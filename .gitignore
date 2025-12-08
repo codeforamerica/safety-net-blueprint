@@ -1,0 +1,13 @@
+node_modules/
+package-lock.json
+.DS_Store
+*.log
+
+# Database files (runtime data - regenerate with npm run mock:reset)
+generated/mock-data/
+*.db
+*.db-shm
+*.db-wal
+
+# Cursor AI working files
+cursor/

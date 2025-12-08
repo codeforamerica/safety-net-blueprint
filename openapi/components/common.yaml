@@ -1,0 +1,108 @@
+# Common shared components and schemas
+Address:
+  type: object
+  description: Residential or mailing address used to determine eligibility.
+  additionalProperties: false
+  required:
+  - addressLine1
+  - city
+  - stateProvince
+  - postalCode
+  properties:
+    addressLine1:
+      type: string
+      description: Primary street address line.
+      minLength: 1
+      maxLength: 150
+    addressLine2:
+      type: string
+      description: Secondary address line such as apartment or unit.
+      maxLength: 150
+    city:
+      type: string
+      description: City or locality of residence.
+      minLength: 1
+      maxLength: 100
+    stateProvince:
+      type: string
+      description: State, province, or region of residence.
+      minLength: 1
+      maxLength: 100
+    postalCode:
+      type: string
+      description: Postal or ZIP code.
+      minLength: 3
+      maxLength: 20
+    county:
+      type: string
+      description: County or equivalent administrative region.
+      maxLength: 100
+
+Email:
+  type: string
+  format: email
+  description: Email address.
+  maxLength: 320
+
+PhoneNumber:
+  type: string
+  description: Phone number in international or local format.
+  pattern: "^\\+?[0-9 .\\-()]{7,20}$"
+
+Name:
+  type: object
+  description: Legal name of a person.
+  additionalProperties: false
+  required:
+  - firstName
+  - lastName
+  properties:
+    firstName:
+      type: string
+      description: First name.
+      minLength: 1
+      maxLength: 100
+    middleInitial:
+      type: string
+      description: Middle initial.
+      maxLength: 1
+    middleName:
+      type: string
+      description: Middle name.
+      maxLength: 100
+    lastName:
+      type: string
+      description: Last name.
+      minLength: 1
+      maxLength: 100
+    maidenName:
+      type: string
+      description: Maiden name if applicable.
+      maxLength: 100
+
+Signature:
+  type: object
+  description: Signature with name and date.
+  additionalProperties: false
+  required:
+  - signature
+  - signatureDate
+  properties:
+    signature:
+      type: string
+      description: Signature or signature indicator.
+    signatureDate:
+      type: string
+      format: date
+      description: Date the signature was made.
+
+SocialSecurityNumber:
+  type: string
+  description: Social Security Number for identity verification.
+  pattern: "^\\d{3}-\\d{2}-\\d{4}$"
+
+Language:
+  type: string
+  description: Preferred language (BCP 47 language tag).
+  pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+

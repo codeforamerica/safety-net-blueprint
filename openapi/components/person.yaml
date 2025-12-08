@@ -1,0 +1,147 @@
+Person:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - name
+  - email
+  - dateOfBirth
+  - phoneNumber
+  - citizenshipStatus
+  - householdSize
+  - monthlyIncome
+  - createdAt
+  - updatedAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier assigned to the person.
+      readOnly: true
+    name:
+      "$ref": "./common.yaml#/Name"
+      description: Legal name of the person.
+    email:
+      "$ref": "./common.yaml#/Email"
+      description: Primary email address of the person.
+    socialSecurityNumber:
+      type: string
+      description: Social Security Number for identity verification.
+      pattern: "^\\d{3}-\\d{2}-\\d{4}$"
+    dateOfBirth:
+      type: string
+      format: date
+      description: Birth date used to verify eligibility.
+    gender:
+      type: string
+      description: Gender identity of the person.
+      enum:
+      - male
+      - female
+      - unknown
+    phoneNumber:
+      "$ref": "./common.yaml#/PhoneNumber"
+      description: Primary phone number for contacting the applicant.
+    address:
+      "$ref": "./common.yaml#/Address"
+      description: Residential or mailing address of the person.
+    citizenshipStatus:
+      type: string
+      description: Citizenship or immigration status relevant to benefits eligibility.
+      enum:
+      - citizen
+      - permanent_resident
+      - qualified_non_citizen
+      - undocumented
+      - other
+    maritalStatus:
+      type: string
+      description: Current marital status of the applicant.
+      enum:
+      - single
+      - married
+      - divorced
+      - widowed
+      - separated
+    householdSize:
+      type: integer
+      description: Total number of individuals sharing a household budget.
+      minimum: 1
+    householdId:
+      type: string
+      format: uuid
+      description: Reference to the household this person belongs to.
+    employmentStatus:
+      type: string
+      description: Current employment status of the applicant.
+      enum:
+      - employed_full_time
+      - employed_part_time
+      - self_employed
+      - unemployed
+      - retired
+      - student
+    employerName:
+      type: string
+      description: Employer name if the applicant is employed.
+      maxLength: 150
+    monthlyIncome:
+      type: number
+      description: Gross monthly household income in local currency.
+      minimum: 0
+    incomeSources:
+      type: array
+      description: Reported sources contributing to the monthly income.
+      items:
+        type: string
+        enum:
+        - employment
+        - self_employment
+        - unemployment_benefits
+        - social_security
+        - disability_benefits
+        - child_support
+        - alimony
+        - pension
+        - other
+    housingStatus:
+      type: string
+      description: Current housing situation of the applicant.
+      enum:
+      - renting
+      - own_home
+      - staying_with_family_or_friends
+      - shelter
+      - unhoused
+      - other
+    languagePreference:
+      type: string
+      description: Preferred language for communications (BCP 47 language tag).
+      pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+    disabilityStatus:
+      type: boolean
+      description: Indicates whether the applicant identifies as having a disability.
+    veteranStatus:
+      type: boolean
+      description: Indicates whether the applicant has served in the armed forces.
+    preferredContactMethod:
+      type: string
+      description: Preferred method of contact during the application process.
+      enum:
+      - phone
+      - email
+      - mail
+      - sms
+    consentToShareInformation:
+      type: boolean
+      description: Applicant consent to share information with partner agencies.
+    createdAt:
+      type: string
+      format: date-time
+      description: Timestamp when the person record was created.
+      readOnly: true
+    updatedAt:
+      type: string
+      format: date-time
+      description: Timestamp when the person record was last updated.
+      readOnly: true

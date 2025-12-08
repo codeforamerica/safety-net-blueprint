@@ -1,0 +1,1762 @@
+{
+  "info": {
+    "name": "Model App API Collection",
+    "description": "Auto-generated from OpenAPI specifications",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "c70bc1e2-9f89-4158-8c5a-5eaf013e9236"
+  },
+  "item": [
+    {
+      "name": "Application Service API",
+      "item": [
+        {
+          "name": "Create Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"submitted\",\n  \"state\": \"FL\",\n  \"programs\": {\n    \"snap\": true,\n    \"cashPrograms\": {\n      \"tanfProgram\": false,\n      \"adultFinancial\": false\n    },\n    \"medicalAssistance\": false\n  },\n  \"applicantInfo\": {\n    \"applicantName\": {\n      \"firstName\": \"Bianca\",\n      \"lastName\": \"Rivera\",\n      \"middleName\": \"Elena\"\n    },\n    \"socialSecurityNumber\": \"234-56-7890\",\n    \"dateOfBirth\": \"1992-11-08\",\n    \"signature\": {\n      \"applicantSignature\": {\n        \"signature\": \"Bianca Elena Rivera\",\n        \"signatureDate\": \"2024-08-15\"\n      }\n    },\n    \"homeAddress\": {\n      \"addressLine1\": \"789 Palm Ave\",\n      \"city\": \"Miami\",\n      \"stateProvince\": \"FL\",\n      \"postalCode\": \"33101\",\n      \"county\": \"Miami-Dade\"\n    },\n    \"phoneNumber\": \"+1-555-987-6543\",\n    \"otherPhoneNumber\": \"+1-555-987-6544\",\n    \"email\": \"bianca.rivera@example.com\",\n    \"speaksEnglish\": false,\n    \"preferredLanguage\": \"es-US\",\n    \"isHomeless\": false,\n    \"isStateResident\": true,\n    \"preferredNoticeMethod\": \"email\"\n  },\n  \"householdDemographics\": {\n    \"householdMembers\": [\n      {\n        \"name\": {\n          \"firstName\": \"Bianca\",\n          \"lastName\": \"Rivera\",\n          \"middleName\": \"Elena\"\n        },\n        \"relationship\": \"self\",\n        \"dateOfBirth\": \"1992-11-08\",\n        \"socialSecurityNumber\": \"234-56-7890\",\n        \"isUSCitizen\": false,\n        \"gender\": \"female\",\n        \"maritalStatus\": \"single\",\n        \"isHispanicOrLatino\": true,\n        \"race\": [\n          \"white\"\n        ]\n      }\n    ]\n  },\n  \"expeditedSNAPDetails\": {\n    \"householdSize\": 1,\n    \"isMigrantOrSeasonalFarmWorker\": false,\n    \"totalExpectedIncomeThisMonth\": 4200,\n    \"totalCashOnHand\": 850,\n    \"monthlyRent\": 1200,\n    \"utilityCosts\": {\n      \"electricity\": 120,\n      \"water\": 45,\n      \"phone\": 60,\n      \"trash\": 25,\n      \"sewer\": 30\n    }\n  },\n  \"ebtCard\": {\n    \"needsEBTCard\": true,\n    \"ebtCardDeliveryMethod\": \"postal_mail\"\n  },\n  \"voterRegistration\": {\n    \"wantsToRegister\": true\n  },\n  \"earnedIncome\": {\n    \"hasEmployment\": false,\n    \"hasSelfEmployment\": true,\n    \"selfEmployment\": [\n      {\n        \"personName\": \"Bianca Elena Rivera\",\n        \"businessName\": \"Rivera Consulting\",\n        \"oneMonthsGrossIncome\": 4200,\n        \"monthOfIncome\": \"2024-08-01\",\n        \"selfEmploymentType\": \"sole_proprietor\",\n        \"utilitiesPaidForBusiness\": 80,\n        \"businessTaxesPaid\": 300,\n        \"interestPaidForBusiness\": 0,\n        \"grossBusinessLaborCosts\": 0,\n        \"costOfMerchandise\": 500,\n        \"totalNetIncome\": 3320\n      }\n    ]\n  },\n  \"expenses\": {\n    \"rent\": {\n      \"hasRentExpenses\": true,\n      \"rentExpenses\": [\n        {\n          \"expenseType\": \"rent\",\n          \"whoPays\": \"Bianca Rivera\",\n          \"isPersonInHome\": true,\n          \"whoIsExpenseFor\": \"Bianca Rivera\",\n          \"expenseMonth\": \"2024-08-01\",\n          \"amountPaid\": 1200\n        }\n      ],\n      \"utilitiesIncludedInRent\": false,\n      \"receivesSection8OrPublicHousing\": false\n    },\n    \"utilities\": {\n      \"heatingCoolingMethod\": [\n        \"electric\",\n        \"swamp_cooler\"\n      ],\n      \"receivedLEAP\": false\n    }\n  },\n  \"resources\": {\n    \"hasResources\": true,\n    \"financialResources\": [\n      {\n        \"personName\": \"Bianca Rivera\",\n        \"resourceType\": \"checking_account\",\n        \"financialInstitutionName\": \"First National Bank\",\n        \"accountNumber\": \"****5678\",\n        \"currentValue\": 850\n      }\n    ]\n  },\n  \"priorConvictions\": {\n    \"convictedOfDuplicateSNAPBenefits\": false,\n    \"hidingFromLaw\": false,\n    \"convictedOfDrugFelony\": false,\n    \"convictedOfSNAPTrafficking\": false,\n    \"convictedOfTradingSNAPForWeapons\": false,\n    \"disqualifiedForIPVOrWelfareFraud\": false,\n    \"convictedOfViolentCrime\": false\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new application with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Application (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"under_review\",\n  \"state\": \"IL\",\n  \"programs\": {\n    \"snap\": true,\n    \"medicalAssistance\": true\n  },\n  \"applicantInfo\": {\n    \"applicantName\": {\n      \"firstName\": \"Jordan\",\n      \"lastName\": \"Fields\"\n    },\n    \"dateOfBirth\": \"1990-03-20\",\n    \"homeAddress\": {\n      \"addressLine1\": \"456 Market St\",\n      \"addressLine2\": \"Suite 12\",\n      \"city\": \"Chicago\",\n      \"stateProvince\": \"IL\",\n      \"postalCode\": \"60605\",\n      \"county\": \"Cook\"\n    },\n    \"phoneNumber\": \"+1-555-765-4321\",\n    \"email\": \"jordan.fields@example.com\",\n    \"isStateResident\": true,\n    \"preferredNoticeMethod\": \"email\"\n  },\n  \"householdDemographics\": {\n    \"householdMembers\": [\n      {\n        \"name\": {\n          \"firstName\": \"Jordan\",\n          \"lastName\": \"Fields\"\n        },\n        \"relationship\": \"self\",\n        \"dateOfBirth\": \"1990-03-20\",\n        \"isUSCitizen\": true\n      },\n      {\n        \"name\": {\n          \"firstName\": \"Taylor\",\n          \"lastName\": \"Fields\"\n        },\n        \"relationship\": \"spouse\",\n        \"dateOfBirth\": \"1991-07-15\",\n        \"isUSCitizen\": true\n      },\n      {\n        \"name\": {\n          \"firstName\": \"Riley\",\n          \"lastName\": \"Fields\"\n        },\n        \"relationship\": \"child\",\n        \"dateOfBirth\": \"2015-03-22\",\n        \"isUSCitizen\": true\n      }\n    ]\n  },\n  \"earnedIncome\": {\n    \"hasEmployment\": true,\n    \"jobs\": [\n      {\n        \"personName\": \"Jordan Fields\",\n        \"employerName\": \"Gotham Health\",\n        \"employerPhone\": \"+1-555-111-2222\",\n        \"monthlyWagesBeforeTaxes\": 5800,\n        \"hourlyWage\": 35,\n        \"averageHoursPerWeek\": 40,\n        \"payFrequency\": \"every_two_weeks\",\n        \"incomeType\": \"regular_employment\"\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another application with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Application - Programs",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f/applications/{{applicationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"programs\": {\n    \"snap\": true,\n    \"cashPrograms\": {\n      \"tanfProgram\": false,\n      \"adultFinancial\": false\n    },\n    \"medicalAssistance\": false\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update programs of ApplicationExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Application - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f/applications/{{applicationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"submitted\",\n  \"state\": \"FL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of ApplicationExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Application",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "9c1d2e3f-4a5b-6c7d-8e9f-0a1b2c3d4e5f/applications/{{applicationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "9c1d2e3f-4a5b-6c7d-8e9f-0a1b2c3d4e5f"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "description": "Delete ApplicationExample3"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Applications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Applications (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "draft",
+                  "description": "Filter applications by status."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by programs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "programs",
+                  "value": "example",
+                  "description": "Filter applications by program types. Can specify multiple programs (e.g., programs=snap&programs=cash_programs)."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get ApplicationExample1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f/applications/{{applicationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get ApplicationExample2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "7a9b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d/applications/{{applicationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "7a9b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get ApplicationExample3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "9c1d2e3f-4a5b-6c7d-8e9f-0a1b2c3d4e5f/applications/{{applicationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "9c1d2e3f-4a5b-6c7d-8e9f-0a1b2c3d4e5f"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Application (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "00000000-0000-0000-0000-000000000000/applications/{{applicationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Application Service API"
+    },
+    {
+      "name": "Household Service API",
+      "item": [
+        {
+          "name": "Create Household",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/households",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"homeAddress\": {\n    \"addressLine1\": \"123 Main St\",\n    \"addressLine2\": \"Apt 4B\",\n    \"city\": \"Springfield\",\n    \"stateProvince\": \"IL\",\n    \"postalCode\": \"62704\",\n    \"county\": \"Sangamon\"\n  },\n  \"mailingAddress\": {\n    \"addressLine1\": \"PO Box 5678\",\n    \"city\": \"Springfield\",\n    \"stateProvince\": \"IL\",\n    \"postalCode\": \"62705\",\n    \"county\": \"Sangamon\"\n  },\n  \"phoneNumber\": \"+1-555-123-4567\",\n  \"members\": [\n    {\n      \"personId\": \"4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2\",\n      \"relationship\": \"head_of_household\"\n    },\n    {\n      \"personId\": \"7e8f9a0b-1c2d-3e4f-5a6b-7c8d9e0f1a2b\",\n      \"relationship\": \"spouse\"\n    },\n    {\n      \"personId\": \"2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e\",\n      \"relationship\": \"child\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new household with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Household (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/households",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"homeAddress\": {\n    \"addressLine1\": \"789 Palm Ave\",\n    \"city\": \"Miami\",\n    \"stateProvince\": \"FL\",\n    \"postalCode\": \"33101\",\n    \"county\": \"Miami-Dade\"\n  },\n  \"members\": [\n    {\n      \"personId\": \"d2c8f19e-7e03-4fd2-8d56-6d8c7f7b5e2a\",\n      \"relationship\": \"head_of_household\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another household with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Household - HomeAddress",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "a1b2c3d4-e5f6-7890-abcd-ef1234567890/households/{{householdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households",
+                "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+              ],
+              "variables": [
+                "householdId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"homeAddress\": {\n    \"addressLine1\": \"123 Main St\",\n    \"addressLine2\": \"Apt 4B\",\n    \"city\": \"Springfield\",\n    \"stateProvince\": \"IL\",\n    \"postalCode\": \"62704\",\n    \"county\": \"Sangamon\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update homeAddress of HouseholdExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Household",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "c3d4e5f6-a7b8-9012-cdef-123456789012/households/{{householdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households",
+                "c3d4e5f6-a7b8-9012-cdef-123456789012"
+              ],
+              "variables": [
+                "householdId"
+              ]
+            },
+            "description": "Delete HouseholdExample3"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Households",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/households",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Households (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/households",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get HouseholdExample1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "a1b2c3d4-e5f6-7890-abcd-ef1234567890/households/{{householdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households",
+                "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+              ],
+              "variables": [
+                "householdId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get HouseholdExample2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "b2c3d4e5-f6a7-8901-bcde-f12345678901/households/{{householdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households",
+                "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+              ],
+              "variables": [
+                "householdId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get HouseholdExample3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "c3d4e5f6-a7b8-9012-cdef-123456789012/households/{{householdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households",
+                "c3d4e5f6-a7b8-9012-cdef-123456789012"
+              ],
+              "variables": [
+                "householdId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Household (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "00000000-0000-0000-0000-000000000000/households/{{householdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "householdId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Household Service API"
+    },
+    {
+      "name": "Person Service API",
+      "item": [
+        {
+          "name": "Create Person",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/persons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"firstName\": \"Avery\",\n    \"lastName\": \"Johnson\",\n    \"middleName\": \"Marie\"\n  },\n  \"email\": \"avery.johnson@example.com\",\n  \"socialSecurityNumber\": \"123-45-6789\",\n  \"dateOfBirth\": \"1985-04-12\",\n  \"gender\": \"unknown\",\n  \"phoneNumber\": \"+1-555-123-4567\",\n  \"address\": {\n    \"addressLine1\": \"123 Main St\",\n    \"addressLine2\": \"Apt 4B\",\n    \"city\": \"Springfield\",\n    \"stateProvince\": \"IL\",\n    \"postalCode\": \"62704\",\n    \"county\": \"Sangamon\"\n  },\n  \"citizenshipStatus\": \"citizen\",\n  \"maritalStatus\": \"married\",\n  \"householdSize\": 4,\n  \"householdId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"employmentStatus\": \"employed_full_time\",\n  \"employerName\": \"Acme Logistics\",\n  \"monthlyIncome\": 6200,\n  \"incomeSources\": [\n    \"employment\"\n  ],\n  \"housingStatus\": \"own_home\",\n  \"languagePreference\": \"en-US\",\n  \"disabilityStatus\": false,\n  \"veteranStatus\": false,\n  \"preferredContactMethod\": \"email\",\n  \"consentToShareInformation\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new person with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Person (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/persons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"firstName\": \"Bianca\",\n    \"lastName\": \"Rivera\"\n  },\n  \"email\": \"bianca.rivera@example.com\",\n  \"dateOfBirth\": \"1992-11-08\",\n  \"phoneNumber\": \"+1-555-987-6543\",\n  \"citizenshipStatus\": \"permanent_resident\",\n  \"householdSize\": 1,\n  \"monthlyIncome\": 4200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another person with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Person - Single Field",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2/persons/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons",
+                "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2"
+              ],
+              "variables": [
+                "personId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"householdSize\": 104\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update a single field of PersonExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Person - Name",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2/persons/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons",
+                "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2"
+              ],
+              "variables": [
+                "personId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"firstName\": \"Avery\",\n    \"lastName\": \"Johnson\",\n    \"middleName\": \"Marie\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update name of PersonExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Person - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2/persons/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons",
+                "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2"
+              ],
+              "variables": [
+                "personId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"avery.johnson@example.com\",\n  \"socialSecurityNumber\": \"123-45-6789\",\n  \"dateOfBirth\": \"1985-04-12\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of PersonExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Person",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "0f6a2df3-2b2f-41d0-8f13-2ba623d8e6d7/persons/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons",
+                "0f6a2df3-2b2f-41d0-8f13-2ba623d8e6d7"
+              ],
+              "variables": [
+                "personId"
+              ]
+            },
+            "description": "Delete PersonExample3"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Persons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/persons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Persons (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/persons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Persons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/persons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Avery",
+                  "description": "Search query"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get PersonExample1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2/persons/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons",
+                "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2"
+              ],
+              "variables": [
+                "personId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get PersonExample2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "d2c8f19e-7e03-4fd2-8d56-6d8c7f7b5e2a/persons/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons",
+                "d2c8f19e-7e03-4fd2-8d56-6d8c7f7b5e2a"
+              ],
+              "variables": [
+                "personId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get PersonExample3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "0f6a2df3-2b2f-41d0-8f13-2ba623d8e6d7/persons/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons",
+                "0f6a2df3-2b2f-41d0-8f13-2ba623d8e6d7"
+              ],
+              "variables": [
+                "personId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Person (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "00000000-0000-0000-0000-000000000000/persons/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persons",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "personId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Person Service API"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:1080",
+      "type": "string"
+    },
+    {
+      "key": "applicationId",
+      "value": "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f",
+      "type": "string"
+    },
+    {
+      "key": "householdId",
+      "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "type": "string"
+    },
+    {
+      "key": "personId",
+      "value": "4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2",
+      "type": "string"
+    }
+  ]
+}

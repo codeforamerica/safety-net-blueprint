@@ -1,0 +1,36 @@
+{
+  "name": "safety-net-openapi",
+  "version": "1.0.0",
+  "description": "Generate Mock API server, Swagger UI, and Zodios API clients from OpenApi specifications",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node scripts/start-all.js",
+    "validate": "node scripts/validate-openapi.js",
+    "clients:generate": "node scripts/generate-clients.js",
+    "postman:generate": "node scripts/generate-postman.js",
+    "mock:start": "node scripts/mock-server/server.js",
+    "mock:setup": "node scripts/mock-server/setup.js",
+    "mock:reset": "node scripts/mock-server/reset.js",
+    "swagger:start": "node scripts/swagger/server.js",
+    "test": "node tests/mock-server/run-all-tests.js --unit",
+    "test:unit": "node tests/mock-server/run-all-tests.js --unit",
+    "test:integration": "node tests/mock-server/run-all-tests.js --integration",
+    "test:all": "node tests/mock-server/run-all-tests.js --all"
+  },
+  "devDependencies": {
+    "openapi-zod-client": "^1.18.2"
+  },
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.7.2",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^3.0.1",
+    "better-sqlite3": "^11.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "js-yaml": "^4.1.0",
+    "swagger-ui-express": "^5.0.1"
+  }
+}

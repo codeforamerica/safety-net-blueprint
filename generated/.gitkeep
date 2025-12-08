@@ -1,0 +1,4 @@
+# This file ensures the /generated folder structure exists in git
+# Even though runtime files are gitignored, we want the folder and its README committed
+
+

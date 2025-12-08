@@ -1,0 +1,64 @@
+# Individual person examples (used as building blocks)
+PersonExample1:
+  id: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+  name:
+    firstName: Avery
+    lastName: Johnson
+    middleName: Marie
+  email: avery.johnson@example.com
+  socialSecurityNumber: 123-45-6789
+  dateOfBirth: '1985-04-12'
+  gender: unknown
+  phoneNumber: "+1-555-123-4567"
+  address:
+    addressLine1: 123 Main St
+    addressLine2: Apt 4B
+    city: Springfield
+    stateProvince: IL
+    postalCode: '62704'
+    county: Sangamon
+  citizenshipStatus: citizen
+  maritalStatus: married
+  householdSize: 4
+  householdId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  employmentStatus: employed_full_time
+  employerName: Acme Logistics
+  monthlyIncome: 6200
+  incomeSources:
+  - employment
+  housingStatus: own_home
+  languagePreference: en-US
+  disabilityStatus: false
+  veteranStatus: false
+  preferredContactMethod: email
+  consentToShareInformation: true
+  createdAt: '2024-01-05T09:15:00Z'
+  updatedAt: '2024-06-12T14:23:11Z'
+
+PersonExample2:
+  id: d2c8f19e-7e03-4fd2-8d56-6d8c7f7b5e2a
+  name:
+    firstName: Bianca
+    lastName: Rivera
+  email: bianca.rivera@example.com
+  dateOfBirth: '1992-11-08'
+  phoneNumber: "+1-555-987-6543"
+  citizenshipStatus: permanent_resident
+  householdSize: 1
+  monthlyIncome: 4200
+  createdAt: '2024-02-14T10:05:00Z'
+  updatedAt: '2024-05-22T08:11:45Z'
+
+PersonExample3:
+  id: 0f6a2df3-2b2f-41d0-8f13-2ba623d8e6d7
+  name:
+    firstName: Jordan
+    lastName: Fields
+  email: jordan.fields@example.com
+  dateOfBirth: '1990-03-20'
+  phoneNumber: "+1-555-765-4321"
+  citizenshipStatus: citizen
+  householdSize: 3
+  monthlyIncome: 5800
+  createdAt: '2024-07-11T15:30:00Z'
+  updatedAt: '2024-07-11T15:30:00Z'
