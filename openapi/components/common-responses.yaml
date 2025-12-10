@@ -34,6 +34,13 @@ NotFound:
       schema:
         "$ref": "#/Error"
 
+Conflict:
+  description: A conflict occurred with the current state of the resource.
+  content:
+    application/json:
+      schema:
+        "$ref": "#/Error"
+
 UnprocessableEntity:
   description: The request was well-formed but contained semantic errors.
   content:
