@@ -17,11 +17,11 @@ tags:
 - name: Income
   description: Manage income records.
 paths:
-  "/income-items":
+  "/income":
     get:
-      summary: List income items
-      description: Retrieve a paginated list of income items.
-      operationId: listIncomeItems
+      summary: List income
+      description: Retrieve a paginated list of income.
+      operationId: listIncome
       tags:
       - Income
       parameters:
@@ -29,19 +29,19 @@ paths:
       - "$ref": "./components/common-parameters.yaml#/OffsetParam"
       responses:
         '200':
-          description: A paginated collection of income items.
+          description: A paginated collection of income.
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/IncomeItemList"
+                "$ref": "#/components/schemas/IncomeList"
         '400':
           "$ref": "./components/common-responses.yaml#/BadRequest"
         '500':
           "$ref": "./components/common-responses.yaml#/InternalError"
     post:
-      summary: Create an income item
-      description: Create a new income item record.
-      operationId: createIncomeItem
+      summary: Create income
+      description: Create a new income record.
+      operationId: createIncome
       tags:
       - Income
       requestBody:
@@ -49,20 +49,20 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/IncomeItemCreate"
+              "$ref": "#/components/schemas/IncomeCreate"
       responses:
         '201':
-          description: Income item created successfully.
+          description: Income created successfully.
           headers:
             Location:
-              description: URL of the newly created income item resource.
+              description: URL of the newly created income resource.
               schema:
                 type: string
                 format: uri
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/IncomeItem"
+                "$ref": "#/components/schemas/Income"
         '400':
           "$ref": "./components/common-responses.yaml#/BadRequest"
         '409':
@@ -71,38 +71,38 @@ paths:
           "$ref": "./components/common-responses.yaml#/UnprocessableEntity"
         '500':
           "$ref": "./components/common-responses.yaml#/InternalError"
-  "/income-items/{incomeItemId}":
+  "/income/{incomeId}":
     parameters:
-    - name: incomeItemId
+    - name: incomeId
       in: path
       required: true
-      description: Unique identifier of the income item.
+      description: Unique identifier of the income.
       schema:
         type: string
         format: uuid
     get:
-      summary: Get an income item
-      description: Retrieve a single income item by identifier.
-      operationId: getIncomeItem
+      summary: Get income
+      description: Retrieve a single income by identifier.
+      operationId: getIncome
       tags:
       - Income
       responses:
         '200':
-          description: Income item retrieved successfully.
+          description: Income retrieved successfully.
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/IncomeItem"
+                "$ref": "#/components/schemas/Income"
         '404':
           "$ref": "./components/common-responses.yaml#/NotFound"
         '500':
           "$ref": "./components/common-responses.yaml#/InternalError"
     patch:
-      summary: Update an income item
+      summary: Update income
       description: |
-        Apply partial updates to an existing income item. The `type` field cannot
+        Apply partial updates to an existing income. The `type` field cannot
         be changed after creation.
-      operationId: updateIncomeItem
+      operationId: updateIncome
       tags:
       - Income
       requestBody:
@@ -110,14 +110,14 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/IncomeItemUpdate"
+              "$ref": "#/components/schemas/IncomeUpdate"
       responses:
         '200':
-          description: Income item updated successfully.
+          description: Income updated successfully.
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/IncomeItem"
+                "$ref": "#/components/schemas/Income"
         '400':
           "$ref": "./components/common-responses.yaml#/BadRequest"
         '404':
@@ -129,42 +129,42 @@ paths:
         '500':
           "$ref": "./components/common-responses.yaml#/InternalError"
     delete:
-      summary: Delete an income item
-      description: Permanently remove an income item record.
-      operationId: deleteIncomeItem
+      summary: Delete income
+      description: Permanently remove an income record.
+      operationId: deleteIncome
       tags:
       - Income
       responses:
         '204':
-          description: Income item deleted successfully.
+          description: Income deleted successfully.
         '404':
           "$ref": "./components/common-responses.yaml#/NotFound"
         '500':
           "$ref": "./components/common-responses.yaml#/InternalError"
 components:
   schemas:
-    IncomeItem:
+    Income:
       "$ref": "./components/income.yaml#/Income"
-    IncomeItemCreate:
+    IncomeCreate:
       allOf:
       - "$ref": "./components/income.yaml#/Income"
       - type: object
         description: |
-          Payload to create a new income item record.
+          Payload to create a new income record.
 
           Note: id is server-generated (readOnly) and will be returned in the response.
-    IncomeItemUpdate:
+    IncomeUpdate:
       allOf:
       - "$ref": "./components/income.yaml#/Income"
       - type: object
         description: |
-          Payload to update one or more mutable fields of an existing income item.
+          Payload to update one or more mutable fields of an existing income.
           Partial updates are supported.
 
           Note: id is server-generated (readOnly) and cannot be updated.
           The `type` field cannot be changed after creation.
         minProperties: 1
-    IncomeItemList:
+    IncomeList:
       type: object
       additionalProperties: false
       required:
@@ -176,16 +176,16 @@ components:
         items:
           type: array
           items:
-            "$ref": "#/components/schemas/IncomeItem"
+            "$ref": "#/components/schemas/Income"
         total:
           type: integer
           minimum: 0
-          description: Total number of income items available.
+          description: Total number of income available.
         limit:
           type: integer
           minimum: 1
           maximum: 100
-          description: Maximum number of income items requested.
+          description: Maximum number of income requested.
         offset:
           type: integer
           minimum: 0

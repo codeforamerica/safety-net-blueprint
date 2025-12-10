@@ -9,6 +9,10 @@ VerificationSource:
       readOnly: true
       description: Unique identifier for the verification source.
 
+Employer:
+  type: object
+  description: An employer of one or more people.
+
 Income:
   type: object
   description: A single item of income, which may be earned or unearned.

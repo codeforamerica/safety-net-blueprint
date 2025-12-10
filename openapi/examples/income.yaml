@@ -12,6 +12,7 @@ IncomeExample1:
   id: 1a2b3c4d-5e6f-7890-abcd-111111111111
   personId: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
   type: employed
+  employerId: a1b2c3d4-e5f6-7890-abcd-111111111111
   incomeBasis: gross
   amount: 3100
   frequency: every_2_weeks
@@ -29,6 +30,7 @@ IncomeExample2:
   id: 2b3c4d5e-6f7a-8b9c-0d1e-222222222222
   personId: d2c8f19e-7e03-4fd2-8d56-6d8c7f7b5e2a
   type: self_employed
+  employerId: b2c3d4e5-f6a7-8b9c-0d1e-222222222222
   incomeBasis: net
   amount: 800
   frequency: weekly
@@ -43,6 +45,7 @@ IncomeExample3:
   id: 3c4d5e6f-7a8b-9c0d-1e2f-333333333333
   personId: 0f6a2df3-2b2f-41d0-8f13-2ba623d8e6d7
   type: employed
+  employerId: c3d4e5f6-a7b8-9c0d-1e2f-333333333333
   incomeBasis: gross
   amount: 5800
   frequency: monthly
