@@ -547,7 +547,6 @@ SocialSecurityRetirementIncomeItem:
             - tbd
 
 # @todo actively refine these three.
-
 RentingHomeIncomeItem:
   description: Income from renting a home.
   required:
