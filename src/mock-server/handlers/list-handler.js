@@ -6,6 +6,19 @@ import { getDatabase } from '../database-manager.js';
 import { executeSearch } from '../search-engine.js';
 
 /**
+ * Default searchable fields for full-text search
+ * These are common fields that most resources have
+ */
+const DEFAULT_SEARCHABLE_FIELDS = [
+  'name',
+  'name.firstName',
+  'name.lastName',
+  'email',
+  'description',
+  'title'
+];
+
+/**
  * Create list handler for a resource
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
@@ -16,35 +29,36 @@ export function createListHandler(apiMetadata, endpoint) {
     try {
       // Get database (this will create it if it doesn't exist)
       const db = getDatabase(apiMetadata.name);
-      
+
       // Ensure req.query exists
       const queryParams = req.query || {};
-      
-      // Determine searchable fields from query parameters in spec
-      const searchableFields = [];
+
+      // Determine searchable fields for full-text search
+      // Check if the endpoint has a `q` or `search` parameter
+      let searchableFields = [];
       for (const param of endpoint.parameters || []) {
-        if (param.in === 'query' && param.name === 'search') {
-          // Generic search parameter - look for name fields and email by default
-          searchableFields.push('name.firstName', 'name.lastName', 'email');
+        if (param.in === 'query' && (param.name === 'q' || param.name === 'search')) {
+          // Use default searchable fields for full-text queries
+          searchableFields = DEFAULT_SEARCHABLE_FIELDS;
           break;
         }
       }
-      
+
       // Ensure pagination defaults exist
       const paginationDefaults = apiMetadata.pagination || {
         limitDefault: 25,
         limitMax: 100,
         offsetDefault: 0
       };
-      
+
       // Execute search with filters and pagination
       const result = executeSearch(
-        db, 
-        queryParams, 
+        db,
+        queryParams,
         searchableFields,
         paginationDefaults
       );
-      
+
       // Ensure result has all required fields
       const safeResult = {
         items: result.items || [],
@@ -53,14 +67,14 @@ export function createListHandler(apiMetadata, endpoint) {
         offset: result.offset || 0,
         hasNext: result.hasNext || false
       };
-      
+
       res.json(safeResult);
     } catch (error) {
       console.error('List handler error:', error);
       console.error('Error stack:', error.stack);
       console.error('API:', apiMetadata.name);
       console.error('Query params:', req.query);
-      
+
       // Return empty list instead of error for better UX
       res.json({
         items: [],

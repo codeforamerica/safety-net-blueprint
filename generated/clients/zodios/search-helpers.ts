@@ -17,8 +17,14 @@
  *
  * | Pattern | Description | Example |
  * |---------|-------------|---------|
- * | `term` | Full-text search across all fields | `john` |
+ * | `term` | Full-text exact match | `john` |
+ * | `*term*` | Full-text contains | `*john*` |
+ * | `term*` | Full-text starts with | `john*` |
+ * | `*term` | Full-text ends with | `*smith` |
  * | `field:value` | Exact match | `status:approved` |
+ * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+ * | `field:value*` | Starts with | `name:john*` |
+ * | `field:*value` | Ends with | `email:*@example.com` |
  * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
  * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
  * | `field:>value` | Greater than | `income:>1000` |
@@ -28,6 +34,7 @@
  * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
  * | `-field:value` | Exclude / negate | `-status:denied` |
  * | `field:*` | Field exists (not null) | `email:*` |
+ * | `-field:*` | Field does not exist | `-deletedAt:*` |
  *
  * ## URL Encoding
  *
@@ -200,6 +207,58 @@ export const search = {
   exists: (field: string): string => `${field}:*`,
 
   /**
+   * Field does not exist (is null): `-field:*`
+   *
+   * @example
+   * search.notExists("deletedAt")
+   * // => "-deletedAt:*"
+   *
+   * @example
+   * search.notExists("address.apartment")
+   * // => "-address.apartment:*"
+   */
+  notExists: (field: string): string => `-${field}:*`,
+
+  /**
+   * Contains (case-insensitive): `field:*value*`
+   *
+   * @example
+   * search.contains("name", "john")
+   * // => "name:*john*"
+   *
+   * @example
+   * search.contains("email", "example.com")
+   * // => "email:*example.com*"
+   */
+  contains: (field: string, value: string): string => `${field}:*${value}*`,
+
+  /**
+   * Starts with (case-insensitive): `field:value*`
+   *
+   * @example
+   * search.startsWith("name", "john")
+   * // => "name:john*"
+   *
+   * @example
+   * search.startsWith("email", "admin")
+   * // => "email:admin*"
+   */
+  startsWith: (field: string, value: string): string => `${field}:${value}*`,
+
+  /**
+   * Ends with (case-insensitive): `field:*value`
+   *
+   * @example
+   * search.endsWith("email", "@example.com")
+   * // => "email:*@example.com"
+   *
+   * @example
+   * search.endsWith("name", "son")
+   * // => "name:*son"
+   */
+  endsWith: (field: string, value: string): string => `${field}:*${value}`,
+
+  /**
    * Quoted value (for values containing spaces): `field:"value with spaces"`
    *
    * @example
@@ -213,9 +272,9 @@ export const search = {
   quoted: (field: string, value: string): string => `${field}:"${value}"`,
 
   /**
-   * Full-text search term (no field specified)
+   * Full-text exact match (no field specified)
    *
-   * Searches across all searchable fields for the given term.
+   * Searches across all searchable fields for an exact match of the term.
    *
    * @example
    * search.text("john")
@@ -227,4 +286,37 @@ export const search = {
    * // => "john status:active"
    */
   text: (term: string): string => term,
+
+  /**
+   * Full-text contains search (no field specified)
+   *
+   * Searches across all searchable fields for terms containing the value.
+   *
+   * @example
+   * search.textContains("john")
+   * // => "*john*"
+   */
+  textContains: (term: string): string => `*${term}*`,
+
+  /**
+   * Full-text starts with search (no field specified)
+   *
+   * Searches across all searchable fields for terms starting with the value.
+   *
+   * @example
+   * search.textStartsWith("john")
+   * // => "john*"
+   */
+  textStartsWith: (term: string): string => `${term}*`,
+
+  /**
+   * Full-text ends with search (no field specified)
+   *
+   * Searches across all searchable fields for terms ending with the value.
+   *
+   * @example
+   * search.textEndsWith("smith")
+   * // => "*smith"
+   */
+  textEndsWith: (term: string): string => `*${term}`,
 };

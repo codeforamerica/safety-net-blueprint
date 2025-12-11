@@ -369,7 +369,7 @@
           ]
         },
         {
-          "name": "Filter by status",
+          "name": "Filter by q",
           "request": {
             "method": "GET",
             "header": [],
@@ -384,58 +384,9 @@
               "variables": [],
               "query": [
                 {
-                  "key": "status",
-                  "value": "draft",
-                  "description": "Filter applications by status."
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON\", function () {",
-                  "    pm.response.to.be.json;",
-                  "});",
-                  "",
-                  "pm.test(\"Response has required list properties\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('items');",
-                  "    pm.expect(jsonData).to.have.property('total');",
-                  "    pm.expect(jsonData).to.have.property('limit');",
-                  "    pm.expect(jsonData).to.have.property('offset');",
-                  "    pm.expect(jsonData.items).to.be.an('array');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Filter by programs",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/applications",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "applications"
-              ],
-              "variables": [],
-              "query": [
-                {
-                  "key": "programs",
+                  "key": "q",
                   "value": "example",
-                  "description": "Filter applications by program types. Can specify multiple programs (e.g., programs=snap&programs=cash_programs)."
+                  "description": "Search query using field:value syntax. Multiple conditions separated by\nspaces are ANDed together.\n\n**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.\nMost HTTP clients handle this automatically. Examples in this documentation\nshow human-readable syntax for clarity.\n\n## Syntax\n\n| Pattern | Description | Example |\n|---------|-------------|---------|\n| `term` | Full-text exact match | `john` |\n| `*term*` | Full-text contains | `*john*` |\n| `term*` | Full-text starts with | `john*` |\n| `*term` | Full-text ends with | `*smith` |\n| `field:value` | Exact match on field | `status:approved` |\n| `field:*value*` | Contains (case-insensitive) | `name:*john*` |\n| `field:value*` | Starts with | `name:john*` |\n| `field:*value` | Ends with | `email:*@example.com` |\n| `field:\"value\"` | Quoted value (for spaces) | `name:\"john doe\"` |\n| `field.nested:value` | Nested field (dot notation) | `address.state:CA` |\n| `field:>value` | Greater than | `income:>1000` |\n| `field:>=value` | Greater than or equal | `income:>=1000` |\n| `field:<value` | Less than | `income:<5000` |\n| `field:<=value` | Less than or equal | `income:<=5000` |\n| `field:val1,val2` | Match any value (OR) | `status:approved,pending` |\n| `-field:value` | Exclude / negate | `-status:denied` |\n| `field:*` | Field exists (not null) | `email:*` |\n| `-field:*` | Field does not exist | `-deletedAt:*` |\n\n## Examples\n\n- `john` — exact match for \"john\" in searchable fields\n- `*john*` — contains \"john\" in searchable fields\n- `name:*smith*` — name contains \"smith\" (case-insensitive)\n- `email:*@example.com` — email ends with \"@example.com\"\n- `status:approved` — exact match on status field\n- `status:approved,pending` — status is \"approved\" OR \"pending\"\n- `income:>=1000` — income greater than or equal to 1000\n- `created:>2024-01-01` — created after January 1, 2024\n- `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)\n- `-status:denied` — exclude records with status \"denied\"\n- `-deletedAt:*` — only records where deletedAt does not exist\n- `applicant.state:CA` — nested field filter\n\n## URL Encoding Reference\n\nWhen manually constructing URLs, encode these characters:\n\n| Character | Encoded |\n|-----------|---------|\n| (space) | `%20` or `+` |\n| `\"` | `%22` |\n| `:` | `%3A` |\n| `>` | `%3E` |\n| `<` | `%3C` |\n| `,` | `%2C` |\n\n**Example:**\n```\nHuman-readable: q=status:approved income:>=1000\nURL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000\n```\n"
                 }
               ]
             }
@@ -909,6 +860,55 @@
                   "key": "offset",
                   "value": "0",
                   "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by q",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/households",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "example",
+                  "description": "Search query using field:value syntax. Multiple conditions separated by\nspaces are ANDed together.\n\n**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.\nMost HTTP clients handle this automatically. Examples in this documentation\nshow human-readable syntax for clarity.\n\n## Syntax\n\n| Pattern | Description | Example |\n|---------|-------------|---------|\n| `term` | Full-text exact match | `john` |\n| `*term*` | Full-text contains | `*john*` |\n| `term*` | Full-text starts with | `john*` |\n| `*term` | Full-text ends with | `*smith` |\n| `field:value` | Exact match on field | `status:approved` |\n| `field:*value*` | Contains (case-insensitive) | `name:*john*` |\n| `field:value*` | Starts with | `name:john*` |\n| `field:*value` | Ends with | `email:*@example.com` |\n| `field:\"value\"` | Quoted value (for spaces) | `name:\"john doe\"` |\n| `field.nested:value` | Nested field (dot notation) | `address.state:CA` |\n| `field:>value` | Greater than | `income:>1000` |\n| `field:>=value` | Greater than or equal | `income:>=1000` |\n| `field:<value` | Less than | `income:<5000` |\n| `field:<=value` | Less than or equal | `income:<=5000` |\n| `field:val1,val2` | Match any value (OR) | `status:approved,pending` |\n| `-field:value` | Exclude / negate | `-status:denied` |\n| `field:*` | Field exists (not null) | `email:*` |\n| `-field:*` | Field does not exist | `-deletedAt:*` |\n\n## Examples\n\n- `john` — exact match for \"john\" in searchable fields\n- `*john*` — contains \"john\" in searchable fields\n- `name:*smith*` — name contains \"smith\" (case-insensitive)\n- `email:*@example.com` — email ends with \"@example.com\"\n- `status:approved` — exact match on status field\n- `status:approved,pending` — status is \"approved\" OR \"pending\"\n- `income:>=1000` — income greater than or equal to 1000\n- `created:>2024-01-01` — created after January 1, 2024\n- `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)\n- `-status:denied` — exclude records with status \"denied\"\n- `-deletedAt:*` — only records where deletedAt does not exist\n- `applicant.state:CA` — nested field filter\n\n## URL Encoding Reference\n\nWhen manually constructing URLs, encode these characters:\n\n| Character | Encoded |\n|-----------|---------|\n| (space) | `%20` or `+` |\n| `\"` | `%22` |\n| `:` | `%3A` |\n| `>` | `%3E` |\n| `<` | `%3C` |\n| `,` | `%2C` |\n\n**Example:**\n```\nHuman-readable: q=status:approved income:>=1000\nURL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000\n```\n"
                 }
               ]
             }
@@ -1519,7 +1519,7 @@
           ]
         },
         {
-          "name": "Search Persons",
+          "name": "Filter by q",
           "request": {
             "method": "GET",
             "header": [],
@@ -1534,14 +1534,9 @@
               "variables": [],
               "query": [
                 {
-                  "key": "search",
-                  "value": "Avery",
-                  "description": "Search query"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Maximum results"
+                  "key": "q",
+                  "value": "example",
+                  "description": "Search query using field:value syntax. Multiple conditions separated by\nspaces are ANDed together.\n\n**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.\nMost HTTP clients handle this automatically. Examples in this documentation\nshow human-readable syntax for clarity.\n\n## Syntax\n\n| Pattern | Description | Example |\n|---------|-------------|---------|\n| `term` | Full-text exact match | `john` |\n| `*term*` | Full-text contains | `*john*` |\n| `term*` | Full-text starts with | `john*` |\n| `*term` | Full-text ends with | `*smith` |\n| `field:value` | Exact match on field | `status:approved` |\n| `field:*value*` | Contains (case-insensitive) | `name:*john*` |\n| `field:value*` | Starts with | `name:john*` |\n| `field:*value` | Ends with | `email:*@example.com` |\n| `field:\"value\"` | Quoted value (for spaces) | `name:\"john doe\"` |\n| `field.nested:value` | Nested field (dot notation) | `address.state:CA` |\n| `field:>value` | Greater than | `income:>1000` |\n| `field:>=value` | Greater than or equal | `income:>=1000` |\n| `field:<value` | Less than | `income:<5000` |\n| `field:<=value` | Less than or equal | `income:<=5000` |\n| `field:val1,val2` | Match any value (OR) | `status:approved,pending` |\n| `-field:value` | Exclude / negate | `-status:denied` |\n| `field:*` | Field exists (not null) | `email:*` |\n| `-field:*` | Field does not exist | `-deletedAt:*` |\n\n## Examples\n\n- `john` — exact match for \"john\" in searchable fields\n- `*john*` — contains \"john\" in searchable fields\n- `name:*smith*` — name contains \"smith\" (case-insensitive)\n- `email:*@example.com` — email ends with \"@example.com\"\n- `status:approved` — exact match on status field\n- `status:approved,pending` — status is \"approved\" OR \"pending\"\n- `income:>=1000` — income greater than or equal to 1000\n- `created:>2024-01-01` — created after January 1, 2024\n- `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)\n- `-status:denied` — exclude records with status \"denied\"\n- `-deletedAt:*` — only records where deletedAt does not exist\n- `applicant.state:CA` — nested field filter\n\n## URL Encoding Reference\n\nWhen manually constructing URLs, encode these characters:\n\n| Character | Encoded |\n|-----------|---------|\n| (space) | `%20` or `+` |\n| `\"` | `%22` |\n| `:` | `%3A` |\n| `>` | `%3E` |\n| `<` | `%3C` |\n| `,` | `%2C` |\n\n**Example:**\n```\nHuman-readable: q=status:approved income:>=1000\nURL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000\n```\n"
                 }
               ]
             }

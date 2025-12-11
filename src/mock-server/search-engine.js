@@ -1,7 +1,22 @@
 /**
  * Search and filter engine for building dynamic SQL queries
  * Supports searching across JSON fields in SQLite
+ *
+ * Supports the `q` parameter with Elasticsearch/GitHub-style search syntax:
+ *   q=term                      # Full-text search
+ *   q=field:value               # Exact match
+ *   q=field:>value              # Greater than
+ *   q=field:>=value             # Greater than or equal
+ *   q=field:<value              # Less than
+ *   q=field:<=value             # Less than or equal
+ *   q=field:val1,val2           # Match any (OR)
+ *   q=-field:value              # Exclude/negate
+ *   q=field:*                   # Field exists
+ *   q=term1 term2               # Multiple conditions (AND)
+ *   q=field.nested:value        # Nested field (dot notation)
  */
+
+import { parseQueryString, tokensToSqlConditions } from './query-parser.js';
 
 /**
  * Build search conditions for SQLite JSON queries
@@ -12,49 +27,61 @@
 export function buildSearchConditions(queryParams = {}, searchableFields = []) {
   const whereClauses = [];
   const params = [];
-  
+
   // Ensure queryParams is an object
   if (!queryParams || typeof queryParams !== 'object') {
     return { whereClauses, params };
   }
-  
-  // Handle generic 'search' parameter (searches across multiple fields)
+
+  // Handle the `q` parameter with search syntax
+  if (queryParams.q) {
+    const tokens = parseQueryString(queryParams.q);
+    const { whereClauses: qClauses, params: qParams } = tokensToSqlConditions(tokens, searchableFields);
+    whereClauses.push(...qClauses);
+    params.push(...qParams);
+  }
+
+  // Handle legacy 'search' parameter (searches across multiple fields)
+  // This provides backward compatibility
   if (queryParams.search && searchableFields.length > 0) {
-    const searchClauses = searchableFields.map(field => 
-      `LOWER(json_extract(data, '$.${field}')) LIKE LOWER(?)`
+    const searchClauses = searchableFields.map(field =>
+      `LOWER(COALESCE(json_extract(data, '$.${field}'), '')) LIKE LOWER(?)`
     );
     whereClauses.push(`(${searchClauses.join(' OR ')})`);
-    
+
     // Add search pattern for each field
     const searchPattern = `%${queryParams.search}%`;
     searchableFields.forEach(() => params.push(searchPattern));
   }
-  
-  // Handle specific field filters (exact match)
-  for (const [key, value] of Object.entries(queryParams)) {
-    // Skip special parameters
-    if (['search', 'limit', 'offset', 'page'].includes(key)) {
-      continue;
-    }
-    
-    // Handle array parameters (e.g., programs[])
-    if (Array.isArray(value)) {
-      // For array fields, check if the JSON array contains the value
-      const arrayClauses = value.map(() => 
-        `EXISTS (
-          SELECT 1 FROM json_each(json_extract(data, '$.${key}'))
-          WHERE value = ?
-        )`
-      );
-      whereClauses.push(`(${arrayClauses.join(' OR ')})`);
-      params.push(...value);
-    } else if (value !== undefined && value !== null && value !== '') {
-      // Exact match for single values
-      whereClauses.push(`json_extract(data, '$.${key}') = ?`);
-      params.push(value);
+
+  // Handle specific field filters (exact match) - legacy support
+  // Skip if using `q` parameter to avoid double-filtering
+  if (!queryParams.q) {
+    for (const [key, value] of Object.entries(queryParams)) {
+      // Skip special parameters
+      if (['search', 'q', 'limit', 'offset', 'page'].includes(key)) {
+        continue;
+      }
+
+      // Handle array parameters (e.g., programs[])
+      if (Array.isArray(value)) {
+        // For array fields, check if the JSON array contains the value
+        const arrayClauses = value.map(() =>
+          `EXISTS (
+            SELECT 1 FROM json_each(json_extract(data, '$.${key}'))
+            WHERE value = ?
+          )`
+        );
+        whereClauses.push(`(${arrayClauses.join(' OR ')})`);
+        params.push(...value);
+      } else if (value !== undefined && value !== null && value !== '') {
+        // Exact match for single values
+        whereClauses.push(`json_extract(data, '$.${key}') = ?`);
+        params.push(value);
+      }
     }
   }
-  
+
   return { whereClauses, params };
 }
 

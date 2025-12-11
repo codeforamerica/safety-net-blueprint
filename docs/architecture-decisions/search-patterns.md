@@ -203,8 +203,14 @@ To address the learning curve, we implemented:
 ## Search Syntax Reference
 
 ```
-q=term                      # Full-text search
+q=term                      # Full-text exact match
+q=*term*                    # Full-text contains
+q=term*                     # Full-text starts with
+q=*term                     # Full-text ends with
 q=field:value               # Exact match
+q=field:*value*             # Contains (case-insensitive)
+q=field:value*              # Starts with
+q=field:*value              # Ends with
 q=field:>value              # Greater than
 q=field:>=value             # Greater than or equal
 q=field:<value              # Less than
@@ -212,6 +218,7 @@ q=field:<=value             # Less than or equal
 q=field:val1,val2           # Match any (OR)
 q=-field:value              # Exclude/negate
 q=field:*                   # Field exists
+q=-field:*                  # Field does not exist
 q=term1 term2               # Multiple conditions (AND)
 q=field.nested:value        # Nested field (dot notation)
 ```
