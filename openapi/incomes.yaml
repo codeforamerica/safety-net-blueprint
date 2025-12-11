@@ -25,6 +25,7 @@ paths:
       tags:
       - Income
       parameters:
+      - "$ref": "./components/common-parameters.yaml#/SearchQueryParam"
       - "$ref": "./components/common-parameters.yaml#/LimitParam"
       - "$ref": "./components/common-parameters.yaml#/OffsetParam"
       responses:
