@@ -35,36 +35,11 @@ For each spec (e.g., `persons.yaml`):
 
 ## Search Query Syntax
 
-Use the `q` parameter for filtering:
+Use the `q` parameter for filtering. See [README_SEARCH_SYNTAX.md](README_SEARCH_SYNTAX.md) for full syntax reference.
 
 ```bash
-# Full-text search
-curl "http://localhost:1080/persons?q=john"
-
-# Field match
-curl "http://localhost:1080/persons?q=status:active"
-
-# Comparison
-curl "http://localhost:1080/persons?q=income:>=1000"
-
-# Multiple conditions (AND)
-curl "http://localhost:1080/persons?q=status:active%20income:>=1000"
+curl "http://localhost:1080/persons?q=status:active income:>=1000"
 ```
-
-### Operators
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `term` | Full-text search | `john` |
-| `field:value` | Exact match | `status:active` |
-| `field:>value` | Greater than | `income:>1000` |
-| `field:>=value` | Greater or equal | `income:>=1000` |
-| `field:<value` | Less than | `income:<5000` |
-| `field:<=value` | Less or equal | `income:<=5000` |
-| `field:a,b` | Match any (OR) | `status:active,pending` |
-| `-field:value` | Exclude | `-status:denied` |
-| `field:*` | Field exists | `email:*` |
-| `field.nested:value` | Nested field | `address.state:CA` |
 
 ## Pagination
 
