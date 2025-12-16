@@ -1,6 +1,10 @@
 # Safety Net OpenAPI Toolkit
 
-Generate mock servers, TypeScript clients, and Postman collections from OpenAPI specifications.
+This toolkit helps teams build consistent, well-documented APIs for safety net programs—enabling faster integration between benefits systems and reducing the technical barriers to improving service delivery.
+
+It provides a standardized foundation for designing APIs that handle common patterns in benefits administration: searching and filtering records, managing cases and applications, and exchanging eligibility data between systems. By codifying these patterns into reusable templates and validation rules, teams can focus on their domain logic rather than reinventing API conventions.
+
+The toolkit generates mock servers, TypeScript clients, and Postman collections from your OpenAPI specifications, making it easier to prototype integrations and onboard developers.
 
 ## Quick Start
 
