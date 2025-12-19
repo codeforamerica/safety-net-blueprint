@@ -9,33 +9,7 @@ ApplicationExample1:
       tanfProgram: false
       adultFinancial: false
     medicalAssistance: false
-  applicantInfo:
-    applicantName:
-      firstName: Bianca
-      lastName: Rivera
-      middleName: Elena
-    socialSecurityNumber: 234-56-7890
-    dateOfBirth: '1992-11-08'
-    signature:
-      applicantSignature:
-        signature: Bianca Elena Rivera
-        signatureDate: '2024-08-15'
-    homeAddress:
-      addressLine1: 789 Palm Ave
-      city: Miami
-      stateProvince: FL
-      postalCode: '33101'
-      county: Miami-Dade
-    phoneNumber: "+1-555-987-6543"
-    otherPhoneNumber: "+1-555-987-6544"
-    email: bianca.rivera@example.com
-    speaksEnglish: false
-    preferredLanguage: es-US
-    isHomeless: false
-    isStateResident: true
-    preferredNoticeMethod: email
-  householdDemographics:
-    householdMembers:
+  persons:
     - name:
         firstName: Bianca
         lastName: Rivera
@@ -48,7 +22,59 @@ ApplicationExample1:
       maritalStatus: single
       isHispanicOrLatino: true
       race:
-      - white
+        - white
+      programsApplyingFor:
+        snap: true
+      # Person-specific data (moved from Application level)
+      selfEmployment:
+        - businessName: Rivera Consulting
+          oneMonthsGrossIncome: 4200
+          monthOfIncome: '2024-08-01'
+          selfEmploymentType: sole_proprietor
+          utilitiesPaidForBusiness: 80
+          businessTaxesPaid: 300
+          interestPaidForBusiness: 0
+          grossBusinessLaborCosts: 0
+          costOfMerchandise: 500
+          totalNetIncome: 3320
+      expenses:
+        rent:
+          - expenseType: rent
+            expenseMonth: '2024-08-01'
+            amountPaid: 1200
+      financialResources:
+        - resourceType: checking_account
+          financialInstitutionName: First National Bank
+          accountNumber: "****5678"
+          currentValue: 850
+      priorConvictions:
+        convictedOfDuplicateSNAPBenefits: false
+        hidingFromLaw: false
+        convictedOfDrugFelony: false
+        convictedOfSNAPTrafficking: false
+        convictedOfTradingSNAPForWeapons: false
+        disqualifiedForIPVOrWelfareFraud: false
+        convictedOfViolentCrime: false
+  primaryApplicant:
+    contactInfo:
+      homeAddress:
+        addressLine1: 789 Palm Ave
+        city: Miami
+        stateProvince: FL
+        postalCode: '33101'
+        county: Miami-Dade
+      phoneNumber: "+1-555-987-6543"
+      otherPhoneNumber: "+1-555-987-6544"
+      email: bianca.rivera@example.com
+      speaksEnglish: false
+      preferredLanguage: es-US
+      isHomeless: false
+      isStateResident: true
+      preferredNoticeMethod: email
+    signatures:
+      applicantSignature:
+        signature: Bianca Elena Rivera
+        signatureDate: '2024-08-15'
   expeditedSNAPDetails:
     householdSize: 1
     isMigrantOrSeasonalFarmWorker: false
@@ -69,43 +95,18 @@ ApplicationExample1:
   earnedIncome:
     hasEmployment: false
     hasSelfEmployment: true
-    selfEmployment:
-    - personName: Bianca Elena Rivera
-      businessName: Rivera Consulting
-      oneMonthsGrossIncome: 4200
-      monthOfIncome: '2024-08-01'
-      selfEmploymentType: sole_proprietor
-      utilitiesPaidForBusiness: 80
-      businessTaxesPaid: 300
-      interestPaidForBusiness: 0
-      grossBusinessLaborCosts: 0
-      costOfMerchandise: 500
-      totalNetIncome: 3320
   expenses:
     rent:
       hasRentExpenses: true
-      rentExpenses:
-      - expenseType: rent
-        whoPays: Bianca Rivera
-        isPersonInHome: true
-        whoIsExpenseFor: Bianca Rivera
-        expenseMonth: '2024-08-01'
-        amountPaid: 1200
       utilitiesIncludedInRent: false
       receivesSection8OrPublicHousing: false
     utilities:
       heatingCoolingMethod:
-      - electric
-      - swamp_cooler
+        - electric
+        - swamp_cooler
       receivedLEAP: false
   resources:
     hasResources: true
-    financialResources:
-    - personName: Bianca Rivera
-      resourceType: checking_account
-      financialInstitutionName: First National Bank
-      accountNumber: "****5678"
-      currentValue: 850
   priorConvictions:
     convictedOfDuplicateSNAPBenefits: false
     hidingFromLaw: false
@@ -124,53 +125,56 @@ ApplicationExample2:
   programs:
     snap: true
     medicalAssistance: true
-  applicantInfo:
-    applicantName:
-      firstName: Jordan
-      lastName: Fields
-    dateOfBirth: '1990-03-20'
-    homeAddress:
-      addressLine1: 456 Market St
-      addressLine2: Suite 12
-      city: Chicago
-      stateProvince: IL
-      postalCode: '60605'
-      county: Cook
-    phoneNumber: "+1-555-765-4321"
-    email: jordan.fields@example.com
-    isStateResident: true
-    preferredNoticeMethod: email
-  householdDemographics:
-    householdMembers:
+  persons:
     - name:
         firstName: Jordan
         lastName: Fields
       relationship: self
       dateOfBirth: '1990-03-20'
       isUSCitizen: true
+      programsApplyingFor:
+        snap: true
+        medicalAssistance: true
+      # Person-specific data (moved from Application level)
+      jobs:
+        - employerName: Gotham Health
+          employerPhone: "+1-555-111-2222"
+          monthlyWagesBeforeTaxes: 5800
+          hourlyWage: 35
+          averageHoursPerWeek: 40
+          payFrequency: every_two_weeks
+          incomeType: regular_employment
     - name:
         firstName: Taylor
         lastName: Fields
       relationship: spouse
       dateOfBirth: '1991-07-15'
       isUSCitizen: true
+      programsApplyingFor:
+        medicalAssistance: true
     - name:
         firstName: Riley
         lastName: Fields
       relationship: child
       dateOfBirth: '2015-03-22'
       isUSCitizen: true
+      programsApplyingFor:
+        medicalAssistance: true
+  primaryApplicant:
+    contactInfo:
+      homeAddress:
+        addressLine1: 456 Market St
+        addressLine2: Suite 12
+        city: Chicago
+        stateProvince: IL
+        postalCode: '60605'
+        county: Cook
+      phoneNumber: "+1-555-765-4321"
+      email: jordan.fields@example.com
+      isStateResident: true
+      preferredNoticeMethod: email
   earnedIncome:
     hasEmployment: true
-    jobs:
-    - personName: Jordan Fields
-      employerName: Gotham Health
-      employerPhone: "+1-555-111-2222"
-      monthlyWagesBeforeTaxes: 5800
-      hourlyWage: 35
-      averageHoursPerWeek: 40
-      payFrequency: every_two_weeks
-      incomeType: regular_employment
   createdAt: '2024-07-11T15:30:00Z'
   updatedAt: '2024-09-01T09:15:00Z'
 
@@ -180,29 +184,28 @@ ApplicationExample3:
   state: CO
   programs:
     medicalAssistance: true
-  applicantInfo:
-    applicantName:
-      firstName: Alex
-      lastName: Martinez
-    dateOfBirth: '1978-05-30'
-    homeAddress:
-      addressLine1: 321 Oak Street
-      city: Denver
-      stateProvince: CO
-      postalCode: '80202'
-      county: Denver
-    phoneNumber: "+1-555-234-5678"
-    email: alex.martinez@example.com
-    isStateResident: true
-    preferredNoticeMethod: paper
-  householdDemographics:
-    householdMembers:
+  persons:
     - name:
         firstName: Alex
         lastName: Martinez
       relationship: self
       dateOfBirth: '1978-05-30'
       isUSCitizen: true
+      programsApplyingFor:
+        medicalAssistance: true
+  primaryApplicant:
+    personId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    contactInfo:
+      homeAddress:
+        addressLine1: 321 Oak Street
+        city: Denver
+        stateProvince: CO
+        postalCode: '80202'
+        county: Denver
+      phoneNumber: "+1-555-234-5678"
+      email: alex.martinez@example.com
+      isStateResident: true
+      preferredNoticeMethod: paper
   healthInsurance:
     hasHealthInsurance: false
   createdAt: '2024-06-01T08:00:00Z'
