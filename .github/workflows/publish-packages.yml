@@ -1,0 +1,23 @@
+name: Publish State Packages
+on:
+  workflow_dispatch:
+    inputs:
+      state:
+        description: 'State to publish (or "all" for all states)'
+        required: true
+        type: choice
+        options:
+          - all
+          - california
+          - colorado
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: echo "This workflow is under development. Run from a feature branch to test."
