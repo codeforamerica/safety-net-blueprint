@@ -17,7 +17,7 @@ function loadYaml(filePath) {
   return yaml.load(content);
 }
 
-function resolveSchema(spec, schemaRef, specPath = null) {
+function resolveSchema(spec, schemaRef, specPath = null, fileContext = null) {
   if (!schemaRef || typeof schemaRef !== 'object') {
     return schemaRef;
   }
@@ -25,40 +25,62 @@ function resolveSchema(spec, schemaRef, specPath = null) {
   // Handle $ref first
   if (schemaRef.$ref) {
     const ref = schemaRef.$ref;
-    
+
     if (ref.startsWith('#')) {
+      // Local reference - use fileContext if available, otherwise spec
+      const contextToUse = fileContext || spec;
       const parts = ref.substring(1).split('/').filter(p => p);
-      let resolved = spec;
+      let resolved = contextToUse;
       for (const part of parts) {
         resolved = resolved?.[part];
       }
       // Recursively resolve any nested $ref in the resolved schema
-      return resolveSchema(spec, resolved, specPath);
+      return resolveSchema(spec, resolved, specPath, fileContext);
     }
-    
+
     if (ref.startsWith('./') && specPath) {
       const [filePath, fragment] = ref.split('#');
       const fullPath = join(dirname(specPath), filePath);
       const fileContent = loadYaml(fullPath);
-      
+
       if (fragment) {
         const parts = fragment.substring(1).split('/').filter(p => p);
         let resolved = fileContent;
         for (const part of parts) {
           resolved = resolved?.[part];
         }
-        // Recursively resolve any nested $ref in the resolved schema
-        return resolveSchema(spec, resolved, specPath);
+        // Recursively resolve any nested $ref, using fileContent as context for local refs
+        return resolveSchema(spec, resolved, specPath, fileContent);
       }
       return fileContent;
     }
+  }
+
+  // Handle allOf by merging schemas
+  if (schemaRef.allOf) {
+    let merged = { type: 'object', properties: {}, required: [] };
+    for (const subSchema of schemaRef.allOf) {
+      const resolved = resolveSchema(spec, subSchema, specPath, fileContext);
+      if (resolved) {
+        if (resolved.type) merged.type = resolved.type;
+        if (resolved.description) merged.description = resolved.description;
+        if (resolved.properties) {
+          merged.properties = { ...merged.properties, ...resolved.properties };
+        }
+        if (resolved.required) {
+          merged.required = [...new Set([...merged.required, ...resolved.required])];
+        }
+      }
+    }
+    if (merged.required.length === 0) delete merged.required;
+    return merged;
   }
 
   // Handle nested properties with $ref (after resolving top-level $ref)
   if (schemaRef.properties) {
     const resolved = { ...schemaRef };
     for (const [key, value] of Object.entries(schemaRef.properties)) {
-      resolved.properties[key] = resolveSchema(spec, value, specPath);
+      resolved.properties[key] = resolveSchema(spec, value, specPath, fileContext);
     }
     return resolved;
   }
@@ -67,7 +89,7 @@ function resolveSchema(spec, schemaRef, specPath = null) {
   if (schemaRef.items) {
     return {
       ...schemaRef,
-      items: resolveSchema(spec, schemaRef.items, specPath)
+      items: resolveSchema(spec, schemaRef.items, specPath, fileContext)
     };
   }
 

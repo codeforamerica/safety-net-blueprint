@@ -37,10 +37,12 @@ Visit `http://localhost:3000` for interactive API docs.
 | `npm run validate` | Validate base specs |
 | `npm run validate:state` | Validate specs for current STATE |
 | `npm run validate:all-states` | Validate all states |
-| `npm run clients:generate` | Generate TypeScript clients |
+| `npm run clients:generate` | Generate Zodios TypeScript clients |
+| `npm run clients:validate` | Type-check generated clients |
 | `npm run postman:generate` | Generate Postman collection |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
+| `npm run test:integration` | Run integration tests (includes Postman/newman) |
 
 [Full command reference →](./docs/reference/commands.md)
 

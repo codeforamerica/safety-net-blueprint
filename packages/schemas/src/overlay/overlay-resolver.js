@@ -5,6 +5,10 @@
  * transformations to base schemas.
  */
 
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import yaml from 'js-yaml';
+
 /**
  * Apply a JSONPath-like target to get values in an object.
  * Supports basic JSONPath: $.foo.bar.baz
@@ -151,24 +155,88 @@ export function rootExists(obj, path) {
 }
 
 /**
+ * Replace a value at a JSONPath-like location (no merging, complete replacement)
+ * @param {Object} obj - The object to modify
+ * @param {string} path - JSONPath-like path
+ * @param {*} value - The value to set (replaces entirely)
+ */
+export function replaceAtPath(obj, path, value) {
+  const cleanPath = path.startsWith('$.') ? path.slice(2) : path;
+  const parts = cleanPath.split('.');
+  const lastPart = parts.pop();
+
+  let current = obj;
+  for (const part of parts) {
+    if (current[part] === undefined) {
+      current[part] = {};
+    }
+    current = current[part];
+  }
+
+  // Complete replacement, no merging
+  current[lastPart] = value;
+}
+
+/**
+ * Load a replacement schema from a $ref path
+ * @param {string} refPath - The $ref path (e.g., "./replacements/expenses.yaml#/CaliforniaExpenses")
+ * @param {string} baseDir - The base directory to resolve relative paths from
+ * @returns {{ value: Object | null, error: string | null }}
+ */
+export function loadReplacementRef(refPath, baseDir) {
+  // Parse the $ref: "./path/to/file.yaml#/SchemaName"
+  const [filePath, pointer] = refPath.split('#');
+
+  if (!filePath) {
+    return { value: null, error: 'Invalid $ref: missing file path' };
+  }
+
+  const fullPath = join(baseDir, filePath);
+
+  if (!existsSync(fullPath)) {
+    return { value: null, error: `Replacement file not found: ${fullPath}` };
+  }
+
+  try {
+    const content = readFileSync(fullPath, 'utf8');
+    const parsed = yaml.load(content);
+
+    if (pointer) {
+      // Extract the specific schema from the file
+      const schemaName = pointer.startsWith('/') ? pointer.slice(1) : pointer;
+      if (!parsed[schemaName]) {
+        return { value: null, error: `Schema '${schemaName}' not found in ${filePath}` };
+      }
+      return { value: parsed[schemaName], error: null };
+    }
+
+    // Return entire file contents if no pointer
+    return { value: parsed, error: null };
+  } catch (err) {
+    return { value: null, error: `Failed to load replacement: ${err.message}` };
+  }
+}
+
+/**
  * Apply overlay actions to a spec
  * @param {Object} spec - The base specification object
  * @param {Object} overlay - The overlay object with actions
  * @param {Object} options - Options for applying overlay
  * @param {boolean} options.silent - Suppress console output
+ * @param {string} options.overlayDir - Directory containing the overlay file (for resolving $ref in replace)
  * @returns {{ result: Object, warnings: string[] }}
  */
 export function applyOverlay(spec, overlay, options = {}) {
   const result = JSON.parse(JSON.stringify(spec)); // Deep clone
   const warnings = [];
-  const { silent = false } = options;
+  const { silent = false, overlayDir = null } = options;
 
   if (!overlay.actions || !Array.isArray(overlay.actions)) {
     return { result, warnings };
   }
 
   for (const action of overlay.actions) {
-    const { target, update, remove, rename } = action;
+    const { target, update, remove, rename, replace } = action;
 
     if (!target) {
       if (!silent) {
@@ -189,7 +257,7 @@ export function applyOverlay(spec, overlay, options = {}) {
     const isAddingProperties = target.endsWith('.properties') && typeof update === 'object';
 
     // Warn if target doesn't fully exist (except when intentionally adding new properties)
-    if (!pathCheck.fullPathExists && !isAddingProperties) {
+    if (!pathCheck.fullPathExists && !isAddingProperties && !replace) {
       const actionDesc = action.description || target;
       warnings.push(`Target $.${pathCheck.missingAt} does not exist in base schema (action: "${actionDesc}")`);
     }
@@ -207,6 +275,28 @@ export function applyOverlay(spec, overlay, options = {}) {
       }
       if (!success && pathCheck.fullPathExists) {
         warnings.push(`Rename failed for target ${target} (action: "${action.description || target}")`);
+      }
+    } else if (replace !== undefined) {
+      // Custom extension: replace action (complete replacement, supports $ref)
+      let replacementValue = replace;
+
+      // If replace has a $ref, load the referenced file
+      if (replace && typeof replace === 'object' && replace.$ref) {
+        if (!overlayDir) {
+          warnings.push(`Cannot resolve $ref in replace action: overlayDir not provided (action: "${action.description || target}")`);
+          continue;
+        }
+        const { value, error } = loadReplacementRef(replace.$ref, overlayDir);
+        if (error) {
+          warnings.push(`${error} (action: "${action.description || target}")`);
+          continue;
+        }
+        replacementValue = value;
+      }
+
+      replaceAtPath(result, target, replacementValue);
+      if (!silent && action.description) {
+        console.log(`  - Replaced: ${action.description}`);
       }
     } else if (update !== undefined) {
       setAtPath(result, target, update);

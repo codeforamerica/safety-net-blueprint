@@ -10,19 +10,24 @@ info:
 actions:
   # ============================================================================
   # Person Schema Modifications (components/person.yaml)
+  # Note: Person uses allOf composition, so properties are under allOf[1]
   # ============================================================================
 
-  # Colorado gender options
-  - target: $.Person.properties.gender.enum
+  # Colorado gender options (separate from biological sex)
+  - target: $.DemographicInfo.properties
     description: Colorado allows X gender marker on state IDs
     update:
-      - male
-      - female
-      - x
-      - unknown
+      gender:
+        type: string
+        description: Gender identity per Colorado law allowing X gender marker.
+        enum:
+          - male
+          - female
+          - x
+          - unknown
 
   # Add Colorado-specific county tracking
-  - target: $.Person.properties
+  - target: $.Person.allOf.1.properties
     description: Add Colorado county and PEAK integration fields
     update:
       countyCode:
@@ -117,29 +122,13 @@ actions:
         type: boolean
         description: Indicates eligibility for Aid to the Needy Disabled - Colorado Supplement.
 
-  # Colorado income sources include state-specific programs
-  - target: $.Person.properties.incomeSources.items.enum
-    description: Add Colorado-specific income sources
-    update:
-      - employment
-      - self_employment
-      - unemployment_benefits
-      - social_security
-      - disability_benefits
-      - child_support
-      - alimony
-      - pension
-      - colorado_works_cash
-      - old_age_pension
-      - andcs
-      - other
-
   # ============================================================================
   # Application Schema Modifications (components/application.yaml)
+  # Programs are now per-person in HouseholdMember
   # ============================================================================
 
   # Colorado program names
-  - target: $.Application.properties.programs.items.enum
+  - target: $.Program.enum
     description: Colorado program names
     update:
       - snap

@@ -25,8 +25,10 @@ safety-net-openapi/
 │   │   │   ├── patterns/           # API design patterns
 │   │   │   │   └── api-patterns.yaml
 │   │   │   ├── overlays/           # State-specific variations
-│   │   │   │   ├── california.overlay.yaml
-│   │   │   │   └── colorado.overlay.yaml
+│   │   │   │   ├── california/
+│   │   │   │   │   └── modifications.yaml
+│   │   │   │   └── colorado/
+│   │   │   │       └── modifications.yaml
 │   │   │   └── resolved/           # Generated state specs (gitignored)
 │   │   ├── src/
 │   │   │   ├── overlay/            # Overlay resolution logic
@@ -95,7 +97,7 @@ npm install -w @safety-net/schemas -w @safety-net/mock-server
 | API specs | kebab-case | `case-workers.yaml` |
 | Component schemas | kebab-case | `case-worker.yaml` |
 | Example files | kebab-case | `case-workers.yaml` |
-| Overlay files | kebab-case + `.overlay` | `california.overlay.yaml` |
+| Overlay files | `{state}/modifications.yaml` | `california/modifications.yaml` |
 | Scripts | kebab-case | `generate-clients.js` |
 | Tests | kebab-case + `.test` | `overlay-resolver.test.js` |
 
@@ -127,7 +129,7 @@ npm install -w @safety-net/schemas -w @safety-net/mock-server
 | `packages/schemas/openapi/*.yaml` | Main API specifications |
 | `packages/schemas/openapi/components/*.yaml` | Reusable schemas |
 | `packages/schemas/openapi/examples/*.yaml` | Example data |
-| `packages/schemas/openapi/overlays/*.overlay.yaml` | State variations |
+| `packages/schemas/openapi/overlays/*/modifications.yaml` | State variations |
 
 ### Generated (Gitignored)
 
@@ -154,7 +156,7 @@ npm run api:new -- --name "benefits" --resource "Benefit"
 
 ## Adding State Overlays
 
-1. Create overlay: `packages/schemas/openapi/overlays/{state}.overlay.yaml`
+1. Create overlay directory and file: `packages/schemas/openapi/overlays/{state}/modifications.yaml`
 2. Define actions for state-specific changes
 3. Validate: `STATE={state} npm run validate:state`
 

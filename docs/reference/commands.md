@@ -10,11 +10,13 @@ All available npm scripts in the Safety Net OpenAPI toolkit.
 | `npm run validate` | Validate base specs |
 | `npm run validate:state` | Validate specs for current STATE |
 | `npm run validate:all-states` | Validate all states |
-| `npm run clients:generate` | Generate TypeScript clients |
+| `npm run clients:generate` | Generate Zodios TypeScript clients |
+| `npm run clients:validate` | Type-check generated clients |
 | `npm run postman:generate` | Generate Postman collection |
 | `npm run mock:start` | Start mock server only |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
+| `npm run test:integration` | Run integration tests (includes Postman/newman) |
 
 ## Validation Commands
 
@@ -117,20 +119,30 @@ Creates:
 Generates TypeScript/Zodios clients from specs.
 
 ```bash
-STATE=california npm run clients:generate
+npm run clients:generate
 ```
 
-Output: `generated/clients/zodios/*.ts`
+Output: `packages/clients/generated/clients/zodios/*.ts`
+
+### `npm run clients:validate`
+
+Type-checks the generated Zodios clients using TypeScript.
+
+```bash
+npm run clients:validate
+```
+
+Runs `tsc --noEmit` to verify all generated clients compile without errors.
 
 ### `npm run postman:generate`
 
 Generates a Postman collection from specs.
 
 ```bash
-STATE=california npm run postman:generate
+npm run postman:generate
 ```
 
-Output: `generated/postman-collection.json`
+Output: `packages/clients/generated/postman-collection.json`
 
 ## Server Commands
 
@@ -205,11 +217,16 @@ Alias for `npm test`.
 
 ### `npm run test:integration`
 
-Runs integration tests (requires mock server).
+Runs integration tests against the mock server. Automatically starts the server if not running.
 
 ```bash
 npm run test:integration
 ```
+
+Includes:
+- CRUD operation tests for all discovered APIs
+- Cross-API accessibility tests
+- Postman collection execution via Newman
 
 ### `npm run test:all`
 
@@ -239,9 +256,9 @@ npm run validate && npm run validate:all-states
 # Reset and start
 npm run mock:reset && npm start
 
-# Generate all artifacts
-npm run clients:generate && npm run postman:generate
+# Generate and validate all artifacts
+npm run clients:generate && npm run clients:validate && npm run postman:generate
 
-# Validate and test
-npm run validate:state && npm test
+# Full test suite
+npm run validate && npm test && npm run test:integration
 ```

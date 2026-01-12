@@ -14,7 +14,8 @@ actions:
   # ============================================================================
 
   # California uses different terminology for citizenship status
-  - target: $.Person.properties.citizenshipStatus.enum
+  # CitizenshipInfo is now a container schema, making it easier to target
+  - target: $.CitizenshipInfo.properties.status.enum
     description: California uses USCIS-aligned terminology
     update:
       - us_citizen
@@ -24,17 +25,21 @@ actions:
       - undocumented
       - other
 
-  # California tracks additional gender options per state law
-  - target: $.Person.properties.gender.enum
+  # California tracks additional gender options per state law (separate from biological sex)
+  - target: $.DemographicInfo.properties
     description: California Gender Recognition Act compliance
     update:
-      - male
-      - female
-      - nonbinary
-      - unknown
+      gender:
+        type: string
+        description: Gender identity per California Gender Recognition Act (SB 179).
+        enum:
+          - male
+          - female
+          - nonbinary
+          - unknown
 
   # Add California-specific county code field
-  - target: $.Person.properties
+  - target: $.Person.allOf.1.properties
     description: Add California county tracking
     update:
       countyCode:
@@ -115,29 +120,13 @@ actions:
         type: boolean
         description: Indicates eligibility for Medi-Cal.
 
-  # California income sources include state-specific programs
-  - target: $.Person.properties.incomeSources.items.enum
-    description: Add California-specific income sources
-    update:
-      - employment
-      - self_employment
-      - unemployment_benefits
-      - social_security
-      - disability_benefits
-      - child_support
-      - alimony
-      - pension
-      - ssi_ssp
-      - calworks_cash_aid
-      - ihss_wages
-      - other
-
   # ============================================================================
   # Application Schema Modifications (components/application.yaml)
+  # These target HouseholdMember which extends Person with application fields
   # ============================================================================
 
   # California program names
-  - target: $.Application.properties.programs.items.enum
+  - target: $.Program.enum
     description: California uses branded program names
     update:
       - calfresh

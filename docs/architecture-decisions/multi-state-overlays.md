@@ -1,8 +1,8 @@
 # ADR: Multi-State Support Using OpenAPI Overlays
 
-**Status:** Proposed
+**Status:** Accepted
 
-**Date:** 2025-12-18
+**Date:** 2026-01-06
 
 **Deciders:** Development Team
 
@@ -41,7 +41,7 @@ We chose **OpenAPI Overlay Specification (1.0.0)** with a configuration-driven s
 ### How It Works
 
 1. **Base schemas** in `openapi/` define the universal structure
-2. **Overlay files** in `openapi/overlays/{state}.overlay.yaml` declare state-specific modifications
+2. **Overlay files** in `openapi/overlays/{state}/modifications.yaml` declare state-specific modifications
 3. **Resolve script** merges base + overlay → `openapi/resolved/` at build time
 4. **All tooling** operates on resolved specs, unaware of the overlay system
 
@@ -64,8 +64,13 @@ openapi/
 │   ├── person.yaml           # Base schema
 │   └── application.yaml      # Base schema
 ├── overlays/
-│   ├── california.overlay.yaml
-│   └── colorado.overlay.yaml
+│   ├── california/
+│   │   ├── modifications.yaml    # Overlay actions
+│   │   └── replacements/         # Complete schema replacements
+│   │       └── expenses.yaml
+│   └── colorado/
+│       ├── modifications.yaml
+│       └── replacements/
 └── resolved/                 # .gitignored, generated at build time
     ├── persons.yaml
     └── components/
@@ -75,6 +80,7 @@ openapi/
 ### Overlay File Format
 
 ```yaml
+# overlays/california/modifications.yaml
 overlay: 1.0.0
 info:
   title: California State Overlay
@@ -106,19 +112,63 @@ actions:
   - target: $.Person.properties.federalProgramId
     description: Use California-specific name
     rename: calworksId
+
+  # Replace entire schema with state-specific structure (custom extension)
+  - target: $.PersonExpenses
+    description: California expense tracking structure
+    replace:
+      $ref: "./replacements/expenses.yaml#/CaliforniaExpenses"
 ```
 
 ### Custom Extensions
 
-We extend the OpenAPI Overlay spec with a `rename` action for renaming properties:
+We extend the OpenAPI Overlay spec with custom actions:
 
 | Action | Standard | Description |
 |--------|----------|-------------|
 | `update` | Yes | Merge/replace values at target path |
 | `remove` | Yes | Delete value at target path |
 | `rename` | **No** (custom) | Rename property, preserving full definition |
+| `replace` | **No** (custom) | Complete replacement of target (no merging) |
 
 The `rename` action copies the entire property definition to a new key and removes the old key. This is useful when states use different terminology for the same concept without having to duplicate the property definition.
+
+The `replace` action completely replaces the target value (unlike `update` which merges objects). It supports `$ref` to load replacement schemas from separate files in the `replacements/` directory. This is useful when a state needs a fundamentally different structure that can't be achieved through property updates.
+
+### File Scoping
+
+When a target path exists in multiple files (e.g., a schema name that appears in both `person.yaml` and `application.yaml`), you can use the `file` or `files` property to specify which file(s) to apply the action to:
+
+```yaml
+actions:
+  # Apply to a single specific file
+  - target: $.CitizenshipInfo.properties.status.enum
+    description: California uses USCIS-aligned terminology
+    file: components/person.yaml
+    update:
+      - us_citizen
+      - lawful_permanent_resident
+
+  # Apply to multiple specific files
+  - target: $.Program.enum
+    description: Update program names in multiple files
+    files:
+      - components/common.yaml
+      - components/application.yaml
+    update:
+      - CalFresh
+      - Medi-Cal
+```
+
+**Smart Auto-Detection:**
+
+The resolver uses two-pass processing to automatically determine where to apply actions:
+
+1. **Target in 0 files** - Warning: target doesn't exist anywhere
+2. **Target in 1 file** - Auto-apply to that file (no `file` property needed)
+3. **Target in 2+ files** - Require `file` or `files` property to disambiguate
+
+This means most actions don't need explicit file scoping - the resolver automatically finds where each target path exists and applies the action there. Only when the same exact target path exists in multiple files (indicating potential ambiguity) does the overlay require explicit file specification.
 
 ---
 
@@ -260,12 +310,12 @@ openapi/
 
 | File | Change |
 |------|--------|
-| `src/overlay/overlay-resolver.js` | Core overlay resolution logic with custom `rename` action support |
+| `src/overlay/overlay-resolver.js` | Core overlay resolution logic with `rename` and `replace` action support |
 | `scripts/resolve-overlay.js` | CLI script to apply overlays with target validation |
 | `scripts/validate-state.js` | New script to resolve and validate state specs |
 | `scripts/validate-patterns.js` | Updated to support `--dir` argument |
-| `openapi/overlays/california.overlay.yaml` | California state overlay |
-| `openapi/overlays/colorado.overlay.yaml` | Colorado state overlay |
+| `openapi/overlays/{state}/modifications.yaml` | State-specific overlay actions |
+| `openapi/overlays/{state}/replacements/` | State-specific schema replacements |
 | `openapi/resolved/` | Generated directory (.gitignored) |
 | `package.json` | Added overlay and state validation scripts |
 | `.gitignore` | Added `openapi/resolved/` |

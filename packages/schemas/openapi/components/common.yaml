@@ -44,6 +44,26 @@ Email:
   description: Email address.
   maxLength: 320
 
+EmployerInfo:
+  type: object
+  description: Employer identification and contact information.
+  additionalProperties: false
+  properties:
+    name:
+      type: string
+      description: Employer or business name.
+      maxLength: 200
+    phone:
+      $ref: "#/PhoneNumber"
+      description: Employer phone number.
+    address:
+      $ref: "#/Address"
+      description: Employer address.
+    identificationNumber:
+      type: string
+      description: Employer Identification Number (EIN).
+      maxLength: 50
+
 PhoneNumber:
   type: string
   description: Phone number in international or local format.
@@ -79,6 +99,19 @@ Name:
       type: string
       description: Maiden name if applicable.
       maxLength: 100
+    suffix:
+      type: string
+      description: Name suffix such as Jr., Sr., III, etc.
+      maxLength: 20
+
+Program:
+  type: string
+  description: Public assistance program type.
+  enum:
+    - snap
+    - tanf
+    - adult_financial
+    - medical_assistance
 
 Signature:
   type: object

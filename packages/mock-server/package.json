@@ -22,5 +22,8 @@
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
     "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
   }
 }

@@ -6,9 +6,11 @@
   "exports": {
     "./overlay": "./src/overlay/overlay-resolver.js",
     "./validation": "./src/validation/openapi-validator.js",
-    "./loader": "./src/validation/openapi-loader.js"
+    "./loader": "./src/validation/openapi-loader.js",
+    "./patterns": "./src/validation/pattern-validator.js"
   },
   "scripts": {
+    "test": "node --test tests/unit/*.test.js",
     "validate": "npm run validate:syntax && npm run validate:patterns",
     "validate:syntax": "node scripts/validate-openapi.js",
     "validate:lint": "npx spectral lint 'openapi/*.yaml' --ignore-unknown-format",

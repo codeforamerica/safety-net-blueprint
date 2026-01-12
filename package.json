@@ -22,6 +22,7 @@
     "overlay:list": "npm run overlay:list -w @safety-net/schemas",
     "clients:generate": "npm run generate -w @safety-net/clients",
     "clients:build-package": "node packages/clients/scripts/build-state-package.js",
+    "clients:validate": "npm run validate -w @safety-net/clients",
     "postman:generate": "npm run postman -w @safety-net/clients",
     "mock:start": "npm start -w @safety-net/mock-server",
     "mock:start:all": "npm run start:all -w @safety-net/mock-server",

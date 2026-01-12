@@ -5,7 +5,7 @@ State overlays allow you to customize API specifications for different states wi
 ## How It Works
 
 1. **Base schemas** in `openapi/` define the universal structure
-2. **Overlay files** in `openapi/overlays/{state}.overlay.yaml` declare modifications
+2. **Overlay files** in `openapi/overlays/{state}/modifications.yaml` declare modifications
 3. **Resolve script** merges base + overlay into `openapi/resolved/`
 4. **All tooling** operates on resolved specs
 
@@ -33,7 +33,7 @@ npm run overlay:resolve
 Overlays use the [OpenAPI Overlay Specification 1.0.0](https://github.com/OAI/Overlay-Specification):
 
 ```yaml
-# openapi/overlays/california.overlay.yaml
+# openapi/overlays/california/modifications.yaml
 overlay: 1.0.0
 info:
   title: California State Overlay
@@ -133,11 +133,12 @@ Targets use JSONPath-like syntax:
 
 ## Creating a New State Overlay
 
-### 1. Create the Overlay File
+### 1. Create the Overlay Directory and File
 
 ```bash
-# Copy an existing overlay as a template
-cp openapi/overlays/california.overlay.yaml openapi/overlays/newstate.overlay.yaml
+# Create state directory and copy an existing overlay as a template
+mkdir openapi/overlays/newstate
+cp openapi/overlays/california/modifications.yaml openapi/overlays/newstate/modifications.yaml
 ```
 
 ### 2. Update the Metadata

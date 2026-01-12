@@ -21,15 +21,15 @@ const overlaysDir = join(rootDir, 'openapi/overlays');
 const resolvedDir = join(rootDir, 'openapi/resolved');
 
 /**
- * Get available states from overlay files
+ * Get available states from overlay directories
  */
 function getAvailableStates() {
   if (!existsSync(overlaysDir)) {
     return [];
   }
-  return readdirSync(overlaysDir)
-    .filter(f => f.endsWith('.overlay.yaml'))
-    .map(f => f.replace('.overlay.yaml', ''));
+  return readdirSync(overlaysDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && existsSync(join(overlaysDir, entry.name, 'modifications.yaml')))
+    .map(entry => entry.name);
 }
 
 /**

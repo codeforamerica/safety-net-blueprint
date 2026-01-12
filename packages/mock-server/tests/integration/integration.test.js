@@ -13,10 +13,11 @@ import { startMockServer, stopServer, isServerRunning } from '../../scripts/serv
 import { discoverApiSpecs } from '@safety-net/schemas/loader';
 import { clearAll } from '../../src/database-manager.js';
 import { seedDatabase } from '../../src/seeder.js';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import newman from 'newman';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -417,6 +418,73 @@ async function testApi(api, examples) {
 }
 
 /**
+ * Run Postman collection tests using Newman
+ */
+async function runPostmanTests() {
+  const collectionPath = join(__dirname, '../../../clients/generated/postman-collection.json');
+
+  console.log(`\n${'='.repeat(70)}`);
+  console.log('Postman Collection Tests (Newman)');
+  console.log('='.repeat(70));
+
+  if (!existsSync(collectionPath)) {
+    console.log('\n  ⚠️  Postman collection not found. Run "npm run postman:generate" first.');
+    console.log(`     Expected: ${collectionPath}`);
+    return { passed: 0, failed: 0, total: 0, skipped: true };
+  }
+
+  console.log(`\n  Collection: ${collectionPath}`);
+  console.log(`  Base URL: ${BASE_URL}\n`);
+
+  return new Promise((resolve) => {
+    newman.run({
+      collection: collectionPath,
+      envVar: [
+        { key: 'baseUrl', value: BASE_URL }
+      ],
+      reporters: ['cli'],
+      reporter: {
+        cli: {
+          silent: false,
+          noSummary: false
+        }
+      }
+    }, (err, summary) => {
+      if (err) {
+        console.log(`  ✗ Newman execution error: ${err.message}`);
+        resolve({ passed: 0, failed: 1, total: 1, skipped: false });
+        return;
+      }
+
+      const stats = summary.run.stats;
+      const assertions = stats.assertions || { total: 0, failed: 0 };
+      const requests = stats.requests || { total: 0, failed: 0 };
+
+      const passed = requests.total - requests.failed;
+      const failed = requests.failed;
+
+      console.log(`\n  ${'─'.repeat(66)}`);
+      console.log(`  Newman Summary:`);
+      console.log(`    Requests: ${passed}/${requests.total} passed`);
+      console.log(`    Assertions: ${assertions.total - assertions.failed}/${assertions.total} passed`);
+
+      if (failed === 0) {
+        console.log(`  ✓ PASS: All Postman requests succeeded`);
+      } else {
+        console.log(`  ✗ FAIL: ${failed} request(s) failed`);
+      }
+
+      resolve({
+        passed: failed === 0 ? 1 : 0,
+        failed: failed > 0 ? 1 : 0,
+        total: 1,
+        skipped: false
+      });
+    });
+  });
+}
+
+/**
  * Main test runner
  */
 async function runTests() {
@@ -486,13 +554,13 @@ async function runTests() {
   console.log(`\n${'='.repeat(70)}`);
   console.log(`Cross-API Test: All APIs Accessible`);
   console.log('='.repeat(70));
-  
+
   try {
     console.log(`\n  Testing all ${apis.length} API(s) are accessible...`);
     const results = await Promise.all(
       apis.map(api => fetch(`${BASE_URL}/${api.name}`))
     );
-    
+
     const allOk = results.every(r => r.ok);
     if (allOk) {
       console.log(`  ✓ PASS: All ${apis.length} API(s) accessible`);
@@ -510,7 +578,15 @@ async function runTests() {
     totalFailed++;
     totalTests++;
   }
-  
+
+  // Postman collection tests
+  const postmanResults = await runPostmanTests();
+  if (!postmanResults.skipped) {
+    totalPassed += postmanResults.passed;
+    totalFailed += postmanResults.failed;
+    totalTests += postmanResults.total;
+  }
+
   // Summary
   console.log('\n' + '='.repeat(70));
   console.log('Integration Test Summary');

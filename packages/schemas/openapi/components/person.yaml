@@ -1,147 +1,339 @@
+# Person resource - core attributes of an individual
+# Used by the Persons API and as a base for HouseholdMember
+#
+# Person contains persistent data about an individual. Eligibility-specific
+# data (health coverage, income, etc.) is in HouseholdMember (application.yaml).
+#
+# Schemas in this file:
+#   Primary:
+#     - Person                 Main person schema (extends PersonIdentity)
+#
+#   Identity:
+#     - PersonIdentity         Base identity fields (name, DOB, SSN, address, phone, email)
+#
+#   Domain Containers:
+#     - CitizenshipInfo        Citizenship status, certificate, immigration info
+#     - ContactInfo            Contact preferences, mailing address, language
+#     - DemographicInfo        Sex, marital status, race, ethnicity
+#     - EducationInfo          School enrollment, graduation, student status
+#     - EmploymentInfo         Jobs (basic employer and dates)
+#     - MilitaryInfo           Service member and veteran status
+#     - TribalInfo             Tribal membership, health service eligibility
+#
+#   Nested/Supporting:
+#     - ImmigrationInfo        Immigration documents (no eligibility fields)
+#     - Job                    Basic employment (employer and dates)
+#     - Sponsor                Immigration sponsor (extends PersonIdentity)
+
 Person:
+  allOf:
+    - $ref: "#/PersonIdentity"
+    - type: object
+      description: |
+        Person resource representing an individual in the system. Contains core
+        identity, demographic, and ongoing attributes that persist about a person.
+      required:
+        - name
+        - dateOfBirth
+      properties:
+        # System fields
+        id:
+          type: string
+          format: uuid
+          description: |
+            Unique identifier for the person. When creating an application, clients may
+            provide a temporary ID for linking related records (e.g., linking an absent
+            parent to a child). The server replaces client-provided IDs with server-generated
+            UUIDs upon submission.
+
+        # Domain containers
+        demographicInfo:
+          $ref: "#/DemographicInfo"
+          description: Demographic information including sex, marital status, and race.
+        citizenshipInfo:
+          $ref: "#/CitizenshipInfo"
+          description: Citizenship and immigration status information.
+        contactInfo:
+          $ref: "#/ContactInfo"
+          description: Contact information and communication preferences.
+        employmentInfo:
+          $ref: "#/EmploymentInfo"
+          description: Employment and self-employment information.
+        educationInfo:
+          $ref: "#/EducationInfo"
+          description: Student enrollment information for this person.
+        militaryInfo:
+          $ref: "#/MilitaryInfo"
+          description: Military and veteran status information.
+        tribalInfo:
+          $ref: "#/TribalInfo"
+          description: American Indian or Alaska Native tribal information for this person.
+
+        # Simple fields
+        consentToShareInformation:
+          type: boolean
+          description: Consent to share information with partner agencies.
+
+        # Timestamps
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the person record was created.
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the person record was last updated.
+          readOnly: true
+
+# Ancillary schemas (alphabetical order)
+
+CitizenshipInfo:
   type: object
-  additionalProperties: false
-  required:
-  - id
-  - name
-  - email
-  - dateOfBirth
-  - phoneNumber
-  - citizenshipStatus
-  - householdSize
-  - monthlyIncome
-  - createdAt
-  - updatedAt
+  description: Citizenship and immigration status information.
   properties:
-    id:
-      type: string
-      format: uuid
-      description: Unique identifier assigned to the person.
-      readOnly: true
-    name:
-      "$ref": "./common.yaml#/Name"
-      description: Legal name of the person.
-    email:
-      "$ref": "./common.yaml#/Email"
-      description: Primary email address of the person.
-    socialSecurityNumber:
-      type: string
-      description: Social Security Number for identity verification.
-      pattern: "^\\d{3}-\\d{2}-\\d{4}$"
-    dateOfBirth:
-      type: string
-      format: date
-      description: Birth date used to verify eligibility.
-    gender:
-      type: string
-      description: Gender identity of the person.
-      enum:
-      - male
-      - female
-      - unknown
-    phoneNumber:
-      "$ref": "./common.yaml#/PhoneNumber"
-      description: Primary phone number for contacting the applicant.
-    address:
-      "$ref": "./common.yaml#/Address"
-      description: Residential or mailing address of the person.
-    citizenshipStatus:
+    status:
       type: string
       description: Citizenship or immigration status relevant to benefits eligibility.
       enum:
-      - citizen
-      - permanent_resident
-      - qualified_non_citizen
-      - undocumented
-      - other
+        - citizen
+        - permanent_resident
+        - qualified_non_citizen
+        - undocumented
+        - other
+    certificateNumber:
+      type: string
+      description: Certificate number if naturalized or derived citizen.
+      maxLength: 50
+    immigrationInfo:
+      $ref: "#/ImmigrationInfo"
+      description: Immigration information for this person (if non-citizen).
+
+ContactInfo:
+  type: object
+  description: Contact information and communication preferences.
+  properties:
+    otherPhoneNumber:
+      $ref: "./common.yaml#/PhoneNumber"
+      description: Alternative phone number.
+    mailingAddress:
+      $ref: "./common.yaml#/Address"
+      description: Mailing address if different from residential address.
+    isHomeless:
+      type: boolean
+      description: Whether the person is currently homeless.
+    preferredNoticeMethod:
+      type: string
+      description: Preferred method for receiving official notices.
+      enum:
+        - paper
+        - email
+        - both
+    languagePreference:
+      type: object
+      description: Language preferences for communications.
+      additionalProperties: false
+      properties:
+        written:
+          type: string
+          description: Preferred language for written communications (BCP 47 language tag).
+          pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+        spoken:
+          type: string
+          description: Preferred language for spoken communications (BCP 47 language tag).
+          pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+    preferredContactMethod:
+      type: string
+      description: Preferred method of contact.
+      enum:
+        - phone
+        - email
+        - mail
+        - sms
+
+DemographicInfo:
+  type: object
+  description: Demographic information for a person.
+  additionalProperties: false
+  properties:
+    sex:
+      type: string
+      description: Biological sex of the person.
+      enum:
+        - male
+        - female
+        - unknown
     maritalStatus:
       type: string
-      description: Current marital status of the applicant.
+      description: Current marital status.
       enum:
-      - single
-      - married
-      - divorced
-      - widowed
-      - separated
-    householdSize:
-      type: integer
-      description: Total number of individuals sharing a household budget.
-      minimum: 1
-    householdId:
-      type: string
-      format: uuid
-      description: Reference to the household this person belongs to.
-    employmentStatus:
-      type: string
-      description: Current employment status of the applicant.
-      enum:
-      - employed_full_time
-      - employed_part_time
-      - self_employed
-      - unemployed
-      - retired
-      - student
-    employerName:
-      type: string
-      description: Employer name if the applicant is employed.
-      maxLength: 150
-    monthlyIncome:
-      type: number
-      description: Gross monthly household income in local currency.
-      minimum: 0
-    incomeSources:
+        - single
+        - married
+        - divorced
+        - separated
+        - widowed
+        - civil_union
+        - domestic_partnership
+    isHispanicOrLatino:
+      type: boolean
+      description: Whether the person identifies as Hispanic or Latino.
+    race:
       type: array
-      description: Reported sources contributing to the monthly income.
+      description: Race identification (can select multiple).
       items:
         type: string
         enum:
-        - employment
-        - self_employment
-        - unemployment_benefits
-        - social_security
-        - disability_benefits
-        - child_support
-        - alimony
-        - pension
-        - other
-    housingStatus:
+          - american_indian_alaskan_native
+          - asian
+          - black_african_american
+          - native_hawaiian_pacific_islander
+          - white
+
+EducationInfo:
+  type: object
+  description: Education and enrollment information.
+  additionalProperties: false
+  properties:
+    lastGradeCompleted:
       type: string
-      description: Current housing situation of the applicant.
-      enum:
-      - renting
-      - own_home
-      - staying_with_family_or_friends
-      - shelter
-      - unhoused
-      - other
-    languagePreference:
-      type: string
-      description: Preferred language for communications (BCP 47 language tag).
-      pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
-    disabilityStatus:
+      description: Last grade level completed.
+      maxLength: 50
+    isCurrentlyEnrolled:
       type: boolean
-      description: Indicates whether the applicant identifies as having a disability.
+      description: Whether this person is currently enrolled in school.
+    schoolName:
+      type: string
+      description: Name of the school or educational institution (if currently enrolled).
+      maxLength: 200
+    startDate:
+      type: string
+      format: date
+      description: Date enrollment started (if currently enrolled).
+    isFullTimeStudent:
+      type: boolean
+      description: Whether the person is a full-time student (if currently enrolled).
+    expectedGraduationDate:
+      type: string
+      format: date
+      description: Expected graduation date (if currently enrolled).
+
+EmploymentInfo:
+  type: object
+  description: Basic employment information (employers and dates only).
+  additionalProperties: false
+  properties:
+    jobs:
+      type: array
+      description: Employment records for this person.
+      items:
+        $ref: "#/Job"
+
+ImmigrationInfo:
+  type: object
+  description: Immigration document information for a non-citizen.
+  properties:
+    status:
+      type: string
+      maxLength: 100
+    documentType:
+      type: string
+      maxLength: 100
+    documentNumber:
+      type: string
+      maxLength: 100
+    alienOrI94Number:
+      type: string
+      maxLength: 100
+    documentExpirationDate:
+      type: string
+      format: date
+    countryOfIssuance:
+      type: string
+      maxLength: 100
+    hasSponsor:
+      type: boolean
+    sponsor:
+      $ref: "#/Sponsor"
+      description: Sponsor information for this non-citizen.
+
+Job:
+  type: object
+  description: Basic employment record (employer and dates only).
+  additionalProperties: false
+  properties:
+    employer:
+      $ref: "./common.yaml#/EmployerInfo"
+      description: Employer information.
+    startDate:
+      type: string
+      format: date
+      description: Date employment started.
+    endDate:
+      type: string
+      format: date
+      description: Date employment ended (omit if current job).
+
+MilitaryInfo:
+  type: object
+  description: Military and veteran status information.
+  additionalProperties: false
+  properties:
+    isMilitaryServiceMember:
+      type: boolean
+      description: Whether this person is a military service member.
     veteranStatus:
       type: boolean
-      description: Indicates whether the applicant has served in the armed forces.
-    preferredContactMethod:
+      description: Indicates whether the person has served in the armed forces.
+
+PersonIdentity:
+  type: object
+  description: Basic identity and contact information for a person.
+  properties:
+    name:
+      $ref: "./common.yaml#/Name"
+      description: Legal name of the person.
+    dateOfBirth:
       type: string
-      description: Preferred method of contact during the application process.
-      enum:
-      - phone
-      - email
-      - mail
-      - sms
-    consentToShareInformation:
+      format: date
+      description: Birth date of the person.
+    socialSecurityNumber:
+      $ref: "./common.yaml#/SocialSecurityNumber"
+      description: Social Security Number for identity verification.
+    address:
+      $ref: "./common.yaml#/Address"
+      description: Address of the person.
+    phoneNumber:
+      $ref: "./common.yaml#/PhoneNumber"
+      description: Phone number for the person.
+    email:
+      $ref: "./common.yaml#/Email"
+      description: Email address of the person.
+
+Sponsor:
+  allOf:
+    - $ref: "#/PersonIdentity"
+    - type: object
+      description: Immigration sponsor information.
+      properties:
+        spouse:
+          $ref: "#/PersonIdentity"
+          description: Sponsor's spouse information.
+        totalPeopleInHousehold:
+          type: integer
+          minimum: 1
+          description: Total number of people in the sponsor's household.
+
+TribalInfo:
+  type: object
+  description: American Indian or Alaska Native tribal membership information.
+  properties:
+    tribeName:
+      type: string
+      maxLength: 200
+    tribeState:
+      type: string
+      maxLength: 100
+    hasReceivedServiceFromIndianHealthService:
       type: boolean
-      description: Applicant consent to share information with partner agencies.
-    createdAt:
-      type: string
-      format: date-time
-      description: Timestamp when the person record was created.
-      readOnly: true
-    updatedAt:
-      type: string
-      format: date-time
-      description: Timestamp when the person record was last updated.
-      readOnly: true
+    isEligibleForIndianHealthService:
+      type: boolean

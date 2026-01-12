@@ -1,4 +1,5 @@
 # Individual person examples (used as building blocks)
+# Person contains persistent data only - eligibility fields are in HouseholdMember
 PersonExample1:
   id: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
   name:
@@ -8,7 +9,6 @@ PersonExample1:
   email: avery.johnson@example.com
   socialSecurityNumber: 123-45-6789
   dateOfBirth: '1985-04-12'
-  gender: unknown
   phoneNumber: "+1-555-123-4567"
   address:
     addressLine1: 123 Main St
@@ -17,20 +17,27 @@ PersonExample1:
     stateProvince: IL
     postalCode: '62704'
     county: Sangamon
-  citizenshipStatus: citizen
-  maritalStatus: married
-  householdSize: 4
-  householdId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-  employmentStatus: employed_full_time
-  employerName: Acme Logistics
-  monthlyIncome: 6200
-  incomeSources:
-  - employment
-  housingStatus: own_home
-  languagePreference: en-US
-  disabilityStatus: false
-  veteranStatus: false
-  preferredContactMethod: email
+  demographicInfo:
+    sex: unknown
+    maritalStatus: married
+    isHispanicOrLatino: false
+    race:
+      - white
+  citizenshipInfo:
+    status: citizen
+  contactInfo:
+    languagePreference:
+      written: en-US
+      spoken: en-US
+    preferredContactMethod: email
+  employmentInfo:
+    jobs:
+      - employer:
+          name: Acme Logistics
+          phone: "+1-555-111-2222"
+        startDate: '2020-03-15'
+  militaryInfo:
+    veteranStatus: false
   consentToShareInformation: true
   createdAt: '2024-01-05T09:15:00Z'
   updatedAt: '2024-06-12T14:23:11Z'
@@ -43,9 +50,16 @@ PersonExample2:
   email: bianca.rivera@example.com
   dateOfBirth: '1992-11-08'
   phoneNumber: "+1-555-987-6543"
-  citizenshipStatus: permanent_resident
-  householdSize: 1
-  monthlyIncome: 4200
+  citizenshipInfo:
+    status: permanent_resident
+    immigrationInfo:
+      status: permanent_resident
+  employmentInfo:
+    jobs:
+      - employer:
+          name: City Hospital
+          phone: "+1-555-222-3333"
+        startDate: '2021-06-01'
   createdAt: '2024-02-14T10:05:00Z'
   updatedAt: '2024-05-22T08:11:45Z'
 
@@ -57,8 +71,13 @@ PersonExample3:
   email: jordan.fields@example.com
   dateOfBirth: '1990-03-20'
   phoneNumber: "+1-555-765-4321"
-  citizenshipStatus: citizen
-  householdSize: 3
-  monthlyIncome: 5800
+  citizenshipInfo:
+    status: citizen
+  employmentInfo:
+    jobs:
+      - employer:
+          name: Tech Solutions Inc
+          phone: "+1-555-333-4444"
+        startDate: '2022-01-10'
   createdAt: '2024-07-11T15:30:00Z'
   updatedAt: '2024-07-11T15:30:00Z'
