@@ -37,9 +37,9 @@ jobs:
       - name: Determine states and version
         id: determine
         run: |
-          # Get all available states from overlay files
-          ALL_STATES=$(ls packages/schemas/openapi/overlays/*.overlay.yaml 2>/dev/null | \
-            sed 's/.*\/\(.*\)\.overlay\.yaml/\1/' | \
+          # Get all available states from overlay directories
+          ALL_STATES=$(ls -d packages/schemas/openapi/overlays/*/ 2>/dev/null | \
+            xargs -I{} basename {} | \
             jq -R -s -c 'split("\n") | map(select(length > 0))')
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
