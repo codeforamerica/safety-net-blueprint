@@ -735,4 +735,116 @@ test('Overlay Resolver Tests', async (t) => {
     assert.strictEqual(result.Person.properties.expenses.type, 'array');
   });
 
+  // ==========================================================================
+  // checkPathExists tests for file scoping
+  // ==========================================================================
+
+  await t.test('checkPathExists - fullPathExists is true for nested enum path', () => {
+    const personSpec = {
+      CitizenshipInfo: {
+        properties: {
+          status: {
+            type: 'string',
+            enum: ['citizen', 'permanent_resident']
+          }
+        }
+      }
+    };
+    const result = checkPathExists(personSpec, '$.CitizenshipInfo.properties.status.enum');
+    assert.strictEqual(result.rootExists, true);
+    assert.strictEqual(result.fullPathExists, true);
+  });
+
+  await t.test('checkPathExists - fullPathExists is false when structure differs', () => {
+    // This simulates a schema where CitizenshipInfo exists but with different structure
+    const applicationSpec = {
+      CitizenshipInfo: {
+        allOf: [
+          { $ref: './components/person.yaml#/CitizenshipInfo' },
+          { type: 'object' }
+        ]
+      }
+    };
+    const result = checkPathExists(applicationSpec, '$.CitizenshipInfo.properties.status.enum');
+    assert.strictEqual(result.rootExists, true);
+    assert.strictEqual(result.fullPathExists, false);
+    // Should identify where path stops existing
+    assert.strictEqual(result.missingAt, 'CitizenshipInfo.properties');
+  });
+
+  await t.test('checkPathExists - distinguishes files with same schema name but different paths', () => {
+    // File 1: Has the full path
+    const file1 = {
+      Person: {
+        properties: {
+          gender: {
+            type: 'string',
+            enum: ['male', 'female']
+          }
+        }
+      }
+    };
+    // File 2: Has Person but different structure
+    const file2 = {
+      Person: {
+        $ref: './components/person.yaml#/Person'
+      }
+    };
+
+    const target = '$.Person.properties.gender.enum';
+    const result1 = checkPathExists(file1, target);
+    const result2 = checkPathExists(file2, target);
+
+    // File 1 should have full path
+    assert.strictEqual(result1.fullPathExists, true);
+    // File 2 should not have full path (uses $ref)
+    assert.strictEqual(result2.fullPathExists, false);
+  });
+
+  await t.test('checkPathExists - used for file scoping logic', () => {
+    // Simulate multiple files with same schema name
+    const files = [
+      {
+        path: 'components/person.yaml',
+        spec: {
+          Program: {
+            type: 'string',
+            enum: ['SNAP', 'Medicaid']
+          }
+        }
+      },
+      {
+        path: 'components/application.yaml',
+        spec: {
+          Program: {
+            type: 'string',
+            enum: ['SNAP', 'Medicaid']
+          }
+        }
+      },
+      {
+        path: 'components/common.yaml',
+        spec: {
+          Program: {
+            type: 'string',
+            enum: ['SNAP', 'Medicaid']
+          }
+        }
+      }
+    ];
+
+    const target = '$.Program.enum';
+
+    // Find which files have the full target path
+    const matchingFiles = files
+      .filter(f => checkPathExists(f.spec, target).fullPathExists)
+      .map(f => f.path);
+
+    // All three files have the exact same structure, so all should match
+    assert.strictEqual(matchingFiles.length, 3);
+    assert.ok(matchingFiles.includes('components/person.yaml'));
+    assert.ok(matchingFiles.includes('components/application.yaml'));
+    assert.ok(matchingFiles.includes('components/common.yaml'));
+  });
+
 });

@@ -125,8 +125,8 @@ actions:
   # These target HouseholdMember which extends Person with application fields
   # ============================================================================
 
-  # California program names (programs are now per-person in HouseholdMember)
-  - target: $.HouseholdMember.allOf.1.properties.programsApplyingFor.items.enum
+  # California program names
+  - target: $.Program.enum
     description: California uses branded program names
     update:
       - calfresh

@@ -135,6 +135,41 @@ The `rename` action copies the entire property definition to a new key and remov
 
 The `replace` action completely replaces the target value (unlike `update` which merges objects). It supports `$ref` to load replacement schemas from separate files in the `replacements/` directory. This is useful when a state needs a fundamentally different structure that can't be achieved through property updates.
 
+### File Scoping
+
+When a target path exists in multiple files (e.g., a schema name that appears in both `person.yaml` and `application.yaml`), you can use the `file` or `files` property to specify which file(s) to apply the action to:
+
+```yaml
+actions:
+  # Apply to a single specific file
+  - target: $.CitizenshipInfo.properties.status.enum
+    description: California uses USCIS-aligned terminology
+    file: components/person.yaml
+    update:
+      - us_citizen
+      - lawful_permanent_resident
+
+  # Apply to multiple specific files
+  - target: $.Program.enum
+    description: Update program names in multiple files
+    files:
+      - components/common.yaml
+      - components/application.yaml
+    update:
+      - CalFresh
+      - Medi-Cal
+```
+
+**Smart Auto-Detection:**
+
+The resolver uses two-pass processing to automatically determine where to apply actions:
+
+1. **Target in 0 files** - Warning: target doesn't exist anywhere
+2. **Target in 1 file** - Auto-apply to that file (no `file` property needed)
+3. **Target in 2+ files** - Require `file` or `files` property to disambiguate
+
+This means most actions don't need explicit file scoping - the resolver automatically finds where each target path exists and applies the action there. Only when the same exact target path exists in multiple files (indicating potential ambiguity) does the overlay require explicit file specification.
+
 ---
 
 ## Options Considered

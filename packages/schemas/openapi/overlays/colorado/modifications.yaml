@@ -128,7 +128,7 @@ actions:
   # ============================================================================
 
   # Colorado program names
-  - target: $.HouseholdMember.allOf.1.properties.programsApplyingFor.items.enum
+  - target: $.Program.enum
     description: Colorado program names
     update:
       - snap

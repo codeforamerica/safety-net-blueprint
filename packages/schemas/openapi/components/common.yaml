@@ -99,6 +99,10 @@ Name:
       type: string
       description: Maiden name if applicable.
       maxLength: 100
+    suffix:
+      type: string
+      description: Name suffix such as Jr., Sr., III, etc.
+      maxLength: 20
 
 Program:
   type: string
