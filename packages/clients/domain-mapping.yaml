@@ -1,0 +1,122 @@
+# Domain Mapping for TypeScript Client Generation
+#
+# Maps OpenAPI schema names to domains for code splitting.
+# Schemas not listed here go to 'core' domain.
+#
+# When adding new schemas to the OpenAPI specs, add them here
+# in the appropriate domain to ensure proper code generation.
+
+domains:
+  # Core application structure
+  core:
+    - Application
+    - ApplicationCreate
+    - ApplicationUpdate
+    - ApplicationList
+    - ApplicationPreferences
+    - ApplicationScreeningFlags
+    - Household
+    - HouseholdMember
+    - HouseholdMemberIdentity
+    - HouseholdOccupant
+    - Signature
+    - Program
+
+  # Persistent person identity
+  person:
+    - Person
+    - PersonIdentity
+    - PersonCreate
+    - PersonUpdate
+    - PersonList
+    - Name
+    - DemographicInfo
+    - EducationInfo
+    - MilitaryInfo
+
+  # Employment and work
+  employment:
+    - JobIncomeInfo
+    - SelfEmploymentRecord
+    - Job
+    - EmploymentInfo
+    - StrikeInfo
+    - Employer
+
+  # Non-employment income
+  income:
+    - UnearnedIncomeSource
+    - LumpSumPayment
+    - IncomeChangeInfo
+    - FinancialAidInfo
+
+  # Health and disability
+  health:
+    - HealthInfo
+    - DisabilityInfo
+    - HealthInsuranceEnrollment
+    - HealthInsurancePlan
+    - HealthCoverageDetail
+    - FamilyPlanningInfo
+    - MedicareInfo
+    - RetroactiveMedicalRequest
+    - InstitutionalizedInfo
+    - FederalHealthBenefit
+
+  # Citizenship and immigration
+  citizenship:
+    - CitizenshipInfo
+    - ImmigrationInfo
+    - NonCitizenApplicationInfo
+    - TribalInfo
+    - Sponsor
+
+  # Contact information
+  contact:
+    - ContactInfo
+    - Address
+    - PhoneNumber
+
+  # Expenses
+  expenses:
+    - ExpenseInfo
+    - HouseholdExpenses
+    - RentExpense
+    - RentExpenses
+    - MortgageExpense
+    - MortgageExpenses
+    - UtilityExpense
+    - HousingExpenseItem
+    - DeductionItem
+    - AdditionalExpense
+
+  # Assets and resources
+  resources:
+    - ResourceInfo
+    - FinancialResource
+    - Property
+    - Vehicle
+    - TransferredAsset
+    - InsurancePolicy
+
+  # Family relationships
+  family:
+    - AbsentParent
+    - FosterCareHistory
+
+  # Benefits history
+  benefits:
+    - PastBenefitsFromOtherStates
+    - PriorConvictionsInfo
+    - ExpeditedSNAPInfo
+    - SocialSecurityApplication
+
+  # Tax information
+  tax:
+    - TaxFilingInfo
+
+  # Representatives and assisters
+  representatives:
+    - ApplicationAssister
+    - AuthorizedRepresentative
+    - ExternalPerson

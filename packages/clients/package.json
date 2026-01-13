@@ -4,7 +4,7 @@
   "description": "Generated API clients and collections for Safety Net APIs",
   "type": "module",
   "scripts": {
-    "generate": "node scripts/generate-modular-zod.js",
+    "generate": "node scripts/generate-modular-zod.js --all",
     "postman": "node scripts/generate-postman.js",
     "build-package": "node scripts/build-state-package.js"
   },

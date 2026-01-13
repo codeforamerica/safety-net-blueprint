@@ -11,8 +11,8 @@
  * references it. This dramatically reduces .d.ts file sizes.
  */
 
-import { writeFile, mkdir } from 'fs/promises';
-import { join, dirname } from 'path';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { join, basename, extname, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 
@@ -283,17 +283,11 @@ function topologicalSort(schemas) {
 }
 
 /**
- * Collect all schemas from a spec and its referenced files.
- * Returns both schemas and their x-domain assignments.
- *
- * Supports two ways to specify domain:
- * 1. File-level: top-level `x-domain` key applies to all schemas in file
- * 2. Schema-level: `x-domain` on individual schema (overrides file-level)
+ * Collect all schemas from a spec and its referenced files
  */
 async function collectAllSchemas(specPath) {
   const refs = await $RefParser.resolve(specPath);
   const allSchemas = {};
-  const schemaDomains = {};
 
   // Get all resolved file values
   const files = refs.values();
@@ -301,26 +295,15 @@ async function collectAllSchemas(specPath) {
   for (const [filePath, content] of Object.entries(files)) {
     if (!content || typeof content !== 'object') continue;
 
-    // Check for file-level x-domain (applies to all schemas in this file)
-    const fileDomain = content['x-domain'] || null;
-
     // Collect from components/schemas if present
     if (content.components?.schemas) {
-      for (const [name, schema] of Object.entries(content.components.schemas)) {
-        allSchemas[name] = schema;
-        // Schema-level x-domain takes precedence over file-level
-        if (schema['x-domain']) {
-          schemaDomains[name] = schema['x-domain'];
-        } else if (fileDomain) {
-          schemaDomains[name] = fileDomain;
-        }
-      }
+      Object.assign(allSchemas, content.components.schemas);
     }
 
-    // Collect top-level schemas (like in component files: person.yaml, application.yaml)
+    // Collect top-level schemas (like in application.yaml, person.yaml)
     for (const [key, value] of Object.entries(content)) {
       // Skip non-schema keys
-      if (['openapi', 'info', 'servers', 'tags', 'paths', 'components', 'security', 'x-domain'].includes(key)) {
+      if (['openapi', 'info', 'servers', 'tags', 'paths', 'components', 'security'].includes(key)) {
         continue;
       }
       // Skip if not an object or if it's an array
@@ -330,116 +313,32 @@ async function collectAllSchemas(specPath) {
       // Check if it looks like a schema (has type, properties, allOf, etc.)
       if (value.type || value.properties || value.allOf || value.anyOf || value.oneOf || value.enum) {
         allSchemas[key] = value;
-        // Schema-level x-domain takes precedence over file-level
-        if (value['x-domain']) {
-          schemaDomains[key] = value['x-domain'];
-        } else if (fileDomain) {
-          schemaDomains[key] = fileDomain;
-        }
       }
     }
   }
 
-  return { schemas: allSchemas, domains: schemaDomains };
+  return allSchemas;
 }
 
 /**
- * Validate that all schemas have x-domain defined.
- * Throws an error listing any schemas missing the extension.
+ * Generate modular Zod schemas for an OpenAPI spec
  */
-function validateDomains(schemaDomains, allSchemas) {
-  const missing = Object.keys(allSchemas).filter(name => !schemaDomains[name]);
-  if (missing.length > 0) {
-    throw new Error(
-      `Schemas missing x-domain extension:\n  ${missing.join('\n  ')}\n\n` +
-      `Add x-domain to each schema in the OpenAPI component files.`
-    );
-  }
-}
+async function generateModularZod(specPath, outputPath) {
+  console.log(`Generating modular Zod schemas for: ${basename(specPath)}`);
 
-/**
- * Group schemas by their x-domain.
- */
-function groupSchemasByDomain(schemas, schemaDomains) {
-  const groups = {};
-  for (const [name, schema] of Object.entries(schemas)) {
-    const domain = schemaDomains[name];
-    if (!groups[domain]) {
-      groups[domain] = {};
-    }
-    groups[domain][name] = schema;
-  }
-  return groups;
-}
+  // Collect all schemas from the spec and its references
+  const schemas = await collectAllSchemas(specPath);
+  const schemaNames = Object.keys(schemas);
 
-/**
- * Find all schema references in a schema definition.
- */
-function findSchemaReferences(schema, knownSchemas) {
-  const refs = new Set();
-
-  function walk(obj) {
-    if (!obj || typeof obj !== 'object') return;
-
-    if (obj.$ref) {
-      // Extract schema name from various ref formats
-      let refName = null;
-      const refPath = obj.$ref;
-
-      if (refPath.startsWith('#/components/schemas/')) {
-        refName = refPath.split('/').pop();
-      } else if (refPath.startsWith('#/')) {
-        refName = refPath.split('/').pop();
-      } else if (refPath.includes('#/')) {
-        refName = refPath.split('#/').pop().split('/').pop();
-      } else if (!refPath.includes('/') && !refPath.startsWith('.')) {
-        refName = refPath;
-      }
-
-      if (refName && knownSchemas.has(refName)) {
-        refs.add(refName);
-      }
-      return;
-    }
-
-    if (Array.isArray(obj)) {
-      obj.forEach(walk);
-    } else {
-      Object.values(obj).forEach(walk);
-    }
+  if (schemaNames.length === 0) {
+    console.log('  No schemas found, skipping');
+    return;
   }
 
-  walk(schema);
-  return refs;
-}
-
-/**
- * Generate Zod code for a set of schemas (internal helper).
- */
-function generateZodCode(schemas, allSchemas, currentDomain, allDomains) {
   // Sort by dependencies
   const sortedNames = topologicalSort(schemas);
-  const localSchemaNames = new Set(Object.keys(schemas));
-  const allSchemaNames = new Set(Object.keys(allSchemas));
 
-  // Find external dependencies (schemas in other domains)
-  const externalDeps = new Map(); // domain -> Set of schema names
-  for (const name of sortedNames) {
-    const refs = findSchemaReferences(schemas[name], allSchemaNames);
-    for (const refName of refs) {
-      if (!localSchemaNames.has(refName)) {
-        // This is an external reference
-        const refDomain = allDomains[refName];
-        if (refDomain && refDomain !== currentDomain) {
-          if (!externalDeps.has(refDomain)) {
-            externalDeps.set(refDomain, new Set());
-          }
-          externalDeps.get(refDomain).add(refName);
-        }
-      }
-    }
-  }
-
+  // Generate Zod code
   const lines = [
     '/**',
     ' * Modular Zod schemas generated from OpenAPI spec.',
@@ -447,27 +346,24 @@ function generateZodCode(schemas, allSchemas, currentDomain, allDomains) {
     ' */',
     '',
     "import { z } from 'zod';",
+    '',
   ];
-
-  // Add imports for external dependencies
-  for (const [domain, schemaNames] of [...externalDeps.entries()].sort()) {
-    const names = [...schemaNames].sort().join(', ');
-    lines.push(`import { ${names} } from './${domain}.js';`);
-  }
-
-  lines.push('');
 
   // Generate each schema as a named export
   for (const name of sortedNames) {
     const schema = schemas[name];
-    const zodCode = openAPITypeToZod(schema, name, allSchemas, '');
+    const zodCode = openAPITypeToZod(schema, name, schemas, '');
 
-    lines.push(`export const ${name} = ${zodCode};`);
+    // Format multi-line objects
+    const formattedCode = zodCode.replace(/\n/g, '\n');
+
+    lines.push(`export const ${name} = ${formattedCode};`);
     lines.push(`export type ${name}Type = z.infer<typeof ${name}>;`);
     lines.push('');
   }
 
   // Add schemas export for compatibility
+  // Use explicit type to avoid TypeScript inference overflow
   lines.push('// Schemas object for compatibility with existing usage');
   lines.push('// Using explicit type annotation to avoid TS7056 inference overflow');
   lines.push(`export const schemas: {`);
@@ -481,86 +377,49 @@ function generateZodCode(schemas, allSchemas, currentDomain, allDomains) {
   lines.push('};');
   lines.push('');
 
-  return lines.join('\n');
+  // Write output
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, lines.join('\n'));
+  console.log(`  Generated: ${outputPath}`);
+  console.log(`  Schemas: ${sortedNames.length}`);
 }
 
 /**
- * Generate modular Zod schemas from a directory of specs, grouped by x-domain.
- * Returns the list of domains that were generated.
- */
-async function generateModularZodByDomain(specDir, outputDir) {
-  const { readdirSync } = await import('fs');
-
-  console.log(`Generating modular Zod schemas by domain from: ${specDir}`);
-
-  // Collect schemas from all spec files
-  const allSchemas = {};
-  const allDomains = {};
-
-  const specFiles = readdirSync(specDir).filter(f => f.endsWith('.yaml'));
-
-  for (const specFile of specFiles) {
-    const specPath = join(specDir, specFile);
-    console.log(`  Reading: ${specFile}`);
-    const { schemas, domains } = await collectAllSchemas(specPath);
-    Object.assign(allSchemas, schemas);
-    Object.assign(allDomains, domains);
-  }
-
-  const schemaCount = Object.keys(allSchemas).length;
-  if (schemaCount === 0) {
-    console.log('  No schemas found');
-    return [];
-  }
-
-  console.log(`  Total schemas collected: ${schemaCount}`);
-
-  // Validate all schemas have x-domain
-  validateDomains(allDomains, allSchemas);
-
-  // Group by domain
-  const groups = groupSchemasByDomain(allSchemas, allDomains);
-  const domainNames = Object.keys(groups).sort();
-
-  console.log(`  Domains discovered: ${domainNames.join(', ')}`);
-
-  // Generate one file per domain
-  await mkdir(outputDir, { recursive: true });
-
-  for (const domain of domainNames) {
-    const domainSchemas = groups[domain];
-    const outputPath = join(outputDir, `${domain}.ts`);
-
-    // Generate code - pass allSchemas and allDomains so cross-domain imports are added
-    const code = generateZodCode(domainSchemas, allSchemas, domain, allDomains);
-
-    await writeFile(outputPath, code);
-    console.log(`  Generated: ${domain}.ts (${Object.keys(domainSchemas).length} schemas)`);
-  }
-
-  return domainNames;
-}
-
-// Export for use by build-state-package.js
-export { generateModularZodByDomain };
-
-/**
- * Main entry point - generates Zod schemas grouped by x-domain.
+ * Main entry point
  */
 async function main() {
   const args = process.argv.slice(2);
 
-  const specDir = args[0] || join(__dirname, '..', '..', 'schemas', 'openapi', 'resolved');
-  const outputDir = args[1] || join(__dirname, '..', 'generated');
-
-  const domains = await generateModularZodByDomain(specDir, outputDir);
-  console.log(`\nGenerated ${domains.length} domain files: ${domains.join(', ')}`);
-}
-
-// Only run main() when script is executed directly (not imported)
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(error => {
-    console.error('Error:', error.message);
+  if (args.length < 2) {
+    console.log('Usage: generate-modular-zod.js <input-spec.yaml> <output.schemas.ts>');
+    console.log('');
+    console.log('Or run without args to generate all specs:');
+    console.log('  generate-modular-zod.js --all');
     process.exit(1);
-  });
+  }
+
+  if (args[0] === '--all') {
+    // Generate for all specs
+    const specsDir = join(__dirname, '..', '..', 'schemas', 'openapi', 'resolved');
+    const outputDir = join(__dirname, '..', 'generated');
+    const specs = ['applications', 'households', 'incomes', 'persons'];
+
+    for (const spec of specs) {
+      const inputPath = join(specsDir, `${spec}.yaml`);
+      const outputPath = join(outputDir, `${spec}.schemas.ts`);
+      try {
+        await generateModularZod(inputPath, outputPath);
+      } catch (error) {
+        console.error(`Failed to generate ${spec}:`, error.message);
+      }
+    }
+  } else {
+    const [inputPath, outputPath] = args;
+    await generateModularZod(inputPath, outputPath);
+  }
 }
+
+main().catch(error => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});

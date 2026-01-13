@@ -110,48 +110,35 @@ async function main() {
   console.log('\n1. Resolving state overlay...');
   await exec('npm', ['run', 'overlay:resolve', '-w', '@safety-net/schemas', '--', `--state=${state}`]);
 
-  // Step 2: Generate modular Zod schemas grouped by x-domain
-  console.log('\n2. Generating modular Zod schemas by domain...');
+  // Step 2: Generate modular Zod schemas from overlay-resolved specs
+  console.log('\n2. Generating modular Zod schemas...');
   const specDir = join(repoRoot, 'packages', 'schemas', 'openapi', 'resolved');
-  const { generateModularZodByDomain } = await import('./generate-modular-zod.js');
+  const generatorScript = join(clientsRoot, 'scripts', 'generate-modular-zod.js');
+  const domains = ['applications', 'households', 'incomes', 'persons'];
 
-  const domains = await generateModularZodByDomain(specDir, srcDir);
-  console.log(`  Discovered domains: ${domains.join(', ')}`);
-
-  if (domains.length === 0) {
-    throw new Error('No domains discovered from specs');
+  for (const domain of domains) {
+    const specPath = join(specDir, `${domain}.yaml`);
+    const outputPath = join(srcDir, `${domain}.ts`);
+    if (existsSync(specPath)) {
+      await exec('node', [generatorScript, specPath, outputPath]);
+    } else {
+      console.warn(`  Warning: ${specPath} not found`);
+    }
   }
 
   // Copy search helpers utility
   cpSync(join(templatesDir, 'search-helpers.ts'), join(srcDir, 'search-helpers.ts'));
   console.log('  Copied search-helpers.ts');
 
-  // Step 3: Generate package.json with dynamic exports based on discovered domains
+  // Step 3: Generate package.json and README from templates
   console.log('\n3. Generating package metadata...');
-  const packageTemplate = JSON.parse(readFileSync(join(templatesDir, 'package.template.json'), 'utf8'));
-
-  // Replace template placeholders
-  packageTemplate.name = `@codeforamerica/safety-net-${state}`;
-  packageTemplate.version = version;
-  packageTemplate.description = `Safety Net API Zod/Zodios client for ${stateTitle}`;
-  packageTemplate.keywords = ['safety-net', state, 'zod', 'zodios', 'openapi', 'api-client'];
-
-  // Generate dynamic exports based on discovered domains
-  packageTemplate.exports = {
-    '.': {
-      import: './dist/index.js',
-      types: './dist/index.d.ts'
-    }
-  };
-  for (const domain of domains) {
-    packageTemplate.exports[`./${domain}`] = {
-      import: `./dist/${domain}.js`,
-      types: `./dist/${domain}.d.ts`
-    };
-  }
-
-  writeFileSync(join(outputDir, 'package.json'), JSON.stringify(packageTemplate, null, 2));
-  console.log(`  Generated package.json with ${domains.length} domain exports`);
+  const packageTemplate = readFileSync(join(templatesDir, 'package.template.json'), 'utf8');
+  const packageJson = packageTemplate
+    .replace(/\{\{STATE\}\}/g, state)
+    .replace(/\{\{VERSION\}\}/g, version)
+    .replace(/\{\{STATE_TITLE\}\}/g, stateTitle);
+  writeFileSync(join(outputDir, 'package.json'), packageJson);
+  console.log('  Generated package.json');
 
   const readmeTemplate = readFileSync(join(templatesDir, 'README.template.md'), 'utf8');
   const readme = readmeTemplate
@@ -160,24 +147,12 @@ async function main() {
   writeFileSync(join(outputDir, 'README.md'), readme);
   console.log('  Generated README.md');
 
-  // Step 4: Generate index.ts dynamically based on discovered domains
+  // Step 4: Generate index.ts from template
   console.log('\n4. Generating index.ts...');
-  const indexLines = [
-    `// Safety Net API Zod/Zodios client for ${stateTitle}`,
-    '// Auto-generated - do not edit directly',
-    '',
-    '// Search query helpers',
-    "export { q, search } from './search-helpers.js';",
-    '',
-    '// Zodios API clients with schemas (namespaced)',
-    '// Each module exports: schemas and individual schema types',
-  ];
-  for (const domain of domains) {
-    indexLines.push(`export * as ${domain} from './${domain}.js';`);
-  }
-  indexLines.push('');
-  writeFileSync(join(srcDir, 'index.ts'), indexLines.join('\n'));
-  console.log(`  Generated index.ts with ${domains.length} domain exports`);
+  const indexTemplate = readFileSync(join(templatesDir, 'index.template.ts'), 'utf8');
+  const indexTs = indexTemplate.replace(/\{\{STATE_TITLE\}\}/g, stateTitle);
+  writeFileSync(join(srcDir, 'index.ts'), indexTs);
+  console.log('  Generated index.ts');
 
   // Step 5: Copy tsconfig for compilation
   console.log('\n5. Setting up TypeScript compilation...');
