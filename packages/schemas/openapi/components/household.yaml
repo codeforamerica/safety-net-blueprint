@@ -1,3 +1,5 @@
+x-domain: households
+
 Household:
   type: object
   description: Represents a household unit with multiple members.

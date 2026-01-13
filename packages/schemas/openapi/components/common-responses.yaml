@@ -1,4 +1,7 @@
 # Common error responses used across multiple APIs
+
+x-domain: common
+
 Error:
   type: object
   additionalProperties: false

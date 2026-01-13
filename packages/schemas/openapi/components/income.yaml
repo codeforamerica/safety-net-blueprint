@@ -1,5 +1,7 @@
 # Components relating to income.
 
+x-domain: incomes
+
 VerificationSource:
   description: A source of verification, which may be an external API or document.
   properties:

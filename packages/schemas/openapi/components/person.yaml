@@ -25,6 +25,8 @@
 #     - Job                    Basic employment (employer and dates)
 #     - Sponsor                Immigration sponsor (extends PersonIdentity)
 
+x-domain: persons
+
 Person:
   allOf:
     - $ref: "#/PersonIdentity"

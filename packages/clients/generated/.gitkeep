@@ -1,9 +1,0 @@
-# This file ensures the /generated folder exists in git.
-# All generated artifacts are gitignored since they are state-specific.
-#
-# Contents (regenerate as needed):
-#   clients/zodios/*.ts    - TypeScript API clients (npm run clients:generate)
-#   postman-collection.json - Postman collection (npm run postman:generate)
-#   mock-data/*.db         - SQLite databases (npm run mock:reset)
-
-
