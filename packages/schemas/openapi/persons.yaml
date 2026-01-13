@@ -1,5 +1,4 @@
 openapi: 3.1.0
-x-domain: persons
 info:
   title: Person Service API
   version: 1.0.0

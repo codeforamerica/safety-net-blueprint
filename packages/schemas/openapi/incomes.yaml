@@ -1,5 +1,4 @@
 openapi: 3.1.0
-x-domain: incomes
 info:
   title: Income Service API
   version: 1.0.0

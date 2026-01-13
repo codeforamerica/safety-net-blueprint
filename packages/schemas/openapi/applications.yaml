@@ -1,5 +1,4 @@
 openapi: 3.1.0
-x-domain: applications
 info:
   title: Application Service API
   version: 1.0.0

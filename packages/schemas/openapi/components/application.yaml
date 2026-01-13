@@ -56,8 +56,6 @@
 #   Supporting Schemas:
 #     - (Various expense, income, health coverage, and resource details)
 
-x-domain: applications
-
 Application:
   type: object
   description: Application schema for public assistance programs. Supports applying for SNAP, Cash Programs, and/or Medical Assistance simultaneously.

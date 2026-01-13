@@ -1,7 +1,4 @@
 # Common shared components and schemas
-
-x-domain: common
-
 Address:
   type: object
   description: Residential or mailing address used to determine eligibility.
