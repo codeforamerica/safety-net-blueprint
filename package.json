@@ -29,6 +29,10 @@
     "test": "npm test --workspaces --if-present",
     "test:unit": "npm run test:unit -w @safety-net/mock-server",
     "test:integration": "npm run test:integration -w @safety-net/mock-server",
-    "test:all": "npm run test:all -w @safety-net/mock-server"
+    "test:all": "npm run test:all -w @safety-net/mock-server",
+    "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html"
+  },
+  "devDependencies": {
+    "@marp-team/marp-cli": "^4.2.3"
   }
 }
