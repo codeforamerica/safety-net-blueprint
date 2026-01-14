@@ -15,17 +15,49 @@
       "import": "./dist/persons/index.js",
       "types": "./dist/persons/index.d.ts"
     },
+    "./persons/client": {
+      "import": "./dist/persons/client/index.js",
+      "types": "./dist/persons/client/index.d.ts"
+    },
+    "./persons/*": {
+      "import": "./dist/persons/*.js",
+      "types": "./dist/persons/*.d.ts"
+    },
     "./applications": {
       "import": "./dist/applications/index.js",
       "types": "./dist/applications/index.d.ts"
+    },
+    "./applications/client": {
+      "import": "./dist/applications/client/index.js",
+      "types": "./dist/applications/client/index.d.ts"
+    },
+    "./applications/*": {
+      "import": "./dist/applications/*.js",
+      "types": "./dist/applications/*.d.ts"
     },
     "./households": {
       "import": "./dist/households/index.js",
       "types": "./dist/households/index.d.ts"
     },
+    "./households/client": {
+      "import": "./dist/households/client/index.js",
+      "types": "./dist/households/client/index.d.ts"
+    },
+    "./households/*": {
+      "import": "./dist/households/*.js",
+      "types": "./dist/households/*.d.ts"
+    },
     "./incomes": {
       "import": "./dist/incomes/index.js",
       "types": "./dist/incomes/index.d.ts"
+    },
+    "./incomes/client": {
+      "import": "./dist/incomes/client/index.js",
+      "types": "./dist/incomes/client/index.d.ts"
+    },
+    "./incomes/*": {
+      "import": "./dist/incomes/*.js",
+      "types": "./dist/incomes/*.d.ts"
     }
   },
   "peerDependencies": {
