@@ -25,9 +25,7 @@ safety-net-openapi/
 │   │   │   ├── patterns/           # API design patterns
 │   │   │   │   └── api-patterns.yaml
 │   │   │   ├── overlays/           # State-specific variations
-│   │   │   │   ├── california/
-│   │   │   │   │   └── modifications.yaml
-│   │   │   │   └── colorado/
+│   │   │   │   └── <state>/
 │   │   │   │       └── modifications.yaml
 │   │   │   └── resolved/           # Generated state specs (gitignored)
 │   │   ├── src/
@@ -98,7 +96,7 @@ npm install -w @safety-net/schemas -w @safety-net/mock-server
 | API specs | kebab-case | `case-workers.yaml` |
 | Component schemas | kebab-case | `case-worker.yaml` |
 | Example files | kebab-case | `case-workers.yaml` |
-| Overlay files | `{state}/modifications.yaml` | `california/modifications.yaml` |
+| Overlay files | `{state}/modifications.yaml` | `<state>/modifications.yaml` |
 | Scripts | kebab-case | `generate-clients.js` |
 | Tests | kebab-case + `.test` | `overlay-resolver.test.js` |
 

@@ -13,19 +13,19 @@ State overlays allow you to customize API specifications for different states wi
 
 ```bash
 # Set via environment variable
-export STATE=california
+export STATE=<your-state>
 
 # Or prefix commands
-STATE=california npm start
-STATE=colorado npm run validate:state
+STATE=<your-state> npm start
+STATE=<your-state> npm run validate:state
 ```
 
 ## Available States
 
 ```bash
-# List available states
+# List available states (run without STATE set)
 npm run overlay:resolve
-# Output: Available states: california, colorado
+# Output: Available states: <lists all configured states>
 ```
 
 ## Overlay File Structure
@@ -33,12 +33,12 @@ npm run overlay:resolve
 Overlays use the [OpenAPI Overlay Specification 1.0.0](https://github.com/OAI/Overlay-Specification):
 
 ```yaml
-# openapi/overlays/california/modifications.yaml
+# openapi/overlays/<your-state>/modifications.yaml
 overlay: 1.0.0
 info:
-  title: California State Overlay
+  title: <Your State> Overlay
   version: 1.0.0
-  description: California-specific modifications
+  description: <Your state>-specific modifications
 
 actions:
   # Replace enum values
@@ -137,8 +137,8 @@ Targets use JSONPath-like syntax:
 
 ```bash
 # Create state directory and copy an existing overlay as a template
-mkdir openapi/overlays/newstate
-cp openapi/overlays/california/modifications.yaml openapi/overlays/newstate/modifications.yaml
+mkdir openapi/overlays/<new-state>
+cp openapi/overlays/<existing-state>/modifications.yaml openapi/overlays/<new-state>/modifications.yaml
 ```
 
 ### 2. Update the Metadata
@@ -169,7 +169,7 @@ actions:
 ### 4. Validate
 
 ```bash
-STATE=newstate npm run validate:state
+STATE=<new-state> npm run validate:state
 ```
 
 The resolver will warn you about any invalid targets:
@@ -222,7 +222,7 @@ Each action should do one thing. Don't combine unrelated changes:
 Always validate after modifying overlays:
 
 ```bash
-STATE=yourstate npm run validate:state
+STATE=<your-state> npm run validate:state
 ```
 
 ### Document State Differences

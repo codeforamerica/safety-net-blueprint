@@ -36,11 +36,7 @@ export GITHUB_TOKEN=ghp_your_token_here
 ### 2. Install the Package
 
 ```bash
-# For Colorado
-npm install @codeforamerica/safety-net-colorado
-
-# For California
-npm install @codeforamerica/safety-net-california
+npm install @codeforamerica/safety-net-<your-state>
 ```
 
 ### 3. Install Peer Dependencies
@@ -61,10 +57,10 @@ import {
   createPerson,
   type Person,
   type PersonList
-} from '@codeforamerica/safety-net-colorado/persons';
+} from '@codeforamerica/safety-net-<your-state>/persons';
 
 // Or namespaced imports
-import { persons, applications } from '@codeforamerica/safety-net-colorado';
+import { persons, applications } from '@codeforamerica/safety-net-<your-state>';
 ```
 
 ### Configuring the Client
@@ -73,8 +69,8 @@ Create a client configuration file:
 
 ```typescript
 // src/api/client.ts
-import { persons, applications } from '@codeforamerica/safety-net-colorado';
-import { createClient, createConfig } from '@codeforamerica/safety-net-colorado/persons/client';
+import { persons, applications } from '@codeforamerica/safety-net-<your-state>';
+import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1080';
 
@@ -94,7 +90,7 @@ export const createPerson = (options: Parameters<typeof persons.createPerson>[0]
   persons.createPerson({ ...options, client });
 
 // Re-export types for convenience
-export type { Person, PersonList } from '@codeforamerica/safety-net-colorado/persons';
+export type { Person, PersonList } from '@codeforamerica/safety-net-<your-state>/persons';
 ```
 
 ### Using in Components
@@ -136,7 +132,7 @@ export function PersonList() {
 For custom validation scenarios, import Zod schemas directly:
 
 ```typescript
-import { zPerson } from '@codeforamerica/safety-net-colorado/persons/zod.gen';
+import { zPerson } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
 
 // Validate API response
 const parseResult = zPerson.safeParse(apiResponse);
@@ -160,7 +156,7 @@ cd safety-net-openapi
 npm install
 
 # Start the mock server
-STATE=colorado npm start
+STATE=<your-state> npm start
 ```
 
 The mock server runs at http://localhost:1080 with realistic test data.
@@ -177,7 +173,7 @@ REACT_APP_API_URL=http://localhost:1080 npm start
 Simply update your package version:
 
 ```bash
-npm update @codeforamerica/safety-net-colorado
+npm update @codeforamerica/safety-net-<your-state>
 ```
 
 ## Exploring the API
@@ -188,7 +184,7 @@ Browse the API documentation interactively:
 
 ```bash
 cd safety-net-openapi
-STATE=colorado npm start
+STATE=<your-state> npm start
 ```
 
 Visit http://localhost:3000 to see all endpoints and schemas.
@@ -227,7 +223,7 @@ Each module also exports:
 The package also exports utilities for building search queries:
 
 ```typescript
-import { q, search } from '@codeforamerica/safety-net-colorado';
+import { q, search } from '@codeforamerica/safety-net-<your-state>';
 
 const query = q(
   search.contains('name.firstName', 'john'),

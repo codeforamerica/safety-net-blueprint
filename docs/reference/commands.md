@@ -66,9 +66,9 @@ npm run validate:patterns
 Resolves the overlay for the current STATE and validates the resolved specs.
 
 ```bash
-STATE=california npm run validate:state
+STATE=<your-state> npm run validate:state
 # or
-npm run validate:state -- --state=colorado
+npm run validate:state -- --state=<your-state>
 ```
 
 ### `npm run validate:all-states`
@@ -88,12 +88,12 @@ Resolves the overlay for the current STATE, writing to `openapi/resolved/`.
 Without STATE set, lists available states:
 ```bash
 npm run overlay:resolve
-# Output: Available states: california, colorado
+# Output: Available states: <lists all configured states>
 ```
 
 With STATE set:
 ```bash
-STATE=california npm run overlay:resolve
+STATE=<your-state> npm run overlay:resolve
 ```
 
 ## Generation Commands
@@ -116,7 +116,7 @@ Creates:
 Build a state-specific npm package with TypeScript SDK and Zod schemas:
 
 ```bash
-node packages/clients/scripts/build-state-package.js --state=colorado --version=1.0.0
+node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
 ```
 
 This generates a complete npm package in `packages/clients/dist-packages/{state}/` containing:
@@ -138,7 +138,7 @@ The package is built using `@hey-api/openapi-ts` with the following plugins:
 Starts both the mock server and Swagger UI.
 
 ```bash
-STATE=california npm start
+STATE=<your-state> npm start
 ```
 
 - Mock server: http://localhost:1080
@@ -149,7 +149,7 @@ STATE=california npm start
 Starts only the mock server.
 
 ```bash
-STATE=california npm run mock:start
+STATE=<your-state> npm run mock:start
 ```
 
 Default: http://localhost:1080
@@ -244,7 +244,7 @@ npm run validate && npm run validate:all-states
 npm run mock:reset && npm start
 
 # Build state package (resolve overlay + generate + compile)
-STATE=colorado npm run overlay:resolve && node packages/clients/scripts/build-state-package.js --state=colorado --version=1.0.0
+STATE=<your-state> npm run overlay:resolve && node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
 
 # Full test suite
 npm run validate && npm test && npm run test:integration

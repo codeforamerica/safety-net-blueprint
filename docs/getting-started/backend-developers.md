@@ -27,7 +27,7 @@ cd safety-net-openapi
 npm install
 
 # Set your state (or add to your shell profile)
-export STATE=california
+export STATE=<your-state>
 
 # Verify installation
 npm run validate:state
@@ -42,8 +42,7 @@ openapi/
 ├── examples/               # Example data for seeding the mock server
 ├── patterns/               # API design patterns and conventions
 └── overlays/               # State-specific variations
-    ├── california.overlay.yaml
-    └── colorado.overlay.yaml
+    └── <state>/modifications.yaml
 ```
 
 ## Your First Workflow
@@ -68,7 +67,7 @@ Before making changes, ensure everything validates:
 npm run validate
 
 # Validate your state's resolved specs
-STATE=california npm run validate:state
+STATE=<your-state> npm run validate:state
 
 # Validate all states
 npm run validate:all-states
@@ -95,10 +94,10 @@ If your state needs different enum values, additional fields, or terminology cha
 
 ```bash
 # Edit your state's overlay
-code openapi/overlays/california.overlay.yaml
+code openapi/overlays/<your-state>/modifications.yaml
 
 # Validate the resolved spec
-STATE=california npm run validate:state
+STATE=<your-state> npm run validate:state
 ```
 
 See [State Overlays Guide](../guides/state-overlays.md) for overlay syntax.
@@ -125,7 +124,7 @@ See [Creating APIs Guide](../guides/creating-apis.md) for customization.
 
 # 2. Validate
 npm run validate
-STATE=california npm run validate:state
+STATE=<your-state> npm run validate:state
 
 # 3. Test with mock server
 npm run mock:reset

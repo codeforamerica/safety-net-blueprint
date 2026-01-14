@@ -143,10 +143,10 @@ Consumers can import types without pulling in Zod:
 
 ```typescript
 // Type-only import — no runtime Zod dependency
-import type { Person } from '@codeforamerica/safety-net-colorado/persons';
+import type { Person } from '@codeforamerica/safety-net-<your-state>/persons';
 
 // Runtime import — includes Zod schemas
-import { zPerson } from '@codeforamerica/safety-net-colorado/persons/zod.gen';
+import { zPerson } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
 ```
 
 ---
@@ -264,10 +264,10 @@ The @hey-api/openapi-ts project:
 
 ```typescript
 // Import SDK functions (includes validation)
-import { listPersons, getPerson, createPerson } from '@codeforamerica/safety-net-colorado/persons';
+import { listPersons, getPerson, createPerson } from '@codeforamerica/safety-net-<your-state>/persons';
 
 // Import client configuration
-import { createClient, createConfig } from '@codeforamerica/safety-net-colorado/persons/client';
+import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
 
 // Configure client with custom base URL
 const client = createClient(createConfig({ baseURL: 'http://localhost:1080' }));

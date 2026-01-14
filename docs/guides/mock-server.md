@@ -6,7 +6,7 @@ Auto-generated mock APIs from OpenAPI specs with SQLite persistence.
 
 ```bash
 # Set your state first
-export STATE=california
+export STATE=<your-state>
 
 npm run mock:start    # Start server (port 1080)
 npm run mock:reset    # Reset database to example data

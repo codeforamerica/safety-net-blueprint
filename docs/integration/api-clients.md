@@ -16,11 +16,7 @@ Create `.npmrc` in your project root:
 ### 2. Install Your State Package
 
 ```bash
-# Colorado
-npm install @codeforamerica/safety-net-colorado
-
-# California
-npm install @codeforamerica/safety-net-california
+npm install @codeforamerica/safety-net-<your-state>
 
 # Peer dependencies
 npm install zod axios
@@ -31,7 +27,7 @@ npm install zod axios
 Each package exports domain modules:
 
 ```typescript
-import { persons, applications, households, incomes } from '@codeforamerica/safety-net-colorado';
+import { persons, applications, households, incomes } from '@codeforamerica/safety-net-<your-state>';
 ```
 
 Each domain module provides:
@@ -53,19 +49,19 @@ The root export also provides search utilities:
 
 ```typescript
 // Root - namespaced access to all domains + search helpers
-import { persons, applications, q, search } from '@codeforamerica/safety-net-colorado';
+import { persons, applications, q, search } from '@codeforamerica/safety-net-<your-state>';
 
 // Domain-specific - direct imports
-import { getPerson, createPerson, type Person } from '@codeforamerica/safety-net-colorado/persons';
+import { getPerson, createPerson, type Person } from '@codeforamerica/safety-net-<your-state>/persons';
 
 // Client configuration
-import { createClient, createConfig } from '@codeforamerica/safety-net-colorado/persons/client';
+import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
 
 // Zod schemas for custom validation
-import { zPerson, zPersonList } from '@codeforamerica/safety-net-colorado/persons/zod.gen';
+import { zPerson, zPersonList } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
 
 // Search helpers (alternative import path)
-import { q, search } from '@codeforamerica/safety-net-colorado/search';
+import { q, search } from '@codeforamerica/safety-net-<your-state>/search';
 ```
 
 ## Basic Usage
@@ -74,8 +70,8 @@ import { q, search } from '@codeforamerica/safety-net-colorado/search';
 
 ```typescript
 // src/api/client.ts
-import { persons, applications, households } from '@codeforamerica/safety-net-colorado';
-import { createClient, createConfig } from '@codeforamerica/safety-net-colorado/persons/client';
+import { persons, applications, households } from '@codeforamerica/safety-net-<your-state>';
+import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1080';
 
@@ -101,7 +97,7 @@ export const deletePerson = (options: Parameters<typeof persons.deletePerson>[0]
   persons.deletePerson({ ...options, client });
 
 // Re-export types
-export type { Person, PersonList, PersonCreate } from '@codeforamerica/safety-net-colorado/persons';
+export type { Person, PersonList, PersonCreate } from '@codeforamerica/safety-net-<your-state>/persons';
 ```
 
 ### Using SDK Functions
@@ -167,7 +163,7 @@ if ('data' in response && response.data) {
 ### Type-Only Imports (No Runtime Cost)
 
 ```typescript
-import type { Person, PersonCreate, PersonList } from '@codeforamerica/safety-net-colorado/persons';
+import type { Person, PersonCreate, PersonList } from '@codeforamerica/safety-net-<your-state>/persons';
 
 function displayPerson(person: Person) {
   console.log(`${person.name?.firstName} ${person.name?.lastName}`);
@@ -177,7 +173,7 @@ function displayPerson(person: Person) {
 ### Zod Schemas for Custom Validation
 
 ```typescript
-import { zPerson, zPersonCreate } from '@codeforamerica/safety-net-colorado/persons/zod.gen';
+import { zPerson, zPersonCreate } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
 
 // Validate data manually
 const result = zPerson.safeParse(unknownData);
@@ -219,9 +215,9 @@ All list endpoints support a `q` parameter for filtering using `field:value` syn
 The package exports `q()` and `search` utilities for type-safe query building:
 
 ```typescript
-import { q, search } from '@codeforamerica/safety-net-colorado';
+import { q, search } from '@codeforamerica/safety-net-<your-state>';
 // Or from dedicated path
-import { q, search } from '@codeforamerica/safety-net-colorado/search';
+import { q, search } from '@codeforamerica/safety-net-<your-state>/search';
 ```
 
 **Available search methods:**
@@ -244,7 +240,7 @@ import { q, search } from '@codeforamerica/safety-net-colorado/search';
 **Combining conditions with `q()`:**
 
 ```typescript
-import { q, search, persons } from '@codeforamerica/safety-net-colorado';
+import { q, search, persons } from '@codeforamerica/safety-net-<your-state>';
 
 // Build a type-safe query
 const query = q(
@@ -277,7 +273,7 @@ const response = await listPersons({
 ### Real-World Examples
 
 ```typescript
-import { q, search } from '@codeforamerica/safety-net-colorado';
+import { q, search } from '@codeforamerica/safety-net-<your-state>';
 
 // Find active persons in a specific county with income above threshold
 const eligiblePersons = q(
@@ -421,21 +417,21 @@ export const createPerson = createAsyncThunk(
 
 ## State-Specific Fields
 
-Each state package includes state-specific schema fields. For example, the Colorado package includes:
+Each state package includes state-specific schema fields defined by that state's overlay. These may include:
 
-**Person schema:**
-- `countyName` - Enum of Colorado counties
-- `countyCode` - Colorado FIPS code pattern
-- `peakAccountId` - Colorado PEAK account identifier
-- `coloradoWorksEligible`, `snapEligible`, `healthFirstColoradoEligible`, `andcsEligible`
-- `incomeSources` includes `colorado_works_cash`, `old_age_pension`, `andcs`
+- State-specific county enums and codes
+- State benefit program identifiers
+- Eligibility flags for state programs
+- State-specific income source types
+
+Check your state's overlay file (`packages/schemas/openapi/overlays/<your-state>/modifications.yaml`) to see what customizations are applied.
 
 ## Updating the Package
 
 When a new version is released:
 
 ```bash
-npm update @codeforamerica/safety-net-colorado
+npm update @codeforamerica/safety-net-<your-state>
 ```
 
 Check the changelog for breaking changes to schema fields or API endpoints.

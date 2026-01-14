@@ -54,7 +54,7 @@ curl "http://localhost:1080/persons?q=status:active%20income:>=1000"
 When using the generated npm packages, you can build queries programmatically:
 
 ```typescript
-import { q, search } from '@codeforamerica/safety-net-colorado';
+import { q, search } from '@codeforamerica/safety-net-<your-state>';
 
 const query = q(
   search.eq('status', 'active'),
