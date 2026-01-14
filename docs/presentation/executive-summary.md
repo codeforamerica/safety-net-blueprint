@@ -11,7 +11,7 @@ The Safety Net OpenAPI Toolkit provides **pre-built, shared API definitions for 
 
 ### Key Capabilities
 
-- **Shared API Definitions** — Ready-to-use specifications for common benefits data, built on industry standards (OpenAPI) that any vendor can implement
+- **Shared API Definitions** — Ready-to-use specifications for common benefits data, built on industry standards that any vendor can implement
 - **Simulated APIs** — Fully functional test environments generated automatically, enabling frontend development without waiting for backend systems
 - **Ready-to-Use Code Libraries** — Pre-built integration code that catches errors early and speeds up development
 - **State Customizations** — Adapt the shared definitions for each state's terminology and requirements without duplicating work
@@ -22,9 +22,8 @@ The Safety Net OpenAPI Toolkit provides **pre-built, shared API definitions for 
 | For | Value |
 |-----|-------|
 | **Development Teams** | Start building immediately; consistent patterns reduce bugs and ramp-up time |
-| **Program Managers** | Faster delivery; clearer communication between technical and non-technical stakeholders |
-| **States & Partners** | Customizable for local requirements while benefiting from shared improvements |
-| **Organizations** | No vendor lock-in; shared API definitions can be implemented by any technology provider |
+| **Program Managers** | Faster delivery; reduced coordination overhead between teams |
+| **States & Agencies** | Customizable for local requirements; no vendor lock-in since any provider can implement the shared definitions |
 
 ### How It Works
 
@@ -36,7 +35,7 @@ The Safety Net OpenAPI Toolkit provides **pre-built, shared API definitions for 
 
 ### Get Started
 
-Visit the [Toolkit Overview presentation](./safety-net-openapi-overview.html) for a detailed walkthrough, or explore the [repository on GitHub](https://github.com/codeforamerica/safety-net-openapi).
+Visit the [Toolkit Overview presentation](https://codeforamerica.github.io/safety-net-openapi/presentation/safety-net-openapi-overview.html) for a detailed walkthrough, or explore the [repository on GitHub](https://github.com/codeforamerica/safety-net-openapi).
 
 ---
 
