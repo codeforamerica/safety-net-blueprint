@@ -2,7 +2,7 @@
 
 This toolkit helps teams build consistent, well-documented APIs for safety net programs—enabling faster integration between benefits systems and reducing the technical barriers to improving service delivery.
 
-**New here?** Start with the [Executive Summary](./docs/presentation/executive-summary.md) for a one-page overview, or read the [Toolkit Overview](./docs/presentation/safety-net-openapi-overview.md) for a detailed walkthrough.
+**New here?** Start with the [Executive Summary](./docs/presentation/executive-summary.md) for a one-page overview, or view the [Toolkit Overview](https://codeforamerica.github.io/safety-net-openapi/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough.
 
 ## About This Repository
 
