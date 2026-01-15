@@ -1,0 +1,80 @@
+{
+  "name": "@codeforamerica/safety-net-{{STATE}}",
+  "version": "{{VERSION}}",
+  "description": "Safety Net API client for {{STATE_TITLE}} with Zod validation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "src"],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./search": {
+      "import": "./dist/search-helpers.js",
+      "types": "./dist/search-helpers.d.ts"
+    },
+    "./persons": {
+      "import": "./dist/persons/index.js",
+      "types": "./dist/persons/index.d.ts"
+    },
+    "./persons/client": {
+      "import": "./dist/persons/client/index.js",
+      "types": "./dist/persons/client/index.d.ts"
+    },
+    "./persons/*": {
+      "import": "./dist/persons/*.js",
+      "types": "./dist/persons/*.d.ts"
+    },
+    "./applications": {
+      "import": "./dist/applications/index.js",
+      "types": "./dist/applications/index.d.ts"
+    },
+    "./applications/client": {
+      "import": "./dist/applications/client/index.js",
+      "types": "./dist/applications/client/index.d.ts"
+    },
+    "./applications/*": {
+      "import": "./dist/applications/*.js",
+      "types": "./dist/applications/*.d.ts"
+    },
+    "./households": {
+      "import": "./dist/households/index.js",
+      "types": "./dist/households/index.d.ts"
+    },
+    "./households/client": {
+      "import": "./dist/households/client/index.js",
+      "types": "./dist/households/client/index.d.ts"
+    },
+    "./households/*": {
+      "import": "./dist/households/*.js",
+      "types": "./dist/households/*.d.ts"
+    },
+    "./incomes": {
+      "import": "./dist/incomes/index.js",
+      "types": "./dist/incomes/index.d.ts"
+    },
+    "./incomes/client": {
+      "import": "./dist/incomes/client/index.js",
+      "types": "./dist/incomes/client/index.d.ts"
+    },
+    "./incomes/*": {
+      "import": "./dist/incomes/*.js",
+      "types": "./dist/incomes/*.d.ts"
+    }
+  },
+  "peerDependencies": {
+    "zod": "^4.0.0",
+    "axios": "^1.6.0"
+  },
+  "keywords": ["safety-net", "{{STATE}}", "zod", "openapi", "api-client"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeforamerica/safety-net-openapi.git"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

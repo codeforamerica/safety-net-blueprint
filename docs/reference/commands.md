@@ -10,9 +10,6 @@ All available npm scripts in the Safety Net OpenAPI toolkit.
 | `npm run validate` | Validate base specs |
 | `npm run validate:state` | Validate specs for current STATE |
 | `npm run validate:all-states` | Validate all states |
-| `npm run clients:generate` | Generate Zodios TypeScript clients |
-| `npm run clients:validate` | Type-check generated clients |
-| `npm run postman:generate` | Generate Postman collection |
 | `npm run mock:start` | Start mock server only |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
@@ -69,9 +66,9 @@ npm run validate:patterns
 Resolves the overlay for the current STATE and validates the resolved specs.
 
 ```bash
-STATE=california npm run validate:state
+STATE=<your-state> npm run validate:state
 # or
-npm run validate:state -- --state=colorado
+npm run validate:state -- --state=<your-state>
 ```
 
 ### `npm run validate:all-states`
@@ -91,12 +88,12 @@ Resolves the overlay for the current STATE, writing to `openapi/resolved/`.
 Without STATE set, lists available states:
 ```bash
 npm run overlay:resolve
-# Output: Available states: california, colorado
+# Output: Available states: <lists all configured states>
 ```
 
 With STATE set:
 ```bash
-STATE=california npm run overlay:resolve
+STATE=<your-state> npm run overlay:resolve
 ```
 
 ## Generation Commands
@@ -114,35 +111,25 @@ Creates:
 - `openapi/components/benefit.yaml`
 - `openapi/examples/benefits.yaml`
 
-### `npm run clients:generate`
+### Building State Packages
 
-Generates TypeScript/Zodios clients from specs.
-
-```bash
-npm run clients:generate
-```
-
-Output: `packages/clients/generated/clients/zodios/*.ts`
-
-### `npm run clients:validate`
-
-Type-checks the generated Zodios clients using TypeScript.
+Build a state-specific npm package with TypeScript SDK and Zod schemas:
 
 ```bash
-npm run clients:validate
+node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
 ```
 
-Runs `tsc --noEmit` to verify all generated clients compile without errors.
+This generates a complete npm package in `packages/clients/dist-packages/{state}/` containing:
+- Typed SDK functions (`getPerson`, `createPerson`, etc.)
+- TypeScript interfaces
+- Zod schemas for runtime validation
+- Axios-based HTTP client
 
-### `npm run postman:generate`
-
-Generates a Postman collection from specs.
-
-```bash
-npm run postman:generate
-```
-
-Output: `packages/clients/generated/postman-collection.json`
+The package is built using `@hey-api/openapi-ts` with the following plugins:
+- `@hey-api/typescript` - TypeScript types
+- `@hey-api/sdk` - SDK functions with validation
+- `@hey-api/zod` - Zod schemas
+- `@hey-api/client-axios` - Axios HTTP client
 
 ## Server Commands
 
@@ -151,7 +138,7 @@ Output: `packages/clients/generated/postman-collection.json`
 Starts both the mock server and Swagger UI.
 
 ```bash
-STATE=california npm start
+STATE=<your-state> npm start
 ```
 
 - Mock server: http://localhost:1080
@@ -162,7 +149,7 @@ STATE=california npm start
 Starts only the mock server.
 
 ```bash
-STATE=california npm run mock:start
+STATE=<your-state> npm run mock:start
 ```
 
 Default: http://localhost:1080
@@ -256,8 +243,8 @@ npm run validate && npm run validate:all-states
 # Reset and start
 npm run mock:reset && npm start
 
-# Generate and validate all artifacts
-npm run clients:generate && npm run clients:validate && npm run postman:generate
+# Build state package (resolve overlay + generate + compile)
+STATE=<your-state> npm run overlay:resolve && node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
 
 # Full test suite
 npm run validate && npm test && npm run test:integration

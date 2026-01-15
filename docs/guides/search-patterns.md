@@ -48,3 +48,20 @@ curl "http://localhost:1080/persons?q=status:active%20income:>=1000"
 | `-field:*` | Field does not exist | `-email:*` | - |
 | `field.nested:value` | Nested field | `address.state:CA` | Yes |
 | `term1 term2` | Multiple conditions (AND) | `status:active income:>=1000` | - |
+
+## TypeScript Search Helpers
+
+When using the generated npm packages, you can build queries programmatically:
+
+```typescript
+import { q, search } from '@codeforamerica/safety-net-<your-state>';
+
+const query = q(
+  search.eq('status', 'active'),
+  search.gte('monthlyIncome', 1000),
+  search.contains('name.lastName', 'smith')
+);
+// Result: "status:active monthlyIncome:>=1000 name.lastName:*smith*"
+```
+
+See [API Clients - Search Helpers](../integration/api-clients.md#search-helpers) for the complete reference.

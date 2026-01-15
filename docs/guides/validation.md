@@ -14,9 +14,9 @@ npm run validate:patterns     # API design patterns only
 When working with state overlays, use these commands to validate resolved specs:
 
 ```bash
-STATE=california npm run validate:state   # Resolve + validate one state
-npm run validate:state -- --state=colorado
-npm run validate:all-states               # Resolve + validate all states
+STATE=<your-state> npm run validate:state   # Resolve + validate one state
+npm run validate:state -- --state=<your-state>
+npm run validate:all-states                 # Resolve + validate all states
 ```
 
 This runs the overlay resolution first (reporting any invalid targets), then validates the resolved specs.

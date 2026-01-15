@@ -2,13 +2,18 @@ node_modules/
 package-lock.json
 .DS_Store
 *.log
+.idea
 
 # Generated artifacts (state-specific, regenerate as needed)
-generated/
-packages/schemas/openapi/resolved/
+packages/generated
+packages/clients/generated
+packages/clients/dist-packages
+packages/schemas/openapi/resolved
 
 # Cursor AI working files
 cursor/
 
 # Claude Code local settings
 .claude/
+CLAUDE.md
+Agents.md

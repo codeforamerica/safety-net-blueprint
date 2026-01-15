@@ -114,12 +114,12 @@ Error: status must be equal to one of the allowed values
 
 ```
 Error: Unknown state 'newstate'
-Available states: california, colorado
+Available states: <lists configured states>
 ```
 
 **Cause:** No overlay file exists for the specified state.
 
-**Solution:** Create `openapi/overlays/newstate.overlay.yaml`.
+**Solution:** Create `openapi/overlays/<new-state>/modifications.yaml`.
 
 ## Mock Server Issues
 
@@ -195,7 +195,7 @@ npm install
 **Solution:** Regenerate clients.
 
 ```bash
-STATE=california npm run clients:generate
+STATE=<your-state> npm run clients:generate
 ```
 
 ### Zod Validation Error at Runtime
@@ -219,7 +219,7 @@ Could not find collection file
 **Solution:** Generate the collection first.
 
 ```bash
-STATE=california npm run postman:generate
+STATE=<your-state> npm run postman:generate
 ```
 
 ### Tests Fail with 404
@@ -264,7 +264,7 @@ Error: connect ECONNREFUSED 127.0.0.1:1080
 
 ```yaml
 env:
-  STATE: california
+  STATE: <your-state>
 ```
 
 ### Permission Denied

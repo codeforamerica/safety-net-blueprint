@@ -1,11 +1,11 @@
 # Getting Started: Frontend Developers
 
-This guide is for developers building frontend applications that consume Safety Net APIs. You'll use generated TypeScript clients and the mock server for local development.
+This guide is for developers building frontend applications that consume Safety Net APIs. You'll use pre-built npm packages with TypeScript SDK functions and Zod schemas.
 
 ## What You'll Do
 
-- Generate type-safe API clients for your state
-- Integrate clients into your frontend application
+- Install a state-specific npm package with typed SDK and Zod schemas
+- Integrate into your frontend application
 - Develop against the mock server while the backend is in progress
 - Set up CI/CD to test your frontend
 
@@ -14,108 +14,149 @@ This guide is for developers building frontend applications that consume Safety 
 - Node.js >= 18.0.0
 - A frontend project (React, Vue, etc.)
 - Familiarity with TypeScript
+- GitHub account (for package access)
 
 ## Initial Setup
 
-```bash
-# Clone the repository
-git clone https://github.com/codeforamerica/safety-net-openapi.git
-cd safety-net-openapi
+### 1. Configure npm for GitHub Packages
 
-# Install dependencies
-npm install
+The packages are published to GitHub Packages. Create or update `.npmrc` in your project root:
 
-# Set your state
-export STATE=california
+```
+@codeforamerica:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
-## Your First Workflow
-
-### 1. Generate API Clients
-
-Generate TypeScript clients for your state:
+Set your GitHub token (needs `read:packages` scope):
 
 ```bash
-STATE=california npm run clients:generate
+export GITHUB_TOKEN=ghp_your_token_here
 ```
 
-This creates type-safe clients in `generated/clients/zodios/`:
-- `persons.ts`
-- `households.ts`
-- `applications.ts`
-- etc.
-
-### 2. Copy Clients to Your Project
+### 2. Install the Package
 
 ```bash
-# Copy to your frontend project
-cp -r generated/clients/zodios/* ../your-frontend/src/api/
+npm install @codeforamerica/safety-net-<your-state>
 ```
 
-### 3. Install Dependencies in Your Frontend
-
-The generated clients require:
+### 3. Install Peer Dependencies
 
 ```bash
-cd ../your-frontend
-npm install @zodios/core zod axios
+npm install zod axios
 ```
 
-### 4. Configure and Use
+## Using the Package
 
-Create a configuration file in your frontend:
+### Importing SDK Functions and Types
 
 ```typescript
-// src/api/config.ts
-import { Zodios } from '@zodios/core';
-import { personsApi } from './persons';
-import { householdsApi } from './households';
+// Direct imports from domain modules
+import {
+  getPerson,
+  listPersons,
+  createPerson,
+  type Person,
+  type PersonList
+} from '@codeforamerica/safety-net-<your-state>/persons';
+
+// Or namespaced imports
+import { persons, applications } from '@codeforamerica/safety-net-<your-state>';
+```
+
+### Configuring the Client
+
+Create a client configuration file:
+
+```typescript
+// src/api/client.ts
+import { persons, applications } from '@codeforamerica/safety-net-<your-state>';
+import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1080';
 
-export const personsClient = new Zodios(BASE_URL, personsApi);
-export const householdsClient = new Zodios(BASE_URL, householdsApi);
+// Create a configured client
+export const client = createClient(createConfig({
+  baseURL: BASE_URL,
+}));
 
-// Add authentication
-export function setAuthToken(token: string) {
-  const authHeader = { Authorization: `Bearer ${token}` };
-  personsClient.axios.defaults.headers.common = authHeader;
-  householdsClient.axios.defaults.headers.common = authHeader;
-}
+// Bind SDK functions to your client
+export const listPersons = (options?: Parameters<typeof persons.listPersons>[0]) =>
+  persons.listPersons({ ...options, client });
+
+export const getPerson = (options: Parameters<typeof persons.getPerson>[0]) =>
+  persons.getPerson({ ...options, client });
+
+export const createPerson = (options: Parameters<typeof persons.createPerson>[0]) =>
+  persons.createPerson({ ...options, client });
+
+// Re-export types for convenience
+export type { Person, PersonList } from '@codeforamerica/safety-net-<your-state>/persons';
 ```
 
-Use in your components:
+### Using in Components
 
 ```typescript
 // src/components/PersonList.tsx
-import { personsClient } from '../api/config';
+import { useEffect, useState } from 'react';
+import { listPersons, type Person } from '../api/client';
 
 export function PersonList() {
-  const [persons, setPersons] = useState([]);
+  const [persons, setPersons] = useState<Person[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    personsClient
-      .listPersons({ queries: { limit: 25 } })
-      .then((response) => setPersons(response.items));
+    async function fetchPersons() {
+      const response = await listPersons({ query: { limit: 25 } });
+      if ('data' in response && response.data) {
+        setPersons(response.data.items ?? []);
+      }
+      setLoading(false);
+    }
+    fetchPersons();
   }, []);
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <ul>
       {persons.map((person) => (
-        <li key={person.id}>{person.name.firstName}</li>
+        <li key={person.id}>{person.name?.firstName} {person.name?.lastName}</li>
       ))}
     </ul>
   );
 }
 ```
 
-### 5. Develop Against the Mock Server
+### Runtime Validation with Zod
 
-While the backend is being built, use the mock server for development:
+For custom validation scenarios, import Zod schemas directly:
+
+```typescript
+import { zPerson } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
+
+// Validate API response
+const parseResult = zPerson.safeParse(apiResponse);
+if (parseResult.success) {
+  return parseResult.data;
+} else {
+  console.error('Validation failed:', parseResult.error);
+}
+```
+
+## Development Workflow
+
+### Develop Against the Mock Server
+
+While the backend is being built, use the mock server:
 
 ```bash
-# In the safety-net-openapi directory
-STATE=california npm start
+# Clone the toolkit (one-time setup)
+git clone https://github.com/codeforamerica/safety-net-openapi.git
+cd safety-net-openapi
+npm install
+
+# Start the mock server
+STATE=<your-state> npm start
 ```
 
 The mock server runs at http://localhost:1080 with realistic test data.
@@ -127,84 +168,13 @@ Point your frontend at it:
 REACT_APP_API_URL=http://localhost:1080 npm start
 ```
 
-## Development Workflow
+### When the Package Updates
 
-### Daily Development
-
-```bash
-# Terminal 1: Start mock server
-cd safety-net-openapi
-STATE=california npm start
-
-# Terminal 2: Start your frontend
-cd your-frontend
-REACT_APP_API_URL=http://localhost:1080 npm start
-```
-
-### When the API Spec Changes
+Simply update your package version:
 
 ```bash
-# Pull latest specs
-cd safety-net-openapi
-git pull
-
-# Regenerate clients
-STATE=california npm run clients:generate
-
-# Copy to your project
-cp -r generated/clients/zodios/* ../your-frontend/src/api/
+npm update @codeforamerica/safety-net-<your-state>
 ```
-
-Consider adding a script to your frontend's `package.json`:
-
-```json
-{
-  "scripts": {
-    "api:update": "cd ../safety-net-openapi && git pull && STATE=california npm run clients:generate && cp -r generated/clients/zodios/* src/api/"
-  }
-}
-```
-
-## CI/CD Integration
-
-### Testing Against Mock Server
-
-```yaml
-# .github/workflows/test.yml
-name: Frontend Tests
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout frontend
-        uses: actions/checkout@v4
-
-      - name: Checkout API toolkit
-        uses: actions/checkout@v4
-        with:
-          repository: codeforamerica/safety-net-openapi
-          path: openapi-toolkit
-
-      - name: Start mock server
-        working-directory: openapi-toolkit
-        run: |
-          npm install
-          STATE=california npm run mock:setup
-          STATE=california npm run mock:start &
-          sleep 5
-
-      - name: Run frontend tests
-        env:
-          REACT_APP_API_URL: http://localhost:1080
-        run: |
-          npm install
-          npm test
-```
-
-See [CI/CD for Frontend](../integration/ci-cd-frontend.md) for more options.
 
 ## Exploring the API
 
@@ -214,13 +184,10 @@ Browse the API documentation interactively:
 
 ```bash
 cd safety-net-openapi
-STATE=california npm start
+STATE=<your-state> npm start
 ```
 
-Visit http://localhost:3000 to:
-- See all available endpoints
-- View request/response schemas
-- Try out requests
+Visit http://localhost:3000 to see all endpoints and schemas.
 
 ### Example Requests
 
@@ -235,16 +202,42 @@ curl "http://localhost:1080/persons?q=status:active"
 curl http://localhost:1080/persons/{id}
 ```
 
-## Key Commands
+## Package Contents
 
-| Command | When to Use |
-|---------|-------------|
-| `npm run clients:generate` | After spec changes, to get new types |
-| `npm start` | To run mock server for development |
-| `npm run mock:reset` | To reset test data |
+Each state package exports domain modules:
+
+| Module | SDK Functions |
+|--------|---------------|
+| `persons` | `listPersons`, `getPerson`, `createPerson`, `updatePerson`, `deletePerson` |
+| `applications` | `listApplications`, `getApplication`, `createApplication`, `updateApplication`, `deleteApplication` |
+| `households` | `listHouseholds`, `getHousehold`, `createHousehold`, `updateHousehold`, `deleteHousehold` |
+| `incomes` | `listIncomes`, `getIncome`, `createIncome`, `updateIncome`, `deleteIncome` |
+
+Each module also exports:
+- TypeScript types (`Person`, `PersonList`, `PersonCreate`, etc.)
+- Zod schemas via `./zod.gen` subpath (`zPerson`, `zPersonList`, etc.)
+- Client utilities via `./client` subpath (`createClient`, `createConfig`)
+
+### Search Helpers
+
+The package also exports utilities for building search queries:
+
+```typescript
+import { q, search } from '@codeforamerica/safety-net-<your-state>';
+
+const query = q(
+  search.contains('name.firstName', 'john'),
+  search.gte('monthlyIncome', 2000),
+  search.eq('status', 'active')
+);
+
+const response = await listPersons({ query: { q: query } });
+```
+
+See [API Clients - Search Helpers](../integration/api-clients.md#search-helpers) for the full reference.
 
 ## Next Steps
 
-- [API Clients](../integration/api-clients.md) — Detailed client usage and React Query integration
+- [API Clients](../integration/api-clients.md) — Detailed client usage and framework integrations
 - [Mock Server](../guides/mock-server.md) — Search, pagination, and data management
 - [CI/CD for Frontend](../integration/ci-cd-frontend.md) — Testing setup

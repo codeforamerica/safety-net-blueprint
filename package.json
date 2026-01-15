@@ -2,7 +2,7 @@
   "name": "safety-net-openapi",
   "version": "1.0.0",
   "private": true,
-  "description": "Generate Mock API server, Swagger UI, and Zodios API clients from OpenApi specifications",
+  "description": "Generate Mock API server, Swagger UI, and typed API clients from OpenAPI specifications",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
@@ -20,10 +20,11 @@
     "api:new": "npm run api:new -w @safety-net/schemas",
     "overlay:resolve": "npm run overlay:resolve -w @safety-net/schemas",
     "overlay:list": "npm run overlay:list -w @safety-net/schemas",
-    "clients:generate": "npm run generate -w @safety-net/clients",
-    "clients:validate": "npm run validate -w @safety-net/clients",
+    "clients:build-package": "node packages/clients/scripts/build-state-package.js",
     "postman:generate": "npm run postman -w @safety-net/clients",
     "mock:start": "npm start -w @safety-net/mock-server",
+    "mock:start:all": "npm run start:all -w @safety-net/mock-server",
+    "mock:swagger": "npm run swagger -w @safety-net/mock-server",
     "mock:setup": "npm run setup -w @safety-net/mock-server",
     "mock:reset": "npm run reset -w @safety-net/mock-server",
     "test": "npm test --workspaces --if-present",

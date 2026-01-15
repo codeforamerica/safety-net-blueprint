@@ -1,132 +1,333 @@
-# API Client Generator
+# API Client Packages
 
-Generate type-safe Zodios/TypeScript clients from OpenAPI specs.
+State-specific npm packages with typed SDK functions and Zod schemas for runtime validation.
 
-## Quick Start
+## Installation
 
-```bash
-STATE=california npm run clients:generate
+### 1. Configure GitHub Packages
+
+Create `.npmrc` in your project root:
+
+```
+@codeforamerica:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
-Output: `generated/clients/zodios/*.ts`
-
-## Integrating into Your Front-End Application
-
-The generated clients are state-specific and designed to be copied into your front-end project. Here's how to integrate them:
-
-### Step 1: Generate Clients for Your State
+### 2. Install Your State Package
 
 ```bash
-# In the safety-net-openapi toolkit
-STATE=california npm run clients:generate
+npm install @codeforamerica/safety-net-<your-state>
+
+# Peer dependencies
+npm install zod axios
 ```
 
-### Step 2: Copy to Your Front-End Project
+## Package Structure
 
-```bash
-# Copy the generated clients to your project
-cp -r generated/clients/zodios/* ../your-frontend/src/api/
-
-# Or set up a script in your frontend's package.json
-```
-
-### Step 3: Install Dependencies
-
-The generated clients require these packages:
-
-```bash
-npm install @zodios/core zod axios
-```
-
-### Step 4: Configure the Client
-
-Create a configuration file to set your API base URL and authentication:
+Each package exports domain modules:
 
 ```typescript
-// src/api/config.ts
-import { Zodios } from '@zodios/core';
-import { personsApi } from './persons';
-import { householdsApi } from './households';
-import { applicationsApi } from './applications';
+import { persons, applications, households, incomes } from '@codeforamerica/safety-net-<your-state>';
+```
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://api.example.com';
+Each domain module provides:
 
-// Create configured clients
-export const personsClient = new Zodios(BASE_URL, personsApi, {
-  axiosConfig: {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  },
+| Export | Description |
+|--------|-------------|
+| SDK functions | `getPerson`, `createPerson`, `listPersons`, etc. |
+| Types | `Person`, `PersonCreate`, `PersonList`, etc. |
+| Client utilities | `createClient`, `createConfig` |
+
+The root export also provides search utilities:
+
+| Export | Description |
+|--------|-------------|
+| `q()` | Combines multiple search conditions into a query string |
+| `search` | Object with methods like `eq()`, `contains()`, `gte()`, etc. |
+
+### Import Paths
+
+```typescript
+// Root - namespaced access to all domains + search helpers
+import { persons, applications, q, search } from '@codeforamerica/safety-net-<your-state>';
+
+// Domain-specific - direct imports
+import { getPerson, createPerson, type Person } from '@codeforamerica/safety-net-<your-state>/persons';
+
+// Client configuration
+import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
+
+// Zod schemas for custom validation
+import { zPerson, zPersonList } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
+
+// Search helpers (alternative import path)
+import { q, search } from '@codeforamerica/safety-net-<your-state>/search';
+```
+
+## Basic Usage
+
+### Configure the Client
+
+```typescript
+// src/api/client.ts
+import { persons, applications, households } from '@codeforamerica/safety-net-<your-state>';
+import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
+
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1080';
+
+// Create a configured client
+export const client = createClient(createConfig({
+  baseURL: BASE_URL,
+}));
+
+// Bind SDK functions to your client
+export const listPersons = (options?: Parameters<typeof persons.listPersons>[0]) =>
+  persons.listPersons({ ...options, client });
+
+export const getPerson = (options: Parameters<typeof persons.getPerson>[0]) =>
+  persons.getPerson({ ...options, client });
+
+export const createPerson = (options: Parameters<typeof persons.createPerson>[0]) =>
+  persons.createPerson({ ...options, client });
+
+export const updatePerson = (options: Parameters<typeof persons.updatePerson>[0]) =>
+  persons.updatePerson({ ...options, client });
+
+export const deletePerson = (options: Parameters<typeof persons.deletePerson>[0]) =>
+  persons.deletePerson({ ...options, client });
+
+// Re-export types
+export type { Person, PersonList, PersonCreate } from '@codeforamerica/safety-net-<your-state>/persons';
+```
+
+### Using SDK Functions
+
+```typescript
+import { getPerson, listPersons, createPerson, updatePerson, deletePerson } from './api/client';
+
+// List with pagination and search
+const response = await listPersons({
+  query: { limit: 10, offset: 0, q: 'status:active' }
 });
 
-export const householdsClient = new Zodios(BASE_URL, householdsApi);
-export const applicationsClient = new Zodios(BASE_URL, applicationsApi);
-
-// Add auth token dynamically
-export function setAuthToken(token: string) {
-  const authHeader = { Authorization: `Bearer ${token}` };
-  personsClient.axios.defaults.headers.common = authHeader;
-  householdsClient.axios.defaults.headers.common = authHeader;
-  applicationsClient.axios.defaults.headers.common = authHeader;
+if ('data' in response && response.data) {
+  console.log('Persons:', response.data.items);
 }
+
+// Get by ID
+const personResponse = await getPerson({
+  path: { personId: '123e4567-e89b-12d3-a456-426614174000' }
+});
+
+// Create
+const newPersonResponse = await createPerson({
+  body: {
+    name: { firstName: 'Jane', lastName: 'Doe' },
+    email: 'jane@example.com',
+    dateOfBirth: '1990-01-15',
+    phoneNumber: '555-123-4567',
+    citizenshipStatus: 'citizen',
+    householdSize: 1,
+    monthlyIncome: 3500
+  }
+});
+
+// Update
+const updatedResponse = await updatePerson({
+  path: { personId: '...' },
+  body: { monthlyIncome: 4000 }
+});
+
+// Delete
+await deletePerson({ path: { personId: '...' } });
 ```
 
-### Step 5: Use in Components
+### Response Handling
+
+The SDK returns responses with automatic Zod validation. Handle responses like this:
 
 ```typescript
-// src/components/PersonList.tsx
-import { useEffect, useState } from 'react';
-import { personsClient } from '../api/config';
+const response = await getPerson({ path: { personId: id } });
 
-// Types are automatically inferred from the API definition
-type Person = Awaited<ReturnType<typeof personsClient.getPerson>>;
-
-export function PersonList() {
-  const [persons, setPersons] = useState<Person[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    personsClient
-      .listPersons({ queries: { limit: 25 } })
-      .then((response) => setPersons(response.items))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
-
-  return (
-    <ul>
-      {persons.map((person) => (
-        <li key={person.id}>
-          {person.name.firstName} {person.name.lastName}
-        </li>
-      ))}
-    </ul>
-  );
+if ('data' in response && response.data) {
+  // Success - data is validated
+  return response.data;
+} else if ('error' in response) {
+  // Error response from API
+  console.error('API error:', response.error);
 }
 ```
 
-### With React Query
+## Using Types
+
+### Type-Only Imports (No Runtime Cost)
+
+```typescript
+import type { Person, PersonCreate, PersonList } from '@codeforamerica/safety-net-<your-state>/persons';
+
+function displayPerson(person: Person) {
+  console.log(`${person.name?.firstName} ${person.name?.lastName}`);
+}
+```
+
+### Zod Schemas for Custom Validation
+
+```typescript
+import { zPerson, zPersonCreate } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
+
+// Validate data manually
+const result = zPerson.safeParse(unknownData);
+if (result.success) {
+  console.log('Valid person:', result.data);
+} else {
+  console.error('Validation errors:', result.error.issues);
+}
+
+// Strict parse (throws on failure)
+const person = zPerson.parse(apiResponse);
+```
+
+## Search Query Syntax
+
+All list endpoints support a `q` parameter for filtering using `field:value` syntax.
+
+### Query Syntax Reference
+
+| Pattern | Description | Example |
+|---------|-------------|---------|
+| `field:value` | Exact match | `status:approved` |
+| `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+| `field:value*` | Starts with | `name:john*` |
+| `field:*value` | Ends with | `email:*@example.com` |
+| `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+| `field.nested:value` | Nested field | `address.state:CA` |
+| `field:>value` | Greater than | `income:>1000` |
+| `field:>=value` | Greater than or equal | `income:>=1000` |
+| `field:<value` | Less than | `income:<5000` |
+| `field:<=value` | Less than or equal | `income:<=5000` |
+| `field:val1,val2` | Match any (OR) | `status:approved,pending` |
+| `-field:value` | Exclude / negate | `-status:denied` |
+| `field:*` | Field exists (not null) | `email:*` |
+| `-field:*` | Field does not exist | `-deletedAt:*` |
+
+### Search Helpers
+
+The package exports `q()` and `search` utilities for type-safe query building:
+
+```typescript
+import { q, search } from '@codeforamerica/safety-net-<your-state>';
+// Or from dedicated path
+import { q, search } from '@codeforamerica/safety-net-<your-state>/search';
+```
+
+**Available search methods:**
+
+| Method | Description | Example Output |
+|--------|-------------|----------------|
+| `search.eq(field, value)` | Exact match | `status:active` |
+| `search.contains(field, value)` | Contains (case-insensitive) | `name:*john*` |
+| `search.startsWith(field, value)` | Starts with | `name:john*` |
+| `search.endsWith(field, value)` | Ends with | `email:*@example.com` |
+| `search.gt(field, value)` | Greater than | `income:>1000` |
+| `search.gte(field, value)` | Greater than or equal | `income:>=1000` |
+| `search.lt(field, value)` | Less than | `income:<5000` |
+| `search.lte(field, value)` | Less than or equal | `income:<=5000` |
+| `search.exists(field)` | Field is not null | `email:*` |
+| `search.notExists(field)` | Field is null | `-email:*` |
+| `search.oneOf(field, values)` | Match any value | `status:active,pending` |
+| `search.not(field, value)` | Exclude value | `-status:denied` |
+
+**Combining conditions with `q()`:**
+
+```typescript
+import { q, search, persons } from '@codeforamerica/safety-net-<your-state>';
+
+// Build a type-safe query
+const query = q(
+  search.eq('status', 'active'),
+  search.gte('monthlyIncome', 2000),
+  search.contains('name.lastName', 'smith'),
+  search.not('countyName', 'Denver')
+);
+// Result: "status:active monthlyIncome:>=2000 name.lastName:*smith* -countyName:Denver"
+
+const response = await persons.listPersons({
+  query: { q: query, limit: 25 },
+  client
+});
+```
+
+### Building Queries Manually
+
+You can also build query strings directly:
+
+```typescript
+// Multiple conditions are ANDed together
+const query = 'status:active monthlyIncome:>=1000 -county:Denver';
+
+const response = await listPersons({
+  query: { q: query, limit: 25 }
+});
+```
+
+### Real-World Examples
+
+```typescript
+import { q, search } from '@codeforamerica/safety-net-<your-state>';
+
+// Find active persons in a specific county with income above threshold
+const eligiblePersons = q(
+  search.eq('status', 'active'),
+  search.eq('countyName', 'Denver'),
+  search.gte('monthlyIncome', 2000),
+  search.exists('email')
+);
+
+// Find applications submitted this year, excluding denied
+const recentApplications = q(
+  search.gte('submittedAt', '2024-01-01'),
+  search.not('status', 'denied')
+);
+
+// Search for persons by partial name match
+const nameSearch = q(
+  search.contains('name.lastName', 'smith')
+);
+```
+
+## With React Query
 
 For better caching and state management:
 
 ```typescript
 // src/hooks/usePersons.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { personsClient } from '../api/config';
+import { listPersons, getPerson, createPerson, updatePerson, deletePerson } from '../api/client';
+import type { Person } from '../api/client';
 
-export function usePersons(options?: { limit?: number; offset?: number }) {
+export function usePersons(options?: { limit?: number; offset?: number; q?: string }) {
   return useQuery({
     queryKey: ['persons', options],
-    queryFn: () => personsClient.listPersons({ queries: options }),
+    queryFn: async () => {
+      const response = await listPersons({ query: options });
+      if ('data' in response && response.data) {
+        return response.data;
+      }
+      throw new Error('Failed to fetch persons');
+    },
   });
 }
 
 export function usePerson(personId: string) {
   return useQuery({
     queryKey: ['persons', personId],
-    queryFn: () => personsClient.getPerson({ params: { personId } }),
+    queryFn: async () => {
+      const response = await getPerson({ path: { personId } });
+      if ('data' in response && response.data) {
+        return response.data;
+      }
+      throw new Error('Failed to fetch person');
+    },
     enabled: !!personId,
   });
 }
@@ -135,111 +336,118 @@ export function useCreatePerson() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Parameters<typeof personsClient.createPerson>[0]) =>
-      personsClient.createPerson(data),
+    mutationFn: async (data: Partial<Person>) => {
+      const response = await createPerson({ body: data });
+      if ('data' in response && response.data) {
+        return response.data;
+      }
+      throw new Error('Failed to create person');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['persons'] });
     },
   });
 }
-
-export function useUpdatePerson() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      personId,
-      data,
-    }: {
-      personId: string;
-      data: Parameters<typeof personsClient.updatePerson>[0];
-    }) => personsClient.updatePerson({ params: { personId }, ...data }),
-    onSuccess: (_, { personId }) => {
-      queryClient.invalidateQueries({ queryKey: ['persons', personId] });
-      queryClient.invalidateQueries({ queryKey: ['persons'] });
-    },
-  });
-}
 ```
 
-### Keeping Clients Updated
-
-When the API spec changes, regenerate and copy the clients:
-
-```bash
-# In safety-net-openapi toolkit
-git pull
-STATE=california npm run clients:generate
-
-# Copy to your project
-cp -r generated/clients/zodios/* ../your-frontend/src/api/
-```
-
-Consider adding a script to your front-end's `package.json`:
-
-```json
-{
-  "scripts": {
-    "api:update": "cd ../safety-net-openapi && git pull && STATE=california npm run clients:generate && cp -r generated/clients/zodios/* ../your-frontend/src/api/"
-  }
-}
-```
-
----
-
-## Basic Usage
+Usage in components:
 
 ```typescript
-import { personsClient } from './generated/clients/zodios/persons';
+// src/components/PersonList.tsx
+import { usePersons, useDeletePerson } from '../hooks/usePersons';
 
-// List with pagination and search
-const persons = await personsClient.listPersons({
-  queries: { limit: 10, offset: 0, q: 'status:active' }
-});
+export function PersonList() {
+  const { data, isLoading, error } = usePersons({
+    limit: 25,
+    q: 'status:active email:*'
+  });
 
-// Get by ID
-const person = await personsClient.getPerson({
-  params: { personId: '123e4567-e89b-12d3-a456-426614174000' }
-});
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
 
-// Create
-const newPerson = await personsClient.createPerson({
-  firstName: 'Jane',
-  lastName: 'Doe',
-  email: 'jane@example.com'
-});
-
-// Update
-const updated = await personsClient.updatePerson({
-  params: { personId: '...' },
-  body: { monthlyIncome: 7500 }
-});
-
-// Delete
-await personsClient.deletePerson({ params: { personId: '...' } });
+  return (
+    <ul>
+      {data?.items.map((person) => (
+        <li key={person.id}>
+          {person.name?.firstName} {person.name?.lastName}
+        </li>
+      ))}
+    </ul>
+  );
+}
 ```
 
-## What's Generated
+## With Redux Toolkit
 
-- Full TypeScript types from OpenAPI schemas
-- Zod schemas for runtime validation
-- Type-safe function parameters and return values
-- All endpoints with proper HTTP methods
+```typescript
+// src/store/slices/personSlice.ts
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { getPerson, createPerson as createPersonApi, type Person } from '../../api/client';
 
-## Requirements
+export const fetchPerson = createAsyncThunk(
+  'persons/fetchById',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await getPerson({ path: { personId: id } });
+      if ('data' in response && response.data) {
+        return response.data;
+      }
+      return rejectWithValue('Failed to fetch person');
+    } catch (err) {
+      return rejectWithValue(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }
+);
 
-Your OpenAPI spec needs:
-- `operationId` on each endpoint (used for function names)
-- Schemas for request/response bodies
-- Parameters defined (path, query)
+export const createPerson = createAsyncThunk(
+  'persons/create',
+  async (payload: Partial<Person>, { rejectWithValue }) => {
+    try {
+      const response = await createPersonApi({ body: payload });
+      if ('data' in response && response.data) {
+        return response.data;
+      }
+      return rejectWithValue('Failed to create person');
+    } catch (err) {
+      return rejectWithValue(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }
+);
+```
+
+## State-Specific Fields
+
+Each state package includes state-specific schema fields defined by that state's overlay. These may include:
+
+- State-specific county enums and codes
+- State benefit program identifiers
+- Eligibility flags for state programs
+- State-specific income source types
+
+Check your state's overlay file (`packages/schemas/openapi/overlays/<your-state>/modifications.yaml`) to see what customizations are applied.
+
+## Updating the Package
+
+When a new version is released:
+
+```bash
+npm update @codeforamerica/safety-net-<your-state>
+```
+
+Check the changelog for breaking changes to schema fields or API endpoints.
 
 ## Troubleshooting
 
-**Generation fails:**
-```bash
-npm run validate   # Check for spec errors
-```
+**401 Unauthorized during install:**
+- Ensure `GITHUB_TOKEN` is set with `read:packages` scope
+- Check `.npmrc` configuration
 
-**Type errors:** Regenerate clients after spec changes.
+**Type errors after update:**
+- Schema fields may have changed
+- Check for renamed or removed fields
+- Run TypeScript compilation to find issues
 
-**Runtime validation errors:** Zod validates responses against the schema. If your backend returns unexpected data, you'll get a Zod error. Check that your backend matches the spec.
+**Runtime validation errors:**
+- The SDK validates responses automatically via Zod
+- Ensure your API returns data matching the expected schema
+- Check for missing required fields or incorrect types

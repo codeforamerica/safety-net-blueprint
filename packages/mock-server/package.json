@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/server.js",
+    "start:all": "node scripts/start-all.js",
+    "swagger": "node scripts/swagger/server.js",
     "setup": "node scripts/setup.js",
     "reset": "node scripts/reset.js",
     "test": "node tests/run-all-tests.js --unit",

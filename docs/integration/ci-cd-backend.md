@@ -98,7 +98,7 @@ jobs:
         working-directory: openapi-toolkit
         run: |
           npm install
-          STATE=california npm run postman:generate
+          STATE=<your-state> npm run postman:generate
 
       - name: Run contract tests
         run: |
@@ -129,7 +129,7 @@ If you prefer not to clone the toolkit in CI, generate the collection locally an
 
 ```bash
 # In the safety-net-openapi toolkit
-STATE=california npm run postman:generate
+STATE=<your-state> npm run postman:generate
 
 # Copy to your backend repo
 cp generated/postman-collection.json ../your-backend/tests/contract/
@@ -171,7 +171,7 @@ Check for spec changes and regenerate only when needed:
   run: |
     cd safety-net-openapi
     npm install
-    STATE=california npm run postman:generate
+    STATE=<your-state> npm run postman:generate
     cp generated/postman-collection.json ../tests/contract/
     echo "${{ steps.spec-check.outputs.new }}" > ../tests/contract/.spec-hash
 ```

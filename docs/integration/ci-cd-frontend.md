@@ -38,8 +38,8 @@ jobs:
         working-directory: openapi-toolkit
         run: |
           npm install
-          STATE=california npm run mock:setup
-          STATE=california npm run mock:start &
+          STATE=<your-state> npm run mock:setup
+          STATE=<your-state> npm run mock:start &
 
           # Wait for server to be ready
           sleep 5
@@ -70,7 +70,7 @@ test:
   services:
     - name: node:18
       alias: mock-server
-      command: ["sh", "-c", "git clone https://github.com/codeforamerica/safety-net-openapi.git && cd safety-net-openapi && npm install && STATE=california npm run mock:start"]
+      command: ["sh", "-c", "git clone https://github.com/codeforamerica/safety-net-openapi.git && cd safety-net-openapi && npm install && STATE=<your-state> npm run mock:start"]
 
   script:
     - npm install
@@ -107,7 +107,7 @@ Add to your frontend's `package.json`:
 ```json
 {
   "scripts": {
-    "api:update": "cd ../safety-net-openapi && git pull && STATE=california npm run clients:generate && cp -r generated/clients/zodios/* ../your-frontend/src/api/"
+    "api:update": "cd ../safety-net-openapi && git pull && STATE=<your-state> npm run clients:generate && cp -r generated/clients/* ../your-frontend/src/api/"
   }
 }
 ```
@@ -146,7 +146,7 @@ jobs:
       - name: Generate clients
         run: |
           cd safety-net-openapi
-          STATE=california npm run clients:generate
+          STATE=<your-state> npm run clients:generate
 
       - name: Check for changes
         id: diff
@@ -245,7 +245,7 @@ describe('Persons', () => {
 export default defineConfig({
   webServer: [
     {
-      command: 'cd ../safety-net-openapi && STATE=california npm run mock:start',
+      command: 'cd ../safety-net-openapi && STATE=<your-state> npm run mock:start',
       port: 1080,
       reuseExistingServer: !process.env.CI,
     },
@@ -297,7 +297,7 @@ Speed up CI by caching the toolkit:
 - name: Start mock server with logs
   working-directory: openapi-toolkit
   run: |
-    STATE=california npm run mock:start 2>&1 | tee mock-server.log &
+    STATE=<your-state> npm run mock:start 2>&1 | tee mock-server.log &
     sleep 5
 
 - name: Upload mock server logs
