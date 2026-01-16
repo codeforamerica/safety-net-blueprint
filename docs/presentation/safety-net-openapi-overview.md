@@ -90,6 +90,8 @@ paths:
 
 **Everyone agrees on what the API will do before building it**
 
+No more "I thought you were sending `firstName`, not `first_name`" conversations after the code is written.
+
 ---
 
 # Feature 2: Interactive Documentation
@@ -156,14 +158,29 @@ GET /persons?q=status:active income:>1000&limit=10
 
 # Feature 3: Simulated API
 
+## A Real Working API, Not Just Static Responses
+
+**Your changes are saved and persist across requests**
+
+- Create a person, then fetch them later — they're still there
+- Update a record, and the changes stick
+- Delete something, and it's actually gone
+- Test complete workflows from start to finish
+
+**Fresh start when you need it:** Restart the server to reset all data back to the original examples
+
+---
+
+# Feature 3: Simulated API
+
 ## Benefits
 
 | Role | Benefit |
 |------|---------|
-| Frontend Teams | Start building immediately |
-| Backend Teams | Clear target to implement against |
-| QA Teams | Consistent test environment |
-| Demos | Show functionality without infrastructure |
+| Frontend Teams | Start building the same day — no waiting for the backend team's sprint to finish |
+| Backend Teams | Clear target to implement against — no guessing what the frontend needs |
+| QA Teams | Build realistic test scenarios piece by piece — add a person, update their income, submit their application — and verify each step works correctly |
+| Demos | Show real functionality to stakeholders without setting up infrastructure |
 
 ---
 
@@ -206,11 +223,52 @@ const results = await client.listPersons({
 
 ## Benefits
 
-- **Catch errors early** - Find mistakes before users do
-- **Self-documenting** - The code itself shows what's available
-- **Faster development** - Your editor does the heavy lifting
-- **Safer changes** - Automated checks find issues when you refactor
-- **Data validation** - Automatically verify API responses are correct
+- **Catch errors early** — Misspell `firstName` as `fristName`? Your editor catches it instantly, not your users
+- **Self-documenting** — Hover over any field to see what it means and what values are valid
+- **Faster development** — Your editor suggests available fields as you type
+- **Safer changes** — Rename a field? The compiler shows every place that needs updating
+- **Data validation** — The API returns unexpected data? You'll know immediately, not when something breaks downstream
+
+---
+
+# Feature 4: Ready-to-Use Code Libraries
+
+## Share Definitions as Packages
+
+**Backend teams publish, frontend teams install**
+
+- API definitions are packaged and published to npm
+- Frontend teams install with one command:
+  ```bash
+  npm install @codeforamerica/safety-net-colorado
+  ```
+- Everyone works from the same source of truth
+- Updates are as simple as upgrading the package version
+
+**No copying files, no version mismatches**
+
+---
+
+# Feature 4: Ready-to-Use Code Libraries
+
+## Built-In Search Helpers
+
+**Construct search queries without memorizing syntax**
+
+```typescript
+import { q, search } from '@codeforamerica/safety-net-colorado';
+
+// Readable, type-safe query building
+const query = q(
+  search.eq("status", "active"),      // status:active
+  search.gt("income", 1000),          // income:>1000
+  search.contains("name", "smith")    // name:*smith*
+);
+```
+
+- Your editor suggests available search options
+- Mistakes are caught before your code runs
+- No need to remember query string formats
 
 ---
 
@@ -268,6 +326,8 @@ actions:
 
 **State-specific changes without duplicating everything**
 
+Without this, you'd maintain separate copies of the entire API for each state — and hope you remember to update all of them when something changes.
+
 ---
 
 # Feature 6: Automated Validation
@@ -309,6 +369,8 @@ actions:
 - Verification that the real API matches what was defined
 
 **Ensures frontend and backend stay in sync**
+
+The frontend expects `firstName` but the backend sends `first_name`? These tests catch that mismatch before users see a broken page.
 
 ---
 
@@ -360,6 +422,8 @@ npm run api:new -- --name "benefits" --resource "Benefit"
 4. Switch to the real backend when ready
 
 **No waiting for backend development**
+
+No more "the backend isn't ready yet" blocking your sprint. Build and test your UI today.
 
 ---
 
