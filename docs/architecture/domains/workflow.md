@@ -18,6 +18,33 @@ The Workflow domain manages work items, tasks, SLA tracking, and task routing.
 
 ---
 
+## Capabilities
+
+| Capability | Supported By |
+|------------|--------------|
+| **Supervisor** | |
+| Set or change task priority | `Task.priority`, `TaskAuditEvent.priority_changed` |
+| Monitor task queues | `Queue` entity |
+| Bulk reassign or reprioritize | Batch Operations API (`PATCH /tasks/batch`) |
+| Monitor deadlines and alerts | `TaskSLAInfo.slaStatus`, `TaskAuditEvent.sla_warning/sla_breached` |
+| Create tasks from external systems | `Task.sourceInfo` |
+| **Caseworker** | |
+| Update task status | `Task.status` (pending, in_progress, completed, etc.) |
+| Release task I cannot complete | `Task.status: returned_to_queue` |
+| **System/Automation** | |
+| Auto-assign by rules | `WorkflowRule` with `ruleType: assignment` |
+| Auto-prioritize based on rules | `WorkflowRule` with `ruleType: priority` |
+| Create tasks on application submission | `Task.applicationId`, `Task.sourceInfo` |
+| **Future** | |
+| Forecast staffing needs | See [Future Considerations](../domain-design.md#future-considerations) |
+
+**Notes:**
+- Staff and organizational entities (CaseWorker, Office, Team, Caseload) are in the [Case Management domain](case-management.md).
+- Workflow tracks *task state* changes. Case Management tracks *who* is assigned and assignment history.
+- Auto-assign rules (`WorkflowRule`) live here; auto-assign data (Office, Caseload, Skills) lives in Case Management.
+
+---
+
 ## Schemas
 
 ### Task

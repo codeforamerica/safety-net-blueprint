@@ -34,7 +34,10 @@ The Case Management domain manages ongoing client relationships, staff, and orga
 | Auto-assign by workload | `Caseload.activeTasks`, `CaseWorker.workloadCapacity` |
 | Auto-assign by skills | `CaseWorkerSkill` matched against task requirements |
 
-**Note:** Task-specific capabilities (status updates, SLA tracking, queues, rules) are in the [Workflow domain](workflow.md).
+**Notes:**
+- Task-specific capabilities (status updates, SLA tracking, queues, rules) are in the [Workflow domain](workflow.md).
+- Case Management tracks *who* is assigned and assignment history. Workflow tracks *task state* changes.
+- Auto-assign data (Office, Caseload, Skills) lives here; auto-assign rules (`WorkflowRule`) live in Workflow.
 
 ---
 
