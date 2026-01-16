@@ -116,7 +116,7 @@ Work items, tasks, and SLA tracking. **[Detailed schemas →](domains/workflow.m
 |--------|---------|
 | **Task** | A work item requiring action |
 | **Queue** | Organizes tasks by team, county, program, or skill |
-| **AssignmentRule** | Defines automatic task routing logic |
+| **WorkflowRule** | Defines automatic task routing and prioritization logic |
 | **VerificationTask** | Task to verify data - either validation (accuracy) or program verification (evidence standards) |
 | **VerificationSource** | External services/APIs for data validation (IRS, ADP, state databases) |
 | **TaskAuditEvent** | Immutable audit trail |
@@ -124,7 +124,7 @@ Work items, tasks, and SLA tracking. **[Detailed schemas →](domains/workflow.m
 **Key decisions:**
 - Workflow is about work items: "What needs to be done? Is it on track?"
 - Queues organize tasks for routing and monitoring
-- AssignmentRules enable automatic task routing based on program, office, skills
+- WorkflowRules enable automatic task routing and prioritization based on program, office, skills, and client attributes
 - Verification has two purposes:
   - **Data validation**: Is the intake data accurate? (check against external sources)
   - **Program verification**: Does the data meet program evidence standards?

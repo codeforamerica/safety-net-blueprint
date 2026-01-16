@@ -10,7 +10,7 @@ The Workflow domain manages work items, tasks, SLA tracking, and task routing.
 |--------|---------|
 | **Task** | A work item requiring action |
 | **Queue** | Organizes tasks by team, county, program, or skill |
-| **AssignmentRule** | Defines automatic task routing logic |
+| **WorkflowRule** | Defines automatic task routing and prioritization logic |
 | **VerificationTask** | Task to verify data (extends Task) |
 | **VerificationSource** | External services/APIs for data validation |
 | **TaskSLAInfo** | SLA tracking details (embedded in Task) |
@@ -117,25 +117,33 @@ Queue:
     createdAt, updatedAt: datetime
 ```
 
-### AssignmentRule
+### WorkflowRule
 
-Defines automatic task routing logic.
+Defines automatic task routing and prioritization logic. Unifies assignment and priority rules with a shared condition structure.
 
 ```yaml
-AssignmentRule:
+WorkflowRule:
   properties:
     id: uuid
-    name: string                    # "Route SNAP to County A"
+    name: string                    # "Route SNAP to County A", "Expedite households with children under 6"
     description: string
-    priority: integer               # Rule evaluation order (lower = evaluated first)
+    ruleType:
+      - assignment                  # Routes tasks to queues/teams/workers
+      - priority                    # Sets task priority level
+    evaluationOrder: integer        # Rule evaluation order (lower = evaluated first)
     isActive: boolean
     # Conditions - when this rule applies
     conditions:
       programTypes: enum[]          # Match these programs
       taskTypes: string[]           # Match these task types
       officeIds: uuid[]             # Match tasks from these offices
-      priorityLevels: string[]      # Match these priorities (expedited, high, etc.)
-    # Assignment target
+      # For priority rules, can also match on application/client attributes:
+      hasChildrenUnderAge: integer  # Household has children under this age
+      incomePercentFPL: number      # Income below this % of Federal Poverty Level
+      isHomeless: boolean           # Client reports homelessness
+      daysUntilDeadline: integer    # SLA deadline within N days
+    # Action - what happens when conditions match
+    # For assignment rules:
     assignmentStrategy:
       - specific_queue              # Assign to targetQueueId
       - specific_team               # Assign to targetTeamId
@@ -144,10 +152,24 @@ AssignmentRule:
       - skill_match                 # Match task requiredSkills to worker certifications
     targetQueueId: uuid             # For specific_queue strategy
     targetTeamId: uuid              # For specific_team strategy
-    # Fallback
     fallbackQueueId: uuid           # If primary assignment fails
+    # For priority rules:
+    targetPriority:
+      - expedited
+      - high
+      - normal
+      - low
     createdAt, updatedAt: datetime
 ```
+
+**Usage Examples:**
+
+| Rule Type | Example | Conditions | Action |
+|-----------|---------|------------|--------|
+| Assignment | Route SNAP to County A queue | `programTypes: [snap]`, `officeIds: [county-a]` | `assignmentStrategy: specific_queue` |
+| Priority | Expedite for young children | `hasChildrenUnderAge: 6` | `targetPriority: expedited` |
+| Priority | High priority near deadline | `daysUntilDeadline: 5` | `targetPriority: high` |
+| Assignment | Skill-based routing | `taskTypes: [appeal_review]` | `assignmentStrategy: skill_match` |
 
 ### TaskSLAInfo
 
