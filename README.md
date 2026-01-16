@@ -67,6 +67,9 @@ Visit `http://localhost:3000` for interactive API docs.
 - [Project Structure](./docs/reference/project-structure.md) — File layout and conventions
 - [Troubleshooting](./docs/reference/troubleshooting.md) — Common issues and solutions
 
+### Architecture
+- [Domain Design](./docs/architecture/domain-design.md) — Domain organization and entity design
+
 ### Architecture Decisions
 - [Multi-State Overlays](./docs/architecture-decisions/multi-state-overlays.md)
 - [Search Patterns](./docs/architecture-decisions/search-patterns.md)

@@ -2,6 +2,9 @@
 
 Research and recommendations for organizing the Safety Net OpenAPI toolkit around domain-driven design principles.
 
+> **Status: Proposed Architecture**
+> This document describes the target domain organization. The current implementation includes only a subset of these domains (Intake with Applications and Persons). The remaining domains and entities are planned for future development.
+
 ---
 
 ## 1. Domain Organization
