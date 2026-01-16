@@ -18,6 +18,26 @@ The Case Management domain manages ongoing client relationships, staff, and orga
 
 ---
 
+## Capabilities
+
+| Capability | Supported By |
+|------------|--------------|
+| **Supervisor** | |
+| Assign task to any caseworker | `Assignment` entity, `CaseWorker.id` as target |
+| Reassign between caseworkers/queues/counties | `Assignment`, `Office` for geographic routing |
+| Monitor team workload | `Caseload` entity, `Team` for grouping |
+| Run reports on productivity, backlog | `Caseload` (tasksOnTrack, tasksAtRisk, tasksBreached) |
+| **Caseworker** | |
+| Release or reassign a task | `Assignment.status: reassigned` |
+| **System/Automation** | |
+| Auto-assign by county | `Office.countyCode`, `CaseWorker.officeId` |
+| Auto-assign by workload | `Caseload.activeTasks`, `CaseWorker.workloadCapacity` |
+| Auto-assign by skills | `CaseWorkerSkill` matched against task requirements |
+
+**Note:** Task-specific capabilities (status updates, SLA tracking, queues, rules) are in the [Workflow domain](workflow.md).
+
+---
+
 ## Schemas
 
 ### Office
