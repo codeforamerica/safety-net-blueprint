@@ -92,7 +92,20 @@ jobs:
           node-version: '20'
 
       - name: Upgrade npm for OIDC support
-        run: npm install -g npm@latest
+        run: |
+          npm install -g npm@latest
+          echo "npm version after upgrade:"
+          npm --version
+
+      - name: Debug OIDC
+        run: |
+          echo "Checking OIDC token availability..."
+          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            echo "OIDC is available"
+            echo "Token URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
+          else
+            echo "ERROR: OIDC token request URL not set - id-token permission may be missing"
+          fi
 
       - name: Install dependencies
         run: npm install
