@@ -91,6 +91,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: npm install
 
