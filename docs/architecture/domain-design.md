@@ -11,7 +11,7 @@ Research and recommendations for organizing the Safety Net OpenAPI toolkit aroun
 
 ### Overview
 
-The Safety Net Benefits API is organized into 8 domains, with Reporting as a cross-cutting concern:
+The Safety Net Benefits API is organized into 7 domains, with Communication and Reporting as cross-cutting concerns:
 
 | Domain | Purpose |
 |--------|---------|
@@ -20,11 +20,12 @@ The Safety Net Benefits API is organized into 8 domains, with Reporting as a cro
 | **Eligibility** | Program-specific interpretation and determination |
 | **Case Management** | Ongoing client relationships and staff assignments |
 | **Workflow** | Work items, tasks, SLAs, and verification |
-| **Communication** | Official notices and correspondence |
 | **Scheduling** | Appointments and interviews |
 | **Document Management** | Files and uploads |
 
-**Reporting** is cross-cutting - each domain exposes data that reporting systems consume; audit events live where actions happen.
+**Cross-cutting concerns:**
+- **Communication** - Notices and correspondence can originate from any domain (application received, documents needed, eligibility determined, appointment scheduled, etc.)
+- **Reporting** - Each domain exposes data that reporting systems consume; audit events live where actions happen
 
 ### Domain Details
 
@@ -125,15 +126,23 @@ Work items, tasks, and SLA tracking.
 - VerificationTask connects Intake data → External Sources → Eligibility requirements
 - Tasks are assigned to CaseWorkers (connects to Case Management)
 
-#### Communication
+#### Communication (Cross-Cutting)
 
-Official notices and correspondence.
+Official notices and correspondence that can originate from any domain.
 
 | Entity | Purpose |
 |--------|---------|
 | **Notice** | Official communication (approval, denial, RFI, etc.) |
 | **Correspondence** | Other communications |
 | **DeliveryRecord** | Tracking of delivery status |
+
+**Key decisions:**
+- Communication is cross-cutting because notices can be triggered by events in any domain:
+  - Intake: "Application received"
+  - Eligibility: "Approved", "Denied", "Request for information"
+  - Workflow: "Documents needed", "Interview scheduled"
+  - Case Management: "Case worker assigned"
+- Entities live in a Communication domain but are consumed/triggered by all domains
 
 #### Scheduling
 
@@ -159,6 +168,10 @@ Files and uploads.
 ## 2. Data Flow Between Domains
 
 ```
+                        ╔═══════════════════════════════════════════════════╗
+                        ║  CROSS-CUTTING: Communication, Reporting          ║
+                        ╚═══════════════════════════════════════════════════╝
+
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLIENT PERSPECTIVE                          │
 └─────────────────────────────────────────────────────────────────────┘
@@ -170,28 +183,43 @@ Files and uploads.
 │  "What the client told us"                                          │
 └─────────────────────────────────────────────────────────────────────┘
                     │                           │
-                    ▼                           ▼
+                    ▼                           │
+      ┌───────────────────────────────┐         │
+      │  CLIENT MANAGEMENT            │         │
+      │  Client, Relationship,        │         │
+      │  LivingArrangement, Income    │         │
+      │  "Persist people seeking      │         │
+      │   benefits"                   │         │
+      └───────────────────────────────┘         │
+                                                │
+       ┌────────────────────────────────────────┤
+       │                                        │
+       │ (SNAP, TANF)                           │ (MAGI Medicaid -
+       │ Caseworker review                      │  automated path)
+       ▼                                        │
+┌───────────────────────────────┐               │
+│  CASE MANAGEMENT              │               │
+│  Case, CaseWorker, Supervisor,│               │
+│  Assignment, Caseload         │               │
+│  "Who's responsible"          │               │
+└───────────────────────────────┘               │
+       │                                        │
+       ▼                                        ▼
 ┌───────────────────────────────┐   ┌─────────────────────────────────┐
-│  CLIENT MANAGEMENT            │   │  ELIGIBILITY                    │
-│  Client, Relationship,        │   │  EligibilityRequest,            │
-│  LivingArrangement, Income    │   │  EligibilityUnit, Determination │
-│  "Persist people seeking      │   │  "Program-specific              │
-│   benefits"                   │   │   interpretation"               │
-└───────────────────────────────┘   └─────────────────────────────────┘
-                                                  │
-                    ┌─────────────────────────────┼─────────────────────────────┐
-                    │                             │                             │
-                    ▼                             ▼                             ▼
-┌───────────────────────────────┐   ┌─────────────────────────────────┐   ┌─────────────────┐
-│  WORKFLOW                     │   │  CASE MANAGEMENT                │   │  COMMUNICATION  │
-│  Task, VerificationTask,      │   │  Case, CaseWorker, Supervisor,  │   │  Notice         │
-│  SLA, TaskAuditEvent          │   │  Assignment, Caseload           │   │                 │
-│  "What work needs to be done" │   │  "Who's responsible"            │   │                 │
-└───────────────────────────────┘   └─────────────────────────────────┘   └─────────────────┘
-          │                                       │
-          └───────────────────────────────────────┘
-                    Tasks assigned to CaseWorkers/Supervisors
+│  WORKFLOW                     │   │  ELIGIBILITY                    │
+│  Task, VerificationTask,      │──▶│  EligibilityRequest,            │
+│  SLA, TaskAuditEvent          │   │  EligibilityUnit, Determination │
+│  "What work needs to be done" │◀──│  "Program-specific              │
+└───────────────────────────────┘   │   interpretation"               │
+                                    └─────────────────────────────────┘
 ```
+
+**Flow notes:**
+- Intake data flows to Client Management (persist clients) and feeds into Eligibility
+- Case workers are typically assigned to review intake data before eligibility determination
+- Workflow tasks support the eligibility process (verification, document review)
+- **MAGI Medicaid** can often be determined automatically without caseworker involvement (no asset test, standardized income rules, electronic data verification)
+- **SNAP and TANF** typically require caseworker review due to asset tests, complex household rules, and interview requirements
 
 ---
 
@@ -647,13 +675,6 @@ packages/schemas/openapi/
 │   │   └── examples/
 │   │       └── tasks.yaml
 │   │
-│   ├── communication/
-│   │   ├── notices.yaml              # Notice API spec
-│   │   ├── components/
-│   │   │   └── notice.yaml           # Notice, NoticeRecipientInfo, etc.
-│   │   └── examples/
-│   │       └── notices.yaml
-│   │
 │   ├── scheduling/
 │   │   ├── appointments.yaml         # Appointment API spec
 │   │   ├── components/
@@ -667,6 +688,15 @@ packages/schemas/openapi/
 │       │   └── document.yaml
 │       └── examples/
 │           └── documents.yaml
+│
+├── cross-cutting/
+│   ├── communication/
+│   │   ├── notices.yaml              # Notice API spec
+│   │   ├── components/
+│   │   │   └── notice.yaml           # Notice, NoticeRecipientInfo, etc.
+│   │   └── examples/
+│   │       └── notices.yaml
+│   └── reporting/                    # Future: report definitions if needed
 │
 ├── shared/
 │   └── components/
@@ -692,12 +722,13 @@ Key decisions made during design, with alternatives considered. These are **prop
 
 | Option | Considered | Chosen |
 |--------|------------|--------|
-| Eligibility | Application is fundamentally about determining eligibility | Yes |
+| Intake | Application captures what the client reports | Yes |
+| Eligibility | Application is fundamentally about determining eligibility | No |
 | Case Management | Application is one event in a larger case lifecycle | No |
 
-*Rationale*: Application is time-bound and purpose-built for eligibility determination. Case Management tracks the ongoing relationship across multiple applications.
+*Rationale*: Application is the client's perspective - what they told us. Eligibility interprets that data per program rules. Case Management tracks the ongoing relationship across multiple applications.
 
-*Reconsider if*: Applications become more about ongoing service delivery than point-in-time eligibility requests.
+*Reconsider if*: Applications become tightly coupled to eligibility rules rather than being a neutral record of client-reported data.
 
 ---
 
@@ -868,17 +899,6 @@ Entities with the same name in different domains represent the same concept, dis
 | **Task** | A work item requiring action |
 | **Case** | Ongoing relationship with a client |
 
-### Explicit Tasks vs Workflow Engine
-
-**Decision**: Use explicit Task entities rather than a full workflow engine (BPMN).
-
-| Approach | Pros | Cons |
-|----------|------|------|
-| Explicit Tasks | Simpler, follows existing patterns, flexible | Workflow logic in consuming systems |
-| Workflow Engine | Declarative workflows, visual modeling | Complex runtime, additional dependencies |
-
-**Rationale**: Explicit tasks are appropriate for v1. A workflow engine can be layered on top later if needed.
-
 ---
 
 ## 7. Migration Considerations
@@ -916,7 +936,7 @@ Entities with the same name in different domains represent the same concept, dis
 ### Phase 1: Workflow & Case Management (Priority)
 1. Create Workflow domain (Task, VerificationTask, TaskAuditEvent)
 2. Create Case Management domain (CaseWorker, Assignment)
-3. Create Communication domain (Notice)
+3. Create Communication entities (Notice) - cross-cutting, consumed by multiple domains
 
 ### Phase 2: Domain Reorganization
 1. Restructure existing schemas into domain folders
