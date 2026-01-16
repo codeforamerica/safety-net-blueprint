@@ -91,35 +91,40 @@ Program-specific interpretation of application data and benefit determination.
 
 #### Case Management
 
-Ongoing client relationships and staff assignments.
+Ongoing client relationships and staff assignments. **[Detailed schemas →](domains/case-management.md)**
 
 | Entity | Purpose |
 |--------|---------|
 | **Case** | The ongoing relationship with a client/household |
 | **CaseWorker** | Staff member who processes applications |
 | **Supervisor** | Extends CaseWorker with approval authority, team capacity, escalation handling |
+| **Office** | Geographic or organizational unit (county, regional, state) |
 | **Assignment** | Who is responsible for what |
 | **Caseload** | Workload for a case worker |
 | **Team** | Group of case workers |
 
 **Key decisions:**
 - Case Management is about relationships: "Who's handling this? What's the history?"
+- Office enables geographic routing and reporting by county/region
 - Separate from Workflow (which is about work items)
 
 #### Workflow
 
-Work items, tasks, and SLA tracking.
+Work items, tasks, and SLA tracking. **[Detailed schemas →](domains/workflow.md)**
 
 | Entity | Purpose |
 |--------|---------|
 | **Task** | A work item requiring action |
+| **Queue** | Organizes tasks by team, county, program, or skill |
+| **AssignmentRule** | Defines automatic task routing logic |
 | **VerificationTask** | Task to verify data - either validation (accuracy) or program verification (evidence standards) |
 | **VerificationSource** | External services/APIs for data validation (IRS, ADP, state databases) |
-| **SLA** | Service level agreement tracking |
 | **TaskAuditEvent** | Immutable audit trail |
 
 **Key decisions:**
 - Workflow is about work items: "What needs to be done? Is it on track?"
+- Queues organize tasks for routing and monitoring
+- AssignmentRules enable automatic task routing based on program, office, skills
 - Verification has two purposes:
   - **Data validation**: Is the intake data accurate? (check against external sources)
   - **Program verification**: Does the data meet program evidence standards?
@@ -128,7 +133,7 @@ Work items, tasks, and SLA tracking.
 
 #### Communication (Cross-Cutting)
 
-Official notices and correspondence that can originate from any domain.
+Official notices and correspondence that can originate from any domain. **[Detailed schemas →](cross-cutting/communication.md)**
 
 | Entity | Purpose |
 |--------|---------|
@@ -264,451 +269,21 @@ Files and uploads.
 
 ---
 
-## 4. Proposed Domain Objects (Detailed)
+## 4. Detailed Schemas
 
-### Workflow Domain
+Detailed schemas have been moved to domain-specific files for better organization:
 
-#### Task
+| Domain | File |
+|--------|------|
+| Workflow | [domains/workflow.md](domains/workflow.md) |
+| Case Management | [domains/case-management.md](domains/case-management.md) |
+| Communication | [cross-cutting/communication.md](cross-cutting/communication.md) |
 
-The core work item representing an action that needs to be completed.
-
-```yaml
-Task:
-  properties:
-    id: uuid
-    taskType:
-      # Document verification
-      - verify_identity
-      - verify_income
-      - verify_employment
-      - verify_residency
-      - verify_citizenship
-      - verify_resources
-      - verify_expenses
-      # Determination
-      - eligibility_determination
-      - benefit_calculation
-      - expedited_screening
-      # Communication
-      - request_information
-      - send_notice
-      - schedule_interview
-      - conduct_interview
-      # Review
-      - supervisor_review
-      - quality_review
-      # Inter-agency
-      - inter_agency_referral
-      - inter_agency_followup
-      # Renewal
-      - renewal_review
-      - recertification
-      # Appeals
-      - appeal_review
-      - hearing_preparation
-    status:
-      - pending
-      - in_progress
-      - awaiting_client
-      - awaiting_verification
-      - awaiting_review
-      - completed
-      - cancelled
-      - escalated
-    priority:
-      - expedited      # 7-day SNAP, emergency
-      - high           # Approaching deadline
-      - normal         # Standard processing
-      - low            # Deferred/backlog
-    applicationId: uuid      # Reference to Application (Intake)
-    assignedToId: uuid       # Reference to CaseWorker (Case Management)
-    programType: enum        # snap, tanf, medical_assistance
-    dueDate: datetime        # SLA deadline
-    slaInfo: TaskSLAInfo     # SLA tracking details
-    sourceInfo: TaskSourceInfo  # What triggered this task
-    parentTaskId: uuid       # For subtasks
-    blockedByTaskIds: uuid[] # Dependencies
-    outcomeInfo: TaskOutcomeInfo  # Completion details
-    createdAt, updatedAt: datetime
-```
-
-#### TaskSLAInfo
-
-```yaml
-TaskSLAInfo:
-  properties:
-    slaType:
-      - snap_standard       # 30 days
-      - snap_expedited      # 7 days
-      - medicaid_standard   # 45 days
-      - medicaid_disability # 90 days
-      - tanf_standard       # 30 days
-      - rfi_response        # Variable
-      - appeal_standard     # Variable by state
-    slaDeadline: datetime
-    clockStartDate: datetime
-    clockPausedAt: datetime    # When paused (awaiting client)
-    totalPausedDays: integer
-    slaStatus:
-      - on_track
-      - at_risk
-      - breached
-      - paused
-      - completed
-    warningThresholdDays: integer
-```
-
-#### TaskAuditEvent
-
-Immutable audit trail for task actions.
-
-```yaml
-TaskAuditEvent:
-  properties:
-    id: uuid
-    taskId: uuid
-    eventType:
-      - created
-      - assigned
-      - reassigned
-      - status_changed
-      - priority_changed
-      - note_added
-      - due_date_changed
-      - escalated
-      - completed
-      - cancelled
-      - sla_warning
-      - sla_breached
-    previousValue: string
-    newValue: string
-    performedById: uuid
-    systemGenerated: boolean
-    notes: string
-    occurredAt: datetime (readonly)
-```
-
-### Eligibility Domain
-
-#### VerificationRequirement
-
-What a program requires to be verified and the acceptable evidence standards.
-
-```yaml
-VerificationRequirement:
-  properties:
-    id: uuid
-    programType: enum           # snap, medicaid, tanf
-    dataType:                   # What type of data this requirement covers
-      - income
-      - employment
-      - identity
-      - residency
-      - citizenship
-      - resources
-      - expenses
-    verificationStandard:       # What counts as verified for this program
-      - self_attestation
-      - documentary_evidence
-      - electronic_data_match
-      - collateral_contact
-    acceptableDocuments: []     # Document types that satisfy this requirement
-    acceptableSources: []       # VerificationSource IDs that satisfy this requirement
-    expirationDays: integer     # How long verification remains valid
-    canBeWaived: boolean
-    waiverConditions: string    # When waiver is allowed
-    createdAt, updatedAt: datetime
-```
-
-### Workflow Domain - Verification Entities
-
-#### VerificationSource
-
-External services and APIs available for data validation.
-
-```yaml
-VerificationSource:
-  properties:
-    id: uuid
-    name: string                # "IRS Income Verification", "ADP Employment", "State Wage Database"
-    sourceType:
-      - federal_agency          # IRS, SSA, DHS/SAVE
-      - state_database          # State wage records, DMV
-      - commercial_service      # ADP, Equifax, LexisNexis
-      - financial_institution   # Banks (for asset verification)
-    dataTypes: []               # What this source can verify: income, employment, identity, etc.
-    integrationMethod:
-      - realtime_api            # Real-time API call
-      - batch                   # Batch file exchange
-      - manual_lookup           # Manual lookup by worker
-    trustLevel:
-      - authoritative           # IRS, SSA - can override client-reported data
-      - supplementary           # Supports but doesn't override
-      - reference               # For comparison only
-    status:
-      - active
-      - inactive
-      - maintenance
-    createdAt, updatedAt: datetime
-```
-
-#### VerificationTask
-
-Task to verify intake data - either for accuracy (data validation) or program requirements (program verification).
-
-```yaml
-VerificationTask:
-  extends: Task
-  properties:
-    # Inherits Task fields (id, status, priority, assignedToId, etc.)
-    verificationType:
-      - data_validation         # Is the intake data accurate?
-      - program_verification    # Does it meet program requirements?
-      - both                    # Satisfies both purposes
-    # What's being verified (Intake reference)
-    applicationId: uuid
-    dataPath: string            # Path to specific data (e.g., "income[0].amount", "person[2].citizenship")
-    reportedValue: string       # The value client reported
-    # For data validation
-    verificationSourceId: uuid  # Which external source to check
-    sourceResult:
-      matchStatus:
-        - match
-        - mismatch
-        - partial_match
-        - not_found
-        - source_unavailable
-      sourceValue: string       # Value returned from external source
-      confidence: number        # Match confidence (0-100) if applicable
-      retrievedAt: datetime
-    # For program verification
-    eligibilityRequestId: uuid  # Which eligibility request this is for
-    verificationRequirementId: uuid  # Which program requirement applies
-    documentIds: uuid[]         # Supporting documents submitted
-    # Outcome
-    outcome:
-      - verified
-      - not_verified
-      - discrepancy_found
-      - waived
-      - pending_documentation
-    resolution:                 # If discrepancy found
-      - client_corrected        # Client updated their reported data
-      - source_error            # External source had incorrect data
-      - data_accepted           # Accepted despite mismatch (with justification)
-      - referred_for_review     # Escalated for supervisor review
-    resolutionNotes: string
-    verifiedAt: datetime
-    verifiedById: uuid          # CaseWorker who completed verification
-```
-
-### Case Management Domain
-
-#### CaseWorker
-
-Staff member who processes applications and tasks.
-
-```yaml
-CaseWorker:
-  properties:
-    id: uuid
-    name: Name
-    employeeId: string
-    email: Email
-    phoneNumber: PhoneNumber
-    role:
-      - intake_worker
-      - eligibility_worker
-      - quality_reviewer
-      - appeals_specialist
-    status:
-      - active
-      - inactive
-      - on_leave
-    supervisorId: uuid
-    teamId: uuid
-    certifications: CaseWorkerCertification[]
-    workloadCapacity: integer
-    languagesSpoken: Language[]
-    createdAt, updatedAt: datetime
-
-Supervisor:
-  extends: CaseWorker
-  properties:
-    # Inherits all CaseWorker fields, plus:
-    approvalAuthority:            # What this supervisor can approve
-      - eligibility_determination
-      - expedited_processing
-      - denial
-      - appeal_decision
-      - exception_request
-    teamCapacity: integer         # Max team members they can supervise
-    canHandleEscalations: boolean
-    escalationTypes:              # Types of escalations they handle
-      - sla_breach
-      - client_complaint
-      - complex_case
-      - inter_agency
-```
-
-### Communication Domain
-
-#### Notice
-
-Official communications sent to clients.
-
-```yaml
-Notice:
-  properties:
-    id: uuid
-    noticeType:
-      # Determination
-      - approval
-      - denial
-      - partial_approval
-      # Information requests
-      - request_for_information
-      - interview_scheduled
-      - interview_missed
-      # Status
-      - application_received
-      - pending_verification
-      - under_review
-      # Action
-      - renewal_due
-      - recertification_required
-      - benefits_ending
-      - benefits_change
-      # Appeals
-      - appeal_received
-      - hearing_scheduled
-      - appeal_decision
-    applicationId: uuid
-    programType: enum
-    recipientInfo: NoticeRecipientInfo
-    deliveryMethod:
-      - postal_mail
-      - email
-      - both
-      - in_person
-    status:
-      - draft
-      - pending_review
-      - approved
-      - sent
-      - delivered
-      - returned
-      - failed
-    language: Language
-    responseRequired: boolean
-    responseDueDate: datetime
-    responseReceivedDate: datetime
-    denialReasons: DenialReason[]    # For denial notices
-    rfiItems: RequestForInformationItem[]  # For RFI notices
-    generatedByTaskId: uuid
-    sentAt: datetime
-    sentById: uuid
-    createdAt, updatedAt: datetime
-```
+*Note: Client Management, Intake, Eligibility, Scheduling, and Document Management schemas will be added as those domains are implemented.*
 
 ---
 
-## 5. Proposed File Structure
-
-Organized by domain:
-
-```
-packages/schemas/openapi/
-├── domains/
-│   ├── client-management/
-│   │   ├── clients.yaml              # Client API spec
-│   │   ├── components/
-│   │   │   ├── client.yaml           # Client
-│   │   │   ├── relationship.yaml     # Relationship between clients
-│   │   │   ├── living-arrangement.yaml # Who the client lives with
-│   │   │   ├── contact-info.yaml     # ContactInfo
-│   │   │   ├── income.yaml           # Stable income sources
-│   │   │   └── employer.yaml         # Employer history
-│   │   └── examples/
-│   │       └── clients.yaml
-│   │
-│   ├── intake/
-│   │   ├── applications.yaml         # Application API spec
-│   │   ├── components/
-│   │   │   ├── application.yaml      # Application
-│   │   │   ├── person.yaml           # People on the application
-│   │   │   ├── living-arrangement.yaml # Reported living arrangement
-│   │   │   ├── income.yaml           # Reported income
-│   │   │   ├── expense.yaml          # Reported expenses
-│   │   │   └── resource.yaml         # Reported resources/assets
-│   │   └── examples/
-│   │       └── applications.yaml
-│   │
-│   ├── eligibility/
-│   │   ├── eligibility.yaml          # Eligibility API spec
-│   │   ├── components/
-│   │   │   ├── eligibility-request.yaml
-│   │   │   ├── eligibility-unit.yaml # Program-specific grouping (SNAP "household", Medicaid "tax unit")
-│   │   │   └── determination.yaml
-│   │   └── examples/
-│   │       └── eligibility.yaml
-│   │
-│   ├── case-management/
-│   │   ├── cases.yaml                # Case API spec
-│   │   ├── case-workers.yaml         # CaseWorker API spec
-│   │   ├── supervisors.yaml          # Supervisor API spec
-│   │   ├── components/
-│   │   │   ├── case.yaml
-│   │   │   ├── case-worker.yaml
-│   │   │   ├── supervisor.yaml       # Extends CaseWorker
-│   │   │   └── assignment.yaml
-│   │   └── examples/
-│   │       ├── cases.yaml
-│   │       └── case-workers.yaml
-│   │
-│   ├── workflow/
-│   │   ├── tasks.yaml                # Task API spec
-│   │   ├── components/
-│   │   │   ├── task.yaml             # Task, TaskSLAInfo, etc.
-│   │   │   ├── verification.yaml     # VerificationTask, VerificationOutcome
-│   │   │   └── audit.yaml            # TaskAuditEvent
-│   │   └── examples/
-│   │       └── tasks.yaml
-│   │
-│   ├── scheduling/
-│   │   ├── appointments.yaml         # Appointment API spec
-│   │   ├── components/
-│   │   │   └── appointment.yaml
-│   │   └── examples/
-│   │       └── appointments.yaml
-│   │
-│   └── document-management/
-│       ├── documents.yaml            # Document API spec
-│       ├── components/
-│       │   └── document.yaml
-│       └── examples/
-│           └── documents.yaml
-│
-├── cross-cutting/
-│   ├── communication/
-│   │   ├── notices.yaml              # Notice API spec
-│   │   ├── components/
-│   │   │   └── notice.yaml           # Notice, NoticeRecipientInfo, etc.
-│   │   └── examples/
-│   │       └── notices.yaml
-│   └── reporting/                    # Future: report definitions if needed
-│
-├── shared/
-│   └── components/
-│       └── common.yaml               # Shared schemas (Name, Address, Phone, etc.)
-│
-└── patterns/
-    └── api-patterns.yaml             # API conventions
-```
-
----
-
-## 6. Design Decisions
+## 5. Design Decisions
 
 ### Decision Log
 
@@ -901,7 +476,7 @@ Entities with the same name in different domains represent the same concept, dis
 
 ---
 
-## 7. Migration Considerations
+## 6. Migration Considerations
 
 ### Current Schema Mapping
 
@@ -931,7 +506,7 @@ Entities with the same name in different domains represent the same concept, dis
 
 ---
 
-## 8. Implementation Phases
+## 7. Implementation Phases
 
 ### Phase 1: Workflow & Case Management (Priority)
 1. Create Workflow domain (Task, VerificationTask, TaskAuditEvent)
@@ -950,7 +525,7 @@ Entities with the same name in different domains represent the same concept, dis
 
 ---
 
-## 9. Future Considerations
+## 8. Future Considerations
 
 Potential domains and functionality not included in the current design, for future evaluation.
 
@@ -1028,7 +603,7 @@ Potential domains and functionality not included in the current design, for futu
 
 ---
 
-## 10. References
+## 9. References
 
 ### Existing Files
 
