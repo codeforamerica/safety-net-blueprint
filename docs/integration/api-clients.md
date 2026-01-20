@@ -4,17 +4,6 @@ State-specific npm packages with typed SDK functions and Zod schemas for runtime
 
 ## Installation
 
-### 1. Configure GitHub Packages
-
-Create `.npmrc` in your project root:
-
-```
-@codeforamerica:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
-
-### 2. Install Your State Package
-
 ```bash
 npm install @codeforamerica/safety-net-<your-state>
 
@@ -437,10 +426,6 @@ npm update @codeforamerica/safety-net-<your-state>
 Check the changelog for breaking changes to schema fields or API endpoints.
 
 ## Troubleshooting
-
-**401 Unauthorized during install:**
-- Ensure `GITHUB_TOKEN` is set with `read:packages` scope
-- Check `.npmrc` configuration
 
 **Type errors after update:**
 - Schema fields may have changed

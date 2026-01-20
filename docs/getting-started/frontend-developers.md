@@ -14,32 +14,16 @@ This guide is for developers building frontend applications that consume Safety 
 - Node.js >= 18.0.0
 - A frontend project (React, Vue, etc.)
 - Familiarity with TypeScript
-- GitHub account (for package access)
 
 ## Initial Setup
 
-### 1. Configure npm for GitHub Packages
-
-The packages are published to GitHub Packages. Create or update `.npmrc` in your project root:
-
-```
-@codeforamerica:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
-
-Set your GitHub token (needs `read:packages` scope):
-
-```bash
-export GITHUB_TOKEN=ghp_your_token_here
-```
-
-### 2. Install the Package
+### 1. Install the Package
 
 ```bash
 npm install @codeforamerica/safety-net-<your-state>
 ```
 
-### 3. Install Peer Dependencies
+### 2. Install Peer Dependencies
 
 ```bash
 npm install zod axios

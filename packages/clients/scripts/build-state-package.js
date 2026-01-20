@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build a state-specific npm package for publishing to GitHub Packages.
+ * Build a state-specific npm package for publishing to npmjs.org.
  *
  * Usage:
  *   node scripts/build-state-package.js --state=california --version=1.0.0
