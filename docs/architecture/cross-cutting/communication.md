@@ -18,6 +18,32 @@ Communication is cross-cutting because notices and correspondence can originate 
 
 ---
 
+## Capabilities
+
+| Capability | Supported By |
+|------------|--------------|
+| **Caseworker** | |
+| Generate notice from task | `Notice.generatedByTaskId`, notice templates |
+| Review notice before sending | `Notice.status: pending_review` |
+| Track notice delivery | `DeliveryRecord` entity |
+| **Supervisor** | |
+| Approve notices before sending | `Notice.status: approved` |
+| Monitor failed deliveries | `DeliveryRecord.status: failed/returned` |
+| **System/Automation** | |
+| Auto-generate notices on determination | `Notice.noticeType`, triggered by eligibility events |
+| Retry failed deliveries | `DeliveryRecord.retryCount` |
+| Track response deadlines | `Notice.responseDueDate`, `Notice.responseReceivedDate` |
+| **Client** | |
+| View notices in portal | `DeliveryRecord.deliveryMethod: portal` |
+| Respond to RFI | `Notice.responseReceivedDate` |
+
+**Notes:**
+- Notices are triggered by events in other domains (Intake, Eligibility, Workflow, Case Management).
+- Notice content comes from templates (see [Configuration Management](../api-architecture.md#configuration-management)).
+- Delivery tracking supports multiple channels (postal, email, portal).
+
+---
+
 ## Schemas
 
 ### Notice
@@ -178,4 +204,112 @@ DeliveryRecord:
     failureReason: string
     retryCount: integer
     createdAt, updatedAt: datetime
+```
+
+---
+
+## Process APIs
+
+Process APIs orchestrate business operations by calling System APIs. They follow the pattern `POST /processes/{domain}/{resource}/{action}` and use `x-actors` and `x-capability` metadata.
+
+See [API Architecture](../api-architecture.md) for the full Process API pattern.
+
+### Notice Operations
+
+| Endpoint | Actors | Description |
+|----------|--------|-------------|
+| `POST /processes/communication/notices/send` | caseworker, system | Generate and send a notice |
+| `POST /processes/communication/notices/approve` | supervisor | Approve a pending notice |
+| `POST /processes/communication/notices/retry` | caseworker, system | Retry a failed delivery |
+
+---
+
+### Send Notice
+
+Generate and send a notice to a client.
+
+```yaml
+POST /processes/communication/notices/send
+x-actors: [caseworker, system]
+x-capability: communication
+
+requestBody:
+  noticeType: string           # approval, denial, request_for_information, etc.
+  applicationId: uuid          # Related application
+  clientId: uuid               # Recipient
+  programType: string          # snap, medicaid, tanf
+  templateId: uuid             # Notice template to use (optional)
+  templateData: object         # Data to populate template
+  deliveryMethod:
+    - postal_mail
+    - email
+    - both
+  skipReview: boolean          # Auto-approve (for system-generated)
+
+responses:
+  200:
+    notice: Notice             # Created notice
+    deliveryRecord: DeliveryRecord
+
+# Orchestrates:
+# 1. Load notice template based on noticeType and programType
+# 2. Populate template with client data and templateData
+# 3. Create Notice record
+# 4. If skipReview or system actor, set status: approved
+# 5. If requires review, set status: pending_review
+# 6. If approved, create DeliveryRecord and initiate delivery
+# 7. If triggered by task, link via generatedByTaskId
+```
+
+### Approve Notice
+
+Supervisor approves a notice pending review.
+
+```yaml
+POST /processes/communication/notices/approve
+x-actors: [supervisor]
+x-capability: communication
+
+requestBody:
+  noticeId: uuid               # Notice to approve
+  modifications: object        # Optional edits to notice content
+  notes: string                # Approval notes
+
+responses:
+  200:
+    notice: Notice             # Approved notice
+    deliveryRecord: DeliveryRecord
+
+# Orchestrates:
+# 1. Validate notice is in pending_review status
+# 2. Apply any modifications
+# 3. Update Notice.status → approved
+# 4. Create DeliveryRecord and initiate delivery
+```
+
+### Retry Delivery
+
+Retry a failed notice delivery.
+
+```yaml
+POST /processes/communication/notices/retry
+x-actors: [caseworker, system]
+x-capability: communication
+
+requestBody:
+  noticeId: uuid               # Notice to retry
+  deliveryMethod: string       # Retry with same or different method
+  updatedAddress: Address      # If address was incorrect (optional)
+  updatedEmail: Email          # If email was incorrect (optional)
+
+responses:
+  200:
+    deliveryRecord: DeliveryRecord  # New delivery attempt
+
+# Orchestrates:
+# 1. Validate previous delivery failed
+# 2. Update recipient info if provided
+# 3. Increment DeliveryRecord.retryCount
+# 4. Create new DeliveryRecord with status: pending
+# 5. Initiate delivery
 ```

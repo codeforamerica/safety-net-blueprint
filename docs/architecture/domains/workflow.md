@@ -410,7 +410,7 @@ Caseworker claims an unassigned task from a queue.
 ```yaml
 POST /processes/workflow/tasks/claim
 x-actors: [caseworker]
-x-capability: task-management
+x-capability: workflow
 
 requestBody:
   taskId: uuid               # Task to claim
@@ -437,7 +437,7 @@ Caseworker completes a task with an outcome.
 ```yaml
 POST /processes/workflow/tasks/complete
 x-actors: [caseworker]
-x-capability: task-management
+x-capability: workflow
 
 requestBody:
   taskId: uuid               # Task to complete
@@ -466,7 +466,7 @@ Caseworker returns a task to the queue (cannot complete it).
 ```yaml
 POST /processes/workflow/tasks/release
 x-actors: [caseworker]
-x-capability: task-management
+x-capability: workflow
 
 requestBody:
   taskId: uuid               # Task to release
@@ -493,7 +493,7 @@ Supervisor reassigns a task to a different worker or queue.
 ```yaml
 POST /processes/workflow/tasks/reassign
 x-actors: [supervisor]
-x-capability: task-management
+x-capability: workflow
 
 requestBody:
   taskId: uuid               # Task to reassign
@@ -523,7 +523,7 @@ Escalate a task to supervisor for review.
 ```yaml
 POST /processes/workflow/tasks/escalate
 x-actors: [caseworker, supervisor]
-x-capability: task-management
+x-capability: workflow
 
 requestBody:
   taskId: uuid               # Task to escalate
@@ -554,7 +554,7 @@ Supervisor reassigns multiple tasks during surge or rebalancing.
 ```yaml
 POST /processes/workflow/tasks/bulk-reassign
 x-actors: [supervisor]
-x-capability: task-management
+x-capability: workflow
 
 requestBody:
   taskIds: uuid[]            # Tasks to reassign
@@ -589,7 +589,7 @@ Apply workflow rules to determine task queue/assignment (typically system-initia
 ```yaml
 POST /processes/workflow/tasks/route
 x-actors: [system]
-x-capability: task-management
+x-capability: workflow
 
 requestBody:
   taskId: uuid               # Task to route
@@ -618,7 +618,7 @@ Initiate external data verification for a verification task.
 ```yaml
 POST /processes/workflow/verification/start
 x-actors: [caseworker, system]
-x-capability: verification
+x-capability: workflow
 
 requestBody:
   taskId: uuid               # VerificationTask to start
@@ -647,7 +647,7 @@ Record verification result and resolve any discrepancies.
 ```yaml
 POST /processes/workflow/verification/complete
 x-actors: [caseworker, system]
-x-capability: verification
+x-capability: workflow
 
 requestBody:
   taskId: uuid               # VerificationTask to complete

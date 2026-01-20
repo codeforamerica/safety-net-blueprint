@@ -187,9 +187,21 @@ See also: [Domain Design](domain-design.md) | [API Architecture](api-architectur
 | Option | Considered | Chosen |
 |--------|------------|--------|
 | By actor (client/, caseworker/, admin/) | Intuitive grouping by who uses it | No |
-| By capability (applications/, eligibility/, tasks/) | Actor-agnostic, same operation available to multiple actors | Yes |
+| By capability (applications/, eligibility/, tasks/) | Actor-agnostic, same operation available to multiple actors | Partially |
+| By domain, then resource, then action | Clear hierarchy, matches domain structure | Yes |
 
-*Rationale*: Many operations are used by multiple actors (e.g., both clients and caseworkers can submit applications). Organizing by capability with actor metadata (`x-actors: [client, caseworker]`) avoids duplication. See [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) for the `x-actors` and `x-capability` extension definitions.
+*Rationale*: Many operations are used by multiple actors (e.g., both clients and caseworkers can submit applications). Actor metadata (`x-actors: [client, caseworker]`) handles authorization without duplicating endpoints. Organizing by domain provides clear ownership and aligns with the System API structure.
+
+*Path pattern*: `/processes/{domain}/{resource}/{action}`
+
+*Examples*:
+- `/processes/workflow/tasks/claim`
+- `/processes/case-management/workers/assign`
+- `/processes/communication/notices/send`
+
+*Convention*: When an operation involves multiple resources, place it under the resource being acted upon (not the primary output). This matches natural language and improves discoverability.
+
+See [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) for the `x-actors` and `x-capability` extension definitions.
 
 *Reconsider if*: Actor-specific behavior diverges significantly (different request/response shapes), making shared endpoints awkward.
 

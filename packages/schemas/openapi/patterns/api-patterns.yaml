@@ -448,23 +448,28 @@ process_api_metadata:
       location: Operation level (under paths/{path}/{method})
       purpose: |
         Groups related Process API endpoints for documentation and discovery.
-        Maps to business capabilities, not technical concerns.
+        Should match the domain in the Process API path for consistency.
       values:
-        - application-intake      # Submitting and managing applications
+        # Core domains
+        - client-management       # Managing client records and relationships
+        - intake                  # Submitting and managing applications
         - eligibility             # Determining eligibility
-        - task-management         # Managing workflow tasks
-        - case-management         # Managing cases and assignments
-        - verification            # Data verification operations
-        - document-management     # Uploading and managing documents
+        - workflow                # Tasks, verification, SLA tracking
+        - case-management         # Cases, assignments, workload
         - scheduling              # Appointments and interviews
-        - communication           # Sending notices and alerts
+        - document-management     # Uploading and managing documents
+        # Cross-cutting
+        - communication           # Notices and correspondence
         - reporting               # Generating reports
         - configuration           # Managing system configuration
+      note: |
+        The x-capability should match the {domain} segment in the Process API path.
+        Example: /processes/workflow/tasks/claim uses x-capability: workflow
       example: |
         paths:
           /processes/intake/applications/submit:
             post:
-              x-capability: application-intake
+              x-capability: intake
               x-actors: [client, caseworker]
 
     x-idempotent:
