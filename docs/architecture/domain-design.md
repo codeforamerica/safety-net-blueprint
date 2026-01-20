@@ -928,12 +928,112 @@ Potential domains and functionality not included in the current design, for futu
 
 ---
 
-## 12. References
+## 12. Documentation Gaps
 
-### Existing Files
+Topics identified but not yet fully documented or implemented.
+
+### Added to api-patterns.yaml (Not Yet Implemented)
+
+The following patterns have been added to [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) but require implementation:
+
+| Pattern | Description | Implementation Required |
+|---------|-------------|------------------------|
+| **Error Handling** | Standard error response structure, error codes, HTTP status guidance | Update `common-responses.yaml` schemas, mock server error responses |
+| **API Versioning** | URL-path versioning strategy, deprecation headers | Update OpenAPI specs with version prefix, mock server routing |
+| **Idempotency** | `Idempotency-Key` header for safe retries | Mock server must track keys and return stored responses |
+| **Batch Operations** | `POST /{resources}/batch` pattern | Add batch endpoints to specs, mock server batch handling |
+
+Each section in `api-patterns.yaml` is marked with `# STATUS: Not yet implemented` to indicate work remaining.
+
+### Needs Architecture Documentation
+
+**Data Retention & Archival**
+
+| Data Type | Active Retention | Archive | Purge |
+|-----------|------------------|---------|-------|
+| Applications | 7 years after closure | Cold storage | Per state policy |
+| Audit logs | 7 years | Immutable archive | Never (compliance) |
+| PII | Per program requirements | Encrypted archive | On request + retention period |
+| Session/tokens | 24 hours | N/A | Immediate |
+
+*Considerations*:
+- Federal programs have specific retention requirements
+- Right to deletion must balance against audit requirements
+- Archived data must remain queryable for audits
+
+**Event-Driven Architecture / Webhooks**
+
+For external system integration without polling.
+
+| Event | Trigger | Typical Consumers |
+|-------|---------|-------------------|
+| `application.submitted` | New application received | Document management, eligibility engine |
+| `determination.completed` | Eligibility decided | Notice generation, benefits issuance |
+| `task.sla_warning` | Task approaching deadline | Supervisor dashboards, alerting |
+| `task.assigned` | Task assignment changed | Caseworker notifications |
+
+*Pattern*:
+- Events published to message broker (not direct HTTP calls)
+- Webhook subscriptions for external consumers
+- At-least-once delivery with idempotent consumers
+- Event schema versioning aligned with API versioning
+
+**Integration Patterns**
+
+How legacy systems and external services connect.
+
+| Pattern | Use Case | Example |
+|---------|----------|---------|
+| API Gateway | All external access | Authentication, rate limiting, routing |
+| Adapter | Vendor system integration | Workflow vendor → System API translation |
+| Anti-corruption layer | Legacy system integration | Mainframe → modern API translation |
+| Event bridge | Async integration | Real-time updates to data warehouse |
+| Batch file | Legacy batch systems | Nightly SSA data exchange |
+
+### Separate Documents (Future)
+
+**Testing Strategy**
+
+Warrants its own document covering:
+- Contract testing (Process APIs against System API contracts)
+- Mock server usage patterns
+- Integration test data management
+- Performance/load testing approach
+
+**Security & RBAC**
+
+Detailed security design including:
+- Role definitions and permissions matrix
+- Authentication flows (OAuth/OIDC)
+- Field-level authorization rules
+- Audit logging requirements
+
+---
+
+## 13. References
+
+### Related Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) | Machine-readable API design patterns and conventions |
+| [Creating APIs Guide](../guides/creating-apis.md) | How to create new API specifications |
+| [Mock Server Guide](../guides/mock-server.md) | Using the mock server for development |
+| [Search Patterns Guide](../guides/search-patterns.md) | Query syntax documentation |
+| [State Overlays Guide](../guides/state-overlays.md) | Customizing specs for state-specific needs |
+
+### Architecture Decision Records
+
+| ADR | Decision |
+|-----|----------|
+| [Search Patterns](../architecture-decisions/search-patterns.md) | Query parameter syntax |
+| [Multi-State Overlays](../architecture-decisions/multi-state-overlays.md) | State customization approach |
+| [OpenAPI TS Client Generation](../architecture-decisions/openapi-ts-client-generation.md) | TypeScript client generation |
+| [Workspace Restructure](../architecture-decisions/workspace-restructure.md) | Monorepo organization |
+
+### Schema Files
 
 - `packages/schemas/openapi/applications.yaml` - Current Application API
 - `packages/schemas/openapi/components/application.yaml` - Current Application schema
 - `packages/schemas/openapi/components/person.yaml` - Current Person schema
 - `packages/schemas/openapi/components/common.yaml` - Shared schemas
-- `packages/schemas/openapi/patterns/api-patterns.yaml` - API conventions

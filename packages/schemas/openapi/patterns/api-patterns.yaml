@@ -375,3 +375,220 @@ validation:
         - List responses have required properties
         - Error responses use shared $refs
         - CRUD operations follow patterns
+
+# =============================================================================
+# Error Handling
+# =============================================================================
+# STATUS: Not yet implemented in mock server or validation
+error_handling:
+  # Standard error response body structure
+  response_body:
+    required_fields:
+      - name: code
+        type: string
+        description: Machine-readable error code (e.g., "VALIDATION_ERROR", "RESOURCE_NOT_FOUND")
+      - name: message
+        type: string
+        description: Human-readable error description
+    optional_fields:
+      - name: details
+        type: array
+        description: Array of specific field-level errors
+        items:
+          field: Path to the field with error
+          code: Field-specific error code
+          message: Field-specific error message
+      - name: retryable
+        type: boolean
+        description: Whether the client should retry the request
+      - name: retryAfter
+        type: integer
+        description: Seconds to wait before retry (for rate limiting)
+
+  # Error code taxonomy
+  error_codes:
+    validation:
+      - MISSING_REQUIRED_FIELD
+      - INVALID_FORMAT
+      - INVALID_VALUE
+      - VALUE_OUT_OF_RANGE
+      - FIELD_TOO_LONG
+    business_rules:
+      - DUPLICATE_RESOURCE
+      - INVALID_STATE_TRANSITION
+      - PREREQUISITE_NOT_MET
+      - RESOURCE_LOCKED
+      - SLA_CONSTRAINT_VIOLATED
+    authorization:
+      - UNAUTHORIZED
+      - FORBIDDEN
+      - INSUFFICIENT_PERMISSIONS
+    system:
+      - SERVICE_UNAVAILABLE
+      - UPSTREAM_TIMEOUT
+      - INTERNAL_ERROR
+
+  # HTTP status code guidance
+  http_status_guidance:
+    400:
+      description: Malformed request (can't parse JSON, missing required query params)
+      retryable: false
+    401:
+      description: Authentication required or invalid credentials
+      retryable: false
+    403:
+      description: Authenticated but not authorized for this resource/action
+      retryable: false
+    404:
+      description: Resource not found
+      retryable: false
+    409:
+      description: Conflict (duplicate resource, concurrent modification)
+      retryable: true
+      note: Client should fetch current state and retry
+    422:
+      description: Valid JSON but fails business validation
+      retryable: false
+    429:
+      description: Rate limited
+      retryable: true
+      note: Use retryAfter header
+    500:
+      description: Unexpected server error
+      retryable: true
+    503:
+      description: Service temporarily unavailable
+      retryable: true
+
+# =============================================================================
+# API Versioning
+# =============================================================================
+# STATUS: Not yet implemented
+versioning:
+  strategy: url-path
+  description: Version in URL path (e.g., /v1/tasks, /v2/tasks)
+
+  current_version: v1
+  supported_versions:
+    - v1
+
+  compatibility_rules:
+    backward_compatible:
+      - Adding new optional request fields
+      - Adding new response fields
+      - Adding new endpoints
+      - Adding new enum values (clients must ignore unknown values)
+      - Adding new optional query parameters
+    breaking_changes:
+      - Removing fields
+      - Changing field types
+      - Renaming fields
+      - Removing enum values
+      - Changing URL paths
+      - Making optional fields required
+
+  deprecation:
+    notice_period_months: 6
+    headers:
+      - name: Deprecation
+        value: "true"
+        description: Indicates endpoint is deprecated
+      - name: Sunset
+        value: "<ISO 8601 date>"
+        description: Date when endpoint will be removed
+      - name: Link
+        value: "<url>; rel=\"successor-version\""
+        description: Link to replacement endpoint/documentation
+
+# =============================================================================
+# Idempotency
+# =============================================================================
+# STATUS: Not yet implemented in mock server
+idempotency:
+  description: |
+    Ensures that retrying a request (due to network issues, timeouts, etc.)
+    does not cause duplicate side effects. Critical for Process APIs.
+
+  applies_to:
+    - All POST operations on Process APIs
+    - POST operations that create resources on System APIs
+
+  mechanism:
+    header_name: Idempotency-Key
+    format: Client-generated UUID v4
+    required: true for applicable operations
+    behavior: |
+      1. Client generates unique key and includes in request header
+      2. Server checks if key has been seen within retention window
+      3. If seen: return stored response (do not re-execute)
+      4. If new: execute operation, store response with key
+    retention_hours: 24
+    note: Keys are scoped per client/tenant
+
+  response_headers:
+    - name: Idempotent-Replayed
+      values: ["true", "false"]
+      description: Indicates whether this response is a replay of a previous request
+
+  error_cases:
+    - code: IDEMPOTENCY_KEY_REUSED
+      status: 422
+      description: Same key used with different request body
+    - code: IDEMPOTENCY_KEY_MISSING
+      status: 400
+      description: Required idempotency key not provided
+
+# =============================================================================
+# Batch Operations
+# =============================================================================
+# STATUS: Not yet implemented
+batch_operations:
+  description: |
+    For operations that need to affect multiple resources in a single request.
+    Useful for bulk updates, imports, and administrative operations.
+
+  endpoint_pattern: "/{resources}/batch"
+  method: POST
+
+  request_body:
+    structure:
+      operations:
+        type: array
+        max_items: 100
+        items:
+          action:
+            type: string
+            enum: [create, update, delete]
+          id:
+            type: string
+            description: Required for update/delete, omit for create
+          data:
+            type: object
+            description: Resource payload (for create/update)
+
+  response:
+    structure:
+      total: Total operations requested
+      succeeded: Count of successful operations
+      failed: Count of failed operations
+      results:
+        type: array
+        items:
+          index: Position in request array
+          action: The action attempted
+          status: "succeeded" | "failed"
+          id: Resource ID (for successful creates)
+          error: Error details (for failures)
+
+  behavior:
+    atomicity: false
+    description: |
+      Batch operations use partial success model - individual operations
+      may succeed or fail independently. Client must check results array
+      to determine outcome of each operation.
+    ordering: Operations processed sequentially in array order
+    rate_limiting: Batch counts as N requests toward rate limit
+
+  idempotency:
+    description: Batch operations require idempotency key
+    scope: Entire batch (not individual operations)
