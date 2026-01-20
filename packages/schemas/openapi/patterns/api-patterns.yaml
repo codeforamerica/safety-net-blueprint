@@ -5,11 +5,31 @@
 version: "1.0"
 
 # =============================================================================
-# Naming Conventions
+# Pattern Applicability
+# =============================================================================
+# This project has two API layers (see docs/architecture/domain-design.md):
+#
+# SYSTEM APIs: RESTful CRUD access to domain data
+#   - Example: GET /tasks/{id}, POST /applications, PATCH /cases/{id}
+#   - Located in: openapi/domains/
+#
+# PROCESS APIs: RPC-style orchestration of business operations
+#   - Example: POST /processes/applications/submit
+#   - Located in: openapi/processes/
+#
+# Each section below indicates which API type it applies to:
+#   [SYSTEM]         - System APIs only
+#   [PROCESS]        - Process APIs only
+#   [BOTH]           - Both API types
+#   [SYSTEM, PROCESS*] - Required for System, optional/varies for Process
+
+# =============================================================================
+# Naming Conventions [BOTH]
 # =============================================================================
 naming:
   # URL path segments: kebab-case (lowercase with hyphens)
-  # Example: /user-profiles, /order-items
+  # System API example: /user-profiles, /order-items
+  # Process API example: /processes/applications/submit
   paths: kebab-case
 
   # Path parameters: camelCase inside braces
@@ -21,11 +41,13 @@ naming:
   query_parameters: camelCase
 
   # Operation IDs: camelCase verb + noun
-  # Example: listPersons, createApplication, getHouseholdById
+  # System API example: listPersons, createApplication, getHouseholdById
+  # Process API example: submitApplication, determineEligibility, reassignTasks
   operation_ids: camelCase
 
   # Schema/component names: PascalCase
-  # Example: Person, ApplicationCreate, HouseholdList
+  # System API example: Person, ApplicationCreate, HouseholdList (resource schemas)
+  # Process API example: SubmitApplicationRequest, SubmitApplicationResponse (DTOs)
   schemas: PascalCase
 
   # File names: kebab-case
@@ -33,8 +55,9 @@ naming:
   files: kebab-case
 
 # =============================================================================
-# List Endpoint Pattern
+# List Endpoint Pattern [SYSTEM]
 # =============================================================================
+# Process APIs do not have list endpoints - they perform actions, not queries.
 list_endpoints:
   # All list endpoints (GET /resources) must include these parameters
   required_parameters:
@@ -73,8 +96,9 @@ list_endpoints:
   response_schema_suffix: List
 
 # =============================================================================
-# Search Query Syntax
+# Search Query Syntax [SYSTEM]
 # =============================================================================
+# Process APIs do not use search - they receive explicit request payloads.
 search_syntax:
   parameter_name: q
   description: |
@@ -114,8 +138,11 @@ search_syntax:
       example: "address.state:CA"
 
 # =============================================================================
-# CRUD Operations
+# CRUD Operations [SYSTEM]
 # =============================================================================
+# Process APIs are RPC-style (POST with action verbs), not RESTful CRUD.
+# Process API pattern: POST /processes/{capability}/{action}
+# Example: POST /processes/applications/submit, POST /processes/tasks/bulk-reassign
 crud_operations:
   # CREATE - POST /resources
   create:
@@ -181,8 +208,10 @@ crud_operations:
     error_responses: [404, 500]
 
 # =============================================================================
-# Shared Components
+# Shared Components [BOTH]
 # =============================================================================
+# Error responses are shared. Query parameters are System API only.
+# Process APIs define their own request/response DTOs.
 shared_components:
   # Error responses - use $ref to these
   error_responses:
@@ -225,8 +254,11 @@ shared_components:
       maxLength: 320
 
 # =============================================================================
-# Schema Patterns
+# Schema Patterns [SYSTEM, PROCESS*]
 # =============================================================================
+# System APIs: Use resource schemas with standard base fields (id, createdAt, updatedAt)
+# Process APIs: Use purpose-built DTOs (Request/Response suffixes) - may reference
+#               System API schemas but define their own request/response shapes.
 schema_patterns:
   # Every resource should have these standard fields
   resource_base_fields:
@@ -314,8 +346,9 @@ schema_patterns:
       - Works for both top-level properties and nested array items
 
 # =============================================================================
-# File Structure
+# File Structure [BOTH]
 # =============================================================================
+# System APIs in openapi/domains/, Process APIs in openapi/processes/
 file_structure:
   # Main API specs go in openapi/ root
   api_specs:
@@ -351,8 +384,9 @@ file_structure:
     postman_collection: "generated/postman-collection.json"
 
 # =============================================================================
-# Validation Rules
+# Validation Rules [BOTH]
 # =============================================================================
+# Syntax and lint rules apply to both. Pattern checks differ by API type.
 validation:
   # These are enforced by npm run validate
   layers:
@@ -377,7 +411,7 @@ validation:
         - CRUD operations follow patterns
 
 # =============================================================================
-# Error Handling
+# Error Handling [BOTH]
 # =============================================================================
 # STATUS: Not yet implemented in mock server or validation
 error_handling:
@@ -461,7 +495,7 @@ error_handling:
       retryable: true
 
 # =============================================================================
-# API Versioning
+# API Versioning [BOTH]
 # =============================================================================
 # STATUS: Not yet implemented
 versioning:
@@ -501,17 +535,19 @@ versioning:
         description: Link to replacement endpoint/documentation
 
 # =============================================================================
-# Idempotency
+# Idempotency [PROCESS required, SYSTEM for POST only]
 # =============================================================================
 # STATUS: Not yet implemented in mock server
+# Process APIs: Required for all POST operations (actions may have side effects)
+# System APIs: Required for POST (create) operations only
 idempotency:
   description: |
     Ensures that retrying a request (due to network issues, timeouts, etc.)
     does not cause duplicate side effects. Critical for Process APIs.
 
   applies_to:
-    - All POST operations on Process APIs
-    - POST operations that create resources on System APIs
+    process_apis: All POST operations (required)
+    system_apis: POST operations that create resources
 
   mechanism:
     header_name: Idempotency-Key
@@ -539,13 +575,17 @@ idempotency:
       description: Required idempotency key not provided
 
 # =============================================================================
-# Batch Operations
+# Batch Operations [SYSTEM primarily, PROCESS rarely]
 # =============================================================================
 # STATUS: Not yet implemented
+# System APIs: Common for bulk CRUD (e.g., PATCH /tasks/batch)
+# Process APIs: Rare; most process operations are single-action. If needed,
+#               the process itself handles multiple items (e.g., bulk-reassign).
 batch_operations:
   description: |
     For operations that need to affect multiple resources in a single request.
     Useful for bulk updates, imports, and administrative operations.
+    Primarily for System APIs; Process APIs typically handle batching internally.
 
   endpoint_pattern: "/{resources}/batch"
   method: POST
