@@ -87,36 +87,7 @@ The core work item representing an action that needs to be completed.
 Task:
   properties:
     id: uuid
-    taskType:
-      # Document verification
-      - verify_identity
-      - verify_income
-      - verify_employment
-      - verify_residency
-      - verify_citizenship
-      - verify_resources
-      - verify_expenses
-      # Determination
-      - eligibility_determination
-      - benefit_calculation
-      - expedited_screening
-      # Communication
-      - request_information
-      - send_notice
-      - schedule_interview
-      - conduct_interview
-      # Review
-      - supervisor_review
-      - quality_review
-      # Inter-agency
-      - inter_agency_referral
-      - inter_agency_followup
-      # Renewal
-      - renewal_review
-      - recertification
-      # Appeals
-      - appeal_review
-      - hearing_preparation
+    taskTypeCode: string     # Reference to TaskType.code (e.g., "verify_income")
     status:
       - pending
       - in_progress
@@ -138,10 +109,11 @@ Task:
     assignedToId: uuid       # Reference to CaseWorker (Case Management)
     queueId: uuid            # Reference to Queue
     officeId: uuid           # Reference to Office (Case Management)
-    programType: enum        # snap, tanf, medical_assistance
+    programType: enum        # TODO: Standardize ProgramType enum across all schemas
     requiredSkills: string[] # Skills needed to work this task
     dueDate: datetime        # SLA deadline
-    slaInfo: TaskSLAInfo     # SLA tracking details
+    slaTypeCode: string      # Reference to SLAType.code (e.g., "snap_expedited")
+    slaInfo: TaskSLAInfo     # SLA tracking details (computed from slaTypeCode)
     sourceInfo: TaskSourceInfo  # What triggered this task
     parentTaskId: uuid       # For subtasks
     blockedByTaskIds: uuid[] # Dependencies
@@ -167,7 +139,7 @@ Queue:
       - general                     # Default/catch-all
     teamId: uuid                    # Optional: linked Team
     officeId: uuid                  # Optional: linked Office
-    programType: enum               # Optional: snap, medicaid, tanf
+    programType: enum               # TODO: Standardize ProgramType enum across all schemas
     requiredSkills: string[]        # Skills needed to work tasks in this queue
     isDefault: boolean              # Default queue for unassigned tasks
     priority: integer               # Queue processing priority (lower = higher priority)
@@ -180,7 +152,7 @@ Queue:
 
 ### WorkflowRule
 
-Defines automatic task routing and prioritization logic. Unifies assignment and priority rules with a shared condition structure.
+Defines automatic task routing and prioritization logic. Uses [JSON Logic](https://jsonlogic.com/) for flexible, extensible conditions.
 
 ```yaml
 WorkflowRule:
@@ -193,16 +165,8 @@ WorkflowRule:
       - priority                    # Sets task priority level
     evaluationOrder: integer        # Rule evaluation order (lower = evaluated first)
     isActive: boolean
-    # Conditions - when this rule applies
-    conditions:
-      programTypes: enum[]          # Match these programs
-      taskTypes: string[]           # Match these task types
-      officeIds: uuid[]             # Match tasks from these offices
-      # For priority rules, can also match on application/client attributes:
-      hasChildrenUnderAge: integer  # Household has children under this age
-      incomePercentFPL: number      # Income below this % of Federal Poverty Level
-      isHomeless: boolean           # Client reports homelessness
-      daysUntilDeadline: integer    # SLA deadline within N days
+    # Conditions - JSON Logic expression evaluated against task + application context
+    conditions: object              # JSON Logic expression (see examples below)
     # Action - what happens when conditions match
     # For assignment rules:
     assignmentStrategy:
@@ -223,30 +187,46 @@ WorkflowRule:
     createdAt, updatedAt: datetime
 ```
 
-**Usage Examples:**
+**JSON Logic Condition Examples:**
 
-| Rule Type | Example | Conditions | Action |
-|-----------|---------|------------|--------|
-| Assignment | Route SNAP to County A queue | `programTypes: [snap]`, `officeIds: [county-a]` | `assignmentStrategy: specific_queue` |
-| Priority | Expedite for young children | `hasChildrenUnderAge: 6` | `targetPriority: expedited` |
-| Priority | High priority near deadline | `daysUntilDeadline: 5` | `targetPriority: high` |
-| Assignment | Skill-based routing | `taskTypes: [appeal_review]` | `assignmentStrategy: skill_match` |
+```json
+// Route SNAP tasks from County A to specific queue
+{
+  "and": [
+    { "==": [{ "var": "task.programType" }, "snap"] },
+    { "==": [{ "var": "task.officeId" }, "county-a-id"] }
+  ]
+}
+
+// Expedite for households with children under 6
+{
+  "<": [{ "var": "application.household.youngestChildAge" }, 6]
+}
+
+// High priority when deadline within 5 days
+{
+  "<=": [{ "var": "task.daysUntilDeadline" }, 5]
+}
+
+// Skill-based routing for appeals
+{
+  "in": [{ "var": "task.taskTypeCode" }, ["appeal_review", "hearing_preparation"]]
+}
+```
+
+**Available context variables:**
+- `task.*` - Task fields (taskTypeCode, programType, officeId, daysUntilDeadline, etc.)
+- `application.*` - Application data (household, income, etc.)
+- `case.*` - Case data (if case-level task)
 
 ### TaskSLAInfo
 
-SLA tracking details embedded in Task.
+SLA tracking details embedded in Task. The SLA type is referenced via `Task.slaTypeCode`.
 
 ```yaml
 TaskSLAInfo:
   properties:
-    slaType:
-      - snap_standard       # 30 days
-      - snap_expedited      # 7 days
-      - medicaid_standard   # 45 days
-      - medicaid_disability # 90 days
-      - tanf_standard       # 30 days
-      - rfi_response        # Variable
-      - appeal_standard     # Variable by state
+    # Note: slaTypeCode is on Task, not here (avoids duplication)
     slaDeadline: datetime
     clockStartDate: datetime
     clockPausedAt: datetime    # When paused (awaiting client)
@@ -257,7 +237,7 @@ TaskSLAInfo:
       - breached
       - paused
       - completed
-    warningThresholdDays: integer
+    warningThresholdDays: integer  # Computed from SLAType config
 ```
 
 ### TaskAuditEvent
@@ -371,6 +351,75 @@ VerificationTask:
     verifiedAt: datetime
     verifiedById: uuid          # CaseWorker who completed verification
 ```
+
+---
+
+## Configuration Schemas
+
+These schemas define configurable lookup data that can be extended without schema changes.
+
+### TaskType
+
+Defines the types of tasks that can be created. New task types can be added without schema changes.
+
+```yaml
+TaskType:
+  properties:
+    code: string (PK)           # "verify_income", "eligibility_determination"
+    category:
+      - verification            # Document/data verification tasks
+      - determination           # Eligibility determination tasks
+      - communication           # Client communication tasks
+      - review                  # Supervisor/quality review tasks
+      - inter_agency            # Inter-agency coordination tasks
+      - renewal                 # Renewal/recertification tasks
+      - appeal                  # Appeals processing tasks
+    name: string                # "Verify Income", "Eligibility Determination"
+    description: string
+    defaultSLATypeCode: string  # Reference to SLAType.code
+    defaultPriority: string     # Default priority for this task type
+    requiredSkills: string[]    # Default skills needed
+    isActive: boolean
+```
+
+**Example task types:**
+
+| Code | Category | Name | Default SLA |
+|------|----------|------|-------------|
+| `verify_income` | verification | Verify Income | snap_standard |
+| `verify_identity` | verification | Verify Identity | snap_standard |
+| `eligibility_determination` | determination | Eligibility Determination | snap_standard |
+| `expedited_screening` | determination | Expedited Screening | snap_expedited |
+| `supervisor_review` | review | Supervisor Review | internal_review |
+| `renewal_review` | renewal | Renewal Review | renewal_standard |
+| `appeal_review` | appeal | Appeal Review | appeal_standard |
+
+### SLAType
+
+Defines SLA configurations for different programs and task types.
+
+```yaml
+SLAType:
+  properties:
+    code: string (PK)           # "snap_expedited", "medicaid_standard"
+    name: string                # "SNAP Expedited Processing"
+    programType: enum           # TODO: Standardize ProgramType enum across all schemas
+    durationDays: integer       # 7, 30, 45, etc.
+    warningThresholdDays: integer  # Days before deadline to show warning
+    pauseOnStatuses: string[]   # Task statuses that pause the clock
+    isActive: boolean
+```
+
+**Example SLA types:**
+
+| Code | Program | Duration | Warning |
+|------|---------|----------|---------|
+| `snap_standard` | snap | 30 days | 5 days |
+| `snap_expedited` | snap | 7 days | 2 days |
+| `medicaid_standard` | medicaid | 45 days | 7 days |
+| `medicaid_disability` | medicaid | 90 days | 14 days |
+| `tanf_standard` | tanf | 30 days | 5 days |
+| `appeal_standard` | (any) | varies by state | 7 days |
 
 ---
 

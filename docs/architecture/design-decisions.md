@@ -156,6 +156,46 @@ See also: [Domain Design](domain-design.md) | [API Architecture](api-architectur
 
 ---
 
+### JSON Logic for Workflow Rule Conditions
+
+| Option | Considered | Chosen |
+|--------|------------|--------|
+| Hardcoded condition fields | Simple but requires schema changes for new conditions | No |
+| Custom expression language | Maximum flexibility but proprietary | No |
+| JSON Logic | Standard, portable, well-documented | Yes |
+| MongoDB-style queries | Familiar syntax, but less expressive | No |
+| OPA/Rego | Powerful but heavy, separate runtime | No |
+
+*Rationale*: [JSON Logic](https://jsonlogic.com/) is an open standard for expressing conditions as JSON objects. It has implementations in JavaScript, Python, Java, Go, and other languages. Workflow rules can define arbitrary conditions without schema changes—new condition types are added by exposing new context variables, not by changing the schema.
+
+*Example*:
+```json
+{
+  "and": [
+    { "==": [{ "var": "task.programType" }, "snap"] },
+    { "<": [{ "var": "application.household.youngestChildAge" }, 6] }
+  ]
+}
+```
+
+*Reconsider if*: Conditions become complex enough to require a full rules engine (e.g., Drools), or if business users need a visual rule builder (which would generate JSON Logic underneath).
+
+---
+
+### Configurable vs Hardcoded Task and SLA Types
+
+| Option | Considered | Chosen |
+|--------|------------|--------|
+| Hardcoded enums | Simple but inflexible; schema changes for new types | No |
+| Configuration entities | TaskType and SLAType as lookup tables with `code` as PK | Yes |
+| UUIDs for configuration | Standard approach but less user-friendly | No |
+
+*Rationale*: Task types and SLA types are configuration data that changes as programs evolve. Using `code` as the primary key (e.g., `verify_income`, `snap_expedited`) is more readable and user-friendly than UUIDs. New task types can be added without schema changes.
+
+*Reconsider if*: Configuration data needs to be synchronized across systems where code collisions are possible (UUIDs would guarantee uniqueness).
+
+---
+
 ### System APIs vs Process APIs?
 
 | Option | Considered | Chosen |
