@@ -264,3 +264,203 @@ Supervisor (1) ──< (many) CaseWorker (via supervisorId)
 CaseWorker (1) ──< (many) Task (via assignedToId)
 CaseWorker (1) ──< (many) Case (via assignedWorkerId)
 ```
+
+---
+
+## Process APIs
+
+Process APIs orchestrate business operations by calling System APIs. They follow the pattern `POST /processes/{capability}/{action}` and use `x-actors` and `x-capability` metadata.
+
+See [API Architecture](../api-architecture.md) for the full Process API pattern.
+
+### Assignment Operations
+
+| Endpoint | Actors | Description |
+|----------|--------|-------------|
+| `POST /processes/assignments/assign` | supervisor, system | Assign worker to case, application, or task |
+| `POST /processes/cases/transfer` | supervisor | Transfer case to different office/worker |
+
+### Workload Management
+
+| Endpoint | Actors | Description |
+|----------|--------|-------------|
+| `POST /processes/teams/rebalance` | supervisor | Redistribute tasks across team members |
+| `POST /processes/workers/update-availability` | caseworker, supervisor | Update worker status and availability |
+| `GET /processes/workers/capacity` | supervisor, system | Get worker capacity for assignment decisions |
+
+---
+
+### Assign Worker
+
+Assign a worker to a case, application, or task.
+
+```yaml
+POST /processes/assignments/assign
+x-actors: [supervisor, system]
+x-capability: case-management
+
+requestBody:
+  assignmentType:
+    - case
+    - application
+    - task
+  referenceId: uuid          # ID of case, application, or task
+  assignedToId: uuid         # CaseWorker to assign
+  reason: string             # Why this assignment
+
+responses:
+  200:
+    assignment: Assignment   # New assignment record
+    previousAssignment: Assignment  # If reassigning
+
+# Orchestrates:
+# 1. Validate worker has capacity (workloadCapacity vs currentWorkload)
+# 2. Validate worker has required skills/programs
+# 3. Close previous Assignment if exists
+# 4. Create new Assignment record
+# 5. Update Case/Task.assignedToId
+# 6. Update Caseload for both workers (if reassignment)
+# 7. Create TaskAuditEvent if task assignment
+```
+
+### Transfer Case
+
+Transfer a case to a different office or worker.
+
+```yaml
+POST /processes/cases/transfer
+x-actors: [supervisor]
+x-capability: case-management
+
+requestBody:
+  caseId: uuid               # Case to transfer
+  targetOfficeId: uuid       # New office (optional)
+  targetWorkerId: uuid       # New worker (optional)
+  transferReason:
+    - client_moved           # Client relocated
+    - workload_balance       # Rebalancing
+    - skill_match            # Needs specialist
+    - client_request         # Client requested
+  notes: string              # Transfer details
+
+responses:
+  200:
+    case: Case               # Updated case
+    assignment: Assignment   # New assignment
+    transferredTasks: Task[] # Tasks moved with case
+
+# Orchestrates:
+# 1. Validate supervisor authority over case
+# 2. Update Case.officeId and/or Case.assignedWorkerId
+# 3. Transfer all active tasks to new worker/queue
+# 4. Create Assignment records
+# 5. Update Caseload for both workers
+# 6. If office changed, re-route tasks through WorkflowRules
+```
+
+### Rebalance Team Workload
+
+Redistribute tasks across team members based on capacity.
+
+```yaml
+POST /processes/teams/rebalance
+x-actors: [supervisor]
+x-capability: case-management
+
+requestBody:
+  teamId: uuid               # Team to rebalance
+  strategy:
+    - by_capacity            # Distribute by available capacity
+    - by_skill               # Match skills to tasks
+    - even                   # Equal distribution
+  includeTaskTypes: string[] # Only these task types (optional)
+  excludeWorkerIds: uuid[]   # Workers to exclude (e.g., on leave)
+
+responses:
+  200:
+    reassignments: ReassignmentSummary[]
+    totalMoved: integer
+    newDistribution: WorkerLoadSummary[]
+
+# Orchestrates:
+# 1. Get all team members and their current Caseload
+# 2. Get all unassigned/redistributable tasks in team's queues
+# 3. Calculate optimal distribution based on strategy
+# 4. Batch reassign tasks
+# 5. Update Caseload for all affected workers
+# 6. Create TaskAuditEvents for all reassignments
+```
+
+### Update Worker Availability
+
+Update a worker's status and availability, triggering reassignment if needed.
+
+```yaml
+POST /processes/workers/update-availability
+x-actors: [caseworker, supervisor]
+x-capability: case-management
+
+requestBody:
+  workerId: uuid             # Worker to update
+  status:
+    - active
+    - on_leave
+    - inactive
+  effectiveDate: date        # When status takes effect
+  expectedReturnDate: date   # For on_leave
+  reassignTasks: boolean     # Reassign current tasks?
+  reassignTo:
+    - queue                  # Return to queue
+    - team                   # Distribute to team
+    - specific_worker        # Assign to targetWorkerId
+  targetWorkerId: uuid       # For specific_worker
+
+responses:
+  200:
+    worker: CaseWorker       # Updated worker
+    reassignedTasks: integer # Count if reassigned
+
+# Orchestrates:
+# 1. Update CaseWorker.status
+# 2. If reassignTasks and status != active:
+#    a. Get all tasks assigned to worker
+#    b. Reassign based on strategy
+#    c. Update Caseload
+#    d. Create TaskAuditEvents
+# 3. If returning from leave, optionally reclaim tasks
+```
+
+### Get Worker Capacity
+
+Get real-time capacity information for assignment decisions.
+
+```yaml
+GET /processes/workers/capacity
+x-actors: [supervisor, system]
+x-capability: case-management
+
+parameters:
+  workerId: uuid             # Specific worker (optional)
+  teamId: uuid               # All workers on team (optional)
+  officeId: uuid             # All workers in office (optional)
+  programType: string        # Filter by program certification
+  requiredSkills: string[]   # Filter by skills
+
+responses:
+  200:
+    workers: WorkerCapacity[]
+      - workerId: uuid
+        name: string
+        currentLoad: integer
+        maxCapacity: integer
+        availableCapacity: integer
+        skills: string[]
+        programs: string[]
+        tasksAtRisk: integer   # Tasks approaching SLA
+
+# Orchestrates:
+# 1. Query CaseWorkers matching filters
+# 2. Get current Caseload for each
+# 3. Calculate available capacity
+# 4. Return sorted by available capacity
+```

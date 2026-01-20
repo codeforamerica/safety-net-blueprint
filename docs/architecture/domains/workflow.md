@@ -368,3 +368,312 @@ When using `skill_match` assignment strategy:
 1. Task's `requiredSkills` are compared against CaseWorker's `skills`
 2. Only workers with all required skills are considered
 3. Among qualified workers, `least_loaded` logic is applied
+
+---
+
+## Process APIs
+
+Process APIs orchestrate business operations by calling System APIs. They follow the pattern `POST /processes/{capability}/{action}` and use `x-actors` and `x-capability` metadata.
+
+See [API Architecture](../api-architecture.md) for the full Process API pattern.
+
+### Task Lifecycle
+
+| Endpoint | Actors | Description |
+|----------|--------|-------------|
+| `POST /processes/tasks/claim` | caseworker | Claim an unassigned task from a queue |
+| `POST /processes/tasks/complete` | caseworker | Complete a task with outcome |
+| `POST /processes/tasks/release` | caseworker | Return a task to the queue |
+| `POST /processes/tasks/reassign` | supervisor | Reassign a task to different worker/queue |
+| `POST /processes/tasks/escalate` | caseworker, supervisor | Escalate a task to supervisor |
+| `POST /processes/tasks/bulk-reassign` | supervisor | Reassign multiple tasks |
+
+### Task Routing
+
+| Endpoint | Actors | Description |
+|----------|--------|-------------|
+| `POST /processes/tasks/route` | system | Apply workflow rules to determine queue/assignment |
+
+### Verification
+
+| Endpoint | Actors | Description |
+|----------|--------|-------------|
+| `POST /processes/verification/start` | caseworker, system | Initiate external data verification |
+| `POST /processes/verification/complete` | caseworker, system | Record verification result |
+
+---
+
+### Claim Task
+
+Caseworker claims an unassigned task from a queue.
+
+```yaml
+POST /processes/tasks/claim
+x-actors: [caseworker]
+x-capability: task-management
+
+requestBody:
+  taskId: uuid               # Task to claim
+  notes: string              # Optional claim notes
+
+responses:
+  200:
+    task: Task               # Updated task with assignedToId set
+    assignment: Assignment   # New assignment record
+
+# Orchestrates:
+# 1. Validate task is unassigned and in valid queue
+# 2. Check worker has required skills (CaseWorker.skills)
+# 3. Update Task.assignedToId, Task.status → in_progress
+# 4. Create Assignment record
+# 5. Create TaskAuditEvent (assigned)
+# 6. Update Caseload for worker
+```
+
+### Complete Task
+
+Caseworker completes a task with an outcome.
+
+```yaml
+POST /processes/tasks/complete
+x-actors: [caseworker]
+x-capability: task-management
+
+requestBody:
+  taskId: uuid               # Task to complete
+  outcome: string            # Task-specific outcome
+  notes: string              # Completion notes
+  createFollowUp: boolean    # Whether to create follow-up task
+
+responses:
+  200:
+    task: Task               # Task with status: completed
+    followUpTask: Task       # If createFollowUp was true
+
+# Orchestrates:
+# 1. Validate task is assigned to requesting worker
+# 2. Update Task.status → completed, Task.outcomeInfo
+# 3. Create TaskAuditEvent (completed)
+# 4. Update Caseload for worker
+# 5. If createFollowUp, create new Task and route it
+# 6. If task type requires notice, trigger notice generation
+```
+
+### Release Task
+
+Caseworker returns a task to the queue (cannot complete it).
+
+```yaml
+POST /processes/tasks/release
+x-actors: [caseworker]
+x-capability: task-management
+
+requestBody:
+  taskId: uuid               # Task to release
+  reason: string             # Why releasing (required)
+  suggestedSkills: string[]  # Skills needed to complete
+
+responses:
+  200:
+    task: Task               # Task with status: returned_to_queue
+
+# Orchestrates:
+# 1. Validate task is assigned to requesting worker
+# 2. Update Task.status → returned_to_queue, clear assignedToId
+# 3. Optionally update Task.requiredSkills
+# 4. Update Assignment.status → reassigned
+# 5. Create TaskAuditEvent (returned_to_queue)
+# 6. Re-route task using WorkflowRules
+```
+
+### Reassign Task
+
+Supervisor reassigns a task to a different worker or queue.
+
+```yaml
+POST /processes/tasks/reassign
+x-actors: [supervisor]
+x-capability: task-management
+
+requestBody:
+  taskId: uuid               # Task to reassign
+  targetWorkerId: uuid       # Assign to specific worker (optional)
+  targetQueueId: uuid        # Move to queue (optional)
+  reason: string             # Reassignment reason (required)
+  priority: string           # Optionally change priority
+
+responses:
+  200:
+    task: Task               # Updated task
+    assignment: Assignment   # New assignment record
+
+# Orchestrates:
+# 1. Validate supervisor has authority over this task
+# 2. Update Task.assignedToId or Task.queueId
+# 3. Optionally update Task.priority
+# 4. Create Assignment record
+# 5. Create TaskAuditEvent (reassigned, priority_changed)
+# 6. Update Caseload for affected workers
+```
+
+### Escalate Task
+
+Escalate a task to supervisor for review.
+
+```yaml
+POST /processes/tasks/escalate
+x-actors: [caseworker, supervisor]
+x-capability: task-management
+
+requestBody:
+  taskId: uuid               # Task to escalate
+  escalationType:
+    - sla_risk               # At risk of missing SLA
+    - complex_case           # Needs supervisor input
+    - policy_question        # Policy clarification needed
+    - client_complaint       # Client escalated issue
+  notes: string              # Escalation details (required)
+
+responses:
+  200:
+    task: Task               # Task with status: escalated
+    escalatedTo: Supervisor  # Supervisor who received escalation
+
+# Orchestrates:
+# 1. Update Task.status → escalated
+# 2. Identify appropriate supervisor (by team, escalation type)
+# 3. Create Assignment to supervisor
+# 4. Create TaskAuditEvent (escalated)
+# 5. Optionally send notification to supervisor
+```
+
+### Bulk Reassign Tasks
+
+Supervisor reassigns multiple tasks during surge or rebalancing.
+
+```yaml
+POST /processes/tasks/bulk-reassign
+x-actors: [supervisor]
+x-capability: task-management
+
+requestBody:
+  taskIds: uuid[]            # Tasks to reassign
+  strategy:
+    - to_worker              # Assign all to targetWorkerId
+    - to_queue               # Move all to targetQueueId
+    - distribute             # Distribute across targetWorkerIds
+  targetWorkerId: uuid       # For to_worker strategy
+  targetQueueId: uuid        # For to_queue strategy
+  targetWorkerIds: uuid[]    # For distribute strategy
+  reason: string             # Bulk reassignment reason
+
+responses:
+  200:
+    updated: integer         # Count of successfully updated
+    failed: TaskError[]      # Any failures with reasons
+    assignments: Assignment[] # New assignment records
+
+# Orchestrates:
+# 1. Validate supervisor authority over all tasks
+# 2. For distribute strategy, balance by current workload
+# 3. Batch update Tasks
+# 4. Batch create Assignments
+# 5. Batch create TaskAuditEvents
+# 6. Update Caseload for all affected workers
+```
+
+### Route Task
+
+Apply workflow rules to determine task queue/assignment (typically system-initiated).
+
+```yaml
+POST /processes/tasks/route
+x-actors: [system]
+x-capability: task-management
+
+requestBody:
+  taskId: uuid               # Task to route
+  skipRules: boolean         # Direct assignment without rules
+  targetQueueId: uuid        # For skipRules: true
+  targetWorkerId: uuid       # For skipRules: true
+
+responses:
+  200:
+    task: Task               # Task with queue/assignment set
+    rulesApplied: string[]   # Names of rules that matched
+    assignment: Assignment   # If worker was assigned
+
+# Orchestrates:
+# 1. Load active WorkflowRules ordered by evaluationOrder
+# 2. Evaluate priority rules → set Task.priority
+# 3. Evaluate assignment rules → set Task.queueId
+# 4. If strategy allows direct assignment, assign to worker
+# 5. Create TaskAuditEvent (queue_changed, assigned)
+```
+
+### Start Verification
+
+Initiate external data verification for a verification task.
+
+```yaml
+POST /processes/verification/start
+x-actors: [caseworker, system]
+x-capability: verification
+
+requestBody:
+  taskId: uuid               # VerificationTask to start
+  verificationSourceId: uuid # Which source to query
+  manualOverride: boolean    # Skip automated check
+
+responses:
+  200:
+    verificationTask: VerificationTask
+  202:
+    verificationTask: VerificationTask
+    estimatedCompletion: datetime  # For async verification
+
+# Orchestrates:
+# 1. Validate VerificationSource is active
+# 2. Update VerificationTask.status → awaiting_verification
+# 3. If realtime_api source, call external API
+# 4. If batch source, queue for batch processing
+# 5. Create TaskAuditEvent (status_changed)
+```
+
+### Complete Verification
+
+Record verification result and resolve any discrepancies.
+
+```yaml
+POST /processes/verification/complete
+x-actors: [caseworker, system]
+x-capability: verification
+
+requestBody:
+  taskId: uuid               # VerificationTask to complete
+  outcome:
+    - verified
+    - not_verified
+    - discrepancy_found
+    - waived
+    - pending_documentation
+  sourceResult:              # If from external source
+    matchStatus: string
+    sourceValue: string
+    confidence: number
+  resolution: string         # If discrepancy_found
+  resolutionNotes: string
+  documentIds: uuid[]        # Supporting documents
+
+responses:
+  200:
+    verificationTask: VerificationTask
+    discrepancyAlert: boolean  # True if needs review
+
+# Orchestrates:
+# 1. Update VerificationTask with outcome and resolution
+# 2. If discrepancy requires review, escalate
+# 3. Create TaskAuditEvent (completed)
+# 4. Update EligibilityRequest if verification affects eligibility
+# 5. If all verifications complete, trigger next workflow step
+```
