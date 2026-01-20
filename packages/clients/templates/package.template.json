@@ -73,7 +73,7 @@
     "type": "git",
     "url": "git+https://github.com/codeforamerica/safety-net-openapi.git"
   },
-  "license": "MIT",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public",
