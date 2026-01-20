@@ -1,5 +1,5 @@
 {
-  "name": "@codeforamerica/safety-net-{{STATE}}",
+  "name": "@codeforamerica/safety-net-openapi-{{STATE}}",
   "version": "{{VERSION}}",
   "description": "Safety Net API client for {{STATE_TITLE}} with Zod validation",
   "type": "module",
