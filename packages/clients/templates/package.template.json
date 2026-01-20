@@ -71,7 +71,7 @@
   "keywords": ["safety-net", "{{STATE}}", "zod", "openapi", "api-client"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeforamerica/safety-net-openapi.git"
+    "url": "git+https://github.com/codeforamerica/safety-net-openapi.git"
   },
   "license": "MIT",
   "publishConfig": {
