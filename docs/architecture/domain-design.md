@@ -942,8 +942,15 @@ The following patterns have been added to [api-patterns.yaml](../../packages/sch
 | **API Versioning** | URL-path versioning strategy, deprecation headers | Update OpenAPI specs with version prefix, mock server routing |
 | **Idempotency** | `Idempotency-Key` header for safe retries | Mock server must track keys and return stored responses |
 | **Batch Operations** | `POST /{resources}/batch` pattern | Add batch endpoints to specs, mock server batch handling |
+| **Authentication** | OAuth 2.0/OIDC, API keys, mTLS options; state-configurable IdP | OpenAPI security schemes, mock server token validation |
+| **Authorization** | Scopes, RBAC roles, ABAC rules, field-level filtering | Middleware for scope/role checks, response filtering |
+| **Rate Limiting** | Request limits with standard headers | API gateway configuration, mock server rate limit simulation |
+| **Security Headers** | HSTS, CORS, cache control | API gateway or middleware configuration |
+| **Audit Logging** | Required fields, sensitive access logging, PII handling | Logging infrastructure, correlation ID propagation |
 
 Each section in `api-patterns.yaml` is marked with `# STATUS: Not yet implemented` to indicate work remaining.
+
+**Note on state configurability:** Authentication and authorization patterns define the interface contract, not specific provider implementations. States configure their own identity providers (Okta, Azure AD, state-specific IdP) and may customize role definitions while maintaining interoperability.
 
 ### Needs Architecture Documentation
 
@@ -1000,13 +1007,13 @@ Warrants its own document covering:
 - Integration test data management
 - Performance/load testing approach
 
-**Security & RBAC**
+**State Security Implementation Guide**
 
-Detailed security design including:
-- Role definitions and permissions matrix
-- Authentication flows (OAuth/OIDC)
-- Field-level authorization rules
-- Audit logging requirements
+The security patterns in `api-patterns.yaml` define the interface contract. A separate guide may be needed for states covering:
+- Identity provider setup (Okta, Azure AD, state IdP)
+- Role mapping to state organizational structure
+- Break-glass procedures and emergency access
+- Compliance documentation (FedRAMP, StateRAMP, etc.)
 
 ---
 

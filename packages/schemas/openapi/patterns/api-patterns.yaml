@@ -632,3 +632,320 @@ batch_operations:
   idempotency:
     description: Batch operations require idempotency key
     scope: Entire batch (not individual operations)
+
+# =============================================================================
+# Authentication [BOTH]
+# =============================================================================
+# STATUS: Not yet implemented
+# NOTE: States will use their own identity providers. This section defines the
+#       interface contract, not the specific provider implementation.
+authentication:
+  description: |
+    How clients prove their identity. The API layer validates tokens but does
+    not implement the identity provider - that's state-specific infrastructure.
+
+  # Supported authentication methods (state chooses which to implement)
+  supported_methods:
+    oauth2_oidc:
+      description: OAuth 2.0 with OpenID Connect (recommended for user-facing apps)
+      token_type: Bearer
+      header: "Authorization: Bearer <token>"
+      token_format: JWT (recommended) or opaque
+      discovery: "/.well-known/openid-configuration"
+      note: State configures their IdP (Okta, Azure AD, Auth0, state-specific)
+
+    api_key:
+      description: API keys for server-to-server integration
+      header: "X-API-Key: <key>"
+      use_cases:
+        - Batch jobs
+        - Legacy system integration
+        - Internal service-to-service
+      note: Simpler but less secure; use OAuth for user context
+
+    mtls:
+      description: Mutual TLS with client certificates
+      use_cases:
+        - High-security integrations
+        - Federal system connections
+      note: Certificate management is state responsibility
+
+  # OpenAPI security scheme definitions (for spec files)
+  openapi_security_schemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: OAuth 2.0 Bearer token
+
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for server-to-server calls
+
+  # Token validation requirements
+  token_validation:
+    required_claims:
+      - sub: Subject (user or service identifier)
+      - iat: Issued at timestamp
+      - exp: Expiration timestamp
+    recommended_claims:
+      - iss: Issuer (IdP identifier)
+      - aud: Audience (this API)
+      - scope: OAuth scopes granted
+      - roles: User roles (for RBAC)
+      - tenant_id: State/county identifier (if multi-tenant)
+
+  # State configuration guidance
+  state_configuration:
+    description: |
+      Each state configures their identity provider. The API layer needs:
+      - JWKS endpoint (for JWT validation)
+      - Issuer URL (for token verification)
+      - Audience value (this API's identifier)
+      - Clock skew tolerance
+    environment_variables:
+      - AUTH_JWKS_URI: "https://idp.example.gov/.well-known/jwks.json"
+      - AUTH_ISSUER: "https://idp.example.gov"
+      - AUTH_AUDIENCE: "safety-net-api"
+      - AUTH_CLOCK_SKEW_SECONDS: 60
+
+# =============================================================================
+# Authorization [BOTH]
+# =============================================================================
+# STATUS: Not yet implemented
+# NOTE: Authorization rules may vary by state. This defines the patterns;
+#       specific role definitions are state-configurable.
+authorization:
+  description: |
+    What authenticated users can do. Combines role-based access control (RBAC)
+    with attribute-based rules (ABAC) for fine-grained permissions.
+
+  # OAuth scopes (coarse-grained API access)
+  scopes:
+    description: OAuth scopes control broad API access categories
+    standard_scopes:
+      - name: "applications:read"
+        description: Read applications
+      - name: "applications:write"
+        description: Create/update applications
+      - name: "tasks:read"
+        description: Read tasks
+      - name: "tasks:write"
+        description: Update task status, assignments
+      - name: "cases:read"
+        description: Read case information
+      - name: "cases:write"
+        description: Update cases
+      - name: "config:read"
+        description: Read configuration
+      - name: "config:admin"
+        description: Modify configuration (admin only)
+      - name: "audit:read"
+        description: Read audit logs
+
+  # Role-based access control
+  rbac:
+    description: |
+      Roles provide bundles of permissions. Roles are state-configurable but
+      should follow this general hierarchy.
+    standard_roles:
+      - name: client
+        description: Person applying for/receiving benefits
+        typical_scopes: [applications:read, applications:write]
+        constraints: Own data only
+
+      - name: authorized_representative
+        description: Representative acting on behalf of clients
+        typical_scopes: [applications:read, applications:write]
+        constraints: Delegated clients only
+
+      - name: caseworker
+        description: Staff processing applications and tasks
+        typical_scopes: [applications:read, tasks:read, tasks:write, cases:read]
+        constraints: Assigned work only
+
+      - name: supervisor
+        description: Team lead with approval authority
+        typical_scopes: [applications:read, tasks:read, tasks:write, cases:read, cases:write]
+        constraints: Team's work, can reassign
+
+      - name: office_manager
+        description: Office-level administration
+        typical_scopes: [applications:read, tasks:read, cases:read, config:read]
+        constraints: Office scope
+
+      - name: program_admin
+        description: Program configuration and reporting
+        typical_scopes: [config:read, config:admin, audit:read]
+        constraints: No case-level PII access
+
+      - name: auditor
+        description: Read-only access for compliance review
+        typical_scopes: [applications:read, tasks:read, cases:read, audit:read]
+        constraints: Read-only, all data
+
+    state_customization: |
+      States may define additional roles or modify scope assignments.
+      Role names should remain consistent for interoperability.
+
+  # Attribute-based access control
+  abac:
+    description: |
+      Fine-grained rules based on resource and user attributes.
+      Evaluated after RBAC role check passes.
+    example_rules:
+      - rule: "Caseworker can only access assigned cases"
+        condition: "resource.assignedToId == user.id"
+
+      - rule: "Supervisor can access team's cases"
+        condition: "resource.assignedToId IN user.teamMemberIds"
+
+      - rule: "Office manager can access office's cases"
+        condition: "resource.officeId == user.officeId"
+
+      - rule: "Can only view cases for programs user is certified for"
+        condition: "resource.programType IN user.certifiedPrograms"
+
+  # Field-level authorization
+  field_level:
+    description: |
+      Some fields require additional authorization beyond endpoint access.
+      Same endpoint may return different fields based on role.
+    sensitive_fields:
+      - field: socialSecurityNumber
+        full_access: [auditor, assigned_caseworker_during_verification]
+        masked_access: [supervisor, office_manager]  # Last 4 only
+        no_access: [client]  # Cannot see own SSN in API response
+
+      - field: internalNotes
+        full_access: [caseworker, supervisor]
+        no_access: [client, authorized_representative]
+
+    implementation: |
+      Use response filtering at the API layer. Do not rely on clients
+      to hide fields - the API must not return unauthorized data.
+
+# =============================================================================
+# Rate Limiting [BOTH]
+# =============================================================================
+# STATUS: Not yet implemented
+rate_limiting:
+  description: |
+    Protects the API from abuse and ensures fair resource allocation.
+    Typically implemented at API gateway level.
+
+  # Standard headers
+  headers:
+    - name: X-RateLimit-Limit
+      description: Maximum requests allowed in window
+    - name: X-RateLimit-Remaining
+      description: Requests remaining in current window
+    - name: X-RateLimit-Reset
+      description: Unix timestamp when window resets
+    - name: Retry-After
+      description: Seconds to wait before retrying (on 429 response)
+
+  # Rate limit tiers (state-configurable)
+  default_tiers:
+    - tier: standard
+      requests_per_minute: 60
+      requests_per_hour: 1000
+      applies_to: Default for authenticated users
+
+    - tier: elevated
+      requests_per_minute: 300
+      requests_per_hour: 5000
+      applies_to: Trusted internal services
+
+    - tier: batch
+      requests_per_minute: 10
+      requests_per_hour: 100
+      note: Batch endpoints; each batch counts as N requests
+
+  # Response when rate limited
+  rate_limit_response:
+    status: 429
+    body:
+      code: RATE_LIMIT_EXCEEDED
+      message: Too many requests
+      retryAfter: <seconds>
+
+# =============================================================================
+# Security Headers [BOTH]
+# =============================================================================
+# STATUS: Not yet implemented
+security_headers:
+  description: Standard HTTP security headers for all responses
+
+  required_headers:
+    - name: Strict-Transport-Security
+      value: "max-age=31536000; includeSubDomains"
+      description: Enforce HTTPS
+
+    - name: X-Content-Type-Options
+      value: "nosniff"
+      description: Prevent MIME type sniffing
+
+    - name: X-Frame-Options
+      value: "DENY"
+      description: Prevent clickjacking
+
+    - name: Cache-Control
+      value: "no-store"
+      description: Prevent caching of sensitive data
+      note: May be relaxed for public/static endpoints
+
+  cors:
+    description: Cross-Origin Resource Sharing (state-configurable)
+    configuration:
+      allowed_origins: State configures allowed frontend domains
+      allowed_methods: [GET, POST, PATCH, DELETE, OPTIONS]
+      allowed_headers: [Authorization, Content-Type, X-API-Key, Idempotency-Key]
+      expose_headers: [X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset]
+      max_age: 86400
+
+# =============================================================================
+# Audit Logging [BOTH]
+# =============================================================================
+# STATUS: Not yet implemented
+audit_logging:
+  description: |
+    All API access must be logged for compliance and security monitoring.
+    Logs must NOT contain PII - use correlation IDs to link to secure storage.
+
+  required_fields:
+    - timestamp: ISO 8601 format
+    - correlation_id: Request correlation ID
+    - user_id: Authenticated user identifier
+    - user_role: Role used for this request
+    - client_ip: Originating IP address
+    - method: HTTP method
+    - path: Request path (without query params)
+    - resource_type: Type of resource accessed
+    - resource_id: ID of resource accessed (if applicable)
+    - action: Logical action (create, read, update, delete)
+    - status_code: HTTP response status
+    - response_time_ms: Request duration
+
+  sensitive_access_logging:
+    description: Additional logging for sensitive data access
+    triggers:
+      - SSN viewed (even read access)
+      - PII exported
+      - Bulk data access
+      - Configuration changes
+      - Failed authorization attempts
+    additional_fields:
+      - fields_accessed: Which sensitive fields were returned
+      - business_justification: If provided by user
+      - supervisor_notified: For break-glass access
+
+  pii_handling:
+    description: Never log PII directly
+    guidance:
+      - Log resource IDs, not resource content
+      - Log field names accessed, not field values
+      - Use correlation ID to link to audit detail in secure storage
+      - Mask any PII that must appear in logs (e.g., last 4 of SSN)
