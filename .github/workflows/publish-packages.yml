@@ -6,7 +6,6 @@ on:
       - 'v*'
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -21,10 +20,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-
-      - name: Configure npm registry
-        run: npm config set registry https://registry.npmjs.org/
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
 
       - run: npm install
 
@@ -36,6 +33,7 @@ jobs:
             --version=$VERSION
 
       - name: Publish to npm
-        uses: JS-DevTools/npm-publish@v4
-        with:
-          package: packages/clients/dist-packages/${{ matrix.state }}/package.json
+        working-directory: packages/clients/dist-packages/${{ matrix.state }}
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
