@@ -1,165 +1,38 @@
 name: Publish State Packages
 
 on:
-  workflow_dispatch:
-    inputs:
-      state:
-        description: 'State to publish (or "all" for all states)'
-        required: true
-        type: choice
-        options:
-          - all
-          - california
-          - colorado
-      version:
-        description: 'Version to publish (e.g., 1.0.0)'
-        required: true
-        type: string
-
   push:
     tags:
       - 'v*'
-      - '*-v*'
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      states: ${{ steps.determine.outputs.states }}
-      version: ${{ steps.determine.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Determine states and version
-        id: determine
-        run: |
-          # Get all available states from overlay directories
-          ALL_STATES=$(ls -d packages/schemas/openapi/overlays/*/ 2>/dev/null | \
-            xargs -n1 basename | \
-            jq -R -s -c 'split("\n") | map(select(length > 0))')
-
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # Manual trigger
-            VERSION="${{ github.event.inputs.version }}"
-            if [[ "${{ github.event.inputs.state }}" == "all" ]]; then
-              STATES="$ALL_STATES"
-            else
-              STATES='["${{ github.event.inputs.state }}"]'
-            fi
-          else
-            # Tag push
-            TAG="${GITHUB_REF#refs/tags/}"
-
-            if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+.*) ]]; then
-              # Format: v1.0.0 or v1.0.0-beta.1 - publish all states
-              VERSION="${BASH_REMATCH[1]}"
-              STATES="$ALL_STATES"
-            elif [[ "$TAG" =~ ^([a-z]+)-v([0-9]+\.[0-9]+\.[0-9]+.*) ]]; then
-              # Format: california-v1.0.0 - publish single state
-              STATE="${BASH_REMATCH[1]}"
-              VERSION="${BASH_REMATCH[2]}"
-              STATES="[\"$STATE\"]"
-            else
-              echo "::error::Invalid tag format: $TAG. Expected v1.0.0 or state-v1.0.0"
-              exit 1
-            fi
-          fi
-
-          echo "states=$STATES" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Publishing states: $STATES at version $VERSION"
-
   publish:
-    needs: setup
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
-        state: ${{ fromJson(needs.setup.outputs.states) }}
-
+        state: [california, colorado]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Upgrade npm for OIDC support
-        run: |
-          npm install -g npm@latest
-          echo "npm version after upgrade:"
-          npm --version
-
-      - name: Debug OIDC
-        run: |
-          echo "Checking OIDC token availability..."
-          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
-            echo "OIDC is available"
-            echo "Token URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
-          else
-            echo "ERROR: OIDC token request URL not set - id-token permission may be missing"
-          fi
-
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
 
       - name: Build state package
         run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
           node packages/clients/scripts/build-state-package.js \
             --state=${{ matrix.state }} \
-            --version=${{ needs.setup.outputs.version }}
-
-      - name: Debug before publish
-        working-directory: packages/clients/dist-packages/${{ matrix.state }}
-        run: |
-          echo "=== npm config ==="
-          npm config list
-          echo ""
-          echo "=== .npmrc in package dir ==="
-          cat .npmrc 2>/dev/null || echo "No .npmrc in package dir"
-          echo ""
-          echo "=== ~/.npmrc ==="
-          cat ~/.npmrc 2>/dev/null || echo "No ~/.npmrc"
-          echo ""
-          echo "=== package.json publishConfig ==="
-          grep -A5 '"publishConfig"' package.json || echo "No publishConfig"
-
-      - name: Clear token auth for OIDC
-        run: |
-          # Remove the authToken line from .npmrc so npm uses OIDC instead
-          if [ -f "$NPM_CONFIG_USERCONFIG" ]; then
-            sed -i '/:_authToken/d' "$NPM_CONFIG_USERCONFIG"
-            echo "Cleared _authToken from $NPM_CONFIG_USERCONFIG"
-            cat "$NPM_CONFIG_USERCONFIG"
-          fi
+            --version=$VERSION
 
       - name: Publish to npm
         working-directory: packages/clients/dist-packages/${{ matrix.state }}
-        run: npm publish --access public --provenance
-        env:
-          NPM_CONFIG_PROVENANCE: true
-          NODE_AUTH_TOKEN: ''
-
-  summary:
-    needs: [setup, publish]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Summary
-        run: |
-          echo "## Published Packages" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version: ${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "States:" >> $GITHUB_STEP_SUMMARY
-          for state in $(echo '${{ needs.setup.outputs.states }}' | jq -r '.[]'); do
-            echo "- @codeforamerica/safety-net-${state}@${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          done
+        run: npm publish
