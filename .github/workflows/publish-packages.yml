@@ -132,11 +132,21 @@ jobs:
           echo "=== package.json publishConfig ==="
           grep -A5 '"publishConfig"' package.json || echo "No publishConfig"
 
+      - name: Clear token auth for OIDC
+        run: |
+          # Remove the authToken line from .npmrc so npm uses OIDC instead
+          if [ -f "$NPM_CONFIG_USERCONFIG" ]; then
+            sed -i '/:_authToken/d' "$NPM_CONFIG_USERCONFIG"
+            echo "Cleared _authToken from $NPM_CONFIG_USERCONFIG"
+            cat "$NPM_CONFIG_USERCONFIG"
+          fi
+
       - name: Publish to npm
         working-directory: packages/clients/dist-packages/${{ matrix.state }}
         run: npm publish --access public --provenance
         env:
           NPM_CONFIG_PROVENANCE: true
+          NODE_AUTH_TOKEN: ''
 
   summary:
     needs: [setup, publish]
