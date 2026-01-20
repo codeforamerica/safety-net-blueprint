@@ -1,123 +1,40 @@
 name: Publish State Packages
 
 on:
-  workflow_dispatch:
-    inputs:
-      state:
-        description: 'State to publish (or "all" for all states)'
-        required: true
-        type: choice
-        options:
-          - all
-          - california
-          - colorado
-      version:
-        description: 'Version to publish (e.g., 1.0.0)'
-        required: true
-        type: string
-
   push:
     tags:
       - 'v*'
-      - '*-v*'
 
 permissions:
   contents: read
-  packages: write
+  id-token: write
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      states: ${{ steps.determine.outputs.states }}
-      version: ${{ steps.determine.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Determine states and version
-        id: determine
-        run: |
-          # Get all available states from overlay directories
-          ALL_STATES=$(ls -d packages/schemas/openapi/overlays/*/ 2>/dev/null | \
-            xargs -n1 basename | \
-            jq -R -s -c 'split("\n") | map(select(length > 0))')
-
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # Manual trigger
-            VERSION="${{ github.event.inputs.version }}"
-            if [[ "${{ github.event.inputs.state }}" == "all" ]]; then
-              STATES="$ALL_STATES"
-            else
-              STATES='["${{ github.event.inputs.state }}"]'
-            fi
-          else
-            # Tag push
-            TAG="${GITHUB_REF#refs/tags/}"
-
-            if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+.*) ]]; then
-              # Format: v1.0.0 or v1.0.0-beta.1 - publish all states
-              VERSION="${BASH_REMATCH[1]}"
-              STATES="$ALL_STATES"
-            elif [[ "$TAG" =~ ^([a-z]+)-v([0-9]+\.[0-9]+\.[0-9]+.*) ]]; then
-              # Format: california-v1.0.0 - publish single state
-              STATE="${BASH_REMATCH[1]}"
-              VERSION="${BASH_REMATCH[2]}"
-              STATES="[\"$STATE\"]"
-            else
-              echo "::error::Invalid tag format: $TAG. Expected v1.0.0 or state-v1.0.0"
-              exit 1
-            fi
-          fi
-
-          echo "states=$STATES" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Publishing states: $STATES at version $VERSION"
-
   publish:
-    needs: setup
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        state: ${{ fromJson(needs.setup.outputs.states) }}
-
+        state: [california, colorado]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@codeforamerica'
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
 
       - name: Build state package
         run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
           node packages/clients/scripts/build-state-package.js \
             --state=${{ matrix.state }} \
-            --version=${{ needs.setup.outputs.version }}
+            --version=$VERSION
 
-      - name: Publish to GitHub Packages
+      - name: Publish to npm
         working-directory: packages/clients/dist-packages/${{ matrix.state }}
-        run: npm publish
+        run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  summary:
-    needs: [setup, publish]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Summary
-        run: |
-          echo "## Published Packages" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version: ${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "States:" >> $GITHUB_STEP_SUMMARY
-          for state in $(echo '${{ needs.setup.outputs.states }}' | jq -r '.[]'); do
-            echo "- @codeforamerica/safety-net-${state}@${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          done
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
