@@ -4,8 +4,20 @@ Domain organization, entities, data flow, and safety net specific concerns for t
 
 See also: [API Architecture](api-architecture.md) | [Design Decisions](design-decisions.md) | [Roadmap](roadmap.md)
 
-> **Status: Proposed Architecture**
-> This document describes the target domain organization. The current implementation includes only a subset of these domains (Intake with Applications and Persons). The remaining domains and entities are planned for future development.
+> **This is design documentation, not implementation documentation.**
+>
+> This document describes the *proposed* domain organization - the target architecture we are designing toward. The design itself is still evolving based on research and feedback.
+>
+> | Domain | Design Status | Implementation Status |
+> |--------|---------------|----------------------|
+> | Workflow | Ready for review | Not started |
+> | Intake | Work in progress | Partial (Applications, Persons, Households, Incomes) |
+> | Case Management | Work in progress | Not started |
+> | Eligibility | Work in progress | Not started |
+> | Client Management | Work in progress | Not started |
+> | Communication | Work in progress | Not started |
+> | Scheduling | Work in progress | Not started |
+> | Document Management | Work in progress | Not started |
 
 ---
 
@@ -81,17 +93,17 @@ Program-specific interpretation of application data and benefit determination.
 
 | Entity | Purpose |
 |--------|---------|
-| **EligibilityRequest** | A specific client + program being evaluated |
+| **EligibilityRequest** | An evaluation of a client + program (initial, recertification, or change) |
 | **EligibilityUnit** | Program-specific grouping (e.g., SNAP "household", Medicaid "tax unit") |
 | **Determination** | The outcome for a client + program |
-| **Recertification** | Periodic re-evaluation of eligibility |
 | **VerificationRequirement** | What a program requires to be verified and how |
 
 **Key decisions:**
+- `EligibilityRequest` handles all evaluation types via `requestType`: initial applications, scheduled recertifications, client-initiated renewals, and mid-certification changes
 - "EligibilityUnit" is the entity; regulatory terms like "household" or "tax unit" appear in descriptions
 - Eligibility happens at the intersection of: **who** (client) + **what** (program) + **when** (point in time)
 - A single application may contain multiple clients applying for multiple programs - each combination gets its own EligibilityRequest
-- Recertification lives here (re-determining eligibility)
+- Recertifications link to the previous Determination, creating a history chain
 
 #### Case Management
 
