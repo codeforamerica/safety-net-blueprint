@@ -222,6 +222,8 @@ state_admin
 applicant (separate hierarchy - self-service only)
 ```
 
+**Implementation note:** The `RoleType` schema is a flat enum defining valid role values. The hierarchy above is conceptual - it documents how permissions should cascade between roles. The User Service implementation is responsible for computing the `permissions` array for each user based on their role. States can customize role-to-permission mappings in their implementations.
+
 ### Role-to-Permission Mapping
 
 | Role | Permissions | Data Scope |
