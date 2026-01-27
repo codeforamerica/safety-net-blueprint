@@ -7,15 +7,15 @@ Common issues and solutions.
 ### Node Version Error
 
 ```
-error engine: Wanted: node >=18.0.0
+error engine: Wanted: node >=20.0.0
 ```
 
-**Solution:** Update Node.js to version 18 or higher.
+**Solution:** Update Node.js to version 20 or higher.
 
 ```bash
 # Using nvm
-nvm install 18
-nvm use 18
+nvm install 20
+nvm use 20
 
 # Verify
 node --version

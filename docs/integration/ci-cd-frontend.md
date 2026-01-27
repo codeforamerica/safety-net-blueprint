@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Checkout API toolkit
@@ -66,9 +66,9 @@ jobs:
 ```yaml
 # .gitlab-ci.yml
 test:
-  image: node:18
+  image: node:20
   services:
-    - name: node:18
+    - name: node:20
       alias: mock-server
       command: ["sh", "-c", "git clone https://github.com/codeforamerica/safety-net-openapi.git && cd safety-net-openapi && npm install && STATE=<your-state> npm run mock:start"]
 
