@@ -39,6 +39,36 @@ We propose a **three-layer architecture** with:
 2. **User Service** for authorization context (roles, permissions, county assignments)
 3. **JWT-based authorization** with permissions embedded in tokens
 
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Identity Provider (IdP)                      │
+│  Auth0, Okta, Keycloak, AWS Cognito, etc.                      │
+│  - Authenticates users (login, MFA, SSO)                       │
+│  - Issues JWTs                                                  │
+│  - Calls User Service to enrich tokens                         │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                │ JWT with embedded claims
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         User Service                            │
+│  - Stores role and county assignments                          │
+│  - Provides claims for JWT enrichment at login                 │
+│  - Manages user lifecycle (invite, activate, deactivate)       │
+│  - Links users to domain entities (Person, CaseWorker)         │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                │ Permissions flow through JWT
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Domain APIs                              │
+│  - Validate JWT signature                                       │
+│  - Read permissions from claims                                 │
+│  - Filter data by county/user scope                            │
+│  - No runtime calls to User Service                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 ### Key Design Choices
 
 | Recommendation | Rationale |
@@ -170,13 +200,43 @@ The User Service is intentionally minimal:
 
 ---
 
+## Role Hierarchy
+
+Roles have an implicit hierarchy for permission inheritance and escalation paths:
+
+```
+state_admin
+    │
+    ├── county_admin
+    │       │
+    │       └── supervisor
+    │               │
+    │               └── case_worker
+    │
+    └── partner_readonly
+
+applicant (separate hierarchy - self-service only)
+```
+
+### Role-to-Permission Mapping
+
+| Role | Permissions | Data Scope |
+|------|-------------|------------|
+| `applicant` | applications:read, applications:create, applications:update, persons:read, households:read, incomes:read, incomes:create | Own records (by personId) |
+| `case_worker` | applications:*, persons:*, households:*, incomes:* | Assigned county |
+| `supervisor` | All of case_worker + applications:approve, persons:read:pii, users:read | Assigned counties (may have multiple) |
+| `county_admin` | All of supervisor + users:create, users:update, applications:delete | Assigned county |
+| `state_admin` | All permissions | All counties |
+| `partner_readonly` | applications:read, persons:read | Per agreement |
+
+---
+
 ## Implementation
 
 ### Files Added
 
 | File | Purpose |
 |------|---------|
-| `docs/architecture/cross-cutting/identity-access.md` | JWT claims, permissions, data scoping patterns |
 | `docs/architecture-decisions/adr-auth-patterns.md` | This ADR |
 | `packages/schemas/openapi/users.yaml` | User Service API specification |
 | `packages/schemas/openapi/components/user.yaml` | User schema components |
@@ -277,8 +337,6 @@ The `permissions` array (e.g., `["applications:read", "applications:update"]`) i
 - Frontends don't need to understand permission string patterns
 - Changes to permission structure don't break frontend logic
 - UI-specific concepts (modules, feature flags) are explicit, not inferred
-
-See [Identity & Access: Frontend Authorization](../architecture/cross-cutting/identity-access.md#frontend-authorization) for implementation details.
 
 ### Open Question: Structure of the `ui` Object
 
@@ -578,9 +636,33 @@ In both cases, backend APIs still receive minimal tokens with just Authorization
 
 ---
 
+## Security Considerations
+
+### Token Security
+
+- JWTs should have short expiration (15-60 minutes)
+- Use refresh tokens for longer sessions
+- Validate JWT signature on every request
+- Check `aud` claim matches your API
+
+### PII Protection
+
+- `persons:read:pii` permission required for unmasked SSN
+- Audit log access to sensitive fields
+- Consider field-level encryption for SSN at rest
+
+### Audit Trail
+
+The User Service maintains an audit log of:
+- User creation and deactivation
+- Role changes
+- County assignment changes
+- Permission modifications
+
+---
+
 ## References
 
-- [Identity & Access Documentation](../architecture/cross-cutting/identity-access.md)
 - [User Service API Specification](../../packages/schemas/openapi/users.yaml)
 - [Auth0 Actions](https://auth0.com/docs/customize/actions) - Example IdP integration
 - [Okta Hooks](https://developer.okta.com/docs/concepts/event-hooks/) - Example IdP integration
