@@ -15,8 +15,9 @@ The Safety Net OpenAPI toolkit needs authentication and authorization patterns t
 ### Requirements
 
 - Support multiple user types with different permissions
-- Multi-tenant (multiple counties/agencies sharing infrastructure)
-- Data scoping by county for staff, by user for applicants
+- Multi-tenant (multiple organizational units sharing infrastructure)
+- Flexible data scoping for staff (by county, district, region, program, or combinations)
+- Data scoping by user for applicants (self-service access to own data)
 - Field-level access control for sensitive data (SSN)
 - Audit trail for compliance
 - Integrate with standard Identity Providers (IdP)
@@ -36,38 +37,40 @@ The Safety Net OpenAPI toolkit needs authentication and authorization patterns t
 We propose a **three-layer architecture** with:
 
 1. **Identity Provider (IdP)** for authentication
-2. **User Service** for authorization context (roles, permissions, county assignments)
+2. **User Service** for authorization context (roles, permissions, organizational scope)
 3. **JWT-based authorization** with permissions embedded in tokens
 
 ```
+┌──────────────┐         ┌─────────────────────────────────────────┐
+│   Frontend   │────────▶│         Identity Provider (IdP)         │
+│              │  login  │  Auth0, Okta, Keycloak, Cognito, etc.  │
+│  - Stores JWT│◀────────│  - Authenticates users (login, MFA)    │
+│  - Calls APIs│   JWT   │  - Calls User Service to enrich tokens │
+└──────┬───────┘         └──────────────────┬──────────────────────┘
+       │                                    │
+       │ GET /users/me                      │ GET /token/claims/{sub}
+       │ (for ui + preferences)             │ (at login time)
+       │                                    ▼
+       │                 ┌─────────────────────────────────────────┐
+       │                 │              User Service               │
+       │                 │  - Stores role and scope assignments   │
+       │                 │  - Provides claims for JWT enrichment  │
+       │                 │  - Manages user lifecycle              │
+       │                 │  - Links to domain entities            │
+       │                 └─────────────────────────────────────────┘
+       │
+       │ Authorization: Bearer <jwt>
+       ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Identity Provider (IdP)                      │
-│  Auth0, Okta, Keycloak, AWS Cognito, etc.                      │
-│  - Authenticates users (login, MFA, SSO)                       │
-│  - Issues JWTs                                                  │
-│  - Calls User Service to enrich tokens                         │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                │ JWT with embedded claims
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         User Service                            │
-│  - Stores role and county assignments                          │
-│  - Provides claims for JWT enrichment at login                 │
-│  - Manages user lifecycle (invite, activate, deactivate)       │
-│  - Links users to domain entities (Person, CaseWorker)         │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                │ Permissions flow through JWT
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        Domain APIs                              │
+│                          Domain APIs                            │
 │  - Validate JWT signature                                       │
 │  - Read permissions from claims                                 │
-│  - Filter data by county/user scope                            │
+│  - Filter data by organizational scope or user                 │
 │  - No runtime calls to User Service                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Note:** In some architectures, a BFF (Backend-for-Frontend) or API gateway sits between the frontend and other services. The BFF handles IdP communication, token management, and may enrich tokens for the frontend. See [BFF/Gateway Pattern](#bffgateway-pattern) for details.
 
 ### Key Design Choices
 
@@ -89,11 +92,11 @@ Store all roles and permissions in the IdP using custom claims or groups.
 | Pros | Cons |
 |------|------|
 | Simpler architecture (one system) | Limited flexibility for domain-specific roles |
-| No additional service to maintain | County assignments don't fit IdP data model |
+| No additional service to maintain | Organizational scope assignments don't fit IdP data model |
 | | Requires IdP customization for each change |
 | | Hard to link users to domain entities |
 
-**Not recommended because:** IdP custom attributes are too limited for multi-county assignments and domain entity linking.
+**Not recommended because:** IdP custom attributes are too limited for flexible organizational scoping and domain entity linking.
 
 ---
 
@@ -122,7 +125,7 @@ Use a policy decision point (OPA, AWS Cedar) for authorization.
 | Policies separate from code | Learning curve for policy language |
 | Can handle complex rules | Overkill for role-based access |
 
-**Not recommended because:** Adds operational complexity; our access patterns are straightforward role-based with county scoping.
+**Not recommended because:** Adds operational complexity; our access patterns are straightforward role-based with organizational scoping.
 
 ---
 
@@ -148,7 +151,8 @@ IdP authenticates users. User Service stores roles and provides claims at login.
 |--------|---------|
 | **Separation of concerns** | IdP handles authentication; User Service handles authorization context |
 | **No runtime dependency** | Domain APIs don't call User Service per request; permissions in JWT |
-| **Multi-tenant support** | User Service manages county assignments naturally |
+| **Multi-tenant support** | User Service manages organizational scope assignments naturally |
+| **Flexible scoping** | Supports counties, districts, regions, programs, or custom structures |
 | **Domain entity linking** | User.personId and User.caseWorkerId enable scoped access |
 | **Audit compliance** | User Service maintains permission change history |
 | **Vendor independence** | Works with any IdP that supports JWT and token enrichment |
@@ -161,7 +165,7 @@ IdP authenticates users. User Service stores roles and provides claims at login.
 
 - Domain APIs are stateless and performant (no external auth calls)
 - Clear separation between identity (IdP) and authorization (User Service)
-- Multi-county staff supported via counties array in JWT
+- Flexible organizational scoping (counties, districts, regions, programs) via JWT claims
 - Applicants and staff handled with same pattern (different roles, same flow)
 - User Service can be implemented independently of domain services
 
@@ -188,7 +192,7 @@ The User Service is intentionally minimal:
 
 **Included:**
 - User CRUD (linked to IdP identity)
-- Role and county assignments
+- Role and organizational scope assignments
 - Token claims endpoint (called by IdP at login)
 - Current user endpoint (called by frontend on load)
 - Audit log of permission changes
@@ -202,12 +206,12 @@ The User Service is intentionally minimal:
 
 ## Role Hierarchy
 
-Roles have an implicit hierarchy for permission inheritance and escalation paths:
+Roles have an implicit hierarchy for permission inheritance and escalation paths. The base spec uses county-based terminology, but states can customize via overlays (see [Customizing Roles and Permissions](#customizing-roles-and-permissions)).
 
 ```
 state_admin
     │
-    ├── county_admin
+    ├── org_admin (county_admin in base spec)
     │       │
     │       └── supervisor
     │               │
@@ -223,11 +227,70 @@ applicant (separate hierarchy - self-service only)
 | Role | Permissions | Data Scope |
 |------|-------------|------------|
 | `applicant` | applications:read, applications:create, applications:update, persons:read, households:read, incomes:read, incomes:create | Own records (by personId) |
-| `case_worker` | applications:*, persons:*, households:*, incomes:* | Assigned county |
-| `supervisor` | All of case_worker + applications:approve, persons:read:pii, users:read | Assigned counties (may have multiple) |
-| `county_admin` | All of supervisor + users:create, users:update, applications:delete | Assigned county |
-| `state_admin` | All permissions | All counties |
+| `case_worker` | applications:*, persons:*, households:*, incomes:* | Assigned organizational unit(s) |
+| `supervisor` | All of case_worker + applications:approve, persons:read:pii, users:read | Assigned organizational units (may have multiple) |
+| `county_admin` | All of supervisor + users:create, users:update, applications:delete | Assigned organizational unit |
+| `state_admin` | All permissions | All organizational units |
 | `partner_readonly` | applications:read, persons:read | Per agreement |
+
+**Note:** "Organizational unit" varies by state - could be county, district, region, program, or a combination. States define their scoping structure via overlays.
+
+---
+
+## Organizational Scoping
+
+Different states organize case workers and data access differently. The base spec provides `counties` as the default scoping mechanism, but this is customizable via overlays.
+
+### Scoping Patterns by State
+
+| Pattern | Example | JWT Claims |
+|---------|---------|------------|
+| County-based | California, Texas | `counties: ["06001", "06013"]` |
+| District-based | Some states use judicial/admin districts | `districts: ["D1", "D2"]` |
+| Region-based | Multi-county regions | `regions: ["central", "northern"]` |
+| Program-based | Staff assigned to specific programs | `programs: ["snap", "tanf"]` |
+| Hybrid | County + Program | `counties: [...], programs: [...]` |
+
+### One-to-Many Relationships
+
+Staff may be assigned to multiple organizational units:
+- A supervisor covering 3 counties
+- A specialist working across 2 programs
+- A regional coordinator spanning multiple districts
+
+The JWT claims support arrays for this:
+
+```yaml
+# Example: Supervisor assigned to multiple counties and programs
+scope:
+  counties: ["06001", "06013", "06075"]
+  programs: ["snap", "tanf"]
+```
+
+### Customizing Scope via Overlays
+
+States define their scoping structure by extending `AuthorizationContext`:
+
+```yaml
+# Example: State using districts instead of counties
+actions:
+  - target: $.AuthorizationContext.properties
+    file: components/common.yaml
+    update:
+      districts:
+        type: array
+        items:
+          type: string
+        description: Administrative districts the user can access.
+        example: ["D1", "D2"]
+
+      # Optionally remove county fields if not used
+  - target: $.AuthorizationContext.properties.counties
+    file: components/common.yaml
+    remove: true
+```
+
+See [Customizing Roles and Permissions](#customizing-roles-and-permissions) for more overlay examples.
 
 ---
 
@@ -256,7 +319,7 @@ When a user logs in, the IdP needs to embed authorization claims in the JWT. Thi
 
 1. User authenticates with IdP (Auth0, Okta, etc.)
 2. IdP calls User Service to get authorization context
-3. User Service returns role, permissions, and county assignments
+3. User Service returns role, permissions, and organizational scope
 4. IdP embeds these claims in the JWT it issues
 5. Domain APIs read permissions directly from JWT (no runtime calls)
 
@@ -265,7 +328,7 @@ When a user logs in, the IdP needs to embed authorization claims in the JWT. Thi
 GET /token/claims/{sub}
 X-API-Key: <idp-api-key>
 
-Response: { "userId": "...", "role": "case_worker", "permissions": [...], "counties": [...] }
+Response: { "userId": "...", "role": "case_worker", "permissions": [...], "scope": {...} }
 ```
 
 The API key shown above is an example. Teams should use whatever authentication method makes sense for their IdP integration (API key, OAuth2 client credentials, mTLS, etc.).
@@ -515,7 +578,7 @@ actions:
 
 **Adding program-based authorization:**
 
-Some states scope access not just by county but also by program (SNAP, TANF, etc.). California's overlay demonstrates this pattern:
+States can add program-based scoping in addition to (or instead of) geographic scoping. California's overlay demonstrates this pattern:
 
 ```yaml
 # From California's overlay - adding program-based scoping
@@ -543,7 +606,7 @@ actions:
           $ref: "./common.yaml#/Program"
         description: |
           Programs the user is authorized to work on.
-          Optional; if empty, user can access all programs within assigned counties.
+          Optional; if empty, user can access all programs within their assigned scope.
         example: ["calfresh", "calworks"]
 ```
 
@@ -587,7 +650,7 @@ Regardless of auth mechanism:
 
 - **User Service** still stores role/permission mappings
 - **Separation of concerns** - IdP handles authentication, User Service handles authorization context
-- **Permission model** - `{resource}:{action}` format, role-based with county scoping
+- **Permission model** - `{resource}:{action}` format, role-based with organizational scoping
 - **Frontend pattern** - `GET /users/me` returns user profile with `ui` permissions object
 
 ---
@@ -619,7 +682,7 @@ The separation between AuthorizationContext (minimal, for API enforcement) and t
 - **AuthorizationContext stays minimal** - Backend APIs receive only what they need for authorization decisions
 - **`ui` and `preferences` live on User** - Retrieved via `/users/me`, not embedded in every JWT
 - **Middleware combines as needed** - BFF can enrich tokens for frontend without bloating backend API calls
-- **Backend APIs never receive `ui` data** - They don't need it; authorization is based on `permissions` and `counties`
+- **Backend APIs never receive `ui` data** - They don't need it; authorization is based on `permissions` and organizational scope
 
 ### Frontend Behavior with Middleware
 
@@ -656,7 +719,7 @@ In both cases, backend APIs still receive minimal tokens with just Authorization
 The User Service maintains an audit log of:
 - User creation and deactivation
 - Role changes
-- County assignment changes
+- Organizational scope assignment changes
 - Permission modifications
 
 ---
