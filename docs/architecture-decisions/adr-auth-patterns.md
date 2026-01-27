@@ -14,7 +14,7 @@ The Safety Net OpenAPI toolkit needs authentication and authorization patterns t
 
 ### Requirements
 
-- Support multiple user types with different permissions
+- Support multiple user roles with different permissions
 - Multi-tenant (multiple organizational units sharing infrastructure)
 - Flexible data scoping for staff (by county, district, region, program, or combinations)
 - Data scoping by user for applicants (self-service access to own data)
@@ -224,7 +224,9 @@ applicant (separate hierarchy - self-service only)
 
 **Implementation note:** The `RoleType` schema is a flat enum defining valid role values. The hierarchy above is conceptual - it documents how permissions should cascade between roles. The User Service implementation is responsible for computing the `permissions` array for each user based on their role. States can customize role-to-permission mappings in their implementations.
 
-### Role-to-Permission Mapping
+### Role-to-Permission Mapping (Example)
+
+The following table illustrates a typical mapping. States should define their own mappings based on their policies and organizational structure.
 
 | Role | Permissions | Data Scope |
 |------|-------------|------------|
