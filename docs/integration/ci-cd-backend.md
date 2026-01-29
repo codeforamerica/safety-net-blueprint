@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install dependencies
         run: npm install
@@ -37,7 +37,7 @@ jobs:
 ```yaml
 # .gitlab-ci.yml
 validate:
-  image: node:18
+  image: node:20
   script:
     - npm install
     - npm run validate

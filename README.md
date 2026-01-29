@@ -39,8 +39,7 @@ Visit `http://localhost:3000` for interactive API docs.
 | `npm run validate` | Validate base specs |
 | `npm run validate:state` | Validate specs for current STATE |
 | `npm run validate:all-states` | Validate all states |
-| `npm run clients:generate` | Generate Zodios TypeScript clients |
-| `npm run clients:validate` | Type-check generated clients |
+| `npm run clients:build-package` | Build state-specific npm package (requires `--state` and `--version`) |
 | `npm run postman:generate` | Generate Postman collection |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
@@ -73,7 +72,7 @@ Visit `http://localhost:3000` for interactive API docs.
 
 ## Requirements
 
-Node.js >= 18.0.0
+Node.js >= 20.0.0
 
 ## License
 

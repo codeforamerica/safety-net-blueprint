@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "src"],
+  "files": ["dist", "src", "openapi", "json-schema"],
   "exports": {
     ".": {
       "import": "./dist/index.js",

@@ -5,7 +5,7 @@
   "description": "Generate Mock API server, Swagger UI, and typed API clients from OpenAPI specifications",
   "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "workspaces": [
     "packages/*"

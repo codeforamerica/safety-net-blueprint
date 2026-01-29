@@ -15,9 +15,26 @@
  */
 
 import { spawn } from 'child_process';
-import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, copyFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, copyFileSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
+
+/**
+ * Recursively copy a directory
+ */
+function copyDirRecursive(src, dest) {
+  mkdirSync(dest, { recursive: true });
+  for (const entry of readdirSync(src)) {
+    const srcPath = join(src, entry);
+    const destPath = join(dest, entry);
+    if (statSync(srcPath).isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+    }
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -185,8 +202,47 @@ async function main() {
     console.log(`    Generated: ${domain}`);
   }
 
-  // Step 3: Create index.ts that re-exports all domains and search helpers
-  console.log('\n3. Creating index exports...');
+  // Step 3: Copy resolved OpenAPI specs to package
+  console.log('\n3. Copying OpenAPI specs...');
+  const openapiDir = join(outputDir, 'openapi');
+  copyDirRecursive(resolvedDir, openapiDir);
+  console.log(`  Copied resolved specs to openapi/`);
+
+  // Step 4: Extract JSON schemas from bundled specs
+  console.log('\n4. Extracting JSON schemas...');
+  const jsonSchemaDir = join(outputDir, 'json-schema');
+  for (const file of specFiles) {
+    const domain = file.replace('.yaml', '');
+    const specPath = join(resolvedDir, file);
+    const domainBundled = join(outputDir, `${domain}-bundled.yaml`);
+    const domainSchemaDir = join(jsonSchemaDir, domain);
+
+    // Bundle spec (dereference $refs) for JSON schema extraction
+    await exec('npx', [
+      '@apidevtools/swagger-cli', 'bundle',
+      specPath,
+      '-o', domainBundled,
+      '--dereference'
+    ]);
+
+    // Extract schemas from bundled spec
+    const bundledContent = readFileSync(domainBundled, 'utf8');
+    const bundledSpec = yaml.load(bundledContent);
+    const schemas = bundledSpec.components?.schemas || {};
+
+    mkdirSync(domainSchemaDir, { recursive: true });
+    for (const [schemaName, schema] of Object.entries(schemas)) {
+      const jsonSchemaPath = join(domainSchemaDir, `${schemaName}.json`);
+      writeFileSync(jsonSchemaPath, JSON.stringify(schema, null, 2));
+    }
+    console.log(`  Extracted ${Object.keys(schemas).length} schemas for ${domain}`);
+
+    // Clean up temp bundled file
+    rmSync(domainBundled, { force: true });
+  }
+
+  // Step 5: Create index.ts that re-exports all domains and search helpers
+  console.log('\n5. Creating index exports...');
   const domainExports = domains.map(d => `export * as ${d} from './${d}/index.js';`).join('\n');
   const indexContent = `${domainExports}
 export { q, search } from './search-helpers.js';
@@ -194,14 +250,14 @@ export { q, search } from './search-helpers.js';
   writeFileSync(join(srcDir, 'index.ts'), indexContent);
   console.log('  Created index.ts');
 
-  // Step 3b: Copy search helpers
+  // Copy search helpers
   const searchHelpersSource = join(templatesDir, 'search-helpers.ts');
   const searchHelpersDest = join(srcDir, 'search-helpers.ts');
   copyFileSync(searchHelpersSource, searchHelpersDest);
   console.log('  Copied search-helpers.ts');
 
-  // Step 4: Generate package.json from template
-  console.log('\n4. Generating package.json...');
+  // Step 6: Generate package.json from template
+  console.log('\n6. Generating package.json...');
   const packageTemplate = readFileSync(join(templatesDir, 'package.template.json'), 'utf8');
   const packageJson = packageTemplate
     .replace(/\{\{STATE\}\}/g, state)
@@ -210,8 +266,8 @@ export { q, search } from './search-helpers.js';
   writeFileSync(join(outputDir, 'package.json'), packageJson);
   console.log('  Generated package.json');
 
-  // Step 5: Create tsconfig for compilation
-  console.log('\n5. Setting up TypeScript compilation...');
+  // Step 7: Create tsconfig for compilation
+  console.log('\n7. Setting up TypeScript compilation...');
   const tsconfig = {
     compilerOptions: {
       target: 'ES2020',
@@ -230,13 +286,13 @@ export { q, search } from './search-helpers.js';
   writeFileSync(join(outputDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
   console.log('  Created tsconfig.json');
 
-  // Step 6: Install build dependencies (peer deps needed for type checking)
-  console.log('\n6. Installing build dependencies...');
+  // Step 8: Install build dependencies (peer deps needed for type checking)
+  console.log('\n8. Installing build dependencies...');
   await exec('npm', ['install', 'zod@^4.3.5', 'axios@^1.6.0', '--save-dev'], { cwd: outputDir });
   console.log('  Dependencies installed');
 
-  // Step 7: Compile TypeScript
-  console.log('\n7. Compiling TypeScript...');
+  // Step 9: Compile TypeScript
+  console.log('\n9. Compiling TypeScript...');
   try {
     await exec('npx', ['tsc'], { cwd: outputDir });
   } catch (error) {
