@@ -1,0 +1,4 @@
+# Generated output files - regenerate with npm run design:reference
+*.html
+*.json
+*.txt

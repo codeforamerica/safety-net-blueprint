@@ -288,6 +288,31 @@ schema_patterns:
       description: Response schema for GET collection endpoints
       suffix: List
 
+  # Foreign key references to other schemas
+  foreign_keys:
+    description: |
+      Foreign key references use the naming convention {entityName}Id with format: uuid.
+      This enables automatic relationship detection in tooling like the design reference.
+    naming_convention:
+      pattern: "{SchemaName}Id"
+      format: uuid
+      example: "personId references Person, householdId references Household"
+    examples:
+      - field: personId
+        type: string
+        format: uuid
+        description: Reference to the Person record
+        references: Person
+      - field: applicationId
+        type: string
+        format: uuid
+        description: Reference to the Application record
+        references: Application
+    detection:
+      - Tooling detects relationships when field ends in 'Id' and has format: uuid
+      - The schema name is derived by removing 'Id' suffix and capitalizing
+      - Works for both top-level properties and nested array items
+
 # =============================================================================
 # File Structure
 # =============================================================================

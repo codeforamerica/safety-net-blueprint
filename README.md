@@ -14,6 +14,7 @@ Choose your path based on your role:
 
 | Role | You want to... | Start here |
 |------|----------------|------------|
+| **UX Designer** | Explore the ORCA data model, populate Figma designs with sample data | [UX Designer Guide](./packages/schemas/docs/ux-designer-guide.md) |
 | **Backend Developer** | Design APIs, validate specs, test backend implementations | [Backend Developer Guide](./docs/getting-started/backend-developers.md) |
 | **Frontend Developer** | Build UIs against the APIs, use generated clients | [Frontend Developer Guide](./docs/getting-started/frontend-developers.md) |
 

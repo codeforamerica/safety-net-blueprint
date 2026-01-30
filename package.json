@@ -31,7 +31,10 @@
     "test:unit": "npm run test:unit -w @safety-net/mock-server",
     "test:integration": "npm run test:integration -w @safety-net/mock-server",
     "test:all": "npm run test:all -w @safety-net/mock-server",
-    "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html"
+    "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html",
+    "design:export": "npm run design:export -w @safety-net/schemas",
+    "design:reference": "npm run design:reference -w @safety-net/schemas",
+    "design:figma-data": "npm run design:figma-data -w @safety-net/schemas"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "^4.2.3"

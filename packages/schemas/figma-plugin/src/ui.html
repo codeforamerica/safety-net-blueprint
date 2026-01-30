@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      color: #333;
+      padding: 16px;
+      background: #fff;
+    }
+
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #333;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #666;
+    }
+
+    select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: inherit;
+    }
+
+    select:focus, textarea:focus {
+      outline: none;
+      border-color: #18a0fb;
+    }
+
+    textarea {
+      height: 200px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 11px;
+      resize: vertical;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 16px;
+      margin-top: 6px;
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: normal;
+      cursor: pointer;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button.primary {
+      background: #18a0fb;
+      color: white;
+    }
+
+    button.primary:hover {
+      background: #0d8de5;
+    }
+
+    button.primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    button.secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    .status.success {
+      background: #e6f7e6;
+      color: #1a7f1a;
+    }
+
+    .status.error {
+      background: #ffe6e6;
+      color: #cc0000;
+    }
+
+    .status.info {
+      background: #e6f0ff;
+      color: #0066cc;
+    }
+
+    .unmatched-list {
+      margin-top: 8px;
+      padding-left: 16px;
+    }
+
+    .unmatched-list li {
+      margin-bottom: 2px;
+      color: #666;
+    }
+
+    .help-text {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .schema-info {
+      background: #f5f5f5;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
+    .schema-info h3 {
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .schema-info .stat {
+      display: inline-block;
+      margin-right: 16px;
+      color: #666;
+    }
+
+    .schema-info .stat strong {
+      color: #333;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      border: none;
+      background: none;
+      font-size: 12px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+
+    .tab.active {
+      border-bottom-color: #18a0fb;
+      color: #18a0fb;
+      font-weight: 500;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h2>Safety Net Schema Populator</h2>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="paste">Paste JSON</button>
+    <button class="tab" data-tab="help">Help</button>
+  </div>
+
+  <div id="paste-tab" class="tab-content active">
+    <div class="section">
+      <label for="json-input">Schema Data (JSON)</label>
+      <textarea id="json-input" placeholder='Paste your exported JSON here...
+
+Example format:
+{
+  "metadata": {
+    "firstName": { "type": "text", "label": "First Name" },
+    "status": { "type": "dropdown", "label": "Status", "options": ["Active", "Inactive"] }
+  },
+  "examples": [
+    { "firstName": "John", "status": "Active" }
+  ]
+}'></textarea>
+      <p class="help-text">Export this JSON using: npm run figma:export</p>
+    </div>
+
+    <div id="schema-info" class="schema-info" style="display: none;">
+      <h3>Loaded Schema</h3>
+      <span class="stat"><strong id="field-count">0</strong> fields</span>
+      <span class="stat"><strong id="example-count">0</strong> examples</span>
+      <span class="stat"><strong id="dropdown-count">0</strong> dropdowns</span>
+    </div>
+
+    <div class="section" id="example-select-section" style="display: none;">
+      <label for="example-select">Select Example</label>
+      <select id="example-select"></select>
+    </div>
+
+    <div class="section">
+      <label>Match Mode</label>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="match-mode" value="fuzzy" checked>
+          Fuzzy (recommended)
+        </label>
+        <label>
+          <input type="radio" name="match-mode" value="exact">
+          Exact
+        </label>
+      </div>
+      <p class="help-text">Fuzzy matching finds layers even if names don't match exactly</p>
+    </div>
+
+    <div class="button-row">
+      <button class="secondary" id="cancel-btn">Cancel</button>
+      <button class="primary" id="populate-btn" disabled>Populate Selection</button>
+    </div>
+
+    <div id="status" class="status" style="display: none;"></div>
+  </div>
+
+  <div id="help-tab" class="tab-content">
+    <div class="section">
+      <h3 style="margin-bottom: 12px;">How to Use</h3>
+      <ol style="padding-left: 20px; line-height: 1.8;">
+        <li>Export your schema data:<br>
+          <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">npm run figma:export</code>
+        </li>
+        <li>Copy the contents of the generated JSON file</li>
+        <li>Paste it in the "Paste JSON" tab</li>
+        <li>Select the example data you want to use</li>
+        <li>Select frames/layers in Figma (or select nothing for whole page)</li>
+        <li>Click "Populate Selection"</li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h3 style="margin-bottom: 12px;">Layer Naming</h3>
+      <p style="line-height: 1.6;">
+        Name your text layers to match field names. The plugin will match:
+      </p>
+      <ul style="padding-left: 20px; margin-top: 8px; line-height: 1.8;">
+        <li><strong>First Name</strong> → firstName, first_name, FirstName</li>
+        <li><strong>Date of Birth</strong> → dateOfBirth, DOB, date_of_birth</li>
+        <li><strong>SSN</strong> → socialSecurityNumber, ssn</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h3 style="margin-bottom: 12px;">Dropdowns</h3>
+      <p style="line-height: 1.6;">
+        For dropdown fields, create a Component Set with variants for each option.
+        Name the component to match the field name (e.g., "maritalStatus" or "Marital Status").
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let schemaData = null;
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+      });
+    });
+
+    // Parse JSON input
+    document.getElementById('json-input').addEventListener('input', (e) => {
+      const statusEl = document.getElementById('status');
+      const schemaInfoEl = document.getElementById('schema-info');
+      const exampleSectionEl = document.getElementById('example-select-section');
+      const populateBtn = document.getElementById('populate-btn');
+
+      try {
+        const text = e.target.value.trim();
+        if (!text) {
+          schemaData = null;
+          schemaInfoEl.style.display = 'none';
+          exampleSectionEl.style.display = 'none';
+          populateBtn.disabled = true;
+          statusEl.style.display = 'none';
+          return;
+        }
+
+        schemaData = JSON.parse(text);
+
+        // Validate structure
+        if (!schemaData.examples || !Array.isArray(schemaData.examples)) {
+          throw new Error('JSON must have an "examples" array');
+        }
+
+        // Update schema info
+        const fieldCount = schemaData.metadata ? Object.keys(schemaData.metadata).length : 0;
+        const exampleCount = schemaData.examples.length;
+        const dropdownCount = schemaData.metadata
+          ? Object.values(schemaData.metadata).filter(m => m.type === 'dropdown').length
+          : 0;
+
+        document.getElementById('field-count').textContent = fieldCount;
+        document.getElementById('example-count').textContent = exampleCount;
+        document.getElementById('dropdown-count').textContent = dropdownCount;
+        schemaInfoEl.style.display = 'block';
+
+        // Populate example selector
+        const selectEl = document.getElementById('example-select');
+        selectEl.innerHTML = schemaData.examples.map((ex, i) => {
+          // Use metadata fields for label if available (support both old _name and new __exampleName)
+          const exampleName = ex['__exampleName'] || ex['_name'] || '';
+          const resourceType = ex['__resourceType'] || '';
+
+          let displayLabel;
+          if (exampleName) {
+            // Format "ApplicationExample1" → "Application Example 1"
+            displayLabel = exampleName
+              .replace(/([a-z])([A-Z])/g, '$1 $2')
+              .replace(/(\D)(\d)/g, '$1 $2');
+            if (resourceType) {
+              displayLabel += ` (${resourceType})`;
+            }
+          } else {
+            // Fallback to name fields
+            const firstName = ex['name.firstName'] || ex['firstName'] || '';
+            const lastName = ex['name.lastName'] || ex['lastName'] || '';
+            displayLabel = firstName && lastName ? `${firstName} ${lastName}` : `Example ${i + 1}`;
+          }
+          return `<option value="${i}">${displayLabel}</option>`;
+        }).join('');
+        exampleSectionEl.style.display = 'block';
+
+        populateBtn.disabled = false;
+        statusEl.style.display = 'none';
+
+      } catch (err) {
+        schemaData = null;
+        schemaInfoEl.style.display = 'none';
+        exampleSectionEl.style.display = 'none';
+        populateBtn.disabled = true;
+
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Invalid JSON: ' + err.message;
+        statusEl.style.display = 'block';
+      }
+    });
+
+    // Populate button
+    document.getElementById('populate-btn').addEventListener('click', () => {
+      if (!schemaData) return;
+
+      const exampleIndex = parseInt(document.getElementById('example-select').value) || 0;
+      const matchMode = document.querySelector('input[name="match-mode"]:checked').value;
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'populate',
+          data: schemaData,
+          exampleIndex: exampleIndex,
+          matchMode: matchMode
+        }
+      }, '*');
+    });
+
+    // Cancel button
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+    });
+
+    // Handle messages from plugin
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === 'populate-result') {
+        const statusEl = document.getElementById('status');
+        const total = msg.textMatched + msg.dropdownMatched;
+
+        if (total > 0) {
+          statusEl.className = 'status success';
+          let html = `Populated ${total} field${total !== 1 ? 's' : ''} `;
+          html += `(${msg.textMatched} text, ${msg.dropdownMatched} dropdown)`;
+
+          if (msg.unmatched && msg.unmatched.length > 0) {
+            html += `<br><br>Unmatched fields (no matching layer found):`;
+            html += '<ul class="unmatched-list">';
+            msg.unmatched.slice(0, 10).forEach(f => {
+              html += `<li>${f}</li>`;
+            });
+            if (msg.unmatched.length > 10) {
+              html += `<li>...and ${msg.unmatched.length - 10} more</li>`;
+            }
+            html += '</ul>';
+          }
+
+          statusEl.innerHTML = html;
+        } else {
+          statusEl.className = 'status info';
+          statusEl.innerHTML = 'No matching layers found. Make sure your layer names match the field names.';
+        }
+
+        statusEl.style.display = 'block';
+      }
+    };
+  </script>
+</body>
+</html>

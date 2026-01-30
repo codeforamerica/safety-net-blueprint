@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "OpenAPI schemas, validation, and overlay resolution for Safety Net APIs",
   "type": "module",
+  "files": [
+    "src/",
+    "openapi/",
+    "scripts/",
+    "docs/"
+  ],
   "exports": {
     "./overlay": "./src/overlay/overlay-resolver.js",
     "./validation": "./src/validation/openapi-validator.js",
@@ -10,6 +16,7 @@
     "./patterns": "./src/validation/pattern-validator.js"
   },
   "scripts": {
+    "prepack": "npm run design:reference",
     "test": "node --test tests/unit/*.test.js",
     "validate": "npm run validate:syntax && npm run validate:patterns",
     "validate:syntax": "node scripts/validate-openapi.js",
@@ -19,7 +26,12 @@
     "validate:all-states": "node scripts/validate-state.js --all",
     "overlay:resolve": "node scripts/resolve-overlay.js",
     "overlay:list": "node scripts/resolve-overlay.js --list",
-    "api:new": "node scripts/generate-api.js"
+    "api:new": "node scripts/generate-api.js",
+    "design:reference": "node scripts/export-design-reference.js",
+    "design:figma-data": "node scripts/export-figma-data.js",
+    "figma:export": "node scripts/export-figma-plugin-data.js",
+    "figma:build": "cd figma-plugin && npm run build",
+    "design:export": "npm run design:reference && npm run design:figma-data"
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
