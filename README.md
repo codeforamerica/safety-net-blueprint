@@ -2,7 +2,7 @@
 
 This toolkit helps teams build consistent, well-documented APIs for safety net programs—enabling faster integration between benefits systems and reducing the technical barriers to improving service delivery.
 
-**New here?** Start with the [Executive Summary](https://codeforamerica.github.io/safety-net-openapi/presentation/executive-summary.html) for a one-page overview, the [Toolkit Overview](https://codeforamerica.github.io/safety-net-openapi/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-openapi/packages/schemas/docs/schema-reference.html) to browse the data model.
+**New here?** Start with the [Executive Summary](https://codeforamerica.github.io/safety-net-openapi/docs/presentation/executive-summary.html) for a one-page overview, the [Toolkit Overview](https://codeforamerica.github.io/safety-net-openapi/docs/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-openapi/packages/schemas/docs/schema-reference.html) to browse the data model.
 
 ## About This Repository
 
