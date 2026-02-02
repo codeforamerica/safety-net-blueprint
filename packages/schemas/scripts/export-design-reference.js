@@ -130,134 +130,29 @@ const DOMAIN_HIERARCHY = {
 };
 
 // Attribute category mapping for property-level grouping (formerly DOMAIN_MAPPING)
-const ATTRIBUTE_CATEGORY_MAPPING = {
-  // Identity
-  id: 'system',
-  name: 'identity',
-  firstName: 'identity',
-  lastName: 'identity',
-  middleName: 'identity',
-  dateOfBirth: 'identity',
-  socialSecurityNumber: 'identity',
+// System fields that should be grouped separately
+const SYSTEM_FIELDS = ['id', 'createdAt', 'updatedAt'];
 
-  // Contact
-  email: 'contact',
-  phoneNumber: 'contact',
-  otherPhoneNumber: 'contact',
-  address: 'contact',
-  homeAddress: 'contact',
-  mailingAddress: 'contact',
-  preferredContactMethod: 'contact',
-  preferredNoticeMethod: 'contact',
-  languagePreference: 'contact',
-  contactInfo: 'contact',
-  isHomeless: 'contact',
-
-  // Demographics
-  sex: 'demographics',
-  maritalStatus: 'demographics',
-  race: 'demographics',
-  isHispanicOrLatino: 'demographics',
-  demographicInfo: 'demographics',
-
-  // Citizenship & Immigration
-  citizenshipInfo: 'citizenship',
-  immigrationInfo: 'citizenship',
-  status: 'citizenship',
-  certificateNumber: 'citizenship',
-  nonCitizenApplicationInfo: 'citizenship',
-
-  // Employment
-  employmentInfo: 'employment',
-  employmentHistory: 'employment',
-  jobs: 'employment',
-  employer: 'employment',
-  startDate: 'employment',
-  endDate: 'employment',
-  selfEmployment: 'employment',
-
-  // Income
-  unearnedIncomeSources: 'income',
-  lumpSumPayments: 'income',
-  incomeChangeInfo: 'income',
-  strikeInfo: 'income',
-  amount: 'income',
-  frequency: 'income',
-  monthlyAmount: 'income',
-  monthlyWagesBeforeTaxes: 'income',
-  hourlyWage: 'income',
-  payFrequency: 'income',
-
-  // Health & Medical
-  healthInfo: 'health',
-  disabilityInfo: 'health',
-  healthCoverage: 'health',
-  medicare: 'health',
-  healthInsuranceEnrollments: 'health',
-  familyPlanningInfo: 'health',
-  hasDisability: 'health',
-  institutionalizedInfo: 'health',
-
-  // Housing & Expenses
-  expenses: 'housing',
-  rent: 'housing',
-  mortgage: 'housing',
-  utilities: 'housing',
-  additionalExpenses: 'housing',
-
-  // Resources & Assets
-  resourceInfo: 'resources',
-  financialResources: 'resources',
-  vehicles: 'resources',
-  insurancePolicies: 'resources',
-  realEstateProperties: 'resources',
-  transferredAssets: 'resources',
-
-  // Education
-  educationInfo: 'education',
-  isCurrentlyEnrolled: 'education',
-  schoolName: 'education',
-  isFullTimeStudent: 'education',
-  financialAidInfo: 'education',
-
-  // Military & Tribal
-  militaryInfo: 'military',
-  tribalInfo: 'tribal',
-  veteranStatus: 'military',
-  isMilitaryServiceMember: 'military',
-
-  // Program & Application
-  programsApplyingFor: 'program',
-  relationship: 'program',
-  screeningFlags: 'program',
-  preferences: 'program',
-  status: 'program',
-  state: 'program',
-
-  // System fields
-  createdAt: 'system',
-  updatedAt: 'system',
-  readOnly: 'system',
-};
-
-// Domain display configuration
+// Domain display configuration for special domains
+// Dynamic domains (schema names) use getDomainConfig() for consistent styling
 const DOMAIN_CONFIG = {
-  identity: { name: 'Identity', color: '#3498db', bgColor: '#ebf5fb' },
-  contact: { name: 'Contact', color: '#27ae60', bgColor: '#e8f8f0' },
-  demographics: { name: 'Demographics', color: '#9b59b6', bgColor: '#f5eef8' },
-  citizenship: { name: 'Citizenship & Immigration', color: '#e67e22', bgColor: '#fdf2e9' },
-  employment: { name: 'Employment', color: '#1abc9c', bgColor: '#e8f6f3' },
-  income: { name: 'Income', color: '#f39c12', bgColor: '#fef9e7' },
-  health: { name: 'Health & Medical', color: '#e74c3c', bgColor: '#fdedec' },
-  housing: { name: 'Housing & Expenses', color: '#8b4513', bgColor: '#faf0e6' },
-  resources: { name: 'Resources & Assets', color: '#7f8c8d', bgColor: '#f4f6f6' },
-  education: { name: 'Education', color: '#2980b9', bgColor: '#eaf2f8' },
-  military: { name: 'Military', color: '#2c3e50', bgColor: '#ebedef' },
-  tribal: { name: 'Tribal', color: '#d35400', bgColor: '#fbeee6' },
-  program: { name: 'Program & Application', color: '#16a085', bgColor: '#e8f6f3' },
+  fields: { name: 'Fields', color: '#3498db', bgColor: '#ebf5fb' },
   system: { name: 'System', color: '#95a5a6', bgColor: '#f8f9f9' },
-  other: { name: 'Other', color: '#566573', bgColor: '#f2f3f4' },
 };
+
+/**
+ * Get domain config, generating consistent colors for dynamic domains
+ */
+function getDomainConfig(domainKey) {
+  if (DOMAIN_CONFIG[domainKey]) {
+    return DOMAIN_CONFIG[domainKey];
+  }
+
+  // For schema-derived domains, format the name nicely and use neutral styling
+  // "ContactInfo" → "Contact Info"
+  const name = domainKey.replace(/([a-z])([A-Z])/g, '$1 $2');
+  return { name, color: '#566573', bgColor: '#f2f3f4' };
+}
 
 // Primary schemas that get full ORCA treatment
 const PRIMARY_SCHEMAS = ['Person', 'Household', 'Application', 'Income', 'HouseholdMember'];
@@ -440,10 +335,18 @@ function formatEnumValues(schema) {
 }
 
 /**
- * Get attribute category for a property name
+ * Get attribute category derived from property type and name
+ * - System fields: group as "System"
+ * - Everything else (primitives and nested objects): group as "Fields"
  */
-function getAttributeCategory(propName) {
-  return ATTRIBUTE_CATEGORY_MAPPING[propName] || 'other';
+function getAttributeCategory(propName, propType) {
+  // System fields
+  if (SYSTEM_FIELDS.includes(propName)) {
+    return 'system';
+  }
+
+  // All other fields (including nested objects) go into 'fields'
+  return 'fields';
 }
 
 /**
@@ -574,7 +477,7 @@ function processSchema(schema, schemaName, stateSchemas = null) {
       enumValues,
       isNested: isNested || isArrayOfObjects,
       schema: propSchema,
-      domain: getAttributeCategory(propName),
+      domain: getAttributeCategory(propName, type),
     });
   }
 
@@ -595,16 +498,26 @@ function groupPropertiesByDomain(properties) {
     grouped[domain].push(prop);
   }
 
-  // Sort domains by preferred order
-  const domainOrder = ['identity', 'contact', 'demographics', 'citizenship', 'employment',
-                       'income', 'health', 'housing', 'resources', 'education',
-                       'military', 'tribal', 'program', 'system', 'other'];
-
+  // Sort domains: 'fields' first, then schema-derived domains alphabetically, 'system' last
   const sorted = {};
-  for (const domain of domainOrder) {
+  const domains = Object.keys(grouped);
+
+  // Fields first
+  if (grouped.fields && grouped.fields.length > 0) {
+    sorted.fields = grouped.fields;
+  }
+
+  // Schema-derived domains (alphabetically)
+  const schemaDomains = domains.filter(d => d !== 'fields' && d !== 'system').sort();
+  for (const domain of schemaDomains) {
     if (grouped[domain] && grouped[domain].length > 0) {
       sorted[domain] = grouped[domain];
     }
+  }
+
+  // System last
+  if (grouped.system && grouped.system.length > 0) {
+    sorted.system = grouped.system;
   }
 
   return sorted;
@@ -634,7 +547,7 @@ function extractRelationships(schemas) {
       }
     }
 
-    // Check properties for contained objects
+    // Check properties for contained objects using PROPERTY_REFS (populated before dereferencing)
     const effectiveSchema = schema.allOf ?
       schema.allOf.reduce((acc, part) => ({
         ...acc,
@@ -644,13 +557,17 @@ function extractRelationships(schemas) {
     const props = effectiveSchema.properties || {};
 
     for (const [propName, propSchema] of Object.entries(props)) {
-      if (propSchema.$ref) {
-        const refName = propSchema.$ref.split('/').pop();
-        relationships[schemaName].contains.push({ name: refName, via: propName });
-      }
-      if (propSchema.type === 'array' && propSchema.items?.$ref) {
-        const refName = propSchema.items.$ref.split('/').pop();
-        relationships[schemaName].contains.push({ name: refName, via: `${propName}[]`, isArray: true });
+      // Use PROPERTY_REFS to find the target schema (works after dereferencing)
+      const refKey = `${schemaName}.${propName}`;
+      const refTarget = PROPERTY_REFS[refKey];
+
+      if (refTarget) {
+        const isArray = propSchema.type === 'array';
+        relationships[schemaName].contains.push({
+          name: refTarget,
+          via: isArray ? `${propName}[]` : propName,
+          isArray
+        });
       }
       // Check for foreign keys within inline array objects (e.g., members[].personId)
       if (propSchema.type === 'array' && propSchema.items?.properties) {
@@ -995,7 +912,7 @@ function generateDomainBrowser(domainSchemaMap) {
     const schemas = domainSchemaMap[domain];
     if (!schemas || schemas.length === 0) continue;
 
-    const config = DOMAIN_CONFIG[domain] || DOMAIN_CONFIG.other;
+    const config = getDomainConfig(domain);
     const primaryCount = schemas.filter(s => PRIMARY_SCHEMAS.includes(s)).length;
 
     html += `    <div class="domain-card" style="--domain-color: ${config.color}; --domain-bg: ${config.bgColor};" data-domain="${domain}">\n`;
@@ -1034,7 +951,7 @@ function generateDomainGroupedTables(groupedProps) {
   let html = '';
 
   for (const [domain, props] of Object.entries(groupedProps)) {
-    const config = DOMAIN_CONFIG[domain] || DOMAIN_CONFIG.other;
+    const config = getDomainConfig(domain);
 
     html += `<div class="domain-group" style="--domain-color: ${config.color}; --domain-bg: ${config.bgColor};">\n`;
     html += `  <h5 class="domain-header"><span class="domain-indicator"></span>${config.name}</h5>\n`;
@@ -1281,15 +1198,44 @@ function generateOrcaSection(schemaName, schema, relationships, operations, stat
 /**
  * Generate simple section for non-primary schemas
  */
-function generateSimpleSection(schemaName, schema, stateSchemas, states, domainKey) {
-  const domain = DOMAIN_HIERARCHY[domainKey];
+function generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, domainKey) {
+  let effectiveDomainKey = domainKey;
+  let domain = DOMAIN_HIERARCHY[domainKey];
+  const rels = relationships[schemaName] || {};
 
-  let html = `<section id="${schemaName}" class="schema-section" data-domain="${domainKey}">\n`;
+  // Find schemas that contain/reference this one
+  const usedBy = [];
+  for (const [otherSchema, otherRels] of Object.entries(relationships)) {
+    if (otherSchema === schemaName) continue;
+    for (const cont of otherRels.contains || []) {
+      if (cont.name === schemaName) {
+        usedBy.push({ schema: otherSchema, via: cont.via });
+      }
+    }
+  }
+
+  // If unclassified, inherit domain from parent schema(s)
+  if (domainKey === 'unclassified' && usedBy.length > 0) {
+    // Use the first parent's domain
+    const { domain: parentDomainKey } = classifySchemaIntoDomain(usedBy[0].schema);
+    if (parentDomainKey !== 'unclassified') {
+      effectiveDomainKey = parentDomainKey;
+      domain = DOMAIN_HIERARCHY[parentDomainKey];
+    }
+  }
+
+  let html = `<section id="${schemaName}" class="schema-section" data-domain="${effectiveDomainKey}">\n`;
   html += `  <div class="section-header simple">\n`;
   if (domain) {
-    html += `    <a href="#domain-${domainKey}" class="entity-domain-badge" style="--domain-color: ${domain.color}; --domain-bg: ${domain.bgColor};">${domain.name}</a>\n`;
+    html += `    <a href="#domain-${effectiveDomainKey}" class="entity-domain-badge" style="--domain-color: ${domain.color}; --domain-bg: ${domain.bgColor};">${domain.name}</a>\n`;
   }
   html += `    <h2>${schemaName}</h2>\n`;
+  if (usedBy.length > 0) {
+    html += `    <div class="used-by-links">`;
+    html += `Used by: `;
+    html += usedBy.map(u => `<a href="#${u.schema}">${u.schema}</a><code>.${u.via}</code>`).join(', ');
+    html += `</div>\n`;
+  }
   html += `  </div>\n`;
   html += `  <p class="description">${escapeHtml(schema.description || '')}</p>\n`;
   html += generateAttributesWithStateVariants(schemaName, schema, stateSchemas, states);
@@ -1304,9 +1250,16 @@ function generateSimpleSection(schemaName, schema, stateSchemas, states, domainK
 function generateInlineObjectSection(inlineName, inlineInfo) {
   const { schema, parentSchema, propName } = inlineInfo;
 
-  let html = `<section id="${inlineName}" class="schema-section inline-object">\n`;
+  // Inherit domain from parent schema
+  const { domain: domainKey } = classifySchemaIntoDomain(parentSchema);
+  const domain = DOMAIN_HIERARCHY[domainKey];
+
+  let html = `<section id="${inlineName}" class="schema-section inline-object" data-domain="${domainKey}">\n`;
   html += `  <div class="section-header simple">\n`;
-  html += `    <span class="inline-object-badge">Nested in ${parentSchema}</span>\n`;
+  if (domain) {
+    html += `    <a href="#domain-${domainKey}" class="entity-domain-badge" style="--domain-color: ${domain.color}; --domain-bg: ${domain.bgColor};">${domain.name}</a>\n`;
+  }
+  html += `    <span class="inline-object-badge">Nested in <a href="#${parentSchema}">${parentSchema}</a></span>\n`;
   html += `    <h2>${inlineName}</h2>\n`;
   html += `  </div>\n`;
   html += `  <p class="description">${escapeHtml(schema.description || `Nested object within ${parentSchema}.${propName}`)}</p>\n`;
@@ -1381,7 +1334,7 @@ function generateDomainGroupedTablesWithStateMarkers(groupedProps, stateName) {
   let html = '';
 
   for (const [domain, props] of Object.entries(groupedProps)) {
-    const config = DOMAIN_CONFIG[domain] || DOMAIN_CONFIG.other;
+    const config = getDomainConfig(domain);
 
     html += `<div class="domain-group" style="--domain-color: ${config.color}; --domain-bg: ${config.bgColor};">\n`;
     html += `  <h5 class="domain-header"><span class="domain-indicator"></span>${config.name}</h5>\n`;
@@ -1705,6 +1658,25 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
   // Generate hierarchical sidebar
   const sidebarHtml = generateHierarchicalSidebar(schemasByDomain, schemas, stateSchemas, states);
 
+  // Build search index of all fields
+  const searchIndex = [];
+  for (const [schemaName, schema] of Object.entries(schemas)) {
+    const { properties } = processSchema(schema, schemaName);
+    const { domain: domainKey } = classifySchemaIntoDomain(schemaName);
+    const domainInfo = DOMAIN_HIERARCHY[domainKey];
+    const domainName = domainInfo?.name || 'Other';
+
+    for (const prop of properties) {
+      searchIndex.push({
+        field: prop.name,
+        schema: schemaName,
+        type: prop.type,
+        domain: domainName,
+        description: prop.description || ''
+      });
+    }
+  }
+
   // Domain order for organizing schema sections
   const domainOrder = ['intake', 'clientManagement', 'eligibility', 'caseManagement',
                        'workflow', 'scheduling', 'documentManagement', 'crossCutting'];
@@ -1754,7 +1726,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
       if (isPrimary) {
         contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, schemaDomain);
       } else {
-        contentHtml += generateSimpleSection(schemaName, schema, stateSchemas, states, schemaDomain);
+        contentHtml += generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, schemaDomain);
       }
     }
   }
@@ -1768,7 +1740,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
     if (isPrimary) {
       contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, 'unclassified');
     } else {
-      contentHtml += generateSimpleSection(schemaName, schema, stateSchemas, states, 'unclassified');
+      contentHtml += generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, 'unclassified');
     }
   }
 
@@ -1933,12 +1905,97 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
       color: white;
     }
 
+    .search-container {
+      position: relative;
+      margin-bottom: 15px;
+    }
+
     .sidebar input {
       width: 100%;
       padding: 8px;
       border: none;
       border-radius: 4px;
-      margin-bottom: 15px;
+    }
+
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    }
+
+    .search-results.visible {
+      display: block;
+    }
+
+    .search-result-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+      color: #333;
+    }
+
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-result-item:hover {
+      background: #f0f7ff;
+    }
+
+    .search-result-field {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .search-result-schema {
+      font-size: 0.85em;
+      color: #7f8c8d;
+      margin-left: 8px;
+    }
+
+    .search-result-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .search-result-type {
+      font-size: 0.8em;
+      color: #3498db;
+    }
+
+    .search-result-domain {
+      font-size: 0.75em;
+      color: #fff;
+      background: #7f8c8d;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .search-no-results {
+      padding: 12px;
+      color: #7f8c8d;
+      text-align: center;
+      font-style: italic;
+    }
+
+    .field-highlight {
+      background: #fff3cd !important;
+      animation: highlight-fade 2s ease-out forwards;
+    }
+
+    @keyframes highlight-fade {
+      0% { background: #fff3cd; }
+      100% { background: transparent; }
     }
 
     .sidebar nav {
@@ -2258,6 +2315,28 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
 
     .section-header.simple {
       margin-bottom: 10px;
+    }
+
+    .used-by-links {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      margin-top: 4px;
+    }
+
+    .used-by-links a {
+      color: #3498db;
+      text-decoration: none;
+    }
+
+    .used-by-links a:hover {
+      text-decoration: underline;
+    }
+
+    .used-by-links code {
+      font-size: 0.85em;
+      color: #95a5a6;
+      background: none;
+      padding: 0;
     }
 
     /* Domain header anchors */
@@ -2912,7 +2991,10 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
           ${states.map(s => `<button class="state-selector-btn" data-state="${s.state}">${s.name}</button>`).join('\n          ')}
         </div>
       </div>
-      <input type="text" id="search" placeholder="Search fields...">
+      <div class="search-container">
+        <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
+        <div id="search-results" class="search-results"></div>
+      </div>
       <nav id="nav">
 ${sidebarHtml}
       </nav>
@@ -2954,47 +3036,6 @@ ${contentHtml}
   </div>
 
   <script>
-    // Search functionality
-    const searchInput = document.getElementById('search');
-    const sections = document.querySelectorAll('.schema-section');
-    const navLinks = document.querySelectorAll('.sidebar nav a');
-
-    searchInput.addEventListener('input', (e) => {
-      const query = e.target.value.toLowerCase();
-
-      sections.forEach(section => {
-        const rows = section.querySelectorAll('tr[data-field]');
-        let hasMatch = false;
-
-        rows.forEach(row => {
-          const fieldName = row.dataset.field.toLowerCase();
-          const notes = row.querySelector('.field-notes')?.textContent.toLowerCase() || '';
-          const matches = query === '' || fieldName.includes(query) || notes.includes(query);
-
-          row.classList.toggle('hidden', !matches);
-          if (matches && query !== '') hasMatch = true;
-        });
-
-        section.classList.toggle('hidden', query !== '' && !hasMatch &&
-          !section.id.toLowerCase().includes(query));
-      });
-
-      navLinks.forEach(link => {
-        const sectionId = link.getAttribute('href').substring(1);
-        const section = document.getElementById(sectionId);
-        link.classList.toggle('hidden', section?.classList.contains('hidden'));
-      });
-    });
-
-    // Smooth scrolling
-    navLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const target = document.querySelector(link.getAttribute('href'));
-        target?.scrollIntoView({ behavior: 'smooth' });
-      });
-    });
-
     // ORCA tabs - with persistence across all schemas
     let activeTab = localStorage.getItem('orcaActiveTab') || 'overview';
 
@@ -3015,7 +3056,7 @@ ${contentHtml}
     // Initialize tabs to saved state
     setActiveTabGlobally(activeTab);
 
-    // Add click handlers
+    // Add click handlers for tabs
     document.querySelectorAll('.orca-tabs').forEach(tabGroup => {
       const tabs = tabGroup.querySelectorAll('.orca-tab');
 
@@ -3023,6 +3064,114 @@ ${contentHtml}
         tab.addEventListener('click', () => {
           setActiveTabGlobally(tab.dataset.tab);
         });
+      });
+    });
+
+    // Search index
+    const searchIndex = ${JSON.stringify(searchIndex)};
+
+    // Search functionality with dropdown
+    const searchInput = document.getElementById('search');
+    const searchResults = document.getElementById('search-results');
+    const navLinks = document.querySelectorAll('.sidebar nav a');
+
+    function renderSearchResults(results) {
+      if (results.length === 0) {
+        searchResults.innerHTML = '<div class="search-no-results">No matching fields found</div>';
+        return;
+      }
+
+      searchResults.innerHTML = results.slice(0, 20).map(r => \`
+        <div class="search-result-item" data-schema="\${r.schema}" data-field="\${r.field}">
+          <span class="search-result-field">\${r.field}</span>
+          <span class="search-result-schema">→ \${r.schema}</span>
+          <span class="search-result-meta">
+            <span class="search-result-type">\${r.type}</span>
+            <span class="search-result-domain">\${r.domain}</span>
+          </span>
+        </div>
+      \`).join('');
+
+      if (results.length > 20) {
+        searchResults.innerHTML += \`<div class="search-no-results">\${results.length - 20} more results...</div>\`;
+      }
+    }
+
+    function navigateToField(schemaName, fieldName) {
+      // Navigate to schema section
+      const section = document.getElementById(schemaName);
+      if (!section) return;
+
+      // Make sure Attributes tab is active
+      setActiveTabGlobally('attributes');
+
+      // Find and highlight the field row
+      const fieldRow = section.querySelector(\`tr[data-field="\${fieldName}"]\`);
+      if (fieldRow) {
+        fieldRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        fieldRow.classList.add('field-highlight');
+        setTimeout(() => fieldRow.classList.remove('field-highlight'), 2000);
+      } else {
+        section.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // Clear search
+      searchInput.value = '';
+      searchResults.classList.remove('visible');
+    }
+
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+
+      if (query.length < 2) {
+        searchResults.classList.remove('visible');
+        return;
+      }
+
+      const results = searchIndex.filter(item =>
+        item.field.toLowerCase().includes(query) ||
+        item.schema.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query)
+      );
+
+      renderSearchResults(results);
+      searchResults.classList.add('visible');
+    });
+
+    searchResults.addEventListener('click', (e) => {
+      const item = e.target.closest('.search-result-item');
+      if (item) {
+        navigateToField(item.dataset.schema, item.dataset.field);
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-container')) {
+        searchResults.classList.remove('visible');
+      }
+    });
+
+    // Keyboard navigation
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        searchResults.classList.remove('visible');
+        searchInput.blur();
+      }
+      if (e.key === 'Enter') {
+        const firstResult = searchResults.querySelector('.search-result-item');
+        if (firstResult) {
+          navigateToField(firstResult.dataset.schema, firstResult.dataset.field);
+        }
+      }
+    });
+
+    // Smooth scrolling
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        target?.scrollIntoView({ behavior: 'smooth' });
       });
     });
 
@@ -3123,6 +3272,10 @@ async function main() {
     const baseSchemas = {};
 
     // Load base schemas from specs
+    // Patterns for CRUD operation schemas that should be excluded from design reference
+    const CRUD_SCHEMA_PATTERNS = [/Create$/, /Update$/, /List$/, /^Conflict$/];
+    const isCrudSchema = (name) => CRUD_SCHEMA_PATTERNS.some(pattern => pattern.test(name));
+
     for (const apiSpec of apiSpecs) {
       console.log(`Processing: ${apiSpec.name}`);
       try {
@@ -3131,6 +3284,8 @@ async function main() {
         });
         if (spec.components?.schemas) {
           for (const [name, schema] of Object.entries(spec.components.schemas)) {
+            // Skip CRUD operation schemas - they're API implementation details, not domain objects
+            if (isCrudSchema(name)) continue;
             baseSchemas[name] = schema;
           }
         }
