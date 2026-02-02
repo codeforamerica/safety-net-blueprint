@@ -1,0 +1,36 @@
+# User Examples
+# Example data for testing and documentation.
+# These examples are validated against the schema by npm run validate
+
+UserExample1:
+  id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  userId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  idpSubject: "auth0|507f1f77bcf86cd799439011"
+  email: "jane.smith@example.gov"
+  roles:
+    name: "case_worker"
+    permissions:
+      - "applications:read"
+      - "applications:create"
+      - "persons:read"
+  status: "active"
+  createdAt: "2024-01-15T10:30:00Z"
+  updatedAt: "2024-01-15T10:30:00Z"
+
+UserExample2:
+  id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+  userId: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+  idpSubject: "auth0|608f2f88cdf97de8a8540022"
+  email: "john.doe@example.gov"
+  roles:
+    name: "supervisor"
+    permissions:
+      - "applications:read"
+      - "applications:create"
+      - "applications:update"
+      - "applications:approve"
+      - "persons:read"
+      - "persons:update"
+  status: "active"
+  createdAt: "2024-02-01T08:00:00Z"
+  updatedAt: "2024-03-10T14:22:00Z"

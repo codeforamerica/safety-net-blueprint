@@ -64,22 +64,22 @@ BackendAuthContext:
     FrontendAuthContext in user.yaml.
   required:
     - userId
-    - roleAssignments
+    - roles
   properties:
     userId:
       type: string
       format: uuid
       description: User Service identifier.
-    roleAssignments:
-      $ref: "#/RoleAssignments"
+    roles:
+      $ref: "#/Role"
 
-RoleAssignments:
+Role:
   type: object
   description: Role and permissions for authorization.
   required:
-    - role
+    - name
   properties:
-    role:
+    name:
       $ref: "#/RoleType"
     permissions:
       type: array
@@ -133,7 +133,7 @@ JwtClaims:
     - aud
     - exp
     - userId
-    - roleAssignments
+    - roles
   allOf:
     - type: object
       properties:

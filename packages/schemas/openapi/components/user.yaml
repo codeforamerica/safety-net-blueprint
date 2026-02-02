@@ -23,7 +23,7 @@ FrontendAuthContext:
   type: object
   description: |
     Authorization context for frontend applications. Extends BackendAuthContext
-    with display name, UI permissions, and user preferences.
+    with UI permissions and user preferences.
 
     Used in enriched JWTs for frontends (via BFF/gateway) or returned by
     GET /users/me. States can customize this independently from BackendAuthContext.
@@ -31,10 +31,6 @@ FrontendAuthContext:
     - $ref: "./common.yaml#/BackendAuthContext"
     - type: object
       properties:
-        name:
-          type: string
-          description: User's display name.
-          example: "Jane Smith"
         ui:
           $ref: "#/UiPermissions"
         preferences:
@@ -92,65 +88,34 @@ User:
 UiPermissions:
   type: object
   readOnly: true
+  additionalProperties: true
   description: |
-    Computed UI permissions for frontend feature toggling.
+    Computed UI permissions and display data for frontend feature toggling.
     Backend computes these from role and permissions to provide
     a UI-friendly interface for showing/hiding features.
-  properties:
-    availableModules:
-      type: array
-      items:
-        type: string
-        enum:
-          - cases
-          - tasks
-          - reports
-          - documents
-          - scheduling
-          - admin
-      description: Modules the user can access in the UI.
-      example:
-        - cases
-        - tasks
-        - documents
-    canApproveApplications:
-      type: boolean
-      description: Can approve/deny applications.
-    canViewSensitivePII:
-      type: boolean
-      description: Can view unmasked SSN and other sensitive data.
-    canExportData:
-      type: boolean
-      description: Can export bulk data.
-    canManageUsers:
-      type: boolean
-      description: Can create/modify user accounts.
-    canImpersonate:
-      type: boolean
-      description: Can act on behalf of another user.
+
+    Structure is flexible - states define their own fields via overlays.
+    Example fields: name, availableModules, canApproveApplications, etc.
+  example:
+    name: "Jane Smith"
+    availableModules: ["cases", "tasks", "documents"]
+    canApproveApplications: false
+    canViewSensitivePII: false
+    canExportData: true
+    canManageUsers: false
 
 UserPreferences:
   type: object
-  description: User preferences for the application.
-  properties:
-    timezone:
-      type: string
-      description: User's preferred timezone (IANA format).
-      example: "America/Los_Angeles"
-    dateFormat:
-      type: string
-      enum:
-        - iso
-        - us
-        - eu
-      default: us
-      description: Preferred date display format.
-    itemsPerPage:
-      type: integer
-      minimum: 10
-      maximum: 100
-      default: 25
-      description: Default pagination size.
+  additionalProperties: true
+  description: |
+    User preferences for the application.
+
+    Structure is flexible - states define their own fields via overlays.
+    Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
+  example:
+    timezone: "America/Los_Angeles"
+    dateFormat: "us"
+    itemsPerPage: 25
 
 UserStatus:
   type: string
