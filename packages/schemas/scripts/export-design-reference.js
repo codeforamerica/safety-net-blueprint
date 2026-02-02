@@ -336,9 +336,8 @@ function formatEnumValues(schema) {
 
 /**
  * Get attribute category derived from property type and name
- * - Nested objects: use the referenced schema name (e.g., "→ ContactInfo" → "ContactInfo")
  * - System fields: group as "System"
- * - Other primitives: group as "Fields"
+ * - Everything else (primitives and nested objects): group as "Fields"
  */
 function getAttributeCategory(propName, propType) {
   // System fields
@@ -346,16 +345,7 @@ function getAttributeCategory(propName, propType) {
     return 'system';
   }
 
-  // Nested objects - derive from the referenced schema name
-  if (propType) {
-    // "→ ContactInfo" or "List of → ContactInfo"
-    const refMatch = propType.match(/→\s*(\w+)/);
-    if (refMatch) {
-      return refMatch[1]; // Return the schema name as the domain
-    }
-  }
-
-  // Default for primitives
+  // All other fields (including nested objects) go into 'fields'
   return 'fields';
 }
 
