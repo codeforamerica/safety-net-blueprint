@@ -47,8 +47,14 @@ This generates `design-export/figma-plugin/all-data.json` containing:
 1. Open your Figma file
 2. Select the frames/layers you want to populate (or select nothing for entire page)
 3. Run the plugin: **Plugins** → **Development** → **Safety Net Schema Populator**
-4. Paste the contents of `all-data.json` into the plugin
-5. Select which example record to use
+4. Load your data using one of these methods:
+   - **Drag and drop** the `all-data.json` file into the plugin
+   - **Click "browse"** to select the JSON file
+   - **Paste** the JSON contents in the "Paste JSON" tab
+5. Use the **Browse tab** to:
+   - Select a resource type (Applications, Households, Incomes, Persons)
+   - Filter and explore available fields
+   - Preview example data before applying
 6. Click "Populate Selection"
 
 ### Layer Naming Convention

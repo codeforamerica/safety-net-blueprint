@@ -198,17 +198,202 @@
     .tab-content.active {
       display: block;
     }
+
+    .field-browser {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px;
+      background: #fafafa;
+    }
+
+    .field-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 6px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .field-item:last-child {
+      border-bottom: none;
+    }
+
+    .field-name {
+      font-weight: 500;
+      color: #333;
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .field-type {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
+    .field-type.text { background: #e3f2fd; color: #1565c0; }
+    .field-type.dropdown { background: #f3e5f5; color: #7b1fa2; }
+    .field-type.date { background: #fff3e0; color: #ef6c00; }
+    .field-type.boolean { background: #e8f5e9; color: #2e7d32; }
+
+    .field-desc {
+      font-size: 11px;
+      color: #666;
+      margin-left: 8px;
+      flex-grow: 1;
+    }
+
+    .example-preview {
+      margin-bottom: 16px;
+    }
+
+    .preview-content {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px;
+      background: #fafafa;
+      font-size: 11px;
+    }
+
+    .preview-row {
+      display: flex;
+      padding: 4px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .preview-row:last-child {
+      border-bottom: none;
+    }
+
+    .preview-label {
+      font-weight: 500;
+      color: #666;
+      min-width: 140px;
+      flex-shrink: 0;
+    }
+
+    .preview-value {
+      color: #333;
+    }
+
+    .field-filter {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+
+    .field-filter:focus {
+      outline: none;
+      border-color: #18a0fb;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: #666;
+    }
+
+    .empty-state p {
+      margin-bottom: 12px;
+    }
+
+    .file-drop-zone {
+      display: block;
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      padding: 24px;
+      margin-top: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #888;
+    }
+
+    .file-drop-zone:hover,
+    .file-drop-zone.drag-over {
+      border-color: #18a0fb;
+      background: #f0f8ff;
+      color: #18a0fb;
+    }
   </style>
 </head>
 <body>
   <h2>Safety Net Schema Populator</h2>
 
   <div class="tabs">
-    <button class="tab active" data-tab="paste">Paste JSON</button>
+    <button class="tab active" data-tab="browse">Browse</button>
+    <button class="tab" data-tab="paste">Paste JSON</button>
     <button class="tab" data-tab="help">Help</button>
   </div>
 
-  <div id="paste-tab" class="tab-content active">
+  <div id="browse-tab" class="tab-content active">
+    <div id="browse-empty-state" class="empty-state">
+      <p>No data loaded yet.</p>
+      <p class="help-text">Paste your JSON in the "Paste JSON" tab, or drag and drop the all-data.json file here.</p>
+      <label class="file-drop-zone" id="file-drop-zone">
+        <input type="file" id="file-input" accept=".json" style="display: none;">
+        <span>Drop JSON file here or click to browse</span>
+      </label>
+    </div>
+
+    <div id="browse-content" style="display: none;">
+      <div class="section">
+        <label for="resource-select">Resource Type</label>
+        <select id="resource-select">
+          <option value="">-- Select --</option>
+        </select>
+      </div>
+
+    <div class="section">
+      <label>Fields</label>
+      <div id="field-browser" class="field-browser">
+        <p class="help-text">Select a resource type to see available fields</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <label for="browse-example-select">Example</label>
+      <select id="browse-example-select" disabled>
+        <option value="">-- Select resource type first --</option>
+      </select>
+    </div>
+
+    <div id="example-preview" class="example-preview" style="display: none;">
+      <label>Preview</label>
+      <div id="preview-content" class="preview-content"></div>
+    </div>
+
+    <div class="section">
+      <label>Match Mode</label>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="browse-match-mode" value="fuzzy" checked>
+          Fuzzy (recommended)
+        </label>
+        <label>
+          <input type="radio" name="browse-match-mode" value="exact">
+          Exact
+        </label>
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button class="secondary" id="browse-cancel-btn">Cancel</button>
+      <button class="primary" id="browse-populate-btn" disabled>Populate Selection</button>
+    </div>
+
+    <div id="browse-status" class="status" style="display: none;"></div>
+    </div>
+  </div>
+
+  <div id="paste-tab" class="tab-content">
     <div class="section">
       <label for="json-input">Schema Data (JSON)</label>
       <textarea id="json-input" placeholder='Paste your exported JSON here...
@@ -299,6 +484,215 @@ Example format:
 
   <script>
     let schemaData = null;
+    let browseData = null;
+    let groupedExamples = {};
+
+    // Infer resource type from example name
+    function inferResourceType(example) {
+      const name = example.__exampleName || example._name || '';
+      if (name.toLowerCase().includes('application')) return 'applications';
+      if (name.toLowerCase().includes('household')) return 'households';
+      if (name.toLowerCase().includes('income')) return 'incomes';
+      if (name.toLowerCase().includes('person')) return 'persons';
+      // Fallback: check for characteristic fields
+      if (example.status && example.screeningFlags) return 'applications';
+      if (example.homeAddress || example['homeAddress.addressLine1']) return 'households';
+      if (example.personId && (example.type || example.amount)) return 'incomes';
+      if (example['name.firstName'] || example.dateOfBirth) return 'persons';
+      return 'other';
+    }
+
+    // Group examples by resource type
+    function groupExamplesByResource(examples) {
+      const grouped = {};
+      for (const example of examples) {
+        const resourceType = example.__resourceType || inferResourceType(example);
+        if (!grouped[resourceType]) {
+          grouped[resourceType] = [];
+        }
+        grouped[resourceType].push(example);
+      }
+      return grouped;
+    }
+
+    // Get fields relevant to a resource type
+    function getFieldsForResource(metadata, resourceType) {
+      // Get all fields and filter by what appears in examples for this resource
+      const fields = [];
+      for (const [key, meta] of Object.entries(metadata)) {
+        fields.push({ key, ...meta });
+      }
+      return fields.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    // Render field browser
+    function renderFieldBrowser(fields, filter = '') {
+      const container = document.getElementById('field-browser');
+      const filtered = filter
+        ? fields.filter(f =>
+            f.label.toLowerCase().includes(filter.toLowerCase()) ||
+            f.key.toLowerCase().includes(filter.toLowerCase())
+          )
+        : fields;
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="help-text">No fields match your filter</p>';
+        return;
+      }
+
+      container.innerHTML = `
+        <input type="text" class="field-filter" placeholder="Filter fields..." value="${filter}" id="field-filter-input">
+        ${filtered.slice(0, 50).map(f => `
+          <div class="field-item">
+            <span class="field-name">${f.label}</span>
+            <span class="field-type ${f.type}">${f.type}</span>
+            ${f.description ? `<span class="field-desc">${f.description}</span>` : ''}
+          </div>
+        `).join('')}
+        ${filtered.length > 50 ? `<p class="help-text">...and ${filtered.length - 50} more fields</p>` : ''}
+      `;
+
+      // Add filter event listener
+      document.getElementById('field-filter-input').addEventListener('input', (e) => {
+        renderFieldBrowser(fields, e.target.value);
+      });
+    }
+
+    // Render example preview
+    function renderExamplePreview(example, metadata) {
+      const container = document.getElementById('preview-content');
+      const previewEl = document.getElementById('example-preview');
+
+      if (!example) {
+        previewEl.style.display = 'none';
+        return;
+      }
+
+      previewEl.style.display = 'block';
+
+      const entries = Object.entries(example)
+        .filter(([key]) => !key.startsWith('_'))
+        .slice(0, 30);
+
+      container.innerHTML = entries.map(([key, value]) => {
+        const meta = metadata[key];
+        const label = meta?.label || key;
+        return `
+          <div class="preview-row">
+            <span class="preview-label">${label}</span>
+            <span class="preview-value">${value}</span>
+          </div>
+        `;
+      }).join('');
+
+      if (Object.keys(example).filter(k => !k.startsWith('_')).length > 30) {
+        container.innerHTML += '<p class="help-text">...and more fields</p>';
+      }
+    }
+
+    // Update browse tab when data is loaded
+    function updateBrowseTab(data) {
+      browseData = data;
+      groupedExamples = groupExamplesByResource(data.examples);
+
+      // Show content, hide empty state
+      document.getElementById('browse-empty-state').style.display = 'none';
+      document.getElementById('browse-content').style.display = 'block';
+
+      const resourceSelect = document.getElementById('resource-select');
+      const resourceTypes = Object.keys(groupedExamples).sort();
+
+      resourceSelect.innerHTML = resourceTypes.map(rt =>
+        `<option value="${rt}">${rt.charAt(0).toUpperCase() + rt.slice(1)} (${groupedExamples[rt].length})</option>`
+      ).join('');
+
+      // Trigger initial selection
+      if (resourceTypes.length > 0) {
+        resourceSelect.value = resourceTypes[0];
+        onResourceTypeChange(resourceTypes[0]);
+      }
+    }
+
+    // Handle resource type change
+    function onResourceTypeChange(resourceType) {
+      const examples = groupedExamples[resourceType] || [];
+      const metadata = browseData?.metadata || {};
+
+      // Update fields
+      const fields = getFieldsForResource(metadata, resourceType);
+      renderFieldBrowser(fields);
+
+      // Update examples dropdown
+      const exampleSelect = document.getElementById('browse-example-select');
+      exampleSelect.disabled = examples.length === 0;
+      exampleSelect.innerHTML = examples.map((ex, i) => {
+        const name = ex.__exampleName || ex._name || `Example ${i + 1}`;
+        // Format name nicely
+        const displayName = name
+          .replace(/([a-z])([A-Z])/g, '$1 $2')
+          .replace(/(\D)(\d)/g, '$1 $2');
+        return `<option value="${i}">${displayName}</option>`;
+      }).join('');
+
+      // Show first example preview
+      if (examples.length > 0) {
+        renderExamplePreview(examples[0], metadata);
+        document.getElementById('browse-populate-btn').disabled = false;
+      } else {
+        renderExamplePreview(null, metadata);
+        document.getElementById('browse-populate-btn').disabled = true;
+      }
+    }
+
+    // Load data from file
+    function loadDataFromFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.examples || !Array.isArray(data.examples)) {
+            throw new Error('JSON must have an "examples" array');
+          }
+          schemaData = data;
+          updateBrowseTab(data);
+
+          // Show browse content, hide empty state
+          document.getElementById('browse-empty-state').style.display = 'none';
+          document.getElementById('browse-content').style.display = 'block';
+
+          // Also update the paste tab textarea
+          document.getElementById('json-input').value = e.target.result;
+          document.getElementById('json-input').dispatchEvent(new Event('input'));
+        } catch (err) {
+          alert('Error loading file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // File input change handler
+    document.getElementById('file-input').addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        loadDataFromFile(e.target.files[0]);
+      }
+    });
+
+    // Drag and drop handlers
+    const dropZone = document.getElementById('file-drop-zone');
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length > 0) {
+        loadDataFromFile(e.dataTransfer.files[0]);
+      }
+    });
 
     // Tab switching
     document.querySelectorAll('.tab').forEach(tab => {
@@ -376,6 +770,9 @@ Example format:
         populateBtn.disabled = false;
         statusEl.style.display = 'none';
 
+        // Also update browse tab
+        updateBrowseTab(schemaData);
+
       } catch (err) {
         schemaData = null;
         schemaInfoEl.style.display = 'none';
@@ -410,18 +807,62 @@ Example format:
       parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
     });
 
+    // Browse tab: Resource type change
+    document.getElementById('resource-select').addEventListener('change', (e) => {
+      onResourceTypeChange(e.target.value);
+    });
+
+    // Browse tab: Example change
+    document.getElementById('browse-example-select').addEventListener('change', (e) => {
+      const resourceType = document.getElementById('resource-select').value;
+      const examples = groupedExamples[resourceType] || [];
+      const exampleIndex = parseInt(e.target.value) || 0;
+      renderExamplePreview(examples[exampleIndex], browseData?.metadata || {});
+    });
+
+    // Browse tab: Populate button
+    document.getElementById('browse-populate-btn').addEventListener('click', () => {
+      if (!browseData) return;
+
+      const resourceType = document.getElementById('resource-select').value;
+      const examples = groupedExamples[resourceType] || [];
+      const exampleIndex = parseInt(document.getElementById('browse-example-select').value) || 0;
+      const matchMode = document.querySelector('input[name="browse-match-mode"]:checked').value;
+
+      // Create data payload with just the selected example
+      const payload = {
+        metadata: browseData.metadata,
+        examples: [examples[exampleIndex]]
+      };
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'populate',
+          data: payload,
+          exampleIndex: 0,
+          matchMode: matchMode
+        }
+      }, '*');
+    });
+
+    // Browse tab: Cancel button
+    document.getElementById('browse-cancel-btn').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+    });
+
     // Handle messages from plugin
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
       if (!msg) return;
 
       if (msg.type === 'populate-result') {
-        const statusEl = document.getElementById('status');
         const total = msg.textMatched + msg.dropdownMatched;
 
+        let html;
+        let className;
         if (total > 0) {
-          statusEl.className = 'status success';
-          let html = `Populated ${total} field${total !== 1 ? 's' : ''} `;
+          className = 'status success';
+          html = `Populated ${total} field${total !== 1 ? 's' : ''} `;
           html += `(${msg.textMatched} text, ${msg.dropdownMatched} dropdown)`;
 
           if (msg.unmatched && msg.unmatched.length > 0) {
@@ -435,14 +876,21 @@ Example format:
             }
             html += '</ul>';
           }
-
-          statusEl.innerHTML = html;
         } else {
-          statusEl.className = 'status info';
-          statusEl.innerHTML = 'No matching layers found. Make sure your layer names match the field names.';
+          className = 'status info';
+          html = 'No matching layers found. Make sure your layer names match the field names.';
         }
 
+        // Update both status elements
+        const statusEl = document.getElementById('status');
+        statusEl.className = className;
+        statusEl.innerHTML = html;
         statusEl.style.display = 'block';
+
+        const browseStatusEl = document.getElementById('browse-status');
+        browseStatusEl.className = className;
+        browseStatusEl.innerHTML = html;
+        browseStatusEl.style.display = 'block';
       }
     };
   </script>
