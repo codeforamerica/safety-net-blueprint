@@ -1,0 +1,127 @@
+# User schemas for the User Service
+#
+# These schemas support authentication/authorization, not domain-specific
+# staff management. For job function, skills, and workload, see CaseWorker
+# in the Case Management domain (future).
+#
+# Schemas in this file:
+#   Primary:
+#     - User                    User account with role and permissions
+#
+#   Supporting (alphabetical):
+#     - FrontendAuthContext     Extended auth context for frontend tokens
+#     - UiPermissions           Computed UI permissions for frontend
+#     - UserPreferences         User preferences
+#     - UserStatus              User account status
+#
+# Shared schemas (in common.yaml):
+#     - BackendAuthContext      Minimal claims for backend API authorization
+#     - JwtClaims               Full JWT structure for domain APIs
+#     - RoleType                Available authorization roles
+
+FrontendAuthContext:
+  type: object
+  description: |
+    Authorization context for frontend applications. Extends BackendAuthContext
+    with UI permissions and user preferences.
+
+    Used in enriched JWTs for frontends (via BFF/gateway) or returned by
+    GET /users/me. States can customize this independently from BackendAuthContext.
+  allOf:
+    - $ref: "./common.yaml#/BackendAuthContext"
+    - type: object
+      properties:
+        ui:
+          $ref: "#/UiPermissions"
+        preferences:
+          $ref: "#/UserPreferences"
+
+User:
+  description: |
+    User account for authentication and authorization. Links an IdP identity
+    to roles, permissions, and county assignments.
+
+    Note: Job function details (skills, team, workload) are not stored here.
+    Staff users link to a CaseWorker record in the Case Management domain.
+  allOf:
+    - $ref: "#/FrontendAuthContext"
+    - type: object
+      required:
+        - id
+        - idpSubject
+        - email
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier for the user (same as userId in JWT claims).
+        idpSubject:
+          type: string
+          description: |
+            Subject identifier from the Identity Provider. Immutable after creation.
+            Format varies by IdP (e.g., "auth0|507f1f77bcf86cd799439011").
+          example: "auth0|507f1f77bcf86cd799439011"
+        email:
+          type: string
+          format: email
+          description: User's email address (from IdP or manually set).
+          example: "jane.smith@alameda.gov"
+        status:
+          $ref: "#/UserStatus"
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the user was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the user was last updated.
+
+# Supporting schemas (alphabetical)
+
+UiPermissions:
+  type: object
+  readOnly: true
+  additionalProperties: true
+  description: |
+    Computed UI permissions and display data for frontend feature toggling.
+    Backend computes these from role and permissions to provide
+    a UI-friendly interface for showing/hiding features.
+
+    Structure is flexible - states define their own fields via overlays.
+    Example fields: name, availableModules, canApproveApplications, etc.
+  example:
+    name: "Jane Smith"
+    availableModules: ["cases", "tasks", "documents"]
+    canApproveApplications: false
+    canViewSensitivePII: false
+    canExportData: true
+    canManageUsers: false
+
+UserPreferences:
+  type: object
+  additionalProperties: true
+  description: |
+    User preferences for the application.
+
+    Structure is flexible - states define their own fields via overlays.
+    Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
+  example:
+    timezone: "America/Los_Angeles"
+    dateFormat: "us"
+    itemsPerPage: 25
+
+UserStatus:
+  type: string
+  description: User account status.
+  enum:
+    - active
+    - inactive
+    - pending
+    - suspended

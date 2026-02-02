@@ -136,3 +136,50 @@ actions:
       - general_assistance
       - capi
       - ihss
+
+  # ============================================================================
+  # User/Auth Schema Modifications (components/user.yaml, components/common.yaml)
+  # ============================================================================
+
+  # California uses base role terminology (case_worker, supervisor, etc.)
+  # No changes needed to RoleType enum
+
+  # Add CalSAWS integration module to UiPermissions
+  - target: $.UiPermissions.properties.availableModules.items.enum
+    file: components/user.yaml
+    description: California includes CalSAWS integration module
+    update:
+      - cases
+      - tasks
+      - reports
+      - documents
+      - scheduling
+      - admin
+      - calsaws_integration
+
+  # Add programs to User for program-based assignments (optional in CA)
+  - target: $.User.allOf.1.properties
+    file: components/user.yaml
+    description: California supports optional program-based assignments
+    update:
+      programs:
+        type: array
+        items:
+          $ref: "./common.yaml#/Program"
+        description: |
+          Programs the user is authorized to work on.
+          Optional in California; if empty, user can access all programs
+          within their assigned counties.
+        example: ["calfresh", "calworks"]
+
+  # Add programs to BackendAuthContext (for JWT)
+  - target: $.BackendAuthContext.properties
+    file: components/common.yaml
+    description: California JWT claims may include programs
+    update:
+      programs:
+        type: array
+        items:
+          type: string
+        description: Programs the user is authorized to access (empty = all programs).
+        example: ["calfresh", "calworks"]

@@ -20,6 +20,20 @@ Error:
         additionalProperties: true
 
 # Response definitions
+Unauthorized:
+  description: Authentication is required or the provided credentials are invalid.
+  content:
+    application/json:
+      schema:
+        "$ref": "#/Error"
+
+Forbidden:
+  description: The authenticated user does not have permission to perform this action.
+  content:
+    application/json:
+      schema:
+        "$ref": "#/Error"
+
 BadRequest:
   description: The request is malformed or contains invalid parameters.
   content:

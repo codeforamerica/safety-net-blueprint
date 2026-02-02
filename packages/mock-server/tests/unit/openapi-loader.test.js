@@ -16,18 +16,50 @@ test('OpenAPI Loader Tests', async (t) => {
   
   await t.test('discoverApiSpecs - discovers all YAML specs', () => {
     const specs = discoverApiSpecs();
-    
+
     assert.ok(Array.isArray(specs), 'Should return an array');
     assert.ok(specs.length > 0, 'Should find at least one spec');
-    
+
     // Check structure
     specs.forEach(spec => {
       assert.ok(spec.name, 'Should have name property');
       assert.ok(spec.specPath, 'Should have specPath property');
       assert.ok(spec.specPath.endsWith('.yaml'), 'Should be a YAML file');
     });
-    
+
     console.log(`  ✓ Discovered ${specs.length} spec(s)`);
+  });
+
+  await t.test('discoverApiSpecs - uses resolved specs by default', () => {
+    const specs = discoverApiSpecs();
+
+    assert.ok(specs.length > 0, 'Should find at least one spec');
+
+    // All specs should come from the resolved directory
+    specs.forEach(spec => {
+      assert.ok(
+        spec.specPath.includes('/openapi/resolved/'),
+        `Spec should be from resolved directory: ${spec.specPath}`
+      );
+    });
+
+    console.log(`  ✓ All ${specs.length} spec(s) from resolved directory`);
+  });
+
+  await t.test('discoverApiSpecs - can use source specs when useResolved=false', () => {
+    const specs = discoverApiSpecs({ useResolved: false });
+
+    assert.ok(specs.length > 0, 'Should find at least one spec');
+
+    // Specs should come from the base openapi directory, not resolved
+    specs.forEach(spec => {
+      assert.ok(
+        !spec.specPath.includes('/openapi/resolved/'),
+        `Spec should not be from resolved directory: ${spec.specPath}`
+      );
+    });
+
+    console.log(`  ✓ All ${specs.length} spec(s) from source directory`);
   });
   
   await t.test('loadSpec - loads and dereferences spec', async () => {

@@ -1,4 +1,19 @@
 # Common shared components and schemas
+#
+# This file contains schemas shared across multiple APIs.
+#
+# Schemas in this file:
+#   Identity/Contact:
+#     - Address, Email, Name, PhoneNumber, SocialSecurityNumber
+#
+#   Authentication/Authorization:
+#     - BackendAuthContext     Minimal claims for backend API authorization
+#     - JwtClaims              Full JWT structure (standard + authorization claims)
+#     - RoleType               Available authorization roles
+#
+#   Domain:
+#     - EmployerInfo, Language, Program, Signature
+
 Address:
   type: object
   description: Residential or mailing address used to determine eligibility.
@@ -38,6 +53,46 @@ Address:
       description: County or equivalent administrative region.
       maxLength: 100
 
+BackendAuthContext:
+  type: object
+  description: |
+    Minimal authorization context for backend API authorization. Stored in the
+    User Service and embedded in JWT tokens during login. Domain APIs read these
+    claims for authorization decisions without runtime calls to the User Service.
+
+    For frontend tokens that include UI permissions and preferences, see
+    FrontendAuthContext in user.yaml.
+  required:
+    - userId
+    - roles
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: User Service identifier.
+    roles:
+      $ref: "#/Role"
+
+Role:
+  type: object
+  description: Role and permissions for authorization.
+  required:
+    - name
+  properties:
+    name:
+      $ref: "#/RoleType"
+    permissions:
+      type: array
+      items:
+        type: string
+      description: |
+        Permission strings in the format {resource}:{action}.
+        Examples: applications:read, persons:update, users:create
+      example:
+        - "applications:read"
+        - "applications:create"
+        - "persons:read"
+
 Email:
   type: string
   format: email
@@ -63,6 +118,61 @@ EmployerInfo:
       type: string
       description: Employer Identification Number (EIN).
       maxLength: 50
+
+JwtClaims:
+  type: object
+  description: |
+    Expected JWT claims structure for domain API authentication.
+    Combines standard JWT claims with custom authorization claims.
+
+    Domain APIs validate the JWT signature and read these claims
+    for authorization decisions. No runtime calls to User Service required.
+  required:
+    - sub
+    - iss
+    - aud
+    - exp
+    - userId
+    - roles
+  allOf:
+    - type: object
+      properties:
+        # Standard JWT claims (RFC 7519)
+        sub:
+          type: string
+          description: |
+            Subject identifier from the Identity Provider.
+            Uniquely identifies the user within the IdP.
+          example: "auth0|507f1f77bcf86cd799439011"
+        iss:
+          type: string
+          format: uri
+          description: Token issuer (IdP URL).
+          example: "https://your-tenant.auth0.com/"
+        aud:
+          type: string
+          description: Intended audience (API identifier).
+          example: "https://api.safetynet.example.com"
+        exp:
+          type: integer
+          description: Expiration timestamp (Unix epoch seconds).
+          example: 1706300000
+        iat:
+          type: integer
+          description: Issued-at timestamp (Unix epoch seconds).
+          example: 1706296400
+        # Identity claims
+        email:
+          type: string
+          format: email
+          description: User's email address.
+          example: "jane.smith@alameda.gov"
+        name:
+          type: string
+          description: User's display name.
+          example: "Jane Smith"
+    # Authorization context
+    - $ref: "#/BackendAuthContext"
 
 PhoneNumber:
   type: string
@@ -112,6 +222,25 @@ Program:
     - tanf
     - adult_financial
     - medical_assistance
+
+RoleType:
+  type: string
+  description: |
+    Authorization roles that determine base permissions and data scoping.
+
+    - applicant: Self-service access to own applications (scoped by personId)
+    - case_worker: Process applications for assigned county
+    - supervisor: Oversee case workers, approve determinations (may span counties)
+    - county_admin: Administer county staff and configuration
+    - state_admin: Statewide oversight and administration (all counties)
+    - partner_readonly: External partner with limited read access
+  enum:
+    - applicant
+    - case_worker
+    - supervisor
+    - county_admin
+    - state_admin
+    - partner_readonly
 
 Signature:
   type: object

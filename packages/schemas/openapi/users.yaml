@@ -1,0 +1,349 @@
+openapi: 3.1.0
+info:
+  title: User Service API
+  version: 0.1.0
+  description: |
+    Manages user accounts, roles, and permissions for safety net program APIs.
+
+    This service provides authorization context. It:
+    - Links IdP identities to roles and county assignments
+    - Provides claims for JWT enrichment at login
+    - Manages user lifecycle (invite, activate, deactivate)
+
+    **Not for runtime authorization checks.** Permissions are embedded in JWTs
+    and evaluated by domain APIs directly.
+
+    > **Status: Sketch**
+    > This specification outlines the API shape. Details will be refined during implementation.
+
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com
+    description: Production server
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Users
+    description: User account management.
+  - name: Token
+    description: JWT enrichment (called by IdP).
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # User Management
+  # ─────────────────────────────────────────────────────────────────────────────
+  /users:
+    get:
+      summary: List users
+      description: |
+        List users with filtering by role, county, or status.
+        Requires `users:read` permission.
+      operationId: listUsers
+      tags: [Users]
+      parameters:
+        - $ref: "./components/common-parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/common-parameters.yaml#/LimitParam"
+        - $ref: "./components/common-parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: Paginated list of users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
+        "400":
+          $ref: "./components/common-responses.yaml#/BadRequest"
+        "401":
+          $ref: "./components/common-responses.yaml#/Unauthorized"
+        "403":
+          $ref: "./components/common-responses.yaml#/Forbidden"
+
+    post:
+      summary: Create a user
+      description: |
+        Create a new user record. The user must already exist in the IdP.
+        Links the IdP identity (sub) to roles and county assignments.
+        Requires `users:create` permission.
+      operationId: createUser
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "201":
+          description: User created successfully.
+          headers:
+            Location:
+              description: URL of the newly created user.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "./components/common-responses.yaml#/BadRequest"
+        "401":
+          $ref: "./components/common-responses.yaml#/Unauthorized"
+        "403":
+          $ref: "./components/common-responses.yaml#/Forbidden"
+        "409":
+          $ref: "./components/common-responses.yaml#/Conflict"
+        "422":
+          $ref: "./components/common-responses.yaml#/UnprocessableEntity"
+
+  /users/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/UserIdParam"
+
+    get:
+      summary: Get a user
+      description: |
+        Retrieve a user by ID. Use "me" as the userId to get the current user.
+        Requires `users:read` permission for other users.
+      operationId: getUser
+      tags: [Users]
+      responses:
+        "200":
+          description: User details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "./components/common-responses.yaml#/Unauthorized"
+        "403":
+          $ref: "./components/common-responses.yaml#/Forbidden"
+        "404":
+          $ref: "./components/common-responses.yaml#/NotFound"
+
+    patch:
+      summary: Update a user
+      description: |
+        Update user role, status, or county assignments.
+        Use "me" as the userId to update current user preferences.
+        Requires `users:update` permission for other users.
+      operationId: updateUser
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: User updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "./components/common-responses.yaml#/BadRequest"
+        "401":
+          $ref: "./components/common-responses.yaml#/Unauthorized"
+        "403":
+          $ref: "./components/common-responses.yaml#/Forbidden"
+        "404":
+          $ref: "./components/common-responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/common-responses.yaml#/UnprocessableEntity"
+
+    delete:
+      summary: Deactivate a user
+      description: |
+        Soft-delete (deactivate) a user. Sets status to inactive.
+        Does not remove from IdP.
+        Requires `users:deactivate` permission.
+      operationId: deactivateUser
+      tags: [Users]
+      responses:
+        "204":
+          description: User deactivated successfully.
+        "401":
+          $ref: "./components/common-responses.yaml#/Unauthorized"
+        "403":
+          $ref: "./components/common-responses.yaml#/Forbidden"
+        "404":
+          $ref: "./components/common-responses.yaml#/NotFound"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Token Enrichment (IdP Integration)
+  # ─────────────────────────────────────────────────────────────────────────────
+  /token/claims/{sub}:
+    get:
+      summary: Get claims for JWT enrichment
+      description: |
+        Called by the IdP during login to fetch the user's role and permissions
+        for embedding in the JWT.
+
+        **When this is called:** During OAuth token issuance. When a user logs in,
+        the IdP (Auth0, Okta, etc.) calls this endpoint before issuing the JWT.
+        The returned claims are embedded in the token. This is how permissions
+        get into the JWT without runtime authorization calls.
+
+        Authenticated via API key (not user JWT).
+      operationId: getTokenClaims
+      tags: [Token]
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: sub
+          in: path
+          required: true
+          description: IdP subject identifier (the user's unique ID in the IdP).
+          schema:
+            type: string
+          example: "auth0|507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Claims to embed in JWT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenClaims"
+        "401":
+          $ref: "./components/common-responses.yaml#/Unauthorized"
+        "404":
+          $ref: "./components/common-responses.yaml#/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT from Identity Provider with embedded permissions.
+
+        Expected claims structure: see common.yaml#/JwtClaims
+        Documentation: docs/architecture/cross-cutting/identity-access.md
+
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for IdP integration (token enrichment endpoint).
+
+  parameters:
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      description: |
+        Unique identifier of the user. Use "me" to reference the current user.
+      schema:
+        type: string
+      example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+  schemas:
+    # References to component files
+    User:
+      $ref: "./components/user.yaml#/User"
+    RoleType:
+      $ref: "./components/common.yaml#/RoleType"
+    TokenClaims:
+      $ref: "./components/common.yaml#/BackendAuthContext"
+    UserStatus:
+      $ref: "./components/user.yaml#/UserStatus"
+    UserPreferences:
+      $ref: "./components/user.yaml#/UserPreferences"
+
+    # Request/Response schemas specific to this API
+    UserCreate:
+      type: object
+      description: Payload to create a new user.
+      required:
+        - idpSubject
+        - email
+        - role
+      properties:
+        idpSubject:
+          type: string
+          description: Subject identifier from the IdP.
+          example: "auth0|507f1f77bcf86cd799439011"
+        email:
+          type: string
+          format: email
+          example: "jane.smith@alameda.gov"
+        name:
+          type: string
+          example: "Jane Smith"
+        role:
+          $ref: "./components/common.yaml#/RoleType"
+        counties:
+          type: array
+          items:
+            type: string
+          description: County FIPS codes to assign.
+          example: ["06001"]
+        organizationId:
+          type: string
+          format: uuid
+
+    UserUpdate:
+      type: object
+      description: Payload to update a user.
+      properties:
+        name:
+          type: string
+        role:
+          $ref: "./components/common.yaml#/RoleType"
+        status:
+          $ref: "./components/user.yaml#/UserStatus"
+        counties:
+          type: array
+          items:
+            type: string
+        personId:
+          type: string
+          format: uuid
+          description: Link to Person record (for applicants).
+        caseWorkerId:
+          type: string
+          format: uuid
+          description: Link to CaseWorker record (for staff).
+        preferences:
+          $ref: "./components/user.yaml#/UserPreferences"
+
+    UserList:
+      type: object
+      description: Paginated list of users.
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of users matching the query.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of users requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of users skipped.
+        hasNext:
+          type: boolean
+          description: Whether more users exist beyond this page.
+

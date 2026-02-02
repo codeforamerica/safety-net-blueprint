@@ -139,3 +139,228 @@ actions:
       - andcs
       - leap
       - cccap
+
+  # ============================================================================
+  # User/Auth Schema Modifications (components/user.yaml, components/common.yaml)
+  # ============================================================================
+
+  # Colorado role terminology - only 3 roles supported
+  - target: $.RoleType.enum
+    file: components/common.yaml
+    description: |
+      Colorado supports only three roles:
+      - technician (processes applications)
+      - supervisor (oversees technicians)
+      - district_ops_manager (oversees district operations)
+    update:
+      - technician
+      - supervisor
+      - district_ops_manager
+
+  # Update RoleType description for Colorado terminology
+  - target: $.RoleType.description
+    file: components/common.yaml
+    description: Colorado role descriptions
+    update: |
+      Colorado authorization roles:
+
+      - technician: Process applications for assigned counties/programs
+      - supervisor: Oversee technicians, approve determinations
+      - district_ops_manager: Oversee district operations across counties
+
+  # ============================================================================
+  # FrontendAuthContext Modifications
+  # Colorado customizations:
+  #   - Standalone (does not extend BackendAuthContext)
+  #   - email, firstName, lastName for user identification
+  #   - roles array with name, county, and permissions object
+  #   - Empty preferences object (reserved for future use)
+  # ============================================================================
+
+  - target: $.FrontendAuthContext
+    file: components/user.yaml
+    description: Colorado FrontendAuthContext - standalone, fully inlined
+    update:
+      type: object
+      description: |
+        Colorado authorization context for frontend applications.
+        Standalone schema with email, name fields, and role-based permissions per county.
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address.
+          example: "jane.smith@state.co.us"
+        firstName:
+          type: string
+          description: User's first name.
+          example: "Jane"
+        lastName:
+          type: string
+          description: User's last name.
+          example: "Smith"
+        roles:
+          type: array
+          description: Role assignments with per-county permissions.
+          items:
+            type: object
+            required:
+              - name
+              - county
+            properties:
+              name:
+                type: string
+                description: Role name.
+                enum:
+                  - technician
+                  - supervisor
+                  - district_ops_manager
+                example: "technician"
+              county:
+                type: string
+                description: Colorado county name.
+                example: "Denver"
+              permissions:
+                type: object
+                description: CRUD permissions by module.
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      type: string
+                      enum: [read, create, update, delete]
+                  cases:
+                    type: array
+                    items:
+                      type: string
+                      enum: [read, create, update, delete]
+                  documents:
+                    type: array
+                    items:
+                      type: string
+                      enum: [read, create, update, delete]
+                  scheduling:
+                    type: array
+                    items:
+                      type: string
+                      enum: [read, create, update, delete]
+                  reports:
+                    type: array
+                    items:
+                      type: string
+                      enum: [read, create, update, delete]
+          example:
+            - name: "technician"
+              county: "Denver"
+              permissions:
+                tasks: ["read", "create"]
+                cases: ["read", "update"]
+                documents: ["read"]
+                scheduling: ["read"]
+                reports: ["read"]
+        preferences:
+          type: object
+          description: User preferences (reserved for future use).
+
+  # ============================================================================
+  # User Modifications
+  # Colorado customizations:
+  #   - Remove email (now inherited from BackendAuthContext)
+  #   - Add districts and programs
+  # ============================================================================
+
+  - target: $.User.allOf.1.properties.email
+    file: components/user.yaml
+    description: Remove email from User (inherited from BackendAuthContext)
+    remove: true
+
+  - target: $.User.allOf.1.required
+    file: components/user.yaml
+    description: Update required fields (remove email)
+    update:
+      - id
+      - idpSubject
+      - status
+      - createdAt
+      - updatedAt
+
+  - target: $.User.allOf.1.properties
+    file: components/user.yaml
+    description: Colorado adds districts and programs to User
+    update:
+      districts:
+        type: array
+        items:
+          type: string
+        description: Colorado administrative districts the user can access.
+        example: ["D01", "D05"]
+      programs:
+        type: array
+        items:
+          $ref: "./common.yaml#/Program"
+        description: Programs the user is authorized to work on.
+        example: ["snap", "colorado_works"]
+
+  # ============================================================================
+  # User Examples
+  # Colorado examples use the standalone FrontendAuthContext structure
+  # ============================================================================
+
+  - target: $.UserExample1
+    file: examples/users.yaml
+    description: Colorado User example - technician role
+    update:
+      id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      idpSubject: "auth0|507f1f77bcf86cd799439011"
+      email: "jane.smith@state.co.us"
+      firstName: "Jane"
+      lastName: "Smith"
+      roles:
+        - name: "technician"
+          county: "Denver"
+          permissions:
+            tasks: ["read", "create"]
+            cases: ["read", "update"]
+            documents: ["read"]
+            scheduling: ["read"]
+            reports: ["read"]
+      preferences: {}
+      districts: ["D01"]
+      programs: ["snap", "colorado_works"]
+      status: "active"
+      createdAt: "2024-01-15T10:30:00Z"
+      updatedAt: "2024-01-15T10:30:00Z"
+
+  - target: $.UserExample2
+    file: examples/users.yaml
+    description: Colorado User example - supervisor role
+    update:
+      id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+      idpSubject: "auth0|608f2f88cdf97de8a8540022"
+      email: "john.doe@state.co.us"
+      firstName: "John"
+      lastName: "Doe"
+      roles:
+        - name: "supervisor"
+          county: "Denver"
+          permissions:
+            tasks: ["read", "create", "update", "delete"]
+            cases: ["read", "create", "update", "delete"]
+            documents: ["read", "create", "update"]
+            scheduling: ["read", "create", "update"]
+            reports: ["read", "create"]
+        - name: "technician"
+          county: "Boulder"
+          permissions:
+            tasks: ["read", "create"]
+            cases: ["read", "update"]
+            documents: ["read"]
+            scheduling: ["read"]
+            reports: ["read"]
+      preferences: {}
+      districts: ["D01", "D05"]
+      programs: ["snap", "colorado_works", "health_first_colorado"]
+      status: "active"
+      createdAt: "2024-02-01T08:00:00Z"
+      updatedAt: "2024-03-10T14:22:00Z"
+

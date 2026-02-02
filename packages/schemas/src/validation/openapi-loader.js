@@ -22,12 +22,20 @@ function loadYaml(filePath) {
 
 /**
  * Discover all API specification files in the openapi directory
+ * Uses resolved specs if available, otherwise falls back to source specs
  * Excludes the components subdirectory
  */
-export function discoverApiSpecs() {
-  const openapiDir = join(__dirname, '../../openapi');
+export function discoverApiSpecs({ useResolved = true } = {}) {
+  const baseDir = join(__dirname, '../../openapi');
+  const resolvedDir = join(baseDir, 'resolved');
+
+  // Use resolved directory if it exists and useResolved is true
+  const openapiDir = useResolved && statSync(resolvedDir, { throwIfNoEntry: false })?.isDirectory()
+    ? resolvedDir
+    : baseDir;
+
   const files = readdirSync(openapiDir);
-  
+
   return files
     .filter(file => {
       const fullPath = join(openapiDir, file);
