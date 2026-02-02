@@ -81,26 +81,34 @@ async function populateTextNodes(
   example: Record<string, any>,
   metadata: Record<string, FieldMetadata>,
   matchMode: 'exact' | 'fuzzy'
-): Promise<{ matched: number; unmatched: string[] }> {
+): Promise<{ matched: number; cleared: number; unmatched: string[] }> {
   let matched = 0;
+  let cleared = 0;
   const unmatchedFields: string[] = [];
   const usedFields = new Set<string>();
+
+  // Build a combined list of all known fields from example and metadata
+  const allFields = new Set<string>();
+  for (const key of Object.keys(example)) {
+    if (!key.startsWith('_')) allFields.add(key);
+  }
+  for (const key of Object.keys(metadata)) {
+    allFields.add(key);
+  }
 
   for (const node of textNodes) {
     const nodeName = node.name;
 
-    // Try to find a matching field
+    // Skip special nodes: labels (end with -label) and system nodes (start with __)
+    if (nodeName.endsWith('-label') || nodeName.startsWith('__')) continue;
+
+    // Try to find a matching field from all known fields
     let matchedField: string | null = null;
-    let matchedValue: any = null;
 
     // First pass: try exact matches
-    for (const [fieldName, value] of Object.entries(example)) {
-      // Skip internal metadata fields
-      if (fieldName.startsWith('_')) continue;
-
+    for (const fieldName of allFields) {
       if (stringsMatch(nodeName, fieldName, 'exact')) {
         matchedField = fieldName;
-        matchedValue = value;
         break;
       }
 
@@ -108,20 +116,15 @@ async function populateTextNodes(
       const meta = metadata[fieldName];
       if (meta && stringsMatch(nodeName, meta.label, 'exact')) {
         matchedField = fieldName;
-        matchedValue = value;
         break;
       }
     }
 
     // Second pass: try fuzzy matches only if no exact match and fuzzy mode enabled
     if (!matchedField && matchMode === 'fuzzy') {
-      for (const [fieldName, value] of Object.entries(example)) {
-        // Skip internal metadata fields
-        if (fieldName.startsWith('_')) continue;
-
+      for (const fieldName of allFields) {
         if (stringsMatch(nodeName, fieldName, 'fuzzy')) {
           matchedField = fieldName;
-          matchedValue = value;
           break;
         }
 
@@ -129,50 +132,58 @@ async function populateTextNodes(
         const meta = metadata[fieldName];
         if (meta && stringsMatch(nodeName, meta.label, 'fuzzy')) {
           matchedField = fieldName;
-          matchedValue = value;
           break;
         }
       }
     }
 
-    if (matchedField && matchedValue !== null && matchedValue !== undefined) {
+    if (matchedField) {
       // Load fonts before changing text
       await figma.loadFontAsync(node.fontName as FontName);
 
-      // Format the value based on type
+      const matchedValue = example[matchedField];
       const meta = metadata[matchedField];
-      let displayValue = String(matchedValue);
 
-      if (meta?.type === 'boolean') {
-        displayValue = matchedValue ? 'Yes' : 'No';
-      } else if (meta?.type === 'date' && matchedValue) {
-        // Format date nicely
-        try {
-          const date = new Date(matchedValue);
-          displayValue = date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-        } catch {
-          displayValue = String(matchedValue);
+      // If value exists, format and display it; otherwise clear the field
+      if (matchedValue !== null && matchedValue !== undefined && matchedValue !== '') {
+        let displayValue = String(matchedValue);
+
+        if (meta?.type === 'boolean') {
+          displayValue = matchedValue ? 'Yes' : 'No';
+        } else if (meta?.type === 'date' && matchedValue) {
+          // Format date nicely
+          try {
+            const date = new Date(matchedValue);
+            displayValue = date.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+          } catch {
+            displayValue = String(matchedValue);
+          }
         }
+
+        node.characters = displayValue;
+        matched++;
+      } else {
+        // Clear the field - use empty string or placeholder
+        node.characters = '';
+        cleared++;
       }
 
-      node.characters = displayValue;
-      matched++;
       usedFields.add(matchedField);
     }
   }
 
-  // Find unmatched fields (skip internal metadata)
+  // Find unmatched fields (fields in example that weren't found in any layer)
   for (const fieldName of Object.keys(example)) {
     if (!fieldName.startsWith('_') && !usedFields.has(fieldName)) {
       unmatchedFields.push(fieldName);
     }
   }
 
-  return { matched, unmatched: unmatchedFields };
+  return { matched, cleared, unmatched: unmatchedFields };
 }
 
 // Handle dropdown components (instances with variants)
@@ -250,8 +261,9 @@ async function generateFormLayout(
   frame.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
   frame.cornerRadius = 8;
 
-  // Add title
+  // Add title (named __title so it won't be matched during populate)
   const title = figma.createText();
+  title.name = '__title';
   title.fontName = { family: 'Inter', style: 'Medium' };
   title.characters = exampleName;
   title.fontSize = 18;
@@ -342,8 +354,9 @@ async function generateAutoLayout(
   frame.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
   frame.cornerRadius = 8;
 
-  // Add title
+  // Add title (named __title so it won't be matched during populate)
   const title = figma.createText();
+  title.name = '__title';
   title.fontName = { family: 'Inter', style: 'Semi Bold' };
   title.characters = exampleName;
   title.fontSize = 20;
@@ -440,23 +453,31 @@ figma.ui.onmessage = async (msg: any) => {
       return;
     }
 
+    // Check if something is selected
+    if (figma.currentPage.selection.length === 0) {
+      figma.notify('Please select a frame to populate', { error: true });
+      figma.ui.postMessage({ type: 'populate-error', message: 'No selection. Please select a frame in Figma first.' });
+      return;
+    }
+
     const example = data.examples[exampleIndex] || data.examples[0];
     const metadata = data.metadata || {};
 
     // Get the scope to search
-    const scope = figma.currentPage.selection.length > 0
-      ? figma.currentPage.selection
-      : [figma.currentPage];
+    const scope = figma.currentPage.selection;
 
     let totalTextMatched = 0;
     let totalDropdownMatched = 0;
     let allUnmatched: string[] = [];
+
+    let totalCleared = 0;
 
     for (const node of scope) {
       // Find and populate text nodes
       const textNodes = findTextNodes(node);
       const textResult = await populateTextNodes(textNodes, example, metadata, matchMode);
       totalTextMatched += textResult.matched;
+      totalCleared += textResult.cleared;
       allUnmatched = [...allUnmatched, ...textResult.unmatched];
 
       // Find and populate dropdown components
@@ -472,11 +493,16 @@ figma.ui.onmessage = async (msg: any) => {
       type: 'populate-result',
       textMatched: totalTextMatched,
       dropdownMatched: totalDropdownMatched,
+      cleared: totalCleared,
       unmatched: uniqueUnmatched
     });
 
     const total = totalTextMatched + totalDropdownMatched;
-    figma.notify(`Populated ${total} field${total !== 1 ? 's' : ''}`);
+    let message = `Populated ${total} field${total !== 1 ? 's' : ''}`;
+    if (totalCleared > 0) {
+      message += `, cleared ${totalCleared}`;
+    }
+    figma.notify(message);
   }
 
   if (msg.type === 'generate') {

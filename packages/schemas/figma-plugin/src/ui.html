@@ -645,14 +645,40 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = JSON.parse(e.target.result);
-          if (!data.examples || !Array.isArray(data.examples)) {
-            throw new Error('JSON must have an "examples" array');
+          const text = e.target.result;
+          const data = JSON.parse(text);
+
+          // Support both formats:
+          // 1. all-data.json: { metadata: {...}, examples: [...] }
+          // 2. all-examples.json: { applications: [...], households: [...], ... }
+
+          if (data.examples && Array.isArray(data.examples)) {
+            // Format 1: all-data.json
+            updateBrowseTab(data);
+          } else if (data.applications || data.households || data.incomes || data.persons) {
+            // Format 2: all-examples.json - convert to expected format
+            const examples = [];
+            for (const [resourceType, resourceExamples] of Object.entries(data)) {
+              if (Array.isArray(resourceExamples)) {
+                resourceExamples.forEach((ex, i) => {
+                  ex.__resourceType = resourceType;
+                  // Generate example name like "Application Example 1"
+                  const typeName = resourceType.charAt(0).toUpperCase() + resourceType.slice(0, -1);
+                  ex.__exampleName = `${typeName}Example${i + 1}`;
+                  examples.push(ex);
+                });
+              }
+            }
+            updateBrowseTab({ metadata: {}, examples: examples });
+          } else {
+            throw new Error('Unrecognized JSON format. Use all-data.json from design-export/figma-plugin/');
           }
-          updateBrowseTab(data);
         } catch (err) {
           alert('Error loading file: ' + err.message);
         }
+      };
+      reader.onerror = () => {
+        alert('Error reading file');
       };
       reader.readAsText(file);
     }
@@ -791,10 +817,15 @@
 
       if (msg.type === 'populate-result') {
         const total = msg.textMatched + msg.dropdownMatched;
+        const cleared = msg.cleared || 0;
 
-        if (total > 0) {
+        if (total > 0 || cleared > 0) {
           browseStatusEl.className = 'status success';
-          browseStatusEl.innerHTML = `Populated ${total} field${total !== 1 ? 's' : ''}`;
+          let html = `Populated ${total} field${total !== 1 ? 's' : ''}`;
+          if (cleared > 0) {
+            html += `, cleared ${cleared}`;
+          }
+          browseStatusEl.innerHTML = html;
         } else {
           browseStatusEl.className = 'status info';
           browseStatusEl.innerHTML = 'No matching layers found. Make sure your layer names match the field labels.';
@@ -805,6 +836,12 @@
       if (msg.type === 'generate-result') {
         browseStatusEl.className = 'status success';
         browseStatusEl.innerHTML = `Generated "${msg.frameName}" with ${msg.fieldCount} fields`;
+        browseStatusEl.style.display = 'block';
+      }
+
+      if (msg.type === 'populate-error') {
+        browseStatusEl.className = 'status error';
+        browseStatusEl.innerHTML = msg.message;
         browseStatusEl.style.display = 'block';
       }
     };
