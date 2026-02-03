@@ -37,8 +37,7 @@ Visit `http://localhost:3000` for interactive API docs.
 | Command | Description |
 |---------|-------------|
 | `npm start` | Start mock server + Swagger UI |
-| `npm run validate` | Validate base specs |
-| `npm run validate:state` | Validate specs for current STATE |
+| `npm run validate` | Validate specs (uses STATE if set) |
 | `npm run validate:all-states` | Validate all states |
 | `npm run clients:build-package` | Build state-specific npm package (requires `--state` and `--version`) |
 | `npm run postman:generate` | Generate Postman collection |

@@ -87,6 +87,32 @@ Application:
         - denied
         - pending_information
         - withdrawn
+    programs:
+      type: object
+      description: |
+        Programs being applied for in this application. At least one program must be selected.
+        - snap: SNAP (food assistance)
+        - cashPrograms: TANF and/or Adult Financial Assistance
+        - medicalAssistance: Medicaid/Medical Assistance
+      additionalProperties: false
+      properties:
+        snap:
+          type: boolean
+          description: Whether applying for SNAP (food assistance).
+        cashPrograms:
+          type: object
+          description: Cash assistance programs.
+          additionalProperties: false
+          properties:
+            tanfProgram:
+              type: boolean
+              description: Whether applying for TANF (Temporary Assistance for Needy Families).
+            adultFinancial:
+              type: boolean
+              description: Whether applying for Adult Financial Assistance.
+        medicalAssistance:
+          type: boolean
+          description: Whether applying for Medical Assistance (Medicaid).
     screeningFlags:
       $ref: "#/ApplicationScreeningFlags"
       description: Flags indicating screening criteria relevant to this application.

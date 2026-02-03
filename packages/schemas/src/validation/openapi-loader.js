@@ -3,7 +3,7 @@
  * Discovers and loads all API specifications from the openapi directory
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, basename } from 'path';
 import yaml from 'js-yaml';
@@ -22,15 +22,19 @@ function loadYaml(filePath) {
 
 /**
  * Discover all API specification files in the openapi directory
- * Uses resolved specs if available, otherwise falls back to source specs
+ * Uses resolved specs if STATE env var is set or useResolved option is true
  * Excludes the components subdirectory
  */
-export function discoverApiSpecs({ useResolved = true } = {}) {
+export function discoverApiSpecs({ useResolved = false } = {}) {
   const baseDir = join(__dirname, '../../openapi');
   const resolvedDir = join(baseDir, 'resolved');
 
-  // Use resolved directory if it exists and useResolved is true
-  const openapiDir = useResolved && statSync(resolvedDir, { throwIfNoEntry: false })?.isDirectory()
+  // STATE env var forces use of resolved specs
+  const state = process.env.STATE;
+  const shouldUseResolved = state || useResolved;
+
+  // Use resolved directory if it exists and we should use resolved
+  const openapiDir = shouldUseResolved && statSync(resolvedDir, { throwIfNoEntry: false })?.isDirectory()
     ? resolvedDir
     : baseDir;
 
@@ -177,6 +181,27 @@ export function extractMetadata(spec, resourceName) {
   }
   
   return metadata;
+}
+
+/**
+ * Get the path to examples file for an API, checking state-specific first
+ * @param {string} apiName - Name of the API (e.g., 'persons')
+ * @returns {string} Path to the examples file
+ */
+export function getExamplesPath(apiName) {
+  const baseDir = join(__dirname, '../../openapi');
+  const state = process.env.STATE;
+
+  // Check for state-specific examples first
+  if (state) {
+    const statePath = join(baseDir, 'overlays', state, 'examples', `${apiName}.yaml`);
+    if (existsSync(statePath)) {
+      return statePath;
+    }
+  }
+
+  // Fall back to base examples
+  return join(baseDir, 'examples', `${apiName}.yaml`);
 }
 
 /**

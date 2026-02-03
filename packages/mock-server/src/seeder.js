@@ -7,9 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import yaml from 'js-yaml';
 import { insertResource, count } from './database-manager.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { getExamplesPath } from '@safety-net/schemas/loader';
 
 /**
  * Load examples from YAML file
@@ -81,8 +79,8 @@ export function seedDatabase(resourceName) {
       return existingCount;
     }
     
-    // Load examples from YAML
-    const examplesPath = join(__dirname, '../../../packages/schemas/openapi/examples', `${resourceName}.yaml`);
+    // Load examples from YAML (uses state-specific if STATE env var set)
+    const examplesPath = getExamplesPath(resourceName);
     
     if (!existsSync(examplesPath)) {
       console.log(`  No examples file found for ${resourceName}, database will be empty`);

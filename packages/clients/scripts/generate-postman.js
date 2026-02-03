@@ -3,7 +3,7 @@
  * Generates a Postman collection from OpenAPI specifications and examples
  */
 
-import { loadAllSpecs, discoverApiSpecs } from '@safety-net/schemas/loader';
+import { loadAllSpecs, discoverApiSpecs, getExamplesPath } from '@safety-net/schemas/loader';
 import { validateAll, getValidationStatus } from '@safety-net/schemas/validation';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -16,15 +16,15 @@ const __dirname = dirname(__filename);
 const BASE_URL = process.env.POSTMAN_BASE_URL || 'http://localhost:1080';
 
 /**
- * Load examples from YAML file
+ * Load examples from YAML file (uses state-specific if STATE env var set)
  */
 function loadExamples(resourceName) {
-  const examplesPath = join(__dirname, '../openapi/examples', `${resourceName}.yaml`);
-  
+  const examplesPath = getExamplesPath(resourceName);
+
   if (!existsSync(examplesPath)) {
     return {};
   }
-  
+
   const content = readFileSync(examplesPath, 'utf8');
   return yaml.load(content) || {};
 }
@@ -604,7 +604,7 @@ async function generatePostmanCollection() {
   const discoveredSpecs = discoverApiSpecs();
   const specsWithExamples = discoveredSpecs.map(spec => ({
     ...spec,
-    examplesPath: join(__dirname, '../openapi/examples', `${spec.name}.yaml`)
+    examplesPath: getExamplesPath(spec.name)
   }));
   
   const validationResults = await validateAll(specsWithExamples);

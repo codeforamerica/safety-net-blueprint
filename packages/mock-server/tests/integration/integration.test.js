@@ -10,7 +10,7 @@
 import http from 'http';
 import { URL } from 'url';
 import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
-import { discoverApiSpecs } from '@safety-net/schemas/loader';
+import { discoverApiSpecs, getExamplesPath } from '@safety-net/schemas/loader';
 import { clearAll } from '../../src/database-manager.js';
 import { seedDatabase } from '../../src/seeder.js';
 import { readFileSync, existsSync } from 'fs';
@@ -81,7 +81,7 @@ async function fetch(url, options = {}) {
  */
 function loadExamples(apiName) {
   try {
-    const examplesPath = join(__dirname, '../../../openapi/examples', `${apiName}.yaml`);
+    const examplesPath = getExamplesPath(apiName);
     const content = readFileSync(examplesPath, 'utf8');
     const examples = yaml.load(content) || {};
     

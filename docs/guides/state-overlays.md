@@ -181,11 +181,18 @@ Warnings:
 
 ## Commands
 
+All commands below respect the `STATE` environment variable. When set, they automatically resolve overlays and use state-specific schemas.
+
 | Command | Description |
 |---------|-------------|
-| `npm run overlay:resolve` | Resolve overlay for current STATE |
-| `npm run validate:state` | Resolve and validate current STATE |
+| `npm start` | Start mock server + Swagger UI |
+| `npm run validate` | Validate schemas and examples (auto-resolves overlays if STATE set) |
 | `npm run validate:all-states` | Validate all available states |
+| `npm run mock:start` | Start mock server only |
+| `npm run mock:swagger` | Start Swagger UI only |
+| `npm run postman:generate` | Generate Postman collection |
+| `npm run test:integration` | Run integration tests |
+| `npm run overlay:resolve` | Manually resolve overlay for current STATE |
 
 ## Best Practices
 

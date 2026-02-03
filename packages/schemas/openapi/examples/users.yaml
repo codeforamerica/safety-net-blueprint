@@ -8,6 +8,7 @@ UserExample1:
   userId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
   idpSubject: "auth0|507f1f77bcf86cd799439011"
   email: "jane.smith@example.gov"
+  role: "case_worker"
   roles:
     name: "case_worker"
     permissions:
@@ -23,6 +24,7 @@ UserExample2:
   userId: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
   idpSubject: "auth0|608f2f88cdf97de8a8540022"
   email: "john.doe@example.gov"
+  role: "supervisor"
   roles:
     name: "supervisor"
     permissions:

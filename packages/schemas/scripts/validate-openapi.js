@@ -2,15 +2,49 @@
 /**
  * Standalone OpenAPI Validation Script
  * Validates OpenAPI specifications and examples
+ *
+ * If STATE env var is set, resolves overlays first then validates state-specific specs.
+ * Otherwise validates base specs.
  */
 
-import { discoverApiSpecs } from '../src/validation/openapi-loader.js';
+import { discoverApiSpecs, getExamplesPath } from '../src/validation/openapi-loader.js';
 import { validateAll, formatResults } from '../src/validation/openapi-validator.js';
+import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+/**
+ * Resolve overlay for a state (creates resolved specs)
+ */
+function resolveOverlay(state) {
+  console.log(`\nResolving overlay for: ${state}`);
+  const result = spawnSync('node', [join(__dirname, 'resolve-overlay.js')], {
+    env: { ...process.env, STATE: state },
+    stdio: 'pipe',
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    console.error(`Failed to resolve overlay for ${state}`);
+    console.error(result.stderr || result.stdout);
+    return false;
+  }
+
+  // Print overlay output (includes warnings)
+  if (result.stdout) {
+    const lines = result.stdout.split('\n');
+    for (const line of lines) {
+      if (line.trim()) {
+        console.log(`  ${line}`);
+      }
+    }
+  }
+
+  return true;
+}
 
 /**
  * Main validation function
@@ -36,22 +70,32 @@ async function main() {
   console.log('='.repeat(70));
   
   try {
-    // Discover API specs (always use base specs, not resolved)
-    // State-specific validation is handled by validate-state.js
+    // If STATE is set, resolve overlay first
+    const state = process.env.STATE;
+    if (state) {
+      if (!resolveOverlay(state)) {
+        process.exit(1);
+      }
+    }
+
+    // Discover API specs (uses resolved specs if STATE is set)
     console.log('\nDiscovering OpenAPI specifications...');
-    const apiSpecs = discoverApiSpecs({ useResolved: false });
-    
+    if (state) {
+      console.log(`  State: ${state}`);
+    }
+    const apiSpecs = discoverApiSpecs();
+
     if (apiSpecs.length === 0) {
       console.error('\n❌ No OpenAPI specifications found in openapi/ directory');
       process.exit(1);
     }
-    
+
     console.log(`✓ Found ${apiSpecs.length} specification(s)\n`);
-    
-    // Add examples paths (base examples for base specs)
+
+    // Add examples paths (uses state-specific if STATE env var is set)
     const specsWithExamples = apiSpecs.map(spec => ({
       ...spec,
-      examplesPath: join(__dirname, '../openapi/examples', `${spec.name}.yaml`)
+      examplesPath: getExamplesPath(spec.name)
     }));
     
     // Validate all specs and examples
