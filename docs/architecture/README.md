@@ -26,6 +26,23 @@ Cross-cutting concerns span multiple domains:
 | Configuration | Planned | Business-configurable rules |
 | Observability | Planned | Health checks, metrics, logging |
 
+## Domains
+
+| Domain | Description |
+|--------|-------------|
+| [Case Management](domains/case-management.md) | Case lifecycle, assignments, and status tracking |
+| [Workflow](domains/workflow.md) | Workflow orchestration and task management |
+
+## Cross-Cutting Concerns
+
+| Concern | Status | Description |
+|---------|--------|-------------|
+| [Identity & Access](cross-cutting/identity-access.md) | Documented | Authentication via IdP, authorization via [Users API](../../packages/schemas/openapi/users.yaml) |
+| [Communication](cross-cutting/communication.md) | Documented | Notices and correspondence |
+| Reporting | Planned | Aggregated data and audit events |
+| Configuration | Planned | Business-configurable rules |
+| Observability | Planned | Health checks, metrics, logging |
+
 ## Related Resources
 
 | Resource | Description |
