@@ -166,19 +166,8 @@ const PROPERTY_REFS = {};
  * Populates PROPERTY_REFS map with { "SchemaName.propName": "TargetSchemaName" }
  */
 function extractPropertyRefs(rawSchemas) {
-  for (const [schemaName, schema] of Object.entries(rawSchemas)) {
-    if (!schema || typeof schema !== 'object') continue;
-
-    // Handle allOf by merging properties
-    let props = schema.properties || {};
-    if (schema.allOf) {
-      for (const part of schema.allOf) {
-        if (part.properties) {
-          props = { ...props, ...part.properties };
-        }
-      }
-    }
-
+  // Helper to recursively extract refs from an object schema
+  function extractFromObject(schemaName, props) {
     for (const [propName, propSchema] of Object.entries(props)) {
       if (!propSchema) continue;
 
@@ -193,7 +182,38 @@ function extractPropertyRefs(rawSchemas) {
         const refTarget = propSchema.items.$ref.split('/').pop();
         PROPERTY_REFS[`${schemaName}.${propName}`] = refTarget;
       }
+
+      // Inline object - recurse into its properties
+      if (propSchema.type === 'object' && propSchema.properties) {
+        // Infer schema name from property name (e.g., "household" -> "Household")
+        const inferredName = propName.charAt(0).toUpperCase() + propName.slice(1);
+        extractFromObject(inferredName, propSchema.properties);
+      }
+
+      // Array of inline objects - recurse into item properties
+      if (propSchema.type === 'array' && propSchema.items?.type === 'object' && propSchema.items?.properties) {
+        // Infer schema name from singular property name (e.g., "members" -> "Member")
+        let itemName = propName.endsWith('s') ? propName.slice(0, -1) : propName;
+        itemName = itemName.charAt(0).toUpperCase() + itemName.slice(1);
+        extractFromObject(itemName, propSchema.items.properties);
+      }
     }
+  }
+
+  for (const [schemaName, schema] of Object.entries(rawSchemas)) {
+    if (!schema || typeof schema !== 'object') continue;
+
+    // Handle allOf by merging properties
+    let props = schema.properties || {};
+    if (schema.allOf) {
+      for (const part of schema.allOf) {
+        if (part.properties) {
+          props = { ...props, ...part.properties };
+        }
+      }
+    }
+
+    extractFromObject(schemaName, props);
   }
 }
 
@@ -1781,10 +1801,22 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
       width: 260px;
       background: #2c3e50;
       color: white;
-      padding: 20px;
       position: fixed;
       height: 100vh;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    .sidebar-header {
+      padding: 20px 20px 0 20px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
       overflow-y: auto;
+      padding: 0 20px 20px 20px;
     }
 
     .sidebar h1 {
@@ -1921,7 +1953,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
       position: absolute;
       top: 100%;
       left: 0;
-      right: 0;
+      width: 400px;
       background: #fff;
       border-radius: 4px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -2984,20 +3016,24 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
 <body>
   <div class="container">
     <aside class="sidebar">
-      <a href="#orca-intro" class="sidebar-title"><h1>ORCA Design Reference</h1></a>
-      <div class="sidebar-state-selector">
-        <div class="sidebar-state-buttons">
-          <button class="state-selector-btn active" data-state="base">Base</button>
-          ${states.map(s => `<button class="state-selector-btn" data-state="${s.state}">${s.name}</button>`).join('\n          ')}
+      <div class="sidebar-header">
+        <a href="#orca-intro" class="sidebar-title"><h1>ORCA Design Reference</h1></a>
+        <div class="sidebar-state-selector">
+          <div class="sidebar-state-buttons">
+            <button class="state-selector-btn active" data-state="base">Base</button>
+            ${states.map(s => `<button class="state-selector-btn" data-state="${s.state}">${s.name}</button>`).join('\n            ')}
+          </div>
+        </div>
+        <div class="search-container">
+          <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
+          <div id="search-results" class="search-results"></div>
         </div>
       </div>
-      <div class="search-container">
-        <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-      <nav id="nav">
+      <div class="sidebar-nav">
+        <nav id="nav">
 ${sidebarHtml}
-      </nav>
+        </nav>
+      </div>
     </aside>
 
     <main class="main">
@@ -3371,8 +3407,8 @@ async function main() {
     // Generate HTML
     const html = generateHtml(baseSchemas, stateSchemas, states, relationships, operations);
 
-    // Write output to docs/ folder (version controlled and published with package)
-    const outputDir = join(__dirname, '../docs');
+    // Write output to root docs/ folder (for GitHub Pages)
+    const outputDir = join(__dirname, '../../../docs');
     if (!existsSync(outputDir)) {
       mkdirSync(outputDir, { recursive: true });
     }

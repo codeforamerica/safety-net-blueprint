@@ -28,10 +28,22 @@
       width: 260px;
       background: #2c3e50;
       color: white;
-      padding: 20px;
       position: fixed;
       height: 100vh;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    .sidebar-header {
+      padding: 20px 20px 0 20px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
       overflow-y: auto;
+      padding: 0 20px 20px 20px;
     }
 
     .sidebar h1 {
@@ -168,7 +180,7 @@
       position: absolute;
       top: 100%;
       left: 0;
-      right: 0;
+      width: 400px;
       background: #fff;
       border-radius: 4px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -1231,19 +1243,22 @@
 <body>
   <div class="container">
     <aside class="sidebar">
-      <a href="#orca-intro" class="sidebar-title"><h1>ORCA Design Reference</h1></a>
-      <div class="sidebar-state-selector">
-        <div class="sidebar-state-buttons">
-          <button class="state-selector-btn active" data-state="base">Base</button>
-          <button class="state-selector-btn" data-state="california">California</button>
-          <button class="state-selector-btn" data-state="colorado">Colorado</button>
+      <div class="sidebar-header">
+        <a href="#orca-intro" class="sidebar-title"><h1>ORCA Design Reference</h1></a>
+        <div class="sidebar-state-selector">
+          <div class="sidebar-state-buttons">
+            <button class="state-selector-btn active" data-state="base">Base</button>
+            <button class="state-selector-btn" data-state="california">California</button>
+            <button class="state-selector-btn" data-state="colorado">Colorado</button>
+          </div>
+        </div>
+        <div class="search-container">
+          <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
+          <div id="search-results" class="search-results"></div>
         </div>
       </div>
-      <div class="search-container">
-        <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-      <nav id="nav">
+      <div class="sidebar-nav">
+        <nav id="nav">
     <div class="sidebar-domain" data-domain="intake" style="--domain-color: #3498db;">
       <div class="sidebar-domain-header">
         <span class="sidebar-domain-indicator"></span>
@@ -1334,7 +1349,8 @@
       </div>
     </div>
 
-      </nav>
+        </nav>
+      </div>
     </aside>
 
     <main class="main">
@@ -1839,6 +1855,7 @@
     <li><a href="#Address">Address</a> via <code>homeAddress</code></li>
     <li><a href="#Address">Address</a> via <code>mailingAddress</code></li>
     <li><a href="#PhoneNumber">PhoneNumber</a> via <code>phoneNumber</code></li>
+    <li><a href="#HouseholdMember">HouseholdMember</a> via <code>members[]</code> (array)</li>
   </ul>
 </div>
 <div class="rel-section">
@@ -1929,7 +1946,7 @@
       </tr>
       <tr data-field="members" class="expandable">
         <td class="field-name">members</td>
-        <td class="field-type">List of → <a href="#Member" class="type-link">Member</a></td>
+        <td class="field-type">List of → <a href="#HouseholdMember" class="type-link">HouseholdMember</a></td>
         <td class="field-required">&#10003;</td>
         <td class="field-notes">List of household members with their relationship to the head of household. [Nested]</td>
       </tr>
@@ -2003,7 +2020,7 @@
       </tr>
       <tr data-field="members" class="expandable">
         <td class="field-name">members</td>
-        <td class="field-type">List of → <a href="#Member" class="type-link">Member</a></td>
+        <td class="field-type">List of → <a href="#HouseholdMember" class="type-link">HouseholdMember</a></td>
         <td class="field-required">&#10003;</td>
         <td class="field-notes">List of household members with their relationship to the head of household. [Nested]</td>
       </tr>
@@ -2077,7 +2094,7 @@
       </tr>
       <tr data-field="members" class="expandable">
         <td class="field-name">members</td>
-        <td class="field-type">List of → <a href="#Member" class="type-link">Member</a></td>
+        <td class="field-type">List of → <a href="#HouseholdMember" class="type-link">HouseholdMember</a></td>
         <td class="field-required">&#10003;</td>
         <td class="field-notes">List of household members with their relationship to the head of household. [Nested]</td>
       </tr>
@@ -9460,6 +9477,112 @@ Presence of a flag in an array indicates the condition is true.
 </div>
 </section>
 
+<section id="BackendAuthContext" class="schema-section" data-domain="unclassified">
+  <div class="section-header simple">
+    <h2>BackendAuthContext</h2>
+  </div>
+  <p class="description">Minimal authorization context for backend API authorization. Stored in the
+User Service and embedded in JWT tokens during login. Domain APIs read these
+claims for authorization decisions without runtime calls to the User Service.
+
+For frontend tokens that include UI permissions and preferences, see
+FrontendAuthContext in user.yaml.
+</p>
+<div class="attributes-content" data-state-content="base">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Role" class="type-link">Role</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="california" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId" class="">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Role" class="type-link">Role</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+      <tr data-field="programs" data-state-field="california" class=" state-added-field">
+        <td class="field-name">programs</td>
+        <td class="field-type">List of Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Programs the user is authorized to access (empty = all programs).</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="colorado" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Role" class="type-link">Role</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+</section>
+
 <section id="DeductionItem" class="schema-section" data-domain="intake">
   <div class="section-header simple">
     <a href="#domain-intake" class="entity-domain-badge" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">Intake</a>
@@ -11566,6 +11689,237 @@ Presence of a flag in an array indicates the condition is true.
 </div>
 </section>
 
+<section id="JwtClaims" class="schema-section" data-domain="unclassified">
+  <div class="section-header simple">
+    <h2>JwtClaims</h2>
+  </div>
+  <p class="description">Expected JWT claims structure for domain API authentication.
+Combines standard JWT claims with custom authorization claims.
+
+Domain APIs validate the JWT signature and read these claims
+for authorization decisions. No runtime calls to User Service required.
+</p>
+<div class="attributes-content" data-state-content="base">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="sub">
+        <td class="field-name">sub</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Subject identifier from the Identity Provider.
+Uniquely identifies the user within the IdP.
+</td>
+      </tr>
+      <tr data-field="iss">
+        <td class="field-name">iss</td>
+        <td class="field-type">URL</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Token issuer (IdP URL).</td>
+      </tr>
+      <tr data-field="aud">
+        <td class="field-name">aud</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Intended audience (API identifier).</td>
+      </tr>
+      <tr data-field="exp">
+        <td class="field-name">exp</td>
+        <td class="field-type">Number</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Expiration timestamp (Unix epoch seconds).</td>
+      </tr>
+      <tr data-field="iat">
+        <td class="field-name">iat</td>
+        <td class="field-type">Number</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Issued-at timestamp (Unix epoch seconds).</td>
+      </tr>
+      <tr data-field="email">
+        <td class="field-name">email</td>
+        <td class="field-type">Email</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s email address.</td>
+      </tr>
+      <tr data-field="name">
+        <td class="field-name">name</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s display name.</td>
+      </tr>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Roles" class="type-link">Roles</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="california" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="sub">
+        <td class="field-name">sub</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Subject identifier from the Identity Provider.
+Uniquely identifies the user within the IdP.
+</td>
+      </tr>
+      <tr data-field="iss">
+        <td class="field-name">iss</td>
+        <td class="field-type">URL</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Token issuer (IdP URL).</td>
+      </tr>
+      <tr data-field="aud">
+        <td class="field-name">aud</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Intended audience (API identifier).</td>
+      </tr>
+      <tr data-field="exp">
+        <td class="field-name">exp</td>
+        <td class="field-type">Number</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Expiration timestamp (Unix epoch seconds).</td>
+      </tr>
+      <tr data-field="iat">
+        <td class="field-name">iat</td>
+        <td class="field-type">Number</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Issued-at timestamp (Unix epoch seconds).</td>
+      </tr>
+      <tr data-field="email">
+        <td class="field-name">email</td>
+        <td class="field-type">Email</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s email address.</td>
+      </tr>
+      <tr data-field="name">
+        <td class="field-name">name</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s display name.</td>
+      </tr>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Roles" class="type-link">Roles</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="colorado" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="sub">
+        <td class="field-name">sub</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Subject identifier from the Identity Provider.
+Uniquely identifies the user within the IdP.
+</td>
+      </tr>
+      <tr data-field="iss">
+        <td class="field-name">iss</td>
+        <td class="field-type">URL</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Token issuer (IdP URL).</td>
+      </tr>
+      <tr data-field="aud">
+        <td class="field-name">aud</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Intended audience (API identifier).</td>
+      </tr>
+      <tr data-field="exp">
+        <td class="field-name">exp</td>
+        <td class="field-type">Number</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Expiration timestamp (Unix epoch seconds).</td>
+      </tr>
+      <tr data-field="iat">
+        <td class="field-name">iat</td>
+        <td class="field-type">Number</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Issued-at timestamp (Unix epoch seconds).</td>
+      </tr>
+      <tr data-field="email">
+        <td class="field-name">email</td>
+        <td class="field-type">Email</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s email address.</td>
+      </tr>
+      <tr data-field="name">
+        <td class="field-name">name</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s display name.</td>
+      </tr>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Roles" class="type-link">Roles</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+</section>
+
 <section id="Language" class="schema-section" data-domain="unclassified">
   <div class="section-header simple">
     <h2>Language</h2>
@@ -12944,6 +13298,129 @@ Presence of a flag in an array indicates the condition is true.
 </div>
 </section>
 
+<section id="Role" class="schema-section" data-domain="unclassified">
+  <div class="section-header simple">
+    <h2>Role</h2>
+    <div class="used-by-links">Used by: <a href="#BackendAuthContext">BackendAuthContext</a><code>.roles</code></div>
+  </div>
+  <p class="description">Role and permissions for authorization.</p>
+<div class="attributes-content" data-state-content="base">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="name" class="expandable">
+        <td class="field-name">name</td>
+        <td class="field-type">→ <a href="#RoleType" class="type-link">RoleType</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: applicant, case worker, supervisor, county admin, state admin, partner readonly [Nested]</td>
+      </tr>
+      <tr data-field="permissions">
+        <td class="field-name">permissions</td>
+        <td class="field-type">List of Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Permission strings in the format {resource}:{action}.
+Examples: applications:read, persons:update, users:create
+</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="california" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="name" class="expandable">
+        <td class="field-name">name</td>
+        <td class="field-type">→ <a href="#RoleType" class="type-link">RoleType</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: applicant, case worker, supervisor, county admin, state admin, partner readonly [Nested]</td>
+      </tr>
+      <tr data-field="permissions">
+        <td class="field-name">permissions</td>
+        <td class="field-type">List of Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Permission strings in the format {resource}:{action}.
+Examples: applications:read, persons:update, users:create
+</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="colorado" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="name" class="expandable">
+        <td class="field-name">name</td>
+        <td class="field-type">→ <a href="#RoleType" class="type-link">RoleType</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: technician, supervisor, district ops manager [Nested]</td>
+      </tr>
+      <tr data-field="permissions">
+        <td class="field-name">permissions</td>
+        <td class="field-type">List of Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Permission strings in the format {resource}:{action}.
+Examples: applications:read, persons:update, users:create
+</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+</section>
+
+<section id="RoleType" class="schema-section" data-domain="unclassified">
+  <div class="section-header simple">
+    <h2>RoleType</h2>
+    <div class="used-by-links">Used by: <a href="#Role">Role</a><code>.name</code></div>
+  </div>
+  <p class="description">Authorization roles that determine base permissions and data scoping.
+
+- applicant: Self-service access to own applications (scoped by personId)
+- case_worker: Process applications for assigned county
+- supervisor: Oversee case workers, approve determinations (may span counties)
+- county_admin: Administer county staff and configuration
+- state_admin: Statewide oversight and administration (all counties)
+- partner_readonly: External partner with limited read access
+</p>
+<div class="attributes-content" data-state-content="base">
+</div>
+<div class="attributes-content" data-state-content="california" style="display: none;">
+</div>
+<div class="attributes-content" data-state-content="colorado" style="display: none;">
+</div>
+</section>
+
 <section id="SelfEmploymentRecord" class="schema-section" data-domain="intake">
   <div class="section-header simple">
     <a href="#domain-intake" class="entity-domain-badge" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">Intake</a>
@@ -13905,6 +14382,523 @@ Presence of a flag in an array indicates the condition is true.
 </div>
 </section>
 
+<section id="TokenClaims" class="schema-section" data-domain="unclassified">
+  <div class="section-header simple">
+    <h2>TokenClaims</h2>
+  </div>
+  <p class="description">Minimal authorization context for backend API authorization. Stored in the
+User Service and embedded in JWT tokens during login. Domain APIs read these
+claims for authorization decisions without runtime calls to the User Service.
+
+For frontend tokens that include UI permissions and preferences, see
+FrontendAuthContext in user.yaml.
+</p>
+<div class="attributes-content" data-state-content="base">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Roles" class="type-link">Roles</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="california" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Roles" class="type-link">Roles</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="colorado" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">→ <a href="#Roles" class="type-link">Roles</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+</section>
+
+<section id="User" class="schema-section" data-domain="unclassified">
+  <div class="section-header simple">
+    <h2>User</h2>
+  </div>
+  <p class="description">User account for authentication and authorization. Links an IdP identity
+to roles, permissions, and county assignments.
+
+Note: Job function details (skills, team, workload) are not stored here.
+Staff users link to a CaseWorker record in the Case Management domain.
+</p>
+<div class="attributes-content" data-state-content="base">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">List of → <a href="#Role" class="type-link">Role</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role assignments with per-county permissions. [Nested]</td>
+      </tr>
+      <tr data-field="ui" class="expandable">
+        <td class="field-name">ui <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">→ Ui</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Computed UI permissions and display data for frontend feature toggling.
+Backend computes these from role and permissions to provide
+a UI-friendly interface for showing/hiding features.
+
+Structure is flexible - states define their own fields via overlays.
+Example fields: name, availableModules, canApproveApplications, etc.
+ [Nested]</td>
+      </tr>
+      <tr data-field="preferences" class="expandable">
+        <td class="field-name">preferences</td>
+        <td class="field-type">→ Preferences</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User preferences (reserved for future use). [Nested]</td>
+      </tr>
+      <tr data-field="email">
+        <td class="field-name">email</td>
+        <td class="field-type">Email</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s email address.</td>
+      </tr>
+      <tr data-field="firstName">
+        <td class="field-name">firstName</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s first name.</td>
+      </tr>
+      <tr data-field="lastName">
+        <td class="field-name">lastName</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s last name.</td>
+      </tr>
+      <tr data-field="idpSubject">
+        <td class="field-name">idpSubject</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Subject identifier from the Identity Provider. Immutable after creation.
+Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
+</td>
+      </tr>
+      <tr data-field="status">
+        <td class="field-name">status</td>
+        <td class="field-type">Dropdown</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: active, inactive, pending, suspended</td>
+      </tr>
+      <tr data-field="districts">
+        <td class="field-name">districts</td>
+        <td class="field-type">List of Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Colorado administrative districts the user can access.</td>
+      </tr>
+      <tr data-field="programs">
+        <td class="field-name">programs</td>
+        <td class="field-type">Multi-select</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Options: snap, colorado works, health first colorado, child health plan plus, old age pension, andcs, leap, cccap</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="domain-group" style="--domain-color: #95a5a6; --domain-bg: #f8f9f9;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>System</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="id">
+        <td class="field-name">id <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Unique identifier for the user (same as userId in JWT claims).</td>
+      </tr>
+      <tr data-field="createdAt">
+        <td class="field-name">createdAt <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">Date & Time</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Timestamp when the user was created.</td>
+      </tr>
+      <tr data-field="updatedAt">
+        <td class="field-name">updatedAt <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">Date & Time</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Timestamp when the user was last updated.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="california" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId" class="">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">List of → <a href="#Role" class="type-link">Role</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role assignments with per-county permissions. [Nested]</td>
+      </tr>
+      <tr data-field="ui" class="expandable">
+        <td class="field-name">ui <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">→ Ui</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Computed UI permissions and display data for frontend feature toggling.
+Backend computes these from role and permissions to provide
+a UI-friendly interface for showing/hiding features.
+
+Structure is flexible - states define their own fields via overlays.
+Example fields: name, availableModules, canApproveApplications, etc.
+ [Nested]</td>
+      </tr>
+      <tr data-field="preferences" class="expandable">
+        <td class="field-name">preferences</td>
+        <td class="field-type">→ Preferences</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User preferences (reserved for future use). [Nested]</td>
+      </tr>
+      <tr data-field="email" class="">
+        <td class="field-name">email</td>
+        <td class="field-type">Email</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s email address.</td>
+      </tr>
+      <tr data-field="firstName" class="">
+        <td class="field-name">firstName</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s first name.</td>
+      </tr>
+      <tr data-field="lastName" class="">
+        <td class="field-name">lastName</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s last name.</td>
+      </tr>
+      <tr data-field="idpSubject" class="">
+        <td class="field-name">idpSubject</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Subject identifier from the Identity Provider. Immutable after creation.
+Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
+</td>
+      </tr>
+      <tr data-field="status" class="">
+        <td class="field-name">status</td>
+        <td class="field-type">Dropdown</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: active, inactive, pending, suspended</td>
+      </tr>
+      <tr data-field="districts" class="">
+        <td class="field-name">districts</td>
+        <td class="field-type">List of Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Colorado administrative districts the user can access.</td>
+      </tr>
+      <tr data-field="programs" class="expandable">
+        <td class="field-name">programs</td>
+        <td class="field-type">List of → <a href="#Program" class="type-link">Program</a></td>
+        <td class="field-required"></td>
+        <td class="field-notes">Programs the user is authorized to work on.
+Optional in California; if empty, user can access all programs
+within their assigned counties.
+ [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="domain-group" style="--domain-color: #95a5a6; --domain-bg: #f8f9f9;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>System</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="id" class="">
+        <td class="field-name">id <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Unique identifier for the user (same as userId in JWT claims).</td>
+      </tr>
+      <tr data-field="createdAt" class="">
+        <td class="field-name">createdAt <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">Date & Time</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Timestamp when the user was created.</td>
+      </tr>
+      <tr data-field="updatedAt" class="">
+        <td class="field-name">updatedAt <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">Date & Time</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Timestamp when the user was last updated.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<div class="attributes-content" data-state-content="colorado" style="display: none;">
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="userId" class="">
+        <td class="field-name">userId</td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User Service identifier.</td>
+      </tr>
+      <tr data-field="roles" class="expandable">
+        <td class="field-name">roles</td>
+        <td class="field-type">List of → <a href="#Role" class="type-link">Role</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role assignments with per-county permissions. [Nested]</td>
+      </tr>
+      <tr data-field="ui" class="expandable">
+        <td class="field-name">ui <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">→ Ui</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Computed UI permissions and display data for frontend feature toggling.
+Backend computes these from role and permissions to provide
+a UI-friendly interface for showing/hiding features.
+
+Structure is flexible - states define their own fields via overlays.
+Example fields: name, availableModules, canApproveApplications, etc.
+ [Nested]</td>
+      </tr>
+      <tr data-field="preferences" class="expandable">
+        <td class="field-name">preferences</td>
+        <td class="field-type">→ Preferences</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User preferences (reserved for future use). [Nested]</td>
+      </tr>
+      <tr data-field="email" class="">
+        <td class="field-name">email</td>
+        <td class="field-type">Email</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s email address.</td>
+      </tr>
+      <tr data-field="firstName" class="">
+        <td class="field-name">firstName</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s first name.</td>
+      </tr>
+      <tr data-field="lastName" class="">
+        <td class="field-name">lastName</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">User&#039;s last name.</td>
+      </tr>
+      <tr data-field="idpSubject" class="">
+        <td class="field-name">idpSubject</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Subject identifier from the Identity Provider. Immutable after creation.
+Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
+</td>
+      </tr>
+      <tr data-field="status" class="">
+        <td class="field-name">status</td>
+        <td class="field-type">Dropdown</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: active, inactive, pending, suspended</td>
+      </tr>
+      <tr data-field="districts" class="">
+        <td class="field-name">districts</td>
+        <td class="field-type">List of Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Colorado administrative districts the user can access.</td>
+      </tr>
+      <tr data-field="programs" class="expandable">
+        <td class="field-name">programs</td>
+        <td class="field-type">List of → <a href="#Program" class="type-link">Program</a></td>
+        <td class="field-required"></td>
+        <td class="field-notes">Programs the user is authorized to work on. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="domain-group" style="--domain-color: #95a5a6; --domain-bg: #f8f9f9;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>System</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="id" class="">
+        <td class="field-name">id <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">ID</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Unique identifier for the user (same as userId in JWT claims).</td>
+      </tr>
+      <tr data-field="createdAt" class="">
+        <td class="field-name">createdAt <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">Date & Time</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Timestamp when the user was created.</td>
+      </tr>
+      <tr data-field="updatedAt" class="">
+        <td class="field-name">updatedAt <span class="read-only-badge">read-only</span></td>
+        <td class="field-type">Date & Time</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Timestamp when the user was last updated.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+</section>
+
+<section id="UserPreferences" class="schema-section" data-domain="unclassified">
+  <div class="section-header simple">
+    <h2>UserPreferences</h2>
+  </div>
+  <p class="description">User preferences for the application.
+
+Structure is flexible - states define their own fields via overlays.
+Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
+</p>
+<div class="attributes-content" data-state-content="base">
+</div>
+<div class="attributes-content" data-state-content="california" style="display: none;">
+</div>
+<div class="attributes-content" data-state-content="colorado" style="display: none;">
+</div>
+</section>
+
+<section id="UserStatus" class="schema-section" data-domain="unclassified">
+  <div class="section-header simple">
+    <h2>UserStatus</h2>
+  </div>
+  <p class="description">User account status.</p>
+<div class="attributes-content" data-state-content="base">
+</div>
+<div class="attributes-content" data-state-content="california" style="display: none;">
+</div>
+<div class="attributes-content" data-state-content="colorado" style="display: none;">
+</div>
+</section>
+
 <section id="UtilityExpense" class="schema-section" data-domain="intake">
   <div class="section-header simple">
     <a href="#domain-intake" class="entity-domain-badge" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">Intake</a>
@@ -14114,25 +15108,25 @@ Presence of a flag in an array indicates the condition is true.
       </tr>
     </thead>
     <tbody>
-      <tr data-field="members">
+      <tr data-field="members" class="expandable">
         <td class="field-name">members</td>
-        <td class="field-type">List of → <a href="#Member" class="type-link">Member</a></td>
+        <td class="field-type">List of → <a href="#HouseholdMember" class="type-link">HouseholdMember</a></td>
         <td class="field-required">&#10003;</td>
         <td class="field-notes">IRS-recognized household members for benefits eligibility, including the primary
 applicant (relationship=self). At least one member with relationship=self is required.
-</td>
+ [Nested]</td>
       </tr>
-      <tr data-field="otherOccupants">
+      <tr data-field="otherOccupants" class="expandable">
         <td class="field-name">otherOccupants</td>
-        <td class="field-type">List of → OtherOccupant</td>
+        <td class="field-type">List of → <a href="#HouseholdOccupant" class="type-link">HouseholdOccupant</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Other people living at the address who are not part of the household unit for
 benefits purposes (e.g., boarders, roomers).
-</td>
+ [Nested]</td>
       </tr>
       <tr data-field="expenses" class="expandable">
         <td class="field-name">expenses</td>
-        <td class="field-type">→ Expenses</td>
+        <td class="field-type">→ <a href="#HouseholdExpenses" class="type-link">HouseholdExpenses</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Household-level expense information (rent/mortgage/utilities). [Nested]</td>
       </tr>
@@ -14169,63 +15163,27 @@ benefits purposes (e.g., boarders, roomers).
     <tbody>
       <tr data-field="applicantSignature" class="expandable">
         <td class="field-name">applicantSignature</td>
-        <td class="field-type">→ ApplicantSignature</td>
+        <td class="field-type">→ <a href="#Signature" class="type-link">Signature</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Primary applicant signature. [Nested]</td>
       </tr>
       <tr data-field="coApplicantSignature" class="expandable">
         <td class="field-name">coApplicantSignature</td>
-        <td class="field-type">→ CoApplicantSignature</td>
+        <td class="field-type">→ <a href="#Signature" class="type-link">Signature</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Spouse/co-applicant signature if applicable. [Nested]</td>
       </tr>
       <tr data-field="applicantAuthorizedRepresentativeSignature" class="expandable">
         <td class="field-name">applicantAuthorizedRepresentativeSignature</td>
-        <td class="field-type">→ ApplicantAuthorizedRepresentativeSignature</td>
+        <td class="field-type">→ <a href="#Signature" class="type-link">Signature</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Authorized representative signature for the applicant. [Nested]</td>
       </tr>
       <tr data-field="coApplicantAuthorizedRepresentativeSignature" class="expandable">
         <td class="field-name">coApplicantAuthorizedRepresentativeSignature</td>
-        <td class="field-type">→ CoApplicantAuthorizedRepresentativeSignature</td>
+        <td class="field-type">→ <a href="#Signature" class="type-link">Signature</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Authorized representative signature for the co-applicant. [Nested]</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-</section>
-
-<section id="Member" class="schema-section inline-object" data-domain="intake">
-  <div class="section-header simple">
-    <a href="#domain-intake" class="entity-domain-badge" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">Intake</a>
-    <span class="inline-object-badge">Nested in <a href="#Household">Household</a></span>
-    <h2>Member</h2>
-  </div>
-  <p class="description">Nested object within Household.members (array item)</p>
-<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
-  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
-  <table class="property-table">
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Req</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr data-field="personId">
-        <td class="field-name">personId</td>
-        <td class="field-type">ID</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Reference to the person&#039;s unique identifier.</td>
-      </tr>
-      <tr data-field="relationship">
-        <td class="field-name">relationship</td>
-        <td class="field-type">Dropdown</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Options: head of household, spouse, husband, wife, partner, child, parent, sibling, grandparent, grandchild, other relative, non relative</td>
       </tr>
     </tbody>
   </table>
@@ -14346,6 +15304,84 @@ benefits purposes (e.g., boarders, roomers).
         <td class="field-type">Text</td>
         <td class="field-required"></td>
         <td class="field-notes">County or equivalent administrative region.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<section id="Role" class="schema-section inline-object" data-domain="unclassified">
+  <div class="section-header simple">
+    <span class="inline-object-badge">Nested in <a href="#User">User</a></span>
+    <h2>Role</h2>
+  </div>
+  <p class="description">Nested object within User.roles (array item)</p>
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="name" class="expandable">
+        <td class="field-name">name</td>
+        <td class="field-type">→ <a href="#RoleType" class="type-link">RoleType</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: technician, supervisor, district ops manager [Nested]</td>
+      </tr>
+      <tr data-field="county">
+        <td class="field-name">county</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Colorado county name.</td>
+      </tr>
+      <tr data-field="permissions" class="expandable">
+        <td class="field-name">permissions</td>
+        <td class="field-type">→ Permissions</td>
+        <td class="field-required"></td>
+        <td class="field-notes">CRUD permissions by module. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<section id="Roles" class="schema-section inline-object" data-domain="unclassified">
+  <div class="section-header simple">
+    <span class="inline-object-badge">Nested in <a href="#TokenClaims">TokenClaims</a></span>
+    <h2>Roles</h2>
+  </div>
+  <p class="description">Role and permissions for authorization.</p>
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="name">
+        <td class="field-name">name</td>
+        <td class="field-type">Dropdown</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: technician, supervisor, district ops manager</td>
+      </tr>
+      <tr data-field="permissions">
+        <td class="field-name">permissions</td>
+        <td class="field-type">List of Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Permission strings in the format {resource}:{action}.
+Examples: applications:read, persons:update, users:create
+</td>
       </tr>
     </tbody>
   </table>
@@ -14914,13 +15950,12 @@ benefits purposes (e.g., boarders, roomers).
 </div>
 </section>
 
-<section id="Expenses" class="schema-section inline-object" data-domain="intake">
+<section id="Permissions" class="schema-section inline-object" data-domain="unclassified">
   <div class="section-header simple">
-    <a href="#domain-intake" class="entity-domain-badge" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">Intake</a>
-    <span class="inline-object-badge">Nested in <a href="#Household">Household</a></span>
-    <h2>Expenses</h2>
+    <span class="inline-object-badge">Nested in <a href="#Role">Role</a></span>
+    <h2>Permissions</h2>
   </div>
-  <p class="description">Household-level expense information (rent/mortgage/utilities).</p>
+  <p class="description">CRUD permissions by module.</p>
 <div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
   <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
   <table class="property-table">
@@ -14933,310 +15968,35 @@ benefits purposes (e.g., boarders, roomers).
       </tr>
     </thead>
     <tbody>
-      <tr data-field="rent" class="expandable">
-        <td class="field-name">rent</td>
-        <td class="field-type">→ Rent</td>
+      <tr data-field="tasks">
+        <td class="field-name">tasks</td>
+        <td class="field-type">Multi-select</td>
         <td class="field-required"></td>
-        <td class="field-notes">Rent expenses and settings. [Nested]</td>
+        <td class="field-notes">Options: read, create, update, delete</td>
       </tr>
-      <tr data-field="mortgage" class="expandable">
-        <td class="field-name">mortgage</td>
-        <td class="field-type">→ Mortgage</td>
+      <tr data-field="cases">
+        <td class="field-name">cases</td>
+        <td class="field-type">Multi-select</td>
         <td class="field-required"></td>
-        <td class="field-notes">Mortgage expenses and settings. [Nested]</td>
+        <td class="field-notes">Options: read, create, update, delete</td>
       </tr>
-      <tr data-field="utilities" class="expandable">
-        <td class="field-name">utilities</td>
-        <td class="field-type">→ <a href="#Utilities" class="type-link">Utilities</a></td>
+      <tr data-field="documents">
+        <td class="field-name">documents</td>
+        <td class="field-type">Multi-select</td>
         <td class="field-required"></td>
-        <td class="field-notes">Utility-related settings for the household. [Nested]</td>
+        <td class="field-notes">Options: read, create, update, delete</td>
       </tr>
-    </tbody>
-  </table>
-</div>
-</section>
-
-<section id="ApplicantSignature" class="schema-section inline-object" data-domain="unclassified">
-  <div class="section-header simple">
-    <span class="inline-object-badge">Nested in <a href="#Signatures">Signatures</a></span>
-    <h2>ApplicantSignature</h2>
-  </div>
-  <p class="description">Primary applicant signature.</p>
-<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
-  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
-  <table class="property-table">
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Req</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr data-field="signature">
-        <td class="field-name">signature</td>
-        <td class="field-type">Text</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Signature or signature indicator.</td>
-      </tr>
-      <tr data-field="signatureDate">
-        <td class="field-name">signatureDate</td>
-        <td class="field-type">Date</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Date the signature was made.</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-</section>
-
-<section id="CoApplicantSignature" class="schema-section inline-object" data-domain="unclassified">
-  <div class="section-header simple">
-    <span class="inline-object-badge">Nested in <a href="#Signatures">Signatures</a></span>
-    <h2>CoApplicantSignature</h2>
-  </div>
-  <p class="description">Spouse/co-applicant signature if applicable.</p>
-<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
-  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
-  <table class="property-table">
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Req</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr data-field="signature">
-        <td class="field-name">signature</td>
-        <td class="field-type">Text</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Signature or signature indicator.</td>
-      </tr>
-      <tr data-field="signatureDate">
-        <td class="field-name">signatureDate</td>
-        <td class="field-type">Date</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Date the signature was made.</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-</section>
-
-<section id="ApplicantAuthorizedRepresentativeSignature" class="schema-section inline-object" data-domain="unclassified">
-  <div class="section-header simple">
-    <span class="inline-object-badge">Nested in <a href="#Signatures">Signatures</a></span>
-    <h2>ApplicantAuthorizedRepresentativeSignature</h2>
-  </div>
-  <p class="description">Authorized representative signature for the applicant.</p>
-<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
-  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
-  <table class="property-table">
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Req</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr data-field="signature">
-        <td class="field-name">signature</td>
-        <td class="field-type">Text</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Signature or signature indicator.</td>
-      </tr>
-      <tr data-field="signatureDate">
-        <td class="field-name">signatureDate</td>
-        <td class="field-type">Date</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Date the signature was made.</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-</section>
-
-<section id="CoApplicantAuthorizedRepresentativeSignature" class="schema-section inline-object" data-domain="unclassified">
-  <div class="section-header simple">
-    <span class="inline-object-badge">Nested in <a href="#Signatures">Signatures</a></span>
-    <h2>CoApplicantAuthorizedRepresentativeSignature</h2>
-  </div>
-  <p class="description">Authorized representative signature for the co-applicant.</p>
-<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
-  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
-  <table class="property-table">
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Req</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr data-field="signature">
-        <td class="field-name">signature</td>
-        <td class="field-type">Text</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Signature or signature indicator.</td>
-      </tr>
-      <tr data-field="signatureDate">
-        <td class="field-name">signatureDate</td>
-        <td class="field-type">Date</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Date the signature was made.</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-</section>
-
-<section id="Rent" class="schema-section inline-object" data-domain="unclassified">
-  <div class="section-header simple">
-    <span class="inline-object-badge">Nested in <a href="#Expenses">Expenses</a></span>
-    <h2>Rent</h2>
-  </div>
-  <p class="description">Rent expenses and settings.</p>
-<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
-  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
-  <table class="property-table">
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Req</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr data-field="utilitiesIncludedInRent">
-        <td class="field-name">utilitiesIncludedInRent</td>
-        <td class="field-type">Yes/No</td>
+      <tr data-field="scheduling">
+        <td class="field-name">scheduling</td>
+        <td class="field-type">Multi-select</td>
         <td class="field-required"></td>
-        <td class="field-notes">Whether utilities are included in rent.</td>
+        <td class="field-notes">Options: read, create, update, delete</td>
       </tr>
-      <tr data-field="receivesSection8OrPublicHousing">
-        <td class="field-name">receivesSection8OrPublicHousing</td>
-        <td class="field-type">Yes/No</td>
+      <tr data-field="reports">
+        <td class="field-name">reports</td>
+        <td class="field-type">Multi-select</td>
         <td class="field-required"></td>
-        <td class="field-notes">Whether receiving Section 8 or public housing assistance.</td>
-      </tr>
-      <tr data-field="housingAssistanceType">
-        <td class="field-name">housingAssistanceType</td>
-        <td class="field-type">Dropdown</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Options: section8, public housing</td>
-      </tr>
-      <tr data-field="items" class="expandable">
-        <td class="field-name">items</td>
-        <td class="field-type">List of → Item</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Rent expense items. [Nested]</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-</section>
-
-<section id="Mortgage" class="schema-section inline-object" data-domain="unclassified">
-  <div class="section-header simple">
-    <span class="inline-object-badge">Nested in <a href="#Expenses">Expenses</a></span>
-    <h2>Mortgage</h2>
-  </div>
-  <p class="description">Mortgage expenses and settings.</p>
-<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
-  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
-  <table class="property-table">
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Req</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr data-field="receivesSection8OrPublicHousing">
-        <td class="field-name">receivesSection8OrPublicHousing</td>
-        <td class="field-type">Yes/No</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Whether receiving Section 8 or public housing assistance.</td>
-      </tr>
-      <tr data-field="housingAssistanceType">
-        <td class="field-name">housingAssistanceType</td>
-        <td class="field-type">Dropdown</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Options: section8, public housing</td>
-      </tr>
-      <tr data-field="items" class="expandable">
-        <td class="field-name">items</td>
-        <td class="field-type">List of → Item</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Mortgage expense items. [Nested]</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-</section>
-
-<section id="Item" class="schema-section inline-object" data-domain="unclassified">
-  <div class="section-header simple">
-    <span class="inline-object-badge">Nested in <a href="#Rent">Rent</a></span>
-    <h2>Item</h2>
-  </div>
-  <p class="description">Housing expense item (shared by rent and mortgage).</p>
-<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
-  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
-  <table class="property-table">
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Req</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr data-field="expenseType">
-        <td class="field-name">expenseType</td>
-        <td class="field-type">Dropdown</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Options: rent, renters insurance, pet fee, washer dryer fee, condo fee, maintenance fee, mortgage, homeowners insurance, property taxes, hoa fees, other</td>
-      </tr>
-      <tr data-field="whoPays">
-        <td class="field-name">whoPays</td>
-        <td class="field-type">Text</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Name of the person who pays this expense.</td>
-      </tr>
-      <tr data-field="isPayerInHome">
-        <td class="field-name">isPayerInHome</td>
-        <td class="field-type">Yes/No</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Whether the person who pays lives in the home.</td>
-      </tr>
-      <tr data-field="expenseFor">
-        <td class="field-name">expenseFor</td>
-        <td class="field-type">Text</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Who the expense is for.</td>
-      </tr>
-      <tr data-field="expenseMonth">
-        <td class="field-name">expenseMonth</td>
-        <td class="field-type">Date</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Month of the expense.</td>
-      </tr>
-      <tr data-field="amountPaid">
-        <td class="field-name">amountPaid</td>
-        <td class="field-type">Number</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Amount paid for this expense.</td>
+        <td class="field-notes">Options: read, create, update, delete</td>
       </tr>
     </tbody>
   </table>
@@ -15280,7 +16040,7 @@ benefits purposes (e.g., boarders, roomers).
     });
 
     // Search index
-    const searchIndex = [{"field":"id","schema":"Application","type":"ID","domain":"Intake","description":"Unique identifier for the application."},{"field":"state","schema":"Application","type":"Text","domain":"Intake","description":"Two-letter state code where the application is being submitted (e.g., CO, CA, NY)."},{"field":"status","schema":"Application","type":"Dropdown","domain":"Intake","description":"Current status of the application."},{"field":"screeningFlags","schema":"Application","type":"→ ApplicationScreeningFlags","domain":"Intake","description":"Flags indicating screening criteria relevant to this application."},{"field":"preferences","schema":"Application","type":"→ ApplicationPreferences","domain":"Intake","description":"Application preferences and consents."},{"field":"household","schema":"Application","type":"→ Household","domain":"Intake","description":"Household information including members, occupants, expenses, and related data."},{"field":"expeditedSNAPInfo","schema":"Application","type":"→ ExpeditedSNAPInfo","domain":"Intake","description":"Expedited SNAP screening information."},{"field":"signatures","schema":"Application","type":"→ Signatures","domain":"Intake","description":"Application signatures."},{"field":"applicationAssister","schema":"Application","type":"→ ApplicationAssister","domain":"Intake","description":"The person who helped complete this application."},{"field":"authorizedRepresentative","schema":"Application","type":"→ AuthorizedRepresentative","domain":"Intake","description":"Authorized representative for the applicant."},{"field":"createdAt","schema":"Application","type":"Date & Time","domain":"Intake","description":"Timestamp when the application was created."},{"field":"updatedAt","schema":"Application","type":"Date & Time","domain":"Intake","description":"Timestamp when the application was last updated."},{"field":"id","schema":"Household","type":"ID","domain":"Intake","description":"Unique identifier for the household."},{"field":"homeAddress","schema":"Household","type":"→ Address","domain":"Intake","description":"Home address of the household."},{"field":"mailingAddress","schema":"Household","type":"→ Address","domain":"Intake","description":"Mailing address if different from home address."},{"field":"phoneNumber","schema":"Household","type":"→ PhoneNumber","domain":"Intake","description":"Primary phone number for the household."},{"field":"members","schema":"Household","type":"List of → Member","domain":"Intake","description":"List of household members with their relationship to the head of household."},{"field":"createdAt","schema":"Household","type":"Date & Time","domain":"Intake","description":"Timestamp when the household record was created."},{"field":"updatedAt","schema":"Household","type":"Date & Time","domain":"Intake","description":"Timestamp when the household record was last updated."},{"field":"id","schema":"Income","type":"ID","domain":"Intake","description":"Unique identifier for the income."},{"field":"personId","schema":"Income","type":"ID","domain":"Intake","description":"Foreign key reference to the person who has this income."},{"field":"employerId","schema":"Income","type":"ID","domain":"Intake","description":"Optional foreign key reference to the employer, third-party or self related to this income."},{"field":"type","schema":"Income","type":"Dropdown","domain":"Intake","description":"The type of income this item represents."},{"field":"unearnedType","schema":"Income","type":"Dropdown","domain":"Intake","description":"Types of unearned income."},{"field":"incomeBasis","schema":"Income","type":"Dropdown","domain":"Intake","description":"Whether the income is net or gross."},{"field":"amount","schema":"Income","type":"Number","domain":"Intake","description":"The amount of income this item represents."},{"field":"frequency","schema":"Income","type":"Dropdown","domain":"Intake","description":"The frequency with which the income is received."},{"field":"reportedOn","schema":"Income","type":"Date","domain":"Intake","description":"The date the income was reported on."},{"field":"source","schema":"Income","type":"Dropdown","domain":"Intake","description":"The source of the income."},{"field":"startDate","schema":"Income","type":"Date","domain":"Intake","description":"When did the applicant first receive this income?"},{"field":"endDate","schema":"Income","type":"Date","domain":"Intake","description":"Does applicant expect this income to end soon or has it already ended?"},{"field":"isVerified","schema":"Income","type":"Yes/No","domain":"Intake","description":"Whether the income has been verified."},{"field":"verifiedDate","schema":"Income","type":"Date","domain":"Intake","description":"The date the income was verified."},{"field":"verifiedBy","schema":"Income","type":"ID","domain":"Intake","description":"The county worker who verified the income."},{"field":"verificationSourceIds","schema":"Income","type":"List of ID","domain":"Intake","description":"Array of verification sources related to this income."},{"field":"name","schema":"Person","type":"→ Name","domain":"Client Management","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"Person","type":"Date","domain":"Client Management","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"Person","type":"SSN","domain":"Client Management","description":"Social Security Number for identity verification."},{"field":"address","schema":"Person","type":"→ Address","domain":"Client Management","description":"Address of the person."},{"field":"phoneNumber","schema":"Person","type":"Phone","domain":"Client Management","description":"Phone number for the person."},{"field":"email","schema":"Person","type":"Email","domain":"Client Management","description":"Email address of the person."},{"field":"id","schema":"Person","type":"ID","domain":"Client Management","description":"Unique identifier for the person. When creating an application, clients may\nprovide a temporary ID for linking related records (e.g., linking an absent\nparent to a child). The server replaces client-provided IDs with server-generated\nUUIDs upon submission.\n"},{"field":"demographicInfo","schema":"Person","type":"→ DemographicInfo","domain":"Client Management","description":"Demographic information including sex, marital status, and race."},{"field":"citizenshipInfo","schema":"Person","type":"→ CitizenshipInfo","domain":"Client Management","description":"Citizenship and immigration status information."},{"field":"contactInfo","schema":"Person","type":"→ ContactInfo","domain":"Client Management","description":"Contact information and communication preferences."},{"field":"employmentInfo","schema":"Person","type":"→ EmploymentInfo","domain":"Client Management","description":"Employment and self-employment information."},{"field":"educationInfo","schema":"Person","type":"→ EducationInfo","domain":"Client Management","description":"Student enrollment information for this person."},{"field":"militaryInfo","schema":"Person","type":"→ MilitaryInfo","domain":"Client Management","description":"Military and veteran status information."},{"field":"tribalInfo","schema":"Person","type":"→ TribalInfo","domain":"Client Management","description":"American Indian or Alaska Native tribal information for this person."},{"field":"consentToShareInformation","schema":"Person","type":"Yes/No","domain":"Client Management","description":"Consent to share information with partner agencies."},{"field":"createdAt","schema":"Person","type":"Date & Time","domain":"Client Management","description":"Timestamp when the person record was created."},{"field":"updatedAt","schema":"Person","type":"Date & Time","domain":"Client Management","description":"Timestamp when the person record was last updated."},{"field":"status","schema":"CitizenshipInfo","type":"Dropdown","domain":"Intake","description":"Citizenship or immigration status relevant to benefits eligibility."},{"field":"certificateNumber","schema":"CitizenshipInfo","type":"Text","domain":"Intake","description":"Certificate number if naturalized or derived citizen."},{"field":"immigrationInfo","schema":"CitizenshipInfo","type":"→ ImmigrationInfo","domain":"Intake","description":"Immigration information extended with eligibility fields."},{"field":"otherPhoneNumber","schema":"ContactInfo","type":"→ PhoneNumber","domain":"Intake","description":"Alternative phone number."},{"field":"mailingAddress","schema":"ContactInfo","type":"→ Address","domain":"Intake","description":"Mailing address if different from residential address."},{"field":"isHomeless","schema":"ContactInfo","type":"Yes/No","domain":"Intake","description":"Whether the person is currently homeless."},{"field":"preferredNoticeMethod","schema":"ContactInfo","type":"Dropdown","domain":"Intake","description":"Preferred method for receiving official notices."},{"field":"languagePreference","schema":"ContactInfo","type":"→ LanguagePreference","domain":"Intake","description":"Language preferences for communications."},{"field":"preferredContactMethod","schema":"ContactInfo","type":"Dropdown","domain":"Intake","description":"Preferred method of contact."},{"field":"isStateResident","schema":"ContactInfo","type":"Yes/No","domain":"Intake","description":"Whether the person is a resident of the state (for eligibility)."},{"field":"sex","schema":"DemographicInfo","type":"Dropdown","domain":"Intake","description":"Biological sex of the person."},{"field":"maritalStatus","schema":"DemographicInfo","type":"Dropdown","domain":"Intake","description":"Current marital status."},{"field":"isHispanicOrLatino","schema":"DemographicInfo","type":"Yes/No","domain":"Intake","description":"Whether the person identifies as Hispanic or Latino."},{"field":"race","schema":"DemographicInfo","type":"Multi-select","domain":"Intake","description":"Race identification (can select multiple)."},{"field":"lastGradeCompleted","schema":"EducationInfo","type":"Text","domain":"Intake","description":"Last grade level completed."},{"field":"isCurrentlyEnrolled","schema":"EducationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person is currently enrolled in school."},{"field":"schoolName","schema":"EducationInfo","type":"Text","domain":"Intake","description":"Name of the school or educational institution (if currently enrolled)."},{"field":"startDate","schema":"EducationInfo","type":"Date","domain":"Intake","description":"Date enrollment started (if currently enrolled)."},{"field":"isFullTimeStudent","schema":"EducationInfo","type":"Yes/No","domain":"Intake","description":"Whether the person is a full-time student (if currently enrolled)."},{"field":"expectedGraduationDate","schema":"EducationInfo","type":"Date","domain":"Intake","description":"Expected graduation date (if currently enrolled)."},{"field":"jobs","schema":"EmploymentInfo","type":"List of → Job","domain":"Intake","description":"Employment records for this person."},{"field":"status","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"documentType","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"documentNumber","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"alienOrI94Number","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"documentExpirationDate","schema":"ImmigrationInfo","type":"Date","domain":"Intake","description":""},{"field":"countryOfIssuance","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"hasSponsor","schema":"ImmigrationInfo","type":"Yes/No","domain":"Intake","description":""},{"field":"sponsor","schema":"ImmigrationInfo","type":"→ Sponsor","domain":"Intake","description":"Sponsor information for this non-citizen."},{"field":"livedInUSSince1996","schema":"ImmigrationInfo","type":"Yes/No","domain":"Intake","description":"Whether the person has lived in the US continuously since August 22, 1996."},{"field":"spouseOrParentIsVeteranOrActiveDuty","schema":"ImmigrationInfo","type":"Yes/No","domain":"Intake","description":"Whether spouse or parent is a veteran or active duty military."},{"field":"employer","schema":"Job","type":"→ EmployerInfo","domain":"Intake","description":"Employer information."},{"field":"startDate","schema":"Job","type":"Date","domain":"Intake","description":"Date employment started."},{"field":"endDate","schema":"Job","type":"Date","domain":"Intake","description":"Date employment ended (omit if current job)."},{"field":"isMilitaryServiceMember","schema":"MilitaryInfo","type":"Yes/No","domain":"Intake","description":"Whether this person is a military service member."},{"field":"veteranStatus","schema":"MilitaryInfo","type":"Yes/No","domain":"Intake","description":"Indicates whether the person has served in the armed forces."},{"field":"name","schema":"PersonIdentity","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"PersonIdentity","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"PersonIdentity","type":"→ SocialSecurityNumber","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"PersonIdentity","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"PersonIdentity","type":"→ PhoneNumber","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"PersonIdentity","type":"→ Email","domain":"Other","description":"Email address of the person."},{"field":"name","schema":"Sponsor","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"Sponsor","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"Sponsor","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"Sponsor","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"Sponsor","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"Sponsor","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"spouse","schema":"Sponsor","type":"→ PersonIdentity","domain":"Other","description":"Basic identity and contact information for a person."},{"field":"totalPeopleInHousehold","schema":"Sponsor","type":"Number","domain":"Other","description":"Total number of people in the sponsor's household."},{"field":"tribeName","schema":"TribalInfo","type":"Text","domain":"Intake","description":""},{"field":"tribeState","schema":"TribalInfo","type":"Text","domain":"Intake","description":""},{"field":"hasReceivedServiceFromIndianHealthService","schema":"TribalInfo","type":"Yes/No","domain":"Intake","description":""},{"field":"isEligibleForIndianHealthService","schema":"TribalInfo","type":"Yes/No","domain":"Intake","description":""},{"field":"typeOfIncomeReceived","schema":"TribalInfo","type":"Text","domain":"Intake","description":"Type of tribal income received."},{"field":"frequencyAndAmount","schema":"TribalInfo","type":"Text","domain":"Intake","description":"Frequency and amount of tribal income."},{"field":"name","schema":"HouseholdMember","type":"→ Name","domain":"Intake","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"HouseholdMember","type":"Date","domain":"Intake","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"HouseholdMember","type":"SSN","domain":"Intake","description":"Social Security Number for identity verification."},{"field":"address","schema":"HouseholdMember","type":"→ Address","domain":"Intake","description":"Address of the person."},{"field":"phoneNumber","schema":"HouseholdMember","type":"Phone","domain":"Intake","description":"Phone number for the person."},{"field":"email","schema":"HouseholdMember","type":"Email","domain":"Intake","description":"Email address of the person."},{"field":"id","schema":"HouseholdMember","type":"ID","domain":"Intake","description":"Unique identifier for the person. When creating an application, clients may\nprovide a temporary ID for linking related records (e.g., linking an absent\nparent to a child). The server replaces client-provided IDs with server-generated\nUUIDs upon submission.\n"},{"field":"demographicInfo","schema":"HouseholdMember","type":"→ DemographicInfo","domain":"Intake","description":"Demographic information including sex, marital status, and race."},{"field":"citizenshipInfo","schema":"HouseholdMember","type":"→ CitizenshipInfo","domain":"Intake","description":"Citizenship information extended with eligibility immigration fields."},{"field":"contactInfo","schema":"HouseholdMember","type":"→ ContactInfo","domain":"Intake","description":"Contact information extended with eligibility fields."},{"field":"employmentInfo","schema":"HouseholdMember","type":"→ EmploymentInfo","domain":"Intake","description":"Employment and self-employment information."},{"field":"educationInfo","schema":"HouseholdMember","type":"→ EducationInfo","domain":"Intake","description":"Student enrollment information for this person."},{"field":"militaryInfo","schema":"HouseholdMember","type":"→ MilitaryInfo","domain":"Intake","description":"Military and veteran status information."},{"field":"tribalInfo","schema":"HouseholdMember","type":"→ TribalInfo","domain":"Intake","description":"Tribal information extended with income eligibility fields."},{"field":"consentToShareInformation","schema":"HouseholdMember","type":"Yes/No","domain":"Intake","description":"Consent to share information with partner agencies."},{"field":"createdAt","schema":"HouseholdMember","type":"Date & Time","domain":"Intake","description":"Timestamp when the person record was created."},{"field":"updatedAt","schema":"HouseholdMember","type":"Date & Time","domain":"Intake","description":"Timestamp when the person record was last updated."},{"field":"relationship","schema":"HouseholdMember","type":"Dropdown","domain":"Intake","description":"Relationship to primary applicant. Use \"self\" for the primary applicant.\n"},{"field":"programsApplyingFor","schema":"HouseholdMember","type":"Multi-select","domain":"Intake","description":"Programs this person is applying for. Empty array or omitted means not applying for any programs."},{"field":"institutionalizedInfo","schema":"HouseholdMember","type":"→ InstitutionalizedInfo","domain":"Intake","description":"Information about institutionalization if this person is temporarily in an institution."},{"field":"disabilityInfo","schema":"HouseholdMember","type":"→ DisabilityInfo","domain":"Intake","description":"Disability and SSI/SSDI information for this person."},{"field":"hasLegalClaim","schema":"HouseholdMember","type":"Yes/No","domain":"Intake","description":"Whether this person has a legal claim related to medical care."},{"field":"expenses","schema":"HouseholdMember","type":"→ ExpenseInfo","domain":"Intake","description":"Expenses paid by or for this person."},{"field":"incomeChangeInfo","schema":"HouseholdMember","type":"→ IncomeChangeInfo","domain":"Intake","description":"Income change information for health insurance eligibility."},{"field":"fosterCareInfo","schema":"HouseholdMember","type":"→ FosterCareHistory","domain":"Intake","description":"Foster care history for this person."},{"field":"absentParents","schema":"HouseholdMember","type":"List of → AbsentParent","domain":"Intake","description":"Absent parents for this child."},{"field":"employmentHistory","schema":"HouseholdMember","type":"List of → JobIncomeInfo","domain":"Intake","description":"Employment history for this person (jobs with endDate are past jobs)."},{"field":"selfEmployment","schema":"HouseholdMember","type":"List of → SelfEmploymentRecord","domain":"Intake","description":"Self-employment businesses for this person."},{"field":"unearnedIncomeSources","schema":"HouseholdMember","type":"List of → UnearnedIncomeSource","domain":"Intake","description":"Unearned income sources for this person."},{"field":"lumpSumPayments","schema":"HouseholdMember","type":"List of → LumpSumPayment","domain":"Intake","description":"Lump sum payments received by this person."},{"field":"strikeInfo","schema":"HouseholdMember","type":"→ StrikeInfo","domain":"Intake","description":"Strike information if this person is on strike."},{"field":"nonCitizenApplicationInfo","schema":"HouseholdMember","type":"→ NonCitizenApplicationInfo","domain":"Intake","description":"Application-specific information for non-citizens."},{"field":"familyPlanningInfo","schema":"HouseholdMember","type":"→ FamilyPlanningInfo","domain":"Intake","description":"Family planning and pregnancy information for this person."},{"field":"financialAidInfo","schema":"HouseholdMember","type":"→ FinancialAidInfo","domain":"Intake","description":"Financial aid information for this person."},{"field":"priorConvictions","schema":"HouseholdMember","type":"→ PriorConvictionsInfo","domain":"Intake","description":"Prior convictions information for this person."},{"field":"taxFilingInfo","schema":"HouseholdMember","type":"→ TaxFilingInfo","domain":"Intake","description":"Tax filing information for this person."},{"field":"resourceInfo","schema":"HouseholdMember","type":"→ ResourceInfo","domain":"Intake","description":"Financial resources and assets for this person."},{"field":"transferredAssets","schema":"HouseholdMember","type":"List of → TransferredAsset","domain":"Intake","description":"Assets transferred by this person."},{"field":"retroactiveMedicalRequest","schema":"HouseholdMember","type":"→ RetroactiveMedicalRequest","domain":"Intake","description":"Request for retroactive medical coverage for this person."},{"field":"healthInfo","schema":"HouseholdMember","type":"→ HealthInfo","domain":"Intake","description":"Health and insurance coverage information for eligibility determination."},{"field":"healthInsuranceEnrollments","schema":"HouseholdMember","type":"List of → HealthInsuranceEnrollment","domain":"Intake","description":"This person's enrollments or eligibilities for health insurance plans."},{"field":"pastBenefitsFromOtherStates","schema":"HouseholdMember","type":"→ PastBenefitsFromOtherStates","domain":"Intake","description":"Information about SNAP or cash benefits received in another state in the last 30 days."},{"field":"givesPermissionToValidateIncome","schema":"ApplicationPreferences","type":"Yes/No","domain":"Other","description":"Whether the applicant gives permission to validate income."},{"field":"wantsToRegisterToVote","schema":"ApplicationPreferences","type":"Yes/No","domain":"Other","description":"Whether the applicant wants to register to vote."},{"field":"burialPreference","schema":"ApplicationPreferences","type":"Dropdown","domain":"Other","description":"Preferred burial arrangement."},{"field":"ebtCardDeliveryMethod","schema":"ApplicationPreferences","type":"Dropdown","domain":"Other","description":"Preferred method for receiving the EBT card."},{"field":"programs","schema":"ApplicationScreeningFlags","type":"→ Programs","domain":"Other","description":"Program-specific screening flags."},{"field":"familyPlanning","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Family planning and dependent-related flags."},{"field":"disability","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Disability-related flags."},{"field":"citizenship","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Citizenship and immigration-related flags."},{"field":"medicalCoverage","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Medical coverage and health-related flags."},{"field":"tribal","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"American Indian or Alaska Native-related flags."},{"field":"fosterCareAndBenefitsHistory","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Foster care and benefits history flags."},{"field":"jobs","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Employment and income change flags."},{"field":"otherIncome","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Unearned income-related flags."},{"field":"expenses","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Housing and expense-related flags."},{"field":"education","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Education-related flags."},{"field":"resources","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Resource and asset-related flags."},{"field":"priorConvictions","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Prior conviction-related flags."},{"field":"military","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Military service-related flags."},{"field":"name","schema":"AbsentParent","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"AbsentParent","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"AbsentParent","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"AbsentParent","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"AbsentParent","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"AbsentParent","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"triedToGetMedicalSupport","schema":"AbsentParent","type":"Yes/No","domain":"Other","description":"Whether applicant tried to get medical support from this absent parent."},{"field":"expenseType","schema":"AdditionalExpense","type":"Dropdown","domain":"Other","description":""},{"field":"monthOfExpense","schema":"AdditionalExpense","type":"Date","domain":"Other","description":""},{"field":"amountPaid","schema":"AdditionalExpense","type":"Number","domain":"Other","description":""},{"field":"legallyObligatedAmount","schema":"AdditionalExpense","type":"Number","domain":"Other","description":""},{"field":"name","schema":"ApplicationAssister","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"ApplicationAssister","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"ApplicationAssister","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"ApplicationAssister","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"ApplicationAssister","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"ApplicationAssister","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"name","schema":"AuthorizedRepresentative","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"AuthorizedRepresentative","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"AuthorizedRepresentative","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"AuthorizedRepresentative","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"AuthorizedRepresentative","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"AuthorizedRepresentative","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"isIndividual","schema":"AuthorizedRepresentative","type":"Yes/No","domain":"Other","description":"Whether the representative is an individual (vs organization)."},{"field":"organizationId","schema":"AuthorizedRepresentative","type":"Text","domain":"Other","description":"Organization identifier if not an individual."},{"field":"inCareOf","schema":"AuthorizedRepresentative","type":"Text","domain":"Other","description":"Care of line for address."},{"field":"receiveNotices","schema":"AuthorizedRepresentative","type":"Yes/No","domain":"Other","description":"Whether this representative should receive official notices."},{"field":"applicantSignature","schema":"AuthorizedRepresentative","type":"→ Signature","domain":"Other","description":"Applicant's signature authorizing this representative."},{"field":"authorizedRepresentativeSignature","schema":"AuthorizedRepresentative","type":"→ Signature","domain":"Other","description":"The authorized representative's signature."},{"field":"deductionType","schema":"DeductionItem","type":"Dropdown","domain":"Other","description":"Type of deduction."},{"field":"deductionTypeOther","schema":"DeductionItem","type":"Text","domain":"Other","description":"Description if deductionType is 'other'."},{"field":"frequency","schema":"DeductionItem","type":"Dropdown","domain":"Other","description":"How often the deduction occurs."},{"field":"currentAmount","schema":"DeductionItem","type":"Number","domain":"Other","description":"Current deduction amount."},{"field":"actualAnnualAmount","schema":"DeductionItem","type":"Number","domain":"Other","description":"Actual annual deduction amount."},{"field":"hasDisability","schema":"DisabilityInfo","type":"Yes/No","domain":"Intake","description":"Whether this person has a disability."},{"field":"needsHelpWithSelfCare","schema":"DisabilityInfo","type":"Yes/No","domain":"Intake","description":"Whether this person needs help with self-care activities."},{"field":"hasMedicalOrDevelopmentalCondition","schema":"DisabilityInfo","type":"Yes/No","domain":"Intake","description":"Whether this person has a medical or developmental condition."},{"field":"socialSecurityApplications","schema":"DisabilityInfo","type":"List of → SocialSecurityApplication","domain":"Intake","description":"SSI/SSDI applications for this person."},{"field":"hasReceivedSsiOrSsdi","schema":"DisabilityInfo","type":"Yes/No","domain":"Intake","description":"Whether this person has ever received SSI or SSDI (if not currently applied)."},{"field":"ssiOrSsdiEndDate","schema":"DisabilityInfo","type":"Date","domain":"Intake","description":"Date SSI or SSDI benefits ended for this person (if applicable)."},{"field":"rent","schema":"ExpenseInfo","type":"List of → RentExpense","domain":"Intake","description":""},{"field":"mortgage","schema":"ExpenseInfo","type":"List of → MortgageExpense","domain":"Intake","description":""},{"field":"utilities","schema":"ExpenseInfo","type":"List of → UtilityExpense","domain":"Intake","description":""},{"field":"additionalExpenses","schema":"ExpenseInfo","type":"List of → AdditionalExpense","domain":"Intake","description":""},{"field":"householdSize","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Number of people in the home who purchase and prepare food together."},{"field":"isMigrantOrSeasonalFarmWorker","schema":"ExpeditedSNAPInfo","type":"Yes/No","domain":"Other","description":"Whether any household member is a migrant or seasonal farm worker."},{"field":"totalExpectedIncomeThisMonth","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Total money household expects to get this month (before deductions)."},{"field":"totalCashOnHand","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Total cash on hand and money in checking/savings account."},{"field":"monthlyMortgage","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Monthly mortgage payment amount."},{"field":"monthlyRent","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Monthly rent payment amount."},{"field":"utilityCosts","schema":"ExpeditedSNAPInfo","type":"→ UtilityCosts","domain":"Other","description":"Monthly utility costs."},{"field":"name","schema":"ExternalPerson","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"ExternalPerson","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"ExternalPerson","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"ExternalPerson","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"ExternalPerson","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"ExternalPerson","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"wantsFamilyPlanningBenefits","schema":"FamilyPlanningInfo","type":"Yes/No","domain":"Intake","description":"Whether this person wants family planning benefits."},{"field":"dueDate","schema":"FamilyPlanningInfo","type":"Date","domain":"Intake","description":"Expected due date if pregnant."},{"field":"numberOfBabiesExpected","schema":"FamilyPlanningInfo","type":"Number","domain":"Intake","description":"Number of babies expected if pregnant."},{"field":"fatherName","schema":"FamilyPlanningInfo","type":"Text","domain":"Intake","description":"Name of the father."},{"field":"wantsGoodCauseFromChildSupport","schema":"FamilyPlanningInfo","type":"Yes/No","domain":"Intake","description":"Whether this person wants good cause exemption from child support cooperation."},{"field":"programTypeOrName","schema":"FederalHealthBenefit","type":"Text","domain":"Other","description":""},{"field":"insuranceCompanyName","schema":"FederalHealthBenefit","type":"Text","domain":"Other","description":""},{"field":"policyNumber","schema":"FederalHealthBenefit","type":"Text","domain":"Other","description":""},{"field":"hasFinancialAid","schema":"FinancialAidInfo","type":"Yes/No","domain":"Intake","description":"Whether this person receives financial aid as a student."},{"field":"grantsScholarshipsWorkStudyForLivingExpenses","schema":"FinancialAidInfo","type":"Number","domain":"Intake","description":"Amount of grants/scholarships/work-study used for living expenses."},{"field":"taxableGrantsScholarshipsWorkStudy","schema":"FinancialAidInfo","type":"Number","domain":"Intake","description":"Amount of taxable grants/scholarships/work-study."},{"field":"nameUsedInOutOfStateFosterCare","schema":"FosterCareHistory","type":"Text","domain":"Other","description":"Name used in out-of-state foster care, if different from current name."},{"field":"dateLeftFosterCare","schema":"FosterCareHistory","type":"Date","domain":"Other","description":"Date the person left foster care, if known."},{"field":"wasAdopted","schema":"FosterCareHistory","type":"Yes/No","domain":"Other","description":"Whether the person was adopted."},{"field":"returnedToFosterCareAfterAdoption","schema":"FosterCareHistory","type":"Yes/No","domain":"Other","description":"If adopted, whether the person returned to foster care after adoption."},{"field":"dateReturnedToFosterCare","schema":"FosterCareHistory","type":"Date","domain":"Other","description":"Date the person returned to foster care after adoption, if applicable."},{"field":"dateOfStateResidency","schema":"FosterCareHistory","type":"Date","domain":"Other","description":"Date the person became a resident of the state."},{"field":"needsHelpPayingMedicalBills","schema":"FosterCareHistory","type":"Yes/No","domain":"Other","description":"Whether the person needs help paying medical bills."},{"field":"medicalBillsMonths","schema":"FosterCareHistory","type":"List of Date","domain":"Other","description":"Months for which the person needs help paying medical bills."},{"field":"resourceType","schema":"FinancialResource","type":"Dropdown","domain":"Intake","description":""},{"field":"financialInstitutionName","schema":"FinancialResource","type":"Text","domain":"Intake","description":""},{"field":"accountNumber","schema":"FinancialResource","type":"Text","domain":"Intake","description":""},{"field":"currentValue","schema":"FinancialResource","type":"Number","domain":"Intake","description":""},{"field":"rent","schema":"HouseholdExpenses","type":"→ RentExpenses","domain":"Other","description":"Rent expenses and settings."},{"field":"mortgage","schema":"HouseholdExpenses","type":"→ MortgageExpenses","domain":"Other","description":"Mortgage expenses and settings."},{"field":"utilities","schema":"HouseholdExpenses","type":"→ Utilities","domain":"Other","description":"Utility-related settings for the household."},{"field":"name","schema":"HouseholdOccupant","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"HouseholdOccupant","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"HouseholdOccupant","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"HouseholdOccupant","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"HouseholdOccupant","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"HouseholdOccupant","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"occupantType","schema":"HouseholdOccupant","type":"Dropdown","domain":"Other","description":"Type of occupant."},{"field":"rentPaidToHousehold","schema":"HouseholdOccupant","type":"Number","domain":"Other","description":"Amount paid for rent per month to the household."},{"field":"mealsIncluded","schema":"HouseholdOccupant","type":"Yes/No","domain":"Other","description":"Whether meals are included with the rent."},{"field":"expenseType","schema":"HousingExpenseItem","type":"Dropdown","domain":"Other","description":"Type of housing expense."},{"field":"whoPays","schema":"HousingExpenseItem","type":"Text","domain":"Other","description":"Name of the person who pays this expense."},{"field":"isPayerInHome","schema":"HousingExpenseItem","type":"Yes/No","domain":"Other","description":"Whether the person who pays lives in the home."},{"field":"expenseFor","schema":"HousingExpenseItem","type":"Text","domain":"Other","description":"Who the expense is for."},{"field":"expenseMonth","schema":"HousingExpenseItem","type":"Date","domain":"Other","description":"Month of the expense."},{"field":"amountPaid","schema":"HousingExpenseItem","type":"Number","domain":"Other","description":"Amount paid for this expense."},{"field":"typeOfCoverage","schema":"HealthCoverageDetail","type":"Dropdown","domain":"Other","description":""},{"field":"coverageStartDate","schema":"HealthCoverageDetail","type":"Date","domain":"Other","description":""},{"field":"coverageEndDate","schema":"HealthCoverageDetail","type":"Date","domain":"Other","description":""},{"field":"enrollmentStatus","schema":"HealthCoverageDetail","type":"Dropdown","domain":"Other","description":""},{"field":"healthCoverage","schema":"HealthInfo","type":"List of → HealthCoverageDetail","domain":"Intake","description":"Health insurance coverage details for this person."},{"field":"medicare","schema":"HealthInfo","type":"→ MedicareInfo","domain":"Intake","description":"Medicare coverage information for this person."},{"field":"federalHealthBenefits","schema":"HealthInfo","type":"List of → FederalHealthBenefit","domain":"Intake","description":"Federal health benefit programs this person is enrolled in."},{"field":"planName","schema":"HealthInsuranceEnrollment","type":"Text","domain":"Intake","description":"References a plan by name in the household's healthInsurancePlans map."},{"field":"status","schema":"HealthInsuranceEnrollment","type":"Dropdown","domain":"Intake","description":"Whether the person is eligible for or enrolled in the plan."},{"field":"coverageStartDate","schema":"HealthInsuranceEnrollment","type":"Date","domain":"Intake","description":"Date coverage started."},{"field":"coverageEndDate","schema":"HealthInsuranceEnrollment","type":"Date","domain":"Intake","description":"Date coverage ended or will end."},{"field":"couldStartCoverageDate","schema":"HealthInsuranceEnrollment","type":"Date","domain":"Intake","description":"Date when coverage could start if not yet enrolled."},{"field":"lostCoverageDate","schema":"HealthInsuranceEnrollment","type":"Date","domain":"Intake","description":"Date coverage was lost."},{"field":"premiumAmount","schema":"HealthInsuranceEnrollment","type":"Number","domain":"Intake","description":"Premium amount this person pays."},{"field":"premiumAmountUnknown","schema":"HealthInsuranceEnrollment","type":"Yes/No","domain":"Intake","description":"Whether the premium amount is unknown."},{"field":"premiumFrequency","schema":"HealthInsuranceEnrollment","type":"Dropdown","domain":"Intake","description":"How often premiums are paid."},{"field":"planName","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Unique name for this plan within the application (used as map key)."},{"field":"planType","schema":"HealthInsurancePlan","type":"Dropdown","domain":"Other","description":"Type of health insurance plan."},{"field":"employer","schema":"HealthInsurancePlan","type":"→ EmployerInfo","domain":"Other","description":"Employer offering the coverage (for employer_sponsored plans)."},{"field":"contactAboutCoverage","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Contact person for questions about coverage (for employer_sponsored plans)."},{"field":"hasEmployeeOnlyPlanMeetingMinimumValue","schema":"HealthInsurancePlan","type":"Yes/No","domain":"Other","description":"Whether an employee-only plan meeting minimum value is available."},{"field":"lowestCostPlanName","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Name of the lowest cost plan available."},{"field":"lowestCostPlanUnknown","schema":"HealthInsurancePlan","type":"Yes/No","domain":"Other","description":"Whether the lowest cost plan is unknown."},{"field":"noPlansMeetMinimumValue","schema":"HealthInsurancePlan","type":"Yes/No","domain":"Other","description":"Whether no plans meet minimum value requirements."},{"field":"insuranceCompanyName","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Name of the insurance company (for non-employer plans)."},{"field":"policyNumber","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Policy number (for non-employer plans)."},{"field":"changeReason","schema":"IncomeChangeInfo","type":"Dropdown","domain":"Intake","description":"Reason for income change."},{"field":"expectedAnnualIncome","schema":"IncomeChangeInfo","type":"Number","domain":"Intake","description":"Expected annual income."},{"field":"expectedIncomeChange","schema":"IncomeChangeInfo","type":"Dropdown","domain":"Intake","description":"How income is expected to change compared to last year."},{"field":"pastIncomeAmount","schema":"IncomeChangeInfo","type":"Number","domain":"Intake","description":"Past income amount for the relevant period."},{"field":"pastDeductionsAmount","schema":"IncomeChangeInfo","type":"Number","domain":"Intake","description":"Past deductions amount for the relevant period."},{"field":"deductionsChangeMonthly","schema":"IncomeChangeInfo","type":"Yes/No","domain":"Intake","description":"Whether deductions change from month to month."},{"field":"deductions","schema":"IncomeChangeInfo","type":"List of → DeductionItem","domain":"Intake","description":"Deductions that affect income for health insurance eligibility."},{"field":"isInstitutionalized","schema":"InstitutionalizedInfo","type":"Yes/No","domain":"Intake","description":"Whether this person is temporarily in an institution."},{"field":"dateEntered","schema":"InstitutionalizedInfo","type":"Date","domain":"Intake","description":"Date the person entered the institution."},{"field":"facilityName","schema":"InstitutionalizedInfo","type":"Text","domain":"Intake","description":"Name of the facility."},{"field":"facilityType","schema":"InstitutionalizedInfo","type":"Dropdown","domain":"Intake","description":"Type of facility."},{"field":"isPendingDisposition","schema":"InstitutionalizedInfo","type":"Yes/No","domain":"Intake","description":"Whether pending disposition of charges (for incarceration)."},{"field":"mealsProvided","schema":"InstitutionalizedInfo","type":"Yes/No","domain":"Intake","description":"Whether meals are provided by the facility."},{"field":"policyType","schema":"InsurancePolicy","type":"Dropdown","domain":"Intake","description":""},{"field":"company","schema":"InsurancePolicy","type":"Text","domain":"Intake","description":""},{"field":"policyNumber","schema":"InsurancePolicy","type":"Text","domain":"Intake","description":""},{"field":"revocableOrIrrevocable","schema":"InsurancePolicy","type":"Dropdown","domain":"Intake","description":""},{"field":"faceValue","schema":"InsurancePolicy","type":"Number","domain":"Intake","description":""},{"field":"cashSurrenderValue","schema":"InsurancePolicy","type":"Number","domain":"Intake","description":""},{"field":"employer","schema":"JobIncomeInfo","type":"→ EmployerInfo","domain":"Other","description":"Employer information."},{"field":"startDate","schema":"JobIncomeInfo","type":"Date","domain":"Other","description":"Date employment started."},{"field":"endDate","schema":"JobIncomeInfo","type":"Date","domain":"Other","description":"Date employment ended (omit if current job)."},{"field":"monthlyWagesBeforeTaxes","schema":"JobIncomeInfo","type":"Number","domain":"Other","description":"Monthly wages before taxes."},{"field":"hourlyWage","schema":"JobIncomeInfo","type":"Number","domain":"Other","description":"Hourly wage rate."},{"field":"averageHoursPerWeek","schema":"JobIncomeInfo","type":"Number","domain":"Other","description":"Average hours worked per week."},{"field":"payFrequency","schema":"JobIncomeInfo","type":"Dropdown","domain":"Other","description":"How often the person is paid."},{"field":"isTemporaryJob","schema":"JobIncomeInfo","type":"Yes/No","domain":"Other","description":"Whether this is a temporary job."},{"field":"incomeType","schema":"JobIncomeInfo","type":"Dropdown","domain":"Other","description":"Type of employment income."},{"field":"lastPaycheckDate","schema":"JobIncomeInfo","type":"Date","domain":"Other","description":"Date of last paycheck (for ended jobs)."},{"field":"lastPaycheckAmount","schema":"JobIncomeInfo","type":"Number","domain":"Other","description":"Amount of last paycheck (for ended jobs)."},{"field":"dateReceived","schema":"LumpSumPayment","type":"Date","domain":"Intake","description":""},{"field":"type","schema":"LumpSumPayment","type":"Dropdown","domain":"Intake","description":""},{"field":"amount","schema":"LumpSumPayment","type":"Number","domain":"Intake","description":""},{"field":"partA","schema":"MedicareInfo","type":"→ PartA","domain":"Other","description":""},{"field":"partB","schema":"MedicareInfo","type":"→ PartB","domain":"Other","description":""},{"field":"partC","schema":"MedicareInfo","type":"→ PartC","domain":"Other","description":""},{"field":"partD","schema":"MedicareInfo","type":"→ PartD","domain":"Other","description":""},{"field":"expenseType","schema":"MortgageExpense","type":"Dropdown","domain":"Other","description":""},{"field":"expenseMonth","schema":"MortgageExpense","type":"Date","domain":"Other","description":""},{"field":"amountPaid","schema":"MortgageExpense","type":"Number","domain":"Other","description":""},{"field":"receivesSection8OrPublicHousing","schema":"MortgageExpenses","type":"Yes/No","domain":"Other","description":"Whether receiving Section 8 or public housing assistance."},{"field":"housingAssistanceType","schema":"MortgageExpenses","type":"Dropdown","domain":"Other","description":"Type of housing assistance received."},{"field":"items","schema":"MortgageExpenses","type":"List of → HousingExpenseItem","domain":"Other","description":"Mortgage expense items."},{"field":"wantsEmergencyMedicaid","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person wants emergency Medicaid."},{"field":"wantsReproductiveBenefits","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person wants reproductive benefits."},{"field":"hasBeenAbandonedMistreatedOrAbused","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person has been abandoned, mistreated, or abused."},{"field":"isPregnantOr20OrYounger","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person is pregnant or 20 years old or younger."},{"field":"livesWithSponsor","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person lives with their sponsor."},{"field":"receivesFreeRoomAndBoardFromSponsor","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person receives free room and board from their sponsor."},{"field":"receivesSupportFromSponsor","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person receives support from their sponsor."},{"field":"dateReceived","schema":"PastBenefitsFromOtherStates","type":"Date","domain":"Other","description":"Date benefits were received."},{"field":"city","schema":"PastBenefitsFromOtherStates","type":"Text","domain":"Other","description":"City where benefits were received."},{"field":"county","schema":"PastBenefitsFromOtherStates","type":"Text","domain":"Other","description":"County where benefits were received."},{"field":"state","schema":"PastBenefitsFromOtherStates","type":"Text","domain":"Other","description":"Two-letter state code where benefits were received."},{"field":"convictedOfDuplicateSNAPBenefits","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"hidingFromLaw","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"convictedOfDrugFelony","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"convictedOfSNAPTrafficking","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"convictedOfTradingSNAPForWeapons","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"disqualifiedForIPVOrWelfareFraud","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"convictedOfViolentCrime","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"propertyType","schema":"Property","type":"Text","domain":"Other","description":""},{"field":"propertyAddress","schema":"Property","type":"→ Address","domain":"Other","description":"Residential or mailing address used to determine eligibility."},{"field":"primaryPropertyUse","schema":"Property","type":"Multi-select","domain":"Other","description":""},{"field":"primaryPropertyUseOther","schema":"Property","type":"Text","domain":"Other","description":""},{"field":"currentValue","schema":"Property","type":"Number","domain":"Other","description":""},{"field":"expenseType","schema":"RentExpense","type":"Dropdown","domain":"Other","description":""},{"field":"expenseMonth","schema":"RentExpense","type":"Date","domain":"Other","description":""},{"field":"amountPaid","schema":"RentExpense","type":"Number","domain":"Other","description":""},{"field":"utilitiesIncludedInRent","schema":"RentExpenses","type":"Yes/No","domain":"Other","description":"Whether utilities are included in rent."},{"field":"receivesSection8OrPublicHousing","schema":"RentExpenses","type":"Yes/No","domain":"Other","description":"Whether receiving Section 8 or public housing assistance."},{"field":"housingAssistanceType","schema":"RentExpenses","type":"Dropdown","domain":"Other","description":"Type of housing assistance received."},{"field":"items","schema":"RentExpenses","type":"List of → HousingExpenseItem","domain":"Other","description":"Rent expense items."},{"field":"financialResources","schema":"ResourceInfo","type":"List of → FinancialResource","domain":"Intake","description":"Financial resources owned by this person."},{"field":"vehicles","schema":"ResourceInfo","type":"List of → Vehicle","domain":"Intake","description":"Vehicles owned by this person."},{"field":"insurancePolicies","schema":"ResourceInfo","type":"List of → InsurancePolicy","domain":"Intake","description":"Life or burial insurance policies for this person."},{"field":"realEstateProperties","schema":"ResourceInfo","type":"List of → Property","domain":"Intake","description":"Real estate properties owned by this person."},{"field":"months","schema":"RetroactiveMedicalRequest","type":"List of Date","domain":"Other","description":""},{"field":"householdIncomeInThoseMonths","schema":"RetroactiveMedicalRequest","type":"Number","domain":"Other","description":""},{"field":"businessName","schema":"SelfEmploymentRecord","type":"Text","domain":"Other","description":""},{"field":"oneMonthsGrossIncome","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"monthOfIncome","schema":"SelfEmploymentRecord","type":"Date","domain":"Other","description":""},{"field":"selfEmploymentType","schema":"SelfEmploymentRecord","type":"Dropdown","domain":"Other","description":""},{"field":"utilitiesPaidForBusiness","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"businessTaxesPaid","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"interestPaidForBusiness","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"grossBusinessLaborCosts","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"costOfMerchandise","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"otherBusinessCosts","schema":"SelfEmploymentRecord","type":"List of → OtherBusinessCost","domain":"Other","description":""},{"field":"totalNetIncome","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"program","schema":"SocialSecurityApplication","type":"Dropdown","domain":"Other","description":""},{"field":"otherProgramName","schema":"SocialSecurityApplication","type":"Text","domain":"Other","description":""},{"field":"applicationDate","schema":"SocialSecurityApplication","type":"Date","domain":"Other","description":""},{"field":"status","schema":"SocialSecurityApplication","type":"Dropdown","domain":"Other","description":""},{"field":"strikeBeginDate","schema":"StrikeInfo","type":"Date","domain":"Intake","description":""},{"field":"lastPaycheckDate","schema":"StrikeInfo","type":"Date","domain":"Intake","description":""},{"field":"lastPaycheckAmount","schema":"StrikeInfo","type":"Number","domain":"Intake","description":""},{"field":"willFileTaxes","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"filingJointlyWithSpouse","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"spouseName","schema":"TaxFilingInfo","type":"Text","domain":"Other","description":""},{"field":"willClaimDependents","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"dependentsToClaim","schema":"TaxFilingInfo","type":"List of Text","domain":"Other","description":""},{"field":"expectsToBeClaimedAsDependent","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"isClaimedAsDependent","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"nameOfPersonClaiming","schema":"TaxFilingInfo","type":"Text","domain":"Other","description":""},{"field":"isPersonClaimingListedOnApplication","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"isPersonClaimingNonCustodialParent","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"marriedFilingSeparatelyWithExceptionalCircumstances","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"dateOfTransfer","schema":"TransferredAsset","type":"Date","domain":"Intake","description":""},{"field":"assetDescription","schema":"TransferredAsset","type":"Text","domain":"Intake","description":""},{"field":"amountReceived","schema":"TransferredAsset","type":"Number","domain":"Intake","description":""},{"field":"fairMarketValue","schema":"TransferredAsset","type":"Number","domain":"Intake","description":""},{"field":"incomeType","schema":"UnearnedIncomeSource","type":"Dropdown","domain":"Intake","description":""},{"field":"monthlyAmount","schema":"UnearnedIncomeSource","type":"Number","domain":"Intake","description":""},{"field":"year","schema":"Vehicle","type":"Number","domain":"Intake","description":""},{"field":"make","schema":"Vehicle","type":"Text","domain":"Intake","description":""},{"field":"model","schema":"Vehicle","type":"Text","domain":"Intake","description":""},{"field":"currentValue","schema":"Vehicle","type":"Number","domain":"Intake","description":""},{"field":"utilityType","schema":"UtilityExpense","type":"Dropdown","domain":"Other","description":""},{"field":"expenseMonth","schema":"UtilityExpense","type":"Date","domain":"Other","description":""},{"field":"amountPaid","schema":"UtilityExpense","type":"Number","domain":"Other","description":""},{"field":"id","schema":"VerificationSource","type":"ID","domain":"Other","description":"Unique identifier for the verification source."},{"field":"addressLine1","schema":"Address","type":"Text","domain":"Intake","description":"Primary street address line."},{"field":"addressLine2","schema":"Address","type":"Text","domain":"Intake","description":"Secondary address line such as apartment or unit."},{"field":"city","schema":"Address","type":"Text","domain":"Intake","description":"City or locality of residence."},{"field":"stateProvince","schema":"Address","type":"Text","domain":"Intake","description":"State, province, or region of residence."},{"field":"postalCode","schema":"Address","type":"Text","domain":"Intake","description":"Postal or ZIP code."},{"field":"county","schema":"Address","type":"Text","domain":"Intake","description":"County or equivalent administrative region."},{"field":"name","schema":"EmployerInfo","type":"Text","domain":"Other","description":"Employer or business name."},{"field":"phone","schema":"EmployerInfo","type":"→ PhoneNumber","domain":"Other","description":"Employer phone number."},{"field":"address","schema":"EmployerInfo","type":"→ Address","domain":"Other","description":"Employer address."},{"field":"identificationNumber","schema":"EmployerInfo","type":"Text","domain":"Other","description":"Employer Identification Number (EIN)."},{"field":"firstName","schema":"Name","type":"Text","domain":"Intake","description":"First name."},{"field":"middleInitial","schema":"Name","type":"Text","domain":"Intake","description":"Middle initial."},{"field":"middleName","schema":"Name","type":"Text","domain":"Intake","description":"Middle name."},{"field":"lastName","schema":"Name","type":"Text","domain":"Intake","description":"Last name."},{"field":"maidenName","schema":"Name","type":"Text","domain":"Intake","description":"Maiden name if applicable."},{"field":"suffix","schema":"Name","type":"Text","domain":"Intake","description":"Name suffix such as Jr., Sr., III, etc."},{"field":"signature","schema":"Signature","type":"Text","domain":"Other","description":"Signature or signature indicator."},{"field":"signatureDate","schema":"Signature","type":"Date","domain":"Other","description":"Date the signature was made."}];
+    const searchIndex = [{"field":"id","schema":"Application","type":"ID","domain":"Intake","description":"Unique identifier for the application."},{"field":"state","schema":"Application","type":"Text","domain":"Intake","description":"Two-letter state code where the application is being submitted (e.g., CO, CA, NY)."},{"field":"status","schema":"Application","type":"Dropdown","domain":"Intake","description":"Current status of the application."},{"field":"screeningFlags","schema":"Application","type":"→ ApplicationScreeningFlags","domain":"Intake","description":"Flags indicating screening criteria relevant to this application."},{"field":"preferences","schema":"Application","type":"→ ApplicationPreferences","domain":"Intake","description":"Application preferences and consents."},{"field":"household","schema":"Application","type":"→ Household","domain":"Intake","description":"Household information including members, occupants, expenses, and related data."},{"field":"expeditedSNAPInfo","schema":"Application","type":"→ ExpeditedSNAPInfo","domain":"Intake","description":"Expedited SNAP screening information."},{"field":"signatures","schema":"Application","type":"→ Signatures","domain":"Intake","description":"Application signatures."},{"field":"applicationAssister","schema":"Application","type":"→ ApplicationAssister","domain":"Intake","description":"The person who helped complete this application."},{"field":"authorizedRepresentative","schema":"Application","type":"→ AuthorizedRepresentative","domain":"Intake","description":"Authorized representative for the applicant."},{"field":"createdAt","schema":"Application","type":"Date & Time","domain":"Intake","description":"Timestamp when the application was created."},{"field":"updatedAt","schema":"Application","type":"Date & Time","domain":"Intake","description":"Timestamp when the application was last updated."},{"field":"id","schema":"Household","type":"ID","domain":"Intake","description":"Unique identifier for the household."},{"field":"homeAddress","schema":"Household","type":"→ Address","domain":"Intake","description":"Home address of the household."},{"field":"mailingAddress","schema":"Household","type":"→ Address","domain":"Intake","description":"Mailing address if different from home address."},{"field":"phoneNumber","schema":"Household","type":"→ PhoneNumber","domain":"Intake","description":"Primary phone number for the household."},{"field":"members","schema":"Household","type":"List of → HouseholdMember","domain":"Intake","description":"List of household members with their relationship to the head of household."},{"field":"createdAt","schema":"Household","type":"Date & Time","domain":"Intake","description":"Timestamp when the household record was created."},{"field":"updatedAt","schema":"Household","type":"Date & Time","domain":"Intake","description":"Timestamp when the household record was last updated."},{"field":"id","schema":"Income","type":"ID","domain":"Intake","description":"Unique identifier for the income."},{"field":"personId","schema":"Income","type":"ID","domain":"Intake","description":"Foreign key reference to the person who has this income."},{"field":"employerId","schema":"Income","type":"ID","domain":"Intake","description":"Optional foreign key reference to the employer, third-party or self related to this income."},{"field":"type","schema":"Income","type":"Dropdown","domain":"Intake","description":"The type of income this item represents."},{"field":"unearnedType","schema":"Income","type":"Dropdown","domain":"Intake","description":"Types of unearned income."},{"field":"incomeBasis","schema":"Income","type":"Dropdown","domain":"Intake","description":"Whether the income is net or gross."},{"field":"amount","schema":"Income","type":"Number","domain":"Intake","description":"The amount of income this item represents."},{"field":"frequency","schema":"Income","type":"Dropdown","domain":"Intake","description":"The frequency with which the income is received."},{"field":"reportedOn","schema":"Income","type":"Date","domain":"Intake","description":"The date the income was reported on."},{"field":"source","schema":"Income","type":"Dropdown","domain":"Intake","description":"The source of the income."},{"field":"startDate","schema":"Income","type":"Date","domain":"Intake","description":"When did the applicant first receive this income?"},{"field":"endDate","schema":"Income","type":"Date","domain":"Intake","description":"Does applicant expect this income to end soon or has it already ended?"},{"field":"isVerified","schema":"Income","type":"Yes/No","domain":"Intake","description":"Whether the income has been verified."},{"field":"verifiedDate","schema":"Income","type":"Date","domain":"Intake","description":"The date the income was verified."},{"field":"verifiedBy","schema":"Income","type":"ID","domain":"Intake","description":"The county worker who verified the income."},{"field":"verificationSourceIds","schema":"Income","type":"List of ID","domain":"Intake","description":"Array of verification sources related to this income."},{"field":"name","schema":"Person","type":"→ Name","domain":"Client Management","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"Person","type":"Date","domain":"Client Management","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"Person","type":"SSN","domain":"Client Management","description":"Social Security Number for identity verification."},{"field":"address","schema":"Person","type":"→ Address","domain":"Client Management","description":"Address of the person."},{"field":"phoneNumber","schema":"Person","type":"Phone","domain":"Client Management","description":"Phone number for the person."},{"field":"email","schema":"Person","type":"Email","domain":"Client Management","description":"Email address of the person."},{"field":"id","schema":"Person","type":"ID","domain":"Client Management","description":"Unique identifier for the person. When creating an application, clients may\nprovide a temporary ID for linking related records (e.g., linking an absent\nparent to a child). The server replaces client-provided IDs with server-generated\nUUIDs upon submission.\n"},{"field":"demographicInfo","schema":"Person","type":"→ DemographicInfo","domain":"Client Management","description":"Demographic information including sex, marital status, and race."},{"field":"citizenshipInfo","schema":"Person","type":"→ CitizenshipInfo","domain":"Client Management","description":"Citizenship and immigration status information."},{"field":"contactInfo","schema":"Person","type":"→ ContactInfo","domain":"Client Management","description":"Contact information and communication preferences."},{"field":"employmentInfo","schema":"Person","type":"→ EmploymentInfo","domain":"Client Management","description":"Employment and self-employment information."},{"field":"educationInfo","schema":"Person","type":"→ EducationInfo","domain":"Client Management","description":"Student enrollment information for this person."},{"field":"militaryInfo","schema":"Person","type":"→ MilitaryInfo","domain":"Client Management","description":"Military and veteran status information."},{"field":"tribalInfo","schema":"Person","type":"→ TribalInfo","domain":"Client Management","description":"American Indian or Alaska Native tribal information for this person."},{"field":"consentToShareInformation","schema":"Person","type":"Yes/No","domain":"Client Management","description":"Consent to share information with partner agencies."},{"field":"createdAt","schema":"Person","type":"Date & Time","domain":"Client Management","description":"Timestamp when the person record was created."},{"field":"updatedAt","schema":"Person","type":"Date & Time","domain":"Client Management","description":"Timestamp when the person record was last updated."},{"field":"userId","schema":"User","type":"ID","domain":"Other","description":"User Service identifier."},{"field":"roles","schema":"User","type":"List of → Role","domain":"Other","description":"Role assignments with per-county permissions."},{"field":"ui","schema":"User","type":"→ Ui","domain":"Other","description":"Computed UI permissions and display data for frontend feature toggling.\nBackend computes these from role and permissions to provide\na UI-friendly interface for showing/hiding features.\n\nStructure is flexible - states define their own fields via overlays.\nExample fields: name, availableModules, canApproveApplications, etc.\n"},{"field":"preferences","schema":"User","type":"→ Preferences","domain":"Other","description":"User preferences (reserved for future use)."},{"field":"email","schema":"User","type":"Email","domain":"Other","description":"User's email address."},{"field":"firstName","schema":"User","type":"Text","domain":"Other","description":"User's first name."},{"field":"lastName","schema":"User","type":"Text","domain":"Other","description":"User's last name."},{"field":"id","schema":"User","type":"ID","domain":"Other","description":"Unique identifier for the user (same as userId in JWT claims)."},{"field":"idpSubject","schema":"User","type":"Text","domain":"Other","description":"Subject identifier from the Identity Provider. Immutable after creation.\nFormat varies by IdP (e.g., \"auth0|507f1f77bcf86cd799439011\").\n"},{"field":"status","schema":"User","type":"Dropdown","domain":"Other","description":"User account status."},{"field":"createdAt","schema":"User","type":"Date & Time","domain":"Other","description":"Timestamp when the user was created."},{"field":"updatedAt","schema":"User","type":"Date & Time","domain":"Other","description":"Timestamp when the user was last updated."},{"field":"districts","schema":"User","type":"List of Text","domain":"Other","description":"Colorado administrative districts the user can access."},{"field":"programs","schema":"User","type":"Multi-select","domain":"Other","description":"Programs the user is authorized to work on."},{"field":"userId","schema":"TokenClaims","type":"ID","domain":"Other","description":"User Service identifier."},{"field":"roles","schema":"TokenClaims","type":"→ Roles","domain":"Other","description":"Role and permissions for authorization."},{"field":"status","schema":"CitizenshipInfo","type":"Dropdown","domain":"Intake","description":"Citizenship or immigration status relevant to benefits eligibility."},{"field":"certificateNumber","schema":"CitizenshipInfo","type":"Text","domain":"Intake","description":"Certificate number if naturalized or derived citizen."},{"field":"immigrationInfo","schema":"CitizenshipInfo","type":"→ ImmigrationInfo","domain":"Intake","description":"Immigration information extended with eligibility fields."},{"field":"otherPhoneNumber","schema":"ContactInfo","type":"→ PhoneNumber","domain":"Intake","description":"Alternative phone number."},{"field":"mailingAddress","schema":"ContactInfo","type":"→ Address","domain":"Intake","description":"Mailing address if different from residential address."},{"field":"isHomeless","schema":"ContactInfo","type":"Yes/No","domain":"Intake","description":"Whether the person is currently homeless."},{"field":"preferredNoticeMethod","schema":"ContactInfo","type":"Dropdown","domain":"Intake","description":"Preferred method for receiving official notices."},{"field":"languagePreference","schema":"ContactInfo","type":"→ LanguagePreference","domain":"Intake","description":"Language preferences for communications."},{"field":"preferredContactMethod","schema":"ContactInfo","type":"Dropdown","domain":"Intake","description":"Preferred method of contact."},{"field":"isStateResident","schema":"ContactInfo","type":"Yes/No","domain":"Intake","description":"Whether the person is a resident of the state (for eligibility)."},{"field":"sex","schema":"DemographicInfo","type":"Dropdown","domain":"Intake","description":"Biological sex of the person."},{"field":"maritalStatus","schema":"DemographicInfo","type":"Dropdown","domain":"Intake","description":"Current marital status."},{"field":"isHispanicOrLatino","schema":"DemographicInfo","type":"Yes/No","domain":"Intake","description":"Whether the person identifies as Hispanic or Latino."},{"field":"race","schema":"DemographicInfo","type":"Multi-select","domain":"Intake","description":"Race identification (can select multiple)."},{"field":"lastGradeCompleted","schema":"EducationInfo","type":"Text","domain":"Intake","description":"Last grade level completed."},{"field":"isCurrentlyEnrolled","schema":"EducationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person is currently enrolled in school."},{"field":"schoolName","schema":"EducationInfo","type":"Text","domain":"Intake","description":"Name of the school or educational institution (if currently enrolled)."},{"field":"startDate","schema":"EducationInfo","type":"Date","domain":"Intake","description":"Date enrollment started (if currently enrolled)."},{"field":"isFullTimeStudent","schema":"EducationInfo","type":"Yes/No","domain":"Intake","description":"Whether the person is a full-time student (if currently enrolled)."},{"field":"expectedGraduationDate","schema":"EducationInfo","type":"Date","domain":"Intake","description":"Expected graduation date (if currently enrolled)."},{"field":"jobs","schema":"EmploymentInfo","type":"List of → Job","domain":"Intake","description":"Employment records for this person."},{"field":"status","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"documentType","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"documentNumber","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"alienOrI94Number","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"documentExpirationDate","schema":"ImmigrationInfo","type":"Date","domain":"Intake","description":""},{"field":"countryOfIssuance","schema":"ImmigrationInfo","type":"Text","domain":"Intake","description":""},{"field":"hasSponsor","schema":"ImmigrationInfo","type":"Yes/No","domain":"Intake","description":""},{"field":"sponsor","schema":"ImmigrationInfo","type":"→ Sponsor","domain":"Intake","description":"Sponsor information for this non-citizen."},{"field":"livedInUSSince1996","schema":"ImmigrationInfo","type":"Yes/No","domain":"Intake","description":"Whether the person has lived in the US continuously since August 22, 1996."},{"field":"spouseOrParentIsVeteranOrActiveDuty","schema":"ImmigrationInfo","type":"Yes/No","domain":"Intake","description":"Whether spouse or parent is a veteran or active duty military."},{"field":"employer","schema":"Job","type":"→ EmployerInfo","domain":"Intake","description":"Employer information."},{"field":"startDate","schema":"Job","type":"Date","domain":"Intake","description":"Date employment started."},{"field":"endDate","schema":"Job","type":"Date","domain":"Intake","description":"Date employment ended (omit if current job)."},{"field":"isMilitaryServiceMember","schema":"MilitaryInfo","type":"Yes/No","domain":"Intake","description":"Whether this person is a military service member."},{"field":"veteranStatus","schema":"MilitaryInfo","type":"Yes/No","domain":"Intake","description":"Indicates whether the person has served in the armed forces."},{"field":"name","schema":"PersonIdentity","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"PersonIdentity","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"PersonIdentity","type":"→ SocialSecurityNumber","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"PersonIdentity","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"PersonIdentity","type":"→ PhoneNumber","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"PersonIdentity","type":"→ Email","domain":"Other","description":"Email address of the person."},{"field":"name","schema":"Sponsor","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"Sponsor","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"Sponsor","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"Sponsor","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"Sponsor","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"Sponsor","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"spouse","schema":"Sponsor","type":"→ PersonIdentity","domain":"Other","description":"Basic identity and contact information for a person."},{"field":"totalPeopleInHousehold","schema":"Sponsor","type":"Number","domain":"Other","description":"Total number of people in the sponsor's household."},{"field":"tribeName","schema":"TribalInfo","type":"Text","domain":"Intake","description":""},{"field":"tribeState","schema":"TribalInfo","type":"Text","domain":"Intake","description":""},{"field":"hasReceivedServiceFromIndianHealthService","schema":"TribalInfo","type":"Yes/No","domain":"Intake","description":""},{"field":"isEligibleForIndianHealthService","schema":"TribalInfo","type":"Yes/No","domain":"Intake","description":""},{"field":"typeOfIncomeReceived","schema":"TribalInfo","type":"Text","domain":"Intake","description":"Type of tribal income received."},{"field":"frequencyAndAmount","schema":"TribalInfo","type":"Text","domain":"Intake","description":"Frequency and amount of tribal income."},{"field":"name","schema":"HouseholdMember","type":"→ Name","domain":"Intake","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"HouseholdMember","type":"Date","domain":"Intake","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"HouseholdMember","type":"SSN","domain":"Intake","description":"Social Security Number for identity verification."},{"field":"address","schema":"HouseholdMember","type":"→ Address","domain":"Intake","description":"Address of the person."},{"field":"phoneNumber","schema":"HouseholdMember","type":"Phone","domain":"Intake","description":"Phone number for the person."},{"field":"email","schema":"HouseholdMember","type":"Email","domain":"Intake","description":"Email address of the person."},{"field":"id","schema":"HouseholdMember","type":"ID","domain":"Intake","description":"Unique identifier for the person. When creating an application, clients may\nprovide a temporary ID for linking related records (e.g., linking an absent\nparent to a child). The server replaces client-provided IDs with server-generated\nUUIDs upon submission.\n"},{"field":"demographicInfo","schema":"HouseholdMember","type":"→ DemographicInfo","domain":"Intake","description":"Demographic information including sex, marital status, and race."},{"field":"citizenshipInfo","schema":"HouseholdMember","type":"→ CitizenshipInfo","domain":"Intake","description":"Citizenship information extended with eligibility immigration fields."},{"field":"contactInfo","schema":"HouseholdMember","type":"→ ContactInfo","domain":"Intake","description":"Contact information extended with eligibility fields."},{"field":"employmentInfo","schema":"HouseholdMember","type":"→ EmploymentInfo","domain":"Intake","description":"Employment and self-employment information."},{"field":"educationInfo","schema":"HouseholdMember","type":"→ EducationInfo","domain":"Intake","description":"Student enrollment information for this person."},{"field":"militaryInfo","schema":"HouseholdMember","type":"→ MilitaryInfo","domain":"Intake","description":"Military and veteran status information."},{"field":"tribalInfo","schema":"HouseholdMember","type":"→ TribalInfo","domain":"Intake","description":"Tribal information extended with income eligibility fields."},{"field":"consentToShareInformation","schema":"HouseholdMember","type":"Yes/No","domain":"Intake","description":"Consent to share information with partner agencies."},{"field":"createdAt","schema":"HouseholdMember","type":"Date & Time","domain":"Intake","description":"Timestamp when the person record was created."},{"field":"updatedAt","schema":"HouseholdMember","type":"Date & Time","domain":"Intake","description":"Timestamp when the person record was last updated."},{"field":"relationship","schema":"HouseholdMember","type":"Dropdown","domain":"Intake","description":"Relationship to primary applicant. Use \"self\" for the primary applicant.\n"},{"field":"programsApplyingFor","schema":"HouseholdMember","type":"Multi-select","domain":"Intake","description":"Programs this person is applying for. Empty array or omitted means not applying for any programs."},{"field":"institutionalizedInfo","schema":"HouseholdMember","type":"→ InstitutionalizedInfo","domain":"Intake","description":"Information about institutionalization if this person is temporarily in an institution."},{"field":"disabilityInfo","schema":"HouseholdMember","type":"→ DisabilityInfo","domain":"Intake","description":"Disability and SSI/SSDI information for this person."},{"field":"hasLegalClaim","schema":"HouseholdMember","type":"Yes/No","domain":"Intake","description":"Whether this person has a legal claim related to medical care."},{"field":"expenses","schema":"HouseholdMember","type":"→ ExpenseInfo","domain":"Intake","description":"Expenses paid by or for this person."},{"field":"incomeChangeInfo","schema":"HouseholdMember","type":"→ IncomeChangeInfo","domain":"Intake","description":"Income change information for health insurance eligibility."},{"field":"fosterCareInfo","schema":"HouseholdMember","type":"→ FosterCareHistory","domain":"Intake","description":"Foster care history for this person."},{"field":"absentParents","schema":"HouseholdMember","type":"List of → AbsentParent","domain":"Intake","description":"Absent parents for this child."},{"field":"employmentHistory","schema":"HouseholdMember","type":"List of → JobIncomeInfo","domain":"Intake","description":"Employment history for this person (jobs with endDate are past jobs)."},{"field":"selfEmployment","schema":"HouseholdMember","type":"List of → SelfEmploymentRecord","domain":"Intake","description":"Self-employment businesses for this person."},{"field":"unearnedIncomeSources","schema":"HouseholdMember","type":"List of → UnearnedIncomeSource","domain":"Intake","description":"Unearned income sources for this person."},{"field":"lumpSumPayments","schema":"HouseholdMember","type":"List of → LumpSumPayment","domain":"Intake","description":"Lump sum payments received by this person."},{"field":"strikeInfo","schema":"HouseholdMember","type":"→ StrikeInfo","domain":"Intake","description":"Strike information if this person is on strike."},{"field":"nonCitizenApplicationInfo","schema":"HouseholdMember","type":"→ NonCitizenApplicationInfo","domain":"Intake","description":"Application-specific information for non-citizens."},{"field":"familyPlanningInfo","schema":"HouseholdMember","type":"→ FamilyPlanningInfo","domain":"Intake","description":"Family planning and pregnancy information for this person."},{"field":"financialAidInfo","schema":"HouseholdMember","type":"→ FinancialAidInfo","domain":"Intake","description":"Financial aid information for this person."},{"field":"priorConvictions","schema":"HouseholdMember","type":"→ PriorConvictionsInfo","domain":"Intake","description":"Prior convictions information for this person."},{"field":"taxFilingInfo","schema":"HouseholdMember","type":"→ TaxFilingInfo","domain":"Intake","description":"Tax filing information for this person."},{"field":"resourceInfo","schema":"HouseholdMember","type":"→ ResourceInfo","domain":"Intake","description":"Financial resources and assets for this person."},{"field":"transferredAssets","schema":"HouseholdMember","type":"List of → TransferredAsset","domain":"Intake","description":"Assets transferred by this person."},{"field":"retroactiveMedicalRequest","schema":"HouseholdMember","type":"→ RetroactiveMedicalRequest","domain":"Intake","description":"Request for retroactive medical coverage for this person."},{"field":"healthInfo","schema":"HouseholdMember","type":"→ HealthInfo","domain":"Intake","description":"Health and insurance coverage information for eligibility determination."},{"field":"healthInsuranceEnrollments","schema":"HouseholdMember","type":"List of → HealthInsuranceEnrollment","domain":"Intake","description":"This person's enrollments or eligibilities for health insurance plans."},{"field":"pastBenefitsFromOtherStates","schema":"HouseholdMember","type":"→ PastBenefitsFromOtherStates","domain":"Intake","description":"Information about SNAP or cash benefits received in another state in the last 30 days."},{"field":"givesPermissionToValidateIncome","schema":"ApplicationPreferences","type":"Yes/No","domain":"Other","description":"Whether the applicant gives permission to validate income."},{"field":"wantsToRegisterToVote","schema":"ApplicationPreferences","type":"Yes/No","domain":"Other","description":"Whether the applicant wants to register to vote."},{"field":"burialPreference","schema":"ApplicationPreferences","type":"Dropdown","domain":"Other","description":"Preferred burial arrangement."},{"field":"ebtCardDeliveryMethod","schema":"ApplicationPreferences","type":"Dropdown","domain":"Other","description":"Preferred method for receiving the EBT card."},{"field":"programs","schema":"ApplicationScreeningFlags","type":"→ Programs","domain":"Other","description":"Program-specific screening flags."},{"field":"familyPlanning","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Family planning and dependent-related flags."},{"field":"disability","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Disability-related flags."},{"field":"citizenship","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Citizenship and immigration-related flags."},{"field":"medicalCoverage","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Medical coverage and health-related flags."},{"field":"tribal","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"American Indian or Alaska Native-related flags."},{"field":"fosterCareAndBenefitsHistory","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Foster care and benefits history flags."},{"field":"jobs","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Employment and income change flags."},{"field":"otherIncome","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Unearned income-related flags."},{"field":"expenses","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Housing and expense-related flags."},{"field":"education","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Education-related flags."},{"field":"resources","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Resource and asset-related flags."},{"field":"priorConvictions","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Prior conviction-related flags."},{"field":"military","schema":"ApplicationScreeningFlags","type":"Multi-select","domain":"Other","description":"Military service-related flags."},{"field":"name","schema":"AbsentParent","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"AbsentParent","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"AbsentParent","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"AbsentParent","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"AbsentParent","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"AbsentParent","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"triedToGetMedicalSupport","schema":"AbsentParent","type":"Yes/No","domain":"Other","description":"Whether applicant tried to get medical support from this absent parent."},{"field":"expenseType","schema":"AdditionalExpense","type":"Dropdown","domain":"Other","description":""},{"field":"monthOfExpense","schema":"AdditionalExpense","type":"Date","domain":"Other","description":""},{"field":"amountPaid","schema":"AdditionalExpense","type":"Number","domain":"Other","description":""},{"field":"legallyObligatedAmount","schema":"AdditionalExpense","type":"Number","domain":"Other","description":""},{"field":"name","schema":"ApplicationAssister","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"ApplicationAssister","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"ApplicationAssister","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"ApplicationAssister","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"ApplicationAssister","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"ApplicationAssister","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"name","schema":"AuthorizedRepresentative","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"AuthorizedRepresentative","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"AuthorizedRepresentative","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"AuthorizedRepresentative","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"AuthorizedRepresentative","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"AuthorizedRepresentative","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"isIndividual","schema":"AuthorizedRepresentative","type":"Yes/No","domain":"Other","description":"Whether the representative is an individual (vs organization)."},{"field":"organizationId","schema":"AuthorizedRepresentative","type":"Text","domain":"Other","description":"Organization identifier if not an individual."},{"field":"inCareOf","schema":"AuthorizedRepresentative","type":"Text","domain":"Other","description":"Care of line for address."},{"field":"receiveNotices","schema":"AuthorizedRepresentative","type":"Yes/No","domain":"Other","description":"Whether this representative should receive official notices."},{"field":"applicantSignature","schema":"AuthorizedRepresentative","type":"→ Signature","domain":"Other","description":"Applicant's signature authorizing this representative."},{"field":"authorizedRepresentativeSignature","schema":"AuthorizedRepresentative","type":"→ Signature","domain":"Other","description":"The authorized representative's signature."},{"field":"deductionType","schema":"DeductionItem","type":"Dropdown","domain":"Other","description":"Type of deduction."},{"field":"deductionTypeOther","schema":"DeductionItem","type":"Text","domain":"Other","description":"Description if deductionType is 'other'."},{"field":"frequency","schema":"DeductionItem","type":"Dropdown","domain":"Other","description":"How often the deduction occurs."},{"field":"currentAmount","schema":"DeductionItem","type":"Number","domain":"Other","description":"Current deduction amount."},{"field":"actualAnnualAmount","schema":"DeductionItem","type":"Number","domain":"Other","description":"Actual annual deduction amount."},{"field":"hasDisability","schema":"DisabilityInfo","type":"Yes/No","domain":"Intake","description":"Whether this person has a disability."},{"field":"needsHelpWithSelfCare","schema":"DisabilityInfo","type":"Yes/No","domain":"Intake","description":"Whether this person needs help with self-care activities."},{"field":"hasMedicalOrDevelopmentalCondition","schema":"DisabilityInfo","type":"Yes/No","domain":"Intake","description":"Whether this person has a medical or developmental condition."},{"field":"socialSecurityApplications","schema":"DisabilityInfo","type":"List of → SocialSecurityApplication","domain":"Intake","description":"SSI/SSDI applications for this person."},{"field":"hasReceivedSsiOrSsdi","schema":"DisabilityInfo","type":"Yes/No","domain":"Intake","description":"Whether this person has ever received SSI or SSDI (if not currently applied)."},{"field":"ssiOrSsdiEndDate","schema":"DisabilityInfo","type":"Date","domain":"Intake","description":"Date SSI or SSDI benefits ended for this person (if applicable)."},{"field":"rent","schema":"ExpenseInfo","type":"List of → RentExpense","domain":"Intake","description":""},{"field":"mortgage","schema":"ExpenseInfo","type":"List of → MortgageExpense","domain":"Intake","description":""},{"field":"utilities","schema":"ExpenseInfo","type":"List of → UtilityExpense","domain":"Intake","description":""},{"field":"additionalExpenses","schema":"ExpenseInfo","type":"List of → AdditionalExpense","domain":"Intake","description":""},{"field":"householdSize","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Number of people in the home who purchase and prepare food together."},{"field":"isMigrantOrSeasonalFarmWorker","schema":"ExpeditedSNAPInfo","type":"Yes/No","domain":"Other","description":"Whether any household member is a migrant or seasonal farm worker."},{"field":"totalExpectedIncomeThisMonth","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Total money household expects to get this month (before deductions)."},{"field":"totalCashOnHand","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Total cash on hand and money in checking/savings account."},{"field":"monthlyMortgage","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Monthly mortgage payment amount."},{"field":"monthlyRent","schema":"ExpeditedSNAPInfo","type":"Number","domain":"Other","description":"Monthly rent payment amount."},{"field":"utilityCosts","schema":"ExpeditedSNAPInfo","type":"→ UtilityCosts","domain":"Other","description":"Monthly utility costs."},{"field":"name","schema":"ExternalPerson","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"ExternalPerson","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"ExternalPerson","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"ExternalPerson","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"ExternalPerson","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"ExternalPerson","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"wantsFamilyPlanningBenefits","schema":"FamilyPlanningInfo","type":"Yes/No","domain":"Intake","description":"Whether this person wants family planning benefits."},{"field":"dueDate","schema":"FamilyPlanningInfo","type":"Date","domain":"Intake","description":"Expected due date if pregnant."},{"field":"numberOfBabiesExpected","schema":"FamilyPlanningInfo","type":"Number","domain":"Intake","description":"Number of babies expected if pregnant."},{"field":"fatherName","schema":"FamilyPlanningInfo","type":"Text","domain":"Intake","description":"Name of the father."},{"field":"wantsGoodCauseFromChildSupport","schema":"FamilyPlanningInfo","type":"Yes/No","domain":"Intake","description":"Whether this person wants good cause exemption from child support cooperation."},{"field":"programTypeOrName","schema":"FederalHealthBenefit","type":"Text","domain":"Other","description":""},{"field":"insuranceCompanyName","schema":"FederalHealthBenefit","type":"Text","domain":"Other","description":""},{"field":"policyNumber","schema":"FederalHealthBenefit","type":"Text","domain":"Other","description":""},{"field":"hasFinancialAid","schema":"FinancialAidInfo","type":"Yes/No","domain":"Intake","description":"Whether this person receives financial aid as a student."},{"field":"grantsScholarshipsWorkStudyForLivingExpenses","schema":"FinancialAidInfo","type":"Number","domain":"Intake","description":"Amount of grants/scholarships/work-study used for living expenses."},{"field":"taxableGrantsScholarshipsWorkStudy","schema":"FinancialAidInfo","type":"Number","domain":"Intake","description":"Amount of taxable grants/scholarships/work-study."},{"field":"nameUsedInOutOfStateFosterCare","schema":"FosterCareHistory","type":"Text","domain":"Other","description":"Name used in out-of-state foster care, if different from current name."},{"field":"dateLeftFosterCare","schema":"FosterCareHistory","type":"Date","domain":"Other","description":"Date the person left foster care, if known."},{"field":"wasAdopted","schema":"FosterCareHistory","type":"Yes/No","domain":"Other","description":"Whether the person was adopted."},{"field":"returnedToFosterCareAfterAdoption","schema":"FosterCareHistory","type":"Yes/No","domain":"Other","description":"If adopted, whether the person returned to foster care after adoption."},{"field":"dateReturnedToFosterCare","schema":"FosterCareHistory","type":"Date","domain":"Other","description":"Date the person returned to foster care after adoption, if applicable."},{"field":"dateOfStateResidency","schema":"FosterCareHistory","type":"Date","domain":"Other","description":"Date the person became a resident of the state."},{"field":"needsHelpPayingMedicalBills","schema":"FosterCareHistory","type":"Yes/No","domain":"Other","description":"Whether the person needs help paying medical bills."},{"field":"medicalBillsMonths","schema":"FosterCareHistory","type":"List of Date","domain":"Other","description":"Months for which the person needs help paying medical bills."},{"field":"resourceType","schema":"FinancialResource","type":"Dropdown","domain":"Intake","description":""},{"field":"financialInstitutionName","schema":"FinancialResource","type":"Text","domain":"Intake","description":""},{"field":"accountNumber","schema":"FinancialResource","type":"Text","domain":"Intake","description":""},{"field":"currentValue","schema":"FinancialResource","type":"Number","domain":"Intake","description":""},{"field":"rent","schema":"HouseholdExpenses","type":"→ RentExpenses","domain":"Other","description":"Rent expenses and settings."},{"field":"mortgage","schema":"HouseholdExpenses","type":"→ MortgageExpenses","domain":"Other","description":"Mortgage expenses and settings."},{"field":"utilities","schema":"HouseholdExpenses","type":"→ Utilities","domain":"Other","description":"Utility-related settings for the household."},{"field":"name","schema":"HouseholdOccupant","type":"→ Name","domain":"Other","description":"Legal name of the person."},{"field":"dateOfBirth","schema":"HouseholdOccupant","type":"Date","domain":"Other","description":"Birth date of the person."},{"field":"socialSecurityNumber","schema":"HouseholdOccupant","type":"SSN","domain":"Other","description":"Social Security Number for identity verification."},{"field":"address","schema":"HouseholdOccupant","type":"→ Address","domain":"Other","description":"Address of the person."},{"field":"phoneNumber","schema":"HouseholdOccupant","type":"Phone","domain":"Other","description":"Phone number for the person."},{"field":"email","schema":"HouseholdOccupant","type":"Email","domain":"Other","description":"Email address of the person."},{"field":"occupantType","schema":"HouseholdOccupant","type":"Dropdown","domain":"Other","description":"Type of occupant."},{"field":"rentPaidToHousehold","schema":"HouseholdOccupant","type":"Number","domain":"Other","description":"Amount paid for rent per month to the household."},{"field":"mealsIncluded","schema":"HouseholdOccupant","type":"Yes/No","domain":"Other","description":"Whether meals are included with the rent."},{"field":"expenseType","schema":"HousingExpenseItem","type":"Dropdown","domain":"Other","description":"Type of housing expense."},{"field":"whoPays","schema":"HousingExpenseItem","type":"Text","domain":"Other","description":"Name of the person who pays this expense."},{"field":"isPayerInHome","schema":"HousingExpenseItem","type":"Yes/No","domain":"Other","description":"Whether the person who pays lives in the home."},{"field":"expenseFor","schema":"HousingExpenseItem","type":"Text","domain":"Other","description":"Who the expense is for."},{"field":"expenseMonth","schema":"HousingExpenseItem","type":"Date","domain":"Other","description":"Month of the expense."},{"field":"amountPaid","schema":"HousingExpenseItem","type":"Number","domain":"Other","description":"Amount paid for this expense."},{"field":"typeOfCoverage","schema":"HealthCoverageDetail","type":"Dropdown","domain":"Other","description":""},{"field":"coverageStartDate","schema":"HealthCoverageDetail","type":"Date","domain":"Other","description":""},{"field":"coverageEndDate","schema":"HealthCoverageDetail","type":"Date","domain":"Other","description":""},{"field":"enrollmentStatus","schema":"HealthCoverageDetail","type":"Dropdown","domain":"Other","description":""},{"field":"healthCoverage","schema":"HealthInfo","type":"List of → HealthCoverageDetail","domain":"Intake","description":"Health insurance coverage details for this person."},{"field":"medicare","schema":"HealthInfo","type":"→ MedicareInfo","domain":"Intake","description":"Medicare coverage information for this person."},{"field":"federalHealthBenefits","schema":"HealthInfo","type":"List of → FederalHealthBenefit","domain":"Intake","description":"Federal health benefit programs this person is enrolled in."},{"field":"planName","schema":"HealthInsuranceEnrollment","type":"Text","domain":"Intake","description":"References a plan by name in the household's healthInsurancePlans map."},{"field":"status","schema":"HealthInsuranceEnrollment","type":"Dropdown","domain":"Intake","description":"Whether the person is eligible for or enrolled in the plan."},{"field":"coverageStartDate","schema":"HealthInsuranceEnrollment","type":"Date","domain":"Intake","description":"Date coverage started."},{"field":"coverageEndDate","schema":"HealthInsuranceEnrollment","type":"Date","domain":"Intake","description":"Date coverage ended or will end."},{"field":"couldStartCoverageDate","schema":"HealthInsuranceEnrollment","type":"Date","domain":"Intake","description":"Date when coverage could start if not yet enrolled."},{"field":"lostCoverageDate","schema":"HealthInsuranceEnrollment","type":"Date","domain":"Intake","description":"Date coverage was lost."},{"field":"premiumAmount","schema":"HealthInsuranceEnrollment","type":"Number","domain":"Intake","description":"Premium amount this person pays."},{"field":"premiumAmountUnknown","schema":"HealthInsuranceEnrollment","type":"Yes/No","domain":"Intake","description":"Whether the premium amount is unknown."},{"field":"premiumFrequency","schema":"HealthInsuranceEnrollment","type":"Dropdown","domain":"Intake","description":"How often premiums are paid."},{"field":"planName","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Unique name for this plan within the application (used as map key)."},{"field":"planType","schema":"HealthInsurancePlan","type":"Dropdown","domain":"Other","description":"Type of health insurance plan."},{"field":"employer","schema":"HealthInsurancePlan","type":"→ EmployerInfo","domain":"Other","description":"Employer offering the coverage (for employer_sponsored plans)."},{"field":"contactAboutCoverage","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Contact person for questions about coverage (for employer_sponsored plans)."},{"field":"hasEmployeeOnlyPlanMeetingMinimumValue","schema":"HealthInsurancePlan","type":"Yes/No","domain":"Other","description":"Whether an employee-only plan meeting minimum value is available."},{"field":"lowestCostPlanName","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Name of the lowest cost plan available."},{"field":"lowestCostPlanUnknown","schema":"HealthInsurancePlan","type":"Yes/No","domain":"Other","description":"Whether the lowest cost plan is unknown."},{"field":"noPlansMeetMinimumValue","schema":"HealthInsurancePlan","type":"Yes/No","domain":"Other","description":"Whether no plans meet minimum value requirements."},{"field":"insuranceCompanyName","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Name of the insurance company (for non-employer plans)."},{"field":"policyNumber","schema":"HealthInsurancePlan","type":"Text","domain":"Other","description":"Policy number (for non-employer plans)."},{"field":"changeReason","schema":"IncomeChangeInfo","type":"Dropdown","domain":"Intake","description":"Reason for income change."},{"field":"expectedAnnualIncome","schema":"IncomeChangeInfo","type":"Number","domain":"Intake","description":"Expected annual income."},{"field":"expectedIncomeChange","schema":"IncomeChangeInfo","type":"Dropdown","domain":"Intake","description":"How income is expected to change compared to last year."},{"field":"pastIncomeAmount","schema":"IncomeChangeInfo","type":"Number","domain":"Intake","description":"Past income amount for the relevant period."},{"field":"pastDeductionsAmount","schema":"IncomeChangeInfo","type":"Number","domain":"Intake","description":"Past deductions amount for the relevant period."},{"field":"deductionsChangeMonthly","schema":"IncomeChangeInfo","type":"Yes/No","domain":"Intake","description":"Whether deductions change from month to month."},{"field":"deductions","schema":"IncomeChangeInfo","type":"List of → DeductionItem","domain":"Intake","description":"Deductions that affect income for health insurance eligibility."},{"field":"isInstitutionalized","schema":"InstitutionalizedInfo","type":"Yes/No","domain":"Intake","description":"Whether this person is temporarily in an institution."},{"field":"dateEntered","schema":"InstitutionalizedInfo","type":"Date","domain":"Intake","description":"Date the person entered the institution."},{"field":"facilityName","schema":"InstitutionalizedInfo","type":"Text","domain":"Intake","description":"Name of the facility."},{"field":"facilityType","schema":"InstitutionalizedInfo","type":"Dropdown","domain":"Intake","description":"Type of facility."},{"field":"isPendingDisposition","schema":"InstitutionalizedInfo","type":"Yes/No","domain":"Intake","description":"Whether pending disposition of charges (for incarceration)."},{"field":"mealsProvided","schema":"InstitutionalizedInfo","type":"Yes/No","domain":"Intake","description":"Whether meals are provided by the facility."},{"field":"policyType","schema":"InsurancePolicy","type":"Dropdown","domain":"Intake","description":""},{"field":"company","schema":"InsurancePolicy","type":"Text","domain":"Intake","description":""},{"field":"policyNumber","schema":"InsurancePolicy","type":"Text","domain":"Intake","description":""},{"field":"revocableOrIrrevocable","schema":"InsurancePolicy","type":"Dropdown","domain":"Intake","description":""},{"field":"faceValue","schema":"InsurancePolicy","type":"Number","domain":"Intake","description":""},{"field":"cashSurrenderValue","schema":"InsurancePolicy","type":"Number","domain":"Intake","description":""},{"field":"employer","schema":"JobIncomeInfo","type":"→ EmployerInfo","domain":"Other","description":"Employer information."},{"field":"startDate","schema":"JobIncomeInfo","type":"Date","domain":"Other","description":"Date employment started."},{"field":"endDate","schema":"JobIncomeInfo","type":"Date","domain":"Other","description":"Date employment ended (omit if current job)."},{"field":"monthlyWagesBeforeTaxes","schema":"JobIncomeInfo","type":"Number","domain":"Other","description":"Monthly wages before taxes."},{"field":"hourlyWage","schema":"JobIncomeInfo","type":"Number","domain":"Other","description":"Hourly wage rate."},{"field":"averageHoursPerWeek","schema":"JobIncomeInfo","type":"Number","domain":"Other","description":"Average hours worked per week."},{"field":"payFrequency","schema":"JobIncomeInfo","type":"Dropdown","domain":"Other","description":"How often the person is paid."},{"field":"isTemporaryJob","schema":"JobIncomeInfo","type":"Yes/No","domain":"Other","description":"Whether this is a temporary job."},{"field":"incomeType","schema":"JobIncomeInfo","type":"Dropdown","domain":"Other","description":"Type of employment income."},{"field":"lastPaycheckDate","schema":"JobIncomeInfo","type":"Date","domain":"Other","description":"Date of last paycheck (for ended jobs)."},{"field":"lastPaycheckAmount","schema":"JobIncomeInfo","type":"Number","domain":"Other","description":"Amount of last paycheck (for ended jobs)."},{"field":"dateReceived","schema":"LumpSumPayment","type":"Date","domain":"Intake","description":""},{"field":"type","schema":"LumpSumPayment","type":"Dropdown","domain":"Intake","description":""},{"field":"amount","schema":"LumpSumPayment","type":"Number","domain":"Intake","description":""},{"field":"partA","schema":"MedicareInfo","type":"→ PartA","domain":"Other","description":""},{"field":"partB","schema":"MedicareInfo","type":"→ PartB","domain":"Other","description":""},{"field":"partC","schema":"MedicareInfo","type":"→ PartC","domain":"Other","description":""},{"field":"partD","schema":"MedicareInfo","type":"→ PartD","domain":"Other","description":""},{"field":"expenseType","schema":"MortgageExpense","type":"Dropdown","domain":"Other","description":""},{"field":"expenseMonth","schema":"MortgageExpense","type":"Date","domain":"Other","description":""},{"field":"amountPaid","schema":"MortgageExpense","type":"Number","domain":"Other","description":""},{"field":"receivesSection8OrPublicHousing","schema":"MortgageExpenses","type":"Yes/No","domain":"Other","description":"Whether receiving Section 8 or public housing assistance."},{"field":"housingAssistanceType","schema":"MortgageExpenses","type":"Dropdown","domain":"Other","description":"Type of housing assistance received."},{"field":"items","schema":"MortgageExpenses","type":"List of → HousingExpenseItem","domain":"Other","description":"Mortgage expense items."},{"field":"wantsEmergencyMedicaid","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person wants emergency Medicaid."},{"field":"wantsReproductiveBenefits","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person wants reproductive benefits."},{"field":"hasBeenAbandonedMistreatedOrAbused","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person has been abandoned, mistreated, or abused."},{"field":"isPregnantOr20OrYounger","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person is pregnant or 20 years old or younger."},{"field":"livesWithSponsor","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person lives with their sponsor."},{"field":"receivesFreeRoomAndBoardFromSponsor","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person receives free room and board from their sponsor."},{"field":"receivesSupportFromSponsor","schema":"NonCitizenApplicationInfo","type":"Yes/No","domain":"Intake","description":"Whether this person receives support from their sponsor."},{"field":"dateReceived","schema":"PastBenefitsFromOtherStates","type":"Date","domain":"Other","description":"Date benefits were received."},{"field":"city","schema":"PastBenefitsFromOtherStates","type":"Text","domain":"Other","description":"City where benefits were received."},{"field":"county","schema":"PastBenefitsFromOtherStates","type":"Text","domain":"Other","description":"County where benefits were received."},{"field":"state","schema":"PastBenefitsFromOtherStates","type":"Text","domain":"Other","description":"Two-letter state code where benefits were received."},{"field":"convictedOfDuplicateSNAPBenefits","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"hidingFromLaw","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"convictedOfDrugFelony","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"convictedOfSNAPTrafficking","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"convictedOfTradingSNAPForWeapons","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"disqualifiedForIPVOrWelfareFraud","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"convictedOfViolentCrime","schema":"PriorConvictionsInfo","type":"Yes/No","domain":"Other","description":""},{"field":"propertyType","schema":"Property","type":"Text","domain":"Other","description":""},{"field":"propertyAddress","schema":"Property","type":"→ Address","domain":"Other","description":"Residential or mailing address used to determine eligibility."},{"field":"primaryPropertyUse","schema":"Property","type":"Multi-select","domain":"Other","description":""},{"field":"primaryPropertyUseOther","schema":"Property","type":"Text","domain":"Other","description":""},{"field":"currentValue","schema":"Property","type":"Number","domain":"Other","description":""},{"field":"expenseType","schema":"RentExpense","type":"Dropdown","domain":"Other","description":""},{"field":"expenseMonth","schema":"RentExpense","type":"Date","domain":"Other","description":""},{"field":"amountPaid","schema":"RentExpense","type":"Number","domain":"Other","description":""},{"field":"utilitiesIncludedInRent","schema":"RentExpenses","type":"Yes/No","domain":"Other","description":"Whether utilities are included in rent."},{"field":"receivesSection8OrPublicHousing","schema":"RentExpenses","type":"Yes/No","domain":"Other","description":"Whether receiving Section 8 or public housing assistance."},{"field":"housingAssistanceType","schema":"RentExpenses","type":"Dropdown","domain":"Other","description":"Type of housing assistance received."},{"field":"items","schema":"RentExpenses","type":"List of → HousingExpenseItem","domain":"Other","description":"Rent expense items."},{"field":"financialResources","schema":"ResourceInfo","type":"List of → FinancialResource","domain":"Intake","description":"Financial resources owned by this person."},{"field":"vehicles","schema":"ResourceInfo","type":"List of → Vehicle","domain":"Intake","description":"Vehicles owned by this person."},{"field":"insurancePolicies","schema":"ResourceInfo","type":"List of → InsurancePolicy","domain":"Intake","description":"Life or burial insurance policies for this person."},{"field":"realEstateProperties","schema":"ResourceInfo","type":"List of → Property","domain":"Intake","description":"Real estate properties owned by this person."},{"field":"months","schema":"RetroactiveMedicalRequest","type":"List of Date","domain":"Other","description":""},{"field":"householdIncomeInThoseMonths","schema":"RetroactiveMedicalRequest","type":"Number","domain":"Other","description":""},{"field":"businessName","schema":"SelfEmploymentRecord","type":"Text","domain":"Other","description":""},{"field":"oneMonthsGrossIncome","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"monthOfIncome","schema":"SelfEmploymentRecord","type":"Date","domain":"Other","description":""},{"field":"selfEmploymentType","schema":"SelfEmploymentRecord","type":"Dropdown","domain":"Other","description":""},{"field":"utilitiesPaidForBusiness","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"businessTaxesPaid","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"interestPaidForBusiness","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"grossBusinessLaborCosts","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"costOfMerchandise","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"otherBusinessCosts","schema":"SelfEmploymentRecord","type":"List of → OtherBusinessCost","domain":"Other","description":""},{"field":"totalNetIncome","schema":"SelfEmploymentRecord","type":"Number","domain":"Other","description":""},{"field":"program","schema":"SocialSecurityApplication","type":"Dropdown","domain":"Other","description":""},{"field":"otherProgramName","schema":"SocialSecurityApplication","type":"Text","domain":"Other","description":""},{"field":"applicationDate","schema":"SocialSecurityApplication","type":"Date","domain":"Other","description":""},{"field":"status","schema":"SocialSecurityApplication","type":"Dropdown","domain":"Other","description":""},{"field":"strikeBeginDate","schema":"StrikeInfo","type":"Date","domain":"Intake","description":""},{"field":"lastPaycheckDate","schema":"StrikeInfo","type":"Date","domain":"Intake","description":""},{"field":"lastPaycheckAmount","schema":"StrikeInfo","type":"Number","domain":"Intake","description":""},{"field":"willFileTaxes","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"filingJointlyWithSpouse","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"spouseName","schema":"TaxFilingInfo","type":"Text","domain":"Other","description":""},{"field":"willClaimDependents","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"dependentsToClaim","schema":"TaxFilingInfo","type":"List of Text","domain":"Other","description":""},{"field":"expectsToBeClaimedAsDependent","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"isClaimedAsDependent","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"nameOfPersonClaiming","schema":"TaxFilingInfo","type":"Text","domain":"Other","description":""},{"field":"isPersonClaimingListedOnApplication","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"isPersonClaimingNonCustodialParent","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"marriedFilingSeparatelyWithExceptionalCircumstances","schema":"TaxFilingInfo","type":"Yes/No","domain":"Other","description":""},{"field":"dateOfTransfer","schema":"TransferredAsset","type":"Date","domain":"Intake","description":""},{"field":"assetDescription","schema":"TransferredAsset","type":"Text","domain":"Intake","description":""},{"field":"amountReceived","schema":"TransferredAsset","type":"Number","domain":"Intake","description":""},{"field":"fairMarketValue","schema":"TransferredAsset","type":"Number","domain":"Intake","description":""},{"field":"incomeType","schema":"UnearnedIncomeSource","type":"Dropdown","domain":"Intake","description":""},{"field":"monthlyAmount","schema":"UnearnedIncomeSource","type":"Number","domain":"Intake","description":""},{"field":"year","schema":"Vehicle","type":"Number","domain":"Intake","description":""},{"field":"make","schema":"Vehicle","type":"Text","domain":"Intake","description":""},{"field":"model","schema":"Vehicle","type":"Text","domain":"Intake","description":""},{"field":"currentValue","schema":"Vehicle","type":"Number","domain":"Intake","description":""},{"field":"utilityType","schema":"UtilityExpense","type":"Dropdown","domain":"Other","description":""},{"field":"expenseMonth","schema":"UtilityExpense","type":"Date","domain":"Other","description":""},{"field":"amountPaid","schema":"UtilityExpense","type":"Number","domain":"Other","description":""},{"field":"id","schema":"VerificationSource","type":"ID","domain":"Other","description":"Unique identifier for the verification source."},{"field":"addressLine1","schema":"Address","type":"Text","domain":"Intake","description":"Primary street address line."},{"field":"addressLine2","schema":"Address","type":"Text","domain":"Intake","description":"Secondary address line such as apartment or unit."},{"field":"city","schema":"Address","type":"Text","domain":"Intake","description":"City or locality of residence."},{"field":"stateProvince","schema":"Address","type":"Text","domain":"Intake","description":"State, province, or region of residence."},{"field":"postalCode","schema":"Address","type":"Text","domain":"Intake","description":"Postal or ZIP code."},{"field":"county","schema":"Address","type":"Text","domain":"Intake","description":"County or equivalent administrative region."},{"field":"userId","schema":"BackendAuthContext","type":"ID","domain":"Other","description":"User Service identifier."},{"field":"roles","schema":"BackendAuthContext","type":"→ Role","domain":"Other","description":"Role and permissions for authorization."},{"field":"name","schema":"Role","type":"→ RoleType","domain":"Other","description":"Authorization roles that determine base permissions and data scoping.\n\n- applicant: Self-service access to own applications (scoped by personId)\n- case_worker: Process applications for assigned county\n- supervisor: Oversee case workers, approve determinations (may span counties)\n- county_admin: Administer county staff and configuration\n- state_admin: Statewide oversight and administration (all counties)\n- partner_readonly: External partner with limited read access\n"},{"field":"permissions","schema":"Role","type":"List of Text","domain":"Other","description":"Permission strings in the format {resource}:{action}.\nExamples: applications:read, persons:update, users:create\n"},{"field":"name","schema":"EmployerInfo","type":"Text","domain":"Other","description":"Employer or business name."},{"field":"phone","schema":"EmployerInfo","type":"→ PhoneNumber","domain":"Other","description":"Employer phone number."},{"field":"address","schema":"EmployerInfo","type":"→ Address","domain":"Other","description":"Employer address."},{"field":"identificationNumber","schema":"EmployerInfo","type":"Text","domain":"Other","description":"Employer Identification Number (EIN)."},{"field":"sub","schema":"JwtClaims","type":"Text","domain":"Other","description":"Subject identifier from the Identity Provider.\nUniquely identifies the user within the IdP.\n"},{"field":"iss","schema":"JwtClaims","type":"URL","domain":"Other","description":"Token issuer (IdP URL)."},{"field":"aud","schema":"JwtClaims","type":"Text","domain":"Other","description":"Intended audience (API identifier)."},{"field":"exp","schema":"JwtClaims","type":"Number","domain":"Other","description":"Expiration timestamp (Unix epoch seconds)."},{"field":"iat","schema":"JwtClaims","type":"Number","domain":"Other","description":"Issued-at timestamp (Unix epoch seconds)."},{"field":"email","schema":"JwtClaims","type":"Email","domain":"Other","description":"User's email address."},{"field":"name","schema":"JwtClaims","type":"Text","domain":"Other","description":"User's display name."},{"field":"userId","schema":"JwtClaims","type":"ID","domain":"Other","description":"User Service identifier."},{"field":"roles","schema":"JwtClaims","type":"→ Roles","domain":"Other","description":"Role and permissions for authorization."},{"field":"firstName","schema":"Name","type":"Text","domain":"Intake","description":"First name."},{"field":"middleInitial","schema":"Name","type":"Text","domain":"Intake","description":"Middle initial."},{"field":"middleName","schema":"Name","type":"Text","domain":"Intake","description":"Middle name."},{"field":"lastName","schema":"Name","type":"Text","domain":"Intake","description":"Last name."},{"field":"maidenName","schema":"Name","type":"Text","domain":"Intake","description":"Maiden name if applicable."},{"field":"suffix","schema":"Name","type":"Text","domain":"Intake","description":"Name suffix such as Jr., Sr., III, etc."},{"field":"signature","schema":"Signature","type":"Text","domain":"Other","description":"Signature or signature indicator."},{"field":"signatureDate","schema":"Signature","type":"Date","domain":"Other","description":"Date the signature was made."}];
 
     // Search functionality with dropdown
     const searchInput = document.getElementById('search');

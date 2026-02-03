@@ -35,7 +35,7 @@ The Safety Net OpenAPI Toolkit provides **pre-built, shared API definitions for 
 
 ### Get Started
 
-Visit the [Toolkit Overview presentation](https://codeforamerica.github.io/safety-net-apis/docs/presentation/safety-net-openapi-overview.html) for a detailed walkthrough, explore the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-apis/packages/schemas/docs/schema-reference.html) to see the data model, or visit the [repository on GitHub](https://github.com/codeforamerica/safety-net-apis).
+Visit the [Toolkit Overview presentation](https://codeforamerica.github.io/safety-net-apis/docs/presentation/safety-net-openapi-overview.html) for a detailed walkthrough, explore the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-apis/docs/schema-reference.html) to see the data model, or visit the [repository on GitHub](https://github.com/codeforamerica/safety-net-apis).
 
 ---
 

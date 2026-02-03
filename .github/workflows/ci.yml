@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install
+
+      - name: Validate schemas
+        run: npm run validate
+
+      - name: Validate all state overlays
+        run: npm run validate:all-states -w @safety-net/schemas
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Regenerate design reference
+        run: npm run design:reference
+
+      - name: Commit design reference if changed
+        run: |
+          if git diff --quiet docs/schema-reference.html; then
+            echo "Design reference is up to date"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add docs/schema-reference.html
+            git commit -m "Update design reference"
+            git push
+          fi
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install
+
+      - name: Start mock server
+        run: npm run mock:start &
+
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:1080/health > /dev/null 2>&1; then
+              echo "Server is ready"
+              exit 0
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 1
+          done
+          echo "Server failed to start"
+          exit 1
+
+      - name: Run integration tests
+        run: npm run test:integration
