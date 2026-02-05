@@ -7,8 +7,8 @@
  *
  * This script:
  * 1. Resolves the state overlay
- * 2. Bundles resolved specs into a single OpenAPI file
- * 3. Generates typed API client using @hey-api/openapi-ts
+ * 2. Generates modular TypeScript types using OpenAPI Generator
+ * 3. Generates Zod schemas from TypeScript types using ts-to-zod
  * 4. Creates package directory with package.json
  * 5. Compiles TypeScript to JavaScript
  * 6. Outputs ready-to-publish package in dist-packages/{state}/
@@ -103,25 +103,167 @@ function titleCase(str) {
 }
 
 /**
- * Create openapi-ts config file
+ * Generate TypeScript types and API client using OpenAPI Generator
  */
-function createOpenApiTsConfig(inputPath, outputPath) {
-  const config = `// Auto-generated openapi-ts config
-export default {
-  input: '${inputPath}',
-  output: '${outputPath}',
-  plugins: [
-    '@hey-api/client-axios',
-    '@hey-api/typescript',
-    'zod',
-    {
-      name: '@hey-api/sdk',
-      validator: true,
-    },
-  ],
-};
+async function generateWithOpenAPIGenerator(specPath, outputPath) {
+  await exec('npx', [
+    '@openapitools/openapi-generator-cli', 'generate',
+    '-i', specPath,
+    '-g', 'typescript-axios',
+    '-o', outputPath,
+    '--skip-validate-spec',
+    '--additional-properties=withSeparateModelsAndApi=true,modelPackage=models,apiPackage=api,withNodeImports=true'
+  ]);
+}
+
+/**
+ * Convert OpenAPI schema to Zod schema code
+ */
+function schemaToZod(schema, schemaName, depth = 0, allSchemas = {}, seenRefs = new Set()) {
+  if (!schema) return 'z.unknown()';
+
+  // Handle $ref
+  if (schema.$ref) {
+    const refName = schema.$ref.split('/').pop();
+
+    // Prevent infinite recursion
+    if (seenRefs.has(refName)) {
+      return `z.lazy(() => ${refName}Schema)`;
+    }
+
+    // For top-level schema refs, just reference the schema name
+    return `${refName}Schema`;
+  }
+
+  // Handle basic types
+  if (schema.type === 'string') {
+    let zod = 'z.string()';
+    if (schema.format === 'date') zod += '.regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Invalid date format")';
+    if (schema.format === 'date-time') zod += '.datetime()';
+    if (schema.format === 'email') zod += '.email()';
+    if (schema.format === 'uuid') zod += '.uuid()';
+    if (schema.minLength) zod += `.min(${schema.minLength})`;
+    if (schema.maxLength) zod += `.max(${schema.maxLength})`;
+    if (schema.pattern) zod += `.regex(/${schema.pattern}/)`;
+    if (schema.enum) {
+      const values = schema.enum.map(v => `"${v}"`).join(', ');
+      zod = `z.enum([${values}])`;
+    }
+    return zod;
+  }
+
+  if (schema.type === 'number' || schema.type === 'integer') {
+    let zod = schema.type === 'integer' ? 'z.number().int()' : 'z.number()';
+    if (schema.minimum !== undefined) zod += `.min(${schema.minimum})`;
+    if (schema.maximum !== undefined) zod += `.max(${schema.maximum})`;
+    return zod;
+  }
+
+  if (schema.type === 'boolean') {
+    return 'z.boolean()';
+  }
+
+  if (schema.type === 'array') {
+    const itemsZod = schemaToZod(schema.items, null, depth + 1, allSchemas, seenRefs);
+    return `z.array(${itemsZod})`;
+  }
+
+  if (schema.type === 'object' || schema.properties) {
+    const props = [];
+    const required = schema.required || [];
+
+    for (const [key, propSchema] of Object.entries(schema.properties || {})) {
+      const propZod = schemaToZod(propSchema, null, depth + 1, allSchemas, seenRefs);
+      const isRequired = required.includes(key);
+      const zodProp = isRequired ? propZod : `${propZod}.optional()`;
+      props.push(`  "${key}": ${zodProp}`);
+    }
+
+    let objectSchema = `z.object({\n${props.join(',\n')}\n})`;
+
+    if (schema.additionalProperties === true) {
+      objectSchema += '.passthrough()';
+    } else if (schema.additionalProperties === false) {
+      objectSchema += '.strict()';
+    }
+
+    return objectSchema;
+  }
+
+  // Handle allOf
+  if (schema.allOf) {
+    const schemas = schema.allOf.map(s => schemaToZod(s, null, depth, allSchemas, seenRefs));
+    return schemas.length === 1 ? schemas[0] : `z.intersection(${schemas.join(', ')})`;
+  }
+
+  // Handle oneOf
+  if (schema.oneOf) {
+    const schemas = schema.oneOf.map(s => schemaToZod(s, null, depth, allSchemas, seenRefs));
+    return `z.union([${schemas.join(', ')}])`;
+  }
+
+  // Handle anyOf
+  if (schema.anyOf) {
+    const schemas = schema.anyOf.map(s => schemaToZod(s, null, depth, allSchemas, seenRefs));
+    return `z.union([${schemas.join(', ')}])`;
+  }
+
+  return 'z.unknown()';
+}
+
+/**
+ * Generate Zod schemas from OpenAPI spec
+ */
+async function generateZodSchemas(specPath, domainSrcDir, domain, outputDir) {
+  const schemasDir = join(domainSrcDir, 'schemas');
+  mkdirSync(schemasDir, { recursive: true });
+
+  // Bundle spec (dereference $refs) for Zod generation
+  const bundledPath = join(outputDir, `${domain}-bundled-for-zod.yaml`);
+  await exec('npx', [
+    '@apidevtools/swagger-cli', 'bundle',
+    specPath,
+    '-o', bundledPath,
+    '--dereference'
+  ]);
+
+  // Read bundled spec
+  const content = readFileSync(bundledPath, 'utf8');
+  const spec = yaml.load(content);
+
+  // Clean up temp file
+  rmSync(bundledPath, { force: true });
+
+  const schemas = [];
+  const allSchemas = spec.components?.schemas || {};
+
+  // Process component schemas
+  if (spec.components && spec.components.schemas) {
+    for (const [name, schema] of Object.entries(spec.components.schemas)) {
+      const zodCode = schemaToZod(schema, name, 0, allSchemas, new Set());
+
+      schemas.push(`
+/**
+ * ${schema.description || name}
+ */
+export const ${name}Schema = ${zodCode};
+`);
+    }
+  }
+
+  // Generate the module content
+  const schemasContent = `/**
+ * Zod validation schemas for ${domain} domain
+ * Auto-generated from OpenAPI specification
+ */
+
+import { z } from 'zod';
+
+${schemas.join('\n')}
 `;
-  return config;
+
+  writeFileSync(join(schemasDir, 'index.ts'), schemasContent);
+  console.log(`    Generated ${Object.keys(spec.components?.schemas || {}).length} Zod schemas`);
 }
 
 /**
@@ -166,40 +308,41 @@ async function main() {
     const domain = file.replace('.yaml', '');
     domains.push(domain);
     const specPath = join(resolvedDir, file);
-    const domainBundled = join(outputDir, `${domain}-bundled.yaml`);
     const domainSrcDir = join(srcDir, domain);
-    const domainConfigPath = join(outputDir, `${domain}.config.js`);
 
     console.log(`\n  Processing ${domain}...`);
 
-    // Bundle spec (dereference $refs)
-    await exec('npx', [
-      '@apidevtools/swagger-cli', 'bundle',
-      specPath,
-      '-o', domainBundled,
-      '--dereference'
-    ]);
+    // Generate TypeScript types and API client using OpenAPI Generator
+    console.log('    Generating TypeScript types and API client...');
+    await generateWithOpenAPIGenerator(specPath, domainSrcDir);
 
-    // Generate client for this domain
-    mkdirSync(domainSrcDir, { recursive: true });
-    const configContent = createOpenApiTsConfig(domainBundled, domainSrcDir);
-    writeFileSync(domainConfigPath, configContent);
+    // Create api/index.ts that re-exports all API files
+    const apiDir = join(domainSrcDir, 'api');
+    if (existsSync(apiDir)) {
+      const apiFiles = readdirSync(apiDir)
+        .filter(f => f.endsWith('-api.ts'))
+        .map(f => f.replace('.ts', ''));
 
-    await exec('npx', ['@hey-api/openapi-ts', '-f', domainConfigPath], { cwd: outputDir });
+      const apiIndexContent = `// Auto-generated API exports for ${domain}\n` +
+        apiFiles.map(f => `export * from './${f}.js';`).join('\n') + '\n';
 
-    // Post-process: Remove unused @ts-expect-error directives
-    const clientGenPath = join(domainSrcDir, 'client', 'client.gen.ts');
-    if (existsSync(clientGenPath)) {
-      let content = readFileSync(clientGenPath, 'utf8');
-      content = content.replace(/^\s*\/\/\s*@ts-expect-error\s*$/gm, '');
-      writeFileSync(clientGenPath, content);
+      writeFileSync(join(apiDir, 'index.ts'), apiIndexContent);
+      console.log(`    Created api/index.ts with ${apiFiles.length} API exports`);
     }
 
-    // Clean up temp files
-    rmSync(domainBundled, { force: true });
-    rmSync(domainConfigPath, { force: true });
+    // Generate Zod schemas from OpenAPI spec
+    console.log('    Generating Zod schemas...');
+    await generateZodSchemas(specPath, domainSrcDir, domain, outputDir);
 
-    console.log(`    Generated: ${domain}`);
+    // Create domain index that re-exports models, schemas, and API
+    const domainIndexContent = `// Auto-generated exports for ${domain}
+export * from './models/index.js';
+export * from './schemas/index.js';
+export * from './api/index.js';
+`;
+    writeFileSync(join(domainSrcDir, 'index.ts'), domainIndexContent);
+
+    console.log(`    ✅ Generated: ${domain}`);
   }
 
   // Step 3: Copy resolved OpenAPI specs to package
@@ -266,8 +409,18 @@ export { q, search } from './search-helpers.js';
   writeFileSync(join(outputDir, 'package.json'), packageJson);
   console.log('  Generated package.json');
 
-  // Step 7: Create tsconfig for compilation
-  console.log('\n7. Setting up TypeScript compilation...');
+  // Step 7: Generate README.md from template
+  console.log('\n7. Generating README.md...');
+  const readMeTemplate = readFileSync(join(templatesDir, 'README.template.md'), 'utf8');
+  const readMeContent = readMeTemplate
+    .replace(/\{\{STATE\}\}/g, state)
+    .replace(/\{\{VERSION\}\}/g, version)
+    .replace(/\{\{STATE_TITLE\}\}/g, stateTitle);
+  writeFileSync(join(outputDir, 'README.md'), readMeContent);
+  console.log('  Generated README.md');
+
+  // Step 8: Create tsconfig for compilation
+  console.log('\n8. Setting up TypeScript compilation...');
   const tsconfig = {
     compilerOptions: {
       target: 'ES2020',
@@ -286,13 +439,13 @@ export { q, search } from './search-helpers.js';
   writeFileSync(join(outputDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
   console.log('  Created tsconfig.json');
 
-  // Step 8: Install build dependencies (peer deps needed for type checking)
-  console.log('\n8. Installing build dependencies...');
+  // Step 9: Install build dependencies (peer deps needed for type checking)
+  console.log('\n9. Installing build dependencies...');
   await exec('npm', ['install', 'zod@^4.3.5', 'axios@^1.6.0', '--save-dev'], { cwd: outputDir });
   console.log('  Dependencies installed');
 
-  // Step 9: Compile TypeScript
-  console.log('\n9. Compiling TypeScript...');
+  // Step 10: Compile TypeScript
+  console.log('\n10. Compiling TypeScript...');
   try {
     await exec('npx', ['tsc'], { cwd: outputDir });
   } catch (error) {
@@ -308,7 +461,7 @@ export { q, search } from './search-helpers.js';
   // Summary
   console.log('\n========================================');
   console.log(`Package built successfully!`);
-  console.log(`  Name: @codeforamerica/safety-net-${state}`);
+  console.log(`  Name: @codeforamerica/safety-net-apis-${state}`);
   console.log(`  Version: ${version}`);
   console.log(`  Location: ${outputDir}`);
   console.log('========================================\n');

@@ -142,7 +142,13 @@ async function startSwaggerServer() {
   console.log('='.repeat(70));
   console.log('📚 Starting Swagger UI Server');
   console.log('='.repeat(70));
-  
+
+  const state = process.env.STATE;
+  if (state) {
+    console.log(`\nState: ${state}`);
+    console.log('Using resolved OpenAPI specifications\n');
+  }
+
   try {
     // Discover all API specs
     const apiSpecs = discoverApiSpecs();
@@ -153,7 +159,7 @@ async function startSwaggerServer() {
     }
     
     console.log(`\nFound ${apiSpecs.length} API specification(s):`);
-    apiSpecs.forEach(api => console.log(`  - ${api.name}`));
+    apiSpecs.forEach(api => console.log(`  - ${api.name} (${api.specPath})`));
     
     // Load all specs
     const loadedApis = [];

@@ -192,8 +192,14 @@ export function getExamplesPath(apiName) {
   const baseDir = join(__dirname, '../../openapi');
   const state = process.env.STATE;
 
-  // Check for state-specific examples first
+  // Check for resolved examples when STATE is set
   if (state) {
+    const resolvedPath = join(baseDir, 'resolved', 'examples', `${apiName}.yaml`);
+    if (existsSync(resolvedPath)) {
+      return resolvedPath;
+    }
+
+    // Check for state-specific examples in overlays
     const statePath = join(baseDir, 'overlays', state, 'examples', `${apiName}.yaml`);
     if (existsSync(statePath)) {
       return statePath;
