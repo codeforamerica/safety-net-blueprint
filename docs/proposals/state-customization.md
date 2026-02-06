@@ -33,15 +33,12 @@ This repository provides base OpenAPI specifications for safety net program APIs
 - Must work with existing Spectral validation
 - Overlays use JSON Merge Patch format (RFC 7396)
 - OpenAPI has no native support for build-time substitution (variables only work in server URLs at runtime), requiring a resolve CLI for CI pipelines
-- Build-time processing must support both value substitution and structural changes (filtering security schemes per environment)
 
 ---
 
 ## 1. File Organization
 
-### API Versioning
-
-**Pattern:** Version suffix in filename (no suffix = v1 implicit)
+**Pattern:** Version suffix in filename (no suffix = v1 implicit). Applies to both API specs and component files.
 
 ```
 openapi/
@@ -49,50 +46,21 @@ openapi/
   applications-v2.yaml      # Version 2 (when breaking changes needed)
   households.yaml
   persons.yaml
+  components/
+    contact.yaml            # Address, Email, PhoneNumber
+    identity.yaml           # Name, SocialSecurityNumber
+    identity-v2.yaml        # Breaking changes to identity schemas
+    auth.yaml               # BackendAuthContext, JwtClaims, RoleType, Role
+    security-schemes.yaml   # OAuth2, API key definitions
+    common.yaml             # Language, Program, Signature
+    common-parameters.yaml
+    common-responses.yaml
 ```
 
 **Conventions:**
 - No suffix = version 1 (implicit)
 - `-v2`, `-v3` etc. for breaking changes
-- Info block includes version: `info.version: "1.0.0"` or `"2.0.0"`
-- Base URL includes version: `/v1/applications`, `/v2/applications`
-
-### Component Versioning
-
-**Pattern:** Version on demand (no suffix = v1 implicit, add suffix for breaking changes)
-
-Break shared components into smaller, related files *(change from current: `common.yaml` contains multiple unrelated schemas)*:
-
-```
-openapi/
-  components/
-    # Identity and contact
-    contact.yaml          # Address, Email, PhoneNumber
-    identity.yaml         # Name, SocialSecurityNumber
-
-    # Authentication/Authorization
-    auth.yaml             # BackendAuthContext, JwtClaims, RoleType, Role
-    security-schemes.yaml # OAuth2, API key definitions
-
-    # Domain-specific
-    employment.yaml       # EmployerInfo
-    application.yaml      # Application schemas
-    person.yaml           # Person schemas
-    household.yaml        # Household schemas
-    income.yaml           # Income schemas
-    user.yaml             # User schemas
-
-    # Truly generic
-    common.yaml           # Language, Program, Signature
-    common-parameters.yaml
-    common-responses.yaml
-```
-
-**Rationale for smaller files:**
-- Easier to version independently (e.g., `identity-v2.yaml` without touching `contact.yaml`)
-- Clearer ownership and purpose
-- Reduces merge conflicts
-- States can overlay specific files without affecting others
+- API specs include version in the info block (`info.version: "1.0.0"`) and base URL (`/v1/applications`)
 
 **Other options considered:**
 
@@ -139,6 +107,8 @@ At build time for `--env=production`:
 - `apiKey` is excluded (production is not in its `x-environments`)
 - `${IDP_AUTHORIZATION_URL}` and `${IDP_TOKEN_URL}` are substituted from environment variables
 
+`x-environments` is optional. States that prefer simplicity can skip it entirely and include all security schemes in every environment, using `description` fields to document which environments support which auth methods. Placeholder substitution works independently.
+
 **Other options considered:**
 
 | Option | Pros | Cons |
@@ -172,7 +142,7 @@ safety-net-apis/
     tools/                  # @safety-net-apis/tools - validation, client generation
 ```
 
-Note: State-specific overlays will be removed from this repository and examples of how to construct overlays will be added to the project documentation. 
+Note: State-specific overlays will be removed from this repository and examples of how to construct overlays will be added to the project documentation. A tradeoff of this approach is overlay fragility: overlays target specific JSONPaths (e.g., `$.Person.properties.program.enum`), so a base spec restructure — moving a property, renaming a schema, or refactoring component files — can break state overlays even when the API itself hasn't changed. The resolve script already warns when overlay targets don't exist in the base spec, but states won't know an update will break their overlays until they run it. To mitigate this, states should pin exact versions of the base schemas (e.g., `"@safety-net-apis/schemas": "1.2.0"` rather than `"^1.2.0"`) so updates are intentional. After updating, the resolve step surfaces any stale targets immediately. Release notes should flag structural changes (renamed schemas, moved paths) so states can assess impact before upgrading.
 
 **State repository (state-controlled, can be private):**
 ```
@@ -216,7 +186,7 @@ npm install @safety-net-apis/schemas
     "clients:generate": "safety-net-clients --specs ./resolved --out ./clients"
   },
   "dependencies": {
-    "@safety-net-apis/schemas": "^1.0.0"
+    "@safety-net-apis/schemas": "1.0.0"
   },
   "devDependencies": {
     "@safety-net-apis/mock-server": "^1.0.0",
@@ -261,3 +231,5 @@ npm run resolve:prod
 |--------|------|------|
 | Single monorepo (all states in one repo) | Simple | Bloated, exposes configs |
 | Fork per state | Full control | Hard to pull updates |
+
+
