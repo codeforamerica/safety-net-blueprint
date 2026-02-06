@@ -1269,7 +1269,7 @@
       <div class="sidebar-domain-entities" style="display: none;">
         <a href="#Application" class="primary">Application</a>
         <a href="#Household" class="primary">Household</a>
-        <a href="#HouseholdMember" class="primary">HouseholdMember</a>
+        <a href="#HouseholdMember" class="primary has-variations">HouseholdMember *</a>
         <a href="#Income" class="primary">Income</a>
         <a href="#Address" class="secondary">Address</a>
         <a href="#CitizenshipInfo" class="secondary">CitizenshipInfo</a>
@@ -2828,43 +2828,43 @@ UUIDs upon submission.
       </tr>
     </thead>
     <tbody>
-      <tr data-field="name" class="expandable">
+      <tr data-field="name" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">name</td>
         <td class="field-type">→ <a href="#Name" class="type-link">Name</a></td>
         <td class="field-required">&#10003;</td>
         <td class="field-notes">Legal name of the person. [Nested]</td>
       </tr>
-      <tr data-field="dateOfBirth">
+      <tr data-field="dateOfBirth" data-state-field="colorado" class=" state-added-field">
         <td class="field-name">dateOfBirth</td>
         <td class="field-type">Date</td>
         <td class="field-required">&#10003;</td>
         <td class="field-notes">Birth date of the person.</td>
       </tr>
-      <tr data-field="socialSecurityNumber">
+      <tr data-field="socialSecurityNumber" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">socialSecurityNumber</td>
-        <td class="field-type">SSN</td>
+        <td class="field-type">→ <a href="#SocialSecurityNumber" class="type-link">SocialSecurityNumber</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Social Security Number for identity verification.</td>
+        <td class="field-notes">Social Security Number for identity verification. [Nested]</td>
       </tr>
-      <tr data-field="address" class="expandable">
+      <tr data-field="address" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">address</td>
         <td class="field-type">→ <a href="#Address" class="type-link">Address</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Address of the person. [Nested]</td>
       </tr>
-      <tr data-field="phoneNumber">
+      <tr data-field="phoneNumber" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">phoneNumber</td>
-        <td class="field-type">Phone</td>
+        <td class="field-type">→ <a href="#PhoneNumber" class="type-link">PhoneNumber</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Phone number for the person.</td>
+        <td class="field-notes">Phone number for the person. [Nested]</td>
       </tr>
-      <tr data-field="email">
+      <tr data-field="email" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">email</td>
-        <td class="field-type">Email</td>
+        <td class="field-type">→ <a href="#Email" class="type-link">Email</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Email address of the person.</td>
+        <td class="field-notes">Email address of the person. [Nested]</td>
       </tr>
-      <tr data-field="demographicInfo" class="expandable">
+      <tr data-field="demographicInfo" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">demographicInfo</td>
         <td class="field-type">→ <a href="#DemographicInfo" class="type-link">DemographicInfo</a></td>
         <td class="field-required"></td>
@@ -2874,27 +2874,27 @@ UUIDs upon submission.
         <td class="field-name">citizenshipInfo</td>
         <td class="field-type">→ <a href="#CitizenshipInfo" class="type-link">CitizenshipInfo</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Citizenship information extended with eligibility immigration fields. [Nested]</td>
+        <td class="field-notes">Citizenship and immigration status information. [Nested]</td>
       </tr>
       <tr data-field="contactInfo" class="expandable">
         <td class="field-name">contactInfo</td>
         <td class="field-type">→ <a href="#ContactInfo" class="type-link">ContactInfo</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Contact information extended with eligibility fields. [Nested]</td>
+        <td class="field-notes">Contact information and communication preferences. [Nested]</td>
       </tr>
-      <tr data-field="employmentInfo" class="expandable">
+      <tr data-field="employmentInfo" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">employmentInfo</td>
         <td class="field-type">→ <a href="#EmploymentInfo" class="type-link">EmploymentInfo</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Employment and self-employment information. [Nested]</td>
       </tr>
-      <tr data-field="educationInfo" class="expandable">
+      <tr data-field="educationInfo" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">educationInfo</td>
         <td class="field-type">→ <a href="#EducationInfo" class="type-link">EducationInfo</a></td>
         <td class="field-required"></td>
         <td class="field-notes">Student enrollment information for this person. [Nested]</td>
       </tr>
-      <tr data-field="militaryInfo" class="expandable">
+      <tr data-field="militaryInfo" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">militaryInfo</td>
         <td class="field-type">→ <a href="#MilitaryInfo" class="type-link">MilitaryInfo</a></td>
         <td class="field-required"></td>
@@ -2904,25 +2904,67 @@ UUIDs upon submission.
         <td class="field-name">tribalInfo</td>
         <td class="field-type">→ <a href="#TribalInfo" class="type-link">TribalInfo</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Tribal information extended with income eligibility fields. [Nested]</td>
+        <td class="field-notes">American Indian or Alaska Native tribal information for this person. [Nested]</td>
       </tr>
-      <tr data-field="consentToShareInformation">
+      <tr data-field="consentToShareInformation" data-state-field="colorado" class=" state-added-field">
         <td class="field-name">consentToShareInformation</td>
         <td class="field-type">Yes/No</td>
         <td class="field-required"></td>
         <td class="field-notes">Consent to share information with partner agencies.</td>
       </tr>
-      <tr data-field="relationship">
+      <tr data-field="countyCode" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">countyCode</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Colorado county FIPS code (001-125, odd numbers only).</td>
+      </tr>
+      <tr data-field="countyName" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">countyName</td>
+        <td class="field-type">Dropdown</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Options: Adams, Alamosa, Arapahoe, Archuleta, Baca, Bent, Boulder, Broomfield, Chaffee, Cheyenne, Clear Creek, Conejos, Costilla, Crowley, Custer, Delta, Denver, Dolores, Douglas, Eagle, El Paso, Elbert, Fremont, Garfield, Gilpin, Grand, Gunnison, Hinsdale, Huerfano, Jackson, Jefferson, Kiowa, Kit Carson, La Plata, Lake, Larimer, Las Animas, Lincoln, Logan, Mesa, Mineral, Moffat, Montezuma, Montrose, Morgan, Otero, Ouray, Park, Phillips, Pitkin, Prowers, Pueblo, Rio Blanco, Rio Grande, Routt, Saguache, San Juan, San Miguel, Sedgwick, Summit, Teller, Washington, Weld, Yuma</td>
+      </tr>
+      <tr data-field="peakAccountId" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">peakAccountId</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Colorado PEAK (Program Eligibility and Application Kit) account identifier.</td>
+      </tr>
+      <tr data-field="coloradoWorksEligible" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">coloradoWorksEligible</td>
+        <td class="field-type">Yes/No</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Indicates eligibility for Colorado Works (TANF).</td>
+      </tr>
+      <tr data-field="snapEligible" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">snapEligible</td>
+        <td class="field-type">Yes/No</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Indicates eligibility for Colorado SNAP.</td>
+      </tr>
+      <tr data-field="healthFirstColoradoEligible" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">healthFirstColoradoEligible</td>
+        <td class="field-type">Yes/No</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Indicates eligibility for Health First Colorado (Medicaid).</td>
+      </tr>
+      <tr data-field="andcsEligible" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">andcsEligible</td>
+        <td class="field-type">Yes/No</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Indicates eligibility for Aid to the Needy Disabled - Colorado Supplement.</td>
+      </tr>
+      <tr data-field="relationship" class="">
         <td class="field-name">relationship</td>
         <td class="field-type">Dropdown</td>
         <td class="field-required">&#10003;</td>
         <td class="field-notes">Options: self, spouse, child, parent, sibling, other relative, non relative</td>
       </tr>
-      <tr data-field="programsApplyingFor">
+      <tr data-field="programsApplyingFor" class="expandable">
         <td class="field-name">programsApplyingFor</td>
-        <td class="field-type">Multi-select</td>
+        <td class="field-type">List of → <a href="#Program" class="type-link">Program</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Options: snap, colorado works, health first colorado, child health plan plus, old age pension, andcs, leap, cccap</td>
+        <td class="field-notes">Options: snap, colorado works, health first colorado, child health plan plus, old age pension, andcs, leap, cccap [Nested]</td>
       </tr>
       <tr data-field="institutionalizedInfo" class="expandable">
         <td class="field-name">institutionalizedInfo</td>
@@ -2936,7 +2978,7 @@ UUIDs upon submission.
         <td class="field-required"></td>
         <td class="field-notes">Disability and SSI/SSDI information for this person. [Nested]</td>
       </tr>
-      <tr data-field="hasLegalClaim">
+      <tr data-field="hasLegalClaim" class="">
         <td class="field-name">hasLegalClaim</td>
         <td class="field-type">Yes/No</td>
         <td class="field-required"></td>
@@ -3008,60 +3050,6 @@ UUIDs upon submission.
         <td class="field-required"></td>
         <td class="field-notes">Family planning and pregnancy information for this person. [Nested]</td>
       </tr>
-      <tr data-field="financialAidInfo" class="expandable">
-        <td class="field-name">financialAidInfo</td>
-        <td class="field-type">→ <a href="#FinancialAidInfo" class="type-link">FinancialAidInfo</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Financial aid information for this person. [Nested]</td>
-      </tr>
-      <tr data-field="priorConvictions" class="expandable">
-        <td class="field-name">priorConvictions</td>
-        <td class="field-type">→ <a href="#PriorConvictionsInfo" class="type-link">PriorConvictionsInfo</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Prior convictions information for this person. [Nested]</td>
-      </tr>
-      <tr data-field="taxFilingInfo" class="expandable">
-        <td class="field-name">taxFilingInfo</td>
-        <td class="field-type">→ <a href="#TaxFilingInfo" class="type-link">TaxFilingInfo</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Tax filing information for this person. [Nested]</td>
-      </tr>
-      <tr data-field="resourceInfo" class="expandable">
-        <td class="field-name">resourceInfo</td>
-        <td class="field-type">→ <a href="#ResourceInfo" class="type-link">ResourceInfo</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Financial resources and assets for this person. [Nested]</td>
-      </tr>
-      <tr data-field="transferredAssets" class="expandable">
-        <td class="field-name">transferredAssets</td>
-        <td class="field-type">List of → <a href="#TransferredAsset" class="type-link">TransferredAsset</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Assets transferred by this person. [Nested]</td>
-      </tr>
-      <tr data-field="retroactiveMedicalRequest" class="expandable">
-        <td class="field-name">retroactiveMedicalRequest</td>
-        <td class="field-type">→ <a href="#RetroactiveMedicalRequest" class="type-link">RetroactiveMedicalRequest</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Request for retroactive medical coverage for this person. [Nested]</td>
-      </tr>
-      <tr data-field="healthInfo" class="expandable">
-        <td class="field-name">healthInfo</td>
-        <td class="field-type">→ <a href="#HealthInfo" class="type-link">HealthInfo</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Health and insurance coverage information for eligibility determination. [Nested]</td>
-      </tr>
-      <tr data-field="healthInsuranceEnrollments" class="expandable">
-        <td class="field-name">healthInsuranceEnrollments</td>
-        <td class="field-type">List of → <a href="#HealthInsuranceEnrollment" class="type-link">HealthInsuranceEnrollment</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">This person&#039;s enrollments or eligibilities for health insurance plans. [Nested]</td>
-      </tr>
-      <tr data-field="pastBenefitsFromOtherStates" class="expandable">
-        <td class="field-name">pastBenefitsFromOtherStates</td>
-        <td class="field-type">→ <a href="#PastBenefitsFromOtherStates" class="type-link">PastBenefitsFromOtherStates</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Information about SNAP or cash benefits received in another state in the last 30 days. [Nested]</td>
-      </tr>
     </tbody>
   </table>
 </div>
@@ -3077,7 +3065,7 @@ UUIDs upon submission.
       </tr>
     </thead>
     <tbody>
-      <tr data-field="id">
+      <tr data-field="id" data-state-field="colorado" class=" state-added-field">
         <td class="field-name">id</td>
         <td class="field-type">ID</td>
         <td class="field-required"></td>
@@ -3087,13 +3075,13 @@ parent to a child). The server replaces client-provided IDs with server-generate
 UUIDs upon submission.
 </td>
       </tr>
-      <tr data-field="createdAt">
+      <tr data-field="createdAt" data-state-field="colorado" class=" state-added-field">
         <td class="field-name">createdAt <span class="read-only-badge">read-only</span></td>
         <td class="field-type">Date & Time</td>
         <td class="field-required"></td>
         <td class="field-notes">Timestamp when the person record was created.</td>
       </tr>
-      <tr data-field="updatedAt">
+      <tr data-field="updatedAt" data-state-field="colorado" class=" state-added-field">
         <td class="field-name">updatedAt <span class="read-only-badge">read-only</span></td>
         <td class="field-type">Date & Time</td>
         <td class="field-required"></td>
@@ -8110,11 +8098,11 @@ UUIDs upon submission.
         <td class="field-required">&#10003;</td>
         <td class="field-notes">Birth date of the person.</td>
       </tr>
-      <tr data-field="socialSecurityNumber" class="">
+      <tr data-field="socialSecurityNumber" class="expandable">
         <td class="field-name">socialSecurityNumber</td>
-        <td class="field-type">SSN</td>
+        <td class="field-type">→ <a href="#SocialSecurityNumber" class="type-link">SocialSecurityNumber</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Social Security Number for identity verification.</td>
+        <td class="field-notes">Social Security Number for identity verification. [Nested]</td>
       </tr>
       <tr data-field="address" class="expandable">
         <td class="field-name">address</td>
@@ -8122,17 +8110,17 @@ UUIDs upon submission.
         <td class="field-required"></td>
         <td class="field-notes">Address of the person. [Nested]</td>
       </tr>
-      <tr data-field="phoneNumber" class="">
+      <tr data-field="phoneNumber" class="expandable">
         <td class="field-name">phoneNumber</td>
-        <td class="field-type">Phone</td>
+        <td class="field-type">→ <a href="#PhoneNumber" class="type-link">PhoneNumber</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Phone number for the person.</td>
+        <td class="field-notes">Phone number for the person. [Nested]</td>
       </tr>
-      <tr data-field="email" class="">
+      <tr data-field="email" class="expandable">
         <td class="field-name">email</td>
-        <td class="field-type">Email</td>
+        <td class="field-type">→ <a href="#Email" class="type-link">Email</a></td>
         <td class="field-required"></td>
-        <td class="field-notes">Email address of the person.</td>
+        <td class="field-notes">Email address of the person. [Nested]</td>
       </tr>
       <tr data-field="demographicInfo" class="expandable">
         <td class="field-name">demographicInfo</td>
@@ -14752,65 +14740,47 @@ within their assigned counties.
       </tr>
     </thead>
     <tbody>
-      <tr data-field="userId" class="">
-        <td class="field-name">userId</td>
-        <td class="field-type">ID</td>
+      <tr data-field="username" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">username</td>
+        <td class="field-type">Text</td>
         <td class="field-required">&#10003;</td>
-        <td class="field-notes">User Service identifier.</td>
+        <td class="field-notes">User&#039;s username for authentication.</td>
       </tr>
-      <tr data-field="roles" class="expandable">
-        <td class="field-name">roles</td>
-        <td class="field-type">→ <a href="#Roles" class="type-link">Roles</a></td>
+      <tr data-field="firstName" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">firstName</td>
+        <td class="field-type">Text</td>
         <td class="field-required">&#10003;</td>
-        <td class="field-notes">Role and permissions for authorization. [Nested]</td>
+        <td class="field-notes">User&#039;s first name.</td>
       </tr>
-      <tr data-field="ui" class="expandable">
-        <td class="field-name">ui <span class="read-only-badge">read-only</span></td>
-        <td class="field-type">→ Ui</td>
-        <td class="field-required"></td>
-        <td class="field-notes">Computed UI permissions and display data for frontend feature toggling.
-Backend computes these from role and permissions to provide
-a UI-friendly interface for showing/hiding features.
-
-Structure is flexible - states define their own fields via overlays.
-Example fields: name, availableModules, canApproveApplications, etc.
- [Nested]</td>
+      <tr data-field="lastName" data-state-field="colorado" class=" state-added-field">
+        <td class="field-name">lastName</td>
+        <td class="field-type">Text</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User&#039;s last name.</td>
       </tr>
-      <tr data-field="preferences" class="expandable">
+      <tr data-field="email" class="">
+        <td class="field-name">email</td>
+        <td class="field-type">Email</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">User&#039;s email address.</td>
+      </tr>
+      <tr data-field="preferences" data-state-field="colorado" class="expandable state-added-field">
         <td class="field-name">preferences</td>
         <td class="field-type">→ Preferences</td>
         <td class="field-required"></td>
-        <td class="field-notes">User preferences for the application.
-
-Structure is flexible - states define their own fields via overlays.
-Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
- [Nested]</td>
+        <td class="field-notes">User preferences. [Nested]</td>
       </tr>
-      <tr data-field="idpSubject" class="">
-        <td class="field-name">idpSubject</td>
-        <td class="field-type">Text</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Subject identifier from the Identity Provider. Immutable after creation.
-Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
-</td>
-      </tr>
-      <tr data-field="status" class="">
-        <td class="field-name">status</td>
-        <td class="field-type">Dropdown</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Options: active, inactive, pending, suspended</td>
-      </tr>
-      <tr data-field="districts" data-state-field="colorado" class=" state-added-field">
-        <td class="field-name">districts</td>
-        <td class="field-type">List of Text</td>
+      <tr data-field="profile" data-state-field="colorado" class="expandable state-added-field">
+        <td class="field-name">profile</td>
+        <td class="field-type">→ Profile</td>
         <td class="field-required"></td>
-        <td class="field-notes">Colorado administrative districts the user can access.</td>
+        <td class="field-notes">User profile information. [Nested]</td>
       </tr>
-      <tr data-field="programs" data-state-field="colorado" class="expandable state-added-field">
-        <td class="field-name">programs</td>
-        <td class="field-type">List of → <a href="#Program" class="type-link">Program</a></td>
-        <td class="field-required"></td>
-        <td class="field-notes">Programs the user is authorized to work on. [Nested]</td>
+      <tr data-field="roles" data-state-field="colorado" class="expandable state-added-field">
+        <td class="field-name">roles</td>
+        <td class="field-type">List of → <a href="#Role" class="type-link">Role</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Role assignments with per-county permissions. [Nested]</td>
       </tr>
     </tbody>
   </table>
@@ -14828,22 +14798,10 @@ Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
     </thead>
     <tbody>
       <tr data-field="id" class="">
-        <td class="field-name">id <span class="read-only-badge">read-only</span></td>
+        <td class="field-name">id</td>
         <td class="field-type">ID</td>
         <td class="field-required">&#10003;</td>
-        <td class="field-notes">Unique identifier for the user (same as userId in JWT claims).</td>
-      </tr>
-      <tr data-field="createdAt" class="">
-        <td class="field-name">createdAt <span class="read-only-badge">read-only</span></td>
-        <td class="field-type">Date & Time</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Timestamp when the user was created.</td>
-      </tr>
-      <tr data-field="updatedAt" class="">
-        <td class="field-name">updatedAt <span class="read-only-badge">read-only</span></td>
-        <td class="field-type">Date & Time</td>
-        <td class="field-required">&#10003;</td>
-        <td class="field-notes">Timestamp when the user was last updated.</td>
+        <td class="field-notes">Unique identifier for the user.</td>
       </tr>
     </tbody>
   </table>
@@ -15902,6 +15860,47 @@ Examples: applications:read, persons:update, users:create
 </div>
 </section>
 
+<section id="Role" class="schema-section inline-object" data-domain="unclassified">
+  <div class="section-header simple">
+    <span class="inline-object-badge">Nested in <a href="#User">User</a></span>
+    <h2>Role</h2>
+  </div>
+  <p class="description">Nested object within User.roles (array item)</p>
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="name" class="expandable">
+        <td class="field-name">name</td>
+        <td class="field-type">→ <a href="#RoleType" class="type-link">RoleType</a></td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">Options: technician, supervisor, district ops manager [Nested]</td>
+      </tr>
+      <tr data-field="county">
+        <td class="field-name">county</td>
+        <td class="field-type">Text</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Colorado county name.</td>
+      </tr>
+      <tr data-field="permissions" class="expandable">
+        <td class="field-name">permissions</td>
+        <td class="field-type">→ Permissions</td>
+        <td class="field-required">&#10003;</td>
+        <td class="field-notes">CRUD permissions by module. [Nested]</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
 <section id="CashPrograms" class="schema-section inline-object" data-domain="unclassified">
   <div class="section-header simple">
     <span class="inline-object-badge">Nested in <a href="#Programs">Programs</a></span>
@@ -15931,6 +15930,59 @@ Examples: applications:read, persons:update, users:create
         <td class="field-type">Yes/No</td>
         <td class="field-required"></td>
         <td class="field-notes">Whether applying for Adult Financial Assistance.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<section id="Permissions" class="schema-section inline-object" data-domain="unclassified">
+  <div class="section-header simple">
+    <span class="inline-object-badge">Nested in <a href="#Role">Role</a></span>
+    <h2>Permissions</h2>
+  </div>
+  <p class="description">CRUD permissions by module.</p>
+<div class="domain-group" style="--domain-color: #3498db; --domain-bg: #ebf5fb;">
+  <h5 class="domain-header"><span class="domain-indicator"></span>Fields</h5>
+  <table class="property-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Req</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-field="cases">
+        <td class="field-name">cases</td>
+        <td class="field-type">Multi-select</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Options: create, read, update, delete</td>
+      </tr>
+      <tr data-field="tasks">
+        <td class="field-name">tasks</td>
+        <td class="field-type">Multi-select</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Options: create, read, update, delete</td>
+      </tr>
+      <tr data-field="documents">
+        <td class="field-name">documents</td>
+        <td class="field-type">Multi-select</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Options: create, read, update, delete</td>
+      </tr>
+      <tr data-field="scheduling">
+        <td class="field-name">scheduling</td>
+        <td class="field-type">Multi-select</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Options: create, read, update, delete</td>
+      </tr>
+      <tr data-field="reports">
+        <td class="field-name">reports</td>
+        <td class="field-type">Multi-select</td>
+        <td class="field-required"></td>
+        <td class="field-notes">Options: create, read, update, delete</td>
       </tr>
     </tbody>
   </table>

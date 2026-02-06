@@ -26,101 +26,182 @@ actions:
           - x
           - unknown
 
-  # Add Colorado-specific county tracking
-  - target: $.Person.allOf.1.properties
-    description: Add Colorado county and PEAK integration fields
-    update:
-      countyCode:
-        type: string
-        description: Colorado county FIPS code (001-125, odd numbers only).
-        pattern: "^[0-1][0-2][0-9]$"
-        example: "001"
-      countyName:
-        type: string
-        description: Colorado county name.
-        enum:
-          - Adams
-          - Alamosa
-          - Arapahoe
-          - Archuleta
-          - Baca
-          - Bent
-          - Boulder
-          - Broomfield
-          - Chaffee
-          - Cheyenne
-          - Clear Creek
-          - Conejos
-          - Costilla
-          - Crowley
-          - Custer
-          - Delta
-          - Denver
-          - Dolores
-          - Douglas
-          - Eagle
-          - El Paso
-          - Elbert
-          - Fremont
-          - Garfield
-          - Gilpin
-          - Grand
-          - Gunnison
-          - Hinsdale
-          - Huerfano
-          - Jackson
-          - Jefferson
-          - Kiowa
-          - Kit Carson
-          - La Plata
-          - Lake
-          - Larimer
-          - Las Animas
-          - Lincoln
-          - Logan
-          - Mesa
-          - Mineral
-          - Moffat
-          - Montezuma
-          - Montrose
-          - Morgan
-          - Otero
-          - Ouray
-          - Park
-          - Phillips
-          - Pitkin
-          - Prowers
-          - Pueblo
-          - Rio Blanco
-          - Rio Grande
-          - Routt
-          - Saguache
-          - San Juan
-          - San Miguel
-          - Sedgwick
-          - Summit
-          - Teller
-          - Washington
-          - Weld
-          - Yuma
-        example: "Denver"
-      peakAccountId:
-        type: string
-        description: Colorado PEAK (Program Eligibility and Application Kit) account identifier.
-        pattern: "^[A-Z0-9]{10}$"
-        example: "PEAK123456"
-      coloradoWorksEligible:
-        type: boolean
-        description: Indicates eligibility for Colorado Works (TANF).
-      snapEligible:
-        type: boolean
-        description: Indicates eligibility for Colorado SNAP.
-      healthFirstColoradoEligible:
-        type: boolean
-        description: Indicates eligibility for Health First Colorado (Medicaid).
-      andcsEligible:
-        type: boolean
-        description: Indicates eligibility for Aid to the Needy Disabled - Colorado Supplement.
+  # Replace Colorado Person schema to avoid allOf composition issues
+  - target: $.Person
+    file: components/person.yaml
+    description: Replace Person schema completely with flattened structure for Colorado
+    replace:
+      type: object
+      description: |
+        Person resource representing an individual in Colorado's system. Contains core
+        identity, demographic, and ongoing attributes that persist about a person.
+      required:
+        - name
+        - dateOfBirth
+      properties:
+        # System fields
+        id:
+          type: string
+          format: uuid
+          description: |
+            Unique identifier for the person. When creating an application, clients may
+            provide a temporary ID for linking related records (e.g., linking an absent
+            parent to a child). The server replaces client-provided IDs with server-generated
+            UUIDs upon submission.
+
+        # PersonIdentity fields (flattened)
+        name:
+          $ref: "./common.yaml#/Name"
+          description: Legal name of the person.
+        dateOfBirth:
+          type: string
+          format: date
+          description: Birth date of the person.
+        socialSecurityNumber:
+          $ref: "./common.yaml#/SocialSecurityNumber"
+          description: Social Security Number for identity verification.
+        address:
+          $ref: "./common.yaml#/Address"
+          description: Address of the person.
+        phoneNumber:
+          $ref: "./common.yaml#/PhoneNumber"
+          description: Phone number for the person.
+        email:
+          $ref: "./common.yaml#/Email"
+          description: Email address of the person.
+
+        # Domain containers
+        demographicInfo:
+          $ref: "#/DemographicInfo"
+          description: Demographic information including sex, marital status, and race.
+        citizenshipInfo:
+          $ref: "#/CitizenshipInfo"
+          description: Citizenship and immigration status information.
+        contactInfo:
+          $ref: "#/ContactInfo"
+          description: Contact information and communication preferences.
+        employmentInfo:
+          $ref: "#/EmploymentInfo"
+          description: Employment and self-employment information.
+        educationInfo:
+          $ref: "#/EducationInfo"
+          description: Student enrollment information for this person.
+        militaryInfo:
+          $ref: "#/MilitaryInfo"
+          description: Military and veteran status information.
+        tribalInfo:
+          $ref: "#/TribalInfo"
+          description: American Indian or Alaska Native tribal information for this person.
+
+        # Simple fields
+        consentToShareInformation:
+          type: boolean
+          description: Consent to share information with partner agencies.
+
+        # Colorado-specific fields
+        countyCode:
+          type: string
+          description: Colorado county FIPS code (001-125, odd numbers only).
+          pattern: "^[0-1][0-2][0-9]$"
+          example: "001"
+        countyName:
+          type: string
+          description: Colorado county name.
+          enum:
+            - Adams
+            - Alamosa
+            - Arapahoe
+            - Archuleta
+            - Baca
+            - Bent
+            - Boulder
+            - Broomfield
+            - Chaffee
+            - Cheyenne
+            - Clear Creek
+            - Conejos
+            - Costilla
+            - Crowley
+            - Custer
+            - Delta
+            - Denver
+            - Dolores
+            - Douglas
+            - Eagle
+            - El Paso
+            - Elbert
+            - Fremont
+            - Garfield
+            - Gilpin
+            - Grand
+            - Gunnison
+            - Hinsdale
+            - Huerfano
+            - Jackson
+            - Jefferson
+            - Kiowa
+            - Kit Carson
+            - La Plata
+            - Lake
+            - Larimer
+            - Las Animas
+            - Lincoln
+            - Logan
+            - Mesa
+            - Mineral
+            - Moffat
+            - Montezuma
+            - Montrose
+            - Morgan
+            - Otero
+            - Ouray
+            - Park
+            - Phillips
+            - Pitkin
+            - Prowers
+            - Pueblo
+            - Rio Blanco
+            - Rio Grande
+            - Routt
+            - Saguache
+            - San Juan
+            - San Miguel
+            - Sedgwick
+            - Summit
+            - Teller
+            - Washington
+            - Weld
+            - Yuma
+          example: "Denver"
+        peakAccountId:
+          type: string
+          description: Colorado PEAK (Program Eligibility and Application Kit) account identifier.
+          pattern: "^[A-Z0-9]{10}$"
+          example: "PEAK123456"
+        coloradoWorksEligible:
+          type: boolean
+          description: Indicates eligibility for Colorado Works (TANF).
+        snapEligible:
+          type: boolean
+          description: Indicates eligibility for Colorado SNAP.
+        healthFirstColoradoEligible:
+          type: boolean
+          description: Indicates eligibility for Health First Colorado (Medicaid).
+        andcsEligible:
+          type: boolean
+          description: Indicates eligibility for Aid to the Needy Disabled - Colorado Supplement.
+
+        # Timestamps
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the person record was created.
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the person record was last updated.
+          readOnly: true
 
   # ============================================================================
   # Application Schema Modifications (components/application.yaml)
@@ -140,11 +221,280 @@ actions:
       - leap
       - cccap
 
+  # Replace HouseholdMember schema to avoid allOf composition issues
+  - target: $.HouseholdMember
+    file: components/application.yaml
+    description: Replace HouseholdMember schema completely with flattened structure for Colorado
+    replace:
+      type: object
+      description: |
+        An IRS-recognized household member for benefits eligibility in Colorado. Contains both
+        person information and application-specific fields for eligibility determination.
+        Includes the primary applicant (relationship=self) and other household members.
+      required:
+        - name
+        - dateOfBirth
+        - relationship
+      properties:
+        # System fields
+        id:
+          type: string
+          format: uuid
+          description: |
+            Unique identifier for the person. When creating an application, clients may
+            provide a temporary ID for linking related records (e.g., linking an absent
+            parent to a child). The server replaces client-provided IDs with server-generated
+            UUIDs upon submission.
+
+        # PersonIdentity fields (flattened from Person)
+        name:
+          $ref: "./common.yaml#/Name"
+          description: Legal name of the person.
+        dateOfBirth:
+          type: string
+          format: date
+          description: Birth date of the person.
+        socialSecurityNumber:
+          $ref: "./common.yaml#/SocialSecurityNumber"
+          description: Social Security Number for identity verification.
+        address:
+          $ref: "./common.yaml#/Address"
+          description: Address of the person.
+        phoneNumber:
+          $ref: "./common.yaml#/PhoneNumber"
+          description: Phone number for the person.
+        email:
+          $ref: "./common.yaml#/Email"
+          description: Email address of the person.
+
+        # Domain containers (from Person)
+        demographicInfo:
+          $ref: "./person.yaml#/DemographicInfo"
+          description: Demographic information including sex, marital status, and race.
+        citizenshipInfo:
+          $ref: "./person.yaml#/CitizenshipInfo"
+          description: Citizenship and immigration status information.
+        contactInfo:
+          $ref: "./person.yaml#/ContactInfo"
+          description: Contact information and communication preferences.
+        employmentInfo:
+          $ref: "./person.yaml#/EmploymentInfo"
+          description: Employment and self-employment information.
+        educationInfo:
+          $ref: "./person.yaml#/EducationInfo"
+          description: Student enrollment information for this person.
+        militaryInfo:
+          $ref: "./person.yaml#/MilitaryInfo"
+          description: Military and veteran status information.
+        tribalInfo:
+          $ref: "./person.yaml#/TribalInfo"
+          description: American Indian or Alaska Native tribal information for this person.
+
+        # Simple fields (from Person)
+        consentToShareInformation:
+          type: boolean
+          description: Consent to share information with partner agencies.
+
+        # Colorado-specific fields (from Person)
+        countyCode:
+          type: string
+          description: Colorado county FIPS code (001-125, odd numbers only).
+          pattern: "^[0-1][0-2][0-9]$"
+          example: "001"
+        countyName:
+          type: string
+          description: Colorado county name.
+          enum:
+            - Adams
+            - Alamosa
+            - Arapahoe
+            - Archuleta
+            - Baca
+            - Bent
+            - Boulder
+            - Broomfield
+            - Chaffee
+            - Cheyenne
+            - Clear Creek
+            - Conejos
+            - Costilla
+            - Crowley
+            - Custer
+            - Delta
+            - Denver
+            - Dolores
+            - Douglas
+            - Eagle
+            - El Paso
+            - Elbert
+            - Fremont
+            - Garfield
+            - Gilpin
+            - Grand
+            - Gunnison
+            - Hinsdale
+            - Huerfano
+            - Jackson
+            - Jefferson
+            - Kiowa
+            - Kit Carson
+            - La Plata
+            - Lake
+            - Larimer
+            - Las Animas
+            - Lincoln
+            - Logan
+            - Mesa
+            - Mineral
+            - Moffat
+            - Montezuma
+            - Montrose
+            - Morgan
+            - Otero
+            - Ouray
+            - Park
+            - Phillips
+            - Pitkin
+            - Prowers
+            - Pueblo
+            - Rio Blanco
+            - Rio Grande
+            - Routt
+            - Saguache
+            - San Juan
+            - San Miguel
+            - Sedgwick
+            - Summit
+            - Teller
+            - Washington
+            - Weld
+            - Yuma
+          example: "Denver"
+        peakAccountId:
+          type: string
+          description: Colorado PEAK (Program Eligibility and Application Kit) account identifier.
+          pattern: "^[A-Z0-9]{10}$"
+          example: "PEAK123456"
+        coloradoWorksEligible:
+          type: boolean
+          description: Indicates eligibility for Colorado Works (TANF).
+        snapEligible:
+          type: boolean
+          description: Indicates eligibility for Colorado SNAP.
+        healthFirstColoradoEligible:
+          type: boolean
+          description: Indicates eligibility for Health First Colorado (Medicaid).
+        andcsEligible:
+          type: boolean
+          description: Indicates eligibility for Aid to the Needy Disabled - Colorado Supplement.
+
+        # Timestamps (from Person)
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the person record was created.
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the person record was last updated.
+          readOnly: true
+
+        # HouseholdMember-specific Application fields
+        relationship:
+          type: string
+          description: |
+            Relationship to primary applicant. Use "self" for the primary applicant.
+          enum:
+            - self
+            - spouse
+            - child
+            - parent
+            - sibling
+            - other_relative
+            - non_relative
+        programsApplyingFor:
+          type: array
+          description: Programs this person is applying for. Empty array or omitted means not applying for any programs.
+          items:
+            $ref: "./common.yaml#/Program"
+        institutionalizedInfo:
+          $ref: "#/InstitutionalizedInfo"
+          description: Information about institutionalization if this person is temporarily in an institution.
+
+        # Disability Info (eligibility determination)
+        disabilityInfo:
+          $ref: "#/DisabilityInfo"
+          description: Disability and SSI/SSDI information for this person.
+
+        hasLegalClaim:
+          type: boolean
+          description: Whether this person has a legal claim related to medical care.
+
+        # Expenses
+        expenses:
+          $ref: "#/ExpenseInfo"
+          description: Expenses paid by or for this person.
+
+        # Income Changes (for health insurance eligibility)
+        incomeChangeInfo:
+          $ref: "#/IncomeChangeInfo"
+          description: Income change information for health insurance eligibility.
+
+        # Foster Care
+        fosterCareInfo:
+          $ref: "#/FosterCareHistory"
+          description: Foster care history for this person.
+
+        # Absent Parents (for children with relationship=child)
+        absentParents:
+          type: array
+          description: Absent parents for this child.
+          items:
+            $ref: "#/AbsentParent"
+
+        # Employment (for eligibility)
+        employmentHistory:
+          type: array
+          description: Employment history for this person (jobs with endDate are past jobs).
+          items:
+            $ref: "#/JobIncomeInfo"
+        selfEmployment:
+          type: array
+          description: Self-employment businesses for this person.
+          items:
+            $ref: "#/SelfEmploymentRecord"
+
+        # Unearned Income (point-in-time for eligibility)
+        unearnedIncomeSources:
+          type: array
+          description: Unearned income sources for this person.
+          items:
+            $ref: "#/UnearnedIncomeSource"
+        lumpSumPayments:
+          type: array
+          description: Lump sum payments received by this person.
+          items:
+            $ref: "#/LumpSumPayment"
+        strikeInfo:
+          $ref: "#/StrikeInfo"
+          description: Strike information if this person is on strike.
+
+        # Non-citizen application info
+        nonCitizenApplicationInfo:
+          $ref: "#/NonCitizenApplicationInfo"
+          description: Application-specific information for non-citizens.
+
+        # Family Planning (includes pregnancy)
+        familyPlanningInfo:
+          $ref: "#/FamilyPlanningInfo"
+          description: Family planning and pregnancy information for this person.
+
   # ============================================================================
   # User/Auth Schema Modifications (components/user.yaml, components/common.yaml)
   # ============================================================================
 
-  # Colorado role terminology - only 3 roles supported
+  # Colorado role terminology - only 3 roles supported (lowercase)
   - target: $.RoleType.enum
     file: components/common.yaml
     description: |
@@ -184,13 +534,24 @@ actions:
       type: object
       description: |
         Colorado authorization context for frontend applications.
-        Standalone schema with email, name fields, and role-based permissions per county.
+        Standalone schema with user identification, profile, and role-based permissions per county.
+      required:
+        - id
+        - username
+        - firstName
+        - lastName
+        - email
+        - roles
       properties:
-        email:
+        id:
           type: string
-          format: email
-          description: User's email address.
-          example: "jane.smith@state.co.us"
+          format: uuid
+          description: Unique identifier for the user.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        username:
+          type: string
+          description: User's username for authentication.
+          example: "randy"
         firstName:
           type: string
           description: User's first name.
@@ -199,6 +560,19 @@ actions:
           type: string
           description: User's last name.
           example: "Smith"
+        email:
+          type: string
+          format: email
+          description: User's email address.
+          example: "jane.smith@state.co.us"
+        preferences:
+          type: object
+          description: User preferences.
+          additionalProperties: true
+        profile:
+          type: object
+          description: User profile information.
+          additionalProperties: true
         roles:
           type: array
           description: Role assignments with per-county permissions.
@@ -206,7 +580,7 @@ actions:
             type: object
             required:
               - name
-              - county
+              - permissions
             properties:
               name:
                 type: string
@@ -223,144 +597,268 @@ actions:
               permissions:
                 type: object
                 description: CRUD permissions by module.
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                    enum: ["create", "read", "update", "delete"]
                 properties:
-                  tasks:
-                    type: array
-                    items:
-                      type: string
-                      enum: [read, create, update, delete]
                   cases:
                     type: array
                     items:
                       type: string
-                      enum: [read, create, update, delete]
+                      enum: ["create", "read", "update", "delete"]
+                  tasks:
+                    type: array
+                    items:
+                      type: string
+                      enum: ["create", "read", "update", "delete"]
                   documents:
                     type: array
                     items:
                       type: string
-                      enum: [read, create, update, delete]
+                      enum: ["create", "read", "update", "delete"]
                   scheduling:
                     type: array
                     items:
                       type: string
-                      enum: [read, create, update, delete]
+                      enum: ["create", "read", "update", "delete"]
                   reports:
                     type: array
                     items:
                       type: string
-                      enum: [read, create, update, delete]
+                      enum: ["create", "read", "update", "delete"]
           example:
             - name: "technician"
               county: "Denver"
               permissions:
-                tasks: ["read", "create"]
-                cases: ["read", "update"]
-                documents: ["read"]
-                scheduling: ["read"]
-                reports: ["read"]
-        preferences:
-          type: object
-          description: User preferences (reserved for future use).
+                cases: ["create", "read", "update", "delete"]
+                tasks: ["create", "read", "update", "delete"]
+                documents: ["create", "read", "update", "delete"]
+                scheduling: ["create", "read", "update", "delete"]
+                reports: ["create", "read", "update", "delete"]
 
   # ============================================================================
   # User Modifications
   # Colorado customizations:
-  #   - Remove email (now inherited from BackendAuthContext)
-  #   - Add districts and programs
+  #   - Replace the entire User schema with simplified structure
+  #   - Eliminates allOf composition to avoid TypeScript intersection types
   # ============================================================================
 
-  - target: $.User.allOf.1.properties.email
+  - target: $.User
     file: components/user.yaml
-    description: Remove email from User (inherited from BackendAuthContext)
-    remove: true
-
-  - target: $.User.allOf.1.required
-    file: components/user.yaml
-    description: Update required fields (remove email)
-    update:
-      - id
-      - idpSubject
-      - status
-      - createdAt
-      - updatedAt
-
-  - target: $.User.allOf.1.properties
-    file: components/user.yaml
-    description: Colorado adds districts and programs to User
-    update:
-      districts:
-        type: array
-        items:
+    description: Replace User schema completely with simplified structure
+    replace:
+      description: |
+        User account for authentication and authorization in Colorado.
+        Uses the same structure as FrontendAuthContext for consistency.
+      type: object
+      required:
+        - id
+        - username
+        - firstName
+        - lastName
+        - email
+        - roles
+      properties:
+        id:
           type: string
-        description: Colorado administrative districts the user can access.
-        example: ["D01", "D05"]
-      programs:
-        type: array
-        items:
-          $ref: "./common.yaml#/Program"
-        description: Programs the user is authorized to work on.
-        example: ["snap", "colorado_works"]
+          format: uuid
+          description: Unique identifier for the user.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        username:
+          type: string
+          description: User's username for authentication.
+          example: "randy"
+        firstName:
+          type: string
+          description: User's first name.
+          example: "Jane"
+        lastName:
+          type: string
+          description: User's last name.
+          example: "Smith"
+        email:
+          type: string
+          format: email
+          description: User's email address.
+          example: "jane.smith@state.co.us"
+        preferences:
+          type: object
+          description: User preferences.
+          additionalProperties: true
+        profile:
+          type: object
+          description: User profile information.
+          additionalProperties: true
+        roles:
+          type: array
+          description: Role assignments with per-county permissions.
+          items:
+            type: object
+            required:
+              - name
+              - permissions
+            properties:
+              name:
+                type: string
+                description: Role name.
+                enum:
+                  - technician
+                  - supervisor
+                  - district_ops_manager
+                example: "technician"
+              county:
+                type: string
+                description: Colorado county name.
+                example: "Denver"
+              permissions:
+                type: object
+                description: CRUD permissions by module.
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                    enum: ["create", "read", "update", "delete"]
+                properties:
+                  cases:
+                    type: array
+                    items:
+                      type: string
+                      enum: ["create", "read", "update", "delete"]
+                  tasks:
+                    type: array
+                    items:
+                      type: string
+                      enum: ["create", "read", "update", "delete"]
+                  documents:
+                    type: array
+                    items:
+                      type: string
+                      enum: ["create", "read", "update", "delete"]
+                  scheduling:
+                    type: array
+                    items:
+                      type: string
+                      enum: ["create", "read", "update", "delete"]
+                  reports:
+                    type: array
+                    items:
+                      type: string
+                      enum: ["create", "read", "update", "delete"]
 
   # ============================================================================
   # User Examples
   # Colorado examples use the standalone FrontendAuthContext structure
   # ============================================================================
 
+  # Remove unwanted base fields from UserExample1
+  - target: $.UserExample1.id
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample1.userId
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample1.idpSubject
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample1.role
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample1.status
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample1.createdAt
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample1.updatedAt
+    file: examples/users.yaml
+    remove: true
+
+  # Set Colorado-specific UserExample1 for /users/me response
   - target: $.UserExample1
     file: examples/users.yaml
-    description: Colorado User example - technician role
+    description: Colorado User example - technician role for /users/me response
     update:
-      id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-      idpSubject: "auth0|507f1f77bcf86cd799439011"
-      email: "jane.smith@state.co.us"
       firstName: "Jane"
-      lastName: "Smith"
+      lastName: "Doe"
+      email: "janedoe@example.gov"
+      preferences: {}
       roles:
         - name: "technician"
-          county: "Denver"
+          county: "Adams"
           permissions:
-            tasks: ["read", "create"]
-            cases: ["read", "update"]
-            documents: ["read"]
-            scheduling: ["read"]
-            reports: ["read"]
-      preferences: {}
-      districts: ["D01"]
-      programs: ["snap", "colorado_works"]
-      status: "active"
-      createdAt: "2024-01-15T10:30:00Z"
-      updatedAt: "2024-01-15T10:30:00Z"
+            cases: ["create", "read", "update", "delete"]
+            tasks: ["create", "read", "update", "delete"]
+            documents: ["create", "read", "update", "delete"]
+            scheduling: ["create", "read", "update", "delete"]
+            reports: ["create", "read", "update", "delete"]
+
+  # Remove unwanted fields from UserExample2
+  - target: $.UserExample2.userId
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample2.idpSubject
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample2.role
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample2.status
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample2.createdAt
+    file: examples/users.yaml
+    remove: true
+
+  - target: $.UserExample2.updatedAt
+    file: examples/users.yaml
+    remove: true
 
   - target: $.UserExample2
     file: examples/users.yaml
     description: Colorado User example - supervisor role
     update:
       id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
-      idpSubject: "auth0|608f2f88cdf97de8a8540022"
+      username: "jdoe"
       email: "john.doe@state.co.us"
       firstName: "John"
       lastName: "Doe"
+      preferences: {}
+      profile: {}
       roles:
         - name: "supervisor"
           county: "Denver"
           permissions:
-            tasks: ["read", "create", "update", "delete"]
-            cases: ["read", "create", "update", "delete"]
-            documents: ["read", "create", "update"]
-            scheduling: ["read", "create", "update"]
-            reports: ["read", "create"]
+            cases: ["create", "read", "update", "delete"]
+            tasks: ["create", "read", "update", "delete"]
+            documents: ["create", "read", "update", "delete"]
+            scheduling: ["create", "read", "update", "delete"]
+            reports: ["create", "read", "update", "delete"]
         - name: "technician"
           county: "Boulder"
           permissions:
-            tasks: ["read", "create"]
-            cases: ["read", "update"]
-            documents: ["read"]
+            cases: ["create", "read", "update"]
+            tasks: ["create", "read", "update"]
+            documents: ["read", "update"]
             scheduling: ["read"]
             reports: ["read"]
-      preferences: {}
-      districts: ["D01", "D05"]
-      programs: ["snap", "colorado_works", "health_first_colorado"]
-      status: "active"
-      createdAt: "2024-02-01T08:00:00Z"
-      updatedAt: "2024-03-10T14:22:00Z"
 
+  # Add example to GET /users/{userId} response
+  - target: $.paths./users/{userId}.get.responses.200.content.application/json
+    file: users.yaml
+    description: Add UserExample1 to GET /users/{userId} response
+    update:
+      examples:
+        UserExample1:
+          $ref: "./examples/users.yaml#/UserExample1"

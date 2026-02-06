@@ -166,23 +166,14 @@ async function main() {
     const domain = file.replace('.yaml', '');
     domains.push(domain);
     const specPath = join(resolvedDir, file);
-    const domainBundled = join(outputDir, `${domain}-bundled.yaml`);
     const domainSrcDir = join(srcDir, domain);
     const domainConfigPath = join(outputDir, `${domain}.config.js`);
 
     console.log(`\n  Processing ${domain}...`);
 
-    // Bundle spec (dereference $refs)
-    await exec('npx', [
-      '@apidevtools/swagger-cli', 'bundle',
-      specPath,
-      '-o', domainBundled,
-      '--dereference'
-    ]);
-
     // Generate client for this domain
     mkdirSync(domainSrcDir, { recursive: true });
-    const configContent = createOpenApiTsConfig(domainBundled, domainSrcDir);
+    const configContent = createOpenApiTsConfig(specPath, domainSrcDir);  // Use specPath instead of domainBundled
     writeFileSync(domainConfigPath, configContent);
 
     await exec('npx', ['@hey-api/openapi-ts', '-f', domainConfigPath], { cwd: outputDir });
@@ -196,7 +187,6 @@ async function main() {
     }
 
     // Clean up temp files
-    rmSync(domainBundled, { force: true });
     rmSync(domainConfigPath, { force: true });
 
     console.log(`    Generated: ${domain}`);
@@ -266,8 +256,17 @@ export { q, search } from './search-helpers.js';
   writeFileSync(join(outputDir, 'package.json'), packageJson);
   console.log('  Generated package.json');
 
-  // Step 7: Create tsconfig for compilation
-  console.log('\n7. Setting up TypeScript compilation...');
+  // Step 7: Generate README from template
+  console.log('\n7. Generating README.md...');
+  const readmeTemplate = readFileSync(join(templatesDir, 'README.template.md'), 'utf8');
+  const readme = readmeTemplate
+    .replace(/\{\{STATE\}\}/g, state)
+    .replace(/\{\{STATE_TITLE\}\}/g, stateTitle);
+  writeFileSync(join(outputDir, 'README.md'), readme);
+  console.log('  Generated README.md');
+
+  // Step 8: Create tsconfig for compilation
+  console.log('\n8. Setting up TypeScript compilation...');
   const tsconfig = {
     compilerOptions: {
       target: 'ES2020',
@@ -286,13 +285,13 @@ export { q, search } from './search-helpers.js';
   writeFileSync(join(outputDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
   console.log('  Created tsconfig.json');
 
-  // Step 8: Install build dependencies (peer deps needed for type checking)
-  console.log('\n8. Installing build dependencies...');
+  // Step 9: Install build dependencies (peer deps needed for type checking)
+  console.log('\n9. Installing build dependencies...');
   await exec('npm', ['install', 'zod@^4.3.5', 'axios@^1.6.0', '--save-dev'], { cwd: outputDir });
   console.log('  Dependencies installed');
 
-  // Step 9: Compile TypeScript
-  console.log('\n9. Compiling TypeScript...');
+  // Step 10: Compile TypeScript
+  console.log('\n10. Compiling TypeScript...');
   try {
     await exec('npx', ['tsc'], { cwd: outputDir });
   } catch (error) {

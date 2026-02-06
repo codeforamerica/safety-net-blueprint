@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "src", "openapi", "json-schema"],
+  "files": ["dist", "src", "openapi", "json-schema", "README.md"],
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -62,6 +62,18 @@
     "./incomes/*": {
       "import": "./dist/incomes/*.js",
       "types": "./dist/incomes/*.d.ts"
+    },
+    "./users": {
+      "import": "./dist/users/index.js",
+      "types": "./dist/users/index.d.ts"
+    },
+    "./users/client": {
+      "import": "./dist/users/client/index.js",
+      "types": "./dist/users/client/index.d.ts"
+    },
+    "./users/*": {
+      "import": "./dist/users/*.js",
+      "types": "./dist/users/*.d.ts"
     }
   },
   "peerDependencies": {
