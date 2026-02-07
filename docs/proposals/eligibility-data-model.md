@@ -21,7 +21,7 @@ Three personas interact with the eligibility data at different stages:
 
 **Applicant** — Fills out an integrated benefits application, selecting which programs to apply for (SNAP, Medicaid, TANF, etc.). Answers questions organized into sections. The questions presented depend on which programs are selected and on previous answers (conditional logic).
 
-**Caseworker** — Reviews the submitted application. Reviews are organized by section per person — a caseworker reviews "income for Jane" once, even if Jane is applying for both SNAP and Medicaid. The caseworker should not have to review the same information twice across programs.
+**Caseworker** — Reviews the submitted application. Reviews are organized by section per person — a caseworker reviews "income for Jane" once, even if Jane is applying for both SNAP and Medicaid. The caseworker should not have to review the same information twice across programs. However, different programs may count or use the same data differently (e.g., SNAP and Medicaid have different income counting rules), so the caseworker benefits from seeing which data points are relevant to which programs.
 
 **Eligibility system** — Receives the application data for determination. Needs to know which data sections are required for each program so it can verify completeness before evaluating. Produces per-program determination results.
 
@@ -142,6 +142,7 @@ A **form definition** is a new contract artifact type alongside state machines a
 - **Questions** — individual data collection points, mapped to schema fields
 - **Conditions** — JSON Logic expressions that control when questions and sections appear (consistent with how rules YAML uses JSON Logic)
 - **Program requirements** — which sections and questions are required for which programs
+- **Program relevance** — which questions and data types are relevant to which programs, enabling program-specific views of the same data
 - **Validation** — required fields, value constraints, cross-field validation
 
 ```yaml
@@ -200,6 +201,23 @@ sections:
     requiredForPrograms: [snap, medicaid, tanf]
     description: Enter each income source as a separate record.
     resourceType: income    # This section manages an API resource, not nested fields
+    programRelevance:       # How income types map to programs
+      employment:
+        relevantToPrograms: [snap, medicaid, tanf]
+      self_employment:
+        relevantToPrograms: [snap, medicaid, tanf]
+      unearned:
+        child_support:
+          relevantToPrograms: [snap, tanf]
+          notes:
+            snap: Counted as unearned income
+            tanf: Counted as unearned income
+        social_security_benefits:
+          relevantToPrograms: [snap, medicaid, tanf]
+          notes:
+            medicaid: Excluded from MAGI for most recipients
+        unemployment_benefits:
+          relevantToPrograms: [snap, medicaid, tanf]
 
   - id: tax_filing
     title: Tax Filing Information
@@ -219,6 +237,55 @@ sections:
         showWhen:
           "==": [{ "var": "taxFilingInfo.willFileTaxes" }, true]
 ```
+
+### Program relevance annotations
+
+The same data can be used differently by different programs. The form definition captures this through `relevantToPrograms` annotations at both the question level and the data type level.
+
+**Question-level relevance** — for nested fields (1:1 objects), individual questions can be annotated with which programs care about that field:
+
+```yaml
+# Tax filing is only required for Medicaid, but within the section,
+# some questions may also be relevant to other programs
+- id: willFileTaxes
+  field: taxFilingInfo.willFileTaxes
+  label: Will you file a federal tax return this year?
+  type: boolean
+  required: true
+  relevantToPrograms: [medicaid]
+
+- id: expectsToBeClaimedAsDependent
+  field: taxFilingInfo.expectsToBeClaimedAsDependent
+  label: Does anyone claim you as a tax dependent?
+  type: boolean
+  relevantToPrograms: [medicaid, snap]   # SNAP uses this for household composition rules
+```
+
+**Data type relevance** — for collection resources (income, assets, expenses), the `programRelevance` block maps specific data types to programs with optional notes explaining how each program uses that data. This enables the UI to show program-specific views during review.
+
+For example, when a caseworker reviews "Income for Jane," the UI can show:
+
+```
+Income for Jane                              Review: [Approved]
+─────────────────────────────────────────────────────────────
+  Employment - ABC Company      $2,100/mo    SNAP  Medicaid  TANF
+  Child support                   $400/mo    SNAP  TANF
+  Social Security                 $800/mo    SNAP  TANF
+                                             (Medicaid: excluded from MAGI)
+```
+
+The data is entered and reviewed once. The program relevance annotations let the UI highlight which items feed into which program's determination — helping the caseworker understand the full picture without reviewing anything twice.
+
+This pattern applies across sections:
+
+| Section | Example of program-specific relevance |
+|---------|--------------------------------------|
+| **Income** | SNAP counts most income types; Medicaid MAGI excludes some (e.g., Social Security for most recipients); TANF has its own exemptions |
+| **Assets** | SNAP tests countable resources (with elderly/disabled exemptions); Medicaid may or may not test assets depending on eligibility group; TANF has separate limits |
+| **Expenses** | SNAP uses specific deduction categories (shelter, dependent care, medical for elderly/disabled); Medicaid MAGI doesn't use the same deductions |
+| **Health & Disability** | Central to Medicaid eligibility grouping; affects SNAP deduction eligibility and ABAWD exemptions; affects TANF incapacity determination |
+
+States can modify program relevance mappings via overlay — a state might have different income counting rules for a state-administered program.
 
 ### How it connects to the adapter pattern
 
@@ -297,6 +364,12 @@ SectionReview:
 4. When all required sections are approved, the application can proceed to eligibility determination
 
 Because review tracking is section-based and sections are shared across programs, a caseworker reviews "Income for Jane" once — that review covers Jane's income for SNAP, Medicaid, and any other program that requires income data.
+
+### Program views during review
+
+While the caseworker reviews a section once, the review UI uses the form definition's program relevance annotations to show which data points matter for which programs. This helps the caseworker understand the impact of what they're reviewing without duplicating the review itself.
+
+The caseworker can optionally filter or highlight by program ("show me what matters for SNAP") while still working from the single canonical dataset. The `SectionReview` approval covers all programs — there's no need for per-program review records.
 
 ---
 
