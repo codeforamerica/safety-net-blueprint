@@ -11,7 +11,8 @@
 5. **[Application Form Definition](#5-application-form-definition)** — Questionnaire as a behavioral contract
 6. **[Review Tracking](#6-review-tracking)** — Per section per person
 7. **[Program Requirements](#7-program-requirements)** — Which sections each program needs
-8. **[Relationship to Existing Schemas](#8-relationship-to-existing-schemas)** — How this reshapes the current Application model
+8. **[Frontend Developer Workflow](#8-frontend-developer-workflow)** — How to build the applicant form and caseworker review UI
+9. **[Relationship to Existing Schemas](#9-relationship-to-existing-schemas)** — How this reshapes the current Application model
 
 ---
 
@@ -102,6 +103,7 @@ States may add sections via overlay (e.g., a state-specific program with data re
 | **Asset** | per member | 0-N records per person (bank accounts, vehicles, properties, insurance policies). Each is an independent item. | `GET/POST /applications/:appId/members/:memberId/assets` |
 | **Expense** | per member or per household | 0-N records. Member-level (dependent care, medical, child support) and household-level (shelter, utilities). | `GET/POST /applications/:appId/expenses` |
 | **Document** | per member or per application | Supporting evidence (pay stubs, immigration papers, ID). Linked to a section and optionally to a specific record. | `GET/POST /applications/:appId/documents` |
+| **SectionReview** | per section per member | Tracks caseworker review status for each section of each member (or household-level section). | `GET/POST /applications/:appId/reviews` |
 
 Each ApplicationMember has their own `programsApplyingFor` list — Jane might apply for SNAP + Medicaid while her child applies for Medicaid only. This per-member selection drives which sections are required, which questions appear in the form, and which program relevance annotations are shown during review.
 
@@ -132,8 +134,9 @@ These are single objects per person with a fixed structure. They're always read 
 | Nested object | Section | Why it's nested |
 |--------------|---------|-----------------|
 | `programs` | — | Read-only. Computed from the union of all members' `programsApplyingFor` lists. Convenience field for high-level filtering (e.g., "does this application involve SNAP?") without iterating members. Not writeable — program selection is always per-member. |
-| `formVersion` | — | Records which version of the form definition was used when the application was started. In-progress applications use their pinned version. |
 | `housingInfo` | Housing | One per application, fixed structure |
+
+The Application schema also includes a `formVersion` string field that records which version of the form definition was used when the application was started. This is a scalar field, not a nested object — it pins in-progress applications to their original form version.
 
 ---
 
@@ -285,7 +288,7 @@ sections:
     conditionallyRequiredFor:         # conditional requirement with JSON Logic
       medicaid:
         when:
-          "==": [{ "var": "member.medicaidEligibilityGroup" }, "non_magi"]
+          "==": [{ "var": "medicaidEligibilityGroup" }, "non_magi"]
     resourceType: asset
     programRelevance:
       financial_account:
@@ -458,13 +461,15 @@ States can add translations via overlay — both for new languages and for overr
 
 Form definitions can be authored as a pair of tables — one for sections and one for questions:
 
-**Section table:**
+**Section table** (showing a subset — the full table would include all 10 domain sections):
 
 | Section | Scope | Required For | Description |
 |---------|-------|-------------|-------------|
+| Household Composition | per household | SNAP, Medicaid, TANF | Members, relationships, program selection |
 | Identity | per member | SNAP, Medicaid, TANF | Name, DOB, SSN, demographics |
 | Citizenship | per member | SNAP, Medicaid, TANF | Citizenship status, immigration documents |
 | Income | per member | SNAP, Medicaid, TANF | Employment, self-employment, unearned income |
+| Assets | per member | SNAP, TANF; Medicaid (conditional) | Financial accounts, vehicles, property |
 | Tax Filing | per member | Medicaid | Filing status, dependents, MAGI deductions |
 | Housing | per household | SNAP | Address, rent/mortgage, utilities |
 
@@ -580,7 +585,254 @@ States may modify this mapping via overlay — for example, a state might requir
 
 ---
 
-## 8. Relationship to Existing Schemas
+## 8. Frontend Developer Workflow
+
+A frontend developer building the applicant form and caseworker review screens needs three things:
+
+1. **Zodios TypeScript clients** (already generated from OpenAPI specs) — typed API calls for all data operations
+2. **Form definition as typed JSON** — the behavioral contract, compiled from YAML to JSON at build time with generated TypeScript types
+3. **Form engine library** — lightweight TypeScript functions for evaluating conditions and computing active sections
+
+### What gets generated
+
+The build tooling produces these artifacts from the form definition YAML:
+
+| Artifact | Source | What it provides |
+|----------|--------|-----------------|
+| `form-definition.json` | Compiled from `forms/integrated-application.yaml` | The full form structure as importable JSON |
+| `form-types.ts` | Generated from `forms/form-definition.schema.json` | TypeScript types: `FormDefinition`, `Section`, `Question`, etc. |
+| `form-engine.ts` | Provided by `@safety-net-apis/tools` | Runtime functions: `getActiveSections()`, `evaluateCondition()`, `getFieldPath()` |
+| Zodios clients | Generated from OpenAPI specs | Typed API calls: `api.createApplication()`, `api.updateMember()`, etc. |
+
+The form engine is a thin wrapper around [json-logic-js](https://github.com/jwadhams/json-logic-js) (3KB, zero dependencies) that adds form-specific helpers. It evaluates `showWhen` conditions, computes which sections are active for a member's programs, and resolves `conditionallyRequiredFor` logic. All evaluation happens client-side for responsive UI — no server round-trip needed to show/hide questions as the user types.
+
+The form definition JSON and the Zodios clients share the same type universe — the `field` paths in the form definition resolve to properties on the same TypeScript types the Zodios clients use. A question with `field: "citizenshipInfo.status"` in a `member`-scope section maps to `ApplicationMember["citizenshipInfo"]["status"]` in the generated types.
+
+### Applicant experience
+
+The frontend renders the application form by loading the form definition, creating an application, and iterating through sections.
+
+**1. Create the application and load the form:**
+
+```typescript
+import { formDefinition } from '@safety-net-apis/forms';
+import { getActiveSections, evaluateCondition } from '@safety-net-apis/forms/engine';
+import { api } from './generated/clients/zodios';
+
+// Create a new application — formVersion is pinned automatically
+const app = await api.createApplication({ body: {} });
+
+// Form definition is a typed import — no fetch needed
+// (or load from server: await api.getForm({ params: { formId: 'integrated-application' } }))
+const form = formDefinition;
+```
+
+**2. Household composition — add members and select programs:**
+
+```typescript
+// Render the household_composition section (sectionType: member_management)
+// User adds Jane and her child, selects programs for each
+
+const jane = await api.createMember({
+  params: { appId: app.id },
+  body: {
+    personId: janePersonId,
+    programsApplyingFor: ['snap', 'medicaid'],
+    relationshipToApplicant: 'self'
+  }
+});
+
+const child = await api.createMember({
+  params: { appId: app.id },
+  body: {
+    personId: childPersonId,
+    programsApplyingFor: ['medicaid'],
+    relationshipToApplicant: 'child'
+  }
+});
+```
+
+**3. Compute active sections per member:**
+
+```typescript
+// For Jane (SNAP + Medicaid): identity, citizenship, income, expenses,
+// assets, health_disability, tax_filing, housing (household)
+const janeSections = getActiveSections(form, jane.programsApplyingFor, jane);
+
+// For child (Medicaid only): identity, citizenship, income, health_disability, tax_filing
+const childSections = getActiveSections(form, child.programsApplyingFor, child);
+```
+
+`getActiveSections` checks `requiredForPrograms` against the member's programs and evaluates `conditionallyRequiredFor` conditions against the member's data. Household-scope sections (housing, household composition) appear once if any member's programs require them.
+
+**4. Render questions and evaluate showWhen:**
+
+```typescript
+// For each question in the current section, check visibility
+for (const question of section.questions) {
+  const visible = question.showWhen
+    ? evaluateCondition(question.showWhen, memberData)
+    : true;
+
+  if (visible) {
+    renderQuestion(question);
+    // question.label  → display text
+    // question.type   → input type (enum, boolean, date, currency, etc.)
+    // question.options → enum values (if type is enum)
+    // question.field  → where to save the answer
+  }
+}
+```
+
+Conditions re-evaluate as the user changes answers — if they select `citizenshipInfo.status = "us_citizen"`, the immigration document question disappears immediately.
+
+**5. Save answers — the `field` property tells the frontend where to write:**
+
+```typescript
+// Nested fields (identity, citizenship, tax_filing sections):
+// field path maps to a PATCH body on the member
+await api.updateMember({
+  params: { appId: app.id, memberId: jane.id },
+  body: { citizenshipInfo: { status: 'us_citizen' } }
+  //       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //       built from question.field = "citizenshipInfo.status"
+});
+
+// Resource sections (income, assets):
+// resourceType tells the frontend to use the resource API, not PATCH
+await api.createIncome({
+  params: { appId: app.id, memberId: jane.id },
+  body: { type: 'employment', employer: 'ABC Company', monthlyAmount: 2100 }
+});
+
+// Household sections (housing):
+// scope: household → PATCH the application, not a member
+await api.updateApplication({
+  params: { appId: app.id },
+  body: { housingInfo: { housingType: 'rent', monthlyRent: 1200 } }
+  //       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //       built from question.field = "housingInfo.housingType" etc.
+});
+```
+
+The pattern: look at the section's `scope` and whether it has a `resourceType`.
+
+| Section config | Save method |
+|---------------|-------------|
+| `scope: member`, no `resourceType` | `PATCH /applications/:appId/members/:memberId` — set fields from `question.field` paths |
+| `scope: member`, has `resourceType` | `POST/PATCH/DELETE` the resource endpoint from `form.resources[resourceType]` |
+| `scope: household`, no `resourceType` | `PATCH /applications/:appId` — set fields from `question.field` paths |
+| `sectionType: member_management` | `POST/PATCH/DELETE /applications/:appId/members` |
+
+**6. Submit the application:**
+
+```typescript
+// Application lifecycle is governed by the state machine contract
+await api.submitApplication({ params: { appId: app.id } });
+// → triggers state transition: draft → submitted
+```
+
+### Caseworker experience
+
+The caseworker UI loads the same form definition but uses it differently — to organize the review, show program relevance, and track review progress.
+
+**1. Load application state:**
+
+```typescript
+const app = await api.getApplication({ params: { appId } });
+const members = await api.listMembers({ params: { appId } });
+const reviews = await api.listReviews({ params: { appId } });
+
+// Load the form version this application was started with
+const form = getFormDefinition(app.formVersion);
+```
+
+**2. Build the review dashboard — sections per member with status:**
+
+```typescript
+for (const member of members.items) {
+  const sections = getActiveSections(form, member.programsApplyingFor, member);
+
+  for (const section of sections) {
+    const review = reviews.items.find(
+      r => r.sectionId === section.id && r.memberId === member.id
+    );
+    renderReviewRow({
+      member,
+      section,
+      status: review?.status ?? 'pending'
+    });
+  }
+}
+
+// Household-scope sections (housing, household composition) appear once
+const householdSections = form.sections.filter(s => s.scope === 'household');
+for (const section of householdSections) {
+  const review = reviews.items.find(
+    r => r.sectionId === section.id && r.memberId === null
+  );
+  renderReviewRow({ member: null, section, status: review?.status ?? 'pending' });
+}
+```
+
+**3. Review a section — load data, documents, and program relevance:**
+
+```typescript
+// Reviewing "Income for Jane"
+const incomeRecords = await api.listIncome({
+  params: { appId, memberId: jane.id }
+});
+
+const docs = await api.listDocuments({
+  params: { appId },
+  queries: { sectionId: 'income', memberId: jane.id }
+});
+
+// Program relevance from the form definition
+const incomeSection = form.sections.find(s => s.id === 'income');
+const relevance = incomeSection.programRelevance;
+
+// For each income record, show which programs it's relevant to
+for (const record of incomeRecords.items) {
+  const programs = getRelevantPrograms(relevance, record.type, jane.programsApplyingFor);
+  // → e.g., { snap: true, medicaid: true, tanf: false }
+  // plus notes: { medicaid: "Excluded from MAGI for most recipients" }
+  renderIncomeRow(record, programs, docs);
+}
+```
+
+**4. Mark section reviewed:**
+
+```typescript
+await api.createReview({
+  params: { appId },
+  body: {
+    sectionId: 'income',
+    memberId: jane.id,
+    status: 'approved',           // or 'needs_correction'
+    reviewNote: 'Verified against pay stubs'
+  }
+});
+```
+
+### What the form engine provides
+
+The form engine library (`@safety-net-apis/forms/engine`) exports these functions:
+
+| Function | Purpose |
+|----------|---------|
+| `getActiveSections(form, programs, memberData?)` | Returns sections that are required for the given programs, evaluating `conditionallyRequiredFor` against member data |
+| `evaluateCondition(condition, data)` | Evaluates a JSON Logic condition against data (wrapper around json-logic-js) |
+| `getFieldPath(question, section, form)` | Resolves a question's `field` to the full API path and HTTP method |
+| `getRelevantPrograms(relevance, dataType, memberPrograms)` | Filters program relevance to the member's programs, returns relevance flags and notes |
+| `isResourceSection(section)` | Returns true if the section manages an API resource (has `resourceType`) |
+| `getResourcePath(form, section)` | Returns the API path template for a resource section |
+
+These are pure functions with no side effects — they take the form definition and data as input and return computed values. The Zodios clients handle all actual API calls.
+
+---
+
+## 9. Relationship to Existing Schemas
 
 The current Application schema (`openapi/components/application.yaml`) nests all eligibility data inside `HouseholdMember`, resulting in a single massive object with 70+ ancillary schemas. This proposal recommends restructuring:
 
