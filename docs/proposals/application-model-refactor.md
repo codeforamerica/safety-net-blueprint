@@ -1,4 +1,4 @@
-# Proposal: Eligibility Data Model
+# Proposal: Application Model Refactor
 
 **Status:** Draft
 
@@ -99,10 +99,10 @@ States may add sections via overlay (e.g., a state-specific program with data re
 | **Application** | top-level | Container for the entire application | `GET/POST /applications` |
 | **ApplicationMember** | per application | Links a person to an application with a per-member `programsApplyingFor` list | `GET/POST /applications/:appId/members` |
 | **Income** | per member | 0-N records per person (multiple jobs, self-employment, unearned sources). Caseworker adds/removes individual records. | `GET/POST /applications/:appId/members/:memberId/income` |
-
-Each ApplicationMember has their own `programsApplyingFor` list — Jane might apply for SNAP + Medicaid while her child applies for Medicaid only. This per-member selection drives which sections are required, which questions appear in the form, and which program relevance annotations are shown during review.
 | **Asset** | per member | 0-N records per person (bank accounts, vehicles, properties, insurance policies). Each is an independent item. | `GET/POST /applications/:appId/members/:memberId/assets` |
 | **Expense** | per member or per household | 0-N records. Member-level (dependent care, medical, child support) and household-level (shelter, utilities). | `GET/POST /applications/:appId/expenses` |
+
+Each ApplicationMember has their own `programsApplyingFor` list — Jane might apply for SNAP + Medicaid while her child applies for Medicaid only. This per-member selection drives which sections are required, which questions appear in the form, and which program relevance annotations are shown during review.
 
 Expenses live at the application level (not nested under members) because some expenses are household-level with no associated member. Income and assets are always per-member, so they're nested under the member path. Expense records have an optional `memberId` field to indicate which member they belong to (null for household-level expenses), and can be filtered with `GET /applications/:appId/expenses?memberId=...`.
 
@@ -140,7 +140,7 @@ The application intake process is behavior-shaped. The questionnaire has conditi
 
 ### Recommendation: form definition YAML
 
-A **form definition** is a new contract artifact type alongside state machines, rules, and metrics (see [adapter pattern proposal](adapter-pattern-approach.md) — the form definition should be added there as an additional optional artifact type). It defines:
+A **form definition** is a contract artifact type alongside state machines, rules, and metrics. It defines:
 
 - **Sections** — ordered groups of questions, mapped to domain sections
 - **Questions** — individual data collection points, mapped to schema fields
