@@ -101,6 +101,7 @@ States may add sections via overlay (e.g., a state-specific program with data re
 | **Income** | per member | 0-N records per person (multiple jobs, self-employment, unearned sources). Caseworker adds/removes individual records. | `GET/POST /applications/:appId/members/:memberId/income` |
 | **Asset** | per member | 0-N records per person (bank accounts, vehicles, properties, insurance policies). Each is an independent item. | `GET/POST /applications/:appId/members/:memberId/assets` |
 | **Expense** | per member or per household | 0-N records. Member-level (dependent care, medical, child support) and household-level (shelter, utilities). | `GET/POST /applications/:appId/expenses` |
+| **Document** | per member or per application | Supporting evidence (pay stubs, immigration papers, ID). Linked to a section and optionally to a specific record. | `GET/POST /applications/:appId/documents` |
 
 Each ApplicationMember has their own `programsApplyingFor` list — Jane might apply for SNAP + Medicaid while her child applies for Medicaid only. This per-member selection drives which sections are required, which questions appear in the form, and which program relevance annotations are shown during review.
 
@@ -111,6 +112,7 @@ Each resource uses a `type` discriminator to distinguish specific kinds within t
 - **Income** `type`: `employment`, `self_employment`, `unearned` (with `unearnedType` for specific source)
 - **Asset** `type`: `financial_account`, `vehicle`, `real_estate`, `insurance_policy`, `transferred_asset`
 - **Expense** `type`: `dependent_care`, `medical`, `child_support`, `shelter`, `utility`, etc. (with optional `memberId` — null means household-level)
+- **Document** `type`: `pay_stub`, `tax_return`, `immigration_document`, `id_document`, `lease`, `utility_bill`, etc. (with `sectionId`, optional `memberId`, and optional `recordId` to link to a specific income/asset/expense record)
 
 ### Nested within ApplicationMember (one-to-one, bounded)
 
@@ -129,7 +131,8 @@ These are single objects per person with a fixed structure. They're always read 
 
 | Nested object | Section | Why it's nested |
 |--------------|---------|-----------------|
-| `programs` | — | Derived from the union of all members' `programsApplyingFor` lists. Convenience field for high-level filtering (e.g., "does this application involve SNAP?") without iterating members. |
+| `programs` | — | Read-only. Computed from the union of all members' `programsApplyingFor` lists. Convenience field for high-level filtering (e.g., "does this application involve SNAP?") without iterating members. Not writeable — program selection is always per-member. |
+| `formVersion` | — | Records which version of the form definition was used when the application was started. In-progress applications use their pinned version. |
 | `housingInfo` | Housing | One per application, fixed structure |
 
 ---
@@ -156,7 +159,40 @@ version: "1.0.0"
 title: Integrated Benefits Application
 defaultLocale: en
 
+# Schema references — links form fields to OpenAPI schemas
+schemas:
+  member: ApplicationMember          # per-member sections map fields here
+  application: Application           # per-household sections map fields here
+
+# API resource paths — resourceType sections manage these endpoints
+resources:
+  income: /applications/{appId}/members/{memberId}/income
+  asset: /applications/{appId}/members/{memberId}/assets
+  expense: /applications/{appId}/expenses
+
 sections:
+  - id: household_composition
+    title: Household Composition
+    scope: household
+    sectionType: member_management    # structural section — creates/manages ApplicationMember records
+    requiredForPrograms: [snap, medicaid, tanf]
+    description: >
+      Add household members, define relationships, and select which programs
+      each member is applying for. This section drives the rest of the form —
+      per-member sections are generated based on the members added here.
+    questions:
+      - id: addMember
+        field: members                # → Application.members (via ApplicationMember resource)
+        label: Who lives in your household?
+        type: member_list
+        required: true
+
+      - id: memberPrograms
+        field: members[].programsApplyingFor   # → ApplicationMember.programsApplyingFor
+        label: Which programs is this person applying for?
+        type: program_select
+        required: true
+
   - id: identity
     title: Personal Information
     scope: member
@@ -241,7 +277,74 @@ sections:
         type: boolean
         showWhen:
           "==": [{ "var": "taxFilingInfo.willFileTaxes" }, true]
+
+  - id: assets
+    title: Assets & Resources
+    scope: member
+    requiredForPrograms: [snap, tanf]
+    conditionallyRequiredFor:         # conditional requirement with JSON Logic
+      medicaid:
+        when:
+          "==": [{ "var": "member.medicaidEligibilityGroup" }, "non_magi"]
+    resourceType: asset
+    programRelevance:
+      financial_account:
+        relevantToPrograms: [snap, tanf]
+        notes:
+          snap: Countable resource (elderly/disabled exemptions may apply)
+      vehicle:
+        relevantToPrograms: [snap, tanf]
+
+  - id: housing
+    title: Housing
+    scope: household                  # → Application.housingInfo
+    requiredForPrograms: [snap]
+    questions:
+      - id: housingType
+        field: housingInfo.housingType
+        label: What is your housing situation?
+        type: enum
+        options: [own, rent, living_with_others, homeless, other]
+        required: true
+
+      - id: monthlyRent
+        field: housingInfo.monthlyRent
+        label: How much is your monthly rent?
+        type: currency
+        showWhen:
+          "==": [{ "var": "housingInfo.housingType" }, "rent"]
 ```
+
+### Schema mapping and validation
+
+The form definition's `schemas` block links it to the OpenAPI schemas — the same way a state machine YAML declares `object: ApprovalRequest` and `stateField: status`.
+
+**Field mapping:**
+
+Each question's `field` property is a dot-path into the schema determined by the section's `scope`:
+
+| Scope | Target schema | Example `field` value | Resolves to |
+|-------|--------------|----------------------|-------------|
+| `member` | `schemas.member` (ApplicationMember) | `citizenshipInfo.status` | `ApplicationMember.citizenshipInfo.status` |
+| `household` | `schemas.application` (Application) | `housingInfo.monthlyRent` | `Application.housingInfo.monthlyRent` |
+
+Sections with `resourceType` don't use question-level `field` mappings — they manage an API resource whose schema defines its own fields. The `resources` block maps `resourceType` values to API paths (e.g., `income` → `/applications/{appId}/members/{memberId}/income`).
+
+A validation script verifies that all `field` references resolve against the OpenAPI schemas, that `resourceType` values match entries in the `resources` block, and that `showWhen` conditions reference valid field paths.
+
+**`showWhen` variable scope:**
+
+`showWhen` conditions evaluate against the current member's data for `member`-scope sections, or the application's data for `household`-scope sections. The variable context includes all fields on the target schema — conditions can reference fields from any section, not just the current one. For example, a housing question can reference `housingInfo.housingType` even though that field is set by an earlier question in the same section.
+
+Cross-member conditions (e.g., "show this question if any other member is applying for Medicaid") are not supported in `showWhen`. If cross-member logic is needed, it should be handled via `conditionallyRequiredFor` at the section level or through the form engine's evaluate endpoint.
+
+**`conditionallyRequiredFor`:**
+
+While `requiredForPrograms` is a static list (section is always required for these programs), `conditionallyRequiredFor` adds programs whose requirement depends on a JSON Logic condition evaluated against the member or application data. This handles cases like "Assets is required for Medicaid only for non-MAGI eligibility groups."
+
+**Form versioning:**
+
+The Application schema should include a `formVersion` field that records which version of the form definition was used when the application was started. In-progress applications continue with their original form version — the form engine loads the pinned version, not the latest. This prevents mid-application changes from altering the intake flow. When a state updates their overlay, only new applications pick up the changes.
 
 ### Program relevance annotations
 
@@ -471,7 +574,7 @@ The form definition captures which sections are required per program. This mappi
 | Education & Training | Conditional | — | Conditional |
 | Housing | Required | — | — |
 
-**Required** = always needed for this program. **Conditional** = needed based on other answers (e.g., expenses are relevant to Medicaid only for non-MAGI groups). **—** = not needed for this program at the federal level.
+**Required** = always needed for this program (listed in `requiredForPrograms`). **Conditional** = needed based on other answers, expressed via `conditionallyRequiredFor` with a JSON Logic condition (e.g., assets are required for Medicaid only for non-MAGI eligibility groups). **—** = not needed for this program at the federal level.
 
 States may modify this mapping via overlay — for example, a state might require education information for Medicaid if the state runs a training program that affects eligibility.
 
@@ -491,6 +594,7 @@ The current Application schema (`openapi/components/application.yaml`) nests all
 | `ExpenseInfo` on member + `HouseholdExpenses` on application | `Expense` API resource with optional `memberId` | Unifies member-level and household-level expenses |
 | `ApplicationScreeningFlags` drives conditional logic | Form definition YAML captures conditions declaratively | Portable, customizable, interpretable by any frontend |
 | No review tracking | `SectionReview` API resource | Enables per-section per-person review workflow |
+| No document management | `Document` API resource with section/record linkage | Evidence attachment for caseworker verification |
 
 ### What stays the same
 
