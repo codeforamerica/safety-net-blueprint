@@ -307,7 +307,7 @@ export { q, search } from './search-helpers.js';
   // Summary
   console.log('\n========================================');
   console.log(`Package built successfully!`);
-  console.log(`  Name: @codeforamerica/safety-net-${state}`);
+  console.log(`  Name: @codeforamerica/safety-net-apis-${state}`);
   console.log(`  Version: ${version}`);
   console.log(`  Location: ${outputDir}`);
   console.log('========================================\n');
