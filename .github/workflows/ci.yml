@@ -5,16 +5,13 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -31,17 +28,13 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Regenerate design reference
-        run: npm run design:reference
-
-      - name: Commit design reference if changed
+      - name: Check design reference is up to date
         run: |
+          npm run design:reference
           if git diff --quiet docs/schema-reference.html; then
             echo "Design reference is up to date"
           else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add docs/schema-reference.html
-            git commit -m "Update design reference"
-            git push
+            echo "::error::Design reference is out of date. Run 'npm run design:reference' locally and commit the result."
+            git diff --stat docs/schema-reference.html
+            exit 1
           fi
