@@ -1,4 +1,4 @@
-# @codeforamerica/safety-net-{{STATE}}
+# @codeforamerica/safety-net-apis-{{STATE}}
 
 TypeScript API client for {{STATE_TITLE}} safety net programs with built-in runtime validation.
 
@@ -11,7 +11,7 @@ This package provides:
 ## Installation
 
 ```bash
-npm install @codeforamerica/safety-net-{{STATE}}
+npm install @codeforamerica/safety-net-apis-{{STATE}}
 ```
 
 **Peer dependencies** (required):
@@ -24,8 +24,8 @@ npm install zod@^4.0.0 axios@^1.6.0
 ### Basic Usage
 
 ```typescript
-import { createClient } from '@codeforamerica/safety-net-{{STATE}}/users/client';
-import { getUser } from '@codeforamerica/safety-net-{{STATE}}/users';
+import { createClient } from '@codeforamerica/safety-net-apis-{{STATE}}/users/client';
+import { getUser } from '@codeforamerica/safety-net-apis-{{STATE}}/users';
 
 // Configure the client
 const client = createClient({
@@ -46,7 +46,7 @@ if ('data' in response) {
 ### Import Types
 
 ```typescript
-import type { User } from '@codeforamerica/safety-net-{{STATE}}/users';
+import type { User } from '@codeforamerica/safety-net-apis-{{STATE}}/users';
 
 function processUser(user: User) {
   // Full type safety
@@ -56,7 +56,7 @@ function processUser(user: User) {
 ### Search Helpers
 
 ```typescript
-import { search, q } from '@codeforamerica/safety-net-{{STATE}}';
+import { search, q } from '@codeforamerica/safety-net-apis-{{STATE}}';
 
 // Build complex queries
 const query = search(
@@ -86,7 +86,7 @@ Each domain provides:
 ## Package Structure
 
 ```
-@codeforamerica/safety-net-{{STATE}}/
+@codeforamerica/safety-net-apis-{{STATE}}/
 ├── users/              # User management SDK
 │   ├── index           # SDK functions + types
 │   ├── client          # HTTP client utilities
@@ -109,7 +109,7 @@ All API calls automatically validate:
 If validation fails, Zod throws an error with details about what went wrong.
 
 ```typescript
-import { getUser } from '@codeforamerica/safety-net-{{STATE}}/users';
+import { getUser } from '@codeforamerica/safety-net-apis-{{STATE}}/users';
 
 try {
   const response = await getUser({
@@ -128,7 +128,7 @@ try {
 
 ```typescript
 import axios from 'axios';
-import { createClient } from '@codeforamerica/safety-net-{{STATE}}/users/client';
+import { createClient } from '@codeforamerica/safety-net-apis-{{STATE}}/users/client';
 
 const customAxios = axios.create({
   timeout: 5000,
@@ -144,7 +144,7 @@ const client = createClient({
 ### Direct Zod Schema Access
 
 ```typescript
-import { zUser } from '@codeforamerica/safety-net-{{STATE}}/users/zod.gen';
+import { zUser } from '@codeforamerica/safety-net-apis-{{STATE}}/users/zod.gen';
 
 // Validate data manually
 const result = zUser.safeParse(unknownData);
