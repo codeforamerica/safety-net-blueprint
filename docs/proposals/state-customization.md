@@ -17,11 +17,12 @@ This repository provides base OpenAPI specifications for safety net program APIs
 1. **[File Organization](#1-file-organization)** - Versioning conventions for APIs and components
 2. **[Environment Configuration](#2-environment-configuration)** - Handling dev/staging/production differences
 3. **[State Distribution & Overlays](#3-state-distribution--overlays)** - How states consume, customize, and contribute
+4. **[Implementation Plan](#4-implementation-plan)** - What needs to change in existing tooling
 
 ## Considerations
 
-- Clear file naming conventions
-- Flat file structure preferred (avoid deep nesting)
+- States can adopt and maintain customizations with minimal overhead
+- Base repo changes should not break state customizations (overlays target schema content, not file paths)
 - States can adopt base specs without forking
 - States can update to newer base versions on their own schedule
 - States can keep sensitive configuration private
@@ -31,36 +32,51 @@ This repository provides base OpenAPI specifications for safety net program APIs
 ### Constraints
 
 - Must work with existing Spectral validation
-- Overlays use JSON Merge Patch format (RFC 7396)
+- Overlays follow the OpenAPI Overlay Specification (1.0.0), with update actions using JSON Merge Patch semantics (RFC 7396)
 - OpenAPI has no native support for build-time substitution (variables only work in server URLs at runtime), requiring a resolve CLI for CI pipelines
 
 ---
 
 ## 1. File Organization
 
-**Pattern:** Version suffix in filename (no suffix = v1 implicit). Applies to both API specs and component files.
+Each API spec is a self-contained OpenAPI document: paths, parameters, and domain schemas all live in the same file. This makes versioning atomic — when you create `applications-v2.yaml`, it carries all its schemas with it. Across the entire file organization, tooling relies on naming conventions and content matching rather than folder structure — files can be reorganized without breaking downstream consumers or overlays.
+
+Shared types that are stable across APIs (Address, Name, Email, PhoneNumber) stay in component files, organized by domain. These are evolved additively (new optional fields, expanded enums) rather than versioned independently — this is standard practice for shared API components. If an API spec ever needs to diverge from a shared type, it can inline its own version and stop referencing the shared one.
+
+**Pattern:** Version suffix in filename (no suffix = v1 implicit). Versioning applies to API specs, not components.
 
 ```
 openapi/
-  applications.yaml         # Version 1 (implicit, current)
-  applications-v2.yaml      # Version 2 (when breaking changes needed)
-  households.yaml
-  persons.yaml
+  applications.yaml              # v1 spec — paths + Application, HouseholdMember, etc.
+  applications-examples.yaml     # v1 examples
+  applications-v2.yaml           # v2 spec (breaking changes) — self-contained
+  applications-examples-v2.yaml  # v2 examples
+  persons.yaml                   # Same pattern: spec + examples per API
+  persons-examples.yaml
+  ...
   components/
-    contact.yaml            # Address, Email, PhoneNumber
-    identity.yaml           # Name, SocialSecurityNumber
-    identity-v2.yaml        # Breaking changes to identity schemas
-    auth.yaml               # BackendAuthContext, JwtClaims, RoleType, Role
-    security-schemes.yaml   # OAuth2, API key definitions
-    common.yaml             # Language, Program, Signature
-    common-parameters.yaml
-    common-responses.yaml
+    contact.yaml                 # Address, Email, PhoneNumber
+    identity.yaml                # Name, SocialSecurityNumber
+    common.yaml                  # Language, Program, Signature
+    parameters.yaml              # Shared query parameters
+    responses.yaml               # Shared error responses
+    auth.yaml                    # BackendAuthContext, JwtClaims, RoleType, Role
+    security-schemes.yaml        # OAuth2, API key definitions
 ```
 
-**Conventions:**
-- No suffix = version 1 (implicit)
-- `-v2`, `-v3` etc. for breaking changes
-- API specs include version in the info block (`info.version: "1.0.0"`) and base URL (`/v1/applications`)
+**API spec conventions:**
+- No suffix = version 1 (implicit), `-v2`, `-v3` etc. for breaking changes
+- Include version in the info block (`info.version: "1.0.0"`) and base URL (`/v1/applications`)
+- May include `info.x-api-id` (e.g., `x-api-id: workflow-tasks`) as a stable machine-readable identifier. Optional — only needed when the same schema name exists in multiple API specs, so overlays can disambiguate using `target-api`
+- Domain schemas live in their API spec, not in separate component files
+- Examples use `{name}-examples.yaml` naming (e.g., `applications-examples.yaml`), colocated with their spec in `openapi/`. Versioned examples follow the same suffix pattern (`applications-examples-v2.yaml`). This eliminates the dependency on a separate `examples/` folder — tooling discovers example files by naming convention, not folder structure, so the directory layout can change without breaking anything. Examples are kept separate from the spec to avoid bloating the API definition with verbose test data — complex schemas like Application can have large realistic examples — and because the mock server reads them independently for database seeding
+- Backward-compatible changes (adding optional fields, expanding enums) update the spec in place — no version bump needed
+- Breaking changes (renaming schemas, removing fields, changing types) create a new versioned spec file
+
+**Shared component conventions:**
+- Organized by domain (`contact.yaml`, `identity.yaml`, etc.) and referenced via `$ref` across API specs
+- Evolved additively, not versioned independently — reorganizing component files does not break downstream overlays since overlays target schema content, not filenames
+- If a shared component needs a breaking change, update the component and have any API specs that need the old shape inline their own version
 
 **Other options considered:**
 
@@ -68,6 +84,7 @@ openapi/
 |--------|------|------|
 | Folder per version (`v1/applications.yaml`) | Groups all v1 together | Deep nesting, harder to compare versions |
 | URL-only versioning | Simpler file structure | Can't maintain incompatible schemas |
+| Independent component versioning (`identity-v2.yaml`) | Fine-grained | Schema name collisions across versions, overlay disambiguation complexity |
 
 ---
 
@@ -124,66 +141,70 @@ States consume base specs as an npm dependency and maintain their own repositori
 
 ### Repository Structure
 
-**This repository (public):**
-```
-safety-net-apis/
-  openapi/
-    applications.yaml
-    households.yaml
-    persons.yaml
-    components/
-      contact.yaml
-      identity.yaml
-      auth.yaml
-      security-schemes.yaml
-  packages/
-    schemas/                # @safety-net-apis/schemas - base specs + resolve CLI
-    mock-server/            # @safety-net-apis/mock-server - mock server CLI
-    tools/                  # @safety-net-apis/tools - validation, client generation
-```
+**This repository (public):** The `openapi/` directory structure is defined in [File Organization](#1-file-organization). The `packages/` directory provides the tooling states install:
 
-Note: State-specific overlays will be removed from this repository and examples of how to construct overlays will be added to the project documentation. A tradeoff of this approach is overlay fragility: overlays target specific JSONPaths (e.g., `$.Person.properties.program.enum`), so a base spec restructure — moving a property, renaming a schema, or refactoring component files — can break state overlays even when the API itself hasn't changed. The resolve script already warns when overlay targets don't exist in the base spec, but states won't know an update will break their overlays until they run it. To mitigate this, states should pin exact versions of the base schemas (e.g., `"@safety-net-apis/schemas": "1.2.0"` rather than `"^1.2.0"`) so updates are intentional. After updating, the resolve step surfaces any stale targets immediately. Release notes should flag structural changes (renamed schemas, moved paths) so states can assess impact before upgrading.
+- `schemas/` — `@safety-net-apis/schemas` — base specs, resolve CLI, design reference generator
+- `mock-server/` — `@safety-net-apis/mock-server` — mock server, Swagger UI
+- `tools/` — `@safety-net-apis/tools` — validation, client generation, Postman collection generation, test runner
+
+Note: State-specific overlays will be removed from this repository and overlay authoring examples will be included in the state setup guide (see [4.9](#49-state-setup-guide)). Because the resolve CLI matches overlay targets by scanning base file contents (not by filename or directory structure), moving or renaming files in the base repository does not break state overlays. The only change that breaks an overlay is renaming a schema itself (e.g., `Person` → `Individual`), which is a real API change. The resolve CLI warns when overlay targets don't match any base schema, so states know immediately after updating. States should pin exact versions of the base schemas (e.g., `"@safety-net-apis/schemas": "1.2.0"` rather than `"^1.2.0"`) so updates are intentional.
 
 **State repository (state-controlled, can be private):**
 ```
-california-safety-net-apis/
+{state}-safety-net-apis/
   package.json              # @safety-net-apis/schemas as dependency
   overlays/
-    applications.yaml       # State-specific schema changes
-    components/
-      person.yaml           # State-specific component changes
-  resolved/                 # Output directory
+    schemas.yaml            # Schema customizations (Person, Application, etc.)
+    auth.yaml               # Auth/role customizations
+  resolved/                 # Output directory (gitignored)
 ```
+
+States organize overlays however makes sense for them — by concern, by team, or even a single file. The resolve CLI matches actions to base files by JSONPath content, not by filename or directory structure.
 
 ### Overlay Conventions
 
-- Overlay folder structure must mirror base structure (e.g., `overlays/components/person.yaml` → `openapi/components/person.yaml`)
-- Overlay filename must match base filename exactly so tooling can auto-resolve *(change from current: existing overlays use different naming)*
-- Only create overlays for files that need customization
-- State can choose which API versions to adopt
+- Each overlay file is a standard OpenAPI Overlay document (`overlay: 1.0.0`, `info`, `actions`)
+- Actions use JSONPath targets (e.g., `$.components.schemas.Person.properties`) — the resolve CLI scans all base files to find where each target exists, so overlays are not coupled to the base repository's folder structure
+- If a target exists in exactly one base file, it is applied automatically. Because domain schemas live in their API spec (not in separate component files), schema names are unique across files in practice.
+- If a target exists in multiple base files, the resolver disambiguates using two optional action properties:
+  - `target-api` — matches against the spec's `info.x-api-id` (e.g., `target-api: workflow-tasks`). Use when the same schema name exists in different API specs.
+  - `target-version` — matches against the filename suffix convention (no suffix = v1, `-v2` = v2, etc.). If omitted, v1 is assumed. Use when the same schema name exists across API versions.
+  - If neither is provided and the target matches multiple files, the resolver warns and skips the action.
+- States can choose which API versions to adopt
 
 ### How States Use It
 
 **Initial setup:**
 ```bash
-mkdir california-safety-net-apis
-cd california-safety-net-apis
+mkdir {state}-safety-net-apis
+cd {state}-safety-net-apis
 npm init -y
 
 # Install base schemas as dependency
 npm install @safety-net-apis/schemas
 ```
 
+The `safety-net-resolve` CLI handles both overlay customizations and environment-specific resolution in a single command:
+
+1. **Apply overlays** — state customizations on top of base specs
+2. **Filter by x-environments** — remove sections not available for target environment
+3. **Substitute placeholders** — replace `${VAR}` with values from environment variables
+4. **Write resolved specs** — output to `./resolved`
+
 **package.json:**
 ```json
 {
-  "name": "california-safety-net-apis",
+  "name": "{state}-safety-net-apis",
   "scripts": {
-    "resolve:dev": "safety-net-resolve --env=dev --overlays=./overlays --out=./resolved",
-    "resolve:prod": "safety-net-resolve --env=production --overlays=./overlays --out=./resolved",
+    "resolve:dev": "safety-net-resolve --base=./node_modules/@safety-net-apis/schemas/openapi --env=dev --overlays=./overlays --out=./resolved",
+    "resolve:prod": "safety-net-resolve --base=./node_modules/@safety-net-apis/schemas/openapi --env=production --overlays=./overlays --out=./resolved",
     "validate": "safety-net-validate --specs ./resolved",
     "mock:start": "safety-net-mock --specs ./resolved",
-    "clients:generate": "safety-net-clients --specs ./resolved --out ./clients"
+    "swagger": "safety-net-swagger --specs ./resolved",
+    "clients:generate": "safety-net-clients --specs ./resolved --out ./clients",
+    "postman": "safety-net-postman --specs ./resolved --out ./postman",
+    "test": "safety-net-test --specs ./resolved",
+    "design:reference": "safety-net-design-reference --specs ./resolved --out ./docs"
   },
   "dependencies": {
     "@safety-net-apis/schemas": "1.0.0"
@@ -195,12 +216,7 @@ npm install @safety-net-apis/schemas
 }
 ```
 
-The `safety-net-resolve` CLI handles both overlay customizations and environment-specific resolution in a single command:
-
-1. **Apply overlays** - State customizations on top of base specs
-2. **Filter by x-environments** - Remove sections not available for target environment
-3. **Substitute placeholders** - Replace `${VAR}` with values from environment variables
-4. **Write resolved specs** - Output to `./resolved`
+This example shows the full set of available scripts. Downstream projects (backend, frontend, QA) don't need all of them — they install only the packages they need and point at the resolved output. For example, a frontend project might only install `@safety-net-apis/tools` for client generation and `@safety-net-apis/mock-server` for local development.
 
 **Getting updates:**
 ```bash
@@ -232,4 +248,109 @@ npm run resolve:prod
 | Single monorepo (all states in one repo) | Simple | Bloated, exposes configs |
 | Fork per state | Full control | Hard to pull updates |
 
+---
 
+## 4. Implementation Plan
+
+This section maps the proposal to concrete changes in existing tooling. Items are ordered by dependency — later items build on earlier ones.
+
+### 4.1 Consolidate domain schemas into API specs
+
+Domain schemas currently live in separate component files (`components/person.yaml`, `components/application.yaml`, etc.) and are referenced by API specs via `$ref`. This creates cross-file dependencies that complicate versioning and overlay targeting.
+
+**Changes:**
+- Move domain schemas into the `components/schemas` section of their API spec file (e.g., Person, DemographicInfo, CitizenshipInfo move into `openapi/persons.yaml`)
+- Reorganize shared component files by domain: split `common.yaml` into `contact.yaml` (Address, Email, PhoneNumber), `identity.yaml` (Name, SocialSecurityNumber), and `common.yaml` (Language, Program, Signature). Rename `common-parameters.yaml` → `parameters.yaml` and `common-responses.yaml` → `responses.yaml`.
+- Keep auth schemas in `components/auth.yaml`
+- Update all `$ref` paths — intra-file references become `#/components/schemas/Person`, cross-API references become `./persons.yaml#/components/schemas/Person`
+- Remove the now-empty component files (`components/person.yaml`, `components/application.yaml`, `components/income.yaml`, etc.)
+- Move example files from `openapi/examples/{name}.yaml` to `openapi/{name}-examples.yaml` to colocate them with their spec
+- Update the API generator (`generate-api.js`) to produce two files instead of three: the API spec (`openapi/{name}.yaml`) with schemas inline under `components/schemas`, and an examples file (`openapi/{name}-examples.yaml`). The generator no longer creates a separate component file under `components/`. If a schema later turns out to be useful across multiple APIs, the author can extract it into `components/` at that point.
+- Add `--version` flag to the generator for creating a new version of an existing API (e.g., `npm run api:new -- --name applications --version 2`). This copies the current spec and examples as a starting point (`applications.yaml` → `applications-v2.yaml`, `applications-examples.yaml` → `applications-examples-v2.yaml`), updates `info.version` and the base URL, and prints a reminder to make the breaking changes.
+- Update the mock server seeder and validation scripts to find examples using the `{name}-examples.yaml` naming convention
+
+### 4.2 Resolve CLI: external overlay directories
+
+The current `resolve-overlay.js` assumes overlays live inside this repository at `openapi/overlays/{state}/modifications.yaml`. For the npm distribution model, the resolve CLI needs to work from a state's own repository.
+
+**Changes:**
+- Accept `--base` flag pointing to the directory of base specs (e.g., `--base=./node_modules/@safety-net-apis/schemas/openapi`). Required — no default, since the tooling runs in different contexts (npm dependency, git submodule, local checkout)
+- Accept `--overlays=./overlays` flag pointing to the state's overlay directory
+- Accept `--out=./resolved` flag for the output directory
+
+### 4.3 Overlay file discovery and version-aware resolution
+
+The current convention uses a single `modifications.yaml` per state inside this repository. The external model allows states to organize overlays however they want — one file or many.
+
+**Changes:**
+- Update the resolve script to discover all `.yaml` files in the `--overlays` directory (any name, any nesting)
+- Each file must be a valid OpenAPI Overlay document (`overlay: 1.0.0`)
+- The existing two-pass target resolution is retained: actions use JSONPath targets, and the resolver scans all base files to find where each target exists
+- Add disambiguation for multi-file matches: when a target exists in multiple base files, the resolver checks the action for `target-api` (matched against the spec's `info.x-api-id`) and `target-version` (matched against the filename suffix convention, default: v1). If neither is provided, warn and skip.
+
+### 4.4 Environment configuration: `x-environments` filtering
+
+No environment filtering exists today.
+
+**Changes:**
+- Add `--env` flag to the resolve CLI (e.g., `--env=production`)
+- After applying overlays, walk the resolved YAML tree and remove nodes whose `x-environments` array does not include the target environment
+- Strip `x-environments` extensions from surviving nodes so the output is clean OpenAPI
+- When `--env` is omitted, skip filtering (all sections included)
+
+### 4.5 Environment configuration: placeholder substitution
+
+No placeholder substitution exists today.
+
+**Changes:**
+- After environment filtering, scan string values for `${VAR}` patterns and replace with `process.env[VAR]`
+- Warn on unresolved placeholders (referenced variable not set)
+- Processing order: apply overlays → filter by `x-environments` → substitute `${VAR}` → write output
+
+### 4.6 Package CLIs as bin entries
+
+The resolve, validate, and mock server scripts are currently internal to each package. States need to run them via `npx` from their own repositories.
+
+**Changes:**
+- Add `bin` entries to each package's `package.json`:
+  - `@safety-net-apis/schemas` → `safety-net-resolve`, `safety-net-design-reference`
+  - `@safety-net-apis/tools` → `safety-net-validate`, `safety-net-clients`, `safety-net-postman`, `safety-net-test`
+  - `@safety-net-apis/mock-server` → `safety-net-mock`, `safety-net-swagger`
+
+**Security note:** CLI bin entries run with the installing user's permissions and have access to all environment variables. The resolve CLI intentionally reads `process.env` for placeholder substitution, so resolved output files may contain sensitive values (IDP URLs, API keys). States should `.gitignore` their `resolved/` directory and limit CI environment variables to what's needed.
+
+### 4.7 Parameterize all tooling to accept `--specs`
+
+All tooling currently reads from hardcoded paths relative to their packages. Each CLI must accept a `--specs` flag so it can operate on resolved specs in any directory. The `--specs` flag is required — there is no default, since the tooling runs in different contexts (this repo, state repos, CI).
+
+**Changes:**
+- Mock server: accept `--specs` to load specs from an arbitrary directory
+- Swagger UI: accept `--specs` to serve interactive API docs
+- Validation: accept `--specs` to validate specs from an arbitrary directory
+- Postman generator: accept `--specs` to generate collections from resolved specs
+- Test runner: accept `--specs` to run integration tests against resolved specs
+- Design reference: accept `--specs` to generate HTML from a single set of specs. The current script discovers state overlays by scanning `openapi/overlays/`, loads each overlay, and generates a multi-state comparison view. Remove the overlay discovery, loading, and application logic (`discoverOverlays`, `loadOverlay`, `applyOverlayToSchemas`) and simplify the HTML output to render a single set of specs rather than a multi-state comparison
+
+### 4.8 Remove state overlays from this repository
+
+Once the external overlay model is in place, state-specific overlays no longer belong in this repo.
+
+**Changes:**
+- Remove all state overlay directories under `openapi/overlays/`
+- Remove the `validate:all-states` script and its CI step (states validate their own resolved specs in their own CI pipelines)
+- Add overlay authoring examples to the state setup guide (see 4.9)
+
+### 4.9 State setup guide
+
+Create a guide for states adopting the base specs. This should cover initial setup, what each package provides, overlay authoring, and CI integration.
+
+**Contents:**
+
+- **What each package provides:** packages, CLIs, and what each is used for
+- **Initial setup:** repository creation, `npm init`, installing dependencies, directory structure
+- **Overlay authoring:** overlay format, JSONPath targets, examples for common customizations (adding fields, replacing enums, replacing entire schemas)
+- **Environment configuration:** when to use `x-environments` vs placeholder substitution, `.env` file patterns
+- **CI pipeline:** resolve → validate → generate clients, `.gitignore` for `resolved/` output
+- **Updating base specs:** pinning versions, running resolve after update to surface stale overlay targets, re-validating
+- **Security:** environment variable handling, keeping resolved output out of version control, secrets in CI
+- **Contributing back:** when to propose changes to the base specs vs keeping them as state overlays
