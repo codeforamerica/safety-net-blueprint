@@ -1,6 +1,6 @@
 # Proposal: State Customization Strategy
 
-**Status:** Draft
+**Status:** Accepted
 
 ## Overview
 
