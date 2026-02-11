@@ -1,7 +1,8 @@
 /**
  * Unit tests for resolve-overlay.js
  * Tests overlay discovery, target-api/target-version disambiguation,
- * and version extraction from filenames.
+ * version extraction from filenames, environment filtering,
+ * and placeholder substitution.
  */
 
 import { test } from 'node:test';
@@ -15,7 +16,9 @@ import {
   analyzeTargetLocations,
   resolveActionTargets,
   getVersionFromFilename,
-  filterByEnvironment
+  filterByEnvironment,
+  parseEnvFile,
+  substitutePlaceholders
 } from '../../scripts/resolve-overlay.js';
 
 // Use checkPathExists from the overlay module (same as the script does)
@@ -419,6 +422,99 @@ test('resolve-overlay tests', async (t) => {
     assert.strictEqual(result.servers[1].url, 'https://common.example.com');
     // x-environments stripped from surviving array item
     assert.strictEqual(result.servers[0]['x-environments'], undefined);
+  });
+
+  // ===========================================================================
+  // parseEnvFile
+  // ===========================================================================
+
+  await t.test('parseEnvFile - parses key=value pairs', () => {
+    const dir = createTmpDir();
+    try {
+      const envPath = join(dir, '.env');
+      writeFileSync(envPath, 'API_URL=https://api.example.com\nDB_HOST=localhost\n');
+      const vars = parseEnvFile(envPath);
+      assert.strictEqual(vars.API_URL, 'https://api.example.com');
+      assert.strictEqual(vars.DB_HOST, 'localhost');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  await t.test('parseEnvFile - strips quotes and ignores comments', () => {
+    const dir = createTmpDir();
+    try {
+      const envPath = join(dir, '.env');
+      writeFileSync(envPath, '# This is a comment\nAPI_KEY="my-secret"\nNAME=\'quoted\'\n\nBLANK_LINE_ABOVE=yes\n');
+      const vars = parseEnvFile(envPath);
+      assert.strictEqual(vars.API_KEY, 'my-secret');
+      assert.strictEqual(vars.NAME, 'quoted');
+      assert.strictEqual(vars.BLANK_LINE_ABOVE, 'yes');
+      assert.strictEqual(Object.keys(vars).length, 3);
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  // ===========================================================================
+  // substitutePlaceholders
+  // ===========================================================================
+
+  await t.test('substitutePlaceholders - replaces ${VAR} from vars', () => {
+    const spec = {
+      servers: [{ url: '${API_URL}/v1' }]
+    };
+    const warnings = [];
+    const result = substitutePlaceholders(spec, { API_URL: 'https://api.example.com' }, warnings);
+    assert.strictEqual(result.servers[0].url, 'https://api.example.com/v1');
+    assert.strictEqual(warnings.length, 0);
+  });
+
+  await t.test('substitutePlaceholders - process.env overrides file values', () => {
+    const spec = { url: '${HOST}' };
+    // Simulate merged vars: file value overridden by process.env
+    const fileVars = { HOST: 'from-file' };
+    const envVars = { HOST: 'from-env' };
+    const merged = { ...fileVars, ...envVars };
+    const warnings = [];
+    const result = substitutePlaceholders(spec, merged, warnings);
+    assert.strictEqual(result.url, 'from-env');
+  });
+
+  await t.test('substitutePlaceholders - warns on unresolved placeholder', () => {
+    const spec = { url: '${MISSING_VAR}' };
+    const warnings = [];
+    const result = substitutePlaceholders(spec, {}, warnings);
+    assert.strictEqual(result.url, '${MISSING_VAR}');
+    assert.strictEqual(warnings.length, 1);
+    assert.strictEqual(warnings[0], 'MISSING_VAR');
+  });
+
+  await t.test('substitutePlaceholders - non-string values unchanged', () => {
+    const spec = { port: 8080, enabled: true, tags: ['a', 'b'] };
+    const warnings = [];
+    const result = substitutePlaceholders(spec, {}, warnings);
+    assert.strictEqual(result.port, 8080);
+    assert.strictEqual(result.enabled, true);
+    assert.deepStrictEqual(result.tags, ['a', 'b']);
+    assert.strictEqual(warnings.length, 0);
+  });
+
+  await t.test('substitutePlaceholders - multiple placeholders in one string', () => {
+    const spec = { url: '${PROTO}://${HOST}:${PORT}' };
+    const warnings = [];
+    const result = substitutePlaceholders(spec, { PROTO: 'https', HOST: 'api.example.com', PORT: '443' }, warnings);
+    assert.strictEqual(result.url, 'https://api.example.com:443');
+    assert.strictEqual(warnings.length, 0);
+  });
+
+  await t.test('substitutePlaceholders - deduplicates warning for same var', () => {
+    const spec = { a: '${X}', b: '${X}', c: '${Y}' };
+    const warnings = [];
+    substitutePlaceholders(spec, {}, warnings);
+    assert.strictEqual(warnings.length, 2);
+    assert.ok(warnings.includes('X'));
+    assert.ok(warnings.includes('Y'));
   });
 
 });

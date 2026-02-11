@@ -21,6 +21,7 @@
  *   --overlays   Path to overlay directory (optional; omit to copy base specs unchanged)
  *   --out        Output directory for resolved specs (required)
  *   --env        Target environment for x-environments filtering (optional)
+ *   --env-file   Path to env file with key=value pairs for placeholder substitution (optional)
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync, rmSync } from 'fs';
@@ -43,6 +44,7 @@ function parseArgs() {
     overlays: null,
     out: null,
     env: null,
+    envFile: null,
     help: false
   };
 
@@ -57,6 +59,8 @@ function parseArgs() {
       options.out = arg.split('=')[1];
     } else if (arg.startsWith('--env=')) {
       options.env = arg.split('=')[1];
+    } else if (arg.startsWith('--env-file=')) {
+      options.envFile = arg.split('=')[1];
     }
   }
 
@@ -70,22 +74,25 @@ Resolve OpenAPI Overlays
 Applies overlay transformations to base specs, producing resolved output.
 
 Usage:
-  node scripts/resolve-overlay.js --base=<dir> --out=<dir> [--overlays=<dir>] [--env=<env>]
+  node scripts/resolve-overlay.js --base=<dir> --out=<dir> [--overlays=<dir>] [--env=<env>] [--env-file=<file>]
 
 Flags:
   --base=<dir>       Path to base specs directory (required)
   --overlays=<dir>   Path to overlay directory (optional)
   --out=<dir>        Output directory for resolved specs (required)
   --env=<env>        Target environment for x-environments filtering (optional)
+  --env-file=<file>  Path to env file for \${VAR} placeholder substitution (optional)
   -h, --help         Show this help message
 
 Without --overlays, base specs are copied to --out unchanged.
 With --env, nodes whose x-environments array doesn't include the target env are removed.
+With --env-file, \${VAR} placeholders in string values are substituted (process.env overrides file values).
 
 Examples:
   node scripts/resolve-overlay.js --base=./openapi --out=./resolved
   node scripts/resolve-overlay.js --base=./openapi --overlays=./overlays/california --out=./resolved
   node scripts/resolve-overlay.js --base=./openapi --out=./resolved --env=production
+  node scripts/resolve-overlay.js --base=./openapi --out=./resolved --env-file=.env
 `);
 }
 
@@ -361,6 +368,68 @@ function filterByEnvironment(node, targetEnv) {
 }
 
 // =============================================================================
+// Placeholder Substitution
+// =============================================================================
+
+/**
+ * Parse an env file (key=value pairs, one per line).
+ * Ignores blank lines and comments (lines starting with #).
+ * Supports quoted values (single or double quotes are stripped).
+ */
+function parseEnvFile(filePath) {
+  const vars = {};
+  const content = readFileSync(filePath, 'utf8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIndex = trimmed.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = trimmed.substring(0, eqIndex).trim();
+    let value = trimmed.substring(eqIndex + 1).trim();
+    // Strip surrounding quotes
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    vars[key] = value;
+  }
+  return vars;
+}
+
+/**
+ * Recursively substitute ${VAR} placeholders in all string values.
+ * Returns { result, warnings } where warnings lists unresolved variables.
+ */
+function substitutePlaceholders(node, vars, warnings = []) {
+  if (typeof node === 'string') {
+    const substituted = node.replace(/\$\{([^}]+)\}/g, (match, varName) => {
+      if (varName in vars) {
+        return vars[varName];
+      }
+      if (!warnings.includes(varName)) {
+        warnings.push(varName);
+      }
+      return match; // Leave unresolved placeholder as-is
+    });
+    return substituted;
+  }
+
+  if (node === null || node === undefined || typeof node !== 'object') {
+    return node;
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(item => substitutePlaceholders(item, vars, warnings));
+  }
+
+  const result = {};
+  for (const [key, value] of Object.entries(node)) {
+    result[key] = substitutePlaceholders(value, vars, warnings);
+  }
+  return result;
+}
+
+// =============================================================================
 // Output
 // =============================================================================
 
@@ -433,9 +502,9 @@ function main() {
   }
   mkdirSync(outDir, { recursive: true });
 
-  if (!options.overlays && !options.env) {
-    // No overlays or env filtering - copy base specs as-is
-    console.log('No --overlays or --env specified, copying base specs unchanged');
+  if (!options.overlays && !options.env && !options.envFile) {
+    // No processing needed - copy base specs as-is
+    console.log('No --overlays, --env, or --env-file specified, copying base specs unchanged');
     copyBaseSpecs(baseDir, outDir);
     console.log(`Base specs copied to ${outDir}`);
     return;
@@ -504,6 +573,32 @@ function main() {
     }
   }
 
+  // Substitute placeholders if --env-file specified or process.env has values
+  if (options.envFile) {
+    const envFilePath = resolve(options.envFile);
+    if (!existsSync(envFilePath)) {
+      console.error(`Error: Env file does not exist: ${envFilePath}`);
+      process.exit(1);
+    }
+
+    const fileVars = parseEnvFile(envFilePath);
+    // process.env overrides file values
+    const vars = { ...fileVars, ...process.env };
+
+    console.log(`Env file:   ${envFilePath}`);
+
+    const placeholderWarnings = [];
+    for (const [relativePath, spec] of currentResults) {
+      currentResults.set(relativePath, substitutePlaceholders(spec, vars, placeholderWarnings));
+    }
+
+    if (placeholderWarnings.length > 0) {
+      for (const varName of placeholderWarnings) {
+        allWarnings.push(`Unresolved placeholder: \${${varName}}`);
+      }
+    }
+  }
+
   // Write resolved specs
   writeResolvedSpecs(currentResults, outDir);
 
@@ -526,7 +621,9 @@ export {
   analyzeTargetLocations,
   resolveActionTargets,
   getVersionFromFilename,
-  filterByEnvironment
+  filterByEnvironment,
+  parseEnvFile,
+  substitutePlaceholders
 };
 
 // Run main when executed directly
