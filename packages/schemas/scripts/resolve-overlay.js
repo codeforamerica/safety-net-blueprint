@@ -20,6 +20,7 @@
  *   --base       Path to base specs directory (required)
  *   --overlays   Path to overlay directory (optional; omit to copy base specs unchanged)
  *   --out        Output directory for resolved specs (required)
+ *   --env        Target environment for x-environments filtering (optional)
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync, rmSync } from 'fs';
@@ -41,6 +42,7 @@ function parseArgs() {
     base: null,
     overlays: null,
     out: null,
+    env: null,
     help: false
   };
 
@@ -53,6 +55,8 @@ function parseArgs() {
       options.overlays = arg.split('=')[1];
     } else if (arg.startsWith('--out=')) {
       options.out = arg.split('=')[1];
+    } else if (arg.startsWith('--env=')) {
+      options.env = arg.split('=')[1];
     }
   }
 
@@ -66,19 +70,22 @@ Resolve OpenAPI Overlays
 Applies overlay transformations to base specs, producing resolved output.
 
 Usage:
-  node scripts/resolve-overlay.js --base=<dir> --out=<dir> [--overlays=<dir>]
+  node scripts/resolve-overlay.js --base=<dir> --out=<dir> [--overlays=<dir>] [--env=<env>]
 
 Flags:
   --base=<dir>       Path to base specs directory (required)
   --overlays=<dir>   Path to overlay directory (optional)
   --out=<dir>        Output directory for resolved specs (required)
+  --env=<env>        Target environment for x-environments filtering (optional)
   -h, --help         Show this help message
 
 Without --overlays, base specs are copied to --out unchanged.
+With --env, nodes whose x-environments array doesn't include the target env are removed.
 
 Examples:
   node scripts/resolve-overlay.js --base=./openapi --out=./resolved
   node scripts/resolve-overlay.js --base=./openapi --overlays=./overlays/california --out=./resolved
+  node scripts/resolve-overlay.js --base=./openapi --out=./resolved --env=production
 `);
 }
 
@@ -301,6 +308,59 @@ function applyOverlayWithTargets(yamlFiles, overlay, actionTargets, overlayDir) 
 }
 
 // =============================================================================
+// Environment Filtering
+// =============================================================================
+
+/**
+ * Recursively filter a spec tree by x-environments.
+ * Removes nodes whose x-environments array doesn't include the target env.
+ * Strips x-environments from surviving nodes.
+ * Returns the filtered tree (or null if the root node itself should be removed).
+ */
+function filterByEnvironment(node, targetEnv) {
+  if (node === null || node === undefined || typeof node !== 'object') {
+    return node;
+  }
+
+  if (Array.isArray(node)) {
+    return node
+      .filter(item => {
+        if (item && typeof item === 'object' && !Array.isArray(item) && item['x-environments']) {
+          return item['x-environments'].includes(targetEnv);
+        }
+        return true;
+      })
+      .map(item => filterByEnvironment(item, targetEnv));
+  }
+
+  // Check if this node should be removed
+  if (node['x-environments']) {
+    if (!node['x-environments'].includes(targetEnv)) {
+      return null;
+    }
+  }
+
+  // Recurse into object properties
+  const result = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'x-environments') continue; // Strip from surviving nodes
+
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const filtered = filterByEnvironment(value, targetEnv);
+      if (filtered !== null) {
+        result[key] = filtered;
+      }
+    } else if (Array.isArray(value)) {
+      result[key] = filterByEnvironment(value, targetEnv);
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+// =============================================================================
 // Output
 // =============================================================================
 
@@ -373,62 +433,75 @@ function main() {
   }
   mkdirSync(outDir, { recursive: true });
 
-  if (!options.overlays) {
-    // No overlays - copy base specs as-is
-    console.log('No --overlays specified, copying base specs unchanged');
-    copyBaseSpecs(baseDir, outDir);
-    console.log(`Base specs copied to ${outDir}`);
-    return;
-  }
-
-  const overlaysDir = resolve(options.overlays);
-
-  if (!existsSync(overlaysDir)) {
-    console.error(`Error: Overlays directory does not exist: ${overlaysDir}`);
-    process.exit(1);
-  }
-
-  // Discover overlay files
-  const overlayFiles = discoverOverlayFiles(overlaysDir);
-  if (overlayFiles.length === 0) {
-    console.log('No overlay files found, copying base specs unchanged');
+  if (!options.overlays && !options.env) {
+    // No overlays or env filtering - copy base specs as-is
+    console.log('No --overlays or --env specified, copying base specs unchanged');
     copyBaseSpecs(baseDir, outDir);
     console.log(`Base specs copied to ${outDir}`);
     return;
   }
 
   console.log(`Base specs: ${baseDir}`);
-  console.log(`Overlays:   ${overlaysDir}`);
   console.log(`Output:     ${outDir}`);
-  console.log('');
 
   // Collect base YAML files
   const yamlFiles = collectYamlFiles(baseDir);
-
-  // Apply each overlay file
   let allWarnings = [];
   let currentResults = null;
 
-  for (const overlayPath of overlayFiles) {
-    const overlayContent = readFileSync(overlayPath, 'utf8');
-    const overlay = yaml.load(overlayContent);
+  // Apply overlays if specified
+  if (options.overlays) {
+    const overlaysDir = resolve(options.overlays);
 
-    console.log(`Overlay: ${overlay.info?.title || relative(overlaysDir, overlayPath)}`);
-    if (overlay.info?.version) {
-      console.log(`Version: ${overlay.info.version}`);
+    if (!existsSync(overlaysDir)) {
+      console.error(`Error: Overlays directory does not exist: ${overlaysDir}`);
+      process.exit(1);
     }
-    console.log('');
 
-    // Use current results as input (for chaining multiple overlays)
-    const inputFiles = currentResults
-      ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
-      : yamlFiles;
+    const overlayFiles = discoverOverlayFiles(overlaysDir);
+    if (overlayFiles.length === 0) {
+      console.log('No overlay files found');
+    } else {
+      console.log(`Overlays:   ${overlaysDir}`);
+      console.log('');
 
-    const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
-    const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
-    allWarnings = allWarnings.concat(warnings);
+      for (const overlayPath of overlayFiles) {
+        const overlayContent = readFileSync(overlayPath, 'utf8');
+        const overlay = yaml.load(overlayContent);
 
-    currentResults = applyOverlayWithTargets(inputFiles, overlay, actionTargets, overlaysDir);
+        console.log(`Overlay: ${overlay.info?.title || relative(overlaysDir, overlayPath)}`);
+        if (overlay.info?.version) {
+          console.log(`Version: ${overlay.info.version}`);
+        }
+        console.log('');
+
+        const inputFiles = currentResults
+          ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+          : yamlFiles;
+
+        const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+        const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+        allWarnings = allWarnings.concat(warnings);
+
+        currentResults = applyOverlayWithTargets(inputFiles, overlay, actionTargets, overlaysDir);
+      }
+    }
+  }
+
+  // Build final results map (from overlays or original files)
+  if (!currentResults) {
+    currentResults = new Map();
+    for (const { relativePath, spec } of yamlFiles) {
+      currentResults.set(relativePath, JSON.parse(JSON.stringify(spec)));
+    }
+  }
+
+  // Filter by environment if --env specified
+  if (options.env) {
+    console.log(`Environment: ${options.env}`);
+    for (const [relativePath, spec] of currentResults) {
+      currentResults.set(relativePath, filterByEnvironment(spec, options.env));
+    }
   }
 
   // Write resolved specs
@@ -452,7 +525,8 @@ export {
   discoverOverlayFiles,
   analyzeTargetLocations,
   resolveActionTargets,
-  getVersionFromFilename
+  getVersionFromFilename,
+  filterByEnvironment
 };
 
 // Run main when executed directly

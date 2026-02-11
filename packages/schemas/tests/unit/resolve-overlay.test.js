@@ -14,7 +14,8 @@ import {
   discoverOverlayFiles,
   analyzeTargetLocations,
   resolveActionTargets,
-  getVersionFromFilename
+  getVersionFromFilename,
+  filterByEnvironment
 } from '../../scripts/resolve-overlay.js';
 
 // Use checkPathExists from the overlay module (same as the script does)
@@ -300,6 +301,124 @@ test('resolve-overlay tests', async (t) => {
 
     assert.strictEqual(warnings.length, 0);
     assert.deepStrictEqual(actionTargets.get(0), ['only.yaml']);
+  });
+
+  // ===========================================================================
+  // filterByEnvironment
+  // ===========================================================================
+
+  await t.test('filterByEnvironment - keeps node matching target env', () => {
+    const spec = {
+      paths: {
+        '/users': {
+          'x-environments': ['production', 'staging'],
+          get: { summary: 'List users' }
+        }
+      }
+    };
+
+    const result = filterByEnvironment(spec, 'production');
+    assert.ok(result.paths['/users']);
+    assert.strictEqual(result.paths['/users'].get.summary, 'List users');
+  });
+
+  await t.test('filterByEnvironment - removes node not matching target env', () => {
+    const spec = {
+      paths: {
+        '/debug': {
+          'x-environments': ['dev'],
+          get: { summary: 'Debug endpoint' }
+        },
+        '/users': {
+          get: { summary: 'List users' }
+        }
+      }
+    };
+
+    const result = filterByEnvironment(spec, 'production');
+    assert.strictEqual(result.paths['/debug'], undefined);
+    assert.ok(result.paths['/users']);
+  });
+
+  await t.test('filterByEnvironment - strips x-environments from surviving nodes', () => {
+    const spec = {
+      paths: {
+        '/users': {
+          'x-environments': ['production'],
+          get: { summary: 'List users' }
+        }
+      }
+    };
+
+    const result = filterByEnvironment(spec, 'production');
+    assert.strictEqual(result.paths['/users']['x-environments'], undefined);
+    assert.strictEqual(result.paths['/users'].get.summary, 'List users');
+  });
+
+  await t.test('filterByEnvironment - nested: parent kept but child with wrong env removed', () => {
+    const spec = {
+      components: {
+        schemas: {
+          User: {
+            properties: {
+              name: { type: 'string' },
+              debugInfo: {
+                'x-environments': ['dev'],
+                type: 'object',
+                properties: { trace: { type: 'string' } }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const result = filterByEnvironment(spec, 'production');
+    assert.ok(result.components.schemas.User.properties.name);
+    assert.strictEqual(result.components.schemas.User.properties.debugInfo, undefined);
+  });
+
+  await t.test('filterByEnvironment - node without x-environments always kept', () => {
+    const spec = {
+      info: { title: 'Test API', version: '1.0.0' },
+      paths: {
+        '/users': { get: { summary: 'List users' } }
+      }
+    };
+
+    const result = filterByEnvironment(spec, 'production');
+    assert.strictEqual(result.info.title, 'Test API');
+    assert.ok(result.paths['/users']);
+  });
+
+  await t.test('filterByEnvironment - handles primitive values unchanged', () => {
+    const spec = {
+      info: { title: 'Test', version: '1.0.0' },
+      count: 42,
+      enabled: true
+    };
+
+    const result = filterByEnvironment(spec, 'production');
+    assert.strictEqual(result.count, 42);
+    assert.strictEqual(result.enabled, true);
+    assert.strictEqual(result.info.title, 'Test');
+  });
+
+  await t.test('filterByEnvironment - filters array items with x-environments', () => {
+    const spec = {
+      servers: [
+        { url: 'https://api.example.com', 'x-environments': ['production'] },
+        { url: 'https://dev.example.com', 'x-environments': ['dev'] },
+        { url: 'https://common.example.com' }
+      ]
+    };
+
+    const result = filterByEnvironment(spec, 'production');
+    assert.strictEqual(result.servers.length, 2);
+    assert.strictEqual(result.servers[0].url, 'https://api.example.com');
+    assert.strictEqual(result.servers[1].url, 'https://common.example.com');
+    // x-environments stripped from surviving array item
+    assert.strictEqual(result.servers[0]['x-environments'], undefined);
   });
 
 });
