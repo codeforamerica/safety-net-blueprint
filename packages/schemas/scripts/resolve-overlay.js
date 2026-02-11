@@ -110,28 +110,53 @@ function collectYamlFiles(sourceDir, baseDir = sourceDir) {
 }
 
 /**
- * Discover all overlay YAML files in the overlays directory
+ * Recursively discover all overlay YAML files in the overlays directory.
+ * Each file must have `overlay: 1.0.0` at the top level to be recognized.
  */
 function discoverOverlayFiles(overlaysDir) {
   if (!existsSync(overlaysDir)) {
     return [];
   }
 
-  // Look for modifications.yaml (current convention) or any .yaml files
-  const modificationsPath = join(overlaysDir, 'modifications.yaml');
-  if (existsSync(modificationsPath)) {
-    return [modificationsPath];
+  const overlayFiles = [];
+
+  function walk(dir) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+      } else if (entry.name.endsWith('.yaml')) {
+        try {
+          const content = readFileSync(fullPath, 'utf8');
+          const parsed = yaml.load(content);
+          if (parsed && parsed.overlay === '1.0.0') {
+            overlayFiles.push(fullPath);
+          }
+        } catch {
+          // Skip files that can't be parsed
+        }
+      }
+    }
   }
 
-  // Fall back to discovering all .yaml files
-  return readdirSync(overlaysDir)
-    .filter(f => f.endsWith('.yaml'))
-    .map(f => join(overlaysDir, f));
+  walk(overlaysDir);
+  return overlayFiles.sort();
 }
 
 // =============================================================================
 // Overlay Resolution
 // =============================================================================
+
+/**
+ * Extract version number from a spec filename.
+ * No suffix = version 1, -v2 suffix = version 2, etc.
+ */
+function getVersionFromFilename(relativePath) {
+  const basename = relativePath.replace(/\.yaml$/, '').split('/').pop();
+  const match = basename.match(/-v(\d+)$/);
+  return match ? parseInt(match[1], 10) : 1;
+}
 
 /**
  * For each action, find which files contain the full target path
@@ -149,12 +174,16 @@ function analyzeTargetLocations(overlay, yamlFiles) {
 
     if (!target) continue;
 
-    // Find all files where the full target path exists
+    // Find all files where the full target path exists, with metadata
     const matchingFiles = [];
     for (const { relativePath, spec } of yamlFiles) {
       const pathCheck = checkPathExists(spec, target);
       if (pathCheck.fullPathExists) {
-        matchingFiles.push(relativePath);
+        matchingFiles.push({
+          relativePath,
+          apiId: spec.info?.['x-api-id'] || null,
+          version: getVersionFromFilename(relativePath)
+        });
       }
     }
 
@@ -170,7 +199,11 @@ function analyzeTargetLocations(overlay, yamlFiles) {
 }
 
 /**
- * Determine which files each action should apply to, generating warnings as needed
+ * Determine which files each action should apply to, generating warnings as needed.
+ * Supports disambiguation via:
+ *   - file/files: explicit file paths
+ *   - target-api: match spec's info.x-api-id
+ *   - target-version: match filename version suffix (no suffix = 1, -v2 = 2)
  */
 function resolveActionTargets(actionFileMap) {
   const warnings = [];
@@ -179,12 +212,15 @@ function resolveActionTargets(actionFileMap) {
   for (const [actionIndex, info] of actionFileMap) {
     const { action, matchingFiles, explicitFile, explicitFiles } = info;
     const actionDesc = action.description || action.target;
+    const targetApi = action['target-api'];
+    const targetVersion = action['target-version'];
 
     // Handle explicit file/files specification
     if (explicitFile || explicitFiles) {
       const specifiedFiles = explicitFiles || [explicitFile];
-      const validFiles = specifiedFiles.filter(f => matchingFiles.includes(f));
-      const invalidFiles = specifiedFiles.filter(f => !matchingFiles.includes(f));
+      const matchPaths = matchingFiles.map(m => m.relativePath);
+      const validFiles = specifiedFiles.filter(f => matchPaths.includes(f));
+      const invalidFiles = specifiedFiles.filter(f => !matchPaths.includes(f));
 
       if (invalidFiles.length > 0) {
         warnings.push(`Target ${action.target} does not exist in specified file(s): ${invalidFiles.join(', ')} (action: "${actionDesc}")`);
@@ -194,14 +230,32 @@ function resolveActionTargets(actionFileMap) {
       continue;
     }
 
-    // Auto-resolve based on matching files
-    if (matchingFiles.length === 0) {
-      warnings.push(`Target ${action.target} does not exist in any file (action: "${actionDesc}")`);
+    // Apply target-api and target-version filters
+    let filtered = matchingFiles;
+
+    if (targetApi) {
+      filtered = filtered.filter(m => m.apiId === targetApi);
+    }
+
+    if (targetVersion !== undefined && targetVersion !== null) {
+      const ver = parseInt(targetVersion, 10);
+      filtered = filtered.filter(m => m.version === ver);
+    }
+
+    const filteredPaths = filtered.map(m => m.relativePath);
+
+    // Auto-resolve based on filtered matches
+    if (filteredPaths.length === 0) {
+      if (matchingFiles.length === 0) {
+        warnings.push(`Target ${action.target} does not exist in any file (action: "${actionDesc}")`);
+      } else {
+        warnings.push(`Target ${action.target} matched ${matchingFiles.length} file(s) but none passed target-api/target-version filters (action: "${actionDesc}")`);
+      }
       actionTargets.set(actionIndex, []);
-    } else if (matchingFiles.length === 1) {
-      actionTargets.set(actionIndex, matchingFiles);
+    } else if (filteredPaths.length === 1) {
+      actionTargets.set(actionIndex, filteredPaths);
     } else {
-      warnings.push(`Target ${action.target} exists in multiple files (${matchingFiles.join(', ')}). Specify 'file' or 'files' to disambiguate (action: "${actionDesc}")`);
+      warnings.push(`Target ${action.target} exists in multiple files (${filteredPaths.join(', ')}). Use file, target-api, or target-version to disambiguate (action: "${actionDesc}")`);
       actionTargets.set(actionIndex, []);
     }
   }
@@ -393,4 +447,16 @@ function main() {
   console.log(`Resolved specs written to ${outDir}`);
 }
 
-main();
+// Export for testing
+export {
+  discoverOverlayFiles,
+  analyzeTargetLocations,
+  resolveActionTargets,
+  getVersionFromFilename
+};
+
+// Run main when executed directly
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+if (isDirectRun) {
+  main();
+}
