@@ -17,7 +17,6 @@
     "validate:patterns": "npm run validate:patterns -w @safety-net/schemas",
 "api:new": "npm run api:new -w @safety-net/schemas",
     "overlay:resolve": "npm run overlay:resolve -w @safety-net/schemas",
-"clients:build-package": "node packages/clients/scripts/build-state-package.js",
     "postman:generate": "npm run postman -w @safety-net/clients",
     "mock:start": "npm start -w @safety-net/mock-server",
     "mock:start:all": "npm run start:all -w @safety-net/mock-server",

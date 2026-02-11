@@ -7,8 +7,7 @@
     "safety-net-generate-clients": "./scripts/generate-clients.js"
   },
   "scripts": {
-    "postman": "node scripts/generate-postman.js",
-    "build-package": "node scripts/build-state-package.js"
+    "postman": "node scripts/generate-postman.js"
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
