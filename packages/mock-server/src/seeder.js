@@ -68,9 +68,10 @@ function extractIndividualResources(examples) {
 /**
  * Seed database with examples from YAML file
  * @param {string} resourceName - Name of the resource (e.g., 'persons')
+ * @param {string} specsDir - Path to specs directory
  * @returns {number} Number of resources seeded
  */
-export function seedDatabase(resourceName) {
+export function seedDatabase(resourceName, specsDir) {
   try {
     // Check if database already has data
     const existingCount = count(resourceName);
@@ -78,9 +79,8 @@ export function seedDatabase(resourceName) {
       console.log(`  Database ${resourceName}.db already has ${existingCount} records, skipping seed`);
       return existingCount;
     }
-    
-    // Load examples from YAML (uses state-specific if STATE env var set)
-    const examplesPath = getExamplesPath(resourceName);
+
+    const examplesPath = getExamplesPath(resourceName, specsDir);
     
     if (!existsSync(examplesPath)) {
       console.log(`  No examples file found for ${resourceName}, database will be empty`);
@@ -137,16 +137,17 @@ export function seedDatabase(resourceName) {
 /**
  * Seed all databases for all discovered APIs
  * @param {Array} apiSpecs - Array of API specification objects
+ * @param {string} specsDir - Path to specs directory
  * @returns {Object} Summary of seeded data
  */
-export function seedAllDatabases(apiSpecs) {
+export function seedAllDatabases(apiSpecs, specsDir) {
   console.log('\nSeeding databases from example files...');
-  
+
   const summary = {};
-  
+
   for (const api of apiSpecs) {
     try {
-      const count = seedDatabase(api.name);
+      const count = seedDatabase(api.name, specsDir);
       summary[api.name] = count;
     } catch (error) {
       console.warn(`  Warning: Could not seed ${api.name}:`, error.message);

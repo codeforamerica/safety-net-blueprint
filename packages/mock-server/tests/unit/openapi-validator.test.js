@@ -12,11 +12,12 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const specsDir = join(__dirname, '../../../schemas/openapi');
 
 test('OpenAPI Validator Tests', async (t) => {
-  
+
   await t.test('validateSpec - validates OpenAPI spec', async () => {
-    const specs = discoverApiSpecs();
+    const specs = discoverApiSpecs({ specsDir });
     assert.ok(specs.length > 0, 'Need at least one spec to test');
     
     const result = await validateSpec(specs[0].specPath);
@@ -46,9 +47,9 @@ test('OpenAPI Validator Tests', async (t) => {
   });
   
   await t.test('validateExamples - validates examples against schema', async () => {
-    const specs = discoverApiSpecs();
+    const specs = discoverApiSpecs({ specsDir });
     const spec = specs[0];
-    const examplesPath = join(dirname(spec.specPath), 'examples', `${spec.name}.yaml`);
+    const examplesPath = join(specsDir, `${spec.name}-examples.yaml`);
     
     const result = await validateExamples(spec.specPath, examplesPath);
     
@@ -66,7 +67,7 @@ test('OpenAPI Validator Tests', async (t) => {
   });
   
   await t.test('validateExamples - handles missing examples file', async () => {
-    const specs = discoverApiSpecs();
+    const specs = discoverApiSpecs({ specsDir });
     const result = await validateExamples(specs[0].specPath, '/nonexistent/examples.yaml');
     
     // Missing examples is optional, so should be valid with a warning
@@ -77,9 +78,9 @@ test('OpenAPI Validator Tests', async (t) => {
   });
   
   await t.test('validateAll - validates all specs and examples', async () => {
-    const specs = discoverApiSpecs().map(spec => ({
+    const specs = discoverApiSpecs({ specsDir }).map(spec => ({
       ...spec,
-      examplesPath: join(dirname(spec.specPath), 'examples', `${spec.name}.yaml`)
+      examplesPath: join(specsDir, `${spec.name}-examples.yaml`)
     }));
     
     const results = await validateAll(specs);
@@ -99,7 +100,7 @@ test('OpenAPI Validator Tests', async (t) => {
   });
   
   await t.test('validation errors have required structure', async () => {
-    const specs = discoverApiSpecs();
+    const specs = discoverApiSpecs({ specsDir });
     const result = await validateSpec('/nonexistent.yaml');
     
     assert.ok(result.errors.length > 0, 'Should have errors');

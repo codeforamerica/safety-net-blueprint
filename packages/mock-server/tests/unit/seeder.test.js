@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const specsDir = join(__dirname, '../../../schemas/openapi');
 
 // Cleanup function
 const cleanup = () => {
@@ -34,7 +35,7 @@ test('Database Seeder Tests', async (t) => {
   await t.test('seedDatabase - seeds from examples file', () => {
     cleanup(); // Start clean
     
-    const seededCount = seedDatabase('persons');
+    const seededCount = seedDatabase('persons', specsDir);
     
     assert.ok(seededCount >= 0, 'Should return count');
     
@@ -49,10 +50,10 @@ test('Database Seeder Tests', async (t) => {
   
   await t.test('seedDatabase - skips if database already has data', () => {
     // Seed once
-    const firstCount = seedDatabase('persons');
+    const firstCount = seedDatabase('persons', specsDir);
     
     // Try to seed again
-    const secondCount = seedDatabase('persons');
+    const secondCount = seedDatabase('persons', specsDir);
     
     // Should return existing count, not re-seed
     assert.strictEqual(firstCount, secondCount, 'Should not re-seed existing data');
@@ -62,7 +63,7 @@ test('Database Seeder Tests', async (t) => {
   await t.test('seedDatabase - handles missing examples', () => {
     cleanup();
     
-    const count = seedDatabase('nonexistent-api');
+    const count = seedDatabase('nonexistent-api', specsDir);
     
     assert.strictEqual(count, 0, 'Should return 0 for missing examples');
     console.log(`  ✓ Handled missing examples gracefully`);
@@ -71,7 +72,7 @@ test('Database Seeder Tests', async (t) => {
   await t.test('seedDatabase - sets timestamps correctly', () => {
     cleanup();
     
-    seedDatabase('persons');
+    seedDatabase('persons', specsDir);
     const records = findAll('persons', {});
     
     if (records.length > 0) {
@@ -88,7 +89,7 @@ test('Database Seeder Tests', async (t) => {
   await t.test('seedDatabase - maintains example order', () => {
     cleanup();
     
-    seedDatabase('persons');
+    seedDatabase('persons', specsDir);
     const records = findAll('persons', {});
     
     if (records.length > 1) {
@@ -107,8 +108,8 @@ test('Database Seeder Tests', async (t) => {
   await t.test('seedAllDatabases - seeds all discovered APIs', async () => {
     cleanup();
     
-    const apiSpecs = await loadAllSpecs();
-    const summary = seedAllDatabases(apiSpecs);
+    const apiSpecs = await loadAllSpecs({ specsDir });
+    const summary = seedAllDatabases(apiSpecs, specsDir);
     
     assert.ok(typeof summary === 'object', 'Should return summary object');
     assert.strictEqual(Object.keys(summary).length, apiSpecs.length,

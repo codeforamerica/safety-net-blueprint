@@ -23,6 +23,7 @@ import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const specsDir = join(__dirname, '../../../schemas/openapi');
 
 const cleanup = () => {
   closeAll();
@@ -40,7 +41,7 @@ test('CRUD Handler Tests', async (t) => {
   
   // Setup before tests
   cleanup();
-  seedDatabase('persons');
+  seedDatabase('persons', specsDir);
   
   await t.test('LIST - returns all resources', () => {
     const results = findAll('persons', {});

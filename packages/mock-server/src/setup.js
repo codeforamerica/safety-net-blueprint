@@ -83,7 +83,7 @@ export async function performSetup({ specsDir, verbose = true, skipValidation = 
   }
   
   // Seed databases from example files
-  const summary = seedAllDatabases(apiSpecs);
+  const summary = seedAllDatabases(apiSpecs, specsDir);
   
   return { apiSpecs, summary };
 }
