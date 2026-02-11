@@ -3,7 +3,7 @@
  * Resolve OpenAPI overlays for state-specific configurations.
  *
  * This script applies OpenAPI Overlay Specification (1.0.0) transformations
- * to base schemas, producing state-specific resolved specifications.
+ * to base schemas, producing resolved specifications.
  *
  * Two-pass processing:
  *   1. Scan all files to determine where each target path exists
@@ -13,52 +13,78 @@
  *      - Target in 2+ files → require file/files property
  *
  * Usage:
- *   STATE=california node scripts/resolve-overlay.js
- *   node scripts/resolve-overlay.js --state=colorado
+ *   node scripts/resolve-overlay.js --base=./openapi --out=./resolved
+ *   node scripts/resolve-overlay.js --base=./openapi --overlays=./overlays/california --out=./resolved
  *
- * The resolved specs are written to openapi/resolved/ and used by
- * the mock server, client generators, and other tooling.
+ * Flags:
+ *   --base       Path to base specs directory (required)
+ *   --overlays   Path to overlay directory (optional; omit to copy base specs unchanged)
+ *   --out        Output directory for resolved specs (required)
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync, rmSync } from 'fs';
-import { join, dirname, relative } from 'path';
+import { join, dirname, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const rootDir = join(__dirname, '..');
-const openapiDir = join(rootDir, 'openapi');
-const overlaysDir = join(openapiDir, 'overlays');
-const resolvedDir = join(openapiDir, 'resolved');
 
-/**
- * Get the state from environment or CLI args
- */
-function getState() {
-  // Check CLI args first
-  const stateArg = process.argv.find(arg => arg.startsWith('--state='));
-  if (stateArg) {
-    return stateArg.split('=')[1];
+// =============================================================================
+// Argument Parsing
+// =============================================================================
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const options = {
+    base: null,
+    overlays: null,
+    out: null,
+    help: false
+  };
+
+  for (const arg of args) {
+    if (arg === '--help' || arg === '-h') {
+      options.help = true;
+    } else if (arg.startsWith('--base=')) {
+      options.base = arg.split('=')[1];
+    } else if (arg.startsWith('--overlays=')) {
+      options.overlays = arg.split('=')[1];
+    } else if (arg.startsWith('--out=')) {
+      options.out = arg.split('=')[1];
+    }
   }
 
-  // Fall back to environment variable
-  return process.env.STATE || null;
+  return options;
 }
 
-/**
- * List available state overlays
- */
-function listAvailableStates() {
-  if (!existsSync(overlaysDir)) {
-    return [];
-  }
+function showHelp() {
+  console.log(`
+Resolve OpenAPI Overlays
 
-  return readdirSync(overlaysDir, { withFileTypes: true })
-    .filter(entry => entry.isDirectory() && existsSync(join(overlaysDir, entry.name, 'modifications.yaml')))
-    .map(entry => entry.name);
+Applies overlay transformations to base specs, producing resolved output.
+
+Usage:
+  node scripts/resolve-overlay.js --base=<dir> --out=<dir> [--overlays=<dir>]
+
+Flags:
+  --base=<dir>       Path to base specs directory (required)
+  --overlays=<dir>   Path to overlay directory (optional)
+  --out=<dir>        Output directory for resolved specs (required)
+  -h, --help         Show this help message
+
+Without --overlays, base specs are copied to --out unchanged.
+
+Examples:
+  node scripts/resolve-overlay.js --base=./openapi --out=./resolved
+  node scripts/resolve-overlay.js --base=./openapi --overlays=./overlays/california --out=./resolved
+`);
 }
+
+// =============================================================================
+// File Collection
+// =============================================================================
 
 /**
  * Recursively collect all YAML files with their relative paths and contents
@@ -71,10 +97,6 @@ function collectYamlFiles(sourceDir, baseDir = sourceDir) {
     const sourcePath = join(sourceDir, file.name);
 
     if (file.isDirectory()) {
-      // Skip overlays and resolved directories
-      if (file.name === 'overlays' || file.name === 'resolved') {
-        continue;
-      }
       yamlFiles = yamlFiles.concat(collectYamlFiles(sourcePath, baseDir));
     } else if (file.name.endsWith('.yaml')) {
       const relativePath = relative(baseDir, sourcePath);
@@ -86,6 +108,30 @@ function collectYamlFiles(sourceDir, baseDir = sourceDir) {
 
   return yamlFiles;
 }
+
+/**
+ * Discover all overlay YAML files in the overlays directory
+ */
+function discoverOverlayFiles(overlaysDir) {
+  if (!existsSync(overlaysDir)) {
+    return [];
+  }
+
+  // Look for modifications.yaml (current convention) or any .yaml files
+  const modificationsPath = join(overlaysDir, 'modifications.yaml');
+  if (existsSync(modificationsPath)) {
+    return [modificationsPath];
+  }
+
+  // Fall back to discovering all .yaml files
+  return readdirSync(overlaysDir)
+    .filter(f => f.endsWith('.yaml'))
+    .map(f => join(overlaysDir, f));
+}
+
+// =============================================================================
+// Overlay Resolution
+// =============================================================================
 
 /**
  * For each action, find which files contain the full target path
@@ -128,7 +174,7 @@ function analyzeTargetLocations(overlay, yamlFiles) {
  */
 function resolveActionTargets(actionFileMap) {
   const warnings = [];
-  const actionTargets = new Map(); // actionIndex -> array of file paths to apply to
+  const actionTargets = new Map();
 
   for (const [actionIndex, info] of actionFileMap) {
     const { action, matchingFiles, explicitFile, explicitFiles } = info;
@@ -137,7 +183,6 @@ function resolveActionTargets(actionFileMap) {
     // Handle explicit file/files specification
     if (explicitFile || explicitFiles) {
       const specifiedFiles = explicitFiles || [explicitFile];
-      // Validate specified files exist in matching files
       const validFiles = specifiedFiles.filter(f => matchingFiles.includes(f));
       const invalidFiles = specifiedFiles.filter(f => !matchingFiles.includes(f));
 
@@ -154,10 +199,8 @@ function resolveActionTargets(actionFileMap) {
       warnings.push(`Target ${action.target} does not exist in any file (action: "${actionDesc}")`);
       actionTargets.set(actionIndex, []);
     } else if (matchingFiles.length === 1) {
-      // Exactly one file - auto-apply
       actionTargets.set(actionIndex, matchingFiles);
     } else {
-      // Multiple files - require explicit specification
       warnings.push(`Target ${action.target} exists in multiple files (${matchingFiles.join(', ')}). Specify 'file' or 'files' to disambiguate (action: "${actionDesc}")`);
       actionTargets.set(actionIndex, []);
     }
@@ -190,14 +233,12 @@ function applyOverlayWithTargets(yamlFiles, overlay, actionTargets, overlayDir) 
       const spec = results.get(relativePath);
       if (!spec) continue;
 
-      // Apply single action
       const singleOverlay = { actions: [action] };
       const { result } = applyOverlay(spec, singleOverlay, { overlayDir, silent: true });
       results.set(relativePath, result);
 
-      // Log application
       if (action.description) {
-        console.log(`  - Applied: ${action.description} → ${relativePath}`);
+        console.log(`  - Applied: ${action.description} -> ${relativePath}`);
       }
     }
   }
@@ -205,10 +246,14 @@ function applyOverlayWithTargets(yamlFiles, overlay, actionTargets, overlayDir) 
   return results;
 }
 
+// =============================================================================
+// Output
+// =============================================================================
+
 /**
  * Write resolved specs to target directory
  */
-function writeResolvedSpecs(results, targetDir, baseDir) {
+function writeResolvedSpecs(results, targetDir) {
   for (const [relativePath, spec] of results) {
     const targetPath = join(targetDir, relativePath);
     const targetDirPath = dirname(targetPath);
@@ -216,8 +261,8 @@ function writeResolvedSpecs(results, targetDir, baseDir) {
     mkdirSync(targetDirPath, { recursive: true });
 
     const output = yaml.dump(spec, {
-      lineWidth: -1,  // Don't wrap lines
-      noRefs: true,   // Don't use aliases
+      lineWidth: -1,
+      noRefs: true,
       quotingType: '"',
       forceQuotes: false
     });
@@ -226,88 +271,126 @@ function writeResolvedSpecs(results, targetDir, baseDir) {
 }
 
 /**
- * Main execution
+ * Copy base specs to output directory unchanged
  */
-function main() {
-  const state = getState();
-  const availableStates = listAvailableStates();
+function copyBaseSpecs(baseDir, outDir) {
+  const files = readdirSync(baseDir, { withFileTypes: true });
+  for (const file of files) {
+    const source = join(baseDir, file.name);
+    const target = join(outDir, file.name);
 
-  // Clean and recreate resolved directory
-  if (existsSync(resolvedDir)) {
-    rmSync(resolvedDir, { recursive: true });
-  }
-  mkdirSync(resolvedDir, { recursive: true });
-
-  if (!state) {
-    // No state specified - copy base specs as-is
-    console.log('No STATE specified, using base specifications');
-    console.log(`Available states: ${availableStates.join(', ') || '(none)'}`);
-    console.log('');
-
-    // Copy all files except overlays and resolved
-    const files = readdirSync(openapiDir, { withFileTypes: true });
-    for (const file of files) {
-      if (file.name === 'overlays' || file.name === 'resolved') continue;
-
-      const source = join(openapiDir, file.name);
-      const target = join(resolvedDir, file.name);
-
-      if (file.isDirectory()) {
-        cpSync(source, target, { recursive: true });
-      } else {
-        cpSync(source, target);
-      }
+    if (file.isDirectory()) {
+      cpSync(source, target, { recursive: true });
+    } else {
+      cpSync(source, target);
     }
+  }
+}
 
-    console.log(`Base specs copied to ${resolvedDir}`);
-    return;
+// =============================================================================
+// Main
+// =============================================================================
+
+function main() {
+  const options = parseArgs();
+
+  if (options.help) {
+    showHelp();
+    process.exit(0);
   }
 
-  // Validate state exists
-  if (!availableStates.includes(state)) {
-    console.error(`Error: Unknown state '${state}'`);
-    console.error(`Available states: ${availableStates.join(', ') || '(none)'}`);
+  if (!options.base || !options.out) {
+    console.error('Error: --base and --out are required.\n');
+    showHelp();
     process.exit(1);
   }
 
-  // Load overlay
-  const stateOverlayDir = join(overlaysDir, state);
-  const overlayPath = join(stateOverlayDir, 'modifications.yaml');
-  console.log(`Applying overlay: ${state}`);
-  console.log(`Overlay file: ${overlayPath}`);
+  const baseDir = resolve(options.base);
+  const outDir = resolve(options.out);
+
+  if (!existsSync(baseDir)) {
+    console.error(`Error: Base directory does not exist: ${baseDir}`);
+    process.exit(1);
+  }
+
+  // Clean and recreate output directory
+  if (existsSync(outDir)) {
+    rmSync(outDir, { recursive: true });
+  }
+  mkdirSync(outDir, { recursive: true });
+
+  if (!options.overlays) {
+    // No overlays - copy base specs as-is
+    console.log('No --overlays specified, copying base specs unchanged');
+    copyBaseSpecs(baseDir, outDir);
+    console.log(`Base specs copied to ${outDir}`);
+    return;
+  }
+
+  const overlaysDir = resolve(options.overlays);
+
+  if (!existsSync(overlaysDir)) {
+    console.error(`Error: Overlays directory does not exist: ${overlaysDir}`);
+    process.exit(1);
+  }
+
+  // Discover overlay files
+  const overlayFiles = discoverOverlayFiles(overlaysDir);
+  if (overlayFiles.length === 0) {
+    console.log('No overlay files found, copying base specs unchanged');
+    copyBaseSpecs(baseDir, outDir);
+    console.log(`Base specs copied to ${outDir}`);
+    return;
+  }
+
+  console.log(`Base specs: ${baseDir}`);
+  console.log(`Overlays:   ${overlaysDir}`);
+  console.log(`Output:     ${outDir}`);
   console.log('');
 
-  const overlayContent = readFileSync(overlayPath, 'utf8');
-  const overlay = yaml.load(overlayContent);
+  // Collect base YAML files
+  const yamlFiles = collectYamlFiles(baseDir);
 
-  console.log(`Overlay: ${overlay.info?.title || state}`);
-  console.log(`Version: ${overlay.info?.version || 'unknown'}`);
-  console.log('');
+  // Apply each overlay file
+  let allWarnings = [];
+  let currentResults = null;
 
-  // Two-pass processing
-  // Pass 1: Collect all YAML files and analyze target locations
-  const yamlFiles = collectYamlFiles(openapiDir);
-  const actionFileMap = analyzeTargetLocations(overlay, yamlFiles);
-  const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+  for (const overlayPath of overlayFiles) {
+    const overlayContent = readFileSync(overlayPath, 'utf8');
+    const overlay = yaml.load(overlayContent);
 
-  // Pass 2: Apply overlay actions to resolved targets
-  const results = applyOverlayWithTargets(yamlFiles, overlay, actionTargets, stateOverlayDir);
+    console.log(`Overlay: ${overlay.info?.title || relative(overlaysDir, overlayPath)}`);
+    if (overlay.info?.version) {
+      console.log(`Version: ${overlay.info.version}`);
+    }
+    console.log('');
+
+    // Use current results as input (for chaining multiple overlays)
+    const inputFiles = currentResults
+      ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+      : yamlFiles;
+
+    const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+    const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+    allWarnings = allWarnings.concat(warnings);
+
+    currentResults = applyOverlayWithTargets(inputFiles, overlay, actionTargets, overlaysDir);
+  }
 
   // Write resolved specs
-  writeResolvedSpecs(results, resolvedDir, openapiDir);
+  writeResolvedSpecs(currentResults, outDir);
 
   // Display warnings if any
-  if (warnings.length > 0) {
+  if (allWarnings.length > 0) {
     console.log('');
     console.log('Warnings:');
-    for (const warning of warnings) {
-      console.log(`  ⚠ ${warning}`);
+    for (const warning of allWarnings) {
+      console.log(`  ! ${warning}`);
     }
   }
 
   console.log('');
-  console.log(`Resolved specs written to ${resolvedDir}`);
-  console.log(`State: ${state}`);
+  console.log(`Resolved specs written to ${outDir}`);
 }
 
 main();
