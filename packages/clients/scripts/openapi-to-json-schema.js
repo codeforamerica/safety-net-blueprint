@@ -29,10 +29,10 @@
  *       ...
  */
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { writeFileSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
+import $RefParser from '@apidevtools/json-schema-ref-parser';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -116,18 +116,16 @@ function discoverSpecs(specsDir) {
 }
 
 /**
- * Load an OpenAPI spec file
+ * Load and dereference an OpenAPI spec file, resolving all $ref entries.
  */
-function loadSpec(specPath) {
+async function loadSpec(specPath) {
   try {
-    const content = readFileSync(specPath, 'utf8');
-    const ext = extname(specPath).toLowerCase();
-
-    if (ext === '.json') {
-      return JSON.parse(content);
-    } else {
-      return yaml.load(content);
-    }
+    const spec = await $RefParser.dereference(specPath, {
+      dereference: {
+        circular: 'ignore'
+      }
+    });
+    return spec;
   } catch (err) {
     console.error(`Error loading spec ${specPath}: ${err.message}`);
     return null;
@@ -152,6 +150,14 @@ function convertToJsonSchema(schema, schemaName) {
     delete obj.xml;
     delete obj.externalDocs;
     delete obj.example;
+    delete obj.deprecated;
+
+    // Remove x- extension properties
+    for (const key of Object.keys(obj)) {
+      if (key.startsWith('x-')) {
+        delete obj[key];
+      }
+    }
 
     // Recursively process nested objects
     for (const key in obj) {
@@ -214,7 +220,7 @@ function writeSchemas(schemas, specName, outDir) {
 /**
  * Main execution
  */
-function main() {
+async function main() {
   const args = parseArgs();
 
   console.log('OpenAPI to JSON Schema Converter');
@@ -240,7 +246,7 @@ function main() {
   for (const spec of specs) {
     console.log(`Processing ${spec.name}${spec.ext}...`);
 
-    const openApiSpec = loadSpec(spec.path);
+    const openApiSpec = await loadSpec(spec.path);
     if (!openApiSpec) {
       console.log(`  ⚠️  Skipped (failed to load)\n`);
       continue;

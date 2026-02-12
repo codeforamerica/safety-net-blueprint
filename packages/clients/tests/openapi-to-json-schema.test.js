@@ -1,6 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { convertToJsonSchema } from '../scripts/openapi-to-json-schema.js';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { convertToJsonSchema, loadSpec } from '../scripts/openapi-to-json-schema.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const resolvedSpecsDir = join(__dirname, '../../schemas/package/openapi/resolved');
 
 describe('OpenAPI to JSON Schema Conversion', () => {
   describe('convertToJsonSchema', () => {
@@ -249,6 +255,94 @@ describe('OpenAPI to JSON Schema Conversion', () => {
       assert.strictEqual(result.oneOf[1].example, undefined);
       assert.strictEqual(result.oneOf[0].type, 'string');
       assert.strictEqual(result.oneOf[1].type, 'number');
+    });
+
+    it('should remove deprecated keyword', () => {
+      const input = {
+        type: 'object',
+        deprecated: true,
+        properties: {
+          oldField: {
+            type: 'string',
+            deprecated: true
+          },
+          newField: {
+            type: 'string'
+          }
+        }
+      };
+
+      const result = convertToJsonSchema(input, 'Legacy');
+
+      assert.strictEqual(result.deprecated, undefined);
+      assert.strictEqual(result.properties.oldField.deprecated, undefined);
+      assert.strictEqual(result.properties.oldField.type, 'string');
+      assert.strictEqual(result.properties.newField.type, 'string');
+    });
+
+    it('should remove x- extension properties', () => {
+      const input = {
+        type: 'object',
+        'x-internal': true,
+        'x-custom-tag': 'some-value',
+        properties: {
+          name: {
+            type: 'string',
+            'x-field-extra': { label: 'Name' }
+          }
+        }
+      };
+
+      const result = convertToJsonSchema(input, 'Extended');
+
+      assert.strictEqual(result['x-internal'], undefined);
+      assert.strictEqual(result['x-custom-tag'], undefined);
+      assert.strictEqual(result.properties.name['x-field-extra'], undefined);
+      assert.strictEqual(result.properties.name.type, 'string');
+    });
+  });
+
+  describe('loadSpec', () => {
+    it('should dereference internal $ref entries', async () => {
+      const specPath = join(resolvedSpecsDir, 'persons.yaml');
+      const spec = await loadSpec(specPath);
+
+      // After dereferencing, components.schemas should contain resolved objects
+      assert.ok(spec.components.schemas, 'components.schemas should exist');
+
+      // All schemas should be resolved objects, not $ref stubs
+      for (const [name, schema] of Object.entries(spec.components.schemas)) {
+        assert.strictEqual(typeof schema, 'object', `${name} schema should be an object`);
+        assert.ok(
+          schema.type || schema.allOf || schema.oneOf || schema.anyOf || schema.properties,
+          `${name} schema should have structure (type, allOf, oneOf, anyOf, or properties)`
+        );
+      }
+    });
+
+    it('should dereference external $ref entries', async () => {
+      const specPath = join(resolvedSpecsDir, 'persons.yaml');
+      const spec = await loadSpec(specPath);
+
+      // External refs like ./components/parameters.yaml#/LimitParam should be resolved
+      // Check that a path operation's parameters are resolved objects, not $ref strings
+      const listPath = spec.paths['/persons'];
+      assert.ok(listPath, '/persons path should exist');
+      const getOp = listPath.get;
+      assert.ok(getOp, 'GET /persons should exist');
+
+      // Parameters should be resolved objects with 'name' and 'in' properties
+      const params = getOp.parameters || listPath.parameters || [];
+      assert.ok(params.length > 0, 'Should have parameters');
+      for (const param of params) {
+        assert.strictEqual(param.$ref, undefined, `Parameter should be dereferenced, but found $ref: ${param.$ref}`);
+        assert.ok(param.name, 'Dereferenced parameter should have a name');
+      }
+    });
+
+    it('should return null for non-existent files', async () => {
+      const result = await loadSpec('/tmp/does-not-exist.yaml');
+      assert.strictEqual(result, null);
     });
   });
 });
