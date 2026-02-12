@@ -4,7 +4,7 @@
 
 **Date:** 2026-02-12
 
-**Deciders:** Leo, Bot
+**Deciders:** Development Team
 
 ---
 
