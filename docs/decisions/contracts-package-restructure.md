@@ -16,7 +16,7 @@ The [contract-driven architecture](../architecture/contract-driven-architecture.
 
 - **Package name reflects scope** — consumers see `@safety-net/schemas` in import statements, which is misleading when the package also contains state machines, rules, metrics, and form definitions
 - **Naming convention supports multiple artifact types** — each domain may have 1–6 artifacts (OpenAPI, state machine, rules, metrics, forms, examples); the convention must make it easy to discover all artifacts for a domain and validate cross-artifact consistency
-- **No dependency on directory structure** — tooling discovers artifacts by filename convention (recursive glob `**/*-{suffix}.yaml`), not by directory path. The naming convention encodes domain and artifact type in the filename itself, so files can be reorganized into subdirectories later without breaking discovery, validation, or overlay resolution. The initial layout is flat (all artifacts at the package root) for simplicity and cross-artifact visibility, but this is a convention, not a constraint that tooling enforces. The one exception is `$ref` paths within OpenAPI specs — those are inherently relative and would need updating if files move, but that's spec-internal, not tooling
+- **No dependency on directory structure** — tooling discovers artifacts by filename convention (recursive glob `**/*-{suffix}.yaml`), not by directory path. The naming convention encodes domain and artifact type in the filename itself, so files can be reorganized into subdirectories later without breaking discovery, validation, or overlay resolution. The initial layout is flat (all artifacts at the package root) for simplicity and cross-artifact visibility, but this is a convention, not a constraint that tooling enforces. The one exception is `$ref` paths within OpenAPI specs — those are inherently relative. However, because domain specs are self-contained (all domain schemas inline) with only external `$ref`s to shared `components/`, the impact of reorganization is limited to updating a predictable set of component refs
 - **Convention is documented and enforced by tooling** — naming conventions only hold if they're discoverable by developers and violations are caught by validation before merge
 - Existing imports, CI, scripts, and documentation are updated consistently
 
@@ -71,11 +71,13 @@ Add `-openapi` suffix and move from `openapi/` to the package root:
 - `authored/` — for future authored tables (CSV sources for generated YAML)
 - `examples/` — for future runnable examples
 
-### `$ref` path updates (~200+ across 10 YAML files)
+### `$ref` path updates
 
-- Cross-spec refs: `./persons.yaml#/...` &rarr; `./persons-openapi.yaml#/...`
-- Example refs: `./applications-examples.yaml#/...` &rarr; `./applications-openapi-examples.yaml#/...`
+Each domain's OpenAPI spec is self-contained — all domain-specific schemas are defined inline rather than split across files. The only external `$ref`s point to shared components (`components/parameters.yaml`, `components/responses.yaml`, etc.). This is a deliberate choice that minimizes cross-file path dependencies: if files are later reorganized into subdirectories, only the refs to `components/` need updating, and those are predictable and mechanical.
+
 - Component refs: `./components/parameters.yaml#/...` — unchanged (relative path still works after `components/` moves up with the specs)
+- Example refs (same-domain): `./applications-examples.yaml#/...` &rarr; `./applications-openapi-examples.yaml#/...` — examples are the one same-domain cross-file ref, kept separate to avoid bloating the spec file
+- No cross-domain refs: specs do not `$ref` into other domain specs
 
 ### Import updates (13 files in `packages/mock-server/` and `packages/clients/`)
 
