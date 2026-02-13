@@ -42,7 +42,7 @@ Rename `packages/schemas/` to `packages/contracts/` and `@safety-net/schemas` to
 
 ### Package rename
 
-`@safety-net/schemas` &rarr; `@safety-net/contracts` in `package.json`
+`@safety-net/schemas` &rarr; `@safety-net/contracts` in `package.json`. Preserve the `exports` map (`./loader`, `./validation`, `./overlay`, `./patterns`) — subpath exports stay the same, only the package name changes.
 
 ### File renames
 
@@ -119,6 +119,7 @@ All discovery scripts must use recursive filename glob (e.g., `**/*-openapi.yaml
 - `scripts/validate-openapi.js`: use recursive glob
 - `scripts/resolve-overlay.js`: use recursive glob
 - `packages/mock-server/package.json`: script args referencing `../schemas/openapi` → `../contracts`
+- `.spectral.yaml`: update any file path references if present
 
 ### CI updates
 
