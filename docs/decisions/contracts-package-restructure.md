@@ -16,7 +16,7 @@ The [contract-driven architecture](../architecture/contract-driven-architecture.
 
 - **Package name reflects scope** — consumers see `@safety-net/schemas` in import statements, which is misleading when the package also contains state machines, rules, metrics, and form definitions
 - **Naming convention supports multiple artifact types** — each domain may have 1–6 artifacts (OpenAPI, state machine, rules, metrics, forms, examples); the convention must make it easy to discover all artifacts for a domain and validate cross-artifact consistency
-- **Flat directory structure** — all contract artifacts for a domain are siblings, not nested in type-specific subdirectories. Rationale: (1) cross-artifact relationships are visible at a glance — you see everything for a domain together; (2) tools can discover all artifacts for a domain with a single glob (`applications-*`) rather than searching multiple directories; (3) overlay targeting is simpler — overlays match by domain prefix, not nested paths; (4) adding a new artifact type doesn't require creating new directories or deciding where files belong
+- **No dependency on directory structure** — tooling discovers artifacts by filename convention (recursive glob `**/*-{suffix}.yaml`), not by directory path. The naming convention encodes domain and artifact type in the filename itself, so files can be reorganized into subdirectories later without breaking discovery, validation, or overlay resolution. The initial layout is flat (all artifacts at the package root) for simplicity and cross-artifact visibility, but this is a convention, not a constraint that tooling enforces. The one exception is `$ref` paths within OpenAPI specs — those are inherently relative and would need updating if files move, but that's spec-internal, not tooling
 - **Convention is documented and enforced by tooling** — naming conventions only hold if they're discoverable by developers and violations are caught by validation before merge
 - Existing imports, CI, scripts, and documentation are updated consistently
 
@@ -95,13 +95,15 @@ All `-w @safety-net/schemas` &rarr; `-w @safety-net/contracts`
 
 ### Source code path updates
 
-- `src/validation/openapi-loader.js`: spec discovery paths (no longer in `openapi/` subdirectory)
-- `src/overlay/overlay-resolver.js`: overlay/spec paths
+All discovery scripts must use recursive filename glob (e.g., `**/*-openapi.yaml`) from the package root, not hardcoded directory paths. This ensures files can be reorganized without breaking tooling.
+
+- `src/validation/openapi-loader.js`: use recursive glob for spec discovery
+- `src/overlay/overlay-resolver.js`: use recursive glob for spec/overlay discovery
 - `scripts/generate-api.js`: output paths, filename patterns (add `-openapi` suffix)
-- `scripts/export-design-reference.js`: spec discovery paths
-- `scripts/validate-openapi.js`: paths
-- `scripts/resolve-overlay.js`: paths
-- `packages/mock-server/package.json`: script args referencing `../schemas/openapi`
+- `scripts/export-design-reference.js`: use recursive glob for spec discovery
+- `scripts/validate-openapi.js`: use recursive glob
+- `scripts/resolve-overlay.js`: use recursive glob
+- `packages/mock-server/package.json`: script args referencing `../schemas/openapi` → `../contracts`
 
 ### CI updates
 
@@ -159,7 +161,7 @@ packages/contracts/
 
 ## Brittleness Mitigation
 
-1. **Cross-artifact validation** — `npm run validate` checks that for every `{domain}-state-machine.yaml`, a matching `{domain}-openapi.yaml` exists. State machine states must match OpenAPI status enums. Effect targets must reference existing schemas. Rule context variables must resolve to real fields. (Validation rules added incrementally as artifact types are implemented.)
+1. **Cross-artifact validation** — `npm run validate` discovers artifacts by recursive filename glob (`**/*-state-machine.yaml`, `**/*-openapi.yaml`, etc.) and checks that for every `{domain}-state-machine.yaml`, a matching `{domain}-openapi.yaml` exists. State machine states must match OpenAPI status enums. Effect targets must reference existing schemas. Rule context variables must resolve to real fields. (Validation rules added incrementally as artifact types are implemented.)
 
 2. **Scaffolding script** — updated `generate-api.js` generates consistently-named files. Developers don't hand-create filenames.
 
@@ -175,6 +177,7 @@ packages/contracts/
 - **New artifact type:** choose a suffix, add to naming convention docs, create conversion script. Existing domains unaffected.
 - **New version:** create `{domain}-{type}-v2.yaml`. Both versions coexist. Overlays target versions via `target-version`.
 - **Authored table types:** open-ended. Any new type follows `authored/{domain}-{type}.csv` &rarr; `{domain}-{type}.yaml`.
+- **Reorganize into subdirectories:** because tooling discovers by filename pattern, not directory path, files can be moved into domain subdirectories (e.g., `applications/applications-openapi.yaml`) without breaking discovery, validation, or overlay resolution. Only `$ref` paths within OpenAPI specs would need updating.
 
 ---
 
