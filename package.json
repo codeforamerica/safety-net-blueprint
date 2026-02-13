@@ -16,7 +16,7 @@
     "validate:syntax": "npm run validate:syntax -w @safety-net/contracts",
     "validate:patterns": "npm run validate:patterns -w @safety-net/contracts",
 "api:new": "npm run api:new -w @safety-net/contracts",
-    "overlay:resolve": "npm run overlay:resolve -w @safety-net/contracts",
+    "overlay:resolve": "node packages/contracts/scripts/resolve-overlay.js",
     "clients:typescript": "node packages/clients/scripts/generate-clients-typescript.js",
     "clients:json-schema": "node packages/clients/scripts/generate-clients-json-schema.js",
     "postman:generate": "npm run postman -w @safety-net/clients",
