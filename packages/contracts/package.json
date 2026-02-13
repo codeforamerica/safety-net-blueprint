@@ -1,7 +1,7 @@
 {
-  "name": "@safety-net/schemas",
+  "name": "@safety-net/contracts",
   "version": "1.0.0",
-  "description": "OpenAPI schemas, validation, and overlay resolution for Safety Net APIs",
+  "description": "Behavioral contracts, OpenAPI specs, validation, and overlay resolution for Safety Net APIs",
   "type": "module",
   "files": [
     "src/",

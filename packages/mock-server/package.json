@@ -8,10 +8,10 @@
     "safety-net-swagger": "./scripts/swagger/server.js"
   },
   "scripts": {
-    "start": "node scripts/server.js --specs=../schemas/openapi",
-    "start:all": "node scripts/start-all.js --specs=../schemas/openapi",
-    "swagger": "node scripts/swagger/server.js --specs=../schemas/openapi",
-    "setup": "node scripts/setup.js --specs=../schemas/openapi",
+    "start": "node scripts/server.js --specs=../contracts/openapi",
+    "start:all": "node scripts/start-all.js --specs=../contracts/openapi",
+    "swagger": "node scripts/swagger/server.js --specs=../contracts/openapi",
+    "setup": "node scripts/setup.js --specs=../contracts/openapi",
     "reset": "node scripts/reset.js",
     "test": "node tests/run-all-tests.js --unit",
     "test:unit": "node tests/run-all-tests.js --unit",
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
-    "@safety-net/schemas": "*",
+    "@safety-net/contracts": "*",
     "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",

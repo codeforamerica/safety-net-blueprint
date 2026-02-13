@@ -12,11 +12,11 @@
   ],
   "scripts": {
     "start": "npm start -w @safety-net/mock-server",
-    "validate": "npm run validate -w @safety-net/schemas",
-    "validate:syntax": "npm run validate:syntax -w @safety-net/schemas",
-    "validate:patterns": "npm run validate:patterns -w @safety-net/schemas",
-"api:new": "npm run api:new -w @safety-net/schemas",
-    "overlay:resolve": "npm run overlay:resolve -w @safety-net/schemas",
+    "validate": "npm run validate -w @safety-net/contracts",
+    "validate:syntax": "npm run validate:syntax -w @safety-net/contracts",
+    "validate:patterns": "npm run validate:patterns -w @safety-net/contracts",
+"api:new": "npm run api:new -w @safety-net/contracts",
+    "overlay:resolve": "npm run overlay:resolve -w @safety-net/contracts",
     "clients:generate": "node packages/clients/scripts/generate-clients.js",
     "postman:generate": "npm run postman -w @safety-net/clients",
     "mock:start": "npm start -w @safety-net/mock-server",
@@ -29,9 +29,9 @@
     "test:integration": "npm run test:integration -w @safety-net/mock-server",
     "test:all": "npm run test:all -w @safety-net/mock-server",
     "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html",
-    "design:export": "npm run design:export -w @safety-net/schemas",
-    "design:reference": "npm run design:reference -w @safety-net/schemas",
-    "design:figma-data": "npm run design:figma-data -w @safety-net/schemas"
+    "design:export": "npm run design:export -w @safety-net/contracts",
+    "design:reference": "npm run design:reference -w @safety-net/contracts",
+    "design:figma-data": "npm run design:figma-data -w @safety-net/contracts"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "^4.2.3"
