@@ -9,19 +9,13 @@
  *   npm run api:new -- --name "case-workers" --resource "CaseWorker"
  *
  * Generates:
- *   - openapi/{name}.yaml - Main API spec (with schemas inline)
- *   - openapi/{name}-examples.yaml - Example data
+ *   - {name}-openapi.yaml - Main API spec (with schemas inline)
+ *   - {name}-openapi-examples.yaml - Example data
  */
 
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const workspaceRoot = join(__dirname, '..');
 
 // =============================================================================
 // Argument Parsing
@@ -74,8 +68,8 @@ Examples:
   npm run api:new -- --name case-workers --resource CaseWorker
 
 Generated files:
-  - openapi/{name}.yaml              Main API specification (schemas inline)
-  - openapi/{name}-examples.yaml     Example data for testing
+  - {name}-openapi.yaml              Main API specification (schemas inline)
+  - {name}-openapi-examples.yaml     Example data for testing
 `);
 }
 
@@ -213,7 +207,7 @@ paths:
                 "$ref": "#/components/schemas/${resource}"
               examples:
                 ${resource}Example1:
-                  "$ref": "./${kebabName}-examples.yaml#/${resource}Example1"
+                  "$ref": "./${kebabName}-openapi-examples.yaml#/${resource}Example1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':
@@ -412,16 +406,13 @@ async function main() {
   console.log('');
 
   // Check if files already exist
-  const specPath = join(workspaceRoot, 'openapi', `${name}.yaml`);
-  const examplesPath = join(workspaceRoot, 'openapi', `${name}-examples.yaml`);
+  const specPath = join(process.cwd(), `${name}-openapi.yaml`);
+  const examplesPath = join(process.cwd(), `${name}-openapi-examples.yaml`);
 
   if (existsSync(specPath)) {
     console.error(`Error: ${specPath} already exists.`);
     process.exit(1);
   }
-
-  // Ensure directories exist
-  await mkdir(join(workspaceRoot, 'openapi'), { recursive: true });
 
   // Generate files
   console.log('📝 Generating files...\n');
@@ -436,8 +427,8 @@ async function main() {
 ✨ API generated successfully!
 
 Next steps:
-  1. Edit openapi/${name}.yaml to customize your resource schema
-  2. Update openapi/${name}-examples.yaml with realistic example data
+  1. Edit ${name}-openapi.yaml to customize your resource schema
+  2. Update ${name}-openapi-examples.yaml with realistic example data
   3. Run validation: npm run validate
   4. Generate clients: npm run clients:generate
   5. Start mock server: npm run mock:start

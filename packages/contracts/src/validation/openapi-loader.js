@@ -22,6 +22,7 @@ function loadYaml(filePath) {
 
 /**
  * Discover all API specification files in the given specs directory.
+ * Matches files ending in -openapi.yaml (the naming convention for OpenAPI specs).
  * @param {Object} options
  * @param {string} options.specsDir - Path to the specs directory (required)
  */
@@ -37,10 +38,10 @@ export function discoverApiSpecs({ specsDir } = {}) {
     .filter(file => {
       const fullPath = join(openapiDir, file);
       const stat = statSync(fullPath);
-      return stat.isFile() && file.endsWith('.yaml') && !file.endsWith('-examples.yaml');
+      return stat.isFile() && file.endsWith('-openapi.yaml');
     })
     .map(file => {
-      const resourceName = basename(file, '.yaml');
+      const resourceName = basename(file, '-openapi.yaml');
       return {
         name: resourceName,
         specPath: join(openapiDir, file)
@@ -186,8 +187,8 @@ export function getExamplesPath(apiName, specsDir) {
   if (!specsDir) {
     throw new Error('specsDir is required');
   }
-  // Examples are colocated with specs as {name}-examples.yaml
-  return join(specsDir, `${apiName}-examples.yaml`);
+  // Examples are colocated with specs as {name}-openapi-examples.yaml
+  return join(specsDir, `${apiName}-openapi-examples.yaml`);
 }
 
 /**
