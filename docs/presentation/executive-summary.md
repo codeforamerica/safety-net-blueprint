@@ -1,4 +1,4 @@
-# Safety Net OpenAPI Toolkit
+# Safety Net Blueprint
 ## Executive Summary
 
 ### The Problem
@@ -7,7 +7,7 @@ Building technology for safety net programs is challenging. Each state has diffe
 
 ### The Solution
 
-The Safety Net OpenAPI Toolkit provides **pre-built, shared definitions for benefits eligibility programs** — both data models and operational behavior. Instead of starting from scratch, teams build on a common foundation that captures core concepts—applications, households, income, eligibility, task routing, SLA tracking—while allowing for state-specific customization.
+The Safety Net Blueprint provides **a shared systems integration blueprint for benefits eligibility programs** — covering data models, APIs, and operational behavior. Instead of starting from scratch, teams build on a common foundation that captures core concepts — applications, households, income, eligibility, task routing, SLA tracking — while allowing for state-specific customization.
 
 ### Key Capabilities
 
@@ -38,8 +38,8 @@ The Safety Net OpenAPI Toolkit provides **pre-built, shared definitions for bene
 
 ### Get Started
 
-Visit the [Toolkit Overview presentation](https://codeforamerica.github.io/safety-net-apis/docs/presentation/safety-net-openapi-overview.html) for a detailed walkthrough, explore the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-apis/docs/schema-reference.html) to see the data model, or visit the [repository on GitHub](https://github.com/codeforamerica/safety-net-apis).
+Visit the [Toolkit Overview presentation](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/safety-net-openapi-overview.html) for a detailed walkthrough, explore the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-blueprint/docs/schema-reference.html) to see the data model, or visit the [repository on GitHub](https://github.com/codeforamerica/safety-net-blueprint).
 
 ---
 
-*Code for America — Enabling faster, more consistent API development for safety net programs.*
+*Code for America — A systems integration blueprint for safety net programs.*

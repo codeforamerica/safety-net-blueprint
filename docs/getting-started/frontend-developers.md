@@ -35,8 +35,8 @@ See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup p
 For development within this repository:
 
 ```bash
-git clone https://github.com/codeforamerica/safety-net-apis.git
-cd safety-net-apis
+git clone https://github.com/codeforamerica/safety-net-blueprint.git
+cd safety-net-blueprint
 npm install
 ```
 

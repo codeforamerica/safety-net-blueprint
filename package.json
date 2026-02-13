@@ -1,8 +1,8 @@
 {
-  "name": "safety-net-apis",
+  "name": "safety-net-blueprint",
   "version": "1.0.0",
   "private": true,
-  "description": "Generate Mock API server, Swagger UI, and typed API clients from OpenAPI specifications",
+  "description": "Systems integration blueprint for safety net benefits programs",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"

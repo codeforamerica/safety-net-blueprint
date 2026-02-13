@@ -9,7 +9,7 @@ Overview of the repository layout and file conventions.
 This project uses npm workspaces with three packages:
 
 ```
-safety-net-apis/
+safety-net-blueprint/
 ├── package.json                    # Root workspace config + command aliases
 │
 ├── packages/

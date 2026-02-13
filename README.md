@@ -1,10 +1,10 @@
-# Safety Net APIs
+# Safety Net Blueprint
 
 > **Status: Work in progress** — The system is being designed incrementally, domain by domain, and proven through [steel thread prototypes](./docs/architecture/roadmap.md).
 
-Portable, contract-driven APIs for safety net benefits systems. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and form definitions — define the full API surface for both backend and frontend development. States can swap vendors without rebuilding their systems, and frontends can develop against a mock server and declarative form definitions without waiting for a production backend.
+A systems integration blueprint for safety net benefits programs. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and form definitions — define the full API surface for both backend and frontend development. States adopt the blueprint, customize it with overlays, and build adapters to their vendor systems. Frontends develop against a mock server and declarative form definitions without waiting for a production backend.
 
-**New here?** Start with the [Executive Summary](https://codeforamerica.github.io/safety-net-apis/docs/presentation/executive-summary.html) for a one-page overview, the [Toolkit Overview](https://codeforamerica.github.io/safety-net-apis/docs/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-apis/docs/schema-reference.html) to browse the data model.
+**New here?** Start with the [Executive Summary](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/executive-summary.html) for a one-page overview, the [Blueprint Overview](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-blueprint/docs/schema-reference.html) to browse the data model.
 
 ## About This Repository
 

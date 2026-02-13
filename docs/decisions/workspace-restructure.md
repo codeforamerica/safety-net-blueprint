@@ -13,7 +13,7 @@
 
 ## Context
 
-The Safety Net OpenAPI toolkit contains several distinct capabilities:
+The Safety Net Blueprint contains several distinct capabilities:
 
 - **Schema management** — OpenAPI specs, validation, overlay resolution
 - **Mock server** — Express-based server for development/testing
@@ -41,7 +41,7 @@ Currently, all code lives in a single package with all dependencies installed to
 Restructure the project into **npm workspaces** with three packages:
 
 ```
-safety-net-apis/
+safety-net-blueprint/
 ├── package.json                    # Root workspace config + aliases
 ├── packages/
 │   ├── schemas/                    # OpenAPI specs, validation, overlays
@@ -178,7 +178,7 @@ Split into 3 distinct repositories.
 
 ```json
 {
-  "name": "safety-net-apis",
+  "name": "safety-net-blueprint",
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {

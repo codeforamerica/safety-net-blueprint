@@ -10,7 +10,7 @@
 
 ## Context
 
-The Safety Net OpenAPI toolkit needed a generic search and filtering capability for list endpoints across all REST APIs (Persons, Applications, Households).
+The Safety Net Blueprint needed a generic search and filtering capability for list endpoints across all REST APIs (Persons, Applications, Households).
 
 ### Requirements
 

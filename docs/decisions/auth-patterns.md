@@ -12,7 +12,7 @@
 
 ## Context
 
-The Safety Net OpenAPI toolkit needs authentication and authorization patterns that can be implemented by adopters. The patterns must support multiple user types (applicants, case workers, supervisors, admins) with different levels of access to sensitive data.
+The Safety Net Blueprint needs authentication and authorization patterns that can be implemented by adopters. The patterns must support multiple user types (applicants, case workers, supervisors, admins) with different levels of access to sensitive data.
 
 ### Requirements
 
