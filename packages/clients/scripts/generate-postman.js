@@ -12,6 +12,7 @@ import yaml from 'js-yaml';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const specsDir = join(__dirname, '../../contracts');
 
 const BASE_URL = process.env.POSTMAN_BASE_URL || 'http://localhost:1080';
 
@@ -19,7 +20,7 @@ const BASE_URL = process.env.POSTMAN_BASE_URL || 'http://localhost:1080';
  * Load examples from YAML file (uses state-specific if STATE env var set)
  */
 function loadExamples(resourceName) {
-  const examplesPath = getExamplesPath(resourceName);
+  const examplesPath = getExamplesPath(resourceName, specsDir);
 
   if (!existsSync(examplesPath)) {
     return {};
@@ -596,12 +597,12 @@ async function generatePostmanCollection() {
   
   // Load API specs
   console.log('\nLoading OpenAPI specifications...');
-  const apiSpecs = await loadAllSpecs();
+  const apiSpecs = await loadAllSpecs({ specsDir });
   console.log(`✓ Loaded ${apiSpecs.length} API(s)`);
   
   // Validate specs and examples
   console.log('\nValidating specifications and examples...');
-  const discoveredSpecs = discoverApiSpecs();
+  const discoveredSpecs = discoverApiSpecs({ specsDir });
   const specsWithExamples = discoveredSpecs.map(spec => ({
     ...spec,
     examplesPath: getExamplesPath(spec.name)
