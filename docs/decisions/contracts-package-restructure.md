@@ -79,12 +79,25 @@ Each domain's OpenAPI spec is self-contained — all domain-specific schemas are
 - Example refs (same-domain): `./applications-examples.yaml#/...` &rarr; `./applications-openapi-examples.yaml#/...` — examples are the one same-domain cross-file ref, kept separate to avoid bloating the spec file. Domain specs and their examples should stay as siblings.
 - No cross-domain refs: specs do not `$ref` into other domain specs
 
-### Import updates (13 files in `packages/mock-server/` and `packages/clients/`)
+### Import updates (`packages/mock-server/` and `packages/clients/`)
 
-- `from '@safety-net/schemas/loader'` &rarr; `from '@safety-net/contracts/loader'`
-- `from '@safety-net/schemas/validation'` &rarr; `from '@safety-net/contracts/validation'`
-- `from '@safety-net/schemas/overlay'` &rarr; `from '@safety-net/contracts/overlay'`
-- `from '@safety-net/schemas/patterns'` &rarr; `from '@safety-net/contracts/patterns'`
+All `@safety-net/schemas` imports &rarr; `@safety-net/contracts`:
+
+**Source files:**
+- `packages/mock-server/src/setup.js`
+- `packages/mock-server/src/seeder.js`
+- `packages/mock-server/scripts/swagger/server.js`
+- `packages/mock-server/scripts/reset.js` (error message referencing `openapi/ directory`)
+- `packages/clients/scripts/generate-postman.js`
+
+**Test files:**
+- `packages/mock-server/tests/unit/handlers.test.js` (hardcoded `../../../schemas/openapi` path)
+- `packages/mock-server/tests/unit/schema-resolution.test.js` (hardcoded `schemas/openapi` path)
+- `packages/mock-server/tests/unit/seeder.test.js` (hardcoded `../../../schemas/openapi` path)
+- `packages/mock-server/tests/unit/openapi-validator.test.js` (hardcoded `../../../schemas/openapi` path)
+- `packages/mock-server/tests/unit/openapi-loader.test.js` (hardcoded `../../../schemas/openapi` path)
+- `packages/mock-server/tests/unit/overlay-resolver.test.js`
+- `packages/mock-server/tests/integration/integration.test.js`
 
 ### Dependency updates
 
@@ -105,19 +118,61 @@ All discovery scripts must use recursive filename glob (e.g., `**/*-openapi.yaml
 - `scripts/export-design-reference.js`: use recursive glob for spec discovery
 - `scripts/validate-openapi.js`: use recursive glob
 - `scripts/resolve-overlay.js`: use recursive glob
+- `scripts/export-figma-data.js`: hardcoded `../openapi/examples` path
+- `scripts/export-figma-plugin-data.js`: hardcoded `../openapi/components` and `../openapi/examples` paths
 - `packages/mock-server/package.json`: script args referencing `../schemas/openapi` → `../contracts`
 
 ### CI updates
 
-`.github/workflows/ci.yml`: any path references
+- `.github/workflows/ci.yml`: step name "Validate schemas" &rarr; "Validate contracts"
 
-### Documentation updates (~35 files)
+### `.gitignore` update
 
-- All `packages/schemas` &rarr; `packages/contracts`
-- All `@safety-net/schemas` &rarr; `@safety-net/contracts`
-- All `openapi/` paths &rarr; new flat paths
+- `packages/schemas/openapi/resolved` &rarr; `packages/contracts/resolved` (or remove if `resolved/` is deleted)
+
+### Package-internal docs
+
+These files live inside `packages/schemas/` and move with the directory rename, but their contents also reference the old paths:
+
+- `packages/schemas/figma-plugin/README.md`
+- `packages/schemas/docs/ux-designer-guide.md`
+
+### Documentation updates (~20 files)
+
+All `packages/schemas` &rarr; `packages/contracts`, all `@safety-net/schemas` &rarr; `@safety-net/contracts`, all `openapi/` paths &rarr; new flat paths.
+
+**Reference/guides:**
 - `docs/reference/project-structure.md`: rewrite file layout section
+- `docs/reference/commands.md`
+- `docs/guides/validation.md`
+- `docs/guides/state-setup-guide.md`
+
+**Getting started:**
+- `docs/getting-started/backend-developers.md`
+- `docs/getting-started/frontend-developers.md`
+
+**Integration:**
+- `docs/integration/api-clients.md`
+- `docs/integration/package-publishing.md`
+
+**Architecture:**
+- `docs/architecture/api-architecture.md`
+- `docs/architecture/design-rationale.md`
+- `docs/architecture/domain-design.md`
+- `docs/architecture/README.md`
+- `docs/architecture/cross-cutting/identity-access.md`
+
+**Decisions:**
 - `docs/decisions/state-customization.md`: update directory examples
+- `docs/decisions/workspace-restructure.md`: add "Partially superseded" note (package name and directory structure superseded by this ADR)
+- `docs/decisions/auth-patterns.md`
+
+**Prototypes:**
+- `docs/prototypes/application-review-prototype.md`
+
+**Root:**
+- `README.md`
+- `.claude/CLAUDE.md` (local-only, not committed)
 
 ---
 
@@ -187,12 +242,15 @@ packages/contracts/
 
 1. `npm install` — workspace resolves `@safety-net/contracts`
 2. `npm run validate` — all renamed specs pass
-3. `npm test` — unit tests pass with updated imports
+3. `npm test` — unit tests pass with updated imports (including all 6 mock-server test files)
 4. `npm run test:integration` — integration tests pass
 5. `npm start` — mock server loads from new paths, Swagger UI works
 6. `npm run overlay:resolve` — resolution works (may need temp overlay fixture)
 7. `npm run design:reference` — export finds specs in new locations
-8. CI passes
+8. `npm run api:new` — scaffold generates files with `-openapi` suffix at correct location
+9. `grep -r '@safety-net/schemas' packages/ .gitignore .github/` — returns zero results (only docs/decisions/ may retain historical references)
+10. `grep -r 'schemas/openapi' packages/` — returns zero results
+11. CI passes
 
 ---
 
