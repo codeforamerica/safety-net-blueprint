@@ -1,5 +1,7 @@
 # Project Structure
 
+> **Status: Draft**
+
 Overview of the repository layout and file conventions.
 
 ## Directory Layout
@@ -17,8 +19,8 @@ safety-net-apis/
 │   │   │   ├── *.yaml              # Main API specs (persons.yaml, etc.)
 │   │   │   ├── components/         # Shared schemas and parameters
 │   │   │   │   ├── common.yaml     # Reusable schemas (Address, Name)
-│   │   │   │   ├── common-parameters.yaml  # Query params (limit, offset)
-│   │   │   │   ├── common-responses.yaml   # Error responses
+│   │   │   │   ├── parameters.yaml # Query params (limit, offset)
+│   │   │   │   ├── responses.yaml  # Error responses
 │   │   │   │   └── {resource}.yaml # Resource-specific schemas
 │   │   │   ├── examples/           # Example data for seeding
 │   │   │   │   └── {resource}.yaml
@@ -60,11 +62,14 @@ safety-net-apis/
 │           └── {state}/                # State-specific packages
 │
 └── docs/                           # Documentation
+    ├── architecture/               # Architecture docs
+    ├── decisions/                  # Architectural decision records
     ├── getting-started/            # Persona-based onboarding
     ├── guides/                     # How-to guides
     ├── integration/                # CI/CD guides
-    ├── reference/                  # Reference docs
-    └── architecture-decisions/     # ADRs
+    ├── presentation/               # Executive summary and slide deck
+    ├── prototypes/                 # Implementation specs (steel threads)
+    └── reference/                  # Reference docs
 ```
 
 ## Workspaces
@@ -156,7 +161,7 @@ npm run api:new -- --name "benefits" --resource "Benefit"
 
 1. Create overlay directory and file: `packages/schemas/openapi/overlays/{state}/modifications.yaml`
 2. Define actions for state-specific changes
-3. Validate: `STATE={state} npm run validate:state`
+3. Validate: `STATE={state} npm run overlay:resolve`
 
 ## Testing
 

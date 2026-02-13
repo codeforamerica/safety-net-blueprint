@@ -1,5 +1,7 @@
 # Troubleshooting
 
+> **Status: Draft**
+
 Common issues and solutions.
 
 ## Installation Issues

@@ -139,13 +139,13 @@ Steps 1-3 prove the authoring pipeline. Steps 4+ prove the runtime behavior.
 
 ## Prototype Scope
 
-This document follows the **steel thread** approach — the thinnest end-to-end slice needed to prove a specific part of the [contract-driven architecture](contract-driven-architecture.md). This prototype proves the **behavioral contract artifacts** (state machine, rules, metrics) at depth, applied to the task lifecycle. The [application review prototype](application-review-prototype.md) complements this by proving form definitions — the one artifact type this prototype doesn't touch. Between the two, every artifact type is covered. They can be done in either order.
+This document follows the **steel thread** approach — the thinnest end-to-end slice needed to prove a specific part of the [contract-driven architecture](../architecture/contract-driven-architecture.md). This prototype proves the **behavioral contract artifacts** (state machine, rules, metrics) at depth, applied to the task lifecycle. The [application review prototype](application-review-prototype.md) complements this by proving form definitions — the one artifact type this prototype doesn't touch. Between the two, every artifact type is covered. They can be done in either order.
 
-> **Authoring note:** The tables in this document are the authoring format. Conversion scripts read them and generate the state machine YAML, rules YAML, and metrics YAML — the YAML is a build artifact that nobody edits by hand. In a spreadsheet, each table would be a separate sheet (transitions, guards, effects, rules, metrics), and the conversion script joins them by trigger or guard name. See [Authoring Experience](contract-driven-architecture.md#authoring-experience) for the full workflow.
+> **Authoring note:** The tables in this document are the authoring format. Conversion scripts read them and generate the state machine YAML, rules YAML, and metrics YAML — the YAML is a build artifact that nobody edits by hand. In a spreadsheet, each table would be a separate sheet (transitions, guards, effects, rules, metrics), and the conversion script joins them by trigger or guard name. See [Authoring Experience](../architecture/contract-driven-architecture.md#authoring-experience) for the full workflow.
 
 ### Architecture concepts exercised
 
-Each row is a concept from the [contract-driven architecture](contract-driven-architecture.md). The right column shows where this prototype exercises it.
+Each row is a concept from the [contract-driven architecture](../architecture/contract-driven-architecture.md). The right column shows where this prototype exercises it.
 
 | Concept | Exercised by |
 |---------|-------------|
@@ -275,7 +275,7 @@ This table defines the task lifecycle as a state machine. Each row is a valid tr
 | in_progress | completed | complete | caseworker | Caller is the assigned worker | Record outcome, create audit event; if follow-up requested, create new task (copies `programType`, `slaTypeCode`, `applicationId`, `caseId` from original) |
 | in_progress | pending | release | caseworker | Caller is the assigned worker | Clear assignment, create audit event, re-evaluate routing rules |
 
-The *(creation)* row is not a state transition — it's an `onCreate` block, a domain-specific extension to the base state machine schema. Object creation has no "from" state, but often requires orchestration (SLA calculation, routing, audit). Domains extend the base schema with top-level fields like `onCreate` as requirements emerge — see [How the Contracts Work](contract-driven-architecture.md#how-the-contracts-work).
+The *(creation)* row is not a state transition — it's an `onCreate` block, a domain-specific extension to the base state machine schema. Object creation has no "from" state, but often requires orchestration (SLA calculation, routing, audit). Domains extend the base schema with top-level fields like `onCreate` as requirements emerge — see [How the Contracts Work](../architecture/contract-driven-architecture.md#how-the-contracts-work).
 
 **SLA clock behavior by state:**
 
@@ -341,7 +341,7 @@ Each RPC API endpoint accepts a JSON request body.
 These tables define the routing and priority rules. Each row is a rule evaluated against the task. The conversion script generates the rules YAML from these tables.
 
 **Context variables available to rules:**
-- `task.*` — Task fields (`programType`, `taskTypeCode`, `isExpedited`, `dueDate`, etc.). The state machine binds the governed entity as the context object — in the workflow domain, this is the task. See [Rules](contract-driven-architecture.md#rules).
+- `task.*` — Task fields (`programType`, `taskTypeCode`, `isExpedited`, `dueDate`, etc.). The state machine binds the governed entity as the context object — in the workflow domain, this is the task. See [Rules](../architecture/contract-driven-architecture.md#rules).
 
 Cross-domain context (e.g., `application.*` for household data) is not included in this prototype. Rules that need application data would be added when the context binding system is built.
 
@@ -368,7 +368,7 @@ Rules that set task priority. Evaluated in order — first match wins.
 
 ## Metrics Summary
 
-These metrics define what to measure for operational monitoring. Each metric exercises a different source type from the [metrics artifact](contract-driven-architecture.md#how-the-contracts-work).
+These metrics define what to measure for operational monitoring. Each metric exercises a different source type from the [metrics artifact](../architecture/contract-driven-architecture.md#how-the-contracts-work).
 
 | Metric | What It Measures | Source type | Source | Target |
 |--------|-----------------|-------------|--------|--------|

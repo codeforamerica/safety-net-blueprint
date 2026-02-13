@@ -1,5 +1,7 @@
 # State Setup Guide
 
+> **Status: Draft**
+
 This guide walks through adopting the Safety Net API base specs for a specific state implementation.
 
 ## What each package provides
@@ -77,7 +79,7 @@ Use an exact version in `package.json` to control when you pick up base spec cha
 
 Overlays modify the base specs without forking them. Each overlay file uses the [OpenAPI Overlay Specification 1.0.0](https://github.com/OAI/Overlay-Specification) format.
 
-A working example is included in the base repo at [`openapi/overlays/example/modifications.yaml`](../packages/schemas/openapi/overlays/example/modifications.yaml). The patterns below reference that file — use it as a starting point for your own overlay.
+A working example is included in the base repo at [`openapi/overlays/example/modifications.yaml`](../../packages/schemas/openapi/overlays/example/modifications.yaml). The patterns below reference that file — use it as a starting point for your own overlay.
 
 ### Overlay file structure
 

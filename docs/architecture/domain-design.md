@@ -1,23 +1,10 @@
 # Domain Design
 
+> **Status: Work in progress** — Domain organization is still evolving based on research and feedback. See the domain table below for per-domain design status.
+
 Domain organization, entities, data flow, and safety net specific concerns for the Safety Net Benefits API.
 
-See also: [API Architecture](api-architecture.md) | [Design Decisions](design-decisions.md) | [Roadmap](roadmap.md)
-
-> **This is design documentation, not implementation documentation.**
->
-> This document describes the *proposed* domain organization - the target architecture we are designing toward. The design itself is still evolving based on research and feedback.
->
-> | Domain | Design Status | Implementation Status |
-> |--------|---------------|----------------------|
-> | Workflow | Ready for review | Not started |
-> | Intake | Work in progress | Partial (Applications, Persons, Households, Incomes) |
-> | Case Management | Work in progress | Not started |
-> | Eligibility | Work in progress | Not started |
-> | Client Management | Work in progress | Not started |
-> | Communication | Work in progress | Not started |
-> | Scheduling | Work in progress | Not started |
-> | Document Management | Work in progress | Not started |
+See also: [API Architecture](api-architecture.md) | [Design Rationale](design-rationale.md) | [Roadmap](roadmap.md)
 
 ---
 
@@ -27,15 +14,15 @@ See also: [API Architecture](api-architecture.md) | [Design Decisions](design-de
 
 The Safety Net Benefits API is organized into 7 domains, with 4 cross-cutting concerns:
 
-| Domain | Purpose |
-|--------|---------|
-| **Client Management** | Persistent identity and relationships for people receiving benefits |
-| **Intake** | Application submission from the client's perspective |
-| **Eligibility** | Program-specific interpretation and determination |
-| **Case Management** | Ongoing client relationships and staff assignments |
-| **Workflow** | Work items, tasks, SLAs, and verification |
-| **Scheduling** | Appointments and interviews |
-| **Document Management** | Files and uploads |
+| Domain | Design Status | Purpose |
+|--------|---------------|---------|
+| **Client Management** | Not started | Persistent identity and relationships for people receiving benefits |
+| **Intake** | Partial | Application submission from the client's perspective |
+| **Eligibility** | Not started | Program-specific interpretation and determination |
+| **Case Management** | Partial | Ongoing client relationships and staff assignments |
+| **Workflow** | Partial (pending approval) | Work items, tasks, SLAs, and verification |
+| **Scheduling** | Not started | Appointments and interviews |
+| **Document Management** | Not started | Files and uploads |
 
 **Cross-cutting concerns:**
 - **Communication** - Notices and correspondence can originate from any domain (application received, documents needed, eligibility determined, appointment scheduled, etc.)
@@ -67,24 +54,20 @@ Persistent information about people applying for or receiving benefits.
 
 #### Intake
 
-The application as the client experiences it - what they report.
+The application as the client experiences it — what they report. See the [application review prototype](../prototypes/application-review-prototype.md) for the proven subset.
 
 | Entity | Purpose |
 |--------|---------|
-| **Application** | The submission requesting benefits |
-| **Person** | People mentioned on the application (household members, absent parents, sponsors, etc.) |
-| **Income** | Income the client claims |
+| **Application** | The submission requesting benefits, with programs applied for |
+| **ApplicationMember** | People on the application — with relationship, programs applying for, citizenship info, tax filing info |
+| **Income** | Income sources per member (employed, self-employed, unearned) |
 | **Expense** | Expenses the client claims |
 | **Resource** | Resources/assets the client claims |
-| **LivingArrangement** | Who lives where, relationships as reported |
 
 **Key decisions:**
 - This is the "source of truth" for what the client told us
-- Different types of people on an application:
-  - **Household members** - people in the eligibility unit (seeking benefits)
-  - **Other occupants** - live there but not part of benefits household
-  - **Related parties** - absent parents, sponsors, non-custodial parents
-  - **Representatives** - authorized representatives, application assisters
+- ApplicationMember captures different types of people on an application (household members, other occupants, related parties, representatives) via the `relationship` field
+- Each member specifies which programs they are applying for (`programsApplyingFor`), which drives form definition rendering and section review creation
 - Application is client-facing; eligibility interpretation happens in Eligibility domain
 
 #### Eligibility
@@ -107,7 +90,7 @@ Program-specific interpretation of application data and benefit determination.
 
 #### Case Management
 
-Ongoing client relationships and staff assignments. **[Detailed schemas →](domains/case-management.md)**
+Ongoing client relationships and staff assignments. **[Details →](domains/case-management.md)**
 
 | Entity | Purpose |
 |--------|---------|
@@ -126,21 +109,22 @@ Ongoing client relationships and staff assignments. **[Detailed schemas →](dom
 
 #### Workflow
 
-Work items, tasks, and SLA tracking. **[Detailed schemas →](domains/workflow.md)**
+Work items, tasks, and SLA tracking. **[Details →](domains/workflow.md)**
 
 | Entity | Purpose |
 |--------|---------|
 | **Task** | A work item requiring action |
 | **Queue** | Organizes tasks by team, county, program, or skill |
-| **WorkflowRule** | Defines automatic task routing and prioritization logic |
-| **VerificationTask** | Task to verify data - either validation (accuracy) or program verification (evidence standards) |
+| **SLAType** | Configuration for SLA deadlines by program and task type |
+| **TaskType** | Configuration for task categories with default SLA and skills |
+| **VerificationTask** | Task to verify data — either validation (accuracy) or program verification (evidence standards) |
 | **VerificationSource** | External services/APIs for data validation (IRS, ADP, state databases) |
 | **TaskAuditEvent** | Immutable audit trail |
 
 **Key decisions:**
 - Workflow is about work items: "What needs to be done? Is it on track?"
 - Queues organize tasks for routing and monitoring
-- WorkflowRules enable automatic task routing and prioritization based on program, office, skills, and client attributes
+- Routing and priority rules are defined as decision tables in the [rules YAML contract artifact](contract-driven-architecture.md#rules), not as CRUD entities — the state machine invokes them via `evaluate-rules` effects
 - Verification has two purposes:
   - **Data validation**: Is the intake data accurate? (check against external sources)
   - **Program verification**: Does the data meet program evidence standards?
@@ -149,7 +133,7 @@ Work items, tasks, and SLA tracking. **[Detailed schemas →](domains/workflow.m
 
 #### Communication (Cross-Cutting)
 
-Official notices and correspondence that can originate from any domain. **[Detailed schemas →](cross-cutting/communication.md)**
+Official notices and correspondence that can originate from any domain. **[Details →](cross-cutting/communication.md)**
 
 | Entity | Purpose |
 |--------|---------|
@@ -200,7 +184,7 @@ Files and uploads.
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │  INTAKE                                                             │
-│  Application, Person, Income, Expense, Resource, LivingArrangement  │
+│  Application, ApplicationMember, Income, Expense, Resource          │
 │  "What the client told us"                                          │
 └─────────────────────────────────────────────────────────────────────┘
                     │                           │
@@ -229,7 +213,7 @@ Files and uploads.
 ┌───────────────────────────────┐   ┌─────────────────────────────────┐
 │  WORKFLOW                     │   │  ELIGIBILITY                    │
 │  Task, VerificationTask,      │──▶│  EligibilityRequest,            │
-│  SLA, TaskAuditEvent          │   │  EligibilityUnit, Determination │
+│  SLAType, TaskAuditEvent      │   │  EligibilityUnit, Determination │
 │  "What work needs to be done" │◀──│  "Program-specific              │
 └───────────────────────────────┘   │   interpretation"               │
                                     └─────────────────────────────────┘
@@ -285,9 +269,9 @@ Files and uploads.
 
 ---
 
-## 4. Detailed Schemas
+## 4. Domain Details
 
-Detailed schemas have been moved to domain-specific files for better organization:
+Domain-specific design has been moved to separate files:
 
 | Domain | File |
 |--------|------|
@@ -295,7 +279,7 @@ Detailed schemas have been moved to domain-specific files for better organizatio
 | Case Management | [domains/case-management.md](domains/case-management.md) |
 | Communication | [cross-cutting/communication.md](cross-cutting/communication.md) |
 
-*Note: Client Management, Intake, Eligibility, Scheduling, and Document Management schemas will be added as those domains are implemented. Reporting aggregates data from other domains and doesn't have its own schemas.*
+*Note: Client Management, Intake, Eligibility, Scheduling, and Document Management will be added as those domains are designed. Reporting aggregates data from other domains and doesn't have its own design doc.*
 
 For operational concerns (Configuration Management, Observability), see [API Architecture](api-architecture.md).
 
@@ -305,7 +289,8 @@ For operational concerns (Configuration Management, Observability), see [API Arc
 
 | Document | Description |
 |----------|-------------|
-| [API Architecture](api-architecture.md) | API layers, vendor independence, operational architecture |
-| [Design Decisions](design-decisions.md) | Key decisions with rationale and alternatives |
-| [Roadmap](roadmap.md) | Migration, implementation phases, future considerations |
+| [Contract-Driven Architecture](contract-driven-architecture.md) | Contract artifacts for backend and frontend portability |
+| [API Architecture](api-architecture.md) | API organization, vendor independence, operational architecture |
+| [Design Rationale](design-rationale.md) | Key decisions with rationale and alternatives |
+| [Roadmap](roadmap.md) | Implementation phases, prototypes, future considerations |
 | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) | Machine-readable API design patterns |

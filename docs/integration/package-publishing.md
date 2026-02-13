@@ -1,10 +1,12 @@
 # Package Generation & Publishing
 
-This guide covers how state-specific npm packages are built and published to npmjs.org.
+> **Status: Draft**
+
+This guide covers how state-specific client packages are built from resolved OpenAPI specs.
 
 ## Overview
 
-The toolkit generates npm packages named `@codeforamerica/safety-net-apis-{state}` containing:
+The `@safety-net/clients` package generates state-specific TypeScript client packages containing:
 
 - TypeScript SDK with typed functions for each API domain
 - Zod schemas for runtime validation
@@ -21,7 +23,7 @@ Merges base specs with state-specific modifications from `openapi/overlays/{stat
 
 ### 2. Generate Domain Clients
 
-For each spec (persons, applications, households, incomes):
+For each resolved spec:
 
 - Bundles and dereferences the spec using `@apidevtools/swagger-cli`
 - Generates TypeScript SDK via `@hey-api/openapi-ts` with:
@@ -67,14 +69,15 @@ cd packages/clients/dist-packages/<state>
 # Option 1: npm link
 npm link
 cd /path/to/your/project
-npm link @codeforamerica/safety-net-apis-<state>
+npm link <package-name>
 
 # Option 2: npm pack
 npm pack
-# Creates @codeforamerica-safety-net-apis-<state>-0.0.0-local.tgz
 cd /path/to/your/project
-npm install /path/to/@codeforamerica-safety-net-apis-<state>-0.0.0-local.tgz
+npm install /path/to/<package-name>-0.0.0-local.tgz
 ```
+
+The package name is defined in `packages/clients/templates/package.template.json`.
 
 ## Publishing
 
@@ -90,9 +93,9 @@ git push origin v1.2.3
 The GitHub Actions workflow (`.github/workflows/publish-packages.yml`):
 
 1. Triggers on `v*` tags
-2. Builds packages for all states in the matrix (california, <state>)
+2. Builds packages for all states in the matrix
 3. Extracts version from tag (e.g., `v1.2.3` → `1.2.3`)
-4. Publishes to npmjs.org as `@codeforamerica/safety-net-apis-{state}`
+4. Publishes to npmjs.org
 
 ### Manual Publishing
 
@@ -107,7 +110,7 @@ cd packages/clients/dist-packages/<state>
 npm publish --access public
 ```
 
-Requires npm authentication with write access to the `@codeforamerica` scope.
+Requires npm authentication with write access to the package scope.
 
 ## Authentication Strategy
 
@@ -115,7 +118,7 @@ Publishing uses two complementary authentication mechanisms:
 
 ### NPM_TOKEN
 
-A classic npm automation token stored as a GitHub repository secret. Provides write access to the `@codeforamerica` scope on npmjs.org.
+A classic npm automation token stored as a GitHub repository secret. Provides write access to the package scope on npmjs.org.
 
 To create a new token:
 
@@ -136,31 +139,22 @@ Consumers can verify on npmjs.org that a package was built from this repository'
 
 ## Package Contents
 
-The published package includes:
+The generated package includes:
 
 ```
-@codeforamerica/safety-net-apis-{state}/
+<state>/
 ├── dist/                    # Compiled JavaScript + declaration files
 │   ├── index.js
 │   ├── index.d.ts
 │   ├── search-helpers.js
-│   ├── persons/
-│   ├── applications/
-│   ├── households/
-│   └── incomes/
+│   └── {domain}/            # Per-domain SDK, types, Zod schemas
 ├── src/                     # TypeScript source (for reference)
 ├── openapi/                 # Resolved OpenAPI specs (YAML)
-│   ├── persons.yaml
-│   ├── applications.yaml
-│   ├── households.yaml
-│   └── incomes.yaml
+│   └── {domain}.yaml
 └── json-schema/             # Extracted JSON schemas
-    ├── persons/
-    │   ├── Person.json
-    │   ├── PersonCreate.json
-    │   └── ...
-    ├── applications/
-    └── ...
+    └── {domain}/
+        ├── {Resource}.json
+        └── ...
 ```
 
 ## Adding a New State
@@ -192,7 +186,7 @@ The overlay wasn't resolved. Check that:
 
 ### Publish Fails: 403 Forbidden
 
-The NPM_TOKEN doesn't have write access to the `@codeforamerica` scope, or has expired.
+The NPM_TOKEN doesn't have write access to the package scope, or has expired.
 
 ### Publish Fails: Provenance Error
 

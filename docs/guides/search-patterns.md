@@ -1,6 +1,8 @@
 # Search Query Syntax
 
-Use the `q` parameter on list endpoints to filter results.
+> **Status: Draft**
+
+Use the `q` parameter on list endpoints to filter results. See [Search Patterns Decision](../decisions/search-patterns.md) for the design rationale.
 
 ## Quick Examples
 
@@ -51,10 +53,10 @@ curl "http://localhost:1080/persons?q=status:active%20income:>=1000"
 
 ## TypeScript Search Helpers
 
-When using the generated npm packages, you can build queries programmatically:
+When using generated TypeScript clients, you can build queries programmatically:
 
 ```typescript
-import { q, search } from '@codeforamerica/safety-net-<your-state>';
+import { q, search } from './generated';
 
 const query = q(
   search.eq('status', 'active'),

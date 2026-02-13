@@ -1,12 +1,14 @@
 # ADR: Multi-State Support Using OpenAPI Overlays
 
-**Status:** Accepted
+**Status:** Superseded by [State Customization Strategy](state-customization.md)
 
 **Date:** 2026-01-06
 
 **Deciders:** Development Team
 
 ---
+
+> **Superseded:** This ADR established the decision to use OpenAPI Overlays for multi-state support. The [State Customization Strategy](state-customization.md) supersedes it with a comprehensive proposal covering file organization, environment configuration, npm-based distribution, and an external overlay model. The overlay technology decision made here still holds — the customization strategy builds on it.
 
 ## Context
 

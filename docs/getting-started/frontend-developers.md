@@ -1,227 +1,200 @@
 # Getting Started: Frontend Developers
 
-This guide is for developers building frontend applications that consume Safety Net APIs. You'll use pre-built npm packages with TypeScript SDK functions and Zod schemas.
+> **Status: Draft**
 
-## What You'll Do
+This guide is for developers building frontend applications that consume Safety Net APIs. The APIs include both REST endpoints (CRUD operations on resources) and RPC endpoints (behavioral operations like claiming a task or submitting an application). Form definitions drive context-dependent UI rendering — the frontend doesn't hardcode domain-specific logic.
 
-- Install a state-specific npm package with typed SDK and Zod schemas
-- Integrate into your frontend application
-- Develop against the mock server while the backend is in progress
-- Set up CI/CD to test your frontend
+See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
+
+> **Note:** The REST APIs and mock server for CRUD operations work today. The behavioral contract capabilities described below — RPC APIs, form definitions, event streams — are being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes the target developer experience.
+
+## What You'll Work With
+
+- [**REST APIs**](#rest-apis-data-operations) — standard CRUD operations on resources (`GET /workflow/tasks`, `POST /intake/applications`)
+- [**RPC APIs**](#rpc-apis-behavioral-operations) — behavioral operations generated from state machine triggers (`POST /workflow/tasks/:id/claim`, `POST /intake/applications/:id/submit`)
+- [**Form definitions**](#form-definitions-context-dependent-ui) — declarative YAML that determines which sections and fields to display, visibility conditions, and field annotations (program relevance, verification requirements, regulatory citations)
+- [**Event streams**](#event-streams-real-time-updates) — real-time updates via Server-Sent Events (`GET /events/stream?domain=workflow`)
+- [**Mock server**](#develop-against-the-mock-server) — development adapter that interprets behavioral contracts (state machines, rules, metrics) with an in-memory database — no production backend needed
 
 ## Prerequisites
 
-- Node.js >= 18.0.0
+- Node.js >= 20.19.0
 - A frontend project (React, Vue, etc.)
 - Familiarity with TypeScript
 
 ## Initial Setup
 
-### 1. Install the Package
+The toolkit provides base specs, scripts, and a mock server. States create their own repository and install the base packages:
 
 ```bash
-npm install @codeforamerica/safety-net-<your-state>
+npm install @safety-net/schemas @safety-net/mock-server @safety-net/clients
 ```
 
-### 2. Install Peer Dependencies
+See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup process, including overlays and resolved specs.
+
+For development within this repository:
 
 ```bash
-npm install zod axios
-```
-
-## Using the Package
-
-### Importing SDK Functions and Types
-
-```typescript
-// Direct imports from domain modules
-import {
-  getPerson,
-  listPersons,
-  createPerson,
-  type Person,
-  type PersonList
-} from '@codeforamerica/safety-net-<your-state>/persons';
-
-// Or namespaced imports
-import { persons, applications } from '@codeforamerica/safety-net-<your-state>';
-```
-
-### Configuring the Client
-
-Create a client configuration file:
-
-```typescript
-// src/api/client.ts
-import { persons, applications } from '@codeforamerica/safety-net-<your-state>';
-import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
-
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1080';
-
-// Create a configured client
-export const client = createClient(createConfig({
-  baseURL: BASE_URL,
-}));
-
-// Bind SDK functions to your client
-export const listPersons = (options?: Parameters<typeof persons.listPersons>[0]) =>
-  persons.listPersons({ ...options, client });
-
-export const getPerson = (options: Parameters<typeof persons.getPerson>[0]) =>
-  persons.getPerson({ ...options, client });
-
-export const createPerson = (options: Parameters<typeof persons.createPerson>[0]) =>
-  persons.createPerson({ ...options, client });
-
-// Re-export types for convenience
-export type { Person, PersonList } from '@codeforamerica/safety-net-<your-state>/persons';
-```
-
-### Using in Components
-
-```typescript
-// src/components/PersonList.tsx
-import { useEffect, useState } from 'react';
-import { listPersons, type Person } from '../api/client';
-
-export function PersonList() {
-  const [persons, setPersons] = useState<Person[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchPersons() {
-      const response = await listPersons({ query: { limit: 25 } });
-      if ('data' in response && response.data) {
-        setPersons(response.data.items ?? []);
-      }
-      setLoading(false);
-    }
-    fetchPersons();
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
-
-  return (
-    <ul>
-      {persons.map((person) => (
-        <li key={person.id}>{person.name?.firstName} {person.name?.lastName}</li>
-      ))}
-    </ul>
-  );
-}
-```
-
-### Runtime Validation with Zod
-
-For custom validation scenarios, import Zod schemas directly:
-
-```typescript
-import { zPerson } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
-
-// Validate API response
-const parseResult = zPerson.safeParse(apiResponse);
-if (parseResult.success) {
-  return parseResult.data;
-} else {
-  console.error('Validation failed:', parseResult.error);
-}
+git clone https://github.com/codeforamerica/safety-net-apis.git
+cd safety-net-apis
+npm install
 ```
 
 ## Development Workflow
 
 ### Develop Against the Mock Server
 
-While the backend is being built, use the mock server:
+The mock server interprets behavioral contracts — state machines, rules, metrics — with an in-memory database. RPC endpoints are auto-generated from state machine triggers, so adding a transition is a contract change, not server code.
 
 ```bash
-# Clone the toolkit (one-time setup)
-git clone https://github.com/codeforamerica/safety-net-apis.git
-cd safety-net-apis
-npm install
-
-# Start the mock server
+# Within this repository
 STATE=<your-state> npm start
+
+# Or in a state repository with resolved specs
+npm run mock:start
 ```
 
-The mock server runs at http://localhost:1080 with realistic test data.
-
-Point your frontend at it:
+The mock server runs at http://localhost:1080. Point your frontend at it:
 
 ```bash
-# In your frontend
 REACT_APP_API_URL=http://localhost:1080 npm start
 ```
 
-### When the Package Updates
+### Exploring the API
 
-Simply update your package version:
-
-```bash
-npm update @codeforamerica/safety-net-<your-state>
-```
-
-## Exploring the API
-
-### Swagger UI
-
-Browse the API documentation interactively:
+Browse all endpoints — REST and RPC — via Swagger UI:
 
 ```bash
-cd safety-net-apis
 STATE=<your-state> npm start
 ```
 
 Visit http://localhost:3000 to see all endpoints and schemas.
 
-### Example Requests
+### Generated TypeScript Clients
 
-```bash
-# List persons
-curl http://localhost:1080/persons
-
-# Search
-curl "http://localhost:1080/persons?q=status:active"
-
-# Get by ID
-curl http://localhost:1080/persons/{id}
-```
-
-## Package Contents
-
-Each state package exports domain modules:
-
-| Module | SDK Functions |
-|--------|---------------|
-| `persons` | `listPersons`, `getPerson`, `createPerson`, `updatePerson`, `deletePerson` |
-| `applications` | `listApplications`, `getApplication`, `createApplication`, `updateApplication`, `deleteApplication` |
-| `households` | `listHouseholds`, `getHousehold`, `createHousehold`, `updateHousehold`, `deleteHousehold` |
-| `incomes` | `listIncomes`, `getIncome`, `createIncome`, `updateIncome`, `deleteIncome` |
-
-Each module also exports:
-- TypeScript types (`Person`, `PersonList`, `PersonCreate`, etc.)
-- Zod schemas via `./zod.gen` subpath (`zPerson`, `zPersonList`, etc.)
-- Client utilities via `./client` subpath (`createClient`, `createConfig`)
-
-### Search Helpers
-
-The package also exports utilities for building search queries:
+The `@safety-net/clients` package generates typed SDK functions and Zod schemas from resolved specs:
 
 ```typescript
-import { q, search } from '@codeforamerica/safety-net-<your-state>';
+import {
+  getTask,
+  listTasks,
+  type Task,
+} from './generated/workflow';
 
-const query = q(
-  search.contains('name.firstName', 'john'),
-  search.gte('monthlyIncome', 2000),
-  search.eq('status', 'active')
-);
-
-const response = await listPersons({ query: { q: query } });
+// List tasks filtered by status and queue
+const response = await listTasks({ query: { status: 'pending', queueId: 'snap-intake' } });
 ```
 
-See [API Clients - Search Helpers](../integration/api-clients.md#search-helpers) for the full reference.
+See [API Clients](../integration/api-clients.md) for client generation and framework integrations.
+
+## Working with the APIs
+
+### REST APIs (Data Operations)
+
+REST APIs provide standard CRUD operations on resources — create, read, update, delete, list, and search:
+
+```typescript
+// Get a single task by ID
+const task = await getTask({ path: { id: taskId } });
+
+// Create a new application
+const app = await createApplication({
+  body: { programs: { snap: true, medicalAssistance: true } }
+});
+```
+
+### RPC APIs (Behavioral Operations)
+
+RPC APIs trigger state transitions — they enforce guards (preconditions), execute effects (side effects like audit records and notifications), and reject invalid transitions with a 409 response. Each RPC endpoint corresponds to a trigger in the domain's state machine.
+
+```typescript
+// Claim a task — transitions from pending to in_progress
+// Guards: task must be unassigned, caller must have required skills
+await claimTask({ path: { id: taskId } });
+
+// Complete a task with an outcome
+// Guard: caller must be the assigned worker
+await completeTask({
+  path: { id: taskId },
+  body: { outcome: 'approved', notes: 'All documents verified' }
+});
+```
+
+A 409 response means either the transition is invalid from the current state or a guard condition failed. The response body includes details about which guard failed.
+
+### Form Definitions (Context-Dependent UI)
+
+Form definitions tell the frontend what to render without hardcoding domain-specific logic. The frontend fetches the form definition and uses it to determine sections, fields, visibility conditions, and annotations.
+
+```typescript
+// 1. Fetch the form definition
+const formDef = await getFormDefinition();
+
+// 2. Fetch work item records (e.g., SectionReview) for a member
+const sectionReviews = await listSectionReviews({
+  query: { memberId: member.id }
+});
+
+// 3. For each SectionReview, look up the matching section in the form definition
+for (const review of sectionReviews) {
+  const section = formDef.sections.find(s => s.id === review.sectionId);
+
+  // 4. Evaluate visibleWhen condition against the member's data
+  // (uses the same expression format as rule conditions, e.g., JSON Logic)
+  if (evaluateCondition(section.visibleWhen, { member })) {
+    // 5. Render fields with annotations — the frontend iterates over
+    //    whatever annotation types exist without knowing what they mean
+    for (const field of section.fields) {
+      renderField(field, field.annotations);
+    }
+  }
+}
+```
+
+The key principle: the frontend renders annotations generically. It doesn't know what "program relevance" or "verification requirement" means — it just displays them. Adding a new annotation type is a form definition change, not a code change.
+
+### Event Streams (Real-Time Updates)
+
+Subscribe to domain events via Server-Sent Events:
+
+```typescript
+const eventSource = new EventSource('/events/stream?domain=workflow');
+
+eventSource.addEventListener('task.claimed', (event) => {
+  const data = JSON.parse(event.data);
+  // data contains TaskClaimedEvent payload: taskId, claimedById, queueId, claimedAt
+  refreshTaskList();
+});
+```
+
+### Runtime Validation with Zod
+
+For custom validation scenarios, import generated Zod schemas:
+
+```typescript
+import { zTask } from './generated/workflow/zod.gen';
+
+const parseResult = zTask.safeParse(apiResponse);
+if (!parseResult.success) {
+  console.error('Validation failed:', parseResult.error);
+}
+```
+
+## Mock to Production
+
+During development, the frontend talks to the mock server. In production, it talks to a production adapter built by the state. The API surface is the same — swapping from mock to production changes the adapter, not the frontend code.
+
+```
+Development:  [Frontend] → [Mock Server]
+Production:   [Frontend] → [Production Adapter] → [Vendor System]
+```
+
+See [Contract-Driven Architecture — Development to production](../architecture/contract-driven-architecture.md#development-to-production) for the full transition process.
 
 ## Next Steps
 
-- [API Clients](../integration/api-clients.md) — Detailed client usage and framework integrations
-- [Mock Server](../guides/mock-server.md) — Search, pagination, and data management
-- [CI/CD for Frontend](../integration/ci-cd-frontend.md) — Testing setup
+- [State Setup Guide](../guides/state-setup-guide.md) — Setting up a state repository with overlays
+- [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) — How contracts define the API surface
+- [Workflow Prototype](../prototypes/workflow-prototype.md) — Example of behavioral contracts in action (state machine, rules, metrics)
+- [Application Review Prototype](../prototypes/application-review-prototype.md) — Example of form definitions in action
+- [API Clients](../integration/api-clients.md) — Generated TypeScript clients and framework integrations

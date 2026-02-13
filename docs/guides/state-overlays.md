@@ -1,5 +1,7 @@
 # State Overlays Guide
 
+> **Status: Draft**
+
 State overlays allow you to customize API specifications for different states without duplicating the entire spec. Each state can have different enum values, additional properties, and terminology while sharing the same base structure.
 
 ## How It Works
@@ -17,7 +19,7 @@ export STATE=<your-state>
 
 # Or prefix commands
 STATE=<your-state> npm start
-STATE=<your-state> npm run validate:state
+STATE=<your-state> npm run overlay:resolve
 ```
 
 ## Available States
@@ -169,7 +171,7 @@ actions:
 ### 4. Validate
 
 ```bash
-STATE=<new-state> npm run validate:state
+STATE=<new-state> npm run overlay:resolve
 ```
 
 The resolver will warn you about any invalid targets:
@@ -186,8 +188,7 @@ All commands below respect the `STATE` environment variable. When set, they auto
 | Command | Description |
 |---------|-------------|
 | `npm start` | Start mock server + Swagger UI |
-| `npm run validate` | Validate schemas and examples (auto-resolves overlays if STATE set) |
-| `npm run validate:all-states` | Validate all available states |
+| `npm run validate` | Validate base schemas and examples |
 | `npm run mock:start` | Start mock server only |
 | `npm run mock:swagger` | Start Swagger UI only |
 | `npm run postman:generate` | Generate Postman collection |
@@ -229,7 +230,7 @@ Each action should do one thing. Don't combine unrelated changes:
 Always validate after modifying overlays:
 
 ```bash
-STATE=<your-state> npm run validate:state
+STATE=<your-state> npm run overlay:resolve
 ```
 
 ### Document State Differences
@@ -277,5 +278,5 @@ If validation fails after applying an overlay:
 
 ## Reference
 
-- [Multi-State Architecture ADR](../architecture-decisions/multi-state-overlays.md)
+- [State Customization Strategy](../decisions/state-customization.md)
 - [OpenAPI Overlay Specification](https://github.com/OAI/Overlay-Specification)

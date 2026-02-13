@@ -2,51 +2,34 @@
 
 This directory contains architecture documentation for the Safety Net Benefits API.
 
-> **Status: In Progress**
-> Architecture documentation is being added incrementally. Currently documented:
-> - Identity & Access (cross-cutting)
->
-> Future additions will include domain designs (Intake, Case Management, Eligibility, Workflow, etc.) and additional cross-cutting concerns.
+> **Status: Work in progress** — The system is being designed incrementally, domain by domain.
 
-## Documents
+## How this documentation is organized
+
+| Document | What it covers |
+|----------|---------------|
+| [Domain Design](domain-design.md) | Domain organization, entities, data flow, and domain status |
+| [Contract-Driven Architecture](contract-driven-architecture.md) | Contract artifacts for backend and frontend portability |
+| [API Architecture](api-architecture.md) | API organization, operational concerns, quality attributes |
+| [Design Rationale](design-rationale.md) | Key decisions with rationale and alternatives |
+| [Roadmap](roadmap.md) | Implementation phases, prototypes, future considerations |
+
+## Domain and cross-cutting docs
 
 | Document | Description |
 |----------|-------------|
-| [Cross-Cutting: Identity & Access](cross-cutting/identity-access.md) | Authentication, authorization, JWT claims, and User Service |
+| [Case Management](domains/case-management.md) | Ongoing client relationships, staff, and organizational structure |
+| [Workflow](domains/workflow.md) | Task lifecycle, contract artifacts (state machine, rules, metrics) |
+| [Identity & Access](cross-cutting/identity-access.md) | Authentication, authorization, JWT claims, and User Service |
+| [Communication](cross-cutting/communication.md) | Notices and correspondence |
 
-## Cross-Cutting Concerns
+See [Domain Design](domain-design.md) for the full list of domains, cross-cutting concerns, and their current design status.
 
-Cross-cutting concerns span multiple domains:
-
-| Concern | Status | Description |
-|---------|--------|-------------|
-| **Identity & Access** | Documented | Authentication via IdP, authorization via User Service |
-| Communication | Planned | Notices and correspondence |
-| Reporting | Planned | Aggregated data and audit events |
-| Configuration | Planned | Business-configurable rules |
-| Observability | Planned | Health checks, metrics, logging |
-
-## Domains
-
-| Domain | Description |
-|--------|-------------|
-| [Case Management](domains/case-management.md) | Case lifecycle, assignments, and status tracking |
-| [Workflow](domains/workflow.md) | Workflow orchestration and task management |
-
-## Cross-Cutting Concerns
-
-| Concern | Status | Description |
-|---------|--------|-------------|
-| [Identity & Access](cross-cutting/identity-access.md) | Documented | Authentication via IdP, authorization via [Users API](../../packages/schemas/openapi/users.yaml) |
-| [Communication](cross-cutting/communication.md) | Documented | Notices and correspondence |
-| Reporting | Planned | Aggregated data and audit events |
-| Configuration | Planned | Business-configurable rules |
-| Observability | Planned | Health checks, metrics, logging |
-
-## Related Resources
+## Other resources
 
 | Resource | Description |
 |----------|-------------|
 | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) | Machine-readable API design patterns |
-| [Architecture Decision Records](../architecture-decisions/) | Formal ADRs for significant decisions |
+| [Decisions](../decisions/) | Architectural decisions (auth, search, state customization, tooling) |
+| [Prototypes](../prototypes/) | Implementation specs for proving architecture patterns |
 | [Guides](../guides/) | How-to guides for working with the toolkit |

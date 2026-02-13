@@ -1,4 +1,4 @@
-# Design Decisions
+# Design Rationale
 
 Key decisions made during design, with alternatives considered. These are **proposed decisions** - review and adjust before implementation.
 
@@ -182,14 +182,15 @@ This keeps verification logic declarative (in workflow rules) rather than hardco
 
 ### Explicit Tasks vs Workflow Engine?
 
+> **Superseded** by [Contract-Driven Architecture](contract-driven-architecture.md). The state machine YAML IS the workflow definition — declarative, table-authored, and interpreted by the mock server and production adapters. This replaces the choice between explicit tasks and a workflow engine with a contract-driven approach that provides both: declarative definitions authored in tables, with the adapter (or vendor engine) interpreting them at runtime.
+
 | Option | Considered | Chosen |
 |--------|------------|--------|
-| Explicit Task entities | Simple, flexible, follows existing patterns | Yes |
+| Explicit Task entities | Simple, flexible, follows existing patterns | ~~Yes~~ |
 | BPMN workflow engine | Declarative, visual modeling | No |
+| Contract-driven state machine | Declarative YAML, table-authored, interpreted by adapter | **Yes** |
 
-*Rationale*: Explicit tasks are simpler and sufficient for v1. A workflow engine can be layered on top later if needed.
-
-*Reconsider if*: Workflows become complex enough that declarative definitions and visual modeling would significantly reduce implementation effort, or if non-developers need to modify workflows.
+*Original rationale*: Explicit tasks are simpler and sufficient for v1. A workflow engine can be layered on top later if needed.
 
 ---
 
@@ -235,65 +236,57 @@ This keeps verification logic declarative (in workflow rules) rather than hardco
 
 ### System APIs vs Process APIs?
 
+> **Superseded** by [Contract-Driven Architecture](contract-driven-architecture.md). The two-layer System/Process API model is replaced by REST APIs (data-shaped) and RPC APIs (behavior-shaped) within the same domain. RPC endpoints are generated from state machine triggers, not hand-written as a separate API layer.
+
 | Option | Considered | Chosen |
 |--------|------------|--------|
 | Single API layer | Simpler, fewer moving parts | No |
-| Two layers (System + Process) | Clear separation of data access vs orchestration | Yes |
+| Two layers (System + Process) | Clear separation of data access vs orchestration | ~~Yes~~ |
+| REST + RPC within same domain | API type determined by contract artifacts | **Yes** |
 
-*Rationale*: System APIs provide RESTful CRUD access to domain data. Process APIs orchestrate business operations by calling System APIs. This separation means Process APIs contain business logic while System APIs remain simple and reusable.
-
-*Reconsider if*: The overhead of maintaining two layers isn't justified by the complexity of the business processes, or if most operations map 1:1 to CRUD actions.
+*Original rationale*: System APIs provide RESTful CRUD access to domain data. Process APIs orchestrate business operations by calling System APIs. This separation means Process APIs contain business logic while System APIs remain simple and reusable.
 
 ---
 
 ### What should the mock server cover?
 
+> **Superseded** by [Contract-Driven Architecture](contract-driven-architecture.md). The mock server interprets all contract artifacts — OpenAPI specs, state machine YAML, rules, metrics, and form definitions. It serves as the development adapter, generating both REST and RPC endpoints from contracts.
+
 | Option | Considered | Chosen |
 |--------|------------|--------|
-| All APIs | Complete testing environment | No |
-| System APIs only | Mock data layer, test real orchestration | Yes |
+| All APIs | Complete testing environment | **Yes** |
+| System APIs only | Mock data layer, test real orchestration | ~~Yes~~ |
 
-*Rationale*: Process APIs are orchestration logic—that's what you want to test. Mocking them defeats the purpose. Real Process API implementations call mock System APIs during development.
-
-*Reconsider if*: Teams need to develop against Process APIs before implementations exist, or if Process API behavior is complex enough to warrant contract testing via mocks.
+*Original rationale*: Process APIs are orchestration logic—that's what you want to test. Mocking them defeats the purpose. Real Process API implementations call mock System APIs during development.
 
 ---
 
 ### How to organize Process APIs?
 
+> **Superseded** by [Contract-Driven Architecture](contract-driven-architecture.md). RPC endpoints are generated from state machine triggers, not organized manually. Each trigger on a resource becomes `POST /{domain}/{resource}/{id}/{trigger}` — e.g., `claim` on `Task` in `workflow` becomes `POST /workflow/tasks/:id/claim`.
+
 | Option | Considered | Chosen |
 |--------|------------|--------|
 | By actor (client/, caseworker/, admin/) | Intuitive grouping by who uses it | No |
-| By capability (applications/, eligibility/, tasks/) | Actor-agnostic, same operation available to multiple actors | Partially |
-| By domain, then resource, then action | Clear hierarchy, matches domain structure | Yes |
+| By capability (applications/, eligibility/, tasks/) | Actor-agnostic, same operation available to multiple actors | No |
+| By domain, then resource, then action | Clear hierarchy, matches domain structure | ~~Yes~~ |
+| Generated from state machine triggers | Endpoints derived from contracts | **Yes** |
 
-*Rationale*: Many operations are used by multiple actors (e.g., both clients and caseworkers can submit applications). Actor metadata (`x-actors: [client, caseworker]`) handles authorization without duplicating endpoints. Organizing by domain provides clear ownership and aligns with the System API structure.
-
-*Path pattern*: `/processes/{domain}/{resource}/{action}`
-
-*Examples*:
-- `/processes/workflow/tasks/claim`
-- `/processes/case-management/workers/assign`
-- `/processes/communication/notices/send`
-
-*Convention*: When an operation involves multiple resources, place it under the resource being acted upon (not the primary output). This matches natural language and improves discoverability.
-
-See [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) for the `x-actors` and `x-capability` extension definitions.
-
-*Reconsider if*: Actor-specific behavior diverges significantly (different request/response shapes), making shared endpoints awkward.
+*Original rationale*: Many operations are used by multiple actors (e.g., both clients and caseworkers can submit applications). Actor metadata (`x-actors: [client, caseworker]`) handles authorization without duplicating endpoints. Organizing by domain provides clear ownership and aligns with the System API structure.
 
 ---
 
 ### What is the purpose of reference implementations?
 
+> **Superseded** by [Contract-Driven Architecture](contract-driven-architecture.md). States build adapters that satisfy the behavioral contracts, not reference implementations of a separate Process API layer. The mock server serves as the reference adapter — it interprets contract artifacts directly. States build production adapters that expose the same API surface, translating to their vendor systems.
+
 | Option | Considered | Chosen |
 |--------|------------|--------|
 | Production-ready code to extend | States fork and customize | No |
-| Educational examples | States learn patterns, implement from scratch | Yes |
+| Educational examples | States learn patterns, implement from scratch | ~~Yes~~ |
+| Mock server as reference adapter | States build adapters satisfying contracts | **Yes** |
 
-*Rationale*: Reference implementations demonstrate how to implement Process APIs against System API contracts. States implement in their preferred language/framework. Extending reference code creates maintenance burden and hidden coupling.
-
-*Reconsider if*: Implementation patterns are complex enough that reference code provides significant value, or if a common framework emerges across states.
+*Original rationale*: Reference implementations demonstrate how to implement Process APIs against System API contracts. States implement in their preferred language/framework. Extending reference code creates maintenance burden and hidden coupling.
 
 ---
 
@@ -328,31 +321,33 @@ See [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yam
 | Option | Considered | Chosen |
 |--------|------------|--------|
 | Experience Layer now | Tailored APIs for each client type (mobile, web, caseworker portal) | No |
-| Process APIs serve all clients | Clients call Process APIs directly | Yes |
+| Adapter serves all clients | Clients call the adapter directly | Yes |
 | GraphQL in the future | Flexible querying when client needs diverge | Deferred |
 
-*What is an Experience Layer?* An Experience Layer (sometimes called "Backend for Frontend" or BFF) is an API layer that sits above Process APIs and tailors responses for specific client applications. For example, a mobile app might need a lightweight response with only essential fields, while a caseworker dashboard might need aggregated data from multiple domains in a single call. The Experience Layer handles this translation so Process APIs remain client-agnostic.
+*What is an Experience Layer?* An Experience Layer (sometimes called "Backend for Frontend" or BFF) is an API layer that sits above the adapter and tailors responses for specific client applications. For example, a mobile app might need a lightweight response with only essential fields, while a caseworker dashboard might need aggregated data from multiple domains in a single call.
 
-*Rationale*: An Experience Layer adds complexity that isn't justified yet. Process APIs are sufficient for current use cases. Adding this layer now would mean maintaining three API layers before we understand the actual client requirements.
+*Rationale*: An Experience Layer adds complexity that isn't justified yet. The adapter's REST and RPC APIs are sufficient for current use cases.
 
 *Reconsider if*: Client applications need significantly different data shapes (e.g., mobile app needs minimal payloads, web dashboard needs aggregated views), or if multiple teams are building frontends with duplicated data-fetching logic.
 
-*Future direction*: When an Experience Layer becomes necessary, GraphQL is likely the best choice. It allows clients to request exactly the fields they need, reducing over-fetching and enabling frontend teams to evolve independently. A GraphQL gateway could sit above Process APIs without changing the underlying architecture.
+*Future direction*: When an Experience Layer becomes necessary, GraphQL is likely the best choice. It allows clients to request exactly the fields they need, reducing over-fetching and enabling frontend teams to evolve independently. A GraphQL gateway could sit above the adapter without changing the underlying architecture.
 
 ---
 
 ### How to organize API specs by domain and type?
 
+> **Superseded** by [Contract-Driven Architecture](contract-driven-architecture.md). The `x-api-type` extension (with values `system`, `process`, `cross-cutting`) has been removed. The contract-driven architecture expresses API type through which contract artifacts exist — OpenAPI spec only = data-shaped (REST), OpenAPI spec + state machine = behavior-shaped (REST + RPC) — not through a metadata tag. No code reads `x-api-type`. The `x-domain` and `x-status` extensions remain.
+
 | Option | Considered | Chosen |
 |--------|------------|--------|
 | Folder-based organization | Nested folders (`system/intake/`, `cross-cutting/`) | No |
-| OpenAPI x-extensions | Metadata tags (`x-domain`, `x-api-type`, `x-status`) | Yes |
+| OpenAPI x-extensions | Metadata tags (`x-domain`, `x-api-type`, `x-status`) | ~~Yes~~ |
+| x-extensions without x-api-type | `x-domain`, `x-status`, `x-visibility` — API type from contract artifacts | **Yes** |
 
-*Rationale*: Folder-based organization requires updating tooling (loaders, validation scripts, Spectral globs) whenever the structure changes. Using x-extensions provides the same logical organization without breaking existing tooling. Extensions are machine-readable for filtering, documentation generation, and future folder reorganization if needed.
+*Original rationale*: Folder-based organization requires updating tooling (loaders, validation scripts, Spectral globs) whenever the structure changes. Using x-extensions provides the same logical organization without breaking existing tooling.
 
 *Extensions defined*:
 - `x-domain`: Business domain (intake, client-management, workflow, eligibility, etc.)
-- `x-api-type`: Architectural layer (system, process, cross-cutting)
 - `x-status`: Implementation status (planned, alpha, beta, stable, deprecated)
 - `x-visibility`: Access scope (public, partner, internal)
 
@@ -361,7 +356,6 @@ See [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yam
 info:
   title: Applications API
   x-domain: intake
-  x-api-type: system
   x-status: stable
   x-visibility: public
 ```

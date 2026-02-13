@@ -6,6 +6,8 @@
 
 **Deciders:** Development Team
 
+> **Note:** Implementation details below (scripts, dependencies, generated output structure) reflect the state at decision time. The workspace structure and package boundaries are unchanged, but tooling has evolved — notably the client generator migrated from Zodios to @hey-api/openapi-ts (see [openapi-ts-client-generation](openapi-ts-client-generation.md)) and the Node.js minimum is now 20.19.0+. See `package.json` files for current details.
+
 ---
 
 ## Context

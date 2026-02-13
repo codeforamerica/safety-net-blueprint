@@ -1,196 +1,171 @@
 # Roadmap
 
-Migration plan, implementation phases, future considerations, and documentation gaps.
+> **Status: Work in progress**
 
-See also: [Domain Design](domain-design.md) | [API Architecture](api-architecture.md) | [Design Decisions](design-decisions.md)
-
----
-
-## 1. Migration Considerations
-
-### Current Schema Mapping
-
-| Current Entity | Proposed Domain | Proposed Entity | Notes |
-|----------------|-----------------|-----------------|-------|
-| Person | Client Management | Client | Rename - "Client" indicates someone we serve |
-| Household | Split | LivingArrangement (Client Mgmt/Intake) + EligibilityUnit (Eligibility) | Separate factual from regulatory |
-| Application | Intake | Application | Move to Intake domain |
-| HouseholdMember | Intake | Person | Simplify name, domain provides context |
-| Income | Split | Income (Client Mgmt - stable) + Income (Intake - reported) | Split by stability |
-
-### New Entities Needed
-
-| Entity | Domain | Priority |
-|--------|--------|----------|
-| Task | Workflow | High |
-| CaseWorker | Case Management | High |
-| Supervisor | Case Management (extends CaseWorker) | High |
-| Notice | Communication | High |
-| Case | Case Management | Medium |
-| EligibilityRequest | Eligibility | Medium |
-| EligibilityUnit | Eligibility | Medium |
-| Determination | Eligibility | Medium |
-| LivingArrangement | Client Management / Intake | Medium |
-| Appointment | Scheduling | Low |
-| Document | Document Management | Low |
+See also: [Contract-Driven Architecture](contract-driven-architecture.md) | [Domain Design](domain-design.md) | [API Architecture](api-architecture.md) | [Design Rationale](design-rationale.md)
 
 ---
 
-## 2. Implementation Phases
+## Context: H.R. 1 (One Big Beautiful Bill Act)
 
-### Phase 1: Workflow & Case Management (Priority)
-1. Create Workflow domain (Task, VerificationTask, TaskAuditEvent)
-2. Create Case Management domain (CaseWorker, Assignment)
-3. Create Communication entities (Notice) - cross-cutting, consumed by multiple domains
+H.R. 1, signed into law in mid-2025, introduces significant changes to safety net programs that directly affect the domains this project is designing. These changes increase the urgency of having portable, contract-driven systems that states can adapt quickly.
 
-### Phase 2: Domain Reorganization
-1. Restructure existing schemas into domain folders
-2. Create Client Management domain (rename Person → Client)
-3. Create Intake domain (reorganize Application)
-4. Create Eligibility domain (EligibilityUnit, EligibilityRequest, Determination)
+**SNAP changes (effective 2025):**
+- Work requirements expanded to ages 18–65 (previously 18–49 for ABAWDs), requiring 80 hours/month of work, volunteering, or training
+- Noncitizen eligibility narrowed to LPRs, Cuban-Haitian entrants, and COFA migrants
+- State cost-sharing starting 2028 for states with payment error rates above 6%
 
-### Phase 3: Additional Domains
-1. Create Scheduling domain
-2. Create Document Management domain
+**Medicaid changes (effective December 31, 2026):**
+- Work/community engagement requirements for enrollees ages 19–64 (80 hours/month), with exemptions for parents of dependents under 13, pregnant/postpartum women, and medically frail individuals
+- Eligibility redetermination every 6 months (from 12) for expansion population adults without disabilities
+- Noncitizen eligibility narrowed (effective October 2026)
+
+**Impact on state systems:**
+- States must update integrated eligibility and enrollment (IEE) systems before compliance dates
+- Significant IT system changes needed — some states estimating hundreds of new positions for more frequent redeterminations
+- States are deprioritizing previously planned enhancements to focus on H.R. 1 compliance
+
+**Relevance to this project:**
+- Work requirement tracking affects Workflow (new task types), Eligibility (new verification requirements), and Case Management (more frequent reviews)
+- More frequent redeterminations increase the volume and complexity of Eligibility and Intake workflows
+- Narrowed immigrant eligibility adds verification complexity to Intake and Eligibility
+- The contract-driven approach — where adding a requirement is a table change, not a code change — is exactly what states need to respond to these kinds of policy shifts without rebuilding their systems
 
 ---
 
-## 3. Future Considerations
+## Approach
+
+The architecture is being proven through **steel thread prototypes** — the thinnest end-to-end slices that exercise the most complex and risky parts of the [contract-driven architecture](contract-driven-architecture.md). The goal is to validate that:
+
+1. **Behavioral contracts work** — State machines, rules, and metrics can be defined declaratively and interpreted by a mock server, generating RPC endpoints from transitions without hand-written orchestration code.
+2. **The authoring pipeline works** — Business users and developers can author contracts in tables (spreadsheets), and conversion scripts generate valid YAML. The tables-to-YAML-to-mock-server chain works end to end.
+3. **Business users can work with the artifacts** — The table-based authoring format is accessible to program managers, policy analysts, and business analysts — not just developers. If business users can't read and modify state transition tables, decision tables, and form definition tables, the architecture fails regardless of technical correctness.
+4. **Form definitions drive context-dependent UI** — The frontend can render multi-program forms from declarative definitions without hardcoding domain-specific logic.
+
+Two prototypes cover every contract artifact type between them:
+
+| Prototype | What it proves | Key artifacts |
+|-----------|---------------|---------------|
+| [Workflow Prototype](../prototypes/workflow-prototype.md) | Behavioral contracts — state machine, rules, metrics, audit | OpenAPI schemas, state machine YAML, rules YAML, metrics YAML |
+| [Application Review Prototype](../prototypes/application-review-prototype.md) | Form definitions — program-driven sections, field annotations, record creation | OpenAPI schemas, form definition YAML |
+
+They can be done in either order. Together they prove the full artifact set before any domain is built out at scale.
+
+---
+
+## Phases
+
+### Phase 1: Prove the architecture (current)
+
+Build and validate the two steel thread prototypes. This is where the highest-risk design questions get answered.
+
+#### Tooling priorities
+
+The prototypes require new tooling and updates to existing tooling. This is the foundation — the prototypes can't run without it.
+
+**Conversion scripts (new)** — translate from the table-based authoring format to YAML contract definitions:
+- State machine tables → state machine YAML (states, transitions, guards, effects)
+- Decision tables → rules YAML (routing, assignment, priority)
+- Metrics tables → metrics YAML (metric names, source linkage, targets)
+- Form definition tables → form definition YAML (sections, fields, annotations, program requirements)
+
+**Validation scripts (update existing + new)** — extend `npm run validate` to check cross-artifact consistency:
+- State machine states match OpenAPI status enums
+- Effect targets reference schemas that exist
+- Rule context variables resolve to real fields
+- Form definition field source paths resolve to OpenAPI schema fields
+- Transitions include required audit effects
+- Metric sources reference states/transitions that exist
+
+**Mock server (update)** — add a behavioral engine that interprets contract YAML alongside the existing CRUD engine:
+- Load state machine YAML and auto-generate RPC endpoints from triggers
+- Enforce state transitions and evaluate guards on RPC calls
+- Execute effects (set fields, create records, lookup references, evaluate rules, emit events)
+- Evaluate decision rules for routing, assignment, and priority
+- Track metrics linked to states and transitions
+- Serve form definitions and create work item records from program requirements
+
+#### Prototype deliverables
+
+**Workflow prototype:**
+- Conversion scripts generate state machine, rules, and metrics YAML from authored tables
+- Validation script catches cross-artifact inconsistencies
+- Mock server runs the full workflow walkthrough (create → route → claim → complete) without hand-written endpoint code
+- Minimal frontend exercises every API type (REST reads, RPC actions, SSE events)
+- Business users review the authoring tables for clarity and usability
+
+**Application review prototype:**
+- Conversion scripts generate form definition YAML from authored tables
+- Validation script catches internal inconsistencies (field source paths → OpenAPI schemas, section IDs match between program requirements and section definitions)
+- Mock server serves form definitions and creates SectionReview records from program requirements on submission
+- Minimal frontend renders context-dependent sections and field annotations from the form definition
+- Business users review program requirements and field annotation tables
+
+**What success looks like:**
+- Conversion scripts generate valid YAML from authored tables
+- Validation catches structural inconsistencies (missing states, dangling references, unresolvable field paths)
+- Mock server runs the full walkthrough for both prototypes without hand-written endpoint code
+- Business stakeholders can read the tables, understand what they mean, and propose changes
+
+### Phase 2: Expand proven domains
+
+With the architecture validated, expand the domains that were started in the prototypes.
+
+- **Workflow** — Add remaining states and transitions (escalate, reassign, cancel, awaiting states), verification workflow, cross-domain rule context, notification effects, full SLA configuration
+- **Intake** — Add additional sections (assets, expenses, employment), additional programs (TANF, WIC, CHIP), conditional section requirements, applicant-facing forms
+- **Case Management** — Define contract artifacts (OpenAPI spec, case lifecycle state machine, assignment rules)
+- **Communication** — Define contract artifacts (notice lifecycle state machine, delivery tracking)
+
+### Phase 3: Remaining domains
+
+- **Eligibility** — Domain design and contract artifacts (eligibility request lifecycle, determination, verification requirements)
+- **Client Management** — OpenAPI spec for persistent client identity and relationships
+- **Scheduling** — Appointments and interviews
+- **Document Management** — Files and uploads
+
+---
+
+## Future Considerations
 
 Potential domains and functionality not included in the current design, for future evaluation.
 
 ### High Priority
 
 **Benefits/Issuance**
-- Benefit amounts and calculations
-- EBT card issuance and management
-- Payment tracking
-- Benefit history and adjustments
-
-*Rationale*: Core to safety net programs - what happens after eligibility is determined. Currently out of scope but essential for end-to-end benefits administration.
+- Benefit amounts and calculations, EBT card issuance, payment tracking, benefit history
+- Core to safety net programs — what happens after eligibility is determined
 
 **Appeals**
-- Appeal requests
-- Fair hearing scheduling
-- Hearing outcomes and decisions
-- Appeal workflow (distinct from standard eligibility workflow)
-
-*Rationale*: Required by law for all safety net programs. Has distinct workflow, timelines, and participants (hearing officers). Currently only represented as task types.
+- Appeal requests, fair hearing scheduling, hearing outcomes
+- Required by law for all programs, with distinct workflow, timelines, and participants
 
 ### Medium Priority
 
-**Staffing Forecasting**
-- Project task volume based on historical patterns and upcoming deadlines
-- Calculate required staff hours vs current capacity
-- Identify staffing gaps by office, queue, or program
-- Potential entities: `StaffingForecast`, `DeadlineProjection`
-
-*Rationale*: Helps supervisors plan staffing during surges and avoid SLA breaches. Depends on mature Task and Caseload data to be useful.
-
 **Change Reporting**
-- Mid-certification changes reported by clients
-- Change processing and verification
-- Impact assessment on current benefits
-- Change-triggered recertifications
-
-*Rationale*: Common client interaction between certifications. Changes can affect eligibility and benefit amounts. Related to but distinct from Intake (not a new application).
+- Mid-certification changes reported by clients, impact assessment on current benefits
+- Common client interaction between certifications, related to but distinct from Intake
 
 **Programs**
-- Program definitions (SNAP, TANF, Medicaid, etc.)
-- Eligibility rules and criteria
-- Income/asset limits
-- Deduction rules
-- Program-specific configurations
-
-*Rationale*: Reference data needed across all domains. Currently assumed but not explicitly modeled. Could be configuration vs. a domain.
+- Program definitions, eligibility rules, income/asset limits, deduction rules
+- Reference data needed across all domains — could be configuration vs. a domain
 
 ### Low Priority
 
-**Fraud/Integrity**
-- Fraud investigations
-- Overpayment identification and tracking
-- Recovery efforts
-- Intentional Program Violations (IPVs)
-- Disqualification periods
+**Fraud/Integrity** — Investigations, overpayment tracking, recovery, IPVs, disqualification periods
 
-*Rationale*: Important for program integrity but specialized function. Often handled by separate units with different workflows.
+**Referrals** — Referrals to other services, partner agency connections, community resource linking
 
-**Referrals**
-- Referrals to other services (employment, housing, childcare)
-- Partner agency connections
-- Community resource linking
-- Referral tracking and outcomes
+**Provider Management** — Healthcare providers (Medicaid), SNAP retailers, TANF service providers
 
-*Rationale*: Valuable for holistic client support but secondary to core benefits administration. May vary significantly by state/agency.
+**Quality Assurance** — Case reviews, error tracking, corrective action plans, federal reporting metrics
 
-**Provider Management**
-- Healthcare providers (Medicaid)
-- SNAP authorized retailers
-- TANF service providers
-- Provider enrollment and verification
-
-*Rationale*: Program-specific (primarily Medicaid). Often managed by separate systems. Complex enough to be its own domain.
-
-**Quality Assurance**
-- Case reviews and audits
-- Error tracking and categorization
-- Corrective action plans
-- Federal reporting metrics (timeliness, accuracy)
-
-*Rationale*: Important for compliance but often aggregated from other domains. May be better as cross-cutting reporting than a separate domain.
+**Staffing Forecasting** — Project task volume, calculate required staff hours, identify staffing gaps
 
 ---
 
-## 4. Documentation Gaps
+## Documentation Gaps
 
-Topics identified but not yet fully documented or implemented.
-
-**Recently Addressed:**
-- Performance specifics (caching TTLs, pagination limits, query complexity) → [api-architecture.md](api-architecture.md#performance)
-- Circuit breaker pattern → [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml#circuit-breakers)
-- Data classification annotations → [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml#data-classification)
-- Domain-specific SLI metrics → [workflow.md](domains/workflow.md#operational-metrics)
-- Quality attributes summary → [api-architecture.md](api-architecture.md#4-quality-attributes-summary)
-
-### Added to api-patterns.yaml (Not Yet Implemented)
-
-The following patterns have been added to [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) but require implementation:
-
-| Pattern | Description | Implementation Required |
-|---------|-------------|------------------------|
-| **Error Handling** | Standard error response structure, error codes, HTTP status guidance | Update `common-responses.yaml` schemas, mock server error responses |
-| **API Versioning** | URL-path versioning strategy, deprecation headers | Update OpenAPI specs with version prefix, mock server routing |
-| **Idempotency** | `Idempotency-Key` header for safe retries | Mock server must track keys and return stored responses |
-| **Batch Operations** | `POST /{resources}/batch` pattern | Add batch endpoints to specs, mock server batch handling |
-| **Authentication** | OAuth 2.0/OIDC, API keys, mTLS options; state-configurable IdP | OpenAPI security schemes, mock server token validation |
-| **Authorization** | Scopes, RBAC roles, ABAC rules, field-level filtering | Middleware for scope/role checks, response filtering |
-| **Rate Limiting** | Request limits with standard headers | API gateway configuration, mock server rate limit simulation |
-| **Security Headers** | HSTS, CORS, cache control | API gateway or middleware configuration |
-| **Audit Logging** | Required fields, sensitive access logging, PII handling | Logging infrastructure, correlation ID propagation |
-| **Process API Metadata** | `x-actors`, `x-capability` extensions | Validation rules, documentation generation |
-| **Correlation IDs** | `X-Correlation-ID` header for request tracing | Header propagation, logging integration |
-| **ETags / Optimistic Concurrency** | `If-Match`, `If-None-Match` for conflict prevention | ETag generation, conditional request handling |
-| **Sorting** | `sort` query parameter for list endpoints | Add to list endpoint specs, mock server support |
-| **Long-Running Operations** | Async pattern with operation status polling | Operation status endpoints, background job infrastructure |
-
-Each section in `api-patterns.yaml` is marked with `# STATUS: Not yet implemented` to indicate work remaining.
-
-**Note on state configurability:** Authentication and authorization patterns define the interface contract, not specific provider implementations. States configure their own identity providers (Okta, Azure AD, state-specific IdP) and may customize role definitions while maintaining interoperability.
-
-### API Patterns to Consider
-
-Additional patterns that may be valuable depending on implementation needs. These are not commitments—evaluate each based on actual requirements.
-
-| Pattern | Description | Consider When |
-|---------|-------------|---------------|
-| **Webhooks / Event Subscriptions** | Subscribe to events, delivery guarantees | Event-driven integration is needed |
-| **Partial Responses / Field Selection** | `?fields=id,name` to reduce payload size | Mobile or bandwidth-constrained clients emerge |
-| **Advanced Caching** | `Cache-Control` directives, `Vary` headers | Caching strategy is defined |
-| **Hypermedia / HATEOAS** | `_links` in responses for discoverability | API discovery becomes important |
-| **Content Negotiation** | `Accept` header handling, multiple formats | Non-JSON formats are needed |
-| **Health Check Details** | Detailed `/health` and `/ready` patterns | Observability standards are finalized |
-
-### Needs Architecture Documentation
+### Needs architecture documentation
 
 **Data Retention & Archival**
 
@@ -201,66 +176,18 @@ Additional patterns that may be valuable depending on implementation needs. Thes
 | PII | Per program requirements | Encrypted archive | On request + retention period |
 | Session/tokens | 24 hours | N/A | Immediate |
 
-*Considerations*:
-- Federal programs have specific retention requirements
-- Right to deletion must balance against audit requirements
-- Archived data must remain queryable for audits
+Compliance cross-references: SNAP (7 CFR 272.1), Medicaid (42 CFR 431.17), TANF (45 CFR 265.2), HIPAA, FERPA. See also [API Architecture - Compliance](api-architecture.md#compliance).
 
-*Compliance Cross-References*:
+**Event-Driven Architecture**
 
-| Program | Regulation | Requirement |
-|---------|------------|-------------|
-| SNAP | 7 CFR 272.1 | Record retention requirements |
-| Medicaid | 42 CFR 431.17 | Records and reports |
-| TANF | 45 CFR 265.2 | Data collection and reporting |
-| All | HIPAA | Protected health information (Medicaid) |
-| All | FERPA | Education records (when used for eligibility) |
-
-*See also*: [API Architecture - Compliance](api-architecture.md#compliance) for field-level handling and right-to-deletion process.
-
-**Event-Driven Architecture / Webhooks**
-
-For external system integration without polling.
-
-| Event | Trigger | Typical Consumers |
-|-------|---------|-------------------|
-| `application.submitted` | New application received | Document management, eligibility engine |
-| `determination.completed` | Eligibility decided | Notice generation, benefits issuance |
-| `task.sla_warning` | Task approaching deadline | Supervisor dashboards, alerting |
-| `task.assigned` | Task assignment changed | Caseworker notifications |
-
-*Pattern*:
-- Events published to message broker (not direct HTTP calls)
-- Webhook subscriptions for external consumers
-- At-least-once delivery with idempotent consumers
-- Event schema versioning aligned with API versioning
+Events published to a message broker for external system integration. Event payload schemas are defined as contract artifacts (e.g., `TaskClaimedEvent` in the workflow prototype). Webhook subscriptions, delivery guarantees, and event versioning need further design.
 
 **Integration Patterns**
 
-How legacy systems and external services connect.
+How legacy systems and external services connect — API gateway, adapter pattern, anti-corruption layer, event bridge, batch file exchange. The [contract-driven architecture](contract-driven-architecture.md) defines the adapter pattern; other integration patterns need further documentation.
 
-| Pattern | Use Case | Example |
-|---------|----------|---------|
-| API Gateway | All external access | Authentication, rate limiting, routing |
-| Adapter | Vendor system integration | Workflow vendor → System API translation |
-| Anti-corruption layer | Legacy system integration | Mainframe → modern API translation |
-| Event bridge | Async integration | Real-time updates to data warehouse |
-| Batch file | Legacy batch systems | Nightly SSA data exchange |
+### Separate documents (future)
 
-### Separate Documents (Future)
+**Testing Strategy** — Contract testing, mock server usage patterns, integration test data management, performance testing approach
 
-**Testing Strategy**
-
-Warrants its own document covering:
-- Contract testing (Process APIs against System API contracts)
-- Mock server usage patterns
-- Integration test data management
-- Performance/load testing approach
-
-**State Security Implementation Guide**
-
-The security patterns in `api-patterns.yaml` define the interface contract. A separate guide may be needed for states covering:
-- Identity provider setup (Okta, Azure AD, state IdP)
-- Role mapping to state organizational structure
-- Break-glass procedures and emergency access
-- Compliance documentation (FedRAMP, StateRAMP, etc.)
+**State Security Implementation Guide** — Identity provider setup, role mapping, break-glass procedures, compliance documentation (FedRAMP, StateRAMP)

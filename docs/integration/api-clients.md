@@ -1,30 +1,47 @@
 # API Client Packages
 
-State-specific npm packages with typed SDK functions and Zod schemas for runtime validation.
+> **Status: Draft**
 
-## Installation
+Generated TypeScript SDK functions and Zod schemas for type-safe API consumption.
+
+The `@safety-net/clients` package generates typed clients from resolved OpenAPI specs. States build client packages from their resolved specs (base + overlays) and consume them locally or publish under their own package name.
+
+> **Note:** Client generation currently covers REST APIs (CRUD operations). As RPC endpoints are added via behavioral contracts (state machines), the generated clients will include those operations as well. See the [Frontend Developer Guide](../getting-started/frontend-developers.md) for the full API surface including RPC and event streams.
+
+## Generating Clients
+
+### Within this repository
 
 ```bash
-npm install @codeforamerica/safety-net-<your-state>
-
-# Peer dependencies
-npm install zod axios
+# Build a state-specific client package
+node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
 ```
+
+This generates a complete npm package in `packages/clients/dist-packages/<your-state>/` containing:
+- Typed SDK functions (`getTask`, `listApplications`, etc.)
+- TypeScript interfaces
+- Zod schemas for runtime validation
+- Axios-based HTTP client
+- Search query helpers
+
+### In a state repository
+
+States install `@safety-net/clients` and generate clients from their resolved specs. See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup.
 
 ## Package Structure
 
-Each package exports domain modules:
+The generated package exports domain modules:
 
 ```typescript
-import { persons, applications, households, incomes } from '@codeforamerica/safety-net-<your-state>';
+import { workflow, intake, persons } from './generated';
 ```
 
 Each domain module provides:
 
 | Export | Description |
 |--------|-------------|
-| SDK functions | `getPerson`, `createPerson`, `listPersons`, etc. |
-| Types | `Person`, `PersonCreate`, `PersonList`, etc. |
+| SDK functions | `getTask`, `listTasks`, `createApplication`, etc. |
+| Types | `Task`, `Application`, `ApplicationMember`, etc. |
 | Client utilities | `createClient`, `createConfig` |
 
 The root export also provides search utilities:
@@ -38,19 +55,19 @@ The root export also provides search utilities:
 
 ```typescript
 // Root - namespaced access to all domains + search helpers
-import { persons, applications, q, search } from '@codeforamerica/safety-net-<your-state>';
+import { workflow, intake, q, search } from './generated';
 
 // Domain-specific - direct imports
-import { getPerson, createPerson, type Person } from '@codeforamerica/safety-net-<your-state>/persons';
+import { getTask, listTasks, type Task } from './generated/workflow';
 
 // Client configuration
-import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
+import { createClient, createConfig } from './generated/workflow/client';
 
 // Zod schemas for custom validation
-import { zPerson, zPersonList } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
+import { zTask, zTaskList } from './generated/workflow/zod.gen';
 
 // Search helpers (alternative import path)
-import { q, search } from '@codeforamerica/safety-net-<your-state>/search';
+import { q, search } from './generated/search';
 ```
 
 ## Basic Usage
@@ -59,8 +76,8 @@ import { q, search } from '@codeforamerica/safety-net-<your-state>/search';
 
 ```typescript
 // src/api/client.ts
-import { persons, applications, households } from '@codeforamerica/safety-net-<your-state>';
-import { createClient, createConfig } from '@codeforamerica/safety-net-<your-state>/persons/client';
+import { workflow, intake } from './generated';
+import { createClient, createConfig } from './generated/workflow/client';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1080';
 
@@ -70,65 +87,43 @@ export const client = createClient(createConfig({
 }));
 
 // Bind SDK functions to your client
-export const listPersons = (options?: Parameters<typeof persons.listPersons>[0]) =>
-  persons.listPersons({ ...options, client });
+export const listTasks = (options?: Parameters<typeof workflow.listTasks>[0]) =>
+  workflow.listTasks({ ...options, client });
 
-export const getPerson = (options: Parameters<typeof persons.getPerson>[0]) =>
-  persons.getPerson({ ...options, client });
+export const getTask = (options: Parameters<typeof workflow.getTask>[0]) =>
+  workflow.getTask({ ...options, client });
 
-export const createPerson = (options: Parameters<typeof persons.createPerson>[0]) =>
-  persons.createPerson({ ...options, client });
-
-export const updatePerson = (options: Parameters<typeof persons.updatePerson>[0]) =>
-  persons.updatePerson({ ...options, client });
-
-export const deletePerson = (options: Parameters<typeof persons.deletePerson>[0]) =>
-  persons.deletePerson({ ...options, client });
+export const listApplications = (options?: Parameters<typeof intake.listApplications>[0]) =>
+  intake.listApplications({ ...options, client });
 
 // Re-export types
-export type { Person, PersonList, PersonCreate } from '@codeforamerica/safety-net-<your-state>/persons';
+export type { Task, TaskList } from './generated/workflow';
+export type { Application } from './generated/intake';
 ```
 
 ### Using SDK Functions
 
 ```typescript
-import { getPerson, listPersons, createPerson, updatePerson, deletePerson } from './api/client';
+import { getTask, listTasks, listApplications } from './api/client';
 
-// List with pagination and search
-const response = await listPersons({
-  query: { limit: 10, offset: 0, q: 'status:active' }
+// List tasks with pagination and search
+const response = await listTasks({
+  query: { limit: 10, offset: 0, q: 'status:pending' }
 });
 
 if ('data' in response && response.data) {
-  console.log('Persons:', response.data.items);
+  console.log('Tasks:', response.data.items);
 }
 
-// Get by ID
-const personResponse = await getPerson({
-  path: { personId: '123e4567-e89b-12d3-a456-426614174000' }
+// Get a task by ID
+const taskResponse = await getTask({
+  path: { taskId: '123e4567-e89b-12d3-a456-426614174000' }
 });
 
-// Create
-const newPersonResponse = await createPerson({
-  body: {
-    name: { firstName: 'Jane', lastName: 'Doe' },
-    email: 'jane@example.com',
-    dateOfBirth: '1990-01-15',
-    phoneNumber: '555-123-4567',
-    citizenshipStatus: 'citizen',
-    householdSize: 1,
-    monthlyIncome: 3500
-  }
+// List applications filtered by status
+const appsResponse = await listApplications({
+  query: { limit: 25, q: 'status:submitted' }
 });
-
-// Update
-const updatedResponse = await updatePerson({
-  path: { personId: '...' },
-  body: { monthlyIncome: 4000 }
-});
-
-// Delete
-await deletePerson({ path: { personId: '...' } });
 ```
 
 ### Response Handling
@@ -136,7 +131,7 @@ await deletePerson({ path: { personId: '...' } });
 The SDK returns responses with automatic Zod validation. Handle responses like this:
 
 ```typescript
-const response = await getPerson({ path: { personId: id } });
+const response = await getTask({ path: { taskId: id } });
 
 if ('data' in response && response.data) {
   // Success - data is validated
@@ -152,28 +147,28 @@ if ('data' in response && response.data) {
 ### Type-Only Imports (No Runtime Cost)
 
 ```typescript
-import type { Person, PersonCreate, PersonList } from '@codeforamerica/safety-net-<your-state>/persons';
+import type { Task, Application } from './generated/workflow';
 
-function displayPerson(person: Person) {
-  console.log(`${person.name?.firstName} ${person.name?.lastName}`);
+function displayTask(task: Task) {
+  console.log(`${task.title} — ${task.status}`);
 }
 ```
 
 ### Zod Schemas for Custom Validation
 
 ```typescript
-import { zPerson, zPersonCreate } from '@codeforamerica/safety-net-<your-state>/persons/zod.gen';
+import { zTask } from './generated/workflow/zod.gen';
 
 // Validate data manually
-const result = zPerson.safeParse(unknownData);
+const result = zTask.safeParse(unknownData);
 if (result.success) {
-  console.log('Valid person:', result.data);
+  console.log('Valid task:', result.data);
 } else {
   console.error('Validation errors:', result.error.issues);
 }
 
 // Strict parse (throws on failure)
-const person = zPerson.parse(apiResponse);
+const task = zTask.parse(apiResponse);
 ```
 
 ## Search Query Syntax
@@ -201,12 +196,12 @@ All list endpoints support a `q` parameter for filtering using `field:value` syn
 
 ### Search Helpers
 
-The package exports `q()` and `search` utilities for type-safe query building:
+The generated package exports `q()` and `search` utilities for type-safe query building:
 
 ```typescript
-import { q, search } from '@codeforamerica/safety-net-<your-state>';
+import { q, search } from './generated';
 // Or from dedicated path
-import { q, search } from '@codeforamerica/safety-net-<your-state>/search';
+import { q, search } from './generated/search';
 ```
 
 **Available search methods:**
@@ -229,20 +224,19 @@ import { q, search } from '@codeforamerica/safety-net-<your-state>/search';
 **Combining conditions with `q()`:**
 
 ```typescript
-import { q, search, persons } from '@codeforamerica/safety-net-<your-state>';
+import { q, search } from './generated';
+import { listTasks } from './api/client';
 
 // Build a type-safe query
 const query = q(
-  search.eq('status', 'active'),
-  search.gte('monthlyIncome', 2000),
-  search.contains('name.lastName', 'smith'),
-  search.not('countyName', 'Denver')
+  search.eq('status', 'pending'),
+  search.eq('queueId', 'snap-intake'),
+  search.exists('assignedToId')
 );
-// Result: "status:active monthlyIncome:>=2000 name.lastName:*smith* -countyName:Denver"
+// Result: "status:pending queueId:snap-intake assignedToId:*"
 
-const response = await persons.listPersons({
-  query: { q: query, limit: 25 },
-  client
+const response = await listTasks({
+  query: { q: query, limit: 25 }
 });
 ```
 
@@ -252,9 +246,9 @@ You can also build query strings directly:
 
 ```typescript
 // Multiple conditions are ANDed together
-const query = 'status:active monthlyIncome:>=1000 -county:Denver';
+const query = 'status:pending queueId:snap-intake';
 
-const response = await listPersons({
+const response = await listTasks({
   query: { q: query, limit: 25 }
 });
 ```
@@ -262,14 +256,13 @@ const response = await listPersons({
 ### Real-World Examples
 
 ```typescript
-import { q, search } from '@codeforamerica/safety-net-<your-state>';
+import { q, search } from './generated';
 
-// Find active persons in a specific county with income above threshold
-const eligiblePersons = q(
-  search.eq('status', 'active'),
-  search.eq('countyName', 'Denver'),
-  search.gte('monthlyIncome', 2000),
-  search.exists('email')
+// Find pending tasks in a specific queue
+const queueTasks = q(
+  search.eq('status', 'pending'),
+  search.eq('queueId', 'snap-intake'),
+  search.notExists('assignedToId')
 );
 
 // Find applications submitted this year, excluding denied
@@ -278,9 +271,10 @@ const recentApplications = q(
   search.not('status', 'denied')
 );
 
-// Search for persons by partial name match
-const nameSearch = q(
-  search.contains('name.lastName', 'smith')
+// Find tasks assigned to a specific worker
+const myTasks = q(
+  search.eq('assignedToId', workerId),
+  search.oneOf('status', ['in_progress', 'pending'])
 );
 ```
 
@@ -289,52 +283,35 @@ const nameSearch = q(
 For better caching and state management:
 
 ```typescript
-// src/hooks/usePersons.ts
+// src/hooks/useTasks.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listPersons, getPerson, createPerson, updatePerson, deletePerson } from '../api/client';
-import type { Person } from '../api/client';
+import { listTasks, getTask } from '../api/client';
+import type { Task } from '../api/client';
 
-export function usePersons(options?: { limit?: number; offset?: number; q?: string }) {
+export function useTasks(options?: { limit?: number; offset?: number; q?: string }) {
   return useQuery({
-    queryKey: ['persons', options],
+    queryKey: ['tasks', options],
     queryFn: async () => {
-      const response = await listPersons({ query: options });
+      const response = await listTasks({ query: options });
       if ('data' in response && response.data) {
         return response.data;
       }
-      throw new Error('Failed to fetch persons');
+      throw new Error('Failed to fetch tasks');
     },
   });
 }
 
-export function usePerson(personId: string) {
+export function useTask(taskId: string) {
   return useQuery({
-    queryKey: ['persons', personId],
+    queryKey: ['tasks', taskId],
     queryFn: async () => {
-      const response = await getPerson({ path: { personId } });
+      const response = await getTask({ path: { taskId } });
       if ('data' in response && response.data) {
         return response.data;
       }
-      throw new Error('Failed to fetch person');
+      throw new Error('Failed to fetch task');
     },
-    enabled: !!personId,
-  });
-}
-
-export function useCreatePerson() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: Partial<Person>) => {
-      const response = await createPerson({ body: data });
-      if ('data' in response && response.data) {
-        return response.data;
-      }
-      throw new Error('Failed to create person');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['persons'] });
-    },
+    enabled: !!taskId,
   });
 }
 ```
@@ -342,13 +319,13 @@ export function useCreatePerson() {
 Usage in components:
 
 ```typescript
-// src/components/PersonList.tsx
-import { usePersons, useDeletePerson } from '../hooks/usePersons';
+// src/components/TaskList.tsx
+import { useTasks } from '../hooks/useTasks';
 
-export function PersonList() {
-  const { data, isLoading, error } = usePersons({
+export function TaskList() {
+  const { data, isLoading, error } = useTasks({
     limit: 25,
-    q: 'status:active email:*'
+    q: 'status:pending queueId:snap-intake'
   });
 
   if (isLoading) return <div>Loading...</div>;
@@ -356,9 +333,9 @@ export function PersonList() {
 
   return (
     <ul>
-      {data?.items.map((person) => (
-        <li key={person.id}>
-          {person.name?.firstName} {person.name?.lastName}
+      {data?.items.map((task) => (
+        <li key={task.id}>
+          {task.title} — {task.status}
         </li>
       ))}
     </ul>
@@ -369,34 +346,19 @@ export function PersonList() {
 ## With Redux Toolkit
 
 ```typescript
-// src/store/slices/personSlice.ts
+// src/store/slices/taskSlice.ts
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getPerson, createPerson as createPersonApi, type Person } from '../../api/client';
+import { getTask, type Task } from '../../api/client';
 
-export const fetchPerson = createAsyncThunk(
-  'persons/fetchById',
+export const fetchTask = createAsyncThunk(
+  'tasks/fetchById',
   async (id: string, { rejectWithValue }) => {
     try {
-      const response = await getPerson({ path: { personId: id } });
+      const response = await getTask({ path: { taskId: id } });
       if ('data' in response && response.data) {
         return response.data;
       }
-      return rejectWithValue('Failed to fetch person');
-    } catch (err) {
-      return rejectWithValue(err instanceof Error ? err.message : 'Unknown error');
-    }
-  }
-);
-
-export const createPerson = createAsyncThunk(
-  'persons/create',
-  async (payload: Partial<Person>, { rejectWithValue }) => {
-    try {
-      const response = await createPersonApi({ body: payload });
-      if ('data' in response && response.data) {
-        return response.data;
-      }
-      return rejectWithValue('Failed to create person');
+      return rejectWithValue('Failed to fetch task');
     } catch (err) {
       return rejectWithValue(err instanceof Error ? err.message : 'Unknown error');
     }
@@ -406,24 +368,25 @@ export const createPerson = createAsyncThunk(
 
 ## State-Specific Fields
 
-Each state package includes state-specific schema fields defined by that state's overlay. These may include:
+Each generated package includes state-specific schema fields defined by that state's overlay. These may include:
 
 - State-specific county enums and codes
 - State benefit program identifiers
 - Eligibility flags for state programs
 - State-specific income source types
 
-Check your state's overlay file (`packages/schemas/openapi/overlays/<your-state>/modifications.yaml`) to see what customizations are applied.
+Check your state's overlay file (in this repo: `packages/schemas/openapi/overlays/<your-state>/modifications.yaml`, or in a state repo: `overlays/modifications.yaml`) to see what customizations are applied. See [State Overlays](../guides/state-overlays.md) for overlay syntax.
 
-## Updating the Package
+## Updating Clients
 
-When a new version is released:
+When the base specs (`@safety-net/schemas`) are updated:
 
-```bash
-npm update @codeforamerica/safety-net-<your-state>
-```
+1. Update the dependency: `npm install @safety-net/schemas@<new-version>`
+2. Re-resolve overlays: `npm run resolve`
+3. Regenerate clients from the updated resolved specs
+4. Check the changelog for breaking changes to schema fields or API endpoints
 
-Check the changelog for breaking changes to schema fields or API endpoints.
+See [State Setup Guide — Updating base specs](../guides/state-setup-guide.md#updating-base-specs) for the full update workflow.
 
 ## Troubleshooting
 

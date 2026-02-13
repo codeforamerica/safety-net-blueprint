@@ -19,6 +19,8 @@ This repository provides base OpenAPI specifications for safety net program APIs
 3. **[State Distribution & Overlays](#3-state-distribution--overlays)** - How states consume, customize, and contribute
 4. **[Implementation Plan](#4-implementation-plan)** - What needs to change in existing tooling
 
+> **Note:** This proposal was written for OpenAPI spec overlays. The [contract-driven architecture](../architecture/contract-driven-architecture.md) introduces additional contract artifacts (state machine YAML, rules YAML, metrics YAML, form definitions) that states will also need to customize. The overlay approach described here extends naturally to those artifact types — a future update will document how state overlays apply across all contract artifacts.
+
 ## Considerations
 
 - States can adopt and maintain customizations with minimal overhead

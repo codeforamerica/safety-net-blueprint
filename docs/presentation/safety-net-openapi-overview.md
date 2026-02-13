@@ -45,6 +45,8 @@ paginate: true
 | Capability | Benefit |
 |------------|---------|
 | API Definitions | Clear, versioned contracts everyone can read |
+| Workflow & Business Rules | SLA deadlines, task routing, and approval workflows you own — not locked in a vendor |
+| Vendor Portability | Switch backend or frontend vendors without losing your rules, customizations, or apps |
 | Simulated API | Build and test without a real backend |
 | Ready-to-Use Code Libraries | Pre-built integration code with error checking |
 | Test Suites | Manual and automated API testing |
@@ -412,6 +414,63 @@ npm run api:new -- --name "benefits" --resource "Benefit"
 
 ---
 
+# Feature 9: Workflow & Business Rules
+
+## Your Rules, Written Down and Portable
+
+**Today, your business rules for processing benefits live inside your vendor's system:**
+
+- "SNAP applications must be processed within 30 days"
+- "Expedited cases go to the worker with the lightest caseload"
+- "If an applicant doesn't respond to an information request in 10 days, send a reminder"
+- "Supervisor approval is required before denying benefits"
+
+If you switch vendors, someone has to re-enter every rule and hope nothing gets missed. If you want to audit how your system actually works, you're reading vendor documentation — not your own.
+
+---
+
+# Feature 9: Workflow & Business Rules
+
+## What Changes
+
+**The toolkit captures these rules in portable files your state owns:**
+
+- Which worker gets which task, and why
+- What the deadlines are for each program
+- What happens when a deadline is about to be missed
+- Who needs to approve what
+
+**The rules are readable, auditable, and travel with you** — not with a vendor's contract.
+
+When federal policy changes from 30-day to 21-day SNAP processing, you update one definition and every system that reads it — your case worker portal, your supervisor dashboard, your SLA reports — picks up the change.
+
+---
+
+# Feature 10: Vendor Portability
+
+## Switch Systems Without Starting Over
+
+**A common story:** Your state spent two years building a case management frontend that workers love. Then the backend vendor's contract ends. Without portable definitions, the new vendor's system has different field names, different workflows, different APIs — and the frontend team starts over.
+
+**With the toolkit:** The frontend was built against shared definitions. The new vendor builds a connector to those same definitions. The frontend keeps working.
+
+---
+
+# Feature 10: Vendor Portability
+
+## What You Keep When Vendors Change
+
+| You Replace | You Keep |
+|---|---|
+| The connection to the old vendor's system | Your business rules and workflows |
+| Vendor-specific configuration | Your case worker portal and client-facing apps |
+| | Your state's customizations |
+| | Your test suites and quality checks |
+
+**The years of work your teams invested in frontends, customizations, and business rules are protected** — vendor transitions affect the plumbing, not the product.
+
+---
+
 # How Teams Use This Toolkit
 
 ## Frontend Developers
@@ -483,7 +542,8 @@ No more "the backend isn't ready yet" blocking your sprint. Build and test your 
 | Multi-state support | Customizations adapt for each state |
 | Automated testing | Verification runs on every code change |
 | Better documentation | Always up-to-date with definitions |
-| No vendor lock-in | Shared API definitions any vendor can implement |
+| Portable business rules | SLA deadlines, routing, and workflows travel with you — not a vendor |
+| Vendor portability | Switch backend or frontend vendors without rebuilding from scratch |
 
 ---
 

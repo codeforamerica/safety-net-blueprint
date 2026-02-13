@@ -184,11 +184,13 @@
       <p>Building technology for safety net programs is challenging. Each state has different terminology, program names, and requirements. Development teams waste time reinventing solutions, integration between systems is slow and error-prone, and organizations often become locked into specific vendors' proprietary systems.</p>
 
       <h2>The Solution</h2>
-      <p>The Safety Net OpenAPI Toolkit provides <strong>pre-built, shared API definitions for benefits eligibility programs</strong>. Instead of starting from scratch, teams build on a common foundation that captures core concepts—applications, households, income, eligibility—while allowing for state-specific customization.</p>
+      <p>The Safety Net OpenAPI Toolkit provides <strong>pre-built, shared definitions for benefits eligibility programs</strong> — both data models and operational behavior. Instead of starting from scratch, teams build on a common foundation that captures core concepts—applications, households, income, eligibility, task routing, SLA tracking—while allowing for state-specific customization.</p>
 
       <h2>Key Capabilities</h2>
       <ul>
         <li><strong>Shared API Definitions</strong> — Ready-to-use specifications for common benefits data, built on industry standards that any vendor can implement</li>
+        <li><strong>Workflow & Business Rules</strong> — Your rules for processing benefits — deadlines, task routing, approval workflows — captured in portable files your state owns, not locked inside a vendor's system</li>
+        <li><strong>Vendor Portability</strong> — Switch backend or frontend vendors without losing your business rules, state customizations, or the applications your teams have built</li>
         <li><strong>Simulated APIs</strong> — Fully functional test environments generated automatically, enabling frontend development without waiting for backend systems</li>
         <li><strong>Ready-to-Use Code Libraries</strong> — Pre-built integration code that catches errors early and speeds up development</li>
         <li><strong>State Customizations</strong> — Adapt the shared definitions for each state's terminology and requirements without duplicating work</li>
@@ -207,17 +209,18 @@
         </tr>
         <tr>
           <th>States & Agencies</th>
-          <td>Customizable for local requirements; no vendor lock-in since any provider can implement the shared definitions</td>
+          <td>Customizable for local requirements; business rules and apps are portable across vendor transitions</td>
         </tr>
       </table>
 
       <h2>How It Works</h2>
       <ol class="steps">
-        <li>Teams start with pre-built API definitions for common benefits data</li>
-        <li>State-specific customizations adapt terminology and requirements</li>
+        <li>Teams start with pre-built definitions for common benefits data and operational workflows</li>
+        <li>State-specific customizations adapt terminology, requirements, and business rules</li>
         <li>Documentation, test environments, and code libraries are generated automatically</li>
         <li>Backend teams implement against clear specifications with automated verification</li>
         <li>Improvements to the shared foundation benefit all participating states</li>
+        <li>When vendors change, your rules, customizations, and frontends carry over — only the connection to the vendor's system is replaced</li>
       </ol>
 
       <div class="cta">

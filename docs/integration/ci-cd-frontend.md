@@ -1,5 +1,7 @@
 # CI/CD for Frontend
 
+> **Status: Draft**
+
 This guide covers building and testing frontend applications that consume Safety Net APIs.
 
 ## Testing Against the Mock Server
@@ -107,7 +109,7 @@ Add to your frontend's `package.json`:
 ```json
 {
   "scripts": {
-    "api:update": "cd ../safety-net-apis && git pull && STATE=<your-state> npm run clients:generate && cp -r generated/clients/* ../your-frontend/src/api/"
+    "api:update": "cd ../safety-net-apis && git pull && STATE=<your-state> npm run clients:generate && cp -r packages/clients/dist-packages/<your-state>/* ../your-frontend/src/api/generated/"
   }
 }
 ```
@@ -151,8 +153,8 @@ jobs:
       - name: Check for changes
         id: diff
         run: |
-          cp -r safety-net-apis/generated/clients/zodios/* src/api/
-          git diff --quiet src/api/ || echo "changed=true" >> $GITHUB_OUTPUT
+          cp -r safety-net-apis/packages/clients/dist-packages/<your-state>/* src/api/generated/
+          git diff --quiet src/api/generated/ || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Create PR
         if: steps.diff.outputs.changed == 'true'
@@ -209,12 +211,16 @@ NEXT_PUBLIC_API_URL=https://api.example.com
 
 ```typescript
 // src/api/config.ts
+import { createClient, createConfig } from './generated/workflow/client';
+
 const API_URL = process.env.REACT_APP_API_URL
   || process.env.VITE_API_URL
   || process.env.NEXT_PUBLIC_API_URL
   || 'http://localhost:1080';
 
-export const personsClient = new Zodios(API_URL, personsApi);
+export const client = createClient(createConfig({
+  baseURL: API_URL,
+}));
 ```
 
 ## E2E Testing with Cypress

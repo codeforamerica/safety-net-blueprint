@@ -1,6 +1,8 @@
 # Command Reference
 
-All available npm scripts in the Safety Net OpenAPI toolkit.
+> **Status: Draft**
+
+All available npm scripts in the Safety Net APIs toolkit.
 
 ## Quick Reference
 
@@ -8,8 +10,6 @@ All available npm scripts in the Safety Net OpenAPI toolkit.
 |---------|-------------|
 | `npm start` | Start mock server + Swagger UI |
 | `npm run validate` | Validate base specs |
-| `npm run validate:state` | Validate specs for current STATE |
-| `npm run validate:all-states` | Validate all states |
 | `npm run mock:start` | Start mock server only |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
@@ -39,15 +39,15 @@ Validates OpenAPI syntax only:
 npm run validate:syntax
 ```
 
-### `npm run validate:lint`
+### `npm run validate:lint -w @safety-net/schemas`
 
-Runs Spectral linting only:
+Runs Spectral linting only (available in the schemas package):
 - Naming conventions
 - HTTP method rules
 - Response codes
 
 ```bash
-npm run validate:lint
+npm run validate:lint -w @safety-net/schemas
 ```
 
 ### `npm run validate:patterns`
@@ -59,24 +59,6 @@ Validates API design patterns only:
 
 ```bash
 npm run validate:patterns
-```
-
-### `npm run validate:state`
-
-Resolves the overlay for the current STATE and validates the resolved specs.
-
-```bash
-STATE=<your-state> npm run validate:state
-# or
-npm run validate:state -- --state=<your-state>
-```
-
-### `npm run validate:all-states`
-
-Validates all available state overlays.
-
-```bash
-npm run validate:all-states
 ```
 
 ## Overlay Commands
@@ -178,12 +160,12 @@ Clears all data and reseeds from examples.
 npm run mock:reset
 ```
 
-### `npm run swagger:start`
+### `npm run mock:swagger`
 
 Starts only the Swagger UI server.
 
 ```bash
-npm run swagger:start
+npm run mock:swagger
 ```
 
 Default: http://localhost:3000
@@ -238,7 +220,7 @@ Common command combinations:
 
 ```bash
 # Full validation
-npm run validate && npm run validate:all-states
+npm run validate
 
 # Reset and start
 npm run mock:reset && npm start

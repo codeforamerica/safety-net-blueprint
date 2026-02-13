@@ -2,7 +2,7 @@
 
 Quick reference for authentication and authorization patterns.
 
-> For full rationale and alternatives considered, see [ADR: Auth Patterns](../../architecture-decisions/adr-auth-patterns.md).
+> For full rationale and alternatives considered, see [ADR: Auth Patterns](../../decisions/auth-patterns.md).
 
 ## Architecture
 
@@ -92,4 +92,4 @@ Staff may be scoped by geography, program, or both. The base spec uses counties;
 ## Resources
 
 - [User Service API](../../../packages/schemas/openapi/users.yaml) — Full OpenAPI specification
-- [ADR: Auth Patterns](../../architecture-decisions/adr-auth-patterns.md) — Decision rationale, options considered, security details
+- [ADR: Auth Patterns](../../decisions/auth-patterns.md) — Decision rationale, options considered, security details

@@ -7,30 +7,25 @@ version: "1.0"
 # =============================================================================
 # Pattern Applicability
 # =============================================================================
-# This project has two API layers (see docs/architecture/domain-design.md):
+# This project uses a contract-driven architecture with two API types:
 #
-# SYSTEM APIs: RESTful CRUD access to domain data
-#   - Example: GET /tasks/{id}, POST /applications, PATCH /cases/{id}
-#   - Located in: openapi/domains/
+# REST APIs: CRUD operations on domain resources
+#   - Example: GET /workflow/tasks/{id}, POST /intake/applications
+#   - Defined by: OpenAPI specs
 #
-# PROCESS APIs: RPC-style orchestration of business operations
-#   - Pattern: POST /processes/{domain}/{resource}/{action}
-#   - Example: POST /processes/workflow/tasks/claim
-#   - Located in: openapi/processes/{domain}/{resource}/{action}.yaml
+# RPC APIs: Behavioral operations that trigger state transitions
+#   - Example: POST /workflow/tasks/{id}/claim
+#   - Generated from: state machine triggers in contract artifacts
 #
-# Each section below indicates which API type it applies to:
-#   [SYSTEM]         - System APIs only
-#   [PROCESS]        - Process APIs only
-#   [BOTH]           - Both API types
-#   [SYSTEM, PROCESS*] - Required for System, optional/varies for Process
+# See docs/architecture/contract-driven-architecture.md for details.
 
 # =============================================================================
-# Naming Conventions [BOTH]
+# Naming Conventions
 # =============================================================================
 naming:
   # URL path segments: kebab-case (lowercase with hyphens)
-  # System API example: /user-profiles, /order-items
-  # Process API example: /processes/applications/submit
+  # REST example: /user-profiles, /order-items
+  # RPC example: /workflow/tasks/{id}/claim
   paths: kebab-case
 
   # Path parameters: camelCase inside braces
@@ -42,13 +37,12 @@ naming:
   query_parameters: camelCase
 
   # Operation IDs: camelCase verb + noun
-  # System API example: listPersons, createApplication, getHouseholdById
-  # Process API example: submitApplication, determineEligibility, reassignTasks
+  # REST example: listPersons, createApplication, getHouseholdById
+  # RPC example: claimTask, completeTask, submitApplication
   operation_ids: camelCase
 
   # Schema/component names: PascalCase
-  # System API example: Person, ApplicationCreate, HouseholdList (resource schemas)
-  # Process API example: SubmitApplicationRequest, SubmitApplicationResponse (DTOs)
+  # Example: Person, ApplicationCreate, HouseholdList
   schemas: PascalCase
 
   # File names: kebab-case
@@ -56,11 +50,9 @@ naming:
   files: kebab-case
 
 # =============================================================================
-# List Endpoint Pattern [SYSTEM]
-# =============================================================================
-# Process APIs do not have list endpoints - they perform actions, not queries.
+# List Endpoint Pattern# =============================================================================
 list_endpoints:
-  # All list endpoints (GET /resources) must include these parameters
+  # All REST list endpoints (GET /resources) must include these parameters
   required_parameters:
     - ref: "./components/common-parameters.yaml#/SearchQueryParam"
       name: q
@@ -97,9 +89,7 @@ list_endpoints:
   response_schema_suffix: List
 
 # =============================================================================
-# Search Query Syntax [SYSTEM]
-# =============================================================================
-# Process APIs do not use search - they receive explicit request payloads.
+# Search Query Syntax# =============================================================================
 search_syntax:
   parameter_name: q
   description: |
@@ -139,11 +129,9 @@ search_syntax:
       example: "address.state:CA"
 
 # =============================================================================
-# CRUD Operations [SYSTEM]
-# =============================================================================
-# Process APIs are RPC-style (POST with action verbs), not RESTful CRUD.
-# Process API pattern: POST /processes/{domain}/{resource}/{action}
-# Example: POST /processes/workflow/tasks/claim, POST /processes/case-management/workers/assign
+# CRUD Operations# =============================================================================
+# RPC endpoints (POST with action verbs) are generated from state machine triggers.
+# REST endpoints follow standard CRUD patterns below.
 crud_operations:
   # CREATE - POST /resources
   create:
@@ -209,10 +197,7 @@ crud_operations:
     error_responses: [404, 500]
 
 # =============================================================================
-# Shared Components [BOTH]
-# =============================================================================
-# Error responses are shared. Query parameters are System API only.
-# Process APIs define their own request/response DTOs.
+# Shared Components# =============================================================================
 shared_components:
   # Error responses - use $ref to these
   error_responses:
@@ -255,11 +240,8 @@ shared_components:
       maxLength: 320
 
 # =============================================================================
-# Schema Patterns [SYSTEM, PROCESS*]
+# Schema Patterns
 # =============================================================================
-# System APIs: Use resource schemas with standard base fields (id, createdAt, updatedAt)
-# Process APIs: Use purpose-built DTOs (Request/Response suffixes) - may reference
-#               System API schemas but define their own request/response shapes.
 schema_patterns:
   # Every resource should have these standard fields
   resource_base_fields:
@@ -347,10 +329,9 @@ schema_patterns:
       - Works for both top-level properties and nested array items
 
 # =============================================================================
-# File Structure [BOTH]
-# =============================================================================
+# File Structure# =============================================================================
 # API specs are organized flat with x-extensions for classification.
-# See "API Classification" section for x-domain, x-api-type, x-status.
+# See "API Classification" section for x-domain, x-status.
 file_structure:
   # Main API specs go in openapi/ root (flat structure)
   api_specs:
@@ -359,16 +340,16 @@ file_structure:
     organization: |
       APIs are organized logically using x-extensions rather than folders:
       - x-domain: Business domain (intake, client-management, etc.)
-      - x-api-type: Architectural layer (system, process, cross-cutting)
       - x-status: Implementation status (planned, stable, deprecated)
 
-      This avoids tooling changes while enabling filtering and documentation.
+      API type (REST vs RPC) is determined by which contract artifacts exist,
+      not by a metadata tag. See contract-driven-architecture.md.
     examples:
-      - openapi/applications.yaml   # x-domain: intake, x-api-type: system
-      - openapi/persons.yaml        # x-domain: client-management, x-api-type: system
-      - openapi/households.yaml     # x-domain: intake, x-api-type: system
-      - openapi/incomes.yaml        # x-domain: intake, x-api-type: system
-      - openapi/users.yaml          # x-domain: identity-access, x-api-type: cross-cutting
+      - openapi/applications.yaml   # x-domain: intake
+      - openapi/persons.yaml        # x-domain: client-management
+      - openapi/households.yaml     # x-domain: intake
+      - openapi/incomes.yaml        # x-domain: intake
+      - openapi/users.yaml          # x-domain: identity-access
 
   # Shared components in openapi/components/
   components:
@@ -395,124 +376,15 @@ file_structure:
     postman_collection: "generated/postman-collection.json"
 
 # =============================================================================
-# Process API Metadata [PROCESS]
-# =============================================================================
-# STATUS: Not yet implemented in validation
-# Process APIs use OpenAPI extension fields to declare metadata about
-# who can call them and what capability they provide.
-process_api_metadata:
-  description: |
-    Process APIs are organized by domain, then resource, then action:
-
-      /processes/{domain}/{resource}/{action}
-
-    Examples:
-      /processes/workflow/tasks/claim
-      /processes/workflow/verification/start
-      /processes/case-management/workers/assign
-      /processes/communication/notices/send
-
-    This enables documentation generation, authorization rules, and API discovery.
-
-  path_convention:
-    pattern: "/processes/{domain}/{resource}/{action}"
-    components:
-      domain: The owning domain (workflow, case-management, intake, eligibility, communication, etc.)
-      resource: The resource being acted upon (tasks, workers, cases, notices, etc.)
-      action: The operation being performed (claim, assign, transfer, send, etc.)
-    convention: |
-      When an operation involves multiple resources, place it under the resource
-      being acted upon (not the primary output). This matches natural language
-      and improves discoverability.
-    examples:
-      - path: /processes/workflow/tasks/claim
-        description: Claim a task (task is acted upon)
-      - path: /processes/case-management/workers/assign
-        description: Assign a worker (worker is acted upon)
-      - path: /processes/case-management/cases/transfer
-        description: Transfer a case (case is acted upon)
-      - path: /processes/communication/notices/send
-        description: Send a notice (notice is acted upon)
-
-  extensions:
-    x-actors:
-      description: Which actors/roles can call this endpoint
-      type: array
-      location: Operation level (under paths/{path}/{method})
-      values:
-        - client              # Person applying for/receiving benefits
-        - authorized_rep      # Representative acting on behalf of client
-        - caseworker          # Staff processing applications
-        - supervisor          # Team lead with approval authority
-        - system              # Automated/batch processes
-      example: |
-        paths:
-          /processes/intake/applications/submit:
-            post:
-              x-actors: [client, caseworker, authorized_rep]
-              summary: Submit an application
-
-    x-capability:
-      description: The business capability this endpoint provides
-      type: string
-      location: Operation level (under paths/{path}/{method})
-      purpose: |
-        Groups related Process API endpoints for documentation and discovery.
-        Should match the domain in the Process API path for consistency.
-      values:
-        # Core domains
-        - client-management       # Managing client records and relationships
-        - intake                  # Submitting and managing applications
-        - eligibility             # Determining eligibility
-        - workflow                # Tasks, verification, SLA tracking
-        - case-management         # Cases, assignments, workload
-        - scheduling              # Appointments and interviews
-        - document-management     # Uploading and managing documents
-        # Cross-cutting
-        - communication           # Notices and correspondence
-        - reporting               # Generating reports
-        - configuration           # Managing system configuration
-      note: |
-        The x-capability should match the {domain} segment in the Process API path.
-        Example: /processes/workflow/tasks/claim uses x-capability: workflow
-      example: |
-        paths:
-          /processes/intake/applications/submit:
-            post:
-              x-capability: intake
-              x-actors: [client, caseworker]
-
-    x-idempotent:
-      description: Whether this operation is idempotent (safe to retry)
-      type: boolean
-      location: Operation level
-      default: false for POST
-      note: All Process API POST operations should specify this explicitly
-      example: |
-        paths:
-          /processes/intake/applications/submit:
-            post:
-              x-idempotent: true  # Safe to retry with same Idempotency-Key
-
-  usage_in_authorization: |
-    The x-actors extension can be used by API gateways or middleware to
-    enforce role-based access control:
-    1. Extract user's role from JWT token
-    2. Check if role is in x-actors array for the endpoint
-    3. Return 403 Forbidden if not authorized
-
-  usage_in_documentation: |
-    Documentation generators can use these extensions to:
-    - Group endpoints by x-capability
-    - Show which roles can access each endpoint
-    - Generate role-specific API documentation
-
-# =============================================================================
-# API Classification [BOTH]
+# API Classification
 # =============================================================================
 # Extensions for organizing and identifying APIs without folder restructuring.
 # These extensions enable filtering, documentation generation, and tooling
 # without requiring physical file reorganization.
+#
+# Note: x-actors and x-capability concepts still apply but belong to contract
+# artifacts (state machine YAML), not a separate API metadata layer. See
+# docs/architecture/contract-driven-architecture.md.
 api_classification:
   description: |
     Instead of organizing APIs into nested folders (which requires tooling changes),
@@ -553,30 +425,11 @@ api_classification:
             get:
               x-domain: intake
 
-    x-api-type:
-      description: The architectural layer this API belongs to
-      type: string
-      location: Info level (under info:)
-      required: true for all API specs
-      values:
-        - system        # RESTful CRUD access to domain data
-        - process       # RPC-style orchestration of business operations
-        - cross-cutting # Shared services (auth, config, etc.)
-      note: |
-        See design-decisions.md "System APIs vs Process APIs?" for rationale.
-        - System APIs: GET/POST/PATCH/DELETE on resources
-        - Process APIs: POST /processes/{domain}/{resource}/{action}
-        - Cross-cutting: Services used by multiple domains
-      example: |
-        info:
-          title: Applications API
-          x-api-type: system
-          x-domain: intake
-
-        info:
-          title: Users API
-          x-api-type: cross-cutting
-          x-domain: identity-access
+    # x-api-type: Removed. The contract-driven architecture expresses API type
+    # through which contract artifacts exist (OpenAPI only = data-shaped/REST,
+    # OpenAPI + state machine = behavior-shaped/REST + RPC), not through a
+    # metadata tag. Existing specs may still have x-api-type values; these are
+    # ignored and will be cleaned up. See design-decisions.md for history.
 
     x-status:
       description: Implementation/lifecycle status of the API or operation
@@ -663,23 +516,22 @@ api_classification:
             function: truthy
 
   migration_to_folders: |
-    If folder-based organization is later desired, x-domain and x-api-type
-    provide the classification needed:
+    If folder-based organization is later desired, x-domain provides the
+    classification needed:
 
     Current:
-      openapi/applications.yaml  (x-api-type: system, x-domain: intake)
-      openapi/persons.yaml       (x-api-type: system, x-domain: client-management)
-      openapi/users.yaml         (x-api-type: cross-cutting, x-domain: identity-access)
+      openapi/applications.yaml  (x-domain: intake)
+      openapi/persons.yaml       (x-domain: client-management)
+      openapi/users.yaml         (x-domain: identity-access)
 
     Future (if reorganized):
-      openapi/system/intake/applications.yaml
-      openapi/system/client-management/persons.yaml
-      openapi/cross-cutting/users.yaml
+      openapi/intake/applications.yaml
+      openapi/client-management/persons.yaml
+      openapi/identity-access/users.yaml
 
 # =============================================================================
-# Validation Rules [BOTH]
+# Validation Rules
 # =============================================================================
-# Syntax and lint rules apply to both. Pattern checks differ by API type.
 validation:
   # These are enforced by npm run validate
   layers:
@@ -704,8 +556,7 @@ validation:
         - CRUD operations follow patterns
 
 # =============================================================================
-# Error Handling [BOTH]
-# =============================================================================
+# Error Handling# =============================================================================
 # STATUS: Not yet implemented in mock server or validation
 error_handling:
   # Standard error response body structure
@@ -788,8 +639,7 @@ error_handling:
       retryable: true
 
 # =============================================================================
-# API Versioning [BOTH]
-# =============================================================================
+# API Versioning# =============================================================================
 # STATUS: Not yet implemented
 versioning:
   strategy: url-path
@@ -828,19 +678,19 @@ versioning:
         description: Link to replacement endpoint/documentation
 
 # =============================================================================
-# Idempotency [PROCESS required, SYSTEM for POST only]
+# Idempotency
 # =============================================================================
 # STATUS: Not yet implemented in mock server
-# Process APIs: Required for all POST operations (actions may have side effects)
-# System APIs: Required for POST (create) operations only
+# RPC APIs: Required for all POST operations (actions may have side effects)
+# REST APIs: Required for POST (create) operations only
 idempotency:
   description: |
     Ensures that retrying a request (due to network issues, timeouts, etc.)
-    does not cause duplicate side effects. Critical for Process APIs.
+    does not cause duplicate side effects. Critical for RPC APIs.
 
   applies_to:
-    process_apis: All POST operations (required)
-    system_apis: POST operations that create resources
+    rpc_apis: All POST operations (required)
+    rest_apis: POST operations that create resources
 
   mechanism:
     header_name: Idempotency-Key
@@ -868,17 +718,17 @@ idempotency:
       description: Required idempotency key not provided
 
 # =============================================================================
-# Batch Operations [SYSTEM primarily, PROCESS rarely]
+# Batch Operations
 # =============================================================================
 # STATUS: Not yet implemented
-# System APIs: Common for bulk CRUD (e.g., PATCH /tasks/batch)
-# Process APIs: Rare; most process operations are single-action. If needed,
+# REST APIs: Common for bulk CRUD (e.g., PATCH /tasks/batch)
+# RPC APIs: Rare; most RPC operations are single-action. If needed,
 #               the process itself handles multiple items (e.g., bulk-reassign).
 batch_operations:
   description: |
     For operations that need to affect multiple resources in a single request.
     Useful for bulk updates, imports, and administrative operations.
-    Primarily for System APIs; Process APIs typically handle batching internally.
+    Primarily for REST APIs; RPC APIs typically handle batching internally.
 
   endpoint_pattern: "/{resources}/batch"
   method: POST
@@ -927,8 +777,7 @@ batch_operations:
     scope: Entire batch (not individual operations)
 
 # =============================================================================
-# Authentication [BOTH]
-# =============================================================================
+# Authentication# =============================================================================
 # STATUS: Not yet implemented
 # NOTE: States will use their own identity providers. This section defines the
 #       interface contract, not the specific provider implementation.
@@ -1005,8 +854,7 @@ authentication:
       - AUTH_CLOCK_SKEW_SECONDS: 60
 
 # =============================================================================
-# Authorization [BOTH]
-# =============================================================================
+# Authorization# =============================================================================
 # STATUS: Not yet implemented
 # NOTE: Authorization rules may vary by state. This defines the patterns;
 #       specific role definitions are state-configurable.
@@ -1121,8 +969,7 @@ authorization:
       to hide fields - the API must not return unauthorized data.
 
 # =============================================================================
-# Rate Limiting [BOTH]
-# =============================================================================
+# Rate Limiting# =============================================================================
 # STATUS: Not yet implemented
 rate_limiting:
   description: |
@@ -1166,8 +1013,7 @@ rate_limiting:
       retryAfter: <seconds>
 
 # =============================================================================
-# Security Headers [BOTH]
-# =============================================================================
+# Security Headers# =============================================================================
 # STATUS: Not yet implemented
 security_headers:
   description: Standard HTTP security headers for all responses
@@ -1200,8 +1046,7 @@ security_headers:
       max_age: 86400
 
 # =============================================================================
-# Audit Logging [BOTH]
-# =============================================================================
+# Audit Logging# =============================================================================
 # STATUS: Not yet implemented
 audit_logging:
   description: |
@@ -1244,8 +1089,7 @@ audit_logging:
       - Mask any PII that must appear in logs (e.g., last 4 of SSN)
 
 # =============================================================================
-# Correlation IDs [BOTH]
-# =============================================================================
+# Correlation IDs# =============================================================================
 # STATUS: Not yet implemented
 correlation_ids:
   description: |
@@ -1286,13 +1130,12 @@ correlation_ids:
       - Include in async job metadata
 
 # =============================================================================
-# ETags and Optimistic Concurrency [SYSTEM]
-# =============================================================================
+# ETags and Optimistic Concurrency# =============================================================================
 # STATUS: Not yet implemented
 etags:
   description: |
     ETags enable optimistic concurrency control (prevent lost updates) and
-    conditional requests (caching). System APIs should support ETags for
+    conditional requests (caching). REST APIs should support ETags for
     resources that can be updated.
 
   response_headers:
@@ -1338,13 +1181,12 @@ etags:
     - Consider ETag scope: entire resource or specific fields
 
 # =============================================================================
-# Sorting [SYSTEM]
-# =============================================================================
+# Sorting# =============================================================================
 # STATUS: Not yet implemented
 sorting:
   description: |
     Standard query parameter for sorting list endpoint results.
-    Sorting is typically used with System APIs that return collections.
+    Sorting is typically used with REST APIs that return collections.
 
   parameter:
     name: sort
@@ -1387,13 +1229,13 @@ sorting:
     - Limit number of sort fields (e.g., max 3)
 
 # =============================================================================
-# Long-Running Operations [PROCESS primarily]
+# Long-Running Operations
 # =============================================================================
 # STATUS: Not yet implemented
 long_running_operations:
   description: |
     Pattern for operations that take too long for a synchronous response.
-    Common in Process APIs for complex business operations (e.g., batch
+    Common in RPC APIs for complex business operations (e.g., batch
     eligibility determination, bulk document processing).
 
   threshold:
@@ -1481,8 +1323,7 @@ long_running_operations:
       trade_off: More complex, connection management issues
 
 # =============================================================================
-# Circuit Breakers [BOTH]
-# =============================================================================
+# Circuit Breakers# =============================================================================
 # STATUS: Not yet implemented
 circuit_breakers:
   description: |
@@ -1563,8 +1404,7 @@ circuit_breakers:
               timeout_ms: 10000
 
 # =============================================================================
-# Data Classification [BOTH]
-# =============================================================================
+# Data Classification# =============================================================================
 # STATUS: Not yet implemented
 data_classification:
   description: |

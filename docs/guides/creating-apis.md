@@ -1,5 +1,7 @@
 # Creating New APIs
 
+> **Status: Draft**
+
 This guide provides instructions for creating new REST APIs that follow our established patterns. It can be used by developers or AI agents to generate consistent, validated API specifications.
 
 ## Quick Start
@@ -514,4 +516,4 @@ Before submitting a new API:
 - **Shared responses**: `openapi/components/common-responses.yaml`
 - **Shared schemas**: `openapi/components/common.yaml`
 - [Validation Guide](./validation.md)
-- [Search Patterns](./search-patterns.md)
+- [Search Patterns](../decisions/search-patterns.md)

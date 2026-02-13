@@ -71,9 +71,9 @@ A review dashboard with:
 
 ## Prototype Scope
 
-This document follows the **steel thread** approach — the thinnest end-to-end slice needed to prove a specific part of the [contract-driven architecture](contract-driven-architecture.md). This prototype proves the **form definition artifact**: configuration-driven forms that adapt to programs, applicants, and field context. The [workflow prototype](workflow-prototype.md) proves the behavioral contract artifacts (state machine, rules, metrics) at depth. Between the two, every artifact type is covered. They can be done in either order.
+This document follows the **steel thread** approach — the thinnest end-to-end slice needed to prove a specific part of the [contract-driven architecture](../architecture/contract-driven-architecture.md). This prototype proves the **form definition artifact**: configuration-driven forms that adapt to programs, applicants, and field context. The [workflow prototype](workflow-prototype.md) proves the behavioral contract artifacts (state machine, rules, metrics) at depth. Between the two, every artifact type is covered. They can be done in either order.
 
-> **Authoring note:** The tables in this document are the authoring format. Conversion scripts read them and generate the form definition YAML — a build artifact that nobody edits by hand. See [Authoring Experience](contract-driven-architecture.md#authoring-experience) for the full workflow.
+> **Authoring note:** The tables in this document are the authoring format. Conversion scripts read them and generate the form definition YAML — a build artifact that nobody edits by hand. See [Authoring Experience](../architecture/contract-driven-architecture.md#authoring-experience) for the full workflow.
 
 ### Architecture concepts exercised
 
@@ -97,7 +97,7 @@ This document follows the **steel thread** approach — the thinnest end-to-end 
 - **Additional programs** — TANF, WIC, CHIP. More columns in the program requirements table.
 - **Applicant-facing forms** — this covers caseworker review forms only.
 - **Document uploads** — supporting documents attached to sections.
-- **Eligibility determination** — would use the `call` effect type from the [contract-driven architecture](contract-driven-architecture.md#complex-calculation-logic).
+- **Eligibility determination** — would use the `call` effect type from the [contract-driven architecture](../architecture/contract-driven-architecture.md#complex-calculation-logic).
 - **Conditional section requirements** — program requirements cells that have conditions instead of flat Required/—. For example, "Assets required for Medicaid when non-MAGI eligibility group" or "Tax Filing required only for adults (not children)." The server would evaluate the condition during record creation using the same expression engine (JSON Logic) already proven by `visibleWhen` on the client side. Would add a condition column to the program requirements table.
 - **Notifications** — effects that notify caseworkers on corrections or completion.
 
@@ -202,7 +202,7 @@ Tax Filing is only visible when the member is applying for Medicaid. A member ap
 
 Fields within a section, with source paths linking to OpenAPI schemas, program relevance annotations, and verification requirements. Each section has its own field definitions table.
 
-**How fields link to OpenAPI schemas:** The `source` column uses dot-notation paths linking to OpenAPI schema fields — see [Source paths](contract-driven-architecture.md#form-definitions) for the full mechanism. For example, `member.citizenshipInfo.status` references the ApplicationMember schema's nested citizenshipInfo.status field.
+**How fields link to OpenAPI schemas:** The `source` column uses dot-notation paths linking to OpenAPI schema fields — see [Source paths](../architecture/contract-driven-architecture.md#form-definitions) for the full mechanism. For example, `member.citizenshipInfo.status` references the ApplicationMember schema's nested citizenshipInfo.status field.
 
 **Identity section:**
 
@@ -251,7 +251,7 @@ Not every field needs a citation — only those driven by program-specific regul
 
 ### Annotation extensibility
 
-This prototype demonstrates three annotation types: **program relevance** and **verification** as columns in the field definitions tables, and **regulatory citations** as a separate table. The column format works for annotations that apply to most fields. The separate table works for sparse annotations that need additional structure. See [Extensibility and customization](contract-driven-architecture.md#extensibility-and-customization) for the generalized annotations table pattern and how annotation values can be structured.
+This prototype demonstrates three annotation types: **program relevance** and **verification** as columns in the field definitions tables, and **regulatory citations** as a separate table. The column format works for annotations that apply to most fields. The separate table works for sparse annotations that need additional structure. See [Extensibility and customization](../architecture/contract-driven-architecture.md#extensibility-and-customization) for the generalized annotations table pattern and how annotation values can be structured.
 
 **Future annotation types (not in this prototype):**
 - **Role-based guidance** — different annotations for caseworkers vs. supervisors vs. applicants. The role becomes part of the context key.

@@ -1,5 +1,7 @@
 # CI/CD for Backend
 
+> **Status: Draft**
+
 This guide covers validating API specifications in CI and contract testing your backend implementation against the spec.
 
 ## Validating Specifications
@@ -29,7 +31,7 @@ jobs:
         run: npm run validate
 
       - name: Validate all state specs
-        run: npm run validate:all-states
+        run: STATE=<your-state> npm run overlay:resolve
 ```
 
 ### GitLab CI
@@ -41,7 +43,7 @@ validate:
   script:
     - npm install
     - npm run validate
-    - npm run validate:all-states
+    - STATE=<your-state> npm run overlay:resolve
 ```
 
 ## Contract Testing Your Backend

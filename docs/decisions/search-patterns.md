@@ -202,7 +202,7 @@ To address the learning curve, we implemented:
 
 ## Search Syntax Reference
 
-See [README_SEARCH_SYNTAX.md](../README_SEARCH_SYNTAX.md) for the full syntax reference including operators and case sensitivity rules.
+The full syntax reference (operators, case sensitivity rules) is documented in the `SearchQueryParam` description within each API spec's list endpoint.
 
 ---
 

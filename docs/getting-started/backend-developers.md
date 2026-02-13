@@ -1,191 +1,192 @@
 # Getting Started: Backend Developers
 
-This guide is for developers who design API specifications, validate them, and build backend implementations that conform to the Safety Net API standards.
+> **Status: Draft**
+
+This guide is for developers who work with the contract artifacts — OpenAPI specs, state machines, rules, metrics, and form definitions — and build production adapters that satisfy those contracts.
+
+See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
+
+> **Note:** OpenAPI specs, validation, overlays, and the mock server for CRUD operations work today. The behavioral contract tooling described below — conversion scripts, behavioral contract validation, and the mock server's state machine engine — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes the target developer experience.
 
 ## What You'll Do
 
-- Design and modify OpenAPI specifications
-- Add state-specific variations via overlays
-- Validate specs locally and in CI/CD
-- Use the mock server to test your spec design
-- Run contract tests against your backend implementation
+- [**Author contract artifacts**](#1-author-in-tables) — work with tables (spreadsheets) that define state transitions, decision rules, metrics, and form definitions
+- [**Run conversion scripts**](#2-generate-yaml) — generate YAML from authored tables (state machine, rules, metrics, form definition)
+- [**Validate contracts**](#3-validate) — check cross-artifact consistency (states match OpenAPI enums, effect targets reference real schemas, field source paths resolve)
+- [**Test against the mock server**](#4-test-with-the-mock-server) — the mock server serves both REST and RPC APIs, interpreting behavioral contracts directly and auto-generating RPC endpoints from state machine triggers
+- [**Build production adapters**](#building-a-production-adapter) — implement the adapter that translates between contracts and your vendor systems
+- [**Add state-specific variations**](#5-add-state-specific-variations) — customize contracts via overlays without forking the base files
 
 ## Prerequisites
 
-- Node.js >= 18.0.0
+- Node.js >= 20.19.0
 - Git
 - Familiarity with OpenAPI/Swagger
 
 ## Initial Setup
 
+The toolkit provides base specs, scripts, and a mock server as npm packages. States create their own repository and install the base packages:
+
 ```bash
-# Clone the repository
+mkdir my-state-apis && cd my-state-apis
+npm init -y
+npm install @safety-net/schemas @safety-net/mock-server @safety-net/clients
+```
+
+See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup process, including overlays, resolved specs, and CI pipeline configuration.
+
+For development within this repository:
+
+```bash
 git clone https://github.com/codeforamerica/safety-net-apis.git
 cd safety-net-apis
-
-# Install dependencies
 npm install
 
 # Set your state (or add to your shell profile)
 export STATE=<your-state>
 
 # Verify installation
-npm run validate:state
+npm run validate
 ```
 
-## Project Structure
+## What the Packages Provide
 
-```
-openapi/
-├── *.yaml                  # API specifications (persons, households, etc.)
-├── components/             # Shared schemas, parameters, responses
-├── examples/               # Example data for seeding the mock server
-├── patterns/               # API design patterns and conventions
-└── overlays/               # State-specific variations
-    └── <state>/modifications.yaml
-```
+| Package | Description | CLIs |
+|---------|-------------|------|
+| `@safety-net/schemas` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
+| `@safety-net/mock-server` | Mock API server and Swagger UI for development | `safety-net-mock`, `safety-net-swagger` |
+| `@safety-net/clients` | Postman collection and TypeScript client generation | — |
 
-## Your First Workflow
+States install these packages, apply overlays to customize for state-specific needs, and point the CLIs at their resolved specs.
 
-### 1. Explore Existing Specs
+## Contract Artifacts
 
-Start the mock server and Swagger UI to see the current APIs:
+Every domain needs contracts. What contracts you need depends on whether the domain is data-shaped or behavior-shaped.
+
+| Artifact | When needed | What it defines |
+|----------|------------|-----------------|
+| **OpenAPI spec** | Every domain | Resource schemas, REST endpoints, query parameters |
+| **State machine YAML** | Behavior-shaped domains | States, transitions, guards, effects, SLA behavior, audit requirements |
+| **Rules YAML** | Domains with condition-based decisions | Routing, assignment, priority, escalation rules as decision tables |
+| **Metrics YAML** | Domains needing operational monitoring | Metric names, source linkage to states/transitions, targets |
+| **Form definition YAML** | Domains with context-dependent forms | Sections, field visibility, annotations, program requirements |
+
+Data-shaped domains (persons, documents) need only an OpenAPI spec. Behavior-shaped domains (workflow, application review) need richer contracts. See [Contract-Driven Architecture](../architecture/contract-driven-architecture.md#contract-artifacts) for the full breakdown.
+
+## Authoring Workflow
+
+Contract artifacts are generated from tables — nobody edits YAML by hand. Business users and developers author in spreadsheets, and conversion scripts generate the YAML.
+
+### 1. Author in Tables
+
+Each concern gets its own table (sheet in a spreadsheet):
+
+- **State transitions** — From State, To State, Trigger, Who, Guard, Effects
+- **Guards** — Guard name, Field, Operator, Value
+- **Effects** — Trigger, effect details (set, create, lookup, evaluate-rules, event)
+- **Decision rules** — Conditions and actions for routing, assignment, priority
+- **Metrics** — Metric name, source type, source linkage, target
+- **Form definitions** — Program requirements, section definitions, field definitions with annotations
+
+See the [Workflow Prototype](../prototypes/workflow-prototype.md) for complete examples of state transition, guard, effect, and decision tables. See the [Application Review Prototype](../prototypes/application-review-prototype.md) for form definition tables.
+
+### 2. Generate YAML
+
+Conversion scripts generate contract YAML from the authored tables. This tooling is being built as part of the prototypes — the commands below describe the target workflow:
 
 ```bash
-npm start
+# Generate all contract artifacts from tables (planned)
+npm run contracts:generate
+
+# Generate a specific domain (planned)
+npm run contracts:generate -- --domain workflow
 ```
 
-- Swagger UI: http://localhost:3000 (browse and test APIs)
-- Mock Server: http://localhost:1080 (API endpoints)
+### 3. Validate
 
-### 2. Validate Specifications
-
-Before making changes, ensure everything validates:
+Today, `npm run validate` checks OpenAPI spec syntax and pattern compliance. The prototypes will extend validation to check cross-artifact consistency:
 
 ```bash
-# Validate base specs
+# Validate OpenAPI specs (works today)
 npm run validate
 
-# Validate your state's resolved specs
-STATE=<your-state> npm run validate:state
-
-# Validate all states
-npm run validate:all-states
+# What validation will also catch (planned):
+# - State machine states don't match OpenAPI status enums
+# - Effect targets reference schemas that don't exist
+# - Rule context variables don't resolve to real fields
+# - Form definition field source paths don't resolve to OpenAPI schema fields
+# - Transitions missing required audit effects
+# - Metric sources reference states/transitions that don't exist
 ```
 
-### 3. Make Changes to a Spec
+### 4. Test with the Mock Server
 
-Edit files in `openapi/` or `openapi/components/`. After changes:
+Today the mock server serves REST APIs (CRUD endpoints from OpenAPI specs). The prototypes will add a behavioral engine that interprets state machine YAML directly — auto-generating RPC endpoints from triggers, enforcing transitions, evaluating guards, executing effects, and tracking metrics.
 
 ```bash
-# Validate your changes
-npm run validate
+# Within this repository
+STATE=<your-state> npm start
 
-# Reset the mock database to pick up example changes
-npm run mock:reset
-
-# Test with the mock server
-npm start
+# Or in a state repository with resolved specs
+npm run mock:start
 ```
 
-### 4. Add State-Specific Variations
+- **Swagger UI:** http://localhost:3000 — browse endpoints
+- **Mock server:** http://localhost:1080 — API endpoints with in-memory database
 
-If your state needs different enum values, additional fields, or terminology changes, edit the overlay file:
+The target: adding a transition is a table row, not endpoint code.
+
+### 5. Add State-Specific Variations
+
+States customize contracts via overlays without forking the base files. Overlays use the [OpenAPI Overlay Specification](https://github.com/OAI/Overlay-Specification) format with JSONPath targeting:
 
 ```bash
-# Edit your state's overlay
-code openapi/overlays/<your-state>/modifications.yaml
+# Within this repository
+STATE=<your-state> npm run overlay:resolve
 
-# Validate the resolved spec
-STATE=<your-state> npm run validate:state
+# Or in a state repository
+npm run resolve
 ```
 
-See [State Overlays Guide](../guides/state-overlays.md) for overlay syntax.
+If you're working in the base repository rather than a state repository, you can use the example overlay (`packages/schemas/openapi/overlays/example/`) to test overlay behavior without setting up a full state configuration.
 
-### 5. Create a New API
+See [State Overlays Guide](../guides/state-overlays.md) for overlay syntax and the [State Setup Guide](../guides/state-setup-guide.md) for the full state repository setup.
 
-Use the generator to scaffold a new API with all required patterns:
+## Building a Production Adapter
 
-```bash
-npm run api:new -- --name "benefits" --resource "Benefit"
-```
+The production adapter translates between the contract's API surface and your vendor systems. The contracts tell you exactly what the adapter must do.
 
-This creates:
-- `openapi/benefits.yaml` — API spec with CRUD endpoints
-- `openapi/components/benefit.yaml` — Resource schema
-- `openapi/examples/benefits.yaml` — Example data
+**For REST APIs**, the adapter wraps a vendor's data store with a standard interface defined by the OpenAPI spec.
 
-See [Creating APIs Guide](../guides/creating-apis.md) for customization.
+**For RPC APIs**, the adapter wraps a vendor system (workflow engine, rules engine) and exposes behavioral operations. How the adapter and vendor divide the work depends on the vendor:
 
-## Development Workflow
+- **Full workflow engine** (Camunda, Temporal) — The vendor handles state transitions, guards, effects natively. The adapter translates between the contract's HTTP surface and the vendor's APIs.
+- **Simple backend** (database + application code) — The adapter orchestrates the behavior itself: enforcing transitions, evaluating guards, running effects.
+- **Hybrid** — The vendor handles some concerns; the adapter orchestrates others.
 
-```bash
-# 1. Make changes to specs or examples
+The integration test suite (auto-generated from contracts) runs against both the mock server and your production adapter, verifying the same outcomes.
 
-# 2. Validate
-npm run validate
-STATE=<your-state> npm run validate:state
-
-# 3. Test with mock server
-npm run mock:reset
-npm start
-
-# 4. Commit
-git add openapi/
-git commit -m "Add new field to Person schema"
-```
-
-## CI/CD Integration
-
-### Validating Specs in CI
-
-```yaml
-# .github/workflows/validate.yml
-name: Validate Specs
-
-on: [push, pull_request]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install
-      - run: npm run validate
-      - run: npm run validate:all-states
-```
-
-### Contract Testing Your Backend
-
-Once you've built a backend that implements the spec, use the generated Postman collection to verify conformance:
-
-```yaml
-# In your backend repository's CI
-- name: Run contract tests
-  run: |
-    npx newman run path/to/postman-collection.json \
-      --env-var "baseUrl=http://localhost:8080"
-```
-
-See [CI/CD for Backend](../integration/ci-cd-backend.md) for complete examples.
+See [Contract-Driven Architecture — From Contracts to Implementation](../architecture/contract-driven-architecture.md#from-contracts-to-implementation) for the full adapter pattern and development-to-production transition.
 
 ## Key Commands
 
+Commands within this repository (uses `STATE` environment variable):
+
 | Command | When to Use |
 |---------|-------------|
-| `npm run validate` | After editing base specs |
-| `npm run validate:state` | After editing overlays |
-| `npm run validate:all-states` | Before committing, in CI |
-| `npm run mock:reset` | After editing examples |
-| `npm start` | To test specs interactively |
-| `npm run api:new` | To create a new API |
+| `npm run validate` | After editing specs or generating contracts |
+| `npm run overlay:resolve` | After editing overlays (with STATE set) |
+| `npm run mock:reset` | After editing example data |
+| `npm start` | To test contracts interactively (mock server + Swagger UI) |
+| `npm run api:new` | To scaffold a new API |
+
+See the [State Setup Guide](../guides/state-setup-guide.md) for equivalent commands in a state repository.
 
 ## Next Steps
 
-- [Creating APIs](../guides/creating-apis.md) — Detailed guide to designing specs
+- [State Setup Guide](../guides/state-setup-guide.md) — Setting up a state repository with overlays, CI, and resolved specs
+- [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) — How contracts define the API surface and enable portability
+- [Workflow Prototype](../prototypes/workflow-prototype.md) — Complete example of behavioral contracts (state machine, rules, metrics)
+- [Application Review Prototype](../prototypes/application-review-prototype.md) — Complete example of form definitions
 - [State Overlays](../guides/state-overlays.md) — How state variations work
-- [Validation](../guides/validation.md) — Understanding validation rules
-- [CI/CD for Backend](../integration/ci-cd-backend.md) — Contract testing setup
+- [Creating APIs](../guides/creating-apis.md) — Designing new API specifications

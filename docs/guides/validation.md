@@ -1,25 +1,30 @@
 # Validation Guide
 
+> **Status: Draft**
+
+> **Note:** OpenAPI validation (syntax, linting, and pattern checks) works today. Behavioral contract validation — cross-artifact consistency checks for state machines, rules, metrics, and form definitions — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md).
+
 ## Quick Start
 
 ```bash
 npm run validate              # Run all validations (base specs)
 npm run validate:syntax       # OpenAPI syntax and examples only
-npm run validate:lint         # Spectral linting only
 npm run validate:patterns     # API design patterns only
 ```
 
 ## State-Specific Validation
 
-When working with state overlays, use these commands to validate resolved specs:
+When working with state overlays, resolve the overlay and check for target warnings:
 
 ```bash
-STATE=<your-state> npm run validate:state   # Resolve + validate one state
-npm run validate:state -- --state=<your-state>
-npm run validate:all-states                 # Resolve + validate all states
+STATE=<your-state> npm run overlay:resolve
 ```
 
-This runs the overlay resolution first (reporting any invalid targets), then validates the resolved specs.
+The resolver warns about invalid targets (e.g., paths that don't exist in the base schema). After resolving, validate the base specs to ensure no regressions:
+
+```bash
+npm run validate
+```
 
 ## Three Validation Layers
 
@@ -29,7 +34,9 @@ This runs the overlay resolution first (reporting any invalid targets), then val
 - All `$ref` references resolve
 - Examples match their schemas
 
-### 2. Spectral Linting (`validate:lint`)
+### 2. Spectral Linting
+
+Run from the schemas package: `npm run validate:lint -w @safety-net/schemas`
 
 HTTP method rules:
 - POST must return 201
@@ -105,6 +112,21 @@ Validation runs automatically during:
 - `npm run postman:generate`
 
 Skip with `SKIP_VALIDATION=true`.
+
+---
+
+## Behavioral Contract Validation (planned)
+
+The prototypes will extend validation to check cross-artifact consistency:
+
+- State machine states match OpenAPI status enums
+- Effect targets reference schemas that exist
+- Rule context variables resolve to real fields
+- Form definition field source paths resolve to OpenAPI schema fields
+- Transitions include required audit effects
+- Metric sources reference states/transitions that exist
+
+See [Backend Developer Guide — Validate](../getting-started/backend-developers.md#3-validate) for the target validation workflow.
 
 ---
 
