@@ -24,9 +24,9 @@ actions:
   # ============================================================================
 
   # States may use different terminology for citizenship status
-  # CitizenshipInfo is in persons.yaml under components/schemas
+  # CitizenshipInfo is in persons-openapi.yaml under components/schemas
   - target: $.components.schemas.CitizenshipInfo.properties.status.enum
-    file: persons.yaml
+    file: persons-openapi.yaml
     description: Replace citizenship status values with state-specific terminology
     update:
       - us_citizen
@@ -53,9 +53,9 @@ actions:
   # ============================================================================
 
   # Many states track county/region for benefit administration
-  # Person is in persons.yaml under components/schemas
+  # Person is in persons-openapi.yaml under components/schemas
   - target: $.components.schemas.Person.allOf.1.properties
-    file: persons.yaml
+    file: persons-openapi.yaml
     description: Add state-specific geographic tracking fields
     update:
       regionCode:
@@ -75,7 +75,7 @@ actions:
   # States can add explicit properties to flexible schemas
   # UiPermissions has additionalProperties: true, so states define their own fields
   - target: $.components.schemas.UiPermissions
-    file: users.yaml
+    file: users-openapi.yaml
     description: Add explicit property definitions to UiPermissions for state UI modules
     update:
       type: object

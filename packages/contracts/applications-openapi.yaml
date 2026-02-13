@@ -92,7 +92,7 @@ paths:
                 "$ref": "#/components/schemas/Application"
               examples:
                 ApplicationExample1:
-                  "$ref": "./applications-examples.yaml#/ApplicationExample1"
+                  "$ref": "./applications-openapi-examples.yaml#/ApplicationExample1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':
@@ -343,7 +343,7 @@ components:
     # Extends Person with application-specific fields
     HouseholdMember:
       allOf:
-        - $ref: "./persons.yaml#/components/schemas/Person"
+        - $ref: "./persons-openapi.yaml#/components/schemas/Person"
         - type: object
           description: |
             An IRS-recognized household member for benefits eligibility. Extends Person with
@@ -742,7 +742,7 @@ components:
 
     CitizenshipInfo:
       allOf:
-        - $ref: "./persons.yaml#/components/schemas/CitizenshipInfo"
+        - $ref: "./persons-openapi.yaml#/components/schemas/CitizenshipInfo"
         - type: object
           description: Citizenship information extended with eligibility immigration fields.
           properties:
@@ -752,7 +752,7 @@ components:
 
     ContactInfo:
       allOf:
-        - $ref: "./persons.yaml#/components/schemas/ContactInfo"
+        - $ref: "./persons-openapi.yaml#/components/schemas/ContactInfo"
         - type: object
           description: Contact information extended with eligibility fields.
           properties:
@@ -906,7 +906,7 @@ components:
 
     ExternalPerson:
       allOf:
-        - $ref: "./persons.yaml#/components/schemas/PersonIdentity"
+        - $ref: "./persons-openapi.yaml#/components/schemas/PersonIdentity"
         - type: object
           description: |
             A person referenced in an application who is not a household member.
@@ -1078,7 +1078,7 @@ components:
 
     HouseholdOccupant:
       allOf:
-        - $ref: "./persons.yaml#/components/schemas/PersonIdentity"
+        - $ref: "./persons-openapi.yaml#/components/schemas/PersonIdentity"
         - type: object
           description: |
             A person living at the address who is not part of the household unit for benefits purposes
@@ -1336,7 +1336,7 @@ components:
 
     ImmigrationInfo:
       allOf:
-        - $ref: "./persons.yaml#/components/schemas/ImmigrationInfo"
+        - $ref: "./persons-openapi.yaml#/components/schemas/ImmigrationInfo"
         - type: object
           description: Immigration information extended with eligibility fields.
           properties:
@@ -1914,7 +1914,7 @@ components:
 
     TribalInfo:
       allOf:
-        - $ref: "./persons.yaml#/components/schemas/TribalInfo"
+        - $ref: "./persons-openapi.yaml#/components/schemas/TribalInfo"
         - type: object
           description: Tribal information extended with eligibility fields.
           properties:
