@@ -12,7 +12,7 @@
     "start:all": "node scripts/start-all.js --specs=../contracts",
     "swagger": "node scripts/swagger/server.js --specs=../contracts",
     "setup": "node scripts/setup.js --specs=../contracts",
-    "reset": "node scripts/reset.js",
+    "reset": "node scripts/reset.js --specs=../contracts",
     "test": "node tests/run-all-tests.js --unit",
     "test:unit": "node tests/run-all-tests.js --unit",
     "test:integration": "node tests/run-all-tests.js --integration",

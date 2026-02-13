@@ -3,19 +3,33 @@
  * Clears all data and reseeds from example files
  */
 
+import { resolve } from 'path';
 import { performSetup, displaySetupSummary } from '../src/setup.js';
 import { loadAllSpecs } from '@safety-net/contracts/loader';
 import { clearAll, closeAll } from '../src/database-manager.js';
 
+function parseSpecsDir() {
+  const args = process.argv.slice(2);
+  const specsArg = args.find(a => a.startsWith('--specs='));
+  if (!specsArg) {
+    console.error('Error: --specs=<dir> is required.\n');
+    console.error('Usage: node scripts/reset.js --specs=<dir>');
+    process.exit(1);
+  }
+  return resolve(specsArg.split('=')[1]);
+}
+
 async function reset() {
+  const specsDir = parseSpecsDir();
+
   console.log('='.repeat(70));
   console.log('Mock Server Reset');
   console.log('='.repeat(70));
-  
+
   try {
     // Load all OpenAPI specifications
     console.log('\nDiscovering OpenAPI specifications...');
-    const apiSpecs = await loadAllSpecs();
+    const apiSpecs = await loadAllSpecs({ specsDir });
     
     if (apiSpecs.length === 0) {
       throw new Error('No OpenAPI specifications found in specs directory');
@@ -36,7 +50,7 @@ async function reset() {
     }
     
     // Reseed databases using shared setup
-    const { summary } = await performSetup({ verbose: false });
+    const { summary } = await performSetup({ specsDir, verbose: false });
     
     // Display summary
     console.log('='.repeat(70));

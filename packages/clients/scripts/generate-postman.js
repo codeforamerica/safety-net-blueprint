@@ -605,7 +605,7 @@ async function generatePostmanCollection() {
   const discoveredSpecs = discoverApiSpecs({ specsDir });
   const specsWithExamples = discoveredSpecs.map(spec => ({
     ...spec,
-    examplesPath: getExamplesPath(spec.name)
+    examplesPath: getExamplesPath(spec.name, specsDir)
   }));
   
   const validationResults = await validateAll(specsWithExamples);
