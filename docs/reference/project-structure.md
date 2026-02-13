@@ -13,23 +13,23 @@ safety-net-apis/
 ├── package.json                    # Root workspace config + command aliases
 │
 ├── packages/
-│   ├── schemas/                    # OpenAPI specs, validation, overlays
+│   ├── contracts/                  # Behavioral contracts, OpenAPI specs, validation, overlays
 │   │   ├── package.json
-│   │   ├── openapi/
-│   │   │   ├── *.yaml              # Main API specs (persons.yaml, etc.)
-│   │   │   ├── components/         # Shared schemas and parameters
-│   │   │   │   ├── common.yaml     # Reusable schemas (Address, Name)
-│   │   │   │   ├── parameters.yaml # Query params (limit, offset)
-│   │   │   │   ├── responses.yaml  # Error responses
-│   │   │   │   └── {resource}.yaml # Resource-specific schemas
-│   │   │   ├── examples/           # Example data for seeding
-│   │   │   │   └── {resource}.yaml
-│   │   │   ├── patterns/           # API design patterns
-│   │   │   │   └── api-patterns.yaml
-│   │   │   ├── overlays/           # State-specific variations
-│   │   │   │   └── <state>/
-│   │   │   │       └── modifications.yaml
-│   │   │   └── resolved/           # Generated state specs (gitignored)
+│   │   ├── *-openapi.yaml          # Main API specs (persons-openapi.yaml, etc.)
+│   │   ├── *-openapi-examples.yaml # Example data for seeding
+│   │   ├── components/             # Shared schemas and parameters
+│   │   │   ├── common.yaml         # Reusable schemas (Address, Name)
+│   │   │   ├── parameters.yaml     # Query params (limit, offset)
+│   │   │   ├── responses.yaml      # Error responses
+│   │   │   └── {resource}.yaml     # Resource-specific shared schemas
+│   │   ├── patterns/               # API design patterns
+│   │   │   └── api-patterns.yaml
+│   │   ├── overlays/               # State-specific variations
+│   │   │   └── <state>/
+│   │   │       └── modifications.yaml
+│   │   ├── authored/               # Source tables for generated contracts (CSV)
+│   │   ├── examples/               # Runnable examples (prototypes)
+│   │   ├── resolved/               # Generated state specs (gitignored)
 │   │   ├── src/
 │   │   │   ├── overlay/            # Overlay resolution logic
 │   │   │   └── validation/         # OpenAPI loader & validator
@@ -76,7 +76,7 @@ safety-net-apis/
 
 | Package | Purpose | Key Dependencies |
 |---------|---------|------------------|
-| `@safety-net/schemas` | OpenAPI specs, validation, overlay resolution | `js-yaml`, `ajv` |
+| `@safety-net/contracts` | OpenAPI specs, validation, overlay resolution | `js-yaml`, `ajv` |
 | `@safety-net/mock-server` | Mock API server for development | `express`, `better-sqlite3` |
 | `@safety-net/clients` | Generate TypeScript SDK packages | `@hey-api/openapi-ts`, `zod` |
 
@@ -86,10 +86,10 @@ Install only what you need:
 
 ```bash
 # Client generation only
-npm install -w @safety-net/schemas -w @safety-net/clients
+npm install -w @safety-net/contracts -w @safety-net/clients
 
 # Mock server only
-npm install -w @safety-net/schemas -w @safety-net/mock-server
+npm install -w @safety-net/contracts -w @safety-net/mock-server
 ```
 
 ## Naming Conventions
@@ -98,10 +98,10 @@ npm install -w @safety-net/schemas -w @safety-net/mock-server
 
 | Type | Convention | Example |
 |------|------------|---------|
-| API specs | kebab-case | `case-workers.yaml` |
-| Component schemas | kebab-case | `case-worker.yaml` |
-| Example files | kebab-case | `case-workers.yaml` |
-| Overlay files | `{state}/modifications.yaml` | `<state>/modifications.yaml` |
+| API specs | `{domain}-openapi.yaml` | `case-workers-openapi.yaml` |
+| Example files | `{domain}-openapi-examples.yaml` | `case-workers-openapi-examples.yaml` |
+| Component schemas | kebab-case in `components/` | `components/common.yaml` |
+| Overlay files | `overlays/{state}/modifications.yaml` | `overlays/california/modifications.yaml` |
 | Scripts | kebab-case | `generate-clients.js` |
 | Tests | kebab-case + `.test` | `overlay-resolver.test.js` |
 
@@ -124,22 +124,22 @@ npm install -w @safety-net/schemas -w @safety-net/mock-server
 |------|---------|
 | `package.json` | Root workspace config and command aliases |
 | `packages/*/package.json` | Package-specific dependencies and scripts |
-| `packages/schemas/openapi/patterns/api-patterns.yaml` | API design pattern rules |
+| `packages/contracts/patterns/api-patterns.yaml` | API design pattern rules |
 
 ### Source of Truth
 
 | File | Purpose |
 |------|---------|
-| `packages/schemas/openapi/*.yaml` | Main API specifications |
-| `packages/schemas/openapi/components/*.yaml` | Reusable schemas |
-| `packages/schemas/openapi/examples/*.yaml` | Example data |
-| `packages/schemas/openapi/overlays/*/modifications.yaml` | State variations |
+| `packages/contracts/*-openapi.yaml` | Main API specifications |
+| `packages/contracts/*-openapi-examples.yaml` | Example data |
+| `packages/contracts/components/*.yaml` | Shared schemas and parameters |
+| `packages/contracts/overlays/*/modifications.yaml` | State variations |
 
 ### Generated (Gitignored)
 
 | File | Purpose | Regenerate |
 |------|---------|------------|
-| `packages/schemas/openapi/resolved/*.yaml` | State-resolved specs | `npm run overlay:resolve` |
+| `packages/contracts/resolved/*.yaml` | State-resolved specs | `npm run overlay:resolve` |
 | `packages/clients/dist-packages/{state}/` | State npm packages | `node packages/clients/scripts/build-state-package.js` |
 | `packages/mock-server/data/*.db` | SQLite databases | `npm run mock:reset` |
 
@@ -147,9 +147,8 @@ npm install -w @safety-net/schemas -w @safety-net/mock-server
 
 When adding a new API resource:
 
-1. **API spec**: `packages/schemas/openapi/{resources}.yaml`
-2. **Schema**: `packages/schemas/openapi/components/{resource}.yaml`
-3. **Examples**: `packages/schemas/openapi/examples/{resources}.yaml`
+1. **API spec**: `packages/contracts/{resources}-openapi.yaml` (schemas inline)
+2. **Examples**: `packages/contracts/{resources}-openapi-examples.yaml`
 
 Use the generator:
 
@@ -159,7 +158,7 @@ npm run api:new -- --name "benefits" --resource "Benefit"
 
 ## Adding State Overlays
 
-1. Create overlay directory and file: `packages/schemas/openapi/overlays/{state}/modifications.yaml`
+1. Create overlay directory and file: `packages/contracts/overlays/{state}/modifications.yaml`
 2. Define actions for state-specific changes
 3. Validate: `STATE={state} npm run overlay:resolve`
 

@@ -91,5 +91,5 @@ Staff may be scoped by geography, program, or both. The base spec uses counties;
 
 ## Resources
 
-- [User Service API](../../../packages/schemas/openapi/users.yaml) — Full OpenAPI specification
+- [User Service API](../../../packages/contracts/users-openapi.yaml) — Full OpenAPI specification
 - [ADR: Auth Patterns](../../decisions/auth-patterns.md) — Decision rationale, options considered, security details

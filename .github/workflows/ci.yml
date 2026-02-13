@@ -19,7 +19,7 @@ jobs:
 
       - run: npm install
 
-      - name: Validate schemas
+      - name: Validate contracts
         run: npm run validate
 
       - name: Run unit tests

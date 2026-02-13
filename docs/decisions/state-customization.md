@@ -198,8 +198,8 @@ The `safety-net-resolve` CLI handles both overlay customizations and environment
 {
   "name": "{state}-safety-net-apis",
   "scripts": {
-    "resolve:dev": "safety-net-resolve --base=./node_modules/@safety-net-apis/schemas/openapi --env=dev --overlays=./overlays --out=./resolved",
-    "resolve:prod": "safety-net-resolve --base=./node_modules/@safety-net-apis/schemas/openapi --env=production --overlays=./overlays --out=./resolved",
+    "resolve:dev": "safety-net-resolve --base=./node_modules/@safety-net/contracts --env=dev --overlays=./overlays --out=./resolved",
+    "resolve:prod": "safety-net-resolve --base=./node_modules/@safety-net/contracts --env=production --overlays=./overlays --out=./resolved",
     "validate": "safety-net-validate --specs ./resolved",
     "mock:start": "safety-net-mock --specs ./resolved",
     "swagger": "safety-net-swagger --specs ./resolved",
@@ -276,7 +276,7 @@ Domain schemas currently live in separate component files (`components/person.ya
 The current `resolve-overlay.js` assumes overlays live inside this repository at `openapi/overlays/{state}/modifications.yaml`. For the npm distribution model, the resolve CLI needs to work from a state's own repository.
 
 **Changes:**
-- Accept `--base` flag pointing to the directory of base specs (e.g., `--base=./node_modules/@safety-net-apis/schemas/openapi`). Required — no default, since the tooling runs in different contexts (npm dependency, git submodule, local checkout)
+- Accept `--base` flag pointing to the directory of base specs (e.g., `--base=./node_modules/@safety-net/contracts`). Required — no default, since the tooling runs in different contexts (npm dependency, git submodule, local checkout)
 - Accept `--overlays=./overlays` flag pointing to the state's overlay directory
 - Accept `--out=./resolved` flag for the output directory
 

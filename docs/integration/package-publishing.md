@@ -181,7 +181,7 @@ node packages/clients/scripts/build-state-package.js --state=newstate --version=
 ### Build Fails: "No resolved spec files found"
 
 The overlay wasn't resolved. Check that:
-- The state exists in `packages/schemas/openapi/overlays/{state}/`
+- The state exists in `packages/contracts/overlays/{state}/`
 - The overlay file is valid YAML
 
 ### Publish Fails: 403 Forbidden

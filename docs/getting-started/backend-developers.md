@@ -30,7 +30,7 @@ The toolkit provides base specs, scripts, and a mock server as npm packages. Sta
 ```bash
 mkdir my-state-apis && cd my-state-apis
 npm init -y
-npm install @safety-net/schemas @safety-net/mock-server @safety-net/clients
+npm install @safety-net/contracts @safety-net/mock-server @safety-net/clients
 ```
 
 See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup process, including overlays, resolved specs, and CI pipeline configuration.
@@ -53,7 +53,7 @@ npm run validate
 
 | Package | Description | CLIs |
 |---------|-------------|------|
-| `@safety-net/schemas` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
+| `@safety-net/contracts` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
 | `@safety-net/mock-server` | Mock API server and Swagger UI for development | `safety-net-mock`, `safety-net-swagger` |
 | `@safety-net/clients` | Postman collection and TypeScript client generation | — |
 
@@ -148,7 +148,7 @@ STATE=<your-state> npm run overlay:resolve
 npm run resolve
 ```
 
-If you're working in the base repository rather than a state repository, you can use the example overlay (`packages/schemas/openapi/overlays/example/`) to test overlay behavior without setting up a full state configuration.
+If you're working in the base repository rather than a state repository, you can use the example overlay (`packages/contracts/overlays/example/`) to test overlay behavior without setting up a full state configuration.
 
 See [State Overlays Guide](../guides/state-overlays.md) for overlay syntax and the [State Setup Guide](../guides/state-setup-guide.md) for the full state repository setup.
 

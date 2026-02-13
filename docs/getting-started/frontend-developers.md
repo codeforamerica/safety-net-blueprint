@@ -27,7 +27,7 @@ See also: [Contract-Driven Architecture](../architecture/contract-driven-archite
 The toolkit provides base specs, scripts, and a mock server. States create their own repository and install the base packages:
 
 ```bash
-npm install @safety-net/schemas @safety-net/mock-server @safety-net/clients
+npm install @safety-net/contracts @safety-net/mock-server @safety-net/clients
 ```
 
 See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup process, including overlays and resolved specs.

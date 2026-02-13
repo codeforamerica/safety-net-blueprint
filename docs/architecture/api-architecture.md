@@ -1,6 +1,6 @@
 # API Architecture
 
-> **Status: Work in progress** — Operational, performance, and reliability patterns referenced here are not yet fully defined in [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml).
+> **Status: Work in progress** — Operational, performance, and reliability patterns referenced here are not yet fully defined in [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml).
 
 How the Safety Net Benefits API is organized and operated.
 
@@ -17,7 +17,7 @@ APIs are organized by [domain](domain-design.md), with two API types:
 
 Which API types a domain exposes depends on its contract artifacts. Data-shaped domains expose only REST APIs. Behavior-shaped domains expose both REST and RPC APIs. See [Contract-Driven Architecture](contract-driven-architecture.md) for how contract artifacts define the API surface.
 
-Standard API patterns — error handling, pagination, versioning, authentication, idempotency, ETags, rate limiting, and standard endpoints (health, readiness, metrics) — belong in [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml). Not all of these patterns are documented there yet; the file is being built out incrementally alongside the domain contracts.
+Standard API patterns — error handling, pagination, versioning, authentication, idempotency, ETags, rate limiting, and standard endpoints (health, readiness, metrics) — belong in [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml). Not all of these patterns are documented there yet; the file is being built out incrementally alongside the domain contracts.
 
 ---
 
@@ -35,7 +35,7 @@ Each domain has different operational and performance requirements. Caching poli
 
 | Capability | Purpose | Details |
 |------------|---------|---------|
-| Health & readiness | Is the system up and ready? | Standard endpoints in [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) |
+| Health & readiness | Is the system up and ready? | Standard endpoints in [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |
 | Metrics | Request rates, latencies, error rates | Prometheus format |
 | Structured logging | Searchable, consistent format | JSON with correlation IDs, PII masked |
 | Distributed tracing | Follow requests across APIs | OpenTelemetry |
@@ -68,7 +68,7 @@ How configuration is exposed (dedicated admin APIs, per-domain config endpoints,
 | `internal` | Internal operational data | assignedToId, queueId, timestamps |
 | `public` | Non-sensitive reference data | programType, taskTypeCode, status |
 
-PII is encrypted at rest, masked in logs, and access is audited. Authentication, authorization, and security headers are defined in [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml).
+PII is encrypted at rest, masked in logs, and access is audited. Authentication, authorization, and security headers are defined in [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml).
 
 ### Compliance
 
@@ -82,34 +82,34 @@ Detailed compliance mapping is state-specific. States should map these requireme
 
 ### Reliability
 
-Idempotency, circuit breakers, error handling, and long-running operation patterns are defined in [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml). Circuit breaker locations include external verification sources, vendor system adapters, and notice delivery services.
+Idempotency, circuit breakers, error handling, and long-running operation patterns are defined in [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml). Circuit breaker locations include external verification sources, vendor system adapters, and notice delivery services.
 
 ---
 
 ## Quality Attributes Index
 
-> Some entries reference [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) for patterns that are planned but not yet documented there.
+> Some entries reference [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) for patterns that are planned but not yet documented there.
 
 | Quality Attribute | Location |
 |-------------------|----------|
 | **Reliability** | |
-| Idempotency, circuit breakers, error handling | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) |
-| Long-running operations | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) |
+| Idempotency, circuit breakers, error handling | [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |
+| Long-running operations | [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |
 | **Security** | |
-| Authentication, authorization, security headers | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) |
+| Authentication, authorization, security headers | [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |
 | Data classification, audit logging | [api-architecture.md](#security) (this file) |
 | **Performance** | |
-| Pagination, rate limiting | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) |
+| Pagination, rate limiting | [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |
 | Domain-specific caching and query limits | Individual domain docs |
 | **Observability** | |
-| Health endpoints, correlation IDs | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) |
+| Health endpoints, correlation IDs | [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |
 | API-level metrics, logging, tracing | [api-architecture.md](#observability) (this file) |
 | Domain-specific metrics | Individual domain docs (e.g., [Workflow](domains/workflow.md#metrics)) |
 | **Compliance** | |
 | Data retention, deletion, regulatory refs | [api-architecture.md](#compliance) (this file) |
 | **Interoperability** | |
-| API versioning, ETags/concurrency | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) |
+| API versioning, ETags/concurrency | [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |
 | Vendor independence | [Contract-Driven Architecture](contract-driven-architecture.md) |
 | **Maintainability** | |
 | Configuration management | [api-architecture.md](#configuration-management) (this file) |
-| Schema patterns | [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) |
+| Schema patterns | [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |

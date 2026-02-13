@@ -18,7 +18,7 @@ This repository contains the base contract artifacts, tooling, and documentation
 - **Client generation** — typed TypeScript SDK and Zod schemas from resolved specs
 - **State overlays** — states customize contracts without forking the base files
 
-States create their own repositories, install the base packages (`@safety-net/schemas`, `@safety-net/mock-server`, `@safety-net/clients`), and apply overlays. See the [State Setup Guide](./docs/guides/state-setup-guide.md).
+States create their own repositories, install the base packages (`@safety-net/contracts`, `@safety-net/mock-server`, `@safety-net/clients`), and apply overlays. See the [State Setup Guide](./docs/guides/state-setup-guide.md).
 
 The architecture is being proven through [steel thread prototypes](./docs/architecture/roadmap.md) that exercise the most complex parts of the design before domains are built out at scale.
 
@@ -28,7 +28,7 @@ Choose your path based on your role:
 
 | Role | You want to... | Start here |
 |------|----------------|------------|
-| **UX Designer** | Explore the data model, populate Figma designs with sample data | [UX Designer Guide](./packages/schemas/docs/ux-designer-guide.md) |
+| **UX Designer** | Explore the data model, populate Figma designs with sample data | [UX Designer Guide](./packages/contracts/docs/ux-designer-guide.md) |
 | **Backend Developer** | Author contracts, validate specs, build production adapters | [Backend Developer Guide](./docs/getting-started/backend-developers.md) |
 | **Frontend Developer** | Build UIs against REST and RPC APIs, use generated clients | [Frontend Developer Guide](./docs/getting-started/frontend-developers.md) |
 
