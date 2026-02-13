@@ -107,7 +107,7 @@ This document follows the **steel thread** approach — the thinnest end-to-end 
 
 The adapter exposes standard CRUD endpoints for each schema (`GET /intake/applications`, `GET /intake/application-members`, `GET /intake/incomes`, etc.) and a form definition endpoint (`GET /intake/form-definition`) that serves the form definition YAML as JSON. SectionReview records live in the workflow domain (`GET /workflow/section-reviews`). The OpenAPI schemas are referenced by the form definition's field source paths — the validation script verifies the paths resolve.
 
-> **Schema note:** The schemas below are simplified for readability. The [current Intake schemas](../../packages/schemas/openapi/components/application.yaml) use a nested document structure (members and income are nested inside Application). That structure is being revisited — the direction is toward flatter, separately addressable resources like the ones shown here. Where types differ, the values below match the current schemas. The form definition pattern works with either structure — only the field source paths change.
+> **Schema note:** The schemas below are simplified for readability. The [current Intake schemas](../../packages/contracts/applications-openapi.yaml) use a nested document structure (members and income are nested inside Application). That structure is being revisited — the direction is toward flatter, separately addressable resources like the ones shown here. Where types differ, the values below match the current schemas. The form definition pattern works with either structure — only the field source paths change.
 
 ### Application
 

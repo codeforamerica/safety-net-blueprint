@@ -92,7 +92,7 @@ paths:
                 "$ref": "#/components/schemas/Household"
               examples:
                 HouseholdExample1:
-                  "$ref": "./households-examples.yaml#/HouseholdExample1"
+                  "$ref": "./households-openapi-examples.yaml#/HouseholdExample1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':

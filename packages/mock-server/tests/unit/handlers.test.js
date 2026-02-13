@@ -23,7 +23,7 @@ import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const specsDir = join(__dirname, '../../../schemas/openapi');
+const specsDir = join(__dirname, '../../../contracts');
 
 const cleanup = () => {
   closeAll();

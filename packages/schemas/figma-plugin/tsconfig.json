@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["ES2017"],
-    "strict": true,
-    "typeRoots": ["./node_modules/@figma/plugin-typings"]
-  },
-  "include": ["src/**/*.ts"]
-}

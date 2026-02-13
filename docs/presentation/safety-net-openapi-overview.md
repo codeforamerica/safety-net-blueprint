@@ -4,7 +4,7 @@ theme: default
 paginate: true
 ---
 
-# Safety Net OpenAPI Toolkit
+# Safety Net Blueprint
 ## Enabling Faster, More Consistent API Development
 
 ---
@@ -553,7 +553,7 @@ No more "the backend isn't ready yet" blocking your sprint. Build and test your 
 
 ```bash
 # Clone the repository
-git clone https://github.com/codeforamerica/safety-net-apis.git
+git clone https://github.com/codeforamerica/safety-net-blueprint.git
 
 # Install dependencies
 npm install
@@ -573,7 +573,7 @@ npm start
 
 **Resources:**
 
-- Repository: `github.com/codeforamerica/safety-net-apis`
+- Repository: `github.com/codeforamerica/safety-net-blueprint`
 - Backend Guide: `docs/getting-started/backend-developers.md`
 - Frontend Guide: `docs/getting-started/frontend-developers.md`
 

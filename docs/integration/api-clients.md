@@ -375,13 +375,13 @@ Each generated package includes state-specific schema fields defined by that sta
 - Eligibility flags for state programs
 - State-specific income source types
 
-Check your state's overlay file (in this repo: `packages/schemas/openapi/overlays/<your-state>/modifications.yaml`, or in a state repo: `overlays/modifications.yaml`) to see what customizations are applied. See [State Overlays](../guides/state-overlays.md) for overlay syntax.
+Check your state's overlay file (in this repo: `packages/contracts/overlays/<your-state>/modifications.yaml`, or in a state repo: `overlays/modifications.yaml`) to see what customizations are applied. See [State Overlays](../guides/state-overlays.md) for overlay syntax.
 
 ## Updating Clients
 
-When the base specs (`@safety-net/schemas`) are updated:
+When the base specs (`@safety-net/contracts`) are updated:
 
-1. Update the dependency: `npm install @safety-net/schemas@<new-version>`
+1. Update the dependency: `npm install @safety-net/contracts@<new-version>`
 2. Re-resolve overlays: `npm run resolve`
 3. Regenerate clients from the updated resolved specs
 4. Check the changelog for breaking changes to schema fields or API endpoints

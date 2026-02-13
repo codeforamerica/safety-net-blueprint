@@ -139,8 +139,8 @@ async function runTests() {
   
   // Test 2: Inline schema resolution from spec file (shallow)
   try {
-    console.log('\nTest 2: Resolve inline schema reference (#/components/schemas/PersonIdentity from persons.yaml)');
-    const specPath = join(__dirname, '../../../schemas/openapi/persons.yaml');
+    console.log('\nTest 2: Resolve inline schema reference (#/components/schemas/PersonIdentity from persons-openapi.yaml)');
+    const specPath = join(__dirname, '../../../contracts/persons-openapi.yaml');
     const specContent = loadYaml(specPath);
     // Use PersonIdentity directly (not Person which uses allOf and triggers deep
     // recursive resolution across files that the test resolver can't handle)

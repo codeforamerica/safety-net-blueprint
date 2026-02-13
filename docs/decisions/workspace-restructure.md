@@ -7,12 +7,13 @@
 **Deciders:** Development Team
 
 > **Note:** Implementation details below (scripts, dependencies, generated output structure) reflect the state at decision time. The workspace structure and package boundaries are unchanged, but tooling has evolved — notably the client generator migrated from Zodios to @hey-api/openapi-ts (see [openapi-ts-client-generation](openapi-ts-client-generation.md)) and the Node.js minimum is now 20.19.0+. See `package.json` files for current details.
+> Additionally, the `@safety-net/schemas` package (`packages/schemas/`) has been superseded by `@safety-net/contracts` (`packages/contracts/`) per the [contracts-package-restructure](contracts-package-restructure.md) ADR.
 
 ---
 
 ## Context
 
-The Safety Net OpenAPI toolkit contains several distinct capabilities:
+The Safety Net Blueprint contains several distinct capabilities:
 
 - **Schema management** — OpenAPI specs, validation, overlay resolution
 - **Mock server** — Express-based server for development/testing
@@ -40,7 +41,7 @@ Currently, all code lives in a single package with all dependencies installed to
 Restructure the project into **npm workspaces** with three packages:
 
 ```
-safety-net-apis/
+safety-net-blueprint/
 ├── package.json                    # Root workspace config + aliases
 ├── packages/
 │   ├── schemas/                    # OpenAPI specs, validation, overlays
@@ -177,7 +178,7 @@ Split into 3 distinct repositories.
 
 ```json
 {
-  "name": "safety-net-apis",
+  "name": "safety-net-blueprint",
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {

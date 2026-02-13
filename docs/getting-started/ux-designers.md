@@ -1,4 +1,6 @@
-# UX Designer Guide: ORCA Data Model Reference
+# Getting Started: UX Designers
+
+> **Status: Draft**
 
 This guide explains how to generate and use the ORCA data model reference for designing safety net program interfaces.
 
@@ -17,7 +19,7 @@ The data model is defined in OpenAPI schema files and can be exported as an inte
 
 ### Prerequisites
 
-1. Make sure you have Node.js installed (v18 or later)
+1. Make sure you have Node.js installed (v20.19.0 or later)
 2. From the repository root, install dependencies:
    ```bash
    npm install
@@ -25,18 +27,13 @@ The data model is defined in OpenAPI schema files and can be exported as an inte
 
 ### Generate the HTML Reference
 
-From the `packages/schemas` directory:
+From the repository root:
 
 ```bash
 npm run design:reference
 ```
 
-This creates an interactive HTML file at:
-```
-packages/schemas/design-export/design-reference.html
-```
-
-Open this file in your browser to explore the data model.
+This creates an interactive HTML file at `docs/schema-reference.html`. Open this file in your browser to explore the data model.
 
 ## Using the Design Reference
 
@@ -83,13 +80,6 @@ Some fields only apply to certain state implementations. Use the state selector 
 3. **Understanding relationships**
    - Click linked types to explore related schemas
    - Use the domain groupings to understand which schemas belong together
-
-## Figma Integration
-
-A Figma plugin for populating designs with sample data is coming soon. This will allow you to:
-- Auto-fill text layers with realistic example data
-- Preview dropdown/enum fields with actual options
-- Test designs with multiple example records
 
 ## Keeping the Reference Updated
 

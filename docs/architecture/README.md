@@ -29,7 +29,7 @@ See [Domain Design](domain-design.md) for the full list of domains, cross-cuttin
 
 | Resource | Description |
 |----------|-------------|
-| [api-patterns.yaml](../../packages/schemas/openapi/patterns/api-patterns.yaml) | Machine-readable API design patterns |
+| [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) | Machine-readable API design patterns |
 | [Decisions](../decisions/) | Architectural decisions (auth, search, state customization, tooling) |
 | [Prototypes](../prototypes/) | Implementation specs for proving architecture patterns |
 | [Guides](../guides/) | How-to guides for working with the toolkit |

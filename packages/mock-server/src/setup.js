@@ -3,9 +3,9 @@
  * Handles loading specs and seeding databases
  */
 
-import { loadAllSpecs, discoverApiSpecs } from '@safety-net/schemas/loader';
+import { loadAllSpecs, discoverApiSpecs } from '@safety-net/contracts/loader';
 import { seedAllDatabases } from './seeder.js';
-import { validateAll, getValidationStatus } from '@safety-net/schemas/validation';
+import { validateAll, getValidationStatus } from '@safety-net/contracts/validation';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -36,7 +36,7 @@ export async function performSetup({ specsDir, verbose = true, skipValidation = 
   const apiSpecs = await loadAllSpecs({ specsDir });
   
   if (apiSpecs.length === 0) {
-    throw new Error('No OpenAPI specifications found in openapi/ directory');
+    throw new Error('No OpenAPI specifications found in specs directory');
   }
   
   if (verbose) {
@@ -53,7 +53,7 @@ export async function performSetup({ specsDir, verbose = true, skipValidation = 
     const discoveredSpecs = discoverApiSpecs({ specsDir });
     const specsWithExamples = discoveredSpecs.map(spec => ({
       ...spec,
-      examplesPath: join(specsDir, `${spec.name}-examples.yaml`)
+      examplesPath: join(specsDir, `${spec.name}-openapi-examples.yaml`)
     }));
     
     const validationResults = await validateAll(specsWithExamples);

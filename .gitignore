@@ -8,7 +8,7 @@ package-lock.json
 packages/generated
 packages/clients/generated
 packages/clients/dist-packages
-packages/schemas/openapi/resolved
+packages/contracts/resolved
 
 # Cursor AI working files
 cursor/

@@ -6,13 +6,13 @@
 
 **Deciders:** Development Team
 
-> **Note:** Implementation file references below (e.g., `components/user.yaml`, `common-responses.yaml`) describe the proposed structure at decision time. Actual file locations may differ — `common-responses.yaml` was renamed to `responses.yaml`, and auth schemas are in `components/auth.yaml`. See the `packages/schemas/openapi/components/` directory for current state.
+> **Note:** Implementation file references below (e.g., `components/user.yaml`, `common-responses.yaml`) describe the proposed structure at decision time. Actual file locations may differ — `common-responses.yaml` was renamed to `responses.yaml`, and auth schemas are in `components/auth.yaml`. See the `packages/contracts/components/` directory for current state.
 
 ---
 
 ## Context
 
-The Safety Net OpenAPI toolkit needs authentication and authorization patterns that can be implemented by adopters. The patterns must support multiple user types (applicants, case workers, supervisors, admins) with different levels of access to sensitive data.
+The Safety Net Blueprint needs authentication and authorization patterns that can be implemented by adopters. The patterns must support multiple user types (applicants, case workers, supervisors, admins) with different levels of access to sensitive data.
 
 ### Requirements
 
@@ -349,8 +349,8 @@ This separation allows states to:
 | File | Purpose |
 |------|---------|
 | `docs/decisions/auth-patterns.md` | This ADR |
-| `packages/schemas/openapi/users.yaml` | User Service API specification |
-| `packages/schemas/openapi/components/user.yaml` | User schema components |
+| `packages/contracts/users-openapi.yaml` | User Service API specification |
+| `packages/contracts/components/auth.yaml` | User schema components |
 
 ### Shared Components Added
 
@@ -775,7 +775,7 @@ The User Service maintains an audit log of:
 
 ## References
 
-- [User Service API Specification](../../packages/schemas/openapi/users.yaml)
+- [User Service API Specification](../../packages/contracts/users-openapi.yaml)
 - [Auth0 Actions](https://auth0.com/docs/customize/actions) - Example IdP integration
 - [Okta Hooks](https://developer.okta.com/docs/concepts/event-hooks/) - Example IdP integration
 - [JWT RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519)

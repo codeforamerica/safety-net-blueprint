@@ -5,13 +5,13 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { discoverApiSpecs, loadSpec, extractMetadata } from '@safety-net/schemas/loader';
+import { discoverApiSpecs, loadSpec, extractMetadata } from '@safety-net/contracts/loader';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const specsDir = join(__dirname, '../../../schemas/openapi');
+const specsDir = join(__dirname, '../../../contracts');
 
 test('OpenAPI Loader Tests', async (t) => {
 

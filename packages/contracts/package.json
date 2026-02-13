@@ -1,13 +1,16 @@
 {
-  "name": "@safety-net/schemas",
+  "name": "@safety-net/contracts",
   "version": "1.0.0",
-  "description": "OpenAPI schemas, validation, and overlay resolution for Safety Net APIs",
+  "description": "Behavioral contracts, OpenAPI specs, validation, and overlay resolution for Safety Net APIs",
   "type": "module",
   "files": [
     "src/",
-    "openapi/",
-    "scripts/",
-    "docs/"
+    "*.yaml",
+    "components/",
+    "patterns/",
+    "overlays/",
+    "authored/",
+    "scripts/"
   ],
   "bin": {
     "safety-net-resolve": "./scripts/resolve-overlay.js",
@@ -23,16 +26,12 @@
     "prepack": "npm run design:reference",
     "test": "node --test tests/unit/*.test.js",
     "validate": "npm run validate:syntax && npm run validate:patterns",
-    "validate:syntax": "node scripts/validate-openapi.js --specs=./openapi",
-    "validate:lint": "npx spectral lint 'openapi/*.yaml' --ignore-unknown-format",
-    "validate:patterns": "node scripts/validate-patterns.js --specs=./openapi",
-"overlay:resolve": "node scripts/resolve-overlay.js --base=./openapi --out=./openapi/resolved",
+    "validate:syntax": "node scripts/validate-openapi.js --specs=.",
+    "validate:lint": "npx spectral lint '*-openapi.yaml' --ignore-unknown-format",
+    "validate:patterns": "node scripts/validate-patterns.js --specs=.",
+    "overlay:resolve": "node scripts/resolve-overlay.js --base=. --out=./resolved",
     "api:new": "node scripts/generate-api.js",
-    "design:reference": "node scripts/export-design-reference.js --specs=./openapi",
-    "design:figma-data": "node scripts/export-figma-data.js",
-    "figma:export": "node scripts/export-figma-plugin-data.js",
-    "figma:build": "cd figma-plugin && npm run build",
-    "design:export": "npm run design:reference && npm run design:figma-data"
+    "design:reference": "node scripts/export-design-reference.js --specs=. --out=../../docs"
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",

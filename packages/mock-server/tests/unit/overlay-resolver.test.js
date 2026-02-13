@@ -14,7 +14,7 @@ import {
   checkPathExists,
   rootExists,
   applyOverlay
-} from '@safety-net/schemas/overlay';
+} from '@safety-net/contracts/overlay';
 
 test('Overlay Resolver Tests', async (t) => {
 

@@ -9,7 +9,7 @@ import swaggerUi from 'swagger-ui-express';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { discoverApiSpecs } from '@safety-net/schemas/loader';
+import { discoverApiSpecs } from '@safety-net/contracts/loader';
 
 function parseSpecsDir() {
   const args = process.argv.slice(2);
@@ -161,7 +161,7 @@ async function startSwaggerServer() {
     const apiSpecs = discoverApiSpecs({ specsDir });
     
     if (apiSpecs.length === 0) {
-      console.error('\n❌ No API specifications found in /openapi directory');
+      console.error('\n❌ No API specifications found in specs directory');
       process.exit(1);
     }
     

@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { seedDatabase, seedAllDatabases } from '../../src/seeder.js';
-import { loadAllSpecs } from '@safety-net/schemas/loader';
+import { loadAllSpecs } from '@safety-net/contracts/loader';
 import { count, findAll, closeAll } from '../../src/database-manager.js';
 import { unlinkSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const specsDir = join(__dirname, '../../../schemas/openapi');
+const specsDir = join(__dirname, '../../../contracts');
 
 // Cleanup function
 const cleanup = () => {

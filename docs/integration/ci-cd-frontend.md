@@ -33,7 +33,7 @@ jobs:
       - name: Checkout API toolkit
         uses: actions/checkout@v4
         with:
-          repository: codeforamerica/safety-net-apis
+          repository: codeforamerica/safety-net-blueprint
           path: openapi-toolkit
 
       - name: Start mock server
@@ -72,7 +72,7 @@ test:
   services:
     - name: node:20
       alias: mock-server
-      command: ["sh", "-c", "git clone https://github.com/codeforamerica/safety-net-apis.git && cd safety-net-apis && npm install && STATE=<your-state> npm run mock:start"]
+      command: ["sh", "-c", "git clone https://github.com/codeforamerica/safety-net-blueprint.git && cd safety-net-blueprint && npm install && STATE=<your-state> npm run mock:start"]
 
   script:
     - npm install
@@ -109,7 +109,7 @@ Add to your frontend's `package.json`:
 ```json
 {
   "scripts": {
-    "api:update": "cd ../safety-net-apis && git pull && STATE=<your-state> npm run clients:generate && cp -r packages/clients/dist-packages/<your-state>/* ../your-frontend/src/api/generated/"
+    "api:update": "cd ../safety-net-blueprint && git pull && STATE=<your-state> npm run clients:generate && cp -r packages/clients/dist-packages/<your-state>/* ../your-frontend/src/api/generated/"
   }
 }
 ```
@@ -141,19 +141,19 @@ jobs:
 
       - name: Clone API toolkit
         run: |
-          git clone https://github.com/codeforamerica/safety-net-apis.git
-          cd safety-net-apis
+          git clone https://github.com/codeforamerica/safety-net-blueprint.git
+          cd safety-net-blueprint
           npm install
 
       - name: Generate clients
         run: |
-          cd safety-net-apis
+          cd safety-net-blueprint
           STATE=<your-state> npm run clients:generate
 
       - name: Check for changes
         id: diff
         run: |
-          cp -r safety-net-apis/packages/clients/dist-packages/<your-state>/* src/api/generated/
+          cp -r safety-net-blueprint/packages/clients/dist-packages/<your-state>/* src/api/generated/
           git diff --quiet src/api/generated/ || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Create PR
@@ -228,7 +228,7 @@ export const client = createClient(createConfig({
 ```javascript
 // cypress/support/commands.js
 Cypress.Commands.add('resetMockData', () => {
-  cy.exec('cd ../safety-net-apis && npm run mock:reset');
+  cy.exec('cd ../safety-net-blueprint && npm run mock:reset');
 });
 
 // cypress/e2e/persons.cy.js
@@ -251,7 +251,7 @@ describe('Persons', () => {
 export default defineConfig({
   webServer: [
     {
-      command: 'cd ../safety-net-apis && STATE=<your-state> npm run mock:start',
+      command: 'cd ../safety-net-blueprint && STATE=<your-state> npm run mock:start',
       port: 1080,
       reuseExistingServer: !process.env.CI,
     },

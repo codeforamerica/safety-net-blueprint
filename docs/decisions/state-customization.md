@@ -145,16 +145,16 @@ States consume base specs as an npm dependency and maintain their own repositori
 
 **This repository (public):** The `openapi/` directory structure is defined in [File Organization](#1-file-organization). The `packages/` directory provides the tooling states install:
 
-- `schemas/` — `@safety-net-apis/schemas` — base specs, resolve CLI, design reference generator
-- `mock-server/` — `@safety-net-apis/mock-server` — mock server, Swagger UI
-- `tools/` — `@safety-net-apis/tools` — validation, client generation, Postman collection generation, test runner
+- `schemas/` — `@safety-net-blueprint/schemas` — base specs, resolve CLI, design reference generator
+- `mock-server/` — `@safety-net-blueprint/mock-server` — mock server, Swagger UI
+- `tools/` — `@safety-net-blueprint/tools` — validation, client generation, Postman collection generation, test runner
 
-Note: State-specific overlays will be removed from this repository and overlay authoring examples will be included in the state setup guide (see [4.9](#49-state-setup-guide)). Because the resolve CLI matches overlay targets by scanning base file contents (not by filename or directory structure), moving or renaming files in the base repository does not break state overlays. The only change that breaks an overlay is renaming a schema itself (e.g., `Person` → `Individual`), which is a real API change. The resolve CLI warns when overlay targets don't match any base schema, so states know immediately after updating. States should pin exact versions of the base schemas (e.g., `"@safety-net-apis/schemas": "1.2.0"` rather than `"^1.2.0"`) so updates are intentional.
+Note: State-specific overlays will be removed from this repository and overlay authoring examples will be included in the state setup guide (see [4.9](#49-state-setup-guide)). Because the resolve CLI matches overlay targets by scanning base file contents (not by filename or directory structure), moving or renaming files in the base repository does not break state overlays. The only change that breaks an overlay is renaming a schema itself (e.g., `Person` → `Individual`), which is a real API change. The resolve CLI warns when overlay targets don't match any base schema, so states know immediately after updating. States should pin exact versions of the base schemas (e.g., `"@safety-net-blueprint/schemas": "1.2.0"` rather than `"^1.2.0"`) so updates are intentional.
 
 **State repository (state-controlled, can be private):**
 ```
-{state}-safety-net-apis/
-  package.json              # @safety-net-apis/schemas as dependency
+{state}-safety-net-blueprint/
+  package.json              # @safety-net-blueprint/schemas as dependency
   overlays/
     schemas.yaml            # Schema customizations (Person, Application, etc.)
     auth.yaml               # Auth/role customizations
@@ -178,12 +178,12 @@ States organize overlays however makes sense for them — by concern, by team, o
 
 **Initial setup:**
 ```bash
-mkdir {state}-safety-net-apis
-cd {state}-safety-net-apis
+mkdir {state}-safety-net-blueprint
+cd {state}-safety-net-blueprint
 npm init -y
 
 # Install base schemas as dependency
-npm install @safety-net-apis/schemas
+npm install @safety-net-blueprint/schemas
 ```
 
 The `safety-net-resolve` CLI handles both overlay customizations and environment-specific resolution in a single command:
@@ -196,10 +196,10 @@ The `safety-net-resolve` CLI handles both overlay customizations and environment
 **package.json:**
 ```json
 {
-  "name": "{state}-safety-net-apis",
+  "name": "{state}-safety-net-blueprint",
   "scripts": {
-    "resolve:dev": "safety-net-resolve --base=./node_modules/@safety-net-apis/schemas/openapi --env=dev --overlays=./overlays --out=./resolved",
-    "resolve:prod": "safety-net-resolve --base=./node_modules/@safety-net-apis/schemas/openapi --env=production --overlays=./overlays --out=./resolved",
+    "resolve:dev": "safety-net-resolve --base=./node_modules/@safety-net/contracts --env=dev --overlays=./overlays --out=./resolved",
+    "resolve:prod": "safety-net-resolve --base=./node_modules/@safety-net/contracts --env=production --overlays=./overlays --out=./resolved",
     "validate": "safety-net-validate --specs ./resolved",
     "mock:start": "safety-net-mock --specs ./resolved",
     "swagger": "safety-net-swagger --specs ./resolved",
@@ -209,24 +209,24 @@ The `safety-net-resolve` CLI handles both overlay customizations and environment
     "design:reference": "safety-net-design-reference --specs ./resolved --out ./docs"
   },
   "dependencies": {
-    "@safety-net-apis/schemas": "1.0.0"
+    "@safety-net-blueprint/schemas": "1.0.0"
   },
   "devDependencies": {
-    "@safety-net-apis/mock-server": "^1.0.0",
-    "@safety-net-apis/tools": "^1.0.0"
+    "@safety-net-blueprint/mock-server": "^1.0.0",
+    "@safety-net-blueprint/tools": "^1.0.0"
   }
 }
 ```
 
-This example shows the full set of available scripts. Downstream projects (backend, frontend, QA) don't need all of them — they install only the packages they need and point at the resolved output. For example, a frontend project might only install `@safety-net-apis/tools` for client generation and `@safety-net-apis/mock-server` for local development.
+This example shows the full set of available scripts. Downstream projects (backend, frontend, QA) don't need all of them — they install only the packages they need and point at the resolved output. For example, a frontend project might only install `@safety-net-blueprint/tools` for client generation and `@safety-net-blueprint/mock-server` for local development.
 
 **Getting updates:**
 ```bash
 # Update to latest base schemas
-npm update @safety-net-apis/schemas
+npm update @safety-net-blueprint/schemas
 
 # Or update to specific version
-npm install @safety-net-apis/schemas@1.2.0
+npm install @safety-net-blueprint/schemas@1.2.0
 
 # Re-resolve
 npm run resolve:prod
@@ -237,9 +237,9 @@ npm run resolve:prod
 ### Contributing Back
 
 1. State identifies improvement to base model (new field, bug fix, etc.)
-2. State clones `safety-net-apis` repo separately
+2. State clones `safety-net-blueprint` repo separately
 3. State makes changes to base specs
-4. State opens PR to `safety-net-apis` repository
+4. State opens PR to `safety-net-blueprint` repository
 5. PR is reviewed and merged
 6. State updates their npm dependency to get the change
 
@@ -276,7 +276,7 @@ Domain schemas currently live in separate component files (`components/person.ya
 The current `resolve-overlay.js` assumes overlays live inside this repository at `openapi/overlays/{state}/modifications.yaml`. For the npm distribution model, the resolve CLI needs to work from a state's own repository.
 
 **Changes:**
-- Accept `--base` flag pointing to the directory of base specs (e.g., `--base=./node_modules/@safety-net-apis/schemas/openapi`). Required — no default, since the tooling runs in different contexts (npm dependency, git submodule, local checkout)
+- Accept `--base` flag pointing to the directory of base specs (e.g., `--base=./node_modules/@safety-net/contracts`). Required — no default, since the tooling runs in different contexts (npm dependency, git submodule, local checkout)
 - Accept `--overlays=./overlays` flag pointing to the state's overlay directory
 - Accept `--out=./resolved` flag for the output directory
 
@@ -315,9 +315,9 @@ The resolve, validate, and mock server scripts are currently internal to each pa
 
 **Changes:**
 - Add `bin` entries to each package's `package.json`:
-  - `@safety-net-apis/schemas` → `safety-net-resolve`, `safety-net-design-reference`
-  - `@safety-net-apis/tools` → `safety-net-validate`, `safety-net-clients`, `safety-net-postman`, `safety-net-test`
-  - `@safety-net-apis/mock-server` → `safety-net-mock`, `safety-net-swagger`
+  - `@safety-net-blueprint/schemas` → `safety-net-resolve`, `safety-net-design-reference`
+  - `@safety-net-blueprint/tools` → `safety-net-validate`, `safety-net-clients`, `safety-net-postman`, `safety-net-test`
+  - `@safety-net-blueprint/mock-server` → `safety-net-mock`, `safety-net-swagger`
 
 **Security note:** CLI bin entries run with the installing user's permissions and have access to all environment variables. The resolve CLI intentionally reads `process.env` for placeholder substitution, so resolved output files may contain sensitive values (IDP URLs, API keys). States should `.gitignore` their `resolved/` directory and limit CI environment variables to what's needed.
 

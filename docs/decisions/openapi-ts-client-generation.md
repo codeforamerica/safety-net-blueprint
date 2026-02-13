@@ -10,7 +10,7 @@
 
 ## Context
 
-The Safety Net OpenAPI toolkit generates TypeScript clients for consuming the API. These clients have three distinct validation and type-safety requirements:
+The Safety Net Blueprint generates TypeScript clients for consuming the API. These clients have three distinct validation and type-safety requirements:
 
 1. **Request validation** — Validate payloads before sending API requests
 2. **Response validation** — Validate API responses at runtime

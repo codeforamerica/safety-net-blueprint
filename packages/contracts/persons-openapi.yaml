@@ -94,7 +94,7 @@ paths:
                 "$ref": "#/components/schemas/Person"
               examples:
                 PersonExample1:
-                  "$ref": "./persons-examples.yaml#/PersonExample1"
+                  "$ref": "./persons-openapi-examples.yaml#/PersonExample1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':

@@ -3254,15 +3254,17 @@ ${contentHtml}
  * Main function
  */
 async function main() {
-  // Parse --specs flag
+  // Parse flags
   const args = process.argv.slice(2);
   const specsArg = args.find(a => a.startsWith('--specs='));
-  if (!specsArg) {
-    console.error('Error: --specs=<dir> is required.\n');
-    console.error('Usage: node scripts/export-design-reference.js --specs=<dir>');
+  const outArg = args.find(a => a.startsWith('--out='));
+  if (!specsArg || !outArg) {
+    console.error('Error: --specs=<dir> and --out=<dir> are required.\n');
+    console.error('Usage: node scripts/export-design-reference.js --specs=<dir> --out=<dir>');
     process.exit(1);
   }
   const specsDir = resolve(specsArg.split('=')[1]);
+  const outDir = resolve(outArg.split('=')[1]);
 
   console.log('Generating ORCA Design Reference...\n');
   console.log(`Specs: ${specsDir}\n`);
@@ -3322,13 +3324,12 @@ async function main() {
     const states = [];
     const html = generateHtml(baseSchemas, stateSchemas, states, relationships, operations);
 
-    // Write output to root docs/ folder (for GitHub Pages)
-    const outputDir = join(__dirname, '../../../docs');
-    if (!existsSync(outputDir)) {
-      mkdirSync(outputDir, { recursive: true });
+    // Write output
+    if (!existsSync(outDir)) {
+      mkdirSync(outDir, { recursive: true });
     }
 
-    const outputPath = join(outputDir, 'schema-reference.html');
+    const outputPath = join(outDir, 'schema-reference.html');
     writeFileSync(outputPath, html, 'utf8');
 
     console.log(`\nGenerated: ${outputPath}`);

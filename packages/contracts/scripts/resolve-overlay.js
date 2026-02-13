@@ -462,6 +462,9 @@ function copyBaseSpecs(baseDir, outDir) {
     const source = join(baseDir, file.name);
     const target = join(outDir, file.name);
 
+    // Skip the output directory itself (when outDir is inside baseDir)
+    if (resolve(source) === resolve(outDir)) continue;
+
     if (file.isDirectory()) {
       cpSync(source, target, { recursive: true });
     } else {

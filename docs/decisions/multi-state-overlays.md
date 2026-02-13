@@ -12,7 +12,7 @@
 
 ## Context
 
-The Safety Net OpenAPI toolkit needs to support multiple states, each with variations in:
+The Safety Net Blueprint needs to support multiple states, each with variations in:
 
 - **Enum values** - Different program names (e.g., "CalFresh" vs "SNAP")
 - **Additional properties** - State-specific fields (e.g., county codes, eligibility flags)

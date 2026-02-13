@@ -1,10 +1,10 @@
-# Safety Net APIs
+# Safety Net Blueprint
 
 > **Status: Work in progress** — The system is being designed incrementally, domain by domain, and proven through [steel thread prototypes](./docs/architecture/roadmap.md).
 
-Portable, contract-driven APIs for safety net benefits systems. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and form definitions — define the full API surface for both backend and frontend development. States can swap vendors without rebuilding their systems, and frontends can develop against a mock server and declarative form definitions without waiting for a production backend.
+A systems integration blueprint for safety net benefits programs. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and form definitions — define the full API surface for both backend and frontend development. States adopt the blueprint, customize it with overlays, and build adapters to their vendor systems. Frontends develop against a mock server and declarative form definitions without waiting for a production backend.
 
-**New here?** Start with the [Executive Summary](https://codeforamerica.github.io/safety-net-apis/docs/presentation/executive-summary.html) for a one-page overview, the [Toolkit Overview](https://codeforamerica.github.io/safety-net-apis/docs/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-apis/docs/schema-reference.html) to browse the data model.
+**New here?** Start with the [Executive Summary](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/executive-summary.html) for a one-page overview, the [Blueprint Overview](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-blueprint/docs/schema-reference.html) to browse the data model.
 
 ## About This Repository
 
@@ -18,7 +18,7 @@ This repository contains the base contract artifacts, tooling, and documentation
 - **Client generation** — typed TypeScript SDK and Zod schemas from resolved specs
 - **State overlays** — states customize contracts without forking the base files
 
-States create their own repositories, install the base packages (`@safety-net/schemas`, `@safety-net/mock-server`, `@safety-net/clients`), and apply overlays. See the [State Setup Guide](./docs/guides/state-setup-guide.md).
+States create their own repositories, install the base packages (`@safety-net/contracts`, `@safety-net/mock-server`, `@safety-net/clients`), and apply overlays. See the [State Setup Guide](./docs/guides/state-setup-guide.md).
 
 The architecture is being proven through [steel thread prototypes](./docs/architecture/roadmap.md) that exercise the most complex parts of the design before domains are built out at scale.
 
@@ -28,7 +28,7 @@ Choose your path based on your role:
 
 | Role | You want to... | Start here |
 |------|----------------|------------|
-| **UX Designer** | Explore the data model, populate Figma designs with sample data | [UX Designer Guide](./packages/schemas/docs/ux-designer-guide.md) |
+| **UX Designer** | Explore the data model and design reference | [UX Designer Guide](./docs/getting-started/ux-designers.md) |
 | **Backend Developer** | Author contracts, validate specs, build production adapters | [Backend Developer Guide](./docs/getting-started/backend-developers.md) |
 | **Frontend Developer** | Build UIs against REST and RPC APIs, use generated clients | [Frontend Developer Guide](./docs/getting-started/frontend-developers.md) |
 

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import yaml from 'js-yaml';
 import { insertResource, count } from './database-manager.js';
-import { getExamplesPath } from '@safety-net/schemas/loader';
+import { getExamplesPath } from '@safety-net/contracts/loader';
 
 /**
  * Load examples from YAML file

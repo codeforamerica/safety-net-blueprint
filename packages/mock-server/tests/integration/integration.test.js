@@ -10,7 +10,7 @@
 import http from 'http';
 import { URL } from 'url';
 import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
-import { discoverApiSpecs, getExamplesPath } from '@safety-net/schemas/loader';
+import { discoverApiSpecs, getExamplesPath } from '@safety-net/contracts/loader';
 import { clearAll } from '../../src/database-manager.js';
 import { seedDatabase } from '../../src/seeder.js';
 import { readFileSync, existsSync } from 'fs';
@@ -21,6 +21,7 @@ import newman from 'newman';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const specsDir = join(__dirname, '../../../contracts');
 
 const BASE_URL = 'http://localhost:1080';
 let serverStartedByTests = false;
@@ -81,7 +82,7 @@ async function fetch(url, options = {}) {
  */
 function loadExamples(apiName) {
   try {
-    const examplesPath = getExamplesPath(apiName);
+    const examplesPath = getExamplesPath(apiName, specsDir);
     const content = readFileSync(examplesPath, 'utf8');
     const examples = yaml.load(content) || {};
     
@@ -517,7 +518,7 @@ async function runTests() {
   
   // Discover all APIs
   console.log('\n🔍 Discovering APIs...');
-  const apis = discoverApiSpecs();
+  const apis = discoverApiSpecs({ specsDir });
   
   if (apis.length === 0) {
     console.log('  ⚠️  No APIs found');
@@ -532,7 +533,7 @@ async function runTests() {
   for (const api of apis) {
     try {
       clearAll(api.name);
-      const count = seedDatabase(api.name);
+      const count = seedDatabase(api.name, specsDir);
       console.log(`  ✓ ${api.name}: ${count} resources`);
     } catch (error) {
       console.log(`  ⚠️  ${api.name}: ${error.message}`);

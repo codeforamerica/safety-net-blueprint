@@ -8,7 +8,7 @@ This guide walks through adopting the Safety Net API base specs for a specific s
 
 | Package | Description | CLIs |
 |---|---|---|
-| `@safety-net/schemas` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
+| `@safety-net/contracts` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
 | `@safety-net/mock-server` | Mock API server and Swagger UI for development | `safety-net-mock`, `safety-net-swagger` |
 | `@safety-net/clients` | Postman collection and TypeScript client generation | — |
 
@@ -27,7 +27,7 @@ npm init -y
 ### 2. Install dependencies
 
 ```bash
-npm install @safety-net/schemas @safety-net/mock-server @safety-net/clients
+npm install @safety-net/contracts @safety-net/mock-server @safety-net/clients
 ```
 
 ### 3. Create directory structure
@@ -53,9 +53,9 @@ resolved/
 ```json
 {
   "scripts": {
-    "resolve": "safety-net-resolve --base=./node_modules/@safety-net/schemas/openapi --overlays=./overlays --out=./resolved",
-    "resolve:prod": "safety-net-resolve --base=./node_modules/@safety-net/schemas/openapi --overlays=./overlays --out=./resolved --env=production --env-file=.env",
-    "validate": "node ./node_modules/@safety-net/schemas/scripts/validate-openapi.js --specs=./resolved --skip-examples",
+    "resolve": "safety-net-resolve --base=./node_modules/@safety-net/contracts --overlays=./overlays --out=./resolved",
+    "resolve:prod": "safety-net-resolve --base=./node_modules/@safety-net/contracts --overlays=./overlays --out=./resolved --env=production --env-file=.env",
+    "validate": "node ./node_modules/@safety-net/contracts/scripts/validate-openapi.js --specs=./resolved --skip-examples",
     "mock:start": "safety-net-mock --specs=./resolved",
     "swagger": "safety-net-swagger --specs=./resolved",
     "build": "npm run resolve && npm run validate"
@@ -70,7 +70,7 @@ Use an exact version in `package.json` to control when you pick up base spec cha
 ```json
 {
   "dependencies": {
-    "@safety-net/schemas": "1.2.0"
+    "@safety-net/contracts": "1.2.0"
   }
 }
 ```
@@ -79,7 +79,7 @@ Use an exact version in `package.json` to control when you pick up base spec cha
 
 Overlays modify the base specs without forking them. Each overlay file uses the [OpenAPI Overlay Specification 1.0.0](https://github.com/OAI/Overlay-Specification) format.
 
-A working example is included in the base repo at [`openapi/overlays/example/modifications.yaml`](../../packages/schemas/openapi/overlays/example/modifications.yaml). The patterns below reference that file — use it as a starting point for your own overlay.
+A working example is included in the base repo at [`openapi/overlays/example/modifications.yaml`](../../packages/contracts/overlays/example/modifications.yaml). The patterns below reference that file — use it as a starting point for your own overlay.
 
 ### Overlay file structure
 
@@ -361,10 +361,10 @@ The resolver applies transformations in this order:
 
 ## Updating base specs
 
-When a new version of `@safety-net/schemas` is released:
+When a new version of `@safety-net/contracts` is released:
 
 1. **Review the changelog** for breaking changes to schemas or file structure
-2. **Update the dependency**: `npm install @safety-net/schemas@<new-version>`
+2. **Update the dependency**: `npm install @safety-net/contracts@<new-version>`
 3. **Run resolve**: `npm run resolve` — overlay actions that target paths that no longer exist will produce warnings
 4. **Fix stale overlay targets**: update JSONPath expressions to match the new schema structure
 5. **Validate**: `npm run validate` — confirm the resolved output is valid
@@ -390,5 +390,5 @@ Some state customizations may benefit all states. Consider proposing changes to 
 To contribute:
 
 1. Open an issue describing the proposed change and why it benefits multiple states
-2. If approved, submit a PR against the base `@safety-net/schemas` repo
+2. If approved, submit a PR against the base `@safety-net/contracts` repo
 3. Once merged, remove the corresponding overlay action — the change is now in the base
