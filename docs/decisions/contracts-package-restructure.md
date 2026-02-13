@@ -1,6 +1,6 @@
 # ADR: Restructure `@safety-net/schemas` to `@safety-net/contracts`
 
-**Status:** Proposed
+**Status:** Accepted
 
 **Date:** 2026-02-13
 
