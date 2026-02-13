@@ -118,8 +118,6 @@ All discovery scripts must use recursive filename glob (e.g., `**/*-openapi.yaml
 - `scripts/export-design-reference.js`: use recursive glob for spec discovery
 - `scripts/validate-openapi.js`: use recursive glob
 - `scripts/resolve-overlay.js`: use recursive glob
-- `scripts/export-figma-data.js`: hardcoded `../openapi/examples` path
-- `scripts/export-figma-plugin-data.js`: hardcoded `../openapi/components` and `../openapi/examples` paths
 - `packages/mock-server/package.json`: script args referencing `../schemas/openapi` → `../contracts`
 
 ### CI updates
@@ -129,13 +127,6 @@ All discovery scripts must use recursive filename glob (e.g., `**/*-openapi.yaml
 ### `.gitignore` update
 
 - `packages/schemas/openapi/resolved` &rarr; `packages/contracts/resolved` (or remove if `resolved/` is deleted)
-
-### Package-internal docs
-
-These files live inside `packages/schemas/` and move with the directory rename, but their contents also reference the old paths:
-
-- `packages/schemas/figma-plugin/README.md`
-- `packages/schemas/docs/ux-designer-guide.md`
 
 ### Documentation updates (~20 files)
 
