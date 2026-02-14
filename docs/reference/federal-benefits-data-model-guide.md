@@ -1,6 +1,6 @@
-# Federal Eligibility Data Model — Companion Guide
+# Federal Benefits Data Model — Companion Guide
 
-This document explains how to read `federal-eligibility-data-model.csv` and provides guidance for subject-matter expert (SME) review.
+This document explains how to read `federal-benefits-data-model.csv` and provides guidance for subject-matter expert (SME) review.
 
 ## How to read the spreadsheet
 
