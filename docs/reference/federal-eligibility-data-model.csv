@@ -16,6 +16,8 @@ Application,,voterRegistrationResponse,Voter Registration Response,enum,register
 Application,,noticeDeliveryPreference,Notice Delivery Preference,enum,mail|email|electronic_portal|text,applicant,,,,,,,,,,,,How the applicant prefers to receive notices and correspondence. Electronic options vary by state system capabilities.,,Required
 Application,,paymentMethodPreference,Payment/Benefit Delivery Preference,enum,ebt_card|direct_deposit|check,applicant,,,,,,,,,,,,SNAP/Summer EBT: EBT card. SSI: direct deposit or check. Section 8: not applicable (payment goes to landlord). Varies by program.,,Required
 Application,,createdAt,Created At,datetime,,system,,,,,,,,,,,,,,
+Application,,accommodationNeeded,Accessibility Accommodation Needed,boolean,,applicant,,,,,,,,,,,29 USC 794 (Section 504); 42 USC 12132 (ADA Title II),Whether the applicant needs a disability-related accommodation for the application process. Section 504 and ADA Title II require public agencies to provide reasonable accommodations.,,Required
+Application,,accommodationType,Accommodation Type,enum,large_print|braille|screen_reader|sign_language_interpreter|tty_tdd|wheelchair_accessible|in_home_interview|other,applicant,,,,,,,,,,,29 USC 794 (Section 504); 42 USC 12132 (ADA Title II),Type of accommodation requested. Required when accommodationNeeded is true.,,Required
 Application,,updatedAt,Updated At,datetime,,system,,,,,,,,,,,,,,
 Household,1 per Application,,,,,,,,,,,,,,,,,,,
 Household,,id,Household ID,uuid,,system,,,,,,,,,,,,,,
@@ -51,9 +53,9 @@ Household,,utilityCostTelephone,Telephone Cost,number,,applicant,Required,,,,,,,
 Household,,energySupplierName,Energy Supplier Name,string,,applicant,,,,,,,,,Required,,,Name of utility company or fuel dealer. Core LIHEAP operational field for payment direction.,,
 Household,,energySupplierAccountNumber,Energy Supplier Account Number,string,,applicant,,,,,,,,,Required,,,Household account number with the energy supplier. Required for LIHEAP payment processing.,,
 Household,,primaryHeatingFuelType,Primary Heating Fuel Type,enum,natural_gas|electricity|propane|fuel_oil|kerosene|wood|coal|solar|other,applicant,,,,,,,,,Required,,42 USC 8624(b)(5),States must consider energy need; fuel type is a standard LIHEAP data element required for benefit calculation.,,
-Household,,primaryContactPhone,Primary Contact Phone,string,,applicant,Required,Required,Required,Required,Required,Required,Required,Required,Required,Required,,,,
+Household,,primaryContactPhone,Primary Contact Phone,string,,applicant,Required,Required,Required,Required,Required,Required,Required,Required,Required,Required,,,,Required
 Household,,primaryContactEmail,Primary Contact Email,string,,applicant,,,,,,,,,,,,Optional but increasingly used for notices and correspondence,,
-Household,,preferredLanguage,Preferred Language,enum,english|spanish|chinese|vietnamese|korean|tagalog|arabic|french|haitian_creole|russian|portuguese|other,applicant,Required,Required,Required,Required,Required,Required,Required,Required,Required,Required,,Required for language access compliance under Title VI of the Civil Rights Act,,
+Household,,preferredLanguage,Preferred Language,enum,english|spanish|chinese|vietnamese|korean|tagalog|arabic|french|haitian_creole|russian|portuguese|other,applicant,Required,Required,Required,Required,Required,Required,Required,Required,Required,Required,,Required for language access compliance under Title VI of the Civil Rights Act,,Required
 Household,,createdAt,Created At,datetime,,system,,,,,,,,,,,,,,
 Household,,updatedAt,Updated At,datetime,,system,,,,,,,,,,,,,,
 Person,1..N per Household,,,,,,,,,,,,,,,,,,,

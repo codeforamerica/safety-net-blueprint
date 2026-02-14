@@ -292,8 +292,10 @@ Added the Application entity (12 entities total) with 16 data fields and the App
 - `voterRegistrationOffered`, `voterRegistrationResponse` — NVRA Section 7 compliance (52 USC 20506)
 - `noticeDeliveryPreference` — Mail, email, portal, or text
 - `paymentMethodPreference` — EBT card, direct deposit, or check
+- `accommodationNeeded` — Whether applicant needs disability-related accommodation (ADA Title II / Section 504)
+- `accommodationType` — Type of accommodation requested (large print, braille, sign language interpreter, TTY, etc.)
 
-Person.race and Person.ethnicity marked Required for Application/Enrollment (civil rights compliance, not eligibility). Household.applicationId FK added.
+Person.race and Person.ethnicity marked Required for Application/Enrollment (civil rights compliance, not eligibility). Household.preferredLanguage and Household.primaryContactPhone also marked Required for Application/Enrollment (Title VI language access and applicant reachability). Household.applicationId FK added.
 
 ### Enum completeness
 
