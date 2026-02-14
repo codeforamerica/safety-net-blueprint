@@ -12,13 +12,14 @@ This document explains how to read `federal-eligibility-data-model.csv` and prov
 | **Relationship** | Cardinality relative to the parent entity (e.g., `1..N per Household` means one or more per household). Only populated on the entity's header row. |
 | **Field** | The machine-readable field name. |
 | **Label** | Human-readable field label. |
-| **DataType** | `string`, `number`, `integer`, `boolean`, `date`, `datetime`, `uuid`, `enum`, `text`. |
+| **DataType** | `string`, `number`, `integer`, `boolean`, `date`, `datetime`, `uuid`, `enum`, `text`. `text` is used for longer free-form content (e.g., notes, descriptions) while `string` is used for shorter structured values (e.g., names, codes). |
 | **EnumValues** | Pipe-delimited list of allowed values when DataType is `enum`. |
 | **Source** | Where the value comes from (see [Source types](#source-types) below). |
 | **Program columns** | `Required` means the program needs this field for eligibility determination. Blank means the program does not use this field. |
 | **Policy/Statute** | Federal regulation or statute citation. |
 | **Notes** | Implementation guidance, edge cases, or cross-references. |
 | **OBBBA (H.R.1)** | Flags fields affected by the One Big Beautiful Bill Act (signed July 4, 2025). Values: `New field` (added to reflect OBBBA requirements), `Modified` (existing field whose rules, enums, or derivation changed), or blank (unaffected). See [OBBBA changes](#obbba-hr1-changes) below. |
+| **Application/Enrollment** | `Required` means this field is needed for the application or enrollment process itself, regardless of whether it is used for eligibility determination. This column distinguishes process-required fields (signatures, consent, voter registration) from eligibility-required fields. Fields can be Required in both program columns and this column. |
 
 ### Source types
 
@@ -61,7 +62,7 @@ The entities that use type requirement rows:
 ### Entity relationships
 
 ```
-Application
+Application (1 per submission)
   └── Household (1 per Application)
         ├── Person (1..N per Household)
         │     ├── Income (0..N per Person)
@@ -76,7 +77,7 @@ Application
         └── (Household-level fields: address, shelter costs, utilities, etc.)
 ```
 
-Note: Application is not modeled as an entity in the spreadsheet. The Household is the root entity.
+The Application entity captures process-level fields needed for the submission itself — signatures, consent, voter registration, delivery preferences — rather than eligibility determination. Household.applicationId links each household to its application.
 
 ### Conditional "Required" fields
 
@@ -112,6 +113,8 @@ The 10 program columns represent federal benefit programs:
 
 Important: "Required" reflects federal rules only. States may require additional data elements or may waive collection of some federal fields through waivers or simplified reporting. This model is a federal baseline.
 
+The **Application/Enrollment** column works differently from program columns. It marks fields needed for the application process itself (signatures, consent, voter registration) rather than for any specific program's eligibility determination. A field can be Required in both a program column and the Application/Enrollment column — for example, `applicationDate` is Required for SNAP (determines first-month proration and processing deadline) and also Required for Application/Enrollment (every application needs a date). Fields like `race` and `ethnicity` are Required only for Application/Enrollment — they are collected for civil rights compliance, not eligibility.
+
 ### OBBBA (H.R.1) changes
 
 The **One Big Beautiful Bill Act** (OBBBA, H.R.1) was signed into law on July 4, 2025. It made significant changes to SNAP and Medicaid eligibility rules. The data model has been updated to reflect these changes, and the `OBBBA (H.R.1)` column flags every affected row.
@@ -143,11 +146,14 @@ The **One Big Beautiful Bill Act** (OBBBA, H.R.1) was signed into law on July 4,
 - Added ABAWD exemption for Indian/tribal members
 - Non-citizen SNAP eligibility significantly narrowed
 - LIHEAP receipt no longer confers HCSUA for non-elderly/non-disabled households
+- Internet/broadband costs explicitly prohibited from SNAP shelter deduction (OBBBA Section 10104)
 
 **Medicaid:**
 - New community engagement requirement: 80 hours/month of qualifying activities for ages 19–64 in Medicaid expansion population, effective January 1, 2027
 - 9 exemption categories (pregnant, medically frail/disabled, caretaker of dependent child under 6, full-time student, receiving unemployment benefits, tribal member, under 19, age 55+, and others)
 - Six-month redetermination cycle for expansion population (previously 12 months)
+- Address verification required at application and redetermination (OBBBA Section 71107)
+- Non-citizen eligibility narrowing — potential restrictions on Medicaid coverage for some non-citizen categories (OBBBA Sections 71108–71109; implementing regulations pending)
 
 ---
 
@@ -180,9 +186,27 @@ The `nutritionalRiskConditions` field on Person is modeled as a single enum but 
 
 The SSI disability determination is a complex five-step sequential evaluation (20 CFR 416.920) involving medical evidence, residual functional capacity, past work, age-education-experience grid rules, and more. The data model simplifies this to `disabilityStatus` (boolean), `disabilityType` (text), `meetsGainfulActivityTest` (boolean), and `disabilityDuration` (boolean). This is appropriate for an initial application/screening, but an SME should confirm whether additional disability-related fields are needed for processing.
 
+#### AssetTransfer entity
+
+Asset transfer tracking (Medicaid look-back, SNAP transfer penalties) is currently captured with three fields on the Asset entity: `recentAssetTransfer`, `transferDate`, and `transferAmount`. For Medicaid LTC with a 60-month look-back (DRA 2005), a household may have multiple transfers over that period. An SME should evaluate whether a dedicated `AssetTransfer` entity (0..N per Person) with fields for transfer date, amount, recipient, fair market value, and penalty period calculation would be more appropriate.
+
+#### Spousal impoverishment completeness
+
+The spousal impoverishment protections (42 USC 1396r-5) are partially captured via `institutionalizationDate` and `maritalStatus`, but the full data requirements — community spouse resource allowance, minimum monthly maintenance needs allowance, protected resources — may need additional fields. An SME familiar with Medicaid long-term care should review whether the current model captures enough for states to calculate the community spouse protected amount.
+
+#### Additional OBBBA provisions pending review
+
+Several OBBBA provisions may affect data collection beyond what is currently modeled:
+
+- **Section 10104** — Prohibits internet/broadband costs from SNAP shelter deduction. The model's Expense entity should ensure internet costs are not included in shelter expense types. Notes updated but an SME should verify no separate tracking field is needed.
+- **Sections 71107** — Requires address verification at Medicaid application and redetermination. Current `address*` fields exist but verification workflow requirements may need additional data elements.
+- **Sections 71108–71109** — Potential narrowing of Medicaid non-citizen eligibility. `citizenshipStatus` and `citizenshipEligible` notes updated but implementing regulations are still pending.
+
 ### Issues found and fixed during review
 
-The following issues were identified during a self-review pass and have already been corrected in the spreadsheet:
+The following issues were identified during self-review passes and have already been corrected in the spreadsheet.
+
+#### Initial review (round 1)
 
 1. **AuthorizedRepresentative cardinality** — Changed from `0..1` to `0..N` per Person. SNAP explicitly allows separate authorized representatives for application and benefit receipt (7 CFR 273.2(n)(3)).
 2. **Missing field: institutionalizationDate** — Added to Person. The date of institutionalization is required for the spousal impoverishment resource snapshot (42 USC 1396r-5(c)(1)).
@@ -190,6 +214,82 @@ The following issues were identified during a self-review pass and have already 
 4. **employerInsuranceAvailable/Affordable incorrectly Required for Non-MAGI** — Removed. These are MAGI/marketplace concepts; non-MAGI tracks existing coverage via HealthCoverage (third-party liability).
 5. **receivesOtherBenefits not Required for WIC** — Fixed. WIC uses adjunctive eligibility from SNAP/Medicaid/TANF (7 CFR 246.7(d)).
 6. **transferredInLast36Months renamed to recentAssetTransfer** — Field name was misleading since Medicaid LTC uses a 60-month look-back (DRA 2005), not 36 months.
+
+#### Comprehensive review (round 2)
+
+**A. Column alignment errors (5 fields):**
+WIC-specific fields (isBreastfeeding, deliveryDate, isPostpartum, nutritionalRiskLevel, nutritionalRiskConditions) had Required in the SSI column instead of the WIC column — a one-column offset error. Moved to the correct column.
+
+**B. Missing Required markers (~44 fixes):**
+- WorkActivity fields (activityType, hoursPerWeek, startDate, endDate) marked Required for TANF
+- Person fields marked Required for TANF: maritalStatus (two-parent household rules), isPregnant (mandatory exemption)
+- Person.maritalStatus and Person.isPregnant marked Required for SNAP (deduction eligibility, exemptions)
+- Household.size marked Required for WIC
+- BenefitParticipation fields marked Required for WIC (adjunctive eligibility) and Summer EBT (categorical eligibility)
+- HealthCoverage fields marked Required for CHIP (prior coverage waiting period)
+- Sponsor fields marked Required for SSI (deeming)
+- Person.citizenshipStatus marked Required for LIHEAP
+- Asset transfer fields (recentAssetTransfer, transferDate, transferAmount) marked Required for SNAP and Non-MAGI Medicaid
+- Burial-related asset fields (burialPlot, burialFund) marked Required for SNAP and Non-MAGI Medicaid
+- Person.ssn marked Required removed from WIC (not required for WIC eligibility)
+
+**C. Missing fields (19 new fields added):**
+- `Person.abawdCountableMonths` — Tracks months used toward SNAP ABAWD time limit (3 in 36 months)
+- `Person.studentExemptionReason` — Why a student is exempt from SNAP higher-education exclusion
+- `Person.wicParticipantCategory` — WIC category: pregnant, breastfeeding, postpartum, infant, child (determines food package)
+- `Person.deemedResourcesFromSpouse` — SSI resources deemed from ineligible spouse
+- `Person.deemedResourcesFromParent` — SSI resources deemed from parent (for child under 18)
+- `Person.deemedIncomeFromSponsor` — Income deemed from sponsor to non-citizen (42 USC 1631(e))
+- `Person.medicaidEnrollmentGroup` — Medicaid enrollment group determines applicable rules (expansion, poverty-level, medically needy, etc.)
+- `Person.tanfSanctionStatus` — Whether TANF benefits are currently sanctioned (affects household benefit amount)
+- `Person.twoParentFamily` — Whether this is a two-parent family for TANF purposes
+- `Household.energySupplierName` — LIHEAP: name of energy supplier
+- `Household.energySupplierAccountNumber` — LIHEAP: energy supplier account number
+- `Household.primaryHeatingFuelType` — LIHEAP: type of fuel used for primary heating
+- `Person.methamphetamineProductionConviction` — Lifetime SNAP/TANF ban (21 USC 862a)
+- `Person.alcoholAbusePattern` — SSI alcohol/drug evaluation requirement
+- `Person.priorEvictionDate` — Section 8: date of prior drug-related eviction (24 CFR 982.553)
+- `Person.magiHouseholdSize` — MAGI household size (may differ from physical household)
+- `Person.medicaidRedeterminationMonths` — Months since last Medicaid redetermination
+- `Asset.homeEquityValue` — Equity value of primary residence (SNAP: countable if over $500K threshold)
+- `Asset - Type Requirements: able_account` — ABLE account (tax-advantaged disability savings, excluded by SSI/Medicaid)
+
+**D. Enum and structural fixes:**
+- `qualifiedAlienCategory` enum harmonized with `citizenshipStatus` enum values
+- `familyType` enum: added `elderly`, `disabled`, `near_elderly` for Section 8
+- `institutionalStatus` enum: added `icf_iid` (Intermediate Care Facility for Individuals with Intellectual Disabilities)
+- `Asset.type` enum: added `able_account`
+- `medicaidWorkExemptionReason` enum: added `receiving_unemployment_benefits`, `formerly_in_foster_care`, `recently_incarcerated`
+- `race` field: Notes updated to indicate array type (multiple values per person)
+- `netAmount` field: Notes updated with program-specific income counting methodology
+- `citizenshipStatus` field: Notes updated for OBBBA Medicaid narrowing provisions
+- Deeming derivation logic documented in Notes for deemedResourcesFromSpouse/Parent and deemedIncomeFromSponsor
+- `citizenshipEligible` derivation Notes updated for OBBBA non-citizen changes
+- `categoricallyEligible` derivation Notes updated: added FDPIR and free/reduced school meals for Summer EBT
+
+**E. Documentation and conditional requirements (~23 fields):**
+- Added "Required when" conditions to Notes for conditional fields (e.g., "Required when non-citizen", "Required when type is vehicle", "Required for ABAWD-subject individuals")
+- Added format note for SSN field (9-digit, no dashes)
+- Added policy citations for maritalStatus (7 CFR 273.1(b)) and isPregnant (7 CFR 273.2(c)(3))
+
+#### Application entity addition (round 3)
+
+Added the Application entity (12 entities total) with 16 data fields and the Application/Enrollment column:
+
+- `applicationDate` — Date received; determines SNAP proration and processing deadlines
+- `programsAppliedFor` — Which programs the applicant is requesting
+- `isExpedited` — SNAP expedited processing screening (7 CFR 273.2(i))
+- `signatureOfApplicant` — Attestation of truthfulness
+- `signatureDate`, `signatureMethod` — When and how signed (in-person, electronic, telephonic, mark)
+- `rightsAndResponsibilitiesAcknowledged` — Program rights/responsibilities acknowledgment
+- `penaltyOfPerjuryAcknowledged` — Perjury attestation
+- `consentToVerifyInformation` — Authorization to verify with employers, agencies, etc.
+- `consentToShareData` — Authorization for cross-program data sharing
+- `voterRegistrationOffered`, `voterRegistrationResponse` — NVRA Section 7 compliance (52 USC 20506)
+- `noticeDeliveryPreference` — Mail, email, portal, or text
+- `paymentMethodPreference` — EBT card, direct deposit, or check
+
+Person.race and Person.ethnicity marked Required for Application/Enrollment (civil rights compliance, not eligibility). Household.applicationId FK added.
 
 ### Enum completeness
 
@@ -221,11 +321,12 @@ CFR and USC citations were sourced from the most recent available versions. Spec
 
 In order of impact:
 
-1. **OBBBA (H.R.1) changes** — Filter the `OBBBA (H.R.1)` column for "New field" and "Modified" rows. Verify that: (a) the SNAP ABAWD age expansion, exemption changes, and non-citizen narrowing are accurately captured; (b) the Medicaid community engagement requirement exemption categories are complete; (c) no other OBBBA provisions affecting eligibility data collection were missed. The implementing regulations for Medicaid community engagement (effective Jan 2027) may not yet be finalized — compare against the latest CMS guidance.
-2. **Non-MAGI Medicaid column** — Lowest confidence among established programs. Verify Required/blank mappings for the aged, blind, and disabled pathways. Check whether spousal impoverishment and spend-down data requirements are complete.
-3. **LIHEAP column** — Weakest federal requirements. An SME familiar with common state LIHEAP implementations should verify which fields are genuinely federally required vs. commonly collected by states.
-4. **TANF column** — Federal framework is correct but thin. Verify that no federal TANF data requirements are missing.
-5. **Hidden objects and missing fields** listed above — Confirm AuthorizedRepresentative cardinality, institutionalization date, Medicare parts.
-6. **Enum values** — Spot-check critical enums (citizenshipStatus, Income.type, Asset.type) against current federal guidance. Pay particular attention to `abawdExemptionReason` and `medicaidWorkExemptionReason` which were added/updated for OBBBA.
-7. **Cross-program interactions** — Verify categorical/adjunctive eligibility mappings (BenefitParticipation type requirements). Confirm that the programs listed as triggers for categorical eligibility are complete and correct.
-8. **Derived field logic** — Review Notes column for all `derived` and `assessed` fields to confirm the derivation logic is accurate.
+1. **OBBBA (H.R.1) changes** — Filter the `OBBBA (H.R.1)` column for "New field" and "Modified" rows. Verify that: (a) the SNAP ABAWD age expansion, exemption changes, and non-citizen narrowing are accurately captured; (b) the Medicaid community engagement requirement exemption categories are complete; (c) OBBBA Sections 10104 (internet costs), 71107 (address verification), 71108–71109 (non-citizen narrowing) are fully addressed; (d) no other OBBBA provisions affecting eligibility data collection were missed. The implementing regulations for Medicaid community engagement (effective Jan 2027) may not yet be finalized — compare against the latest CMS guidance.
+2. **Non-MAGI Medicaid column** — Lowest confidence among established programs. Verify Required/blank mappings for the aged, blind, and disabled pathways. Check whether spousal impoverishment and spend-down data requirements are complete (see known issue above).
+3. **Asset transfer tracking** — Evaluate whether the current 3-field approach (recentAssetTransfer, transferDate, transferAmount) is sufficient or whether a dedicated AssetTransfer entity is needed for the 60-month Medicaid look-back.
+4. **LIHEAP column** — Weakest federal requirements. An SME familiar with common state LIHEAP implementations should verify which fields are genuinely federally required vs. commonly collected by states.
+5. **TANF column** — Federal framework is correct but thin. Verify that no federal TANF data requirements are missing.
+6. **Application entity** — Verify that application process fields (signatures, consent, voter registration) are complete. Confirm no federally mandated application questions are missing.
+7. **Enum values** — Spot-check critical enums (citizenshipStatus, Income.type, Asset.type) against current federal guidance. Pay particular attention to `abawdExemptionReason` and `medicaidWorkExemptionReason` which were added/updated for OBBBA.
+8. **Cross-program interactions** — Verify categorical/adjunctive eligibility mappings (BenefitParticipation type requirements). Confirm that the programs listed as triggers for categorical eligibility are complete and correct.
+9. **Derived field logic** — Review Notes column for all `derived` and `assessed` fields to confirm the derivation logic is accurate.
