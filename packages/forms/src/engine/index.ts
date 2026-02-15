@@ -1,4 +1,5 @@
 export { FormRenderer } from './FormRenderer';
+export { ContractPreview } from './ContractPreview';
 export { ComponentMapper } from './ComponentMapper';
 export { resolveCondition } from './ConditionResolver';
 export { resolvePermission } from './PermissionsResolver';

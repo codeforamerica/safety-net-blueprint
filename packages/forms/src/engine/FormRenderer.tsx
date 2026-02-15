@@ -15,6 +15,7 @@ interface FormRendererProps {
   role?: Role;
   initialPage?: number;
   onSubmit?: (data: Record<string, unknown>) => void;
+  onPageChange?: (pageId: string) => void;
 }
 
 export function FormRenderer({
@@ -23,9 +24,11 @@ export function FormRenderer({
   role = 'applicant',
   initialPage = 0,
   onSubmit,
+  onPageChange,
 }: FormRendererProps) {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const { pages } = contract.form;
+  const currentPageId = pages[currentPage]?.id;
 
   const {
     register,
@@ -42,13 +45,17 @@ export function FormRenderer({
 
   const handleNext = () => {
     if (currentPage < pages.length - 1) {
-      setCurrentPage(currentPage + 1);
+      const next = currentPage + 1;
+      setCurrentPage(next);
+      onPageChange?.(pages[next].id);
     }
   };
 
   const handleBack = () => {
     if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
+      const prev = currentPage - 1;
+      setCurrentPage(prev);
+      onPageChange?.(pages[prev].id);
     }
   };
 

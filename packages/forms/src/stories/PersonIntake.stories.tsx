@@ -1,186 +1,104 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { FormRenderer } from '../engine/FormRenderer';
+import { ContractPreview } from '../engine/ContractPreview';
 import { personCreateSchema } from '../schemas/person';
-import type { FormContract } from '../engine/types';
+import type { FormContract, Role } from '../engine/types';
 
-// Inline contract to avoid YAML loading in Storybook.
-// This matches src/contracts/person-intake.yaml exactly.
-const personIntakeContract: FormContract = {
-  form: {
-    id: 'person-intake',
-    title: 'Person Intake',
-    schema: 'persons/PersonCreate',
-    pages: [
-      {
-        id: 'personal-info',
-        title: 'Personal Information',
-        fields: [
-          {
-            ref: 'name.firstName',
-            component: 'text-input',
-            width: 'half',
-            hint: 'Legal first name',
-          },
-          {
-            ref: 'name.lastName',
-            component: 'text-input',
-            width: 'half',
-            hint: 'Legal last name',
-          },
-          {
-            ref: 'dateOfBirth',
-            component: 'date-input',
-            hint: 'For example: 4 28 1986',
-          },
-          {
-            ref: 'socialSecurityNumber',
-            component: 'text-input',
-            hint: 'XXX-XX-XXXX',
-            permissions: {
-              reviewer: 'masked',
-              applicant: 'editable',
-              caseworker: 'editable',
-            },
-          },
-          { ref: 'phoneNumber', component: 'text-input' },
-          { ref: 'email', component: 'text-input' },
-        ],
-      },
-      {
-        id: 'demographics',
-        title: 'Demographics',
-        fields: [
-          { ref: 'demographicInfo.sex', component: 'radio' },
-          { ref: 'demographicInfo.maritalStatus', component: 'select' },
-          {
-            ref: 'demographicInfo.isHispanicOrLatino',
-            component: 'radio',
-            labels: { true: 'Yes', false: 'No' },
-          },
-          { ref: 'demographicInfo.race', component: 'checkbox-group' },
-        ],
-      },
-      {
-        id: 'citizenship',
-        title: 'Citizenship',
-        fields: [
-          { ref: 'citizenshipInfo.status', component: 'select' },
-          {
-            ref: 'citizenshipInfo.immigrationInfo.documentType',
-            component: 'text-input',
-            show_when: { field: 'citizenshipInfo.status', not_equals: 'citizen' },
-          },
-          {
-            ref: 'citizenshipInfo.immigrationInfo.documentNumber',
-            component: 'text-input',
-            show_when: { field: 'citizenshipInfo.status', not_equals: 'citizen' },
-          },
-          {
-            ref: 'citizenshipInfo.immigrationInfo.alienOrI94Number',
-            component: 'text-input',
-            show_when: { field: 'citizenshipInfo.status', not_equals: 'citizen' },
-          },
-          {
-            ref: 'citizenshipInfo.immigrationInfo.documentExpirationDate',
-            component: 'date-input',
-            show_when: { field: 'citizenshipInfo.status', not_equals: 'citizen' },
-          },
-        ],
-      },
-    ],
-  },
-};
+// Parsed YAML (via vite-plugin-yaml) — edits to the YAML hot-reload here
+import contract from '../contracts/person-intake.yaml';
+// Raw YAML source for the side-by-side preview
+import yamlSource from '../contracts/person-intake.yaml?raw';
 
-const meta: Meta<typeof FormRenderer> = {
+const personIntakeContract = contract as unknown as FormContract;
+
+const meta: Meta = {
   title: 'Forms/Person Intake',
-  component: FormRenderer,
   parameters: {
-    layout: 'padded',
+    layout: 'fullscreen',
   },
 };
 
 export default meta;
-type Story = StoryObj<typeof FormRenderer>;
 
 const defaultSubmit = (data: Record<string, unknown>) => {
   console.log('Form submitted:', data);
   alert('Form submitted! Check console for data.');
 };
 
-export const Page1PersonalInfo: Story = {
+// -- Side-by-side stories (contract source + rendered form) --
+
+function SideBySideStory({
+  initialPage = 0,
+  role = 'applicant',
+}: {
+  initialPage?: number;
+  role?: Role;
+}) {
+  const startPageId = personIntakeContract.form.pages[initialPage]?.id;
+  const [currentPageId, setCurrentPageId] = useState(startPageId);
+
+  return (
+    <ContractPreview yamlSource={yamlSource} currentPageId={currentPageId}>
+      <FormRenderer
+        contract={personIntakeContract}
+        schema={personCreateSchema}
+        role={role}
+        initialPage={initialPage}
+        onSubmit={defaultSubmit}
+        onPageChange={setCurrentPageId}
+      />
+    </ContractPreview>
+  );
+}
+
+export const Page1PersonalInfo: StoryObj = {
   name: 'Page 1 - Personal Info',
-  args: {
-    contract: personIntakeContract,
-    schema: personCreateSchema,
-    role: 'applicant',
-    initialPage: 0,
-    onSubmit: defaultSubmit,
-  },
+  render: () => <SideBySideStory initialPage={0} />,
 };
 
-export const Page2Demographics: Story = {
+export const Page2Demographics: StoryObj = {
   name: 'Page 2 - Demographics',
-  args: {
-    contract: personIntakeContract,
-    schema: personCreateSchema,
-    role: 'applicant',
-    initialPage: 1,
-    onSubmit: defaultSubmit,
-  },
+  render: () => <SideBySideStory initialPage={1} />,
 };
 
-export const Page3CitizenshipCitizen: Story = {
+export const Page3CitizenshipCitizen: StoryObj = {
   name: 'Page 3 - Citizenship (Citizen)',
-  args: {
-    contract: personIntakeContract,
-    schema: personCreateSchema,
-    role: 'applicant',
-    initialPage: 2,
-    onSubmit: defaultSubmit,
-  },
+  render: () => <SideBySideStory initialPage={2} />,
 };
 
-export const Page3CitizenshipNonCitizen: Story = {
+export const Page3CitizenshipNonCitizen: StoryObj = {
   name: 'Page 3 - Citizenship (Non-Citizen)',
-  args: {
-    contract: personIntakeContract,
-    schema: personCreateSchema,
-    role: 'applicant',
-    initialPage: 2,
-    onSubmit: defaultSubmit,
-  },
+  render: () => <SideBySideStory initialPage={2} />,
 };
 
-export const CaseworkerView: Story = {
+export const CaseworkerView: StoryObj = {
   name: 'Caseworker View',
-  args: {
-    contract: personIntakeContract,
-    schema: personCreateSchema,
-    role: 'caseworker',
-    initialPage: 0,
-    onSubmit: defaultSubmit,
-  },
+  render: () => <SideBySideStory initialPage={0} role="caseworker" />,
 };
 
-export const ReviewerView: Story = {
+export const ReviewerView: StoryObj = {
   name: 'Reviewer View',
-  args: {
-    contract: personIntakeContract,
-    schema: personCreateSchema,
-    role: 'reviewer',
-    initialPage: 0,
-    onSubmit: defaultSubmit,
-  },
+  render: () => <SideBySideStory initialPage={0} role="reviewer" />,
 };
 
-export const FullWizard: Story = {
+export const FullWizard: StoryObj = {
   name: 'Full Wizard',
-  args: {
-    contract: personIntakeContract,
-    schema: personCreateSchema,
-    role: 'applicant',
-    initialPage: 0,
-    onSubmit: defaultSubmit,
-  },
+  render: () => <SideBySideStory initialPage={0} />,
+};
+
+// -- Form-only stories (no source panel) --
+
+export const FormOnly: StoryObj = {
+  name: 'Form Only (No Source)',
+  parameters: { layout: 'padded' },
+  render: () => (
+    <FormRenderer
+      contract={personIntakeContract}
+      schema={personCreateSchema}
+      role="applicant"
+      initialPage={0}
+      onSubmit={defaultSubmit}
+    />
+  ),
 };
