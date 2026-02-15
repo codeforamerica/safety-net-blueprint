@@ -46,6 +46,7 @@ function SideBySideStory({
   return (
     <ContractPreview
       yamlSource={yamlSource}
+      filename="person-intake.yaml"
       initialContract={personIntakeContract}
       onContractChange={handleContractChange}
       currentPageId={currentPageId}
@@ -80,16 +81,6 @@ export const Page3CitizenshipCitizen: StoryObj = {
 export const Page3CitizenshipNonCitizen: StoryObj = {
   name: 'Page 3 - Citizenship (Non-Citizen)',
   render: () => <SideBySideStory initialPage={2} />,
-};
-
-export const CaseworkerView: StoryObj = {
-  name: 'Caseworker View',
-  render: () => <SideBySideStory initialPage={0} role="caseworker" />,
-};
-
-export const ReviewerView: StoryObj = {
-  name: 'Reviewer View',
-  render: () => <SideBySideStory initialPage={0} role="reviewer" />,
 };
 
 export const FullWizard: StoryObj = {

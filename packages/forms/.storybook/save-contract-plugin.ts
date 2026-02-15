@@ -3,19 +3,21 @@ import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import yaml from 'js-yaml';
 
+const ALLOWED_CONTRACTS = [
+  'person-intake.yaml',
+  'person-caseworker-review.yaml',
+];
+
 /**
  * Vite dev server plugin that exposes POST /__save-contract.
- * Writes edited YAML content back to src/contracts/person-intake.yaml.
+ * Writes edited YAML content back to the specified contract file.
  * The file write triggers Vite HMR, which hot-reloads the YAML import.
  */
 export function saveContractPlugin(): Plugin {
   return {
     name: 'save-contract',
     configureServer(server) {
-      const contractPath = resolve(
-        server.config.root,
-        'src/contracts/person-intake.yaml',
-      );
+      const contractsDir = resolve(server.config.root, 'src/contracts');
 
       server.middlewares.use('/__save-contract', async (req, res) => {
         if (req.method !== 'POST') {
@@ -32,6 +34,13 @@ export function saveContractPlugin(): Plugin {
         try {
           const body = JSON.parse(Buffer.concat(chunks).toString());
           const content = body.content as string;
+          const filename = body.filename as string | undefined;
+
+          // Resolve which contract file to write
+          const target = filename && ALLOWED_CONTRACTS.includes(filename)
+            ? filename
+            : 'person-intake.yaml';
+          const contractPath = resolve(contractsDir, target);
 
           // Validate YAML parses and has expected structure
           const parsed = yaml.load(content) as Record<string, unknown>;

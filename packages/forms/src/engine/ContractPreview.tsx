@@ -4,6 +4,7 @@ import type { FormContract } from './types';
 
 interface ContractPreviewProps {
   yamlSource: string;
+  filename: string;
   initialContract: FormContract;
   onContractChange: (contract: FormContract) => void;
   currentPageId?: string;
@@ -18,6 +19,7 @@ type ParseStatus = { valid: true } | { valid: false; error: string };
  */
 export function ContractPreview({
   yamlSource,
+  filename,
   initialContract,
   onContractChange,
   currentPageId,
@@ -64,7 +66,7 @@ export function ContractPreview({
       const res = await fetch('/__save-contract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: source }),
+        body: JSON.stringify({ content: source, filename }),
       });
       if (res.ok) {
         setSaveStatus('saved');
@@ -124,7 +126,7 @@ export function ContractPreview({
                 fontSize: '13px',
               }}
             >
-              person-intake.yaml
+              {filename}
               {dirty && <span style={{ color: '#f9e2af' }}> (modified)</span>}
             </span>
             <div style={{ display: 'flex', gap: '0.5rem' }}>

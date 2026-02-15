@@ -11,11 +11,22 @@ export type PermissionLevel = 'editable' | 'read-only' | 'masked' | 'hidden';
 
 export type Role = 'applicant' | 'caseworker' | 'reviewer';
 
-export interface ShowWhen {
+/** Simple single-field condition. */
+export interface SimpleCondition {
   field: string;
   equals?: string | number | boolean;
   not_equals?: string | number | boolean;
 }
+
+/**
+ * JSON Logic condition for compound rules.
+ * See https://jsonlogic.com for the full spec.
+ */
+export interface JsonLogicCondition {
+  jsonlogic: Record<string, unknown>;
+}
+
+export type ShowWhen = SimpleCondition | JsonLogicCondition;
 
 export interface FieldDefinition {
   ref: string;
@@ -33,11 +44,14 @@ export interface Page {
   fields: FieldDefinition[];
 }
 
+export type FormLayout = 'wizard' | 'review';
+
 export interface FormContract {
   form: {
     id: string;
     title: string;
     schema: string;
+    layout?: FormLayout;
     pages: Page[];
   };
 }

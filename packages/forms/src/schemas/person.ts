@@ -67,6 +67,15 @@ export const personCreateSchema = z.object({
           documentNumber: z.string().max(100).optional(),
           alienOrI94Number: z.string().max(100).optional(),
           documentExpirationDate: z.string().optional(),
+          hasSponsor: z.boolean().optional(),
+          sponsor: z
+            .object({
+              name: z.object({
+                firstName: z.string().max(100).optional(),
+                lastName: z.string().max(100).optional(),
+              }).optional(),
+            })
+            .optional(),
         })
         .optional(),
     })

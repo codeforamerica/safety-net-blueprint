@@ -13,4 +13,5 @@ export type {
   Role,
   ComponentType,
   FieldWidth,
+  FormLayout,
 } from './types';
