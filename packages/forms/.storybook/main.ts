@@ -1,5 +1,6 @@
 import type { StorybookConfig } from '@storybook/react-vite';
 import yaml from '@modyfi/vite-plugin-yaml';
+import { saveContractPlugin } from './save-contract-plugin';
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(ts|tsx)'],
@@ -11,9 +12,7 @@ const config: StorybookConfig = {
   viteFinal(config) {
     config.plugins = config.plugins ?? [];
     config.plugins.push(yaml());
-
-    // Allow ?raw imports for YAML source display
-    config.assetsInclude = config.assetsInclude ?? [];
+    config.plugins.push(saveContractPlugin());
 
     return config;
   },

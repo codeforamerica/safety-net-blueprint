@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { FormRenderer } from '../engine/FormRenderer';
 import { ContractPreview } from '../engine/ContractPreview';
 import { personCreateSchema } from '../schemas/person';
 import type { FormContract, Role } from '../engine/types';
 
-// Parsed YAML (via vite-plugin-yaml) — edits to the YAML hot-reload here
+// Parsed YAML (via vite-plugin-yaml) — file edits hot-reload here
 import contract from '../contracts/person-intake.yaml';
-// Raw YAML source for the side-by-side preview
+// Raw YAML source for the editable preview
 import yamlSource from '../contracts/person-intake.yaml?raw';
 
 const personIntakeContract = contract as unknown as FormContract;
@@ -26,7 +26,7 @@ const defaultSubmit = (data: Record<string, unknown>) => {
   alert('Form submitted! Check console for data.');
 };
 
-// -- Side-by-side stories (contract source + rendered form) --
+// -- Side-by-side stories (editable contract source + rendered form) --
 
 function SideBySideStory({
   initialPage = 0,
@@ -35,13 +35,23 @@ function SideBySideStory({
   initialPage?: number;
   role?: Role;
 }) {
-  const startPageId = personIntakeContract.form.pages[initialPage]?.id;
+  const [activeContract, setActiveContract] = useState(personIntakeContract);
+  const startPageId = activeContract.form.pages[initialPage]?.id;
   const [currentPageId, setCurrentPageId] = useState(startPageId);
 
+  const handleContractChange = useCallback((updated: FormContract) => {
+    setActiveContract(updated);
+  }, []);
+
   return (
-    <ContractPreview yamlSource={yamlSource} currentPageId={currentPageId}>
+    <ContractPreview
+      yamlSource={yamlSource}
+      initialContract={personIntakeContract}
+      onContractChange={handleContractChange}
+      currentPageId={currentPageId}
+    >
       <FormRenderer
-        contract={personIntakeContract}
+        contract={activeContract}
         schema={personCreateSchema}
         role={role}
         initialPage={initialPage}

@@ -1,27 +1,94 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import yaml from 'js-yaml';
+import type { FormContract } from './types';
 
 interface ContractPreviewProps {
   yamlSource: string;
-  children: React.ReactNode;
+  initialContract: FormContract;
+  onContractChange: (contract: FormContract) => void;
   currentPageId?: string;
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type ParseStatus = { valid: true } | { valid: false; error: string };
+
 /**
- * Side-by-side view: YAML contract source on the left, rendered form on the right.
- * Highlights the current page's YAML section. Designers can read the contract
- * alongside the rendered output to understand what drives each field.
+ * Editable side-by-side view: YAML editor on the left, rendered form on the right.
+ * Edits are parsed live and update the form. Save writes back to disk.
  */
 export function ContractPreview({
   yamlSource,
-  children,
+  initialContract,
+  onContractChange,
   currentPageId,
-}: ContractPreviewProps) {
+  children,
+}: ContractPreviewProps & { children: React.ReactNode }) {
   const [showSource, setShowSource] = useState(true);
+  const [source, setSource] = useState(yamlSource);
+  const [parseStatus, setParseStatus] = useState<ParseStatus>({ valid: true });
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [dirty, setDirty] = useState(false);
 
-  // Highlight the current page section in the YAML
-  const highlightedSource = currentPageId
-    ? highlightPageSection(yamlSource, currentPageId)
-    : yamlSource;
+  // Reset when the file-imported YAML changes (Vite HMR)
+  useEffect(() => {
+    setSource(yamlSource);
+    setDirty(false);
+    setParseStatus({ valid: true });
+  }, [yamlSource]);
+
+  const handleChange = useCallback(
+    (newSource: string) => {
+      setSource(newSource);
+      setDirty(true);
+      setSaveStatus('idle');
+
+      try {
+        const parsed = yaml.load(newSource) as FormContract;
+        if (parsed?.form?.pages) {
+          setParseStatus({ valid: true });
+          onContractChange(parsed);
+        } else {
+          setParseStatus({ valid: false, error: 'Missing form.pages structure' });
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Parse error';
+        setParseStatus({ valid: false, error: msg });
+      }
+    },
+    [onContractChange],
+  );
+
+  const handleSave = useCallback(async () => {
+    setSaveStatus('saving');
+    try {
+      const res = await fetch('/__save-contract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: source }),
+      });
+      if (res.ok) {
+        setSaveStatus('saved');
+        setDirty(false);
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+      }
+    } catch {
+      setSaveStatus('error');
+    }
+  }, [source]);
+
+  // Ctrl+S / Cmd+S to save
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's' && showSource) {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleSave, showSource]);
 
   return (
     <div style={{ display: 'flex', gap: '1.5rem', minHeight: '80vh' }}>
@@ -29,23 +96,24 @@ export function ContractPreview({
         <div
           style={{
             flex: '0 0 45%',
-            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
             background: '#1e1e2e',
             borderRadius: '8px',
             padding: '1rem',
-            fontSize: '13px',
-            lineHeight: '1.5',
             maxHeight: '85vh',
           }}
         >
+          {/* Header bar */}
           <div
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '0.75rem',
+              marginBottom: '0.5rem',
               borderBottom: '1px solid #444',
               paddingBottom: '0.5rem',
+              gap: '0.5rem',
             }}
           >
             <span
@@ -53,28 +121,89 @@ export function ContractPreview({
                 color: '#cdd6f4',
                 fontWeight: 600,
                 fontFamily: 'monospace',
+                fontSize: '13px',
               }}
             >
               person-intake.yaml
+              {dirty && <span style={{ color: '#f9e2af' }}> (modified)</span>}
             </span>
-            <button
-              onClick={() => setShowSource(false)}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={handleSave}
+                disabled={!dirty || !parseStatus.valid || saveStatus === 'saving'}
+                style={{
+                  background: dirty && parseStatus.valid ? '#89b4fa' : 'transparent',
+                  border: '1px solid #666',
+                  color: dirty && parseStatus.valid ? '#1e1e2e' : '#888',
+                  borderRadius: '4px',
+                  padding: '2px 10px',
+                  cursor: dirty && parseStatus.valid ? 'pointer' : 'default',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}
+              >
+                {saveStatus === 'saving'
+                  ? 'Saving...'
+                  : saveStatus === 'saved'
+                    ? 'Saved'
+                    : 'Save'}
+              </button>
+              <button
+                onClick={() => setShowSource(false)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #666',
+                  color: '#cdd6f4',
+                  borderRadius: '4px',
+                  padding: '2px 8px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                Hide
+              </button>
+            </div>
+          </div>
+
+          {/* Parse error banner */}
+          {!parseStatus.valid && (
+            <div
               style={{
-                background: 'transparent',
-                border: '1px solid #666',
-                color: '#cdd6f4',
+                background: '#45243a',
+                color: '#f38ba8',
+                padding: '0.4rem 0.6rem',
                 borderRadius: '4px',
-                padding: '2px 8px',
-                cursor: 'pointer',
                 fontSize: '12px',
+                fontFamily: 'monospace',
+                marginBottom: '0.5rem',
+                whiteSpace: 'pre-wrap',
               }}
             >
-              Hide
-            </button>
-          </div>
-          <pre
-            style={{ margin: 0, color: '#cdd6f4', fontFamily: 'monospace' }}
-            dangerouslySetInnerHTML={{ __html: highlightedSource }}
+              {parseStatus.error}
+            </div>
+          )}
+
+          {/* Editable YAML */}
+          <textarea
+            value={source}
+            onChange={(e) => handleChange(e.target.value)}
+            spellCheck={false}
+            style={{
+              flex: 1,
+              margin: 0,
+              padding: 0,
+              background: 'transparent',
+              color: '#cdd6f4',
+              fontFamily: 'monospace',
+              fontSize: '13px',
+              lineHeight: '1.5',
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              tabSize: 2,
+              whiteSpace: 'pre',
+              overflowX: 'auto',
+            }}
           />
         </div>
       )}
@@ -102,61 +231,4 @@ export function ContractPreview({
       </div>
     </div>
   );
-}
-
-/**
- * Wraps the active page section in a highlighted span.
- * Finds the page by its `- id: <pageId>` marker and highlights
- * until the next page or end of pages.
- */
-function highlightPageSection(yaml: string, pageId: string): string {
-  const escaped = escapeHtml(yaml);
-  const lines = escaped.split('\n');
-  const result: string[] = [];
-  let inHighlight = false;
-  let pageIndent = -1;
-
-  for (const line of lines) {
-    const pageMatch = line.match(/^(\s*)- id: (.+)$/);
-
-    if (pageMatch) {
-      if (inHighlight) {
-        result.push('</span>');
-        inHighlight = false;
-      }
-
-      if (pageMatch[2] === pageId) {
-        inHighlight = true;
-        pageIndent = pageMatch[1].length;
-        result.push(
-          '<span style="background:#2a2a4a;display:block;border-left:3px solid #89b4fa;padding-left:4px;margin-left:-7px">',
-        );
-      }
-    } else if (inHighlight) {
-      // Check if we've left the page block (same or lesser indent that's not empty)
-      const trimmed = line.trim();
-      if (trimmed.length > 0) {
-        const currentIndent = line.length - line.trimStart().length;
-        if (currentIndent <= pageIndent && !line.trim().startsWith('-')) {
-          result.push('</span>');
-          inHighlight = false;
-        }
-      }
-    }
-
-    result.push(line);
-  }
-
-  if (inHighlight) {
-    result.push('</span>');
-  }
-
-  return result.join('\n');
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
