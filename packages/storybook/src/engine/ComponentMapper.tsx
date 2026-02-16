@@ -10,6 +10,7 @@ import {
   FormGroup,
   ErrorMessage,
   Fieldset,
+  Tag,
 } from '@trussworks/react-uswds';
 import type { FieldDefinition, PermissionLevel } from './types';
 import type { UseFormRegister, FieldErrors } from 'react-hook-form';
@@ -20,6 +21,8 @@ interface ComponentMapperProps {
   errors: FieldErrors;
   permission: PermissionLevel;
   value?: unknown;
+  annotations?: Record<string, string[]>;
+  pagePrograms?: string[];
 }
 
 /** Derive a human-readable label from a dotted field ref. */
@@ -121,12 +124,19 @@ const ENUM_OPTIONS: Record<string, { value: string; label: string }[]> = {
   ],
 };
 
+/** Strip numeric indices from a qualified ref (e.g. household.members.0.ssn → household.members.ssn). */
+function stripIndices(ref: string): string {
+  return ref.replace(/\.\d+/g, '');
+}
+
 export function ComponentMapper({
   field,
   register,
   errors,
   permission,
   value,
+  annotations,
+  pagePrograms,
 }: ComponentMapperProps) {
   if (permission === 'hidden') return null;
 
@@ -134,11 +144,48 @@ export function ComponentMapper({
   const errorMsg = getError(errors, field.ref);
   const isDisabled = permission === 'read-only' || permission === 'masked';
   const inputId = field.ref.replace(/\./g, '-');
+  const programs = annotations?.[field.ref] ?? annotations?.[stripIndices(field.ref)];
+
+  // Compute exception badge: only show when field's programs differ from the page baseline
+  let badges: React.ReactNode = null;
+  if (programs?.length && pagePrograms?.length) {
+    const fieldSet = new Set(programs);
+    const pageSet = new Set(pagePrograms);
+    const missing = pagePrograms.filter((p) => !fieldSet.has(p));
+    const extra = programs.filter((p) => !pageSet.has(p));
+    const isSame = missing.length === 0 && extra.length === 0;
+
+    if (!isSame) {
+      // If field requires fewer than half the page programs, show "Only: X, Y"
+      // Otherwise show "Not: X, Y" for the missing ones
+      const useOnly = programs.length <= pagePrograms.length / 2;
+      const badgeLabel = useOnly
+        ? `Only: ${programs.map((p) => p.replace(/_/g, ' ')).join(', ')}`
+        : `Not: ${missing.map((p) => p.replace(/_/g, ' ')).join(', ')}`;
+
+      badges = (
+        <span style={{ marginLeft: '6px', verticalAlign: 'middle' }}>
+          <Tag
+            className="font-sans-3xs"
+            style={{
+              fontSize: '10px',
+              padding: '1px 6px',
+              lineHeight: '1.4',
+              background: useOnly ? '#e1f3f8' : '#fce4ec',
+              color: useOnly ? '#0d47a1' : '#b71c1c',
+            }}
+          >
+            {badgeLabel}
+          </Tag>
+        </span>
+      );
+    }
+  }
 
   if (permission === 'masked') {
     return (
       <FormGroup error={!!errorMsg}>
-        <Label htmlFor={inputId}>{label}</Label>
+        <Label htmlFor={inputId}>{label}{badges}</Label>
         {field.hint && <span className="usa-hint">{field.hint}</span>}
         <TextInput
           id={inputId}
@@ -156,7 +203,7 @@ export function ComponentMapper({
     case 'text-input': {
       return (
         <FormGroup error={!!errorMsg}>
-          <Label htmlFor={inputId}>{label}</Label>
+          <Label htmlFor={inputId}>{label}{badges}</Label>
           {field.hint && <span className="usa-hint">{field.hint}</span>}
           {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
           <TextInput
@@ -176,7 +223,7 @@ export function ComponentMapper({
       const yearId = `${inputId}-year`;
       return (
         <FormGroup error={!!errorMsg}>
-          <Fieldset legend={label}>
+          <Fieldset legend={<>{label}{badges}</>}>
             {field.hint && <span className="usa-hint">{field.hint}</span>}
             {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
             <DateInputGroup>
@@ -220,7 +267,7 @@ export function ComponentMapper({
 
       return (
         <FormGroup error={!!errorMsg}>
-          <Fieldset legend={label}>
+          <Fieldset legend={<>{label}{badges}</>}>
             {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
             {options.map((opt) => (
               <Radio
@@ -247,7 +294,7 @@ export function ComponentMapper({
         : ENUM_OPTIONS[field.ref] ?? ENUM_OPTIONS[field.ref.split('.').pop() ?? ''] ?? [];
       return (
         <FormGroup error={!!errorMsg}>
-          <Label htmlFor={inputId}>{label}</Label>
+          <Label htmlFor={inputId}>{label}{badges}</Label>
           {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
           <Select
             id={inputId}
@@ -275,7 +322,7 @@ export function ComponentMapper({
         : ENUM_OPTIONS[field.ref] ?? ENUM_OPTIONS[field.ref.split('.').pop() ?? ''] ?? [];
       return (
         <FormGroup error={!!errorMsg}>
-          <Fieldset legend={label}>
+          <Fieldset legend={<>{label}{badges}</>}>
             {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
             {options.map((opt) => (
               <Checkbox

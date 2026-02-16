@@ -23,6 +23,7 @@ export interface EditorTab {
   filename: string;
   source: string;
   readOnly?: boolean;
+  group?: 'reference';
 }
 
 interface ContractPreviewProps {
@@ -116,17 +117,39 @@ export function ContractPreview({
     setShowSourceRaw(show);
   }, []);
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.id ?? '');
+  const [activeReferenceId, setActiveReferenceId] = useState('');
   const [scenarioSaveStatus, setScenarioSaveStatus] = useState<SaveStatus>('idle');
 
   // Auto-hide editor when Storybook switches to a narrow viewport (mobile/tablet),
   // and auto-show when reset. Only fires on transitions, so manual toggle still works.
   const isNarrowViewport = useViewportAutoHide(containerRef, setShowSource);
 
-  // Append the read-only Reference tab (never saved)
+  // Collect reference-group tabs and build a synthetic "Reference" top-level tab.
+  // The Syntax reference is always appended as the last reference sub-tab.
+  const referenceTabs = useMemo<EditorTab[]>(() => {
+    const grouped = tabs.filter((t) => t.group === 'reference');
+    return [
+      ...grouped,
+      { id: 'syntax', label: 'Syntax', filename: 'Form Contract Syntax', source: REFERENCE_CONTENT, readOnly: true, group: 'reference' },
+    ];
+  }, [tabs]);
+
+  // Top-level tabs: non-grouped tabs + a single "Reference" tab
+  const topLevelTabs = useMemo<EditorTab[]>(
+    () => tabs.filter((t) => !t.group),
+    [tabs],
+  );
+
+  // Initialize the active reference sub-tab
+  if (!activeReferenceId && referenceTabs.length > 0 && activeReferenceId !== referenceTabs[0].id) {
+    setActiveReferenceId(referenceTabs[0].id);
+  }
+
+  // All tabs for state tracking (top-level + all reference sub-tabs)
   const allTabs = useMemo<EditorTab[]>(() => [
-    ...tabs,
-    { id: 'reference', label: 'Reference', filename: 'Form Contract Syntax', source: REFERENCE_CONTENT, readOnly: true },
-  ], [tabs]);
+    ...topLevelTabs,
+    ...referenceTabs,
+  ], [topLevelTabs, referenceTabs]);
 
   // Per-tab state keyed by tab id
   const [tabStates, setTabStates] = useState<Record<string, TabState>>(() => {
@@ -156,8 +179,13 @@ export function ContractPreview({
     });
   }, [tabs.map((t) => t.source).join('\0')]);
 
-  const activeTab = allTabs.find((t) => t.id === activeTabId) ?? allTabs[0];
-  const state = tabStates[activeTabId];
+  const isReferenceActive = activeTabId === 'reference';
+  const activeTab = isReferenceActive
+    ? referenceTabs.find((t) => t.id === activeReferenceId) ?? referenceTabs[0]
+    : allTabs.find((t) => t.id === activeTabId) ?? allTabs[0];
+  const state = isReferenceActive
+    ? tabStates[activeReferenceId]
+    : tabStates[activeTabId];
 
   const handleChange = useCallback(
     (newSource: string) => {
@@ -358,7 +386,7 @@ export function ContractPreview({
   const canSaveScenario = showSaveScenarioButton && scenarioSaveStatus !== 'saving';
   const canUpdateScenario = isViewingScenario && anyDirty && allEditableValid && scenarioSaveStatus !== 'saving';
 
-  if (!state) return <>{children}</>;
+  if (!state && !isReferenceActive) return <>{children}</>;
 
   return (
     <div ref={containerRef} style={{ display: 'flex', gap: '1.5rem', height: '85vh' }}>
@@ -381,7 +409,7 @@ export function ContractPreview({
               padding: '0 0.5rem',
             }}
           >
-            {allTabs.map((tab) => {
+            {topLevelTabs.map((tab) => {
               const ts = tabStates[tab.id];
               return (
                 <button
@@ -398,6 +426,14 @@ export function ContractPreview({
                 </button>
               );
             })}
+            {referenceTabs.length > 0 && (
+              <button
+                onClick={() => setActiveTabId('reference')}
+                style={tabButtonStyle(isReferenceActive)}
+              >
+                Reference
+              </button>
+            )}
 
             {/* Right-side actions */}
             <div
@@ -504,8 +540,38 @@ export function ContractPreview({
             )}
           </div>
 
+          {/* Reference sub-selector */}
+          {isReferenceActive && (
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.25rem',
+                padding: '0.4rem 1rem 0',
+              }}
+            >
+              {referenceTabs.map((rt) => (
+                <button
+                  key={rt.id}
+                  onClick={() => setActiveReferenceId(rt.id)}
+                  style={{
+                    background: rt.id === activeReferenceId ? '#45475a' : 'transparent',
+                    border: '1px solid #585b70',
+                    color: rt.id === activeReferenceId ? '#cdd6f4' : '#888',
+                    borderRadius: '3px',
+                    padding: '1px 8px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {rt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Parse error banner */}
-          {!state.parseStatus.valid && (
+          {state && !state.parseStatus.valid && (
             <div
               style={{
                 background: '#45243a',
@@ -524,7 +590,7 @@ export function ContractPreview({
 
           {/* Editor */}
           <textarea
-            value={state.source}
+            value={state?.source ?? activeTab.source}
             onChange={(e) => handleChange(e.target.value)}
             readOnly={activeTab.readOnly}
             spellCheck={false}

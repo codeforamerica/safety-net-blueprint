@@ -1,0 +1,266 @@
+# Annotation metadata for the Application data model.
+# Maps Zod schema field paths to program requirements, statutes, and data sources.
+# Referenced by form stories to display program badges on fields.
+
+fields:
+  programsAppliedFor:
+    label: Programs Applied For
+    source: applicant
+    statute: "7 CFR 273.2 (SNAP); 42 CFR 435.907 (Medicaid)"
+
+  isExpedited:
+    label: Expedited Processing
+    source: applicant
+    statute: "7 CFR 273.2(i) (SNAP)"
+    programs:
+      SNAP: Required
+
+  household.members.firstName:
+    label: First Name
+    source: applicant
+    statute: "7 CFR 273.2(b) (SNAP); 42 CFR 435.907 (Medicaid); 20 CFR 416.305 (SSI)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+      TANF: Required
+      SSI: Required
+      WIC: Required
+      CHIP: Required
+      Section_8_Housing: Required
+      LIHEAP: Required
+      Summer_EBT: Required
+
+  household.members.lastName:
+    label: Last Name
+    source: applicant
+    statute: "7 CFR 273.2(b) (SNAP); 42 CFR 435.907 (Medicaid); 20 CFR 416.305 (SSI)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+      TANF: Required
+      SSI: Required
+      WIC: Required
+      CHIP: Required
+      Section_8_Housing: Required
+      LIHEAP: Required
+      Summer_EBT: Required
+
+  household.members.dateOfBirth:
+    label: Date of Birth
+    source: applicant
+    statute: "7 CFR 273.2(b) (SNAP); 42 CFR 435.911 (Medicaid); 20 CFR 416.305 (SSI)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+      TANF: Required
+      SSI: Required
+      WIC: Required
+      CHIP: Required
+      Section_8_Housing: Required
+      LIHEAP: Required
+      Summer_EBT: Required
+
+  household.members.ssn:
+    label: Social Security Number
+    source: applicant
+    statute: "7 CFR 273.6 (SNAP); 42 CFR 435.910 (Medicaid); 20 CFR 416.708 (SSI)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+      SSI: Required
+      CHIP: Required
+      Section_8_Housing: Required
+
+  household.members.gender:
+    label: Gender
+    source: applicant
+    statute: "42 CFR 435.907 (Medicaid)"
+    programs:
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+      WIC: Required
+
+  household.members.race:
+    label: Race
+    source: applicant
+    statute: "7 CFR 272.6 (SNAP); 42 CFR 435.907 (Medicaid)"
+    obbba: voluntary
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+
+  household.members.ethnicity:
+    label: Ethnicity
+    source: applicant
+    statute: "7 CFR 272.6 (SNAP); 42 CFR 435.907 (Medicaid)"
+    obbba: voluntary
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+
+  household.members.citizenshipStatus:
+    label: Citizenship Status
+    source: applicant
+    statute: "7 CFR 273.4 (SNAP); 42 CFR 435.406 (Medicaid); 8 USC 1611-1615"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+      TANF: Required
+      SSI: Required
+      CHIP: Required
+      Section_8_Housing: Required
+
+  household.members.relationshipToApplicant:
+    label: Relationship to Applicant
+    source: applicant
+    statute: "7 CFR 273.1 (SNAP); 42 CFR 435.603 (Medicaid MAGI)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      TANF: Required
+      Section_8_Housing: Required
+
+  household.members.maritalStatus:
+    label: Marital Status
+    source: applicant
+    statute: "42 CFR 435.603 (Medicaid MAGI); 20 CFR 416.1806 (SSI)"
+    programs:
+      Medicaid_MAGI: Required
+      SSI: Required
+
+  household.members.isPregnant:
+    label: Pregnancy Status
+    source: applicant
+    statute: "42 CFR 435.116 (Medicaid); 7 CFR 246.7 (WIC)"
+    programs:
+      Medicaid_MAGI: Required
+      WIC: Required
+      CHIP: Required
+
+  household.members.disabilityStatus:
+    label: Disability Status
+    source: applicant
+    statute: "20 CFR 416.905 (SSI); 7 CFR 273.1(a) (SNAP)"
+    programs:
+      SNAP: Required
+      Medicaid_NonMAGI: Required
+      SSI: Required
+
+  household.members.incomes.type:
+    label: Income Type
+    source: applicant
+    statute: "7 CFR 273.9 (SNAP); 42 CFR 435.603 (Medicaid MAGI)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      TANF: Required
+      SSI: Required
+      Section_8_Housing: Required
+
+  household.members.incomes.grossAmount:
+    label: Gross Income Amount
+    source: applicant
+    statute: "7 CFR 273.9 (SNAP); 42 CFR 435.603 (Medicaid MAGI); 20 CFR 416.1110 (SSI)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      TANF: Required
+      SSI: Required
+      Section_8_Housing: Required
+
+  household.members.assets.type:
+    label: Asset Type
+    source: applicant
+    statute: "7 CFR 273.8 (SNAP); 20 CFR 416.1201 (SSI)"
+    programs:
+      SNAP: Required
+      SSI: Required
+      Medicaid_NonMAGI: Required
+
+  household.members.assets.value:
+    label: Asset Value
+    source: applicant
+    statute: "7 CFR 273.8 (SNAP); 20 CFR 416.1201 (SSI)"
+    programs:
+      SNAP: Required
+      SSI: Required
+      Medicaid_NonMAGI: Required
+
+  household.size:
+    label: Household Size
+    source: applicant
+    statute: "7 CFR 273.1 (SNAP); 42 CFR 435.603 (Medicaid MAGI)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      TANF: Required
+      Section_8_Housing: Required
+      LIHEAP: Required
+
+  household.livingArrangement:
+    label: Living Arrangement
+    source: applicant
+    statute: "20 CFR 416.1132 (SSI); 24 CFR 982.401 (Section 8)"
+    programs:
+      SSI: Required
+      Section_8_Housing: Required
+
+  household.shelterCosts.rent:
+    label: Monthly Rent
+    source: applicant
+    statute: "7 CFR 273.9(d) (SNAP); 24 CFR 982.503 (Section 8)"
+    programs:
+      SNAP: Required
+      Section_8_Housing: Required
+      LIHEAP: Required
+
+  household.shelterCosts.mortgage:
+    label: Monthly Mortgage
+    source: applicant
+    statute: "7 CFR 273.9(d) (SNAP)"
+    programs:
+      SNAP: Required
+      LIHEAP: Required
+
+  household.utilityCosts.heating:
+    label: Heating Cost
+    source: applicant
+    statute: "7 CFR 273.9(d) (SNAP); 42 USC 8624 (LIHEAP)"
+    programs:
+      SNAP: Required
+      LIHEAP: Required
+
+  household.utilityCosts.electric:
+    label: Electric Cost
+    source: applicant
+    statute: "7 CFR 273.9(d) (SNAP); 42 USC 8624 (LIHEAP)"
+    programs:
+      SNAP: Required
+      LIHEAP: Required
+
+  consentToVerifyInformation:
+    label: Consent to Verify Information
+    source: applicant
+    statute: "7 CFR 273.2(f) (SNAP); 42 CFR 435.945 (Medicaid)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+
+  signatureOfApplicant:
+    label: Signature of Applicant
+    source: applicant
+    statute: "7 CFR 273.2(b)(3) (SNAP); 42 CFR 435.907(e) (Medicaid)"
+    programs:
+      SNAP: Required
+      Medicaid_MAGI: Required
+      Medicaid_NonMAGI: Required
+      TANF: Required
+      SSI: Required

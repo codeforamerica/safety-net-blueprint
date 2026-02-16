@@ -44,6 +44,8 @@ interface FieldArrayRendererProps {
   formValues: Record<string, unknown>;
   role: Role;
   permissionsPolicy?: PermissionsPolicy;
+  annotations?: Record<string, string[]>;
+  pagePrograms?: string[];
 }
 
 export function FieldArrayRenderer({
@@ -54,6 +56,8 @@ export function FieldArrayRenderer({
   formValues,
   role,
   permissionsPolicy,
+  annotations,
+  pagePrograms,
 }: FieldArrayRendererProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from contract
   const { fields: rows, append, remove } = useFieldArray({
@@ -119,6 +123,8 @@ export function FieldArrayRenderer({
                     errors={errors}
                     permission={subPermission}
                     value={get(formValues, qualifiedRef)}
+                    annotations={annotations}
+                    pagePrograms={pagePrograms}
                   />
                 </div>
               );

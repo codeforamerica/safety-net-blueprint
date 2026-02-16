@@ -3,6 +3,7 @@ form:
   title: Application Review
   schema: applications/ApplicationUpdate
   layout: review
+  annotations: [programs]
   storybook:
     role: caseworker
     permissions: caseworker
