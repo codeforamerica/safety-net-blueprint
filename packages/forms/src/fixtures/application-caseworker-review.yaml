@@ -1,0 +1,99 @@
+# Test data for Application Caseworker Review form.
+# Same scenario as intake: SNAP + Medicaid, 2-person household.
+
+applicationDate: "2026-02-15"
+programsAppliedFor:
+  - SNAP
+  - Medicaid_MAGI
+isExpedited: true
+
+household:
+  size: 2
+  purchasePrepareFoodTogether: true
+  livingArrangement: rent
+  isHomeless: false
+  physicalAddress:
+    street1: 742 Evergreen Terrace
+    city: Springfield
+    state: IL
+    county: Sangamon
+    zip: "62704"
+  mailingAddress:
+    street1: 742 Evergreen Terrace
+    city: Springfield
+    state: IL
+    zip: "62704"
+  shelterCosts:
+    rent: 1200
+    mortgage: 0
+    propertyTax: 0
+    insurance: 35
+  utilityCosts:
+    heating: 85
+    electric: 110
+    water: 45
+    telephone: 60
+  primaryContactPhone: "555-012-3456"
+  primaryContactEmail: maria.garcia@example.com
+  preferredLanguage: Spanish
+  members:
+    - firstName: Maria
+      middleName: Elena
+      lastName: Garcia
+      dateOfBirth: "1986-04-28"
+      ssn: "123-45-6789"
+      gender: female
+      race:
+        - white
+      ethnicity: hispanic_or_latino
+      relationshipToApplicant: self
+      maritalStatus: married
+      isApplicant: true
+      citizenshipStatus: permanent_resident
+      immigrationDocumentType: Green Card
+      immigrationDocumentNumber: ABC-123456
+      alienOrI94Number: I94-789012
+      immigrationDocumentExpiration: "2028-06-15"
+      isPregnant: false
+      disabilityStatus: false
+      employmentStatus: employed
+      incomes:
+        - type: wages
+          grossAmount: 2400
+          frequency: monthly
+          employerName: Springfield General Hospital
+      assets:
+        - type: checking_account
+          value: 1500
+          institutionName: First National Bank
+    - firstName: Carlos
+      lastName: Garcia
+      dateOfBirth: "1984-09-12"
+      ssn: "987-65-4321"
+      gender: male
+      race:
+        - white
+      ethnicity: hispanic_or_latino
+      relationshipToApplicant: spouse
+      maritalStatus: married
+      isApplicant: false
+      citizenshipStatus: citizen
+      isPregnant: false
+      disabilityStatus: false
+      employmentStatus: employed
+      incomes:
+        - type: wages
+          grossAmount: 1800
+          frequency: monthly
+          employerName: Kwik-E-Mart
+      assets:
+        - type: savings_account
+          value: 800
+          institutionName: First National Bank
+
+consentToVerifyInformation: true
+consentToShareData: true
+signatureOfApplicant: Maria Elena Garcia
+signatureDate: "2026-02-15"
+noticeDeliveryPreference: both
+accommodationNeeded: ""

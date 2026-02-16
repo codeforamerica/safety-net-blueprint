@@ -1,0 +1,350 @@
+form:
+  id: application-intake
+  title: Application Intake
+  schema: applications/ApplicationCreate
+  storybook:
+    role: applicant
+    permissions: applicant
+  pages:
+    # ── Page 1: Programs ────────────────────────────────────
+    - id: programs
+      title: Programs
+      fields:
+        - ref: programsAppliedFor
+          component: checkbox-group
+          hint: Select all programs you are applying for
+          labels:
+            SNAP: SNAP (Food Assistance)
+            Medicaid_MAGI: Medicaid (MAGI)
+            Medicaid_NonMAGI: Medicaid (Non-MAGI)
+            TANF: TANF (Cash Assistance)
+            SSI: SSI (Supplemental Security Income)
+            WIC: WIC (Women, Infants, Children)
+            CHIP: CHIP (Children's Health Insurance)
+            Section_8_Housing: Section 8 Housing
+            LIHEAP: LIHEAP (Energy Assistance)
+            Summer_EBT: Summer EBT
+        - ref: isExpedited
+          component: radio
+          hint: Do you need expedited processing?
+          labels:
+            "true": "Yes"
+            "false": "No"
+
+    # ── Page 2: Personal Information (primary applicant) ────
+    - id: personal-info
+      title: Personal Information
+      fields:
+        - ref: household.members.0.firstName
+          component: text-input
+          width: half
+          hint: Legal first name
+        - ref: household.members.0.middleName
+          component: text-input
+          width: half
+          hint: Middle name (optional)
+        - ref: household.members.0.lastName
+          component: text-input
+          width: half
+          hint: Legal last name
+        - ref: household.members.0.suffix
+          component: text-input
+          width: half
+          hint: Suffix (Jr., Sr., etc.)
+        - ref: household.members.0.dateOfBirth
+          component: date-input
+          hint: "For example: 4 28 1986"
+        - ref: household.members.0.ssn
+          component: text-input
+          hint: "XXX-XX-XXXX"
+          permissions:
+            reviewer: masked
+            applicant: editable
+            caseworker: editable
+        - ref: household.members.0.gender
+          component: radio
+        - ref: household.members.0.ethnicity
+          component: radio
+          labels:
+            hispanic_or_latino: Hispanic or Latino
+            not_hispanic_or_latino: Not Hispanic or Latino
+        - ref: household.members.0.race
+          component: checkbox-group
+
+    # ── Page 3: Household ───────────────────────────────────
+    - id: household-info
+      title: Household
+      fields:
+        - ref: household.size
+          component: text-input
+          hint: Total number of people in your household
+        - ref: household.livingArrangement
+          component: select
+        - ref: household.purchasePrepareFoodTogether
+          component: radio
+          hint: Does your household purchase and prepare food together?
+          labels:
+            "true": "Yes"
+            "false": "No"
+        - ref: household.isHomeless
+          component: radio
+          hint: Are you currently experiencing homelessness?
+          labels:
+            "true": "Yes"
+            "false": "No"
+        - ref: household.physicalAddress.street1
+          component: text-input
+          hint: Street address
+        - ref: household.physicalAddress.city
+          component: text-input
+          width: half
+        - ref: household.physicalAddress.state
+          component: text-input
+          width: half
+          hint: Two-letter state code
+        - ref: household.physicalAddress.county
+          component: text-input
+          width: half
+        - ref: household.physicalAddress.zip
+          component: text-input
+          width: half
+          hint: 5-digit ZIP code
+        - ref: household.mailingAddress.street1
+          component: text-input
+          hint: Mailing address (if different)
+        - ref: household.mailingAddress.city
+          component: text-input
+          width: half
+        - ref: household.mailingAddress.state
+          component: text-input
+          width: half
+        - ref: household.mailingAddress.zip
+          component: text-input
+          width: half
+        - ref: household.primaryContactPhone
+          component: text-input
+          width: half
+        - ref: household.primaryContactEmail
+          component: text-input
+          width: half
+        - ref: household.preferredLanguage
+          component: text-input
+          width: half
+          hint: Preferred spoken language
+
+    # ── Page 4: Household Members ───────────────────────────
+    - id: household-members
+      title: Household Members
+      fields:
+        - ref: household.members
+          component: field-array
+          hint: List all people in your household (including yourself)
+          min_items: 1
+          max_items: 10
+          fields:
+            - ref: firstName
+              component: text-input
+              width: half
+            - ref: lastName
+              component: text-input
+              width: half
+            - ref: dateOfBirth
+              component: date-input
+            - ref: relationshipToApplicant
+              component: select
+              labels:
+                self: Self
+                spouse: Spouse
+                child: Child
+                parent: Parent
+                sibling: Sibling
+                other: Other
+            - ref: citizenshipStatus
+              component: select
+            - ref: immigrationDocumentType
+              component: text-input
+              width: half
+              show_when:
+                field: citizenshipStatus
+                not_equals: citizen
+            - ref: immigrationDocumentNumber
+              component: text-input
+              width: half
+              show_when:
+                field: citizenshipStatus
+                not_equals: citizen
+            - ref: alienOrI94Number
+              component: text-input
+              width: half
+              show_when:
+                field: citizenshipStatus
+                not_equals: citizen
+            - ref: immigrationDocumentExpiration
+              component: date-input
+              show_when:
+                field: citizenshipStatus
+                not_equals: citizen
+
+    # ── Page 5: Income ──────────────────────────────────────
+    - id: income
+      title: Income
+      fields:
+        - ref: household.members
+          component: field-array
+          hint: Report income for each household member
+          min_items: 1
+          max_items: 10
+          fields:
+            - ref: firstName
+              component: text-input
+              width: half
+            - ref: lastName
+              component: text-input
+              width: half
+            - ref: incomes
+              component: field-array
+              hint: Add each source of income
+              min_items: 0
+              max_items: 10
+              fields:
+                - ref: type
+                  component: select
+                  labels:
+                    wages: Wages / Salary
+                    self_employment: Self-Employment
+                    social_security: Social Security
+                    ssi: SSI
+                    unemployment: Unemployment
+                    child_support: Child Support
+                    alimony: Alimony
+                    pension: Pension
+                    veterans_benefits: Veterans Benefits
+                    workers_comp: Workers Compensation
+                    rental_income: Rental Income
+                    interest_dividends: Interest / Dividends
+                    other: Other
+                - ref: grossAmount
+                  component: text-input
+                  width: half
+                  hint: Gross amount before deductions
+                - ref: frequency
+                  component: select
+                  width: half
+                  labels:
+                    weekly: Weekly
+                    biweekly: Bi-weekly
+                    monthly: Monthly
+                    quarterly: Quarterly
+                    annually: Annually
+                - ref: employerName
+                  component: text-input
+                  hint: Name of employer or income source
+
+    # ── Page 6: Assets ──────────────────────────────────────
+    - id: assets
+      title: Assets
+      fields:
+        - ref: household.members
+          component: field-array
+          hint: Report assets for each household member
+          min_items: 1
+          max_items: 10
+          fields:
+            - ref: firstName
+              component: text-input
+              width: half
+            - ref: lastName
+              component: text-input
+              width: half
+            - ref: assets
+              component: field-array
+              hint: Add each asset
+              min_items: 0
+              max_items: 20
+              fields:
+                - ref: type
+                  component: select
+                  labels:
+                    checking_account: Checking Account
+                    savings_account: Savings Account
+                    cash: Cash on Hand
+                    stocks_bonds: Stocks / Bonds
+                    vehicle: Vehicle
+                    real_estate: Real Estate
+                    retirement_account: Retirement Account
+                    life_insurance: Life Insurance
+                    burial_fund: Burial Fund
+                    other: Other
+                - ref: value
+                  component: text-input
+                  width: half
+                  hint: Current value
+                - ref: institutionName
+                  component: text-input
+                  width: half
+                  hint: Financial institution name
+
+    # ── Page 7: Expenses ────────────────────────────────────
+    - id: expenses
+      title: Expenses
+      fields:
+        - ref: household.shelterCosts.rent
+          component: text-input
+          width: half
+          hint: Monthly rent
+        - ref: household.shelterCosts.mortgage
+          component: text-input
+          width: half
+          hint: Monthly mortgage payment
+        - ref: household.shelterCosts.propertyTax
+          component: text-input
+          width: half
+          hint: Monthly property tax
+        - ref: household.shelterCosts.insurance
+          component: text-input
+          width: half
+          hint: Monthly homeowner's/renter's insurance
+        - ref: household.utilityCosts.heating
+          component: text-input
+          width: half
+          hint: Monthly heating cost
+        - ref: household.utilityCosts.electric
+          component: text-input
+          width: half
+          hint: Monthly electric cost
+        - ref: household.utilityCosts.water
+          component: text-input
+          width: half
+          hint: Monthly water cost
+        - ref: household.utilityCosts.telephone
+          component: text-input
+          width: half
+          hint: Monthly telephone cost
+
+    # ── Page 8: Review & Sign ───────────────────────────────
+    - id: review-sign
+      title: Review & Sign
+      fields:
+        - ref: consentToVerifyInformation
+          component: radio
+          hint: I consent to verification of the information provided
+          labels:
+            "true": "Yes, I consent"
+            "false": "No"
+        - ref: consentToShareData
+          component: radio
+          hint: I consent to share my data with relevant agencies
+          labels:
+            "true": "Yes, I consent"
+            "false": "No"
+        - ref: signatureOfApplicant
+          component: text-input
+          hint: Type your full legal name as signature
+        - ref: signatureDate
+          component: date-input
+          hint: Date of signature
+        - ref: noticeDeliveryPreference
+          component: select
+        - ref: accommodationNeeded
+          component: text-input
+          hint: Describe any accommodations you need

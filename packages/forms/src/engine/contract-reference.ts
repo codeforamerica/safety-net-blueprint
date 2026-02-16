@@ -5,7 +5,7 @@ export const REFERENCE_CONTENT = `\
 form:
   id: my-form
   title: My Form
-  schema: persons/PersonCreate    # Zod schema used for validation (via zodResolver)
+  schema: applications/ApplicationCreate  # Zod schema used for validation (via zodResolver)
   layout: wizard                  # wizard (multi-page) | review (accordion)
   pages:
     - id: basic-info
@@ -15,7 +15,7 @@ form:
 
 # ── Field Definition ──────────────────────────────────────
 
-- ref: name.firstName             # dot-path into the data model
+- ref: household.members.0.firstName  # dot-path into the data model
   component: text-input           # text-input | date-input | radio | select | checkbox-group
   width: half                     # full (default) | half | third | two-thirds
   hint: Legal first name          # helper text below the label
@@ -24,14 +24,14 @@ form:
 # Override the display text for enum values.
 # Keys are the raw enum values; values are what the user sees.
 
-- ref: citizenshipInfo.status
+- ref: household.members.citizenshipStatus
   component: select
   labels:                           # works with any enum values
     citizen: U.S. Citizen
     permanent_resident: Permanent Resident
-    non_citizen: Non-Citizen
+    qualified_non_citizen: Qualified Non-Citizen
 
-- ref: demographicInfo.isHispanicOrLatino
+- ref: consentToVerifyInformation
   component: radio
   labels:
     "true": "Yes"                   # quotes required — without them YAML
@@ -39,7 +39,7 @@ form:
 
 # ── Inline Permissions (per-field, per-role) ──────────────
 
-- ref: socialSecurityNumber
+- ref: household.members.0.ssn
   component: text-input
   permissions:
     applicant: editable           # editable | read-only | masked | hidden
@@ -73,25 +73,25 @@ form:
 
 # ── Conditional Visibility: Simple ────────────────────────
 
-- ref: citizenshipInfo.immigrationInfo.documentType
+- ref: household.members.immigrationDocumentType
   component: text-input
   show_when:
-    field: citizenshipInfo.status
+    field: citizenshipStatus
     not_equals: citizen           # equals | not_equals
 
 # ── Conditional Visibility: JSON Logic (compound) ─────────
 
-- ref: citizenshipInfo.immigrationInfo.sponsor.name.firstName
+- ref: household.members.immigrationDocumentNumber
   component: text-input
   show_when:
     jsonlogic:
       and:
         - "!=":
-            - var: citizenshipInfo.status
+            - var: citizenshipStatus
             - citizen
-        - "==":
-            - var: citizenshipInfo.immigrationInfo.hasSponsor
-            - "true"
+        - "!=":
+            - var: immigrationDocumentType
+            - ""
 
 # ── Permissions Policy ────────────────────────────────────
 # (Permissions tab)
@@ -104,14 +104,19 @@ fields:                           # per-field overrides
 # ── Test Data ─────────────────────────────────────────────
 # (Test Data tab — mirrors the data model)
 
-name:
-  firstName: Jane
-  lastName: Doe
-dateOfBirth: "1990-01-15"         # ISO 8601: YYYY-MM-DD
-socialSecurityNumber: "123-45-6789"
-demographicInfo:
-  sex: female                     # from Zod enum
-  race:                           # array for checkbox-group
-    - white
-    - asian
+programsAppliedFor:
+  - SNAP
+  - Medicaid_MAGI
+household:
+  size: 2
+  livingArrangement: rent
+  members:
+    - firstName: Jane
+      lastName: Doe
+      dateOfBirth: "1990-01-15"     # ISO 8601: YYYY-MM-DD
+      ssn: "123-45-6789"
+      gender: female                # from Zod enum
+      race:                         # array for checkbox-group
+        - white
+        - asian
 `;

@@ -9,7 +9,6 @@
  *   Contract:    src/contracts/{name}.yaml
  *   Fixtures:    src/fixtures/{name}.yaml
  *   Permissions: src/permissions/{storybook.permissions}.yaml
- *   Schema YAML: packages/contracts/{domain}-openapi.yaml  (derived from form.schema)
  *   Zod schema:  src/schemas/{domain}.ts  (exports {schemaName}Schema)
  *   Story file:  src/stories/{PascalCase}.stories.tsx
  *   Scenarios:   src/scenarios/{contract-id}.{scenario-name}/  (directory with test-data, permissions, layout YAMLs)
@@ -46,10 +45,9 @@ function toCamelCase(kebab) {
  */
 function parseSchemaRef(schemaRef) {
   const [domain, schemaName] = schemaRef.split('/');
-  const openapiFile = `${domain}-openapi.yaml`;
   const zodImport = toCamelCase(schemaName) + 'Schema';
   const zodModule = domain.replace(/s$/, '');
-  return { domain, schemaName, openapiFile, zodImport, zodModule };
+  return { domain, schemaName, zodImport, zodModule };
 }
 
 /**
@@ -83,7 +81,7 @@ function discoverScenarios(contractId) {
 function generateWizardStory(contract) {
   const { id, title, pages, schema } = contract.form;
   const { role, permissions } = contract.form.storybook;
-  const { openapiFile, zodImport, zodModule } = parseSchemaRef(schema);
+  const { zodImport, zodModule } = parseSchemaRef(schema);
   const pascalName = toPascalCase(id);
 
   return `// Auto-generated from contracts/${id}.yaml. Run \`npm run generate:stories\` to regenerate.
@@ -103,8 +101,8 @@ import fixturesYaml from '../fixtures/${id}.yaml?raw';
 // Permissions
 import permsData from '../permissions/${permissions}.yaml';
 import permsYaml from '../permissions/${permissions}.yaml?raw';
-// Schema (read-only, from contracts package)
-import schemaYaml from '../../../contracts/${openapiFile}?raw';
+// Schema (read-only Zod source)
+import schemaSource from '../schemas/${zodModule}.ts?raw';
 
 const typedContract = contract as unknown as FormContract;
 const typedFixtures = fixtures as unknown as Record<string, unknown>;
@@ -128,10 +126,10 @@ function StoryWrapper() {
   const [perms, setPerms] = useState(typedPerms);
 
   const tabs: EditorTab[] = [
-    { id: 'test-data', label: 'Test Data', filename: 'fixtures/${id}.yaml', source: fixturesYaml },
     { id: 'layout', label: 'Layout', filename: '${id}.yaml', source: layoutYaml },
+    { id: 'test-data', label: 'Test Data', filename: 'fixtures/${id}.yaml', source: fixturesYaml },
     { id: 'permissions', label: 'Permissions', filename: 'permissions/${permissions}.yaml', source: permsYaml },
-    { id: 'schema', label: 'Schema', filename: '${openapiFile}', source: schemaYaml, readOnly: true },
+    { id: 'schema', label: 'Schema', filename: 'schemas/${zodModule}.ts', source: schemaSource, readOnly: true },
   ];
 
   return (
@@ -170,7 +168,7 @@ export const ${pascalName}: StoryObj = {
 function generateReviewStory(contract) {
   const { id, title, schema } = contract.form;
   const { role, permissions } = contract.form.storybook;
-  const { openapiFile, zodImport, zodModule } = parseSchemaRef(schema);
+  const { zodImport, zodModule } = parseSchemaRef(schema);
   const pascalName = toPascalCase(id);
 
   return `// Auto-generated from contracts/${id}.yaml. Run \`npm run generate:stories\` to regenerate.
@@ -190,8 +188,8 @@ import fixturesYaml from '../fixtures/${id}.yaml?raw';
 // Permissions
 import permsData from '../permissions/${permissions}.yaml';
 import permsYaml from '../permissions/${permissions}.yaml?raw';
-// Schema (read-only, from contracts package)
-import schemaYaml from '../../../contracts/${openapiFile}?raw';
+// Schema (read-only Zod source)
+import schemaSource from '../schemas/${zodModule}.ts?raw';
 
 const typedContract = contract as unknown as FormContract;
 const typedFixtures = fixtures as unknown as Record<string, unknown>;
@@ -215,10 +213,10 @@ function StoryWrapper() {
   const [perms, setPerms] = useState(typedPerms);
 
   const tabs: EditorTab[] = [
-    { id: 'test-data', label: 'Test Data', filename: 'fixtures/${id}.yaml', source: fixturesYaml },
     { id: 'layout', label: 'Layout', filename: '${id}.yaml', source: layoutYaml },
+    { id: 'test-data', label: 'Test Data', filename: 'fixtures/${id}.yaml', source: fixturesYaml },
     { id: 'permissions', label: 'Permissions', filename: 'permissions/${permissions}.yaml', source: permsYaml },
-    { id: 'schema', label: 'Schema', filename: '${openapiFile}', source: schemaYaml, readOnly: true },
+    { id: 'schema', label: 'Schema', filename: 'schemas/${zodModule}.ts', source: schemaSource, readOnly: true },
   ];
 
   return (
@@ -257,7 +255,7 @@ function generateScenarioStory(contract, scenarioName) {
   const { id, title, schema } = contract.form;
   const layout = contract.form.layout || 'wizard';
   const { role } = contract.form.storybook;
-  const { openapiFile, zodImport, zodModule } = parseSchemaRef(schema);
+  const { zodImport, zodModule } = parseSchemaRef(schema);
 
   const scenarioDisplayName = scenarioName.replace(/-/g, ' ');
 
@@ -278,8 +276,8 @@ import scenarioFixtures from './test-data.yaml';
 import scenarioFixturesYaml from './test-data.yaml?raw';
 import scenarioPerms from './permissions.yaml';
 import scenarioPermsYaml from './permissions.yaml?raw';
-// Schema (read-only, from contracts package)
-import schemaYaml from '../../../../contracts/${openapiFile}?raw';
+// Schema (read-only Zod source)
+import schemaSource from '../../schemas/${zodModule}.ts?raw';
 
 const typedContract = scenarioLayout as unknown as FormContract;
 const typedFixtures = scenarioFixtures as unknown as Record<string, unknown>;
@@ -309,10 +307,10 @@ function StoryWrapper(${layout === 'wizard' ? `{
   const [perms, setPerms] = useState(typedPerms);
 
   const tabs: EditorTab[] = [
-    { id: 'test-data', label: 'Test Data', filename: 'scenarios/${id}.${scenarioName}/test-data.yaml', source: scenarioFixturesYaml },
     { id: 'layout', label: 'Layout', filename: 'scenarios/${id}.${scenarioName}/layout.yaml', source: scenarioLayoutYaml },
+    { id: 'test-data', label: 'Test Data', filename: 'scenarios/${id}.${scenarioName}/test-data.yaml', source: scenarioFixturesYaml },
     { id: 'permissions', label: 'Permissions', filename: 'scenarios/${id}.${scenarioName}/permissions.yaml', source: scenarioPermsYaml },
-    { id: 'schema', label: 'Schema', filename: '${openapiFile}', source: schemaYaml, readOnly: true },
+    { id: 'schema', label: 'Schema', filename: 'schemas/${zodModule}.ts', source: schemaSource, readOnly: true },
   ];
 
   return (

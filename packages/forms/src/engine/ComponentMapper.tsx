@@ -56,14 +56,34 @@ function maskValue(value: unknown): string {
   return str.slice(0, -4).replace(/./g, '*') + str.slice(-4);
 }
 
-// Schema-derived options for enum fields
+// Schema-derived options for enum fields.
+// Keys are the last segment of the field ref (matches qualified refs via fallback).
 const ENUM_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  'demographicInfo.sex': [
+  programsAppliedFor: [
+    { value: 'SNAP', label: 'SNAP (Food Assistance)' },
+    { value: 'Medicaid_MAGI', label: 'Medicaid (MAGI)' },
+    { value: 'Medicaid_NonMAGI', label: 'Medicaid (Non-MAGI)' },
+    { value: 'TANF', label: 'TANF (Cash Assistance)' },
+    { value: 'SSI', label: 'SSI (Supplemental Security Income)' },
+    { value: 'WIC', label: 'WIC (Women, Infants, Children)' },
+    { value: 'CHIP', label: "CHIP (Children's Health Insurance)" },
+    { value: 'Section_8_Housing', label: 'Section 8 Housing' },
+    { value: 'LIHEAP', label: 'LIHEAP (Energy Assistance)' },
+    { value: 'Summer_EBT', label: 'Summer EBT' },
+  ],
+  gender: [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
     { value: 'unknown', label: 'Unknown' },
   ],
-  'demographicInfo.maritalStatus': [
+  race: [
+    { value: 'american_indian_alaskan_native', label: 'American Indian or Alaska Native' },
+    { value: 'asian', label: 'Asian' },
+    { value: 'black_african_american', label: 'Black or African American' },
+    { value: 'native_hawaiian_pacific_islander', label: 'Native Hawaiian or Pacific Islander' },
+    { value: 'white', label: 'White' },
+  ],
+  maritalStatus: [
     { value: 'single', label: 'Single' },
     { value: 'married', label: 'Married' },
     { value: 'divorced', label: 'Divorced' },
@@ -72,19 +92,32 @@ const ENUM_OPTIONS: Record<string, { value: string; label: string }[]> = {
     { value: 'civil_union', label: 'Civil Union' },
     { value: 'domestic_partnership', label: 'Domestic Partnership' },
   ],
-  'demographicInfo.race': [
-    { value: 'american_indian_alaskan_native', label: 'American Indian or Alaska Native' },
-    { value: 'asian', label: 'Asian' },
-    { value: 'black_african_american', label: 'Black or African American' },
-    { value: 'native_hawaiian_pacific_islander', label: 'Native Hawaiian or Pacific Islander' },
-    { value: 'white', label: 'White' },
-  ],
-  'citizenshipInfo.status': [
+  citizenshipStatus: [
     { value: 'citizen', label: 'U.S. Citizen' },
     { value: 'permanent_resident', label: 'Permanent Resident' },
     { value: 'qualified_non_citizen', label: 'Qualified Non-Citizen' },
     { value: 'undocumented', label: 'Undocumented' },
     { value: 'other', label: 'Other' },
+  ],
+  relationshipToApplicant: [
+    { value: 'self', label: 'Self' },
+    { value: 'spouse', label: 'Spouse' },
+    { value: 'child', label: 'Child' },
+    { value: 'parent', label: 'Parent' },
+    { value: 'sibling', label: 'Sibling' },
+    { value: 'other', label: 'Other' },
+  ],
+  livingArrangement: [
+    { value: 'own', label: 'Own' },
+    { value: 'rent', label: 'Rent' },
+    { value: 'homeless', label: 'Homeless' },
+    { value: 'living_with_others', label: 'Living with Others' },
+    { value: 'other', label: 'Other' },
+  ],
+  noticeDeliveryPreference: [
+    { value: 'mail', label: 'Mail' },
+    { value: 'email', label: 'Email' },
+    { value: 'both', label: 'Both' },
   ],
 };
 
