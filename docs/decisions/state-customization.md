@@ -203,7 +203,7 @@ The `safety-net-resolve` CLI handles both overlay customizations and environment
     "validate": "safety-net-validate --specs ./resolved",
     "mock:start": "safety-net-mock --specs ./resolved",
     "swagger": "safety-net-swagger --specs ./resolved",
-    "clients:generate": "safety-net-clients --specs ./resolved --out ./clients",
+    "clients:typescript": "safety-net-clients --specs ./resolved --out ./clients",
     "postman": "safety-net-postman --specs ./resolved --out ./postman",
     "test": "safety-net-test --specs ./resolved",
     "design:reference": "safety-net-design-reference --specs ./resolved --out ./docs"

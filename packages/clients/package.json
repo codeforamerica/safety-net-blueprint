@@ -4,18 +4,19 @@
   "description": "Generated API clients and collections for Safety Net APIs",
   "type": "module",
   "bin": {
-    "safety-net-generate-clients": "./scripts/generate-clients.js"
+    "safety-net-generate-clients": "./scripts/generate-clients-typescript.js",
+    "safety-net-generate-json-schema": "./scripts/generate-clients-json-schema.js"
   },
   "scripts": {
-    "generate": "node scripts/generate-clients.js",
-    "postman": "node scripts/generate-postman.js"
+    "typescript": "node scripts/generate-clients-typescript.js",
+    "json-schema": "node scripts/generate-clients-json-schema.js",
+    "postman": "node scripts/generate-postman.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "@safety-net/contracts": "*",
-    "js-yaml": "^4.1.0"
-  },
-  "devDependencies": {
+    "js-yaml": "^4.1.0",
     "@hey-api/openapi-ts": "^0.90.3",
     "typescript": "^5.3.3"
   }

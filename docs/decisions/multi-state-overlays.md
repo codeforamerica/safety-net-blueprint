@@ -342,7 +342,7 @@ npm run validate:all-states
 STATE=california npm start
 
 # Generate California-specific TypeScript client
-STATE=california npm run clients:generate
+STATE=california npm run clients:typescript
 ```
 
 ---

@@ -102,7 +102,7 @@ npm install -w @safety-net/contracts -w @safety-net/mock-server
 | Example files | `{domain}-openapi-examples.yaml` | `case-workers-openapi-examples.yaml` |
 | Component schemas | kebab-case in `components/` | `components/common.yaml` |
 | Overlay files | `overlays/{state}/modifications.yaml` | `overlays/california/modifications.yaml` |
-| Scripts | kebab-case | `generate-clients.js` |
+| Scripts | kebab-case | `generate-clients-typescript.js` |
 | Tests | kebab-case + `.test` | `overlay-resolver.test.js` |
 
 ### OpenAPI Elements

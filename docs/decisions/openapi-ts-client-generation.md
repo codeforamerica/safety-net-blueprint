@@ -293,6 +293,7 @@ const response = await getPerson({ path: { personId: '123' }, client });
 - **Generated code warnings** — Some TS errors in `client.gen.ts` (suppressed with `noEmitOnError: false`)
 - **Larger output** — Separate type and Zod files vs. combined
 - **Migration effort** — Consumers must update import paths
+- **Zod `additionalProperties` gap** — Schemas with both named properties and `additionalProperties: true` generate `z.object()` without `.passthrough()`, silently stripping extra properties. See [known limitations](../reference/known-limitations.md).
 
 ### Mitigations
 

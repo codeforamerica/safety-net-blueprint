@@ -65,17 +65,21 @@ npm run validate:patterns
 
 ### `npm run overlay:resolve`
 
-Resolves the overlay for the current STATE, writing to `openapi/resolved/`.
+Resolves overlays against base specs, producing resolved specifications. Pass arguments after `--`.
 
-Without STATE set, lists available states:
+Copy base specs unchanged (no overlay):
 ```bash
-npm run overlay:resolve
-# Output: Available states: <lists all configured states>
+npm run overlay:resolve -- --base=packages/contracts --out=packages/contracts/resolved
 ```
 
-With STATE set:
+Apply a state overlay:
 ```bash
-STATE=<your-state> npm run overlay:resolve
+npm run overlay:resolve -- --base=packages/contracts --overlays=packages/contracts/overlays/example --out=packages/contracts/resolved
+```
+
+See all flags:
+```bash
+npm run overlay:resolve -- --help
 ```
 
 ## Generation Commands

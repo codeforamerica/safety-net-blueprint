@@ -108,7 +108,6 @@ Edit `scripts/validate-patterns.js` to modify custom rules.
 
 Validation runs automatically during:
 - `npm run mock:setup`
-- `npm run clients:generate`
 - `npm run postman:generate`
 
 Skip with `SKIP_VALIDATION=true`.
