@@ -3,9 +3,9 @@
  * Handles loading specs and seeding databases
  */
 
-import { loadAllSpecs, discoverApiSpecs } from '@safety-net/contracts/loader';
+import { loadAllSpecs, discoverApiSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { seedAllDatabases } from './seeder.js';
-import { validateAll, getValidationStatus } from '@safety-net/contracts/validation';
+import { validateAll, getValidationStatus } from '@codeforamerica/safety-net-blueprint-contracts/validation';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 

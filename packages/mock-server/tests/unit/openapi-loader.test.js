@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { discoverApiSpecs, loadSpec, extractMetadata } from '@safety-net/contracts/loader';
+import { discoverApiSpecs, loadSpec, extractMetadata } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 

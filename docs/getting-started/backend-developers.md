@@ -30,7 +30,7 @@ The toolkit provides base specs, scripts, and a mock server as npm packages. Sta
 ```bash
 mkdir my-state-apis && cd my-state-apis
 npm init -y
-npm install @safety-net/contracts @safety-net/mock-server @safety-net/clients
+npm install @codeforamerica/safety-net-blueprint-contracts @codeforamerica/safety-net-blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
 ```
 
 See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup process, including overlays, resolved specs, and CI pipeline configuration.
@@ -53,9 +53,9 @@ npm run validate
 
 | Package | Description | CLIs |
 |---------|-------------|------|
-| `@safety-net/contracts` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
-| `@safety-net/mock-server` | Mock API server and Swagger UI for development | `safety-net-mock`, `safety-net-swagger` |
-| `@safety-net/clients` | Postman collection and TypeScript client generation | — |
+| `@codeforamerica/safety-net-blueprint-contracts` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
+| `@codeforamerica/safety-net-blueprint-mock-server` | Mock API server and Swagger UI for development | `safety-net-mock`, `safety-net-swagger` |
+| `@codeforamerica/safety-net-blueprint-clients` | Postman collection and TypeScript client generation | — |
 
 States install these packages, apply overlays to customize for state-specific needs, and point the CLIs at their resolved specs.
 

@@ -36,7 +36,7 @@ npm run validate
 
 ### 2. Spectral Linting
 
-Run from the schemas package: `npm run validate:lint -w @safety-net/contracts`
+Run from the schemas package: `npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts`
 
 HTTP method rules:
 - POST must return 201

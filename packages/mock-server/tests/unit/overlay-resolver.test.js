@@ -14,7 +14,7 @@ import {
   checkPathExists,
   rootExists,
   applyOverlay
-} from '@safety-net/contracts/overlay';
+} from '@codeforamerica/safety-net-blueprint-contracts/overlay';
 
 test('Overlay Resolver Tests', async (t) => {
 

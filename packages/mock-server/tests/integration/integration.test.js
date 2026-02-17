@@ -10,7 +10,7 @@
 import http from 'http';
 import { URL } from 'url';
 import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
-import { discoverApiSpecs, getExamplesPath } from '@safety-net/contracts/loader';
+import { discoverApiSpecs, getExamplesPath } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { clearAll } from '../../src/database-manager.js';
 import { seedDatabase } from '../../src/seeder.js';
 import { readFileSync, existsSync } from 'fs';

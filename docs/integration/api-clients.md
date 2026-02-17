@@ -4,7 +4,7 @@
 
 Generated TypeScript SDK functions and Zod schemas for type-safe API consumption.
 
-The `@safety-net/clients` package generates typed clients from resolved OpenAPI specs. States build client packages from their resolved specs (base + overlays) and consume them locally or publish under their own package name.
+The `@codeforamerica/safety-net-blueprint-clients` package generates typed clients from resolved OpenAPI specs. States build client packages from their resolved specs (base + overlays) and consume them locally or publish under their own package name.
 
 > **Note:** Client generation currently covers REST APIs (CRUD operations). As RPC endpoints are added via behavioral contracts (state machines), the generated clients will include those operations as well. See the [Frontend Developer Guide](../getting-started/frontend-developers.md) for the full API surface including RPC and event streams.
 
@@ -26,7 +26,7 @@ This generates a complete npm package in `packages/clients/dist-packages/<your-s
 
 ### In a state repository
 
-States install `@safety-net/clients` and generate clients from their resolved specs. See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup.
+States install `@codeforamerica/safety-net-blueprint-clients` and generate clients from their resolved specs. See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup.
 
 ## Package Structure
 
@@ -379,9 +379,9 @@ Check your state's overlay file (in this repo: `packages/contracts/overlays/<you
 
 ## Updating Clients
 
-When the base specs (`@safety-net/contracts`) are updated:
+When the base specs (`@codeforamerica/safety-net-blueprint-contracts`) are updated:
 
-1. Update the dependency: `npm install @safety-net/contracts@<new-version>`
+1. Update the dependency: `npm install @codeforamerica/safety-net-blueprint-contracts@<new-version>`
 2. Re-resolve overlays: `npm run resolve`
 3. Regenerate clients from the updated resolved specs
 4. Check the changelog for breaking changes to schema fields or API endpoints

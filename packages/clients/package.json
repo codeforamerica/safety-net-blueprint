@@ -1,21 +1,37 @@
 {
-  "name": "@safety-net/clients",
+  "name": "@codeforamerica/safety-net-blueprint-clients",
   "version": "1.0.0",
   "description": "Generated API clients and collections for Safety Net APIs",
   "type": "module",
+  "files": [
+    "scripts/"
+  ],
   "bin": {
     "safety-net-generate-clients": "./scripts/generate-clients-typescript.js",
     "safety-net-generate-json-schema": "./scripts/generate-clients-json-schema.js"
   },
   "scripts": {
+    "prepack": "node ../../scripts/build-package-readme.js",
     "typescript": "node scripts/generate-clients-typescript.js",
     "json-schema": "node scripts/generate-clients-json-schema.js",
     "postman": "node scripts/generate-postman.js",
     "test": "node --test tests/*.test.js"
   },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "directory": "packages/clients"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
-    "@safety-net/contracts": "*",
+    "@codeforamerica/safety-net-blueprint-contracts": "^1.0.0",
     "js-yaml": "^4.1.0",
     "@hey-api/openapi-ts": "^0.90.3",
     "typescript": "^5.3.3"

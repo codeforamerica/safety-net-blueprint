@@ -1,5 +1,5 @@
 {
-  "name": "@safety-net/contracts",
+  "name": "@codeforamerica/safety-net-blueprint-contracts",
   "version": "1.0.0",
   "description": "Behavioral contracts, OpenAPI specs, validation, and overlay resolution for Safety Net APIs",
   "type": "module",
@@ -23,7 +23,7 @@
     "./patterns": "./src/validation/pattern-validator.js"
   },
   "scripts": {
-    "prepack": "npm run design:reference",
+    "prepack": "npm run design:reference && node ../../scripts/build-package-readme.js",
     "test": "node --test tests/unit/*.test.js",
     "validate": "npm run validate:syntax && npm run validate:patterns",
     "validate:syntax": "node scripts/validate-openapi.js --specs=.",
@@ -38,6 +38,18 @@
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
     "js-yaml": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "directory": "packages/contracts"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@stoplight/spectral-cli": "^6.15.0"

@@ -76,9 +76,9 @@ safety-net-blueprint/
 
 | Package | Purpose | Key Dependencies |
 |---------|---------|------------------|
-| `@safety-net/contracts` | OpenAPI specs, validation, overlay resolution | `js-yaml`, `ajv` |
-| `@safety-net/mock-server` | Mock API server for development | `express`, `better-sqlite3` |
-| `@safety-net/clients` | Generate TypeScript SDK packages | `@hey-api/openapi-ts`, `zod` |
+| `@codeforamerica/safety-net-blueprint-contracts` | OpenAPI specs, validation, overlay resolution | `js-yaml`, `ajv` |
+| `@codeforamerica/safety-net-blueprint-mock-server` | Mock API server for development | `express`, `better-sqlite3` |
+| `@codeforamerica/safety-net-blueprint-clients` | Generate TypeScript SDK packages | `@hey-api/openapi-ts`, `zod` |
 
 ### CI/CD Usage
 
@@ -86,10 +86,10 @@ Install only what you need:
 
 ```bash
 # Client generation only
-npm install -w @safety-net/contracts -w @safety-net/clients
+npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica/safety-net-blueprint-clients
 
 # Mock server only
-npm install -w @safety-net/contracts -w @safety-net/mock-server
+npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica/safety-net-blueprint-mock-server
 ```
 
 ## Naming Conventions

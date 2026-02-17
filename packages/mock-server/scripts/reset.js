@@ -5,7 +5,7 @@
 
 import { resolve } from 'path';
 import { performSetup, displaySetupSummary } from '../src/setup.js';
-import { loadAllSpecs } from '@safety-net/contracts/loader';
+import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { clearAll, closeAll } from '../src/database-manager.js';
 
 function parseSpecsDir() {

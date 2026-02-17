@@ -39,7 +39,7 @@ Validates OpenAPI syntax only:
 npm run validate:syntax
 ```
 
-### `npm run validate:lint -w @safety-net/contracts`
+### `npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts`
 
 Runs Spectral linting only (available in the schemas package):
 - Naming conventions
@@ -47,7 +47,7 @@ Runs Spectral linting only (available in the schemas package):
 - Response codes
 
 ```bash
-npm run validate:lint -w @safety-net/contracts
+npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts
 ```
 
 ### `npm run validate:patterns`
