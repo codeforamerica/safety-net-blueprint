@@ -9,20 +9,26 @@
 
 ## CLI Commands
 
+These commands are installed as bin scripts. Run them via npm scripts in your `package.json` or with `npx`.
+
 ### `safety-net-resolve`
 
 Resolve overlays against base specs to produce state-specific output.
 
-```bash
-safety-net-resolve --base=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlays=./overlays --out=./resolved
+```json
+"scripts": {
+  "resolve": "safety-net-resolve --base=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlays=./overlays --out=./resolved"
+}
 ```
 
 ### `safety-net-design-reference`
 
 Export an HTML design reference from OpenAPI specs.
 
-```bash
-safety-net-design-reference --specs=. --out=./docs
+```json
+"scripts": {
+  "design-reference": "safety-net-design-reference --specs=. --out=./docs"
+}
 ```
 
 ## Programmatic API

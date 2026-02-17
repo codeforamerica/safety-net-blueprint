@@ -4,26 +4,38 @@ Generates TypeScript SDK clients and JSON Schema files from resolved OpenAPI spe
 
 ## CLI Commands
 
+These commands are installed as bin scripts. Run them via npm scripts in your `package.json` or with `npx`.
+
 ### `safety-net-generate-clients`
 
 Generate a TypeScript SDK with Zod schemas from resolved OpenAPI specs.
 
-```bash
-safety-net-generate-clients --specs=./resolved --out=./src/api
+```json
+"scripts": {
+  "clients": "safety-net-generate-clients --specs=./resolved --out=./src/api"
+}
 ```
 
 ### `safety-net-generate-json-schema`
 
 Convert OpenAPI component schemas to standalone JSON Schema files.
 
-```bash
-safety-net-generate-json-schema --specs=./resolved --out=./json-schemas
+```json
+"scripts": {
+  "json-schema": "safety-net-generate-json-schema --specs=./resolved --out=./json-schemas"
+}
 ```
 
 ## Usage Example
 
+```json
+"scripts": {
+  "resolve": "safety-net-resolve --base=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlays=./overlays --out=./resolved",
+  "clients": "safety-net-generate-clients --specs=./resolved --out=./src/api"
+}
+```
+
 ```bash
-# Resolve overlays, then generate clients
-safety-net-resolve --base=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlays=./overlays --out=./resolved
-safety-net-generate-clients --specs=./resolved --out=./src/api
+npm run resolve
+npm run clients
 ```

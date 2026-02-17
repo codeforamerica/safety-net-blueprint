@@ -10,20 +10,26 @@ An Express-based mock API server that auto-discovers OpenAPI specs, creates SQLi
 
 ## CLI Commands
 
+These commands are installed as bin scripts. Run them via npm scripts in your `package.json` or with `npx`.
+
 ### `safety-net-mock`
 
 Start the mock API server.
 
-```bash
-safety-net-mock --specs=./resolved
+```json
+"scripts": {
+  "mock": "safety-net-mock --specs=./resolved"
+}
 ```
 
 ### `safety-net-swagger`
 
 Start the Swagger UI server.
 
-```bash
-safety-net-swagger --specs=./resolved
+```json
+"scripts": {
+  "swagger": "safety-net-swagger --specs=./resolved"
+}
 ```
 
 ## Environment Variables
