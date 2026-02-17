@@ -403,6 +403,105 @@ export const ${pascalName}: StoryObj = {
 }
 
 // =============================================================================
+// Template: split-panel layout
+// =============================================================================
+
+function generateSplitPanelStory(contract, domain) {
+  const { id, title, schema, scope, panels } = contract.form;
+  const { role, permissions } = contract.form.storybook;
+  const annotations = contract.form.annotations ?? [];
+  const { zodImport, zodModule } = parseSchemaRef(schema, scope, 'review');
+  const pascalName = toPascalCase(id);
+  const ann = annotationBlock(domain, zodModule, '..', annotations);
+  const annTab = annotationsTabEntry(domain, zodModule, annotations);
+
+  const leftMode = panels?.left?.mode ?? 'editable';
+  const rightMode = panels?.right?.mode ?? 'readonly';
+  const leftLabel = panels?.left?.label ?? 'Left Panel';
+  const rightLabel = panels?.right?.label ?? 'Right Panel';
+
+  return `// Auto-generated from authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml. Run \`npm run generate:stories\` to regenerate.
+import React, { useState } from 'react';
+import type { Meta, StoryObj } from '@storybook/react';
+import { SplitPanelRenderer } from '../../src/engine/SplitPanelRenderer';
+import { ContractPreview, type EditorTab } from '../../src/engine/ContractPreview';
+import { ${zodImport} } from '../../generated/schemas/${zodModule}';
+import type { FormContract, PermissionsPolicy, ViewMode } from '../../src/engine/types';
+
+// Layout
+import contract from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml';
+import layoutYaml from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml?raw';
+// Test data
+import fixtures from '../../authored/fixtures/${id}.yaml';
+import fixturesYaml from '../../authored/fixtures/${id}.yaml?raw';
+// Permissions
+import permsData from '../../authored/permissions/${permissions}.yaml';
+import permsYaml from '../../authored/permissions/${permissions}.yaml?raw';
+// Schema (read-only Zod source)
+import schemaSource from '../../generated/schemas/${zodModule}.ts?raw';
+${ann.imports}
+
+const typedContract = contract as unknown as FormContract;
+const typedFixtures = fixtures as unknown as Record<string, unknown>;
+const typedPerms = permsData as unknown as PermissionsPolicy;
+${ann.setup}
+
+const meta: Meta = {
+  title: 'Forms/${title}',
+  parameters: { layout: 'fullscreen' },
+};
+
+export default meta;
+
+const logSubmit = (data: Record<string, unknown>) => {
+  console.log('Form submitted:', data);
+  alert('Submitted! Check console for data.');
+};
+
+function StoryWrapper() {
+  const [activeContract, setActiveContract] = useState(typedContract);
+  const [testData, setTestData] = useState(typedFixtures);
+  const [perms, setPerms] = useState(typedPerms);
+
+  const tabs: EditorTab[] = [
+    { id: 'layout', label: 'Layout', filename: 'authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml', source: layoutYaml },
+    { id: 'test-data', label: 'Test Data', filename: 'authored/fixtures/${id}.yaml', source: fixturesYaml },
+    { id: 'permissions', label: 'Permissions', filename: 'authored/permissions/${permissions}.yaml', source: permsYaml },
+    { id: 'schema', label: 'Schema', filename: 'generated/schemas/${zodModule}.ts', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
+  ];
+
+  return (
+    <ContractPreview
+      tabs={tabs}
+      contractId="${id}"
+      formTitle="${title}"
+      onLayoutChange={setActiveContract}
+      onPermissionsChange={setPerms}
+      onTestDataChange={setTestData}
+    >
+      <SplitPanelRenderer
+        contract={activeContract}
+        schema={${zodImport}}
+        role="${role}"
+        panels={{
+          left: { label: '${leftLabel}', viewMode: '${leftMode}' as ViewMode, data: testData },
+          right: { label: '${rightLabel}', viewMode: '${rightMode}' as ViewMode, data: testData },
+        }}
+        permissionsPolicy={perms}${ann.prop}
+        onSubmit={logSubmit}
+      />
+    </ContractPreview>
+  );
+}
+
+export const ${pascalName}: StoryObj = {
+  name: '${title}',
+  render: () => <StoryWrapper />,
+};
+`;
+}
+
+// =============================================================================
 // Template: scenario story (co-located in storybook/scenarios/{dir}/)
 // =============================================================================
 
@@ -775,9 +874,11 @@ function main() {
     const source =
       layout === 'reference'
         ? generateReferenceStory(doc, domain)
-        : layout === 'review'
-          ? generateReviewStory(doc, domain)
-          : generateWizardStory(doc, domain);
+        : layout === 'split-panel'
+          ? generateSplitPanelStory(doc, domain)
+          : layout === 'review'
+            ? generateReviewStory(doc, domain)
+            : generateWizardStory(doc, domain);
 
     writeFileSync(outPath, source, 'utf-8');
     console.log(`  write  ${pascalName}.stories.tsx  (${layout})`);

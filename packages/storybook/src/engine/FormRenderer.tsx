@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Button, Accordion, Tag } from '@trussworks/react-uswds';
 import type { ZodSchema } from 'zod';
-import type { FormContract, Role, Page, PermissionsPolicy, FieldDefinition } from './types';
+import type { FormContract, Role, Page, PermissionsPolicy, FieldDefinition, ViewMode } from './types';
 
 /** Resolve a dot-path like 'name.firstName' from a nested object. */
 function get(obj: Record<string, unknown>, path: string): unknown {
@@ -56,26 +56,41 @@ interface FormRendererProps {
   contract: FormContract;
   schema: ZodSchema;
   role?: Role;
+  viewMode?: ViewMode;
   initialPage?: number;
+  currentPage?: number;
   defaultValues?: Record<string, unknown>;
   permissionsPolicy?: PermissionsPolicy;
   annotations?: Record<string, string[]>;
   onSubmit?: (data: Record<string, unknown>) => void;
   onPageChange?: (pageId: string) => void;
+  /** Hide title, stepper, and submit chrome (used when embedded in SplitPanelRenderer). */
+  hideChrome?: boolean;
+  /** Prefix for DOM element IDs to avoid collisions when multiple renderers share a page. */
+  idPrefix?: string;
 }
 
 export function FormRenderer({
   contract,
   schema,
   role = 'applicant',
+  viewMode = 'editable',
   initialPage = 0,
+  currentPage: controlledPage,
   defaultValues,
   permissionsPolicy,
   annotations,
   onSubmit,
   onPageChange,
+  hideChrome = false,
+  idPrefix = '',
 }: FormRendererProps) {
-  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [internalPage, setInternalPage] = useState(initialPage);
+  const currentPage = controlledPage ?? internalPage;
+  const setCurrentPage = (page: number) => {
+    setInternalPage(page);
+  };
+  const isReadonly = viewMode === 'readonly';
   const { pages, layout = 'wizard' } = contract.form;
 
   const {
@@ -86,7 +101,7 @@ export function FormRenderer({
     control,
     formState: { errors },
   } = useForm<Record<string, unknown>>({
-    resolver: zodResolver(schema),
+    ...(isReadonly ? {} : { resolver: zodResolver(schema) }),
     mode: 'onTouched',
     defaultValues,
   });
@@ -137,8 +152,9 @@ export function FormRenderer({
               return null;
             }
 
-            const permission = resolvePermission(field, role, permissionsPolicy);
-            if (permission === 'hidden') return null;
+            const basePermission = resolvePermission(field, role, permissionsPolicy);
+            if (basePermission === 'hidden') return null;
+            const permission = isReadonly ? 'read-only' as const : basePermission;
 
             if (field.component === 'field-array') {
               return (
@@ -150,9 +166,11 @@ export function FormRenderer({
                     errors={errors}
                     formValues={formValues}
                     role={role}
+                    viewMode={viewMode}
                     permissionsPolicy={permissionsPolicy}
                     annotations={annotations}
                     pagePrograms={pagePrograms}
+                    idPrefix={idPrefix}
                   />
                 </div>
               );
@@ -177,6 +195,7 @@ export function FormRenderer({
                   value={get(formValues, field.ref)}
                   annotations={annotations}
                   pagePrograms={pagePrograms}
+                  idPrefix={idPrefix}
                 />
               </div>
             );
@@ -200,9 +219,11 @@ export function FormRenderer({
         <h1>{contract.form.title}</h1>
         <Form onSubmit={handleFormSubmit} large>
           <Accordion bordered multiselectable items={accordionItems} />
-          <Button type="submit" style={{ marginTop: '1.5rem' }}>
-            Save
-          </Button>
+          {!isReadonly && (
+            <Button type="submit" style={{ marginTop: '1.5rem' }}>
+              Save
+            </Button>
+          )}
         </Form>
       </div>
     );
@@ -226,6 +247,15 @@ export function FormRenderer({
       onPageChange?.(pages[prev].id);
     }
   };
+
+  if (hideChrome) {
+    return (
+      <Form onSubmit={handleFormSubmit} large>
+        <h2>{page.title}</h2>
+        {renderFields(page)}
+      </Form>
+    );
+  }
 
   return (
     <div className="grid-container">

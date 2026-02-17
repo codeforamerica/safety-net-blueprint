@@ -1,0 +1,337 @@
+form:
+  id: application-colorado-caseworker-review
+  title: Colorado Caseworker Review
+  schema: Application
+  scope: colorado
+  layout: split-panel
+  annotations: [federal, colorado]
+  panels:
+    left:
+      label: Working Copy
+      mode: editable
+    right:
+      label: Original Submission
+      mode: readonly
+  storybook:
+    role: caseworker
+    permissions: caseworker
+  pages:
+    - id: programs
+      title: Programs
+      fields:
+        - ref: programsAppliedFor
+          component: checkbox-group
+          labels:
+            SNAP: Colorado SNAP (Food Assistance)
+            Medicaid_MAGI: Health First Colorado (MAGI)
+            Medicaid_NonMAGI: Health First Colorado (Non-MAGI)
+            TANF: Colorado Works (TANF)
+            SSI: SSI (Supplemental Security Income)
+            WIC: Colorado WIC
+            CHIP: CHP+ (Children's Health Plan Plus)
+            Section_8_Housing: Section 8 Housing
+            LIHEAP: LEAP (Energy Assistance)
+            Summer_EBT: Summer EBT
+        - ref: isExpedited
+          component: radio
+          labels:
+            "true": "Yes"
+            "false": "No"
+
+    - id: colorado-info
+      title: Colorado Information
+      fields:
+        - ref: cbisCaseNumber
+          component: text-input
+          label: CBMS Case Number
+        - ref: household.countyCode
+          component: text-input
+          label: County Code
+          width: half
+        - ref: household.coloradoResidencyVerified
+          component: radio
+          label: Colorado Residency Verified
+          labels:
+            "true": "Yes"
+            "false": "No"
+
+    - id: personal-info
+      title: Personal Information
+      fields:
+        - ref: household.members.0.firstName
+          component: text-input
+          width: half
+        - ref: household.members.0.middleName
+          component: text-input
+          width: half
+        - ref: household.members.0.lastName
+          component: text-input
+          width: half
+        - ref: household.members.0.suffix
+          component: text-input
+          width: half
+        - ref: household.members.0.dateOfBirth
+          component: date-input
+        - ref: household.members.0.ssn
+          component: text-input
+          hint: "XXX-XX-XXXX"
+          permissions:
+            reviewer: masked
+            applicant: editable
+            caseworker: editable
+        - ref: household.members.0.gender
+          component: radio
+        - ref: household.members.0.ethnicity
+          component: radio
+          labels:
+            hispanic_or_latino: Hispanic or Latino
+            not_hispanic_or_latino: Not Hispanic or Latino
+        - ref: household.members.0.race
+          component: checkbox-group
+
+    - id: household-info
+      title: Household
+      fields:
+        - ref: household.size
+          component: text-input
+        - ref: household.livingArrangement
+          component: select
+        - ref: household.purchasePrepareFoodTogether
+          component: radio
+          labels:
+            "true": "Yes"
+            "false": "No"
+        - ref: household.isHomeless
+          component: radio
+          labels:
+            "true": "Yes"
+            "false": "No"
+        - ref: household.physicalAddress.street1
+          component: text-input
+        - ref: household.physicalAddress.city
+          component: text-input
+          width: half
+        - ref: household.physicalAddress.state
+          component: text-input
+          width: half
+        - ref: household.physicalAddress.county
+          component: text-input
+          width: half
+        - ref: household.physicalAddress.zip
+          component: text-input
+          width: half
+        - ref: household.mailingAddress.street1
+          component: text-input
+        - ref: household.mailingAddress.city
+          component: text-input
+          width: half
+        - ref: household.mailingAddress.state
+          component: text-input
+          width: half
+        - ref: household.mailingAddress.zip
+          component: text-input
+          width: half
+        - ref: household.primaryContactPhone
+          component: text-input
+          width: half
+        - ref: household.primaryContactEmail
+          component: text-input
+          width: half
+        - ref: household.preferredLanguage
+          component: text-input
+          width: half
+
+    - id: household-members
+      title: Household Members
+      fields:
+        - ref: household.members
+          component: field-array
+          hint: All household members
+          min_items: 1
+          max_items: 10
+          fields:
+            - ref: firstName
+              component: text-input
+              width: half
+            - ref: lastName
+              component: text-input
+              width: half
+            - ref: dateOfBirth
+              component: date-input
+            - ref: relationshipToApplicant
+              component: select
+              labels:
+                self: Self
+                spouse: Spouse
+                child: Child
+                parent: Parent
+                sibling: Sibling
+                other: Other
+            - ref: citizenshipStatus
+              component: select
+            - ref: immigrationDocumentType
+              component: text-input
+              width: half
+              show_when:
+                field: citizenshipStatus
+                not_equals: citizen
+            - ref: immigrationDocumentNumber
+              component: text-input
+              width: half
+              show_when:
+                field: citizenshipStatus
+                not_equals: citizen
+            - ref: alienOrI94Number
+              component: text-input
+              width: half
+              show_when:
+                field: citizenshipStatus
+                not_equals: citizen
+            - ref: immigrationDocumentExpiration
+              component: date-input
+              show_when:
+                field: citizenshipStatus
+                not_equals: citizen
+
+    - id: income
+      title: Income
+      fields:
+        - ref: household.members
+          component: field-array
+          hint: Income for each household member
+          min_items: 1
+          max_items: 10
+          fields:
+            - ref: firstName
+              component: text-input
+              width: half
+            - ref: lastName
+              component: text-input
+              width: half
+            - ref: incomes
+              component: field-array
+              hint: Income sources
+              min_items: 0
+              max_items: 10
+              fields:
+                - ref: type
+                  component: select
+                  labels:
+                    wages: Wages / Salary
+                    self_employment: Self-Employment
+                    social_security: Social Security
+                    ssi: SSI
+                    unemployment: Unemployment
+                    child_support: Child Support
+                    alimony: Alimony
+                    pension: Pension
+                    veterans_benefits: Veterans Benefits
+                    workers_comp: Workers Compensation
+                    rental_income: Rental Income
+                    interest_dividends: Interest / Dividends
+                    other: Other
+                - ref: grossAmount
+                  component: text-input
+                  width: half
+                - ref: frequency
+                  component: select
+                  width: half
+                  labels:
+                    weekly: Weekly
+                    biweekly: Bi-weekly
+                    monthly: Monthly
+                    quarterly: Quarterly
+                    annually: Annually
+                - ref: employerName
+                  component: text-input
+
+    - id: assets
+      title: Assets
+      fields:
+        - ref: household.members
+          component: field-array
+          hint: Assets for each household member
+          min_items: 1
+          max_items: 10
+          fields:
+            - ref: firstName
+              component: text-input
+              width: half
+            - ref: lastName
+              component: text-input
+              width: half
+            - ref: assets
+              component: field-array
+              hint: Asset entries
+              min_items: 0
+              max_items: 20
+              fields:
+                - ref: type
+                  component: select
+                  labels:
+                    checking_account: Checking Account
+                    savings_account: Savings Account
+                    cash: Cash on Hand
+                    stocks_bonds: Stocks / Bonds
+                    vehicle: Vehicle
+                    real_estate: Real Estate
+                    retirement_account: Retirement Account
+                    life_insurance: Life Insurance
+                    burial_fund: Burial Fund
+                    other: Other
+                - ref: value
+                  component: text-input
+                  width: half
+                - ref: institutionName
+                  component: text-input
+                  width: half
+
+    - id: expenses
+      title: Expenses
+      fields:
+        - ref: household.shelterCosts.rent
+          component: text-input
+          width: half
+        - ref: household.shelterCosts.mortgage
+          component: text-input
+          width: half
+        - ref: household.shelterCosts.propertyTax
+          component: text-input
+          width: half
+        - ref: household.shelterCosts.insurance
+          component: text-input
+          width: half
+        - ref: household.utilityCosts.heating
+          component: text-input
+          width: half
+        - ref: household.utilityCosts.electric
+          component: text-input
+          width: half
+        - ref: household.utilityCosts.water
+          component: text-input
+          width: half
+        - ref: household.utilityCosts.telephone
+          component: text-input
+          width: half
+
+    - id: review-sign
+      title: Review & Sign
+      fields:
+        - ref: consentToVerifyInformation
+          component: radio
+          labels:
+            "true": "Yes"
+            "false": "No"
+        - ref: consentToShareData
+          component: radio
+          labels:
+            "true": "Yes"
+            "false": "No"
+        - ref: signatureOfApplicant
+          component: text-input
+        - ref: signatureDate
+          component: date-input
+        - ref: noticeDeliveryPreference
+          component: select
+        - ref: accommodationNeeded
+          component: text-input

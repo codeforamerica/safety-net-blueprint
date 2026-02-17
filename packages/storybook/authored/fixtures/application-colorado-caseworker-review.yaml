@@ -1,0 +1,99 @@
+# Test data for Colorado Caseworker Review (split-panel) form.
+# Colorado-specific scenario: SNAP + Medicaid, 2-person household.
+
+applicationDate: "2026-02-15"
+programsAppliedFor:
+  - SNAP
+  - Medicaid_MAGI
+isExpedited: true
+
+cbisCaseNumber: "CO-2026-004521"
+
+household:
+  size: 2
+  purchasePrepareFoodTogether: true
+  livingArrangement: rent
+  isHomeless: false
+  countyCode: "031"
+  coloradoResidencyVerified: true
+  physicalAddress:
+    street1: 1525 Market Street
+    city: Denver
+    state: CO
+    county: Denver
+    zip: "80202"
+  mailingAddress:
+    street1: 1525 Market Street
+    city: Denver
+    state: CO
+    zip: "80202"
+  shelterCosts:
+    rent: 1450
+    mortgage: 0
+    propertyTax: 0
+    insurance: 40
+  utilityCosts:
+    heating: 95
+    electric: 120
+    water: 50
+    telephone: 55
+  primaryContactPhone: "303-555-0147"
+  primaryContactEmail: jose.martinez@example.com
+  preferredLanguage: Spanish
+  members:
+    - firstName: Jose
+      middleName: Luis
+      lastName: Martinez
+      dateOfBirth: "1988-07-14"
+      ssn: "234-56-7890"
+      gender: male
+      race:
+        - white
+      ethnicity: hispanic_or_latino
+      relationshipToApplicant: self
+      maritalStatus: married
+      isApplicant: true
+      citizenshipStatus: citizen
+      isPregnant: false
+      disabilityStatus: false
+      employmentStatus: employed
+      incomes:
+        - type: wages
+          grossAmount: 2200
+          frequency: monthly
+          employerName: Denver Health
+      assets:
+        - type: checking_account
+          value: 1200
+          institutionName: FirstBank
+    - firstName: Ana
+      lastName: Martinez
+      dateOfBirth: "1990-03-22"
+      ssn: "876-54-3210"
+      gender: female
+      race:
+        - white
+      ethnicity: hispanic_or_latino
+      relationshipToApplicant: spouse
+      maritalStatus: married
+      isApplicant: false
+      citizenshipStatus: citizen
+      isPregnant: false
+      disabilityStatus: false
+      employmentStatus: employed
+      incomes:
+        - type: wages
+          grossAmount: 1600
+          frequency: monthly
+          employerName: King Soopers
+      assets:
+        - type: savings_account
+          value: 650
+          institutionName: FirstBank
+
+consentToVerifyInformation: true
+consentToShareData: true
+signatureOfApplicant: Jose Luis Martinez
+signatureDate: "2026-02-15"
+noticeDeliveryPreference: both
+accommodationNeeded: ""

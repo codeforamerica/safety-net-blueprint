@@ -24,6 +24,8 @@ interface ComponentMapperProps {
   value?: unknown;
   annotations?: Record<string, string[]>;
   pagePrograms?: string[];
+  /** Prefix for DOM element IDs to avoid collisions when multiple renderers share a page. */
+  idPrefix?: string;
 }
 
 /** Get nested error message from FieldErrors. */
@@ -128,13 +130,14 @@ export function ComponentMapper({
   value,
   annotations,
   pagePrograms,
+  idPrefix = '',
 }: ComponentMapperProps) {
   if (permission === 'hidden') return null;
 
   const label = labelFromRef(field.ref);
   const errorMsg = getError(errors, field.ref);
   const isDisabled = permission === 'read-only' || permission === 'masked';
-  const inputId = field.ref.replace(/\./g, '-');
+  const inputId = idPrefix + field.ref.replace(/\./g, '-');
   const programs = annotations?.[field.ref] ?? annotations?.[stripIndices(field.ref)];
 
   // Compute exception badge: only show when field's programs differ from the page baseline

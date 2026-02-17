@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFieldArray, type Control, type UseFormRegister, type FieldErrors } from 'react-hook-form';
 import { Button } from '@trussworks/react-uswds';
-import type { FieldDefinition, Role, PermissionsPolicy, ShowWhen, SimpleCondition } from './types';
+import type { FieldDefinition, Role, PermissionsPolicy, ShowWhen, SimpleCondition, ViewMode } from './types';
 import { ComponentMapper } from './ComponentMapper';
 import { resolveCondition } from './ConditionResolver';
 import { resolvePermission } from './PermissionsResolver';
@@ -43,9 +43,11 @@ interface FieldArrayRendererProps {
   errors: FieldErrors;
   formValues: Record<string, unknown>;
   role: Role;
+  viewMode?: ViewMode;
   permissionsPolicy?: PermissionsPolicy;
   annotations?: Record<string, string[]>;
   pagePrograms?: string[];
+  idPrefix?: string;
 }
 
 export function FieldArrayRenderer({
@@ -55,9 +57,11 @@ export function FieldArrayRenderer({
   errors,
   formValues,
   role,
+  viewMode = 'editable',
   permissionsPolicy,
   annotations,
   pagePrograms,
+  idPrefix = '',
 }: FieldArrayRendererProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from contract
   const { fields: rows, append, remove } = useFieldArray({
@@ -65,8 +69,9 @@ export function FieldArrayRenderer({
     name: field.ref as any,
   });
 
-  const permission = resolvePermission(field, role, permissionsPolicy);
-  const isReadOnly = permission === 'read-only';
+  const basePermission = resolvePermission(field, role, permissionsPolicy);
+  const isViewReadonly = viewMode === 'readonly';
+  const isReadOnly = isViewReadonly || basePermission === 'read-only';
   const canAdd = !isReadOnly && (field.max_items == null || rows.length < field.max_items);
   const canRemove = !isReadOnly && (field.min_items == null || rows.length > field.min_items);
   const templateFields = field.fields ?? [];
@@ -103,8 +108,9 @@ export function FieldArrayRenderer({
                 return null;
               }
 
-              const subPermission = resolvePermission(subField, role, permissionsPolicy);
-              if (subPermission === 'hidden') return null;
+              const baseSubPermission = resolvePermission(subField, role, permissionsPolicy);
+              if (baseSubPermission === 'hidden') return null;
+              const subPermission = isViewReadonly ? 'read-only' as const : baseSubPermission;
 
               const widthClass =
                 subField.width === 'half'
@@ -125,6 +131,7 @@ export function FieldArrayRenderer({
                     value={get(formValues, qualifiedRef)}
                     annotations={annotations}
                     pagePrograms={pagePrograms}
+                    idPrefix={idPrefix}
                   />
                 </div>
               );

@@ -10,6 +10,8 @@ export type FieldWidth = 'full' | 'half' | 'third' | 'two-thirds';
 
 export type PermissionLevel = 'editable' | 'read-only' | 'masked' | 'hidden';
 
+export type ViewMode = 'editable' | 'readonly';
+
 export type Role = 'applicant' | 'caseworker' | 'reviewer';
 
 /** Simple single-field condition. */
@@ -53,11 +55,16 @@ export interface Page {
   expanded?: boolean;
 }
 
-export type FormLayout = 'wizard' | 'review' | 'reference';
+export type FormLayout = 'wizard' | 'review' | 'reference' | 'split-panel';
 
 export interface ReferenceColumn {
   from: string;
   label: string;
+}
+
+export interface PanelConfig {
+  label: string;
+  mode: ViewMode;
 }
 
 export interface StoryBookMeta {
@@ -75,6 +82,7 @@ export interface FormContract {
     storybook?: StoryBookMeta;
     annotations?: string[];
     columns?: ReferenceColumn[];
+    panels?: { left: PanelConfig; right: PanelConfig };
     pages: Page[];
   };
 }

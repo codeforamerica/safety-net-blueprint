@@ -1,4 +1,5 @@
 export { FormRenderer } from './FormRenderer';
+export { SplitPanelRenderer } from './SplitPanelRenderer';
 export { ReferenceRenderer } from './ReferenceRenderer';
 export { ContractPreview } from './ContractPreview';
 export { ComponentMapper } from './ComponentMapper';
@@ -17,6 +18,8 @@ export type {
   ComponentType,
   FieldWidth,
   FormLayout,
+  ViewMode,
+  PanelConfig,
   ReferenceColumn,
   StoryBookMeta,
   PermissionsPolicy,
