@@ -81,7 +81,7 @@ export function extractMetadata(spec, resourceName) {
     name: resourceName,
     title: spec.info?.title || resourceName,
     version: spec.info?.version || '1.0.0',
-    baseResource: `/${resourceName}`,
+    baseResource: Object.keys(paths).find(p => !p.includes('{')) || `/${resourceName}`,
     endpoints: [],
     schemas: {},
     errorResponses: {},
@@ -132,8 +132,8 @@ export function extractMetadata(spec, resourceName) {
         continue;
       }
       
-      // Skip special endpoints (like /submit)
-      if (path.includes('/submit') || path.split('/').length > 3) {
+      // Skip action endpoints (like /submit)
+      if (path.includes('/submit')) {
         continue;
       }
       

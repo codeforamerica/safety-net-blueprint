@@ -80,6 +80,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Kill any orphaned mock server from a previous run
+lsof -ti :1080 | xargs kill -9 2>/dev/null || true
+sleep 1
+
 npm run mock:start 2>&1 &
 MOCK_PID=$!
 

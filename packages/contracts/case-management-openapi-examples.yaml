@@ -1,0 +1,44 @@
+# Case Examples
+# Example data for testing and documentation.
+# These examples are validated against the schema by npm run validate:syntax
+
+CaseExample1:
+  id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  status: "active"
+  effectiveStartDate: "2024-03-15"
+  effectiveEndDate: null
+  primaryApplicantId: "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f"
+  members:
+    - personId: "5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f"
+      relationship: "self"
+    - personId: "6a7b8c9d-0e1f-2a3b-4c5d-6e7f8a9b0c1d"
+      relationship: "spouse"
+  assignedToId: "d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a"
+  createdAt: "2024-03-15T09:00:00Z"
+  updatedAt: "2024-11-01T14:30:00Z"
+
+CaseExample2:
+  id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+  status: "active"
+  effectiveStartDate: "2025-01-10"
+  effectiveEndDate: null
+  primaryApplicantId: "7a9b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+  members:
+    - personId: "7a9b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+      relationship: "self"
+  assignedToId: "e5f6a7b8-c9d0-1e2f-3a4b-5c6d7e8f9a0b"
+  createdAt: "2025-01-10T11:15:00Z"
+  updatedAt: "2025-01-10T11:15:00Z"
+
+CaseExample3:
+  id: "c3d4e5f6-a7b8-9012-cdef-0123456789ab"
+  status: "closed"
+  effectiveStartDate: "2022-06-01"
+  effectiveEndDate: "2025-08-31"
+  primaryApplicantId: "9c1d2e3f-4a5b-6c7d-8e9f-0a1b2c3d4e5f"
+  members:
+    - personId: "9c1d2e3f-4a5b-6c7d-8e9f-0a1b2c3d4e5f"
+      relationship: "self"
+  assignedToId: "d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a"
+  createdAt: "2022-06-01T08:00:00Z"
+  updatedAt: "2025-08-31T16:45:00Z"

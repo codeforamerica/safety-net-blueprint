@@ -1,6 +1,6 @@
 # Case Management Domain
 
-> **Status: Work in progress** — High-level design. Detailed contract artifacts TBD.
+> **Status: Work in progress** — Case API implemented (alpha). Other entities (CaseWorker, Supervisor, Office, Team, Assignment, Caseload) are future work.
 
 See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
@@ -34,7 +34,7 @@ Case Management is primarily **data-shaped** — most interactions are CRUD on c
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| OpenAPI spec | TBD | REST APIs for cases, workers, supervisors, offices, teams, assignments, caseloads |
+| OpenAPI spec | `case-management-openapi.yaml` | Case REST API (alpha). Workers, supervisors, offices, teams, assignments, caseloads TBD |
 | State machine YAML | TBD | Case lifecycle (active, inactive, closed, transferred) with guards and effects (e.g., transfer triggers task reassignment) |
 | Rules YAML | TBD | Assignment routing rules (e.g., match worker skills/programs to case, workload balancing strategies) |
 
