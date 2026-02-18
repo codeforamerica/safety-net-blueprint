@@ -2,10 +2,8 @@ form:
   id: application-intake
   title: Application Intake
   schema: Application
-  scope: california
   storybook:
     role: applicant
-    permissions: applicant
   pages:
     # ── Page 1: Programs ────────────────────────────────────
     - id: programs

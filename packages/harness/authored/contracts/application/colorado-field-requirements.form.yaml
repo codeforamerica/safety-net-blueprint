@@ -2,12 +2,9 @@ form:
   id: application-colorado-field-requirements
   title: Colorado Field Requirements
   schema: Application
-  scope: colorado
   layout: reference
-  annotations: [federal, colorado]
   storybook:
     role: caseworker
-    permissions: caseworker
   columns:
     - from: field.ref
       label: Field

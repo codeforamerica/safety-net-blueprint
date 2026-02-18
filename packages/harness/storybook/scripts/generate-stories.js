@@ -2,34 +2,34 @@
 /**
  * Storybook Story Generator
  *
- * Reads contract YAML files with a `storybook` metadata section and generates
+ * Reads manifest YAML files alongside form contracts and generates
  * corresponding .stories.tsx files. Run via: npm run generate:stories
  *
+ * Each contract has a co-located .manifest.yaml that declares the concrete
+ * file locations used for code generation (schema, fixtures, permissions,
+ * annotations, openapi). The generator reads the manifest and follows
+ * references verbatim — no filesystem probing.
+ *
  * Conventions:
- *   Contract:    authored/contracts/{domain}/{name}.form.yaml
- *   Annotations: generated/annotations/{layer}.yaml  (optional)
- *   Fixtures:    authored/fixtures/{contract-id}.yaml
- *   Permissions: authored/permissions/{storybook.permissions}.yaml
- *   Zod schema:  generated/schemas/{schema}-{scope}.ts  (exports {schema}{Create|Update}Schema)
- *   Story file:  storybook/stories/{PascalCase}.stories.tsx
- *   Scenarios:   storybook/scenarios/{contract-id}.{scenario-name}/
+ *   Manifest:         authored/contracts/{domain}/{name}.manifest.yaml
+ *   Contract:         authored/contracts/{domain}/{name}.form.yaml
+ *   Story file:       storybook/stories/{PascalCase}.stories.tsx
+ *   Scenarios:        storybook/scenarios/{contract-id}.{scenario-name}/
  *   Scenario stories: storybook/scenarios/{contract-id}.{scenario-name}/index.stories.tsx
  */
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
 import { dirs } from '../config.js';
 
 const ROOT = join(import.meta.dirname, '../..');
 const CONTRACTS_DIR = join(ROOT, dirs.contracts);
-const PERMISSIONS_DIR = join(ROOT, dirs.permissions);
-const FIXTURES_DIR = join(ROOT, dirs.fixtures);
 const STORIES_DIR = join(ROOT, dirs.stories);
 const SCENARIOS_DIR = join(ROOT, dirs.scenarios);
 
 // =============================================================================
-// Name utilities
+// Utilities
 // =============================================================================
 
 function toPascalCase(kebab) {
@@ -39,36 +39,44 @@ function toPascalCase(kebab) {
     .join('');
 }
 
-function toCamelCase(kebab) {
-  const pascal = toPascalCase(kebab);
-  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+/**
+ * Write file only if content has actually changed.
+ * Prevents unnecessary mtime updates that trigger Storybook's HMR watcher.
+ */
+function writeIfChanged(filePath, content) {
+  if (existsSync(filePath)) {
+    const existing = readFileSync(filePath, 'utf-8');
+    if (existing === content) return false;
+  }
+  writeFileSync(filePath, content, 'utf-8');
+  return true;
 }
 
-/**
- * Derive schema import info from the form.schema and form.scope fields.
- *
- * schema is a simple object name like "Application".
- * scope is an optional state name like "california" or "colorado".
- * layout determines the CRUD variant: wizard → Create, review/reference → Update.
- *
- * File resolution:
- *   scope: "california" → generated/schemas/application-california.ts
- *   no scope           → generated/schemas/application.ts
- */
-function parseSchemaRef(schemaName, scope, layout) {
-  const baseModule = schemaName.toLowerCase();
-  const variant = layout === 'wizard' ? 'Create' : 'Update';
-  const zodImport = toCamelCase(schemaName) + variant + 'Schema';
+// =============================================================================
+// Discovery
+// =============================================================================
 
-  if (scope) {
-    const scopedModule = `${baseModule}-${scope}`;
-    const scopedFile = join(ROOT, dirs.schemas, `${scopedModule}.ts`);
-    if (existsSync(scopedFile)) {
-      return { schemaName, zodImport, zodModule: scopedModule };
+/**
+ * Discover manifest files within domain subdirectories.
+ * Returns array of { domain, sources } objects.
+ */
+function discoverManifests() {
+  const results = [];
+  if (!existsSync(CONTRACTS_DIR)) return results;
+
+  for (const domain of readdirSync(CONTRACTS_DIR)) {
+    const domainPath = join(CONTRACTS_DIR, domain);
+    if (!statSync(domainPath).isDirectory()) continue;
+
+    for (const file of readdirSync(domainPath)) {
+      if (!file.endsWith('.manifest.yaml')) continue;
+      const manifestPath = join(domainPath, file);
+      const raw = readFileSync(manifestPath, 'utf-8');
+      const manifest = yaml.load(raw);
+      results.push({ domain, sources: manifest.sources });
     }
   }
-
-  return { schemaName, zodImport, zodModule: baseModule };
+  return results;
 }
 
 /**
@@ -95,74 +103,49 @@ function discoverScenarios(contractId) {
     .sort((a, b) => a.scenarioName.localeCompare(b.scenarioName));
 }
 
-/**
- * Discover form contracts within domain subdirectories.
- * Returns array of { domain, filename, filePath } objects.
- */
-function discoverContracts() {
-  const results = [];
-  if (!existsSync(CONTRACTS_DIR)) return results;
-
-  for (const domain of readdirSync(CONTRACTS_DIR)) {
-    const domainPath = join(CONTRACTS_DIR, domain);
-    if (!statSync(domainPath).isDirectory()) continue;
-
-    for (const file of readdirSync(domainPath)) {
-      if (!file.endsWith('.form.yaml')) continue;
-      results.push({
-        domain,
-        filename: file,
-        filePath: join(domainPath, file),
-      });
-    }
-  }
-  return results;
-}
-
 // =============================================================================
-// Annotation helpers (flat: generated/annotations/{layer}.yaml)
+// Manifest path helpers
 // =============================================================================
 
-const ANNOTATIONS_DIR = join(ROOT, dirs.annotations);
-
 /**
- * Discover annotation layer files, filtered to the requested layer names.
- * Annotations are flat files: generated/annotations/federal.yaml, california.yaml, etc.
- * Returns array of { name, rootRelative, filename } objects.
+ * Parse annotation file paths from manifest into layer objects.
+ * Returns array of { name, path } where name is derived from the filename.
  */
-function discoverAnnotationLayers(domain, layerNames) {
-  if (!existsSync(ANNOTATIONS_DIR)) return [];
-
-  return layerNames
-    .map(name => {
-      const filePath = join(ANNOTATIONS_DIR, `${name}.yaml`);
-      if (!existsSync(filePath)) return null;
-      return {
-        name,
-        rootRelative: `generated/annotations/${name}.yaml`,
-        filename: `generated/annotations/${name}.yaml`,
-      };
-    })
-    .filter(Boolean);
+function parseAnnotationPaths(annotationPaths) {
+  if (!annotationPaths || annotationPaths.length === 0) return [];
+  return annotationPaths.map(p => ({
+    name: p.split('/').pop().replace('.yaml', ''),
+    path: p,
+  }));
 }
 
 /**
- * Generate the annotation import + merge block for wizard/review stories.
+ * Parse permission file paths from manifest into objects.
+ * Returns array of { role, path } where role is derived from the filename.
+ */
+function parsePermissionPaths(permissionPaths) {
+  if (!permissionPaths || permissionPaths.length === 0) return [];
+  return permissionPaths.map(p => ({
+    role: p.split('/').pop().replace('.yaml', ''),
+    path: p,
+  }));
+}
+
+// =============================================================================
+// Annotation helpers
+// =============================================================================
+
+/**
+ * Generate the annotation import + merge block for wizard/review/split-panel stories.
  * Layers are merged into a single annotationLookup for badge display.
  */
-function annotationBlock(domain, zodModule, importPrefix, layerNames) {
-  if (!layerNames || layerNames.length === 0) {
-    return { imports: '', setup: '', prop: '' };
-  }
-  const layers = discoverAnnotationLayers(domain, layerNames);
+function annotationBlock(layers, rootPrefix) {
   if (layers.length === 0) {
     return { imports: '', setup: '', prop: '' };
   }
 
-  // importPrefix + /.. gets from the story file's directory up to the package root
-  const rootPrefix = importPrefix + '/..';
   const imports = layers.map((l, i) =>
-    `import annotationLayer${i} from '${rootPrefix}/${l.rootRelative}';\nimport annotationLayer${i}Yaml from '${rootPrefix}/${l.rootRelative}?raw';`
+    `import annotationLayer${i} from '${rootPrefix}/${l.path}';\nimport annotationLayer${i}Yaml from '${rootPrefix}/${l.path}?raw';`
   ).join('\n');
 
   const layerArrayEntries = layers.map((_, i) =>
@@ -212,11 +195,10 @@ const annotationLookup = deriveAnnotationLookup(mergedAnnotations);`;
 /**
  * Generate the annotations reference tab entries (one per layer).
  */
-function annotationsTabEntry(domain, zodModule, layerNames) {
-  if (!layerNames || layerNames.length === 0) return '';
-  const layers = discoverAnnotationLayers(domain, layerNames);
+function annotationsTabEntry(layers) {
+  if (layers.length === 0) return '';
   return layers.map((l, i) =>
-    `\n    { id: 'annotations-${l.name}', label: '${toPascalCase(l.name)} Annotations', filename: '${l.filename}', source: annotationLayer${i}Yaml, readOnly: true, group: 'reference' as const },`
+    `\n    { id: 'annotations-${l.name}', label: '${toPascalCase(l.name)} Annotations', filename: '${l.path}', source: annotationLayer${i}Yaml, readOnly: true, group: 'reference' as const },`
   ).join('');
 }
 
@@ -224,34 +206,39 @@ function annotationsTabEntry(domain, zodModule, layerNames) {
 // Template: wizard layout
 // =============================================================================
 
-function generateWizardStory(contract, domain) {
-  const { id, title, pages, schema, scope } = contract.form;
-  const { role, permissions } = contract.form.storybook;
-  const annotations = contract.form.annotations ?? [];
-  const { zodImport, zodModule } = parseSchemaRef(schema, scope, 'wizard');
+function generateWizardStory(contract, manifest) {
+  const { id, title } = contract.form;
+  const { role } = contract.form.storybook;
+  const src = manifest.sources;
+  const zodExport = src.zodExport;
+  const schemaModule = src.schema.replace(/\.ts$/, '');
+  const contractPath = src.contract;
+  const fixturesPath = src.fixtures;
+  const permsPath = src.permissions[0];
+  const layers = parseAnnotationPaths(src.annotations);
   const pascalName = toPascalCase(id);
-  const ann = annotationBlock(domain, zodModule, '..', annotations);
-  const annTab = annotationsTabEntry(domain, zodModule, annotations);
+  const ann = annotationBlock(layers, '../..');
+  const annTab = annotationsTabEntry(layers);
 
-  return `// Auto-generated from authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml. Run \`npm run generate:stories\` to regenerate.
+  return `// Auto-generated from ${contractPath}. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { FormRenderer } from '../../src/engine/FormRenderer';
 import { ContractPreview, type EditorTab } from '../../src/engine/ContractPreview';
-import { ${zodImport} } from '../../generated/schemas/${zodModule}';
+import { ${zodExport} } from '../../${schemaModule}';
 import type { FormContract, Role, PermissionsPolicy } from '../../src/engine/types';
 
 // Layout
-import contract from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml';
-import layoutYaml from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml?raw';
+import contract from '../../${contractPath}';
+import layoutYaml from '../../${contractPath}?raw';
 // Test data
-import fixtures from '../../authored/fixtures/${id}.yaml';
-import fixturesYaml from '../../authored/fixtures/${id}.yaml?raw';
+import fixtures from '../../${fixturesPath}';
+import fixturesYaml from '../../${fixturesPath}?raw';
 // Permissions
-import permsData from '../../authored/permissions/${permissions}.yaml';
-import permsYaml from '../../authored/permissions/${permissions}.yaml?raw';
+import permsData from '../../${permsPath}';
+import permsYaml from '../../${permsPath}?raw';
 // Schema (read-only Zod source)
-import schemaSource from '../../generated/schemas/${zodModule}.ts?raw';
+import schemaSource from '../../${src.schema}?raw';
 ${ann.imports}
 
 const typedContract = contract as unknown as FormContract;
@@ -277,10 +264,10 @@ function StoryWrapper() {
   const [perms, setPerms] = useState(typedPerms);
 
   const tabs: EditorTab[] = [
-    { id: 'layout', label: 'Layout', filename: 'authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml', source: layoutYaml },
-    { id: 'test-data', label: 'Test Data', filename: 'authored/fixtures/${id}.yaml', source: fixturesYaml },
-    { id: 'permissions', label: 'Permissions', filename: 'authored/permissions/${permissions}.yaml', source: permsYaml },
-    { id: 'schema', label: 'Schema', filename: 'generated/schemas/${zodModule}.ts', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
+    { id: 'layout', label: 'Layout', filename: '${contractPath}', source: layoutYaml },
+    { id: 'test-data', label: 'Test Data', filename: '${fixturesPath}', source: fixturesYaml },
+    { id: 'permissions', label: 'Permissions', filename: '${permsPath}', source: permsYaml },
+    { id: 'schema', label: 'Schema', filename: '${src.schema}', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
   ];
 
   return (
@@ -294,7 +281,7 @@ function StoryWrapper() {
     >
       <FormRenderer
         contract={activeContract}
-        schema={${zodImport}}
+        schema={${zodExport}}
         role={'${role}' as Role}
         initialPage={0}
         defaultValues={testData}
@@ -316,34 +303,39 @@ export const ${pascalName}: StoryObj = {
 // Template: review layout
 // =============================================================================
 
-function generateReviewStory(contract, domain) {
-  const { id, title, schema, scope } = contract.form;
-  const { role, permissions } = contract.form.storybook;
-  const annotations = contract.form.annotations ?? [];
-  const { zodImport, zodModule } = parseSchemaRef(schema, scope, 'review');
+function generateReviewStory(contract, manifest) {
+  const { id, title } = contract.form;
+  const { role } = contract.form.storybook;
+  const src = manifest.sources;
+  const zodExport = src.zodExport;
+  const schemaModule = src.schema.replace(/\.ts$/, '');
+  const contractPath = src.contract;
+  const fixturesPath = src.fixtures;
+  const permsPath = src.permissions[0];
+  const layers = parseAnnotationPaths(src.annotations);
   const pascalName = toPascalCase(id);
-  const ann = annotationBlock(domain, zodModule, '..', annotations);
-  const annTab = annotationsTabEntry(domain, zodModule, annotations);
+  const ann = annotationBlock(layers, '../..');
+  const annTab = annotationsTabEntry(layers);
 
-  return `// Auto-generated from authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml. Run \`npm run generate:stories\` to regenerate.
+  return `// Auto-generated from ${contractPath}. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { FormRenderer } from '../../src/engine/FormRenderer';
 import { ContractPreview, type EditorTab } from '../../src/engine/ContractPreview';
-import { ${zodImport} } from '../../generated/schemas/${zodModule}';
+import { ${zodExport} } from '../../${schemaModule}';
 import type { FormContract, PermissionsPolicy } from '../../src/engine/types';
 
 // Layout
-import contract from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml';
-import layoutYaml from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml?raw';
+import contract from '../../${contractPath}';
+import layoutYaml from '../../${contractPath}?raw';
 // Test data
-import fixtures from '../../authored/fixtures/${id}.yaml';
-import fixturesYaml from '../../authored/fixtures/${id}.yaml?raw';
+import fixtures from '../../${fixturesPath}';
+import fixturesYaml from '../../${fixturesPath}?raw';
 // Permissions
-import permsData from '../../authored/permissions/${permissions}.yaml';
-import permsYaml from '../../authored/permissions/${permissions}.yaml?raw';
+import permsData from '../../${permsPath}';
+import permsYaml from '../../${permsPath}?raw';
 // Schema (read-only Zod source)
-import schemaSource from '../../generated/schemas/${zodModule}.ts?raw';
+import schemaSource from '../../${src.schema}?raw';
 ${ann.imports}
 
 const typedContract = contract as unknown as FormContract;
@@ -369,10 +361,10 @@ function StoryWrapper() {
   const [perms, setPerms] = useState(typedPerms);
 
   const tabs: EditorTab[] = [
-    { id: 'layout', label: 'Layout', filename: 'authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml', source: layoutYaml },
-    { id: 'test-data', label: 'Test Data', filename: 'authored/fixtures/${id}.yaml', source: fixturesYaml },
-    { id: 'permissions', label: 'Permissions', filename: 'authored/permissions/${permissions}.yaml', source: permsYaml },
-    { id: 'schema', label: 'Schema', filename: 'generated/schemas/${zodModule}.ts', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
+    { id: 'layout', label: 'Layout', filename: '${contractPath}', source: layoutYaml },
+    { id: 'test-data', label: 'Test Data', filename: '${fixturesPath}', source: fixturesYaml },
+    { id: 'permissions', label: 'Permissions', filename: '${permsPath}', source: permsYaml },
+    { id: 'schema', label: 'Schema', filename: '${src.schema}', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
   ];
 
   return (
@@ -386,7 +378,7 @@ function StoryWrapper() {
     >
       <FormRenderer
         contract={activeContract}
-        schema={${zodImport}}
+        schema={${zodExport}}
         role="${role}"
         defaultValues={testData}
         permissionsPolicy={perms}${ann.prop}
@@ -407,39 +399,44 @@ export const ${pascalName}: StoryObj = {
 // Template: split-panel layout
 // =============================================================================
 
-function generateSplitPanelStory(contract, domain) {
-  const { id, title, schema, scope, panels } = contract.form;
-  const { role, permissions } = contract.form.storybook;
-  const annotations = contract.form.annotations ?? [];
-  const { zodImport, zodModule } = parseSchemaRef(schema, scope, 'review');
+function generateSplitPanelStory(contract, manifest) {
+  const { id, title, panels } = contract.form;
+  const { role } = contract.form.storybook;
+  const src = manifest.sources;
+  const zodExport = src.zodExport;
+  const schemaModule = src.schema.replace(/\.ts$/, '');
+  const contractPath = src.contract;
+  const fixturesPath = src.fixtures;
+  const permsPath = src.permissions[0];
+  const layers = parseAnnotationPaths(src.annotations);
   const pascalName = toPascalCase(id);
-  const ann = annotationBlock(domain, zodModule, '..', annotations);
-  const annTab = annotationsTabEntry(domain, zodModule, annotations);
+  const ann = annotationBlock(layers, '../..');
+  const annTab = annotationsTabEntry(layers);
 
   const leftMode = panels?.left?.mode ?? 'editable';
   const rightMode = panels?.right?.mode ?? 'readonly';
   const leftLabel = panels?.left?.label ?? 'Left Panel';
   const rightLabel = panels?.right?.label ?? 'Right Panel';
 
-  return `// Auto-generated from authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml. Run \`npm run generate:stories\` to regenerate.
+  return `// Auto-generated from ${contractPath}. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { SplitPanelRenderer } from '../../src/engine/SplitPanelRenderer';
 import { ContractPreview, type EditorTab } from '../../src/engine/ContractPreview';
-import { ${zodImport} } from '../../generated/schemas/${zodModule}';
+import { ${zodExport} } from '../../${schemaModule}';
 import type { FormContract, PermissionsPolicy, ViewMode } from '../../src/engine/types';
 
 // Layout
-import contract from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml';
-import layoutYaml from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml?raw';
+import contract from '../../${contractPath}';
+import layoutYaml from '../../${contractPath}?raw';
 // Test data
-import fixtures from '../../authored/fixtures/${id}.yaml';
-import fixturesYaml from '../../authored/fixtures/${id}.yaml?raw';
+import fixtures from '../../${fixturesPath}';
+import fixturesYaml from '../../${fixturesPath}?raw';
 // Permissions
-import permsData from '../../authored/permissions/${permissions}.yaml';
-import permsYaml from '../../authored/permissions/${permissions}.yaml?raw';
+import permsData from '../../${permsPath}';
+import permsYaml from '../../${permsPath}?raw';
 // Schema (read-only Zod source)
-import schemaSource from '../../generated/schemas/${zodModule}.ts?raw';
+import schemaSource from '../../${src.schema}?raw';
 ${ann.imports}
 
 const typedContract = contract as unknown as FormContract;
@@ -465,10 +462,10 @@ function StoryWrapper() {
   const [perms, setPerms] = useState(typedPerms);
 
   const tabs: EditorTab[] = [
-    { id: 'layout', label: 'Layout', filename: 'authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml', source: layoutYaml },
-    { id: 'test-data', label: 'Test Data', filename: 'authored/fixtures/${id}.yaml', source: fixturesYaml },
-    { id: 'permissions', label: 'Permissions', filename: 'authored/permissions/${permissions}.yaml', source: permsYaml },
-    { id: 'schema', label: 'Schema', filename: 'generated/schemas/${zodModule}.ts', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
+    { id: 'layout', label: 'Layout', filename: '${contractPath}', source: layoutYaml },
+    { id: 'test-data', label: 'Test Data', filename: '${fixturesPath}', source: fixturesYaml },
+    { id: 'permissions', label: 'Permissions', filename: '${permsPath}', source: permsYaml },
+    { id: 'schema', label: 'Schema', filename: '${src.schema}', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
   ];
 
   return (
@@ -482,7 +479,7 @@ function StoryWrapper() {
     >
       <SplitPanelRenderer
         contract={activeContract}
-        schema={${zodImport}}
+        schema={${zodExport}}
         role="${role}"
         panels={{
           left: { label: '${leftLabel}', viewMode: '${leftMode}' as ViewMode, data: testData },
@@ -506,25 +503,27 @@ export const ${pascalName}: StoryObj = {
 // Template: scenario story (co-located in storybook/scenarios/{dir}/)
 // =============================================================================
 
-function generateScenarioStory(contract, scenarioName, domain) {
-  const { id, title, schema, scope } = contract.form;
+function generateScenarioStory(contract, manifest, scenarioName) {
+  const { id, title } = contract.form;
   const layout = contract.form.layout || 'wizard';
   const { role } = contract.form.storybook;
-  const annotations = contract.form.annotations ?? [];
-  const { zodImport, zodModule } = parseSchemaRef(schema, scope, layout);
+  const src = manifest.sources;
+  const zodExport = src.zodExport;
+  const schemaModule = src.schema.replace(/\.ts$/, '');
+  const layers = parseAnnotationPaths(src.annotations);
 
   const scenarioDisplayName = scenarioName.replace(/-/g, ' ');
 
   const roleType = layout === 'wizard' ? ', Role' : '';
-  const ann = annotationBlock(domain, zodModule, '../..', annotations);
-  const annTab = annotationsTabEntry(domain, zodModule, annotations);
+  const ann = annotationBlock(layers, '../../..');
+  const annTab = annotationsTabEntry(layers);
 
   return `// Auto-generated scenario story. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { FormRenderer } from '../../../src/engine/FormRenderer';
 import { ContractPreview, type EditorTab } from '../../../src/engine/ContractPreview';
-import { ${zodImport} } from '../../../generated/schemas/${zodModule}';
+import { ${zodExport} } from '../../../${schemaModule}';
 import type { FormContract${roleType}, PermissionsPolicy } from '../../../src/engine/types';
 
 // Scenario: all three files are co-located in this directory
@@ -535,7 +534,7 @@ import scenarioFixturesYaml from './test-data.yaml?raw';
 import scenarioPerms from './permissions.yaml';
 import scenarioPermsYaml from './permissions.yaml?raw';
 // Schema (read-only Zod source)
-import schemaSource from '../../../generated/schemas/${zodModule}.ts?raw';
+import schemaSource from '../../../${src.schema}?raw';
 ${ann.imports}
 
 const typedContract = scenarioLayout as unknown as FormContract;
@@ -570,7 +569,7 @@ function StoryWrapper(${layout === 'wizard' ? `{
     { id: 'layout', label: 'Layout', filename: 'storybook/scenarios/${id}.${scenarioName}/layout.yaml', source: scenarioLayoutYaml },
     { id: 'test-data', label: 'Test Data', filename: 'storybook/scenarios/${id}.${scenarioName}/test-data.yaml', source: scenarioFixturesYaml },
     { id: 'permissions', label: 'Permissions', filename: 'storybook/scenarios/${id}.${scenarioName}/permissions.yaml', source: scenarioPermsYaml },
-    { id: 'schema', label: 'Schema', filename: 'generated/schemas/${zodModule}.ts', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
+    { id: 'schema', label: 'Schema', filename: '${src.schema}', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
   ];
 
   return (
@@ -584,7 +583,7 @@ function StoryWrapper(${layout === 'wizard' ? `{
     >
       <FormRenderer
         contract={activeContract}
-        schema={${zodImport}}
+        schema={${zodExport}}
         role="${role}"${layout === 'wizard' ? `
         initialPage={initialPage}` : ''}
         defaultValues={testData}
@@ -607,40 +606,6 @@ export const ${toPascalCase(scenarioName)}: StoryObj = {
 // =============================================================================
 
 /**
- * Discover all permissions YAML files in authored/permissions/.
- * Returns array of { role, filename } objects.
- */
-function discoverPermissions() {
-  if (!existsSync(PERMISSIONS_DIR)) return [];
-  return readdirSync(PERMISSIONS_DIR)
-    .filter(f => f.endsWith('.yaml'))
-    .map(f => ({ role: f.replace('.yaml', ''), filename: f }))
-    .sort((a, b) => a.role.localeCompare(b.role));
-}
-
-/**
- * Discover the resolved OpenAPI spec for a contract.
- * Uses scope (e.g. "colorado") to find the matching spec file.
- * Returns { importPath, filename } or null.
- */
-function discoverResolvedSpec(scope) {
-  const openapiDir = join(ROOT, dirs.openapi);
-  if (!existsSync(openapiDir)) return null;
-
-  const files = readdirSync(openapiDir).filter(f =>
-    f.endsWith('-benefits-schema.yaml') && !f.startsWith('federal')
-  );
-  if (files.length === 0) return null;
-
-  const match = scope
-    ? files.find(f => f.toLowerCase().includes(scope.toLowerCase()))
-    : files[0];
-
-  const file = match || files[0];
-  return { importPath: `../../generated/openapi/${file}`, filename: `generated/openapi/${file}` };
-}
-
-/**
  * Build a consolidated annotation field-name reference.
  * Reads each annotation YAML and extracts all field refs + their program names,
  * grouped by layer. Returns a YAML-like string for display in the Reference tab.
@@ -649,7 +614,7 @@ function buildAnnotationFieldsReference(layers) {
   const lines = ['# Available annotation fields and program names', '#', '# Use in columns as: annotation.<layer>.<property>', '# Properties: label, source, statute, notes, programs.<name>', ''];
 
   for (const layer of layers) {
-    const filePath = join(ANNOTATIONS_DIR, `${layer.name}.yaml`);
+    const filePath = join(ROOT, layer.path);
     if (!existsSync(filePath)) continue;
     const raw = readFileSync(filePath, 'utf-8');
     const doc = yaml.load(raw);
@@ -688,11 +653,11 @@ function buildAnnotationFieldsReference(layers) {
  * Build a consolidated permissions reference.
  * Reads each permissions YAML and shows role + defaults + overrides.
  */
-function buildPermissionsReference(allPerms) {
+function buildPermissionsReference(perms) {
   const lines = ['# Available permissions roles', '#', '# Use in columns as: permissions.<role>', '# Values: editable | read-only | masked | hidden', ''];
 
-  for (const p of allPerms) {
-    const filePath = join(PERMISSIONS_DIR, p.filename);
+  for (const p of perms) {
+    const filePath = join(ROOT, p.path);
     if (!existsSync(filePath)) continue;
     const raw = readFileSync(filePath, 'utf-8');
     lines.push(`# ── ${p.role} ──`);
@@ -703,23 +668,20 @@ function buildPermissionsReference(allPerms) {
   return lines.join('\n');
 }
 
-function generateReferenceStory(contract, domain) {
-  const { id, title, schema, scope } = contract.form;
-  const layerNames = contract.form.annotations ?? [];
-  const { zodModule } = parseSchemaRef(schema, scope, 'reference');
-  const pascalName = toPascalCase(id);
-  const layers = discoverAnnotationLayers(domain, layerNames);
+function generateReferenceStory(contract, manifest) {
+  const { id, title } = contract.form;
+  const src = manifest.sources;
+  const contractPath = src.contract;
+  const layers = parseAnnotationPaths(src.annotations);
   const hasAnnotations = layers.length > 0;
+  const pascalName = toPascalCase(id);
 
-  // Discover all permissions files
-  const allPerms = discoverPermissions();
-
-  // Discover resolved spec
-  const resolvedSpec = discoverResolvedSpec(scope);
+  // Permissions from manifest
+  const allPerms = parsePermissionPaths(src.permissions);
 
   // Build permissions imports
   const permsImports = allPerms.map(p =>
-    `import ${p.role}PermsData from '../../authored/permissions/${p.filename}';\nimport ${p.role}PermsYaml from '../../authored/permissions/${p.filename}?raw';`
+    `import ${p.role}PermsData from '../../${p.path}';\nimport ${p.role}PermsYaml from '../../${p.path}?raw';`
   ).join('\n');
 
   const permsTypedArray = allPerms.map(p =>
@@ -728,30 +690,19 @@ function generateReferenceStory(contract, domain) {
 
   // Annotation imports — each layer passed separately (not merged)
   const annotationImports = layers.map((l, i) =>
-    `import annotationLayer${i} from '../../${l.rootRelative}';\nimport annotationLayer${i}Yaml from '../../${l.rootRelative}?raw';`
+    `import annotationLayer${i} from '../../${l.path}';\nimport annotationLayer${i}Yaml from '../../${l.path}?raw';`
   ).join('\n');
 
   const annotationLayerEntries = layers.map((l, i) =>
     `  { name: '${l.name}', data: annotationLayer${i} as unknown as Record<string, unknown> },`
   ).join('\n');
 
-  // Schema spec imports
-  let schemaImports = '';
-  let schemaTyped = '';
-  let schemaTab = '';
-  if (resolvedSpec) {
-    schemaImports = `import schemaSpecData from '${resolvedSpec.importPath}';\nimport schemaSpecYaml from '${resolvedSpec.importPath}?raw';`;
-    schemaTyped = `const typedSchemaSpec = schemaSpecData as unknown as Record<string, unknown>;`;
-    schemaTab = `    { id: 'schema-spec', label: 'OpenAPI Schema', filename: '${resolvedSpec.filename}', source: schemaSpecYaml, readOnly: true, group: 'reference' as const },`;
-  }
-
   // Build consolidated reference tabs (annotation field names + permissions)
   const annotationFieldsRef = hasAnnotations ? buildAnnotationFieldsReference(layers) : '';
   const permissionsRef = buildPermissionsReference(allPerms);
 
-  // Reference tabs: OpenAPI → individual annotations → consolidated fields → consolidated permissions
   const annotationTabs = layers.map((l, i) =>
-    `    { id: 'annotations-${l.name}', label: '${toPascalCase(l.name)} Annotations', filename: '${l.filename}', source: annotationLayer${i}Yaml, readOnly: true, group: 'reference' as const },`
+    `    { id: 'annotations-${l.name}', label: '${toPascalCase(l.name)} Annotations', filename: '${l.path}', source: annotationLayer${i}Yaml, readOnly: true, group: 'reference' as const },`
   ).join('\n');
 
   const annotationFieldsTab = hasAnnotations
@@ -760,7 +711,7 @@ function generateReferenceStory(contract, domain) {
 
   const permissionsTab = `    { id: 'permissions-ref', label: 'Permissions', filename: 'Available permission roles', source: permissionsRefContent, readOnly: true, group: 'reference' as const },`;
 
-  return `// Auto-generated from authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml. Run \`npm run generate:stories\` to regenerate.
+  return `// Auto-generated from ${contractPath}. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { ReferenceRenderer } from '../../src/engine/ReferenceRenderer';
@@ -768,12 +719,11 @@ import { ContractPreview, type EditorTab } from '../../src/engine/ContractPrevie
 import type { FormContract, PermissionsPolicy } from '../../src/engine/types';
 
 // Layout
-import contract from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml';
-import layoutYaml from '../../authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml?raw';
+import contract from '../../${contractPath}';
+import layoutYaml from '../../${contractPath}?raw';
 // Permissions (all roles)
 ${permsImports}
 ${hasAnnotations ? `// Annotations (layered)\n${annotationImports}` : ''}
-${schemaImports ? `// Resolved OpenAPI spec\n${schemaImports}` : ''}
 
 const typedContract = contract as unknown as FormContract;
 const allPermissions: PermissionsPolicy[] = [
@@ -782,7 +732,6 @@ ${permsTypedArray}
 const annotationLayers = [
 ${annotationLayerEntries}
 ];
-${schemaTyped}
 
 // Consolidated reference content (generated at build time)
 const annotationFieldsRefContent = ${JSON.stringify(annotationFieldsRef)};
@@ -799,8 +748,7 @@ function StoryWrapper() {
   const [activeContract, setActiveContract] = useState(typedContract);
 
   const tabs: EditorTab[] = [
-    { id: 'layout', label: 'Layout', filename: 'authored/contracts/${domain}/${contractFileName(id, domain)}.form.yaml', source: layoutYaml },
-${schemaTab}
+    { id: 'layout', label: 'Layout', filename: '${contractPath}', source: layoutYaml },
 ${annotationTabs}
 ${annotationFieldsTab}
 ${permissionsTab}
@@ -817,7 +765,7 @@ ${permissionsTab}
     >
       <ReferenceRenderer
         contract={activeContract}
-${hasAnnotations ? '        annotationLayers={annotationLayers}\n' : ''}${resolvedSpec ? '        schemaSpec={typedSchemaSpec}\n' : ''}        permissionsPolicies={allPermissions}
+${hasAnnotations ? '        annotationLayers={annotationLayers}\n' : ''}        permissionsPolicies={allPermissions}
       />
     </ContractPreview>
   );
@@ -831,52 +779,22 @@ export const ${pascalName}: StoryObj = {
 }
 
 // =============================================================================
-// Helpers
-// =============================================================================
-
-/**
- * Write file only if content has actually changed.
- * Prevents unnecessary mtime updates that trigger Storybook's HMR watcher.
- */
-function writeIfChanged(filePath, content) {
-  if (existsSync(filePath)) {
-    const existing = readFileSync(filePath, 'utf-8');
-    if (existing === content) return false;
-  }
-  writeFileSync(filePath, content, 'utf-8');
-  return true;
-}
-
-/**
- * Derive the filename stem for a contract within a domain directory.
- * Contract id is e.g. "application-intake", domain is "application".
- * The file is named by stripping the domain prefix: "intake.form.yaml".
- * If the id equals the domain, the file is just "{domain}.form.yaml".
- */
-function contractFileName(contractId, domain) {
-  if (contractId === domain) return domain;
-  const prefix = `${domain}-`;
-  if (contractId.startsWith(prefix)) {
-    return contractId.slice(prefix.length);
-  }
-  return contractId;
-}
-
-// =============================================================================
 // Main
 // =============================================================================
 
 function main() {
-  const contracts = discoverContracts();
+  const manifests = discoverManifests();
   let generated = 0;
   let scenariosGenerated = 0;
 
-  for (const { domain, filename, filePath } of contracts) {
-    const content = readFileSync(filePath, 'utf-8');
+  for (const { domain, sources } of manifests) {
+    // Read the contract from the manifest's contract path
+    const contractPath = join(ROOT, sources.contract);
+    const content = readFileSync(contractPath, 'utf-8');
     const doc = yaml.load(content);
 
     if (!doc?.form?.storybook) {
-      console.log(`  skip  ${domain}/${filename} (no storybook section)`);
+      console.log(`  skip  ${sources.contract} (no storybook section)`);
       continue;
     }
 
@@ -884,15 +802,16 @@ function main() {
     const contractId = doc.form.id;
     const pascalName = toPascalCase(contractId);
     const outPath = join(STORIES_DIR, `${pascalName}.stories.tsx`);
+    const manifest = { sources };
 
     const source =
       layout === 'reference'
-        ? generateReferenceStory(doc, domain)
+        ? generateReferenceStory(doc, manifest)
         : layout === 'split-panel'
-          ? generateSplitPanelStory(doc, domain)
+          ? generateSplitPanelStory(doc, manifest)
           : layout === 'review'
-            ? generateReviewStory(doc, domain)
-            : generateWizardStory(doc, domain);
+            ? generateReviewStory(doc, manifest)
+            : generateWizardStory(doc, manifest);
 
     if (writeIfChanged(outPath, source)) {
       console.log(`  write  ${pascalName}.stories.tsx  (${layout})`);
@@ -905,7 +824,7 @@ function main() {
     const scenarios = discoverScenarios(contractId);
     for (const { scenarioName, dir } of scenarios) {
       const scenarioOutPath = join(SCENARIOS_DIR, dir, 'index.stories.tsx');
-      const scenarioSource = generateScenarioStory(doc, scenarioName, domain);
+      const scenarioSource = generateScenarioStory(doc, manifest, scenarioName);
       if (writeIfChanged(scenarioOutPath, scenarioSource)) {
         console.log(`  write  scenarios/${dir}/index.stories.tsx`);
       } else {

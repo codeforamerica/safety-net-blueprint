@@ -2,12 +2,9 @@ form:
   id: application-california-caseworker-review
   title: California Application Review
   schema: Application
-  scope: california
   layout: review
-  annotations: [federal, california]
   storybook:
     role: caseworker
-    permissions: caseworker
   pages:
     - id: programs
       title: Programs
