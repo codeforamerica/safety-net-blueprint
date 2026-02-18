@@ -4,6 +4,19 @@ import { z } from 'zod';
 // Enums (generated from resolved OpenAPI spec)
 // =============================================================================
 
+export const programEnum = z.enum([
+  'SNAP',
+  'Medicaid_MAGI',
+  'Medicaid_NonMAGI',
+  'TANF',
+  'SSI',
+  'WIC',
+  'CHIP',
+  'Section_8_Housing',
+  'LIHEAP',
+  'Summer_EBT',
+]);
+
 export const signatureMethodEnum = z.enum([
   'in_person',
   'electronic',
@@ -491,7 +504,7 @@ export const personSchema = z.object({
   dateOfBirth: z.string().optional(),
   ssn: z.string().optional(),
   gender: genderEnum.optional(),
-  race: raceEnum.optional(),
+  race: z.array(raceEnum).optional(),
   ethnicity: ethnicityEnum.optional(),
   relationshipToApplicant: relationshipEnum.optional(),
   maritalStatus: maritalStatusEnum.optional(),
@@ -510,7 +523,7 @@ export const personSchema = z.object({
   isPostpartum: z.boolean().optional(),
   wicParticipantCategory: wicParticipantCategoryEnum.optional(),
   nutritionalRiskLevel: nutritionalRiskLevelEnum.optional(),
-  nutritionalRiskConditions: nutritionalRiskConditionsEnum.optional(),
+  nutritionalRiskConditions: z.array(nutritionalRiskConditionsEnum).optional(),
   isInFosterCare: z.boolean().optional(),
   isFormerFosterYouth: z.boolean().optional(),
   isEnrolledInSchool: z.boolean().optional(),
@@ -652,7 +665,7 @@ export const householdSchema = z.object({
 
 export const applicationCreateSchema = z.object({
   applicationDate: z.string().optional(),
-  programsAppliedFor: z.string().optional(),
+  programsAppliedFor: z.array(programEnum).optional(),
   isExpedited: z.boolean().optional(),
   signatureOfApplicant: z.boolean().optional(),
   signatureDate: z.string().optional(),

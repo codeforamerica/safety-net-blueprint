@@ -621,7 +621,7 @@ fields:
   household.members.nutritionalRiskConditions:
     label: Nutritional Risk Conditions
     source: assessed
-    statute: Array in implementation — a person may have multiple risk conditions simultaneously
+    statute: A person may have multiple risk conditions simultaneously.
     programs:
       WIC: Required
       Summer EBT: 7 CFR 246.7(e)

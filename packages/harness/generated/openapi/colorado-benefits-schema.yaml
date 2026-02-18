@@ -18,7 +18,20 @@ components:
           x-statute: 7 CFR 273.2(b) (SNAP); 42 CFR 435.912 (Medicaid); 45 CFR 206.10 (TANF)
           x-snap: Required
         programsAppliedFor:
-          type: string
+          type: array
+          items:
+            type: string
+            enum:
+              - SNAP
+              - Medicaid_MAGI
+              - Medicaid_NonMAGI
+              - TANF
+              - SSI
+              - WIC
+              - CHIP
+              - Section_8_Housing
+              - LIHEAP
+              - Summer_EBT
           description: Programs Applied For
           x-source: applicant
         isExpedited:
@@ -637,15 +650,17 @@ components:
           x-wic: Required
           x-chip: Required
         race:
-          type: string
-          enum:
-            - white
-            - black
-            - asian
-            - american_indian_alaska_native
-            - native_hawaiian_pacific_islander
-            - other
-            - multiracial
+          type: array
+          items:
+            type: string
+            enum:
+              - white
+              - black
+              - asian
+              - american_indian_alaska_native
+              - native_hawaiian_pacific_islander
+              - other
+              - multiracial
           description: Race
           x-source: applicant
         ethnicity:
@@ -894,17 +909,19 @@ components:
           x-wic: Required
           x-summer-ebt: 7 CFR 246.7(e)
         nutritionalRiskConditions:
-          type: string
-          enum:
-            - anthropometric
-            - biochemical
-            - dietary_inadequacy
-            - medical_condition
-            - predisposing_condition
-            - other
+          type: array
+          items:
+            type: string
+            enum:
+              - anthropometric
+              - biochemical
+              - dietary_inadequacy
+              - medical_condition
+              - predisposing_condition
+              - other
           description: Nutritional Risk Conditions
           x-source: assessed
-          x-statute: Array in implementation — a person may have multiple risk conditions simultaneously
+          x-statute: A person may have multiple risk conditions simultaneously.
           x-wic: Required
           x-summer-ebt: 7 CFR 246.7(e)
         isInFosterCare:

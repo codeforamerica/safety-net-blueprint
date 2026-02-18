@@ -91,6 +91,10 @@ export function csvTypeToOpenAPI(dataType, enumValues) {
       const values = (enumValues || '').split('|').map(v => v.trim()).filter(Boolean);
       return { type: 'string', enum: values };
     }
+    case 'enum[]': {
+      const values = (enumValues || '').split('|').map(v => v.trim()).filter(Boolean);
+      return { type: 'array', items: { type: 'string', enum: values } };
+    }
     default:
       return { type: 'string' };
   }

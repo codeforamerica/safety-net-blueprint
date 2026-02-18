@@ -123,7 +123,9 @@ function collectEnums(schemas, enums) {
     if (!schema.properties) continue;
 
     for (const [propName, prop] of Object.entries(schema.properties)) {
-      if (prop.enum) {
+      // Direct enum or array-of-enum (enum[])
+      const enumValues = prop.enum || (prop.type === 'array' && prop.items?.enum);
+      if (enumValues) {
         let enumName;
         if (propName === 'type' && typeEnumMap[schemaName]) {
           enumName = typeEnumMap[schemaName];
@@ -134,7 +136,7 @@ function collectEnums(schemas, enums) {
         }
 
         if (!enums.has(enumName)) {
-          enums.set(enumName, prop.enum);
+          enums.set(enumName, enumValues);
         }
       }
 

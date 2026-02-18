@@ -15,7 +15,20 @@ components:
           format: date
           description: Application Date
         programsAppliedFor:
-          type: string
+          type: array
+          items:
+            type: string
+            enum:
+              - SNAP
+              - Medicaid_MAGI
+              - Medicaid_NonMAGI
+              - TANF
+              - SSI
+              - WIC
+              - CHIP
+              - Section_8_Housing
+              - LIHEAP
+              - Summer_EBT
           description: Programs Applied For
         isExpedited:
           type: boolean
@@ -277,15 +290,17 @@ components:
             - other
           description: Sex/Gender
         race:
-          type: string
-          enum:
-            - white
-            - black
-            - asian
-            - american_indian_alaska_native
-            - native_hawaiian_pacific_islander
-            - other
-            - multiracial
+          type: array
+          items:
+            type: string
+            enum:
+              - white
+              - black
+              - asian
+              - american_indian_alaska_native
+              - native_hawaiian_pacific_islander
+              - other
+              - multiracial
           description: Race
         ethnicity:
           type: string
@@ -412,14 +427,16 @@ components:
             - none
           description: Nutritional Risk Level
         nutritionalRiskConditions:
-          type: string
-          enum:
-            - anthropometric
-            - biochemical
-            - dietary_inadequacy
-            - medical_condition
-            - predisposing_condition
-            - other
+          type: array
+          items:
+            type: string
+            enum:
+              - anthropometric
+              - biochemical
+              - dietary_inadequacy
+              - medical_condition
+              - predisposing_condition
+              - other
           description: Nutritional Risk Conditions
         isInFosterCare:
           type: boolean

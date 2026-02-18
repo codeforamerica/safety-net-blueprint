@@ -634,7 +634,7 @@ actions:
     description: Person.nutritionalRiskConditions
     update:
       x-source: assessed
-      x-statute: Array in implementation — a person may have multiple risk conditions simultaneously
+      x-statute: A person may have multiple risk conditions simultaneously.
       x-wic: Required
       x-summer-ebt: 7 CFR 246.7(e)
   - target: $.components.schemas.Person.properties.isInFosterCare
