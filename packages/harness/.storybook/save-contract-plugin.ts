@@ -3,6 +3,7 @@ import { writeFile, mkdir, rename, rm } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { exec } from 'node:child_process';
 import yaml from 'js-yaml';
+import { dirs } from '../storybook/config.js';
 
 /**
  * Valid scenario file pattern:
@@ -27,7 +28,7 @@ async function readBody(req: NodeJS.ReadableStream): Promise<Record<string, unkn
 /** Run story generation. Returns a promise when awaited, or fires-and-forgets if not. */
 function regenerateStories(root: string): Promise<void> {
   return new Promise((resolve) => {
-    exec('node scripts/generate-stories.js', { cwd: root }, (err, stdout) => {
+    exec('node storybook/scripts/generate-stories.js', { cwd: root }, (err, stdout) => {
       if (err) {
         console.error('[save-contract] Story generation failed:', err.message);
       } else {
@@ -41,7 +42,7 @@ function regenerateStories(root: string): Promise<void> {
 /**
  * Vite dev server plugin that exposes scenario management endpoints.
  * Source-of-truth files (contracts, fixtures, permissions) are read-only.
- * Only scenario directories under src/scenarios/ can be written/renamed/deleted.
+ * Only scenario directories under storybook/scenarios/ can be written/renamed/deleted.
  */
 export function saveContractPlugin(): Plugin {
   return {
@@ -90,7 +91,7 @@ export function saveContractPlugin(): Plugin {
             }
           }
 
-          const filePath = resolve(server.config.root, `src/${filename}`);
+          const filePath = resolve(server.config.root, dirs.scenarios, filename.slice('scenarios/'.length));
           await mkdir(dirname(filePath), { recursive: true });
           await writeFile(filePath, content, 'utf-8');
 
@@ -128,8 +129,8 @@ export function saveContractPlugin(): Plugin {
             return;
           }
 
-          const srcDir = resolve(server.config.root, 'src/scenarios', from);
-          const destDir = resolve(server.config.root, 'src/scenarios', to);
+          const srcDir = resolve(server.config.root, dirs.scenarios, from);
+          const destDir = resolve(server.config.root, dirs.scenarios, to);
 
           // Remove co-located story file before rename (will be regenerated)
           await rm(resolve(srcDir, 'index.stories.tsx'), { force: true });
@@ -164,7 +165,7 @@ export function saveContractPlugin(): Plugin {
           }
 
           // rm -rf the entire scenario directory (includes co-located story)
-          const scenarioDir = resolve(server.config.root, 'src/scenarios', scenario);
+          const scenarioDir = resolve(server.config.root, dirs.scenarios, scenario);
           await rm(scenarioDir, { recursive: true, force: true });
 
           await regenerateStories(server.config.root);

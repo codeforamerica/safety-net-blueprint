@@ -9,7 +9,7 @@
     "build-storybook": "storybook build",
     "typecheck": "tsc --noEmit",
     "generate:pipeline": "node scripts/pipeline/generate-pipeline.js",
-    "generate:stories": "node scripts/generate-stories.js",
+    "generate:stories": "node storybook/scripts/generate-stories.js",
     "generate": "npm run generate:pipeline && npm run generate:stories",
     "test": "vitest run",
     "test:watch": "vitest"

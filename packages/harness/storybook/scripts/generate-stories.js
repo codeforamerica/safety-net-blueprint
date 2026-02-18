@@ -19,13 +19,14 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, statSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
+import { dirs } from '../config.js';
 
-const ROOT = join(import.meta.dirname, '..');
-const CONTRACTS_DIR = join(ROOT, 'authored', 'contracts');
-const PERMISSIONS_DIR = join(ROOT, 'authored', 'permissions');
-const FIXTURES_DIR = join(ROOT, 'authored', 'fixtures');
-const STORIES_DIR = join(ROOT, 'storybook', 'stories');
-const SCENARIOS_DIR = join(ROOT, 'storybook', 'scenarios');
+const ROOT = join(import.meta.dirname, '../..');
+const CONTRACTS_DIR = join(ROOT, dirs.contracts);
+const PERMISSIONS_DIR = join(ROOT, dirs.permissions);
+const FIXTURES_DIR = join(ROOT, dirs.fixtures);
+const STORIES_DIR = join(ROOT, dirs.stories);
+const SCENARIOS_DIR = join(ROOT, dirs.scenarios);
 
 // =============================================================================
 // Name utilities
@@ -61,7 +62,7 @@ function parseSchemaRef(schemaName, scope, layout) {
 
   if (scope) {
     const scopedModule = `${baseModule}-${scope}`;
-    const scopedFile = join(ROOT, 'generated', 'schemas', `${scopedModule}.ts`);
+    const scopedFile = join(ROOT, dirs.schemas, `${scopedModule}.ts`);
     if (existsSync(scopedFile)) {
       return { schemaName, zodImport, zodModule: scopedModule };
     }
@@ -122,7 +123,7 @@ function discoverContracts() {
 // Annotation helpers (flat: generated/annotations/{layer}.yaml)
 // =============================================================================
 
-const ANNOTATIONS_DIR = join(ROOT, 'generated', 'annotations');
+const ANNOTATIONS_DIR = join(ROOT, dirs.annotations);
 
 /**
  * Discover annotation layer files, filtered to the requested layer names.
@@ -623,7 +624,7 @@ function discoverPermissions() {
  * Returns { importPath, filename } or null.
  */
 function discoverResolvedSpec(scope) {
-  const openapiDir = join(ROOT, 'generated', 'openapi');
+  const openapiDir = join(ROOT, dirs.openapi);
   if (!existsSync(openapiDir)) return null;
 
   const files = readdirSync(openapiDir).filter(f =>
