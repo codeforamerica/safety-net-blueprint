@@ -15,10 +15,8 @@ form:
   # review  — single-page accordion (uses Update schema)
   # reference — read-only table (requires columns)
 
+  role: caseworker                    # access role (applicant | caseworker | reviewer)
   annotations: [federal, california]  # annotation layers to load
-  storybook:
-    role: caseworker                # default role for the story
-    permissions: caseworker         # which permissions file to load
   pages:
     - id: section-id
       title: Section Title

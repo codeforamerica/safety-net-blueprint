@@ -1,9 +1,8 @@
 form:
   id: application-intake
-  title: Application Intake
+  title: Default
   schema: Application
-  storybook:
-    role: applicant
+  role: applicant
   pages:
     # ── Page 1: Programs ────────────────────────────────────
     - id: programs

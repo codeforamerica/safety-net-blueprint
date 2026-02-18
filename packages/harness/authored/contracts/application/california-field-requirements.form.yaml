@@ -1,10 +1,9 @@
 form:
   id: application-california-field-requirements
-  title: California Field Requirements
+  title: California
   schema: Application
   layout: reference
-  storybook:
-    role: caseworker
+  role: caseworker
   columns:
     - from: field.ref
       label: Field

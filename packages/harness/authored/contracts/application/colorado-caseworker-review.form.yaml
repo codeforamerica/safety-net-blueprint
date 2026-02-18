@@ -1,6 +1,6 @@
 form:
   id: application-colorado-caseworker-review
-  title: Colorado Caseworker Review
+  title: Colorado Side-by-Side
   schema: Application
   layout: split-panel
   panels:
@@ -10,8 +10,7 @@ form:
     right:
       label: Original Submission
       mode: readonly
-  storybook:
-    role: caseworker
+  role: caseworker
   pages:
     - id: programs
       title: Programs

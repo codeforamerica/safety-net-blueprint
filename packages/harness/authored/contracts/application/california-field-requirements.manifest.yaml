@@ -1,3 +1,5 @@
+category: Reports
+
 sources:
   contract: authored/contracts/application/california-field-requirements.form.yaml
   schema: generated/schemas/application-california.ts

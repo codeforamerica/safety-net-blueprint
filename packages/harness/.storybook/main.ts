@@ -4,7 +4,7 @@ import { saveContractPlugin } from './save-contract-plugin';
 
 const config: StorybookConfig = {
   stories: ['../storybook/**/*.stories.@(ts|tsx)'],
-  addons: ['@storybook/addon-essentials'],
+  addons: ['@storybook/addon-essentials', 'storybook-addon-tag-badges'],
   framework: {
     name: '@storybook/react-vite',
     options: {},

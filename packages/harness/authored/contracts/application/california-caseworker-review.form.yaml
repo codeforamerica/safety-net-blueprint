@@ -1,10 +1,9 @@
 form:
   id: application-california-caseworker-review
-  title: California Application Review
+  title: California Side-by-Side
   schema: Application
   layout: review
-  storybook:
-    role: caseworker
+  role: caseworker
   pages:
     - id: programs
       title: Programs

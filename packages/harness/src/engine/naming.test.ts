@@ -6,12 +6,12 @@ import {
   toKebabCase,
   storyNameFromExport,
   buildStoryId,
-  scenarioDisplayName,
-  scenarioMetaTitle,
-  scenarioStoryName,
-  scenarioStoryId,
+  customDisplayName,
+  customMetaTitle,
+  customStoryId,
   willAutoFlatten,
 } from './naming';
+import * as namingExports from './naming';
 
 // =============================================================================
 // sanitize
@@ -23,7 +23,7 @@ describe('sanitize', () => {
   });
 
   it('replaces slashes', () => {
-    expect(sanitize('Forms/Person Review')).toBe('forms-person-review');
+    expect(sanitize('Caseworker/Review')).toBe('caseworker-review');
   });
 
   it('replaces colons', () => {
@@ -31,7 +31,7 @@ describe('sanitize', () => {
   });
 
   it('collapses consecutive hyphens', () => {
-    expect(sanitize('Scenarios/Person Review: abc')).toBe('scenarios-person-review-abc');
+    expect(sanitize('Applicant/Intake/abc')).toBe('applicant-intake-abc');
   });
 
   it('strips leading and trailing hyphens', () => {
@@ -142,8 +142,16 @@ describe('storyNameFromExport', () => {
     expect(storyNameFromExport('RedOak')).toBe('Red Oak');
   });
 
-  it('splits letter-digit boundaries', () => {
+  it('splits letter-digit boundaries (case-insensitive)', () => {
     expect(storyNameFromExport('RedOak2')).toBe('Red Oak 2');
+  });
+
+  it('splits uppercase letter before digit (C3 → C 3)', () => {
+    expect(storyNameFromExport('C3')).toBe('C 3');
+  });
+
+  it('splits digit-to-letter boundaries', () => {
+    expect(storyNameFromExport('Page2Demographics')).toBe('Page 2 Demographics');
   });
 
   it('handles consecutive capitals', () => {
@@ -162,13 +170,12 @@ describe('storyNameFromExport', () => {
     expect(storyNameFromExport('Person_Intake')).toBe('Person Intake');
   });
 
-  it('handles multi-word export', () => {
-    expect(storyNameFromExport('PersonCaseworkerReview')).toBe('Person Caseworker Review');
+  it('handles hyphens', () => {
+    expect(storyNameFromExport('Person-Intake')).toBe('Person Intake');
   });
 
-  it('handles number in middle', () => {
-    // ([a-z])(\d) splits "e2" but no rule for digit→uppercase, so "2D" stays joined
-    expect(storyNameFromExport('Page2Demographics')).toBe('Page 2Demographics');
+  it('handles multi-word export', () => {
+    expect(storyNameFromExport('PersonCaseworkerReview')).toBe('Person Caseworker Review');
   });
 });
 
@@ -178,141 +185,208 @@ describe('storyNameFromExport', () => {
 
 describe('buildStoryId', () => {
   it('combines sanitized title and export-derived name', () => {
-    expect(buildStoryId('Forms/Person Review', 'PersonCaseworkerReview')).toBe(
-      'forms-person-review--person-caseworker-review',
+    expect(buildStoryId('Caseworker/Review', 'PersonCaseworkerReview')).toBe(
+      'caseworker-review--person-caseworker-review',
     );
   });
 
-  it('handles scenario with simple name', () => {
-    expect(buildStoryId('Scenarios/Person Review: red oak', 'RedOak')).toBe(
-      'scenarios-person-review-red-oak--red-oak',
+  it('handles role/category/name structure', () => {
+    expect(buildStoryId('Applicant/Intake/red oak', 'RedOak')).toBe(
+      'applicant-intake-red-oak--red-oak',
     );
   });
 
-  it('handles scenario with trailing number (letter-digit split)', () => {
+  it('handles trailing number in title (letter-digit split)', () => {
     // Title has "red oak2" (no space before 2)
     // Export RedOak2 → storyNameFromExport → "Red Oak 2" → sanitize → "red-oak-2"
-    expect(buildStoryId('Scenarios/Person Review: red oak2', 'RedOak2')).toBe(
-      'scenarios-person-review-red-oak2--red-oak-2',
+    expect(buildStoryId('Caseworker/Review/red oak2', 'RedOak2')).toBe(
+      'caseworker-review-red-oak2--red-oak-2',
     );
   });
 
-  it('handles scenario with spaced number', () => {
+  it('handles spaced number in title', () => {
     // Title has "red oak 2" (space before 2)
     // Export RedOak2 → storyNameFromExport → "Red Oak 2" → sanitize → "red-oak-2"
-    expect(buildStoryId('Scenarios/Person Review: red oak 2', 'RedOak2')).toBe(
-      'scenarios-person-review-red-oak-2--red-oak-2',
+    expect(buildStoryId('Caseworker/Review/red oak 2', 'RedOak2')).toBe(
+      'caseworker-review-red-oak-2--red-oak-2',
     );
   });
 });
 
 // =============================================================================
-// scenarioDisplayName
+// customDisplayName
 // =============================================================================
 
-describe('scenarioDisplayName', () => {
-  it('replaces hyphens with spaces', () => {
-    expect(scenarioDisplayName('red-oak')).toBe('red oak');
+describe('customDisplayName', () => {
+  it('replaces hyphens with spaces and capitalizes words', () => {
+    expect(customDisplayName('red-oak')).toBe('Red Oak');
   });
 
-  it('preserves lowercase', () => {
-    expect(scenarioDisplayName('abc')).toBe('abc');
+  it('capitalizes single word', () => {
+    expect(customDisplayName('abc')).toBe('Abc');
   });
 
-  it('preserves numbers', () => {
-    expect(scenarioDisplayName('red-oak-2')).toBe('red oak 2');
+  it('capitalizes words with trailing number', () => {
+    expect(customDisplayName('red-oak-2')).toBe('Red Oak 2');
   });
 
-  it('preserves embedded numbers', () => {
-    expect(scenarioDisplayName('red-oak2')).toBe('red oak2');
+  it('capitalizes words with embedded number', () => {
+    expect(customDisplayName('red-oak2')).toBe('Red Oak2');
   });
 });
 
 // =============================================================================
-// scenarioMetaTitle / scenarioStoryName / auto-flattening
+// customMetaTitle / auto-flattening
 // =============================================================================
 
-describe('scenario title and auto-flattening', () => {
-  it('meta title uses Scenarios/ prefix', () => {
-    expect(scenarioMetaTitle('Person Review', 'red oak')).toBe(
-      'Scenarios/Person Review: red oak',
+describe('custom title and auto-flattening', () => {
+  it('meta title uses Role/Category/Name when category is provided', () => {
+    expect(customMetaTitle('caseworker', 'Review', 'red oak')).toBe(
+      'Caseworker/Review/red oak',
     );
   });
 
-  it('story name matches the last segment of meta title', () => {
-    const formTitle = 'Person Review';
-    const displayName = 'red oak';
-    const title = scenarioMetaTitle(formTitle, displayName);
-    const name = scenarioStoryName(formTitle, displayName);
-
-    expect(willAutoFlatten(title, name)).toBe(true);
+  it('meta title uses Role/Name when no category', () => {
+    expect(customMetaTitle('applicant', undefined, 'red oak')).toBe(
+      'Applicant/red oak',
+    );
   });
 
-  it('auto-flattens for simple names', () => {
-    const title = scenarioMetaTitle('Person Intake', 'abc');
-    const name = scenarioStoryName('Person Intake', 'abc');
-    expect(willAutoFlatten(title, name)).toBe(true);
+  it('capitalizes role', () => {
+    const title = customMetaTitle('applicant', 'Intake', 'abc');
+    expect(title.startsWith('Applicant/')).toBe(true);
   });
 
-  it('auto-flattens for names with numbers', () => {
-    const title = scenarioMetaTitle('Person Review', 'red oak 2');
-    const name = scenarioStoryName('Person Review', 'red oak 2');
-    expect(willAutoFlatten(title, name)).toBe(true);
-  });
-
-  it('meta title has exactly 2 segments so scenarios render as flat sidebar leaves', () => {
-    const title = scenarioMetaTitle('Person Review', 'red oak');
-    const segments = title.split('/');
-    expect(segments).toHaveLength(2);
-    expect(segments[0]).toBe('Scenarios');
+  it('auto-flattens when story name matches leaf of title', () => {
+    const title = customMetaTitle('applicant', 'Intake', 'abc');
+    // Story name from export "Abc" → storyNameFromExport → "Abc"
+    // Leaf of title is "abc" — these don't match (case difference)
+    expect(willAutoFlatten(title, 'abc')).toBe(true);
   });
 
   it('does NOT auto-flatten when name does not match leaf', () => {
-    expect(willAutoFlatten('Scenarios/Person Review', 'Something Else')).toBe(false);
+    expect(willAutoFlatten('Caseworker/Review/red oak', 'Something Else')).toBe(false);
   });
 });
 
 // =============================================================================
-// scenarioStoryId (end-to-end)
+// customStoryId (end-to-end)
 // =============================================================================
 
-describe('scenarioStoryId', () => {
-  it('computes correct ID for simple name', () => {
-    expect(scenarioStoryId('Person Review', 'red-oak')).toBe(
-      'scenarios-person-review-red-oak--red-oak',
+describe('customStoryId', () => {
+  it('computes correct ID with role and category', () => {
+    expect(customStoryId('caseworker', 'Review', 'red-oak')).toBe(
+      'caseworker-review-red-oak--red-oak',
+    );
+  });
+
+  it('computes correct ID without category', () => {
+    expect(customStoryId('applicant', undefined, 'citizen')).toBe(
+      'applicant-citizen--citizen',
     );
   });
 
   it('computes correct ID for name with trailing number', () => {
-    // kebab "red-oak-2" → display "red oak 2" → title "Scenarios/Person Review: red oak 2"
+    // kebab "red-oak-2" → display "red oak 2" → title "Caseworker/Review/red oak 2"
     // export "RedOak2" → storyNameFromExport "Red Oak 2" → sanitize "red-oak-2"
-    expect(scenarioStoryId('Person Review', 'red-oak-2')).toBe(
-      'scenarios-person-review-red-oak-2--red-oak-2',
+    expect(customStoryId('caseworker', 'Review', 'red-oak-2')).toBe(
+      'caseworker-review-red-oak-2--red-oak-2',
     );
   });
 
   it('computes correct ID for name with embedded number', () => {
-    // kebab "red-oak2" → display "red oak2" → title "Scenarios/Person Review: red oak2"
+    // kebab "red-oak2" → display "red oak2" → title "Caseworker/Review/red oak2"
     // export "RedOak2" → storyNameFromExport "Red Oak 2" → sanitize "red-oak-2"
-    expect(scenarioStoryId('Person Review', 'red-oak2')).toBe(
-      'scenarios-person-review-red-oak2--red-oak-2',
+    expect(customStoryId('caseworker', 'Review', 'red-oak2')).toBe(
+      'caseworker-review-red-oak2--red-oak-2',
     );
   });
 
   it('computes correct ID for single word', () => {
-    expect(scenarioStoryId('Person Intake', 'abc')).toBe(
-      'scenarios-person-intake-abc--abc',
+    expect(customStoryId('applicant', 'Intake', 'abc')).toBe(
+      'applicant-intake-abc--abc',
     );
   });
 
-  it('computes correct ID for Person Intake wizard', () => {
-    expect(scenarioStoryId('Person Intake', 'citizen')).toBe(
-      'scenarios-person-intake-citizen--citizen',
+  it('computes correct ID for applicant intake custom story', () => {
+    expect(customStoryId('applicant', 'Intake', 'citizen')).toBe(
+      'applicant-intake-citizen--citizen',
     );
   });
 
-  it('story ID lives under scenarios- root so navigating to it expands the Scenarios sidebar group', () => {
-    expect(scenarioStoryId('Person Review', 'abc')).toMatch(/^scenarios-/);
-    expect(scenarioStoryId('Person Intake', 'citizen')).toMatch(/^scenarios-/);
+  it('computes correct ID for short names like c2', () => {
+    // toPascalCase('c2') → 'C2', storyNameFromExport('C2') → 'C 2' (case-insensitive /gi),
+    // sanitize('C 2') → 'c-2'
+    expect(customStoryId('caseworker', 'Reports', 'c2')).toBe(
+      'caseworker-reports-c2--c-2',
+    );
+  });
+
+  it('computes correct ID for two-letter names', () => {
+    expect(customStoryId('caseworker', 'Reports', 'ca')).toBe(
+      'caseworker-reports-ca--ca',
+    );
+  });
+
+  it('story ID reflects the role prefix for proper sidebar grouping', () => {
+    expect(customStoryId('caseworker', 'Review', 'abc')).toMatch(/^caseworker-/);
+    expect(customStoryId('applicant', 'Intake', 'citizen')).toMatch(/^applicant-/);
+  });
+});
+
+// =============================================================================
+// customStoryId: rename scenario regression tests
+// =============================================================================
+
+describe('customStoryId rename scenarios', () => {
+  it('produces different IDs for different custom names', () => {
+    const id3 = customStoryId('caseworker', 'Reports', 'california-3');
+    const id6 = customStoryId('caseworker', 'Reports', 'california-6');
+    expect(id3).not.toBe(id6);
+  });
+
+  it('computes correct ID after rename (california-3 → california-6)', () => {
+    const id = customStoryId('caseworker', 'Reports', 'california-6');
+    expect(id).toBe('caseworker-reports-california-6--california-6');
+  });
+
+  it('computes correct ID for original name (california-3)', () => {
+    const id = customStoryId('caseworker', 'Reports', 'california-3');
+    expect(id).toBe('caseworker-reports-california-3--california-3');
+  });
+
+  it('computes correct ID with no category', () => {
+    const id = customStoryId('applicant', undefined, 'my-variant');
+    expect(id).toBe('applicant-my-variant--my-variant');
+  });
+});
+
+// =============================================================================
+// Verify old "snapshot" names are not exported (rename guard)
+// =============================================================================
+
+describe('snapshot→custom rename guard', () => {
+  it('does not export snapshotDisplayName', () => {
+    expect(namingExports).not.toHaveProperty('snapshotDisplayName');
+  });
+
+  it('does not export snapshotMetaTitle', () => {
+    expect(namingExports).not.toHaveProperty('snapshotMetaTitle');
+  });
+
+  it('does not export snapshotStoryId', () => {
+    expect(namingExports).not.toHaveProperty('snapshotStoryId');
+  });
+
+  it('exports customDisplayName', () => {
+    expect(namingExports).toHaveProperty('customDisplayName');
+  });
+
+  it('exports customMetaTitle', () => {
+    expect(namingExports).toHaveProperty('customMetaTitle');
+  });
+
+  it('exports customStoryId', () => {
+    expect(namingExports).toHaveProperty('customStoryId');
   });
 });

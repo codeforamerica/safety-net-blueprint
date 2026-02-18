@@ -1,5 +1,5 @@
 /**
- * Shared naming utilities for scenario management and Storybook story ID computation.
+ * Shared naming utilities for custom story management and Storybook story ID computation.
  * Used by both the form engine (ContractPreview) and story generator script.
  */
 
@@ -36,16 +36,23 @@ export function toKebabCase(input: string): string {
     .replace(/^-|-$/g, '');
 }
 
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 /**
- * Replicate Storybook's storyNameFromExport.
- * Splits at camelCase boundaries and letter-digit boundaries.
+ * Replicate Storybook 8.6's toStartCaseStr (aliased as storyNameFromExport).
+ * Must match @storybook/core/dist/csf/index.js exactly for correct story IDs.
  */
 export function storyNameFromExport(exportName: string): string {
   return exportName
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/([a-z])(\d)/g, '$1 $2')
-    .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
     .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\./g, ' ')
+    .replace(/([^\n])([A-Z])([a-z])/g, '$1 $2$3')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([a-z])([0-9])/gi, '$1 $2')
+    .replace(/([0-9])([a-z])/gi, '$1 $2')
     .replace(/ +/g, ' ')
     .trim();
 }
@@ -56,38 +63,34 @@ export function buildStoryId(metaTitle: string, exportName: string): string {
 }
 
 /**
- * Build the scenario display name from a kebab-case scenario name.
- * Replaces hyphens with spaces — no forced capitalization.
+ * Build the custom story display name from a kebab-case name.
+ * Replaces hyphens with spaces and capitalizes each word (Title Case).
  */
-export function scenarioDisplayName(scenarioName: string): string {
-  return scenarioName.replace(/-/g, ' ');
+export function customDisplayName(customName: string): string {
+  return customName
+    .replace(/-/g, ' ')
+    .replace(/\b[a-z]/g, (c) => c.toUpperCase());
 }
 
 /**
- * Build the Storybook meta title for a scenario story.
- * Must produce a title whose last segment matches the story name for auto-flattening.
+ * Build the Storybook meta title for a custom story.
+ * Uses the same Role/Category/Name structure as base stories.
  */
-export function scenarioMetaTitle(formTitle: string, displayName: string): string {
-  return `Scenarios/${formTitle}: ${displayName}`;
+export function customMetaTitle(role: string, category: string | undefined, displayName: string): string {
+  const prefix = capitalize(role);
+  return category ? `${prefix}/${category}/${displayName}` : `${prefix}/${displayName}`;
 }
 
 /**
- * Build the Storybook story name for a scenario story.
- * Must match the last segment of the meta title for auto-flattening.
+ * Compute the full Storybook story ID for a custom story.
+ * @param role - e.g. "applicant"
+ * @param category - e.g. "Intake" (optional)
+ * @param customKebab - e.g. "texas-snap"
  */
-export function scenarioStoryName(formTitle: string, displayName: string): string {
-  return `${formTitle}: ${displayName}`;
-}
-
-/**
- * Compute the full Storybook story ID for a scenario.
- * @param formTitle - e.g. "Person Review"
- * @param scenarioKebab - e.g. "mary-hamlin"
- */
-export function scenarioStoryId(formTitle: string, scenarioKebab: string): string {
-  const displayName = scenarioDisplayName(scenarioKebab);
-  const metaTitle = scenarioMetaTitle(formTitle, displayName);
-  const exportName = toPascalCase(scenarioKebab);
+export function customStoryId(role: string, category: string | undefined, customKebab: string): string {
+  const displayName = customDisplayName(customKebab);
+  const metaTitle = customMetaTitle(role, category, displayName);
+  const exportName = toPascalCase(customKebab);
   return buildStoryId(metaTitle, exportName);
 }
 

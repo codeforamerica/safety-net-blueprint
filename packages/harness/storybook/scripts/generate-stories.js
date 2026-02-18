@@ -14,8 +14,8 @@
  *   Manifest:         authored/contracts/{domain}/{name}.manifest.yaml
  *   Contract:         authored/contracts/{domain}/{name}.form.yaml
  *   Story file:       storybook/stories/{PascalCase}.stories.tsx
- *   Scenarios:        storybook/scenarios/{contract-id}.{scenario-name}/
- *   Scenario stories: storybook/scenarios/{contract-id}.{scenario-name}/index.stories.tsx
+ *   Custom:           storybook/custom/{contract-id}.{custom-name}/
+ *   Custom stories:   storybook/custom/{contract-id}.{custom-name}/index.stories.tsx
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from 'fs';
@@ -26,7 +26,7 @@ import { dirs } from '../config.js';
 const ROOT = join(import.meta.dirname, '../..');
 const CONTRACTS_DIR = join(ROOT, dirs.contracts);
 const STORIES_DIR = join(ROOT, dirs.stories);
-const SCENARIOS_DIR = join(ROOT, dirs.scenarios);
+const CUSTOM_DIR = join(ROOT, dirs.custom);
 
 // =============================================================================
 // Utilities
@@ -37,6 +37,19 @@ function toPascalCase(kebab) {
     .split('-')
     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
     .join('');
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Build the Storybook meta.title from role, optional category, and title.
+ * Role/Category/Title or Role/Title when no category.
+ */
+function buildMetaTitle(role, category, title) {
+  const prefix = capitalize(role);
+  return category ? `${prefix}/${category}/${title}` : `${prefix}/${title}`;
 }
 
 /**
@@ -58,7 +71,7 @@ function writeIfChanged(filePath, content) {
 
 /**
  * Discover manifest files within domain subdirectories.
- * Returns array of { domain, sources } objects.
+ * Returns array of { domain, category, sources } objects.
  */
 function discoverManifests() {
   const results = [];
@@ -73,34 +86,33 @@ function discoverManifests() {
       const manifestPath = join(domainPath, file);
       const raw = readFileSync(manifestPath, 'utf-8');
       const manifest = yaml.load(raw);
-      results.push({ domain, sources: manifest.sources });
+      results.push({ domain, category: manifest.category, sources: manifest.sources });
     }
   }
   return results;
 }
 
 /**
- * Discover scenario directories for a given contract id.
- * Returns array of { scenarioName, dir } objects.
+ * Discover custom story directories for a given contract id.
+ * Returns array of { customName, dir } objects.
  */
-function discoverScenarios(contractId) {
-  if (!existsSync(SCENARIOS_DIR)) return [];
+function discoverCustom(contractId) {
+  if (!existsSync(CUSTOM_DIR)) return [];
 
-  const requiredFiles = ['test-data.yaml', 'permissions.yaml', 'layout.yaml'];
+  const requiredFiles = ['layout.yaml'];
   const prefix = `${contractId}.`;
-  return readdirSync(SCENARIOS_DIR)
+  return readdirSync(CUSTOM_DIR)
     .filter(entry => {
       if (!entry.startsWith(prefix)) return false;
-      const entryPath = join(SCENARIOS_DIR, entry);
+      const entryPath = join(CUSTOM_DIR, entry);
       if (!statSync(entryPath).isDirectory()) return false;
-      // Only valid if all three YAML files exist
       return requiredFiles.every(f => existsSync(join(entryPath, f)));
     })
     .map(dir => {
-      const scenarioName = dir.slice(prefix.length);
-      return { scenarioName, dir };
+      const customName = dir.slice(prefix.length);
+      return { customName, dir };
     })
-    .sort((a, b) => a.scenarioName.localeCompare(b.scenarioName));
+    .sort((a, b) => a.customName.localeCompare(b.customName));
 }
 
 // =============================================================================
@@ -206,9 +218,9 @@ function annotationsTabEntry(layers) {
 // Template: wizard layout
 // =============================================================================
 
-function generateWizardStory(contract, manifest) {
-  const { id, title } = contract.form;
-  const { role } = contract.form.storybook;
+function generateWizardStory(contract, manifest, category) {
+  const { id, title, role } = contract.form;
+  const metaTitle = buildMetaTitle(role, category, title);
   const src = manifest.sources;
   const zodExport = src.zodExport;
   const schemaModule = src.schema.replace(/\.ts$/, '');
@@ -247,7 +259,8 @@ const typedPerms = permsData as unknown as PermissionsPolicy;
 ${ann.setup}
 
 const meta: Meta = {
-  title: 'Forms/${title}',
+  title: '${metaTitle}',
+  tags: ['read-only'],
   parameters: { layout: 'fullscreen' },
 };
 
@@ -274,7 +287,8 @@ function StoryWrapper() {
     <ContractPreview
       tabs={tabs}
       contractId="${id}"
-      formTitle="${title}"
+      role="${role}"${category ? `
+      category="${category}"` : ''}
       onLayoutChange={setActiveContract}
       onPermissionsChange={setPerms}
       onTestDataChange={setTestData}
@@ -303,9 +317,9 @@ export const ${pascalName}: StoryObj = {
 // Template: review layout
 // =============================================================================
 
-function generateReviewStory(contract, manifest) {
-  const { id, title } = contract.form;
-  const { role } = contract.form.storybook;
+function generateReviewStory(contract, manifest, category) {
+  const { id, title, role } = contract.form;
+  const metaTitle = buildMetaTitle(role, category, title);
   const src = manifest.sources;
   const zodExport = src.zodExport;
   const schemaModule = src.schema.replace(/\.ts$/, '');
@@ -344,7 +358,8 @@ const typedPerms = permsData as unknown as PermissionsPolicy;
 ${ann.setup}
 
 const meta: Meta = {
-  title: 'Forms/${title}',
+  title: '${metaTitle}',
+  tags: ['read-only'],
   parameters: { layout: 'fullscreen' },
 };
 
@@ -371,7 +386,8 @@ function StoryWrapper() {
     <ContractPreview
       tabs={tabs}
       contractId="${id}"
-      formTitle="${title}"
+      role="${role}"${category ? `
+      category="${category}"` : ''}
       onLayoutChange={setActiveContract}
       onPermissionsChange={setPerms}
       onTestDataChange={setTestData}
@@ -399,9 +415,9 @@ export const ${pascalName}: StoryObj = {
 // Template: split-panel layout
 // =============================================================================
 
-function generateSplitPanelStory(contract, manifest) {
-  const { id, title, panels } = contract.form;
-  const { role } = contract.form.storybook;
+function generateSplitPanelStory(contract, manifest, category) {
+  const { id, title, panels, role } = contract.form;
+  const metaTitle = buildMetaTitle(role, category, title);
   const src = manifest.sources;
   const zodExport = src.zodExport;
   const schemaModule = src.schema.replace(/\.ts$/, '');
@@ -445,7 +461,8 @@ const typedPerms = permsData as unknown as PermissionsPolicy;
 ${ann.setup}
 
 const meta: Meta = {
-  title: 'Forms/${title}',
+  title: '${metaTitle}',
+  tags: ['read-only'],
   parameters: { layout: 'fullscreen' },
 };
 
@@ -472,7 +489,8 @@ function StoryWrapper() {
     <ContractPreview
       tabs={tabs}
       contractId="${id}"
-      formTitle="${title}"
+      role="${role}"${category ? `
+      category="${category}"` : ''}
       onLayoutChange={setActiveContract}
       onPermissionsChange={setPerms}
       onTestDataChange={setTestData}
@@ -500,50 +518,112 @@ export const ${pascalName}: StoryObj = {
 }
 
 // =============================================================================
-// Template: scenario story (co-located in storybook/scenarios/{dir}/)
+// Template: custom story (co-located in storybook/custom/{dir}/)
 // =============================================================================
 
-function generateScenarioStory(contract, manifest, scenarioName) {
-  const { id, title } = contract.form;
+function generateCustomStory(contract, manifest, customName, customDir, category) {
+  const { id, title, role } = contract.form;
   const layout = contract.form.layout || 'wizard';
-  const { role } = contract.form.storybook;
+  const panels = contract.form.panels;
   const src = manifest.sources;
   const zodExport = src.zodExport;
   const schemaModule = src.schema.replace(/\.ts$/, '');
   const layers = parseAnnotationPaths(src.annotations);
+  const allPerms = parsePermissionPaths(src.permissions);
 
-  const scenarioDisplayName = scenarioName.replace(/-/g, ' ');
+  const customDisplayName = customName.replace(/-/g, ' ').replace(/\b[a-z]/g, c => c.toUpperCase());
+  const metaTitle = buildMetaTitle(role, category, customDisplayName);
 
+  // Check which optional files exist in the custom directory
+  const customPath = join(CUSTOM_DIR, customDir);
+  const hasTestData = existsSync(join(customPath, 'test-data.yaml'));
+  const hasPermissions = existsSync(join(customPath, 'permissions.yaml'));
+
+  if (layout === 'reference') {
+    return generateReferenceCustomStory({ id, role, src, layers, allPerms, metaTitle, customName, customDisplayName, category });
+  }
+
+  // Form-based layouts: wizard, review, split-panel
   const roleType = layout === 'wizard' ? ', Role' : '';
   const ann = annotationBlock(layers, '../../..');
   const annTab = annotationsTabEntry(layers);
 
-  return `// Auto-generated scenario story. Run \`npm run generate:stories\` to regenerate.
+  // Imports: layout always from custom dir, test-data/permissions from custom or parent
+  const fixturesImport = hasTestData
+    ? `import customFixtures from './test-data.yaml';\nimport customFixturesYaml from './test-data.yaml?raw';`
+    : `import customFixtures from '../../../${src.fixtures}';\nimport customFixturesYaml from '../../../${src.fixtures}?raw';`;
+  const permsImport = hasPermissions
+    ? `import customPerms from './permissions.yaml';\nimport customPermsYaml from './permissions.yaml?raw';`
+    : `import customPerms from '../../../${src.permissions[0]}';\nimport customPermsYaml from '../../../${src.permissions[0]}?raw';`;
+
+  const fixturesTabFilename = hasTestData
+    ? `storybook/custom/${id}.${customName}/test-data.yaml`
+    : src.fixtures;
+  const permsTabFilename = hasPermissions
+    ? `storybook/custom/${id}.${customName}/permissions.yaml`
+    : src.permissions[0];
+
+  // Renderer block depends on layout type
+  let rendererImport, rendererJsx;
+  if (layout === 'split-panel') {
+    const leftMode = panels?.left?.mode ?? 'editable';
+    const rightMode = panels?.right?.mode ?? 'readonly';
+    const leftLabel = panels?.left?.label ?? 'Left Panel';
+    const rightLabel = panels?.right?.label ?? 'Right Panel';
+    rendererImport = `import { SplitPanelRenderer } from '../../../src/engine/SplitPanelRenderer';`;
+    rendererJsx = `      <SplitPanelRenderer
+        contract={activeContract}
+        schema={${zodExport}}
+        role="${role}"
+        panels={{
+          left: { label: '${leftLabel}', viewMode: '${leftMode}' as ViewMode, data: testData },
+          right: { label: '${rightLabel}', viewMode: '${rightMode}' as ViewMode, data: testData },
+        }}
+        permissionsPolicy={perms}${ann.prop}
+        onSubmit={logSubmit}
+      />`;
+  } else {
+    rendererImport = `import { FormRenderer } from '../../../src/engine/FormRenderer';`;
+    rendererJsx = `      <FormRenderer
+        contract={activeContract}
+        schema={${zodExport}}
+        role="${role}"${layout === 'wizard' ? `
+        initialPage={initialPage}` : ''}
+        defaultValues={testData}
+        permissionsPolicy={perms}${ann.prop}
+        onSubmit={logSubmit}
+      />`;
+  }
+
+  const viewModeImport = layout === 'split-panel' ? ', ViewMode' : '';
+
+  return `// Auto-generated custom story. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { FormRenderer } from '../../../src/engine/FormRenderer';
+${rendererImport}
 import { ContractPreview, type EditorTab } from '../../../src/engine/ContractPreview';
 import { ${zodExport} } from '../../../${schemaModule}';
-import type { FormContract${roleType}, PermissionsPolicy } from '../../../src/engine/types';
+import type { FormContract${roleType}, PermissionsPolicy${viewModeImport} } from '../../../src/engine/types';
 
-// Scenario: all three files are co-located in this directory
-import scenarioLayout from './layout.yaml';
-import scenarioLayoutYaml from './layout.yaml?raw';
-import scenarioFixtures from './test-data.yaml';
-import scenarioFixturesYaml from './test-data.yaml?raw';
-import scenarioPerms from './permissions.yaml';
-import scenarioPermsYaml from './permissions.yaml?raw';
+// Layout (from custom)
+import customLayout from './layout.yaml';
+import customLayoutYaml from './layout.yaml?raw';
+// Test data${hasTestData ? ' (from custom)' : ' (from parent)'}
+${fixturesImport}
+// Permissions${hasPermissions ? ' (from custom)' : ' (from parent)'}
+${permsImport}
 // Schema (read-only Zod source)
 import schemaSource from '../../../${src.schema}?raw';
 ${ann.imports}
 
-const typedContract = scenarioLayout as unknown as FormContract;
-const typedFixtures = scenarioFixtures as unknown as Record<string, unknown>;
-const typedPerms = scenarioPerms as unknown as PermissionsPolicy;
+const typedContract = customLayout as unknown as FormContract;
+const typedFixtures = customFixtures as unknown as Record<string, unknown>;
+const typedPerms = customPerms as unknown as PermissionsPolicy;
 ${ann.setup}
 
 const meta: Meta = {
-  title: 'Scenarios/${title}: ${scenarioDisplayName}',
+  title: '${metaTitle}',
+  tags: ['custom'],
   parameters: { layout: 'fullscreen' },
 };
 
@@ -566,9 +646,9 @@ function StoryWrapper(${layout === 'wizard' ? `{
   const [perms, setPerms] = useState(typedPerms);
 
   const tabs: EditorTab[] = [
-    { id: 'layout', label: 'Layout', filename: 'storybook/scenarios/${id}.${scenarioName}/layout.yaml', source: scenarioLayoutYaml },
-    { id: 'test-data', label: 'Test Data', filename: 'storybook/scenarios/${id}.${scenarioName}/test-data.yaml', source: scenarioFixturesYaml },
-    { id: 'permissions', label: 'Permissions', filename: 'storybook/scenarios/${id}.${scenarioName}/permissions.yaml', source: scenarioPermsYaml },
+    { id: 'layout', label: 'Layout', filename: 'storybook/custom/${id}.${customName}/layout.yaml', source: customLayoutYaml },
+    { id: 'test-data', label: 'Test Data', filename: '${fixturesTabFilename}', source: customFixturesYaml },
+    { id: 'permissions', label: 'Permissions', filename: '${permsTabFilename}', source: customPermsYaml },
     { id: 'schema', label: 'Schema', filename: '${src.schema}', source: schemaSource, readOnly: true, group: 'reference' as const },${annTab}
   ];
 
@@ -576,26 +656,131 @@ function StoryWrapper(${layout === 'wizard' ? `{
     <ContractPreview
       tabs={tabs}
       contractId="${id}"
-      formTitle="${title}"
+      role="${role}"${category ? `
+      category="${category}"` : ''}
       onLayoutChange={setActiveContract}
       onPermissionsChange={setPerms}
       onTestDataChange={setTestData}
     >
-      <FormRenderer
+${rendererJsx}
+    </ContractPreview>
+  );
+}
+
+export const ${toPascalCase(customName)}: StoryObj = {
+  name: '${customDisplayName}',
+  render: () => <StoryWrapper />,
+};
+`;
+}
+
+// =============================================================================
+// Template: reference custom story
+// =============================================================================
+
+/**
+ * Generate a custom story for a reference-layout contract.
+ * Layout comes from the custom dir; annotations and permissions come from the parent manifest.
+ */
+function generateReferenceCustomStory({ id, role, src, layers, allPerms, metaTitle, customName, customDisplayName, category }) {
+  const hasAnnotations = layers.length > 0;
+
+  // Annotation imports — each layer passed separately
+  const annotationImports = layers.map((l, i) =>
+    `import annotationLayer${i} from '../../../${l.path}';\nimport annotationLayer${i}Yaml from '../../../${l.path}?raw';`
+  ).join('\n');
+
+  const annotationLayerEntries = layers.map((l, i) =>
+    `  { name: '${l.name}', data: annotationLayer${i} as unknown as Record<string, unknown> },`
+  ).join('\n');
+
+  // Permissions imports (all roles)
+  const permsImports = allPerms.map(p =>
+    `import ${p.role}PermsData from '../../../${p.path}';\nimport ${p.role}PermsYaml from '../../../${p.path}?raw';`
+  ).join('\n');
+
+  const permsTypedArray = allPerms.map(p =>
+    `  ${p.role}PermsData as unknown as PermissionsPolicy,`
+  ).join('\n');
+
+  // Reference content (annotation fields + permissions)
+  const annotationFieldsRef = hasAnnotations ? buildAnnotationFieldsReference(layers) : '';
+  const permissionsRef = buildPermissionsReference(allPerms);
+
+  const annotationTabs = layers.map((l, i) =>
+    `    { id: 'annotations-${l.name}', label: '${toPascalCase(l.name)} Annotations', filename: '${l.path}', source: annotationLayer${i}Yaml, readOnly: true, group: 'reference' as const },`
+  ).join('\n');
+
+  const annotationFieldsTab = hasAnnotations
+    ? `    { id: 'annotation-fields', label: 'Annotation Fields', filename: 'Available annotation column values', source: annotationFieldsRefContent, readOnly: true, group: 'reference' as const },`
+    : '';
+
+  const permissionsTab = `    { id: 'permissions-ref', label: 'Permissions', filename: 'Available permission roles', source: permissionsRefContent, readOnly: true, group: 'reference' as const },`;
+
+  return `// Auto-generated custom story. Run \`npm run generate:stories\` to regenerate.
+import React, { useState } from 'react';
+import type { Meta, StoryObj } from '@storybook/react';
+import { ReferenceRenderer } from '../../../src/engine/ReferenceRenderer';
+import { ContractPreview, type EditorTab } from '../../../src/engine/ContractPreview';
+import type { FormContract, PermissionsPolicy } from '../../../src/engine/types';
+
+// Layout (from custom)
+import customLayout from './layout.yaml';
+import customLayoutYaml from './layout.yaml?raw';
+// Permissions (all roles, from parent)
+${permsImports}
+${hasAnnotations ? `// Annotations (from parent)\n${annotationImports}` : ''}
+
+const typedContract = customLayout as unknown as FormContract;
+const allPermissions: PermissionsPolicy[] = [
+${permsTypedArray}
+];
+const annotationLayers = [
+${annotationLayerEntries}
+];
+
+// Consolidated reference content (generated at build time)
+const annotationFieldsRefContent = ${JSON.stringify(annotationFieldsRef)};
+const permissionsRefContent = ${JSON.stringify(permissionsRef)};
+
+const meta: Meta = {
+  title: '${metaTitle}',
+  tags: ['custom'],
+  parameters: { layout: 'fullscreen' },
+};
+
+export default meta;
+
+function StoryWrapper() {
+  const [activeContract, setActiveContract] = useState(typedContract);
+
+  const tabs: EditorTab[] = [
+    { id: 'layout', label: 'Layout', filename: 'storybook/custom/${id}.${customName}/layout.yaml', source: customLayoutYaml },
+${annotationTabs}
+${annotationFieldsTab}
+${permissionsTab}
+  ];
+
+  return (
+    <ContractPreview
+      tabs={tabs}
+      contractId="${id}"
+      role="${role}"${category ? `
+      category="${category}"` : ''}
+      onLayoutChange={setActiveContract}
+      onPermissionsChange={() => {}}
+      onTestDataChange={() => {}}
+    >
+      <ReferenceRenderer
         contract={activeContract}
-        schema={${zodExport}}
-        role="${role}"${layout === 'wizard' ? `
-        initialPage={initialPage}` : ''}
-        defaultValues={testData}
-        permissionsPolicy={perms}${ann.prop}
-        onSubmit={logSubmit}
+${hasAnnotations ? '        annotationLayers={annotationLayers}\n' : ''}        permissionsPolicies={allPermissions}
       />
     </ContractPreview>
   );
 }
 
-export const ${toPascalCase(scenarioName)}: StoryObj = {
-  name: '${title}: ${scenarioDisplayName}',
+export const ${toPascalCase(customName)}: StoryObj = {
+  name: '${customDisplayName}',
   render: () => <StoryWrapper />,
 };
 `;
@@ -668,8 +853,9 @@ function buildPermissionsReference(perms) {
   return lines.join('\n');
 }
 
-function generateReferenceStory(contract, manifest) {
-  const { id, title } = contract.form;
+function generateReferenceStory(contract, manifest, category) {
+  const { id, title, role } = contract.form;
+  const metaTitle = buildMetaTitle(role, category, title);
   const src = manifest.sources;
   const contractPath = src.contract;
   const layers = parseAnnotationPaths(src.annotations);
@@ -738,7 +924,8 @@ const annotationFieldsRefContent = ${JSON.stringify(annotationFieldsRef)};
 const permissionsRefContent = ${JSON.stringify(permissionsRef)};
 
 const meta: Meta = {
-  title: 'Reference/${title}',
+  title: '${metaTitle}',
+  tags: ['read-only'],
   parameters: { layout: 'fullscreen' },
 };
 
@@ -758,7 +945,8 @@ ${permissionsTab}
     <ContractPreview
       tabs={tabs}
       contractId="${id}"
-      formTitle="${title}"
+      role="${role}"${category ? `
+      category="${category}"` : ''}
       onLayoutChange={setActiveContract}
       onPermissionsChange={() => {}}
       onTestDataChange={() => {}}
@@ -785,16 +973,16 @@ export const ${pascalName}: StoryObj = {
 function main() {
   const manifests = discoverManifests();
   let generated = 0;
-  let scenariosGenerated = 0;
+  let customGenerated = 0;
 
-  for (const { domain, sources } of manifests) {
+  for (const { domain, category, sources } of manifests) {
     // Read the contract from the manifest's contract path
     const contractPath = join(ROOT, sources.contract);
     const content = readFileSync(contractPath, 'utf-8');
     const doc = yaml.load(content);
 
-    if (!doc?.form?.storybook) {
-      console.log(`  skip  ${sources.contract} (no storybook section)`);
+    if (!doc?.form?.id) {
+      console.log(`  skip  ${sources.contract} (no form.id)`);
       continue;
     }
 
@@ -806,12 +994,12 @@ function main() {
 
     const source =
       layout === 'reference'
-        ? generateReferenceStory(doc, manifest)
+        ? generateReferenceStory(doc, manifest, category)
         : layout === 'split-panel'
-          ? generateSplitPanelStory(doc, manifest)
+          ? generateSplitPanelStory(doc, manifest, category)
           : layout === 'review'
-            ? generateReviewStory(doc, manifest)
-            : generateWizardStory(doc, manifest);
+            ? generateReviewStory(doc, manifest, category)
+            : generateWizardStory(doc, manifest, category);
 
     if (writeIfChanged(outPath, source)) {
       console.log(`  write  ${pascalName}.stories.tsx  (${layout})`);
@@ -820,21 +1008,21 @@ function main() {
     }
     generated++;
 
-    // Discover and generate scenario stories (co-located with YAML files)
-    const scenarios = discoverScenarios(contractId);
-    for (const { scenarioName, dir } of scenarios) {
-      const scenarioOutPath = join(SCENARIOS_DIR, dir, 'index.stories.tsx');
-      const scenarioSource = generateScenarioStory(doc, manifest, scenarioName);
-      if (writeIfChanged(scenarioOutPath, scenarioSource)) {
-        console.log(`  write  scenarios/${dir}/index.stories.tsx`);
+    // Discover and generate custom stories (co-located with YAML files)
+    const customs = discoverCustom(contractId);
+    for (const { customName, dir } of customs) {
+      const customOutPath = join(CUSTOM_DIR, dir, 'index.stories.tsx');
+      const customSource = generateCustomStory(doc, manifest, customName, dir, category);
+      if (writeIfChanged(customOutPath, customSource)) {
+        console.log(`  write  custom/${dir}/index.stories.tsx`);
       } else {
-        console.log(`  skip   scenarios/${dir}/index.stories.tsx  (unchanged)`);
+        console.log(`  skip   custom/${dir}/index.stories.tsx  (unchanged)`);
       }
-      scenariosGenerated++;
+      customGenerated++;
     }
   }
 
-  console.log(`\nGenerated ${generated} story file(s) and ${scenariosGenerated} scenario(s).`);
+  console.log(`\nGenerated ${generated} story file(s) and ${customGenerated} custom story/stories.`);
 }
 
 main();

@@ -28,15 +28,15 @@ vi.mock('./useViewportAutoHide', () => ({
 // ---------------------------------------------------------------------------
 
 const minimalTabs: EditorTab[] = [
-  { id: 'layout', label: 'Layout', filename: 'layout.yaml', source: 'form:\n  id: test\n  title: Test\n  schema: Application\n  scope: california\n  pages: []' },
+  { id: 'layout', label: 'Layout', filename: 'layout.yaml', source: 'form:\n  id: test\n  title: Test\n  schema: Application\n  pages: []' },
   { id: 'test-data', label: 'Test Data', filename: 'test-data.yaml', source: 'name: test' },
   { id: 'permissions', label: 'Permissions', filename: 'permissions.yaml', source: 'role: applicant\ndefaults: editable' },
 ];
 
-const scenarioTabs: EditorTab[] = [
-  { id: 'layout', label: 'Layout', filename: 'scenarios/test-app.citizen/layout.yaml', source: 'form:\n  id: test\n  title: Test\n  schema: Application\n  scope: california\n  pages: []' },
-  { id: 'test-data', label: 'Test Data', filename: 'scenarios/test-app.citizen/test-data.yaml', source: 'name: test' },
-  { id: 'permissions', label: 'Permissions', filename: 'scenarios/test-app.citizen/permissions.yaml', source: 'role: applicant\ndefaults: editable' },
+const customTabs: EditorTab[] = [
+  { id: 'layout', label: 'Layout', filename: 'storybook/custom/test-app.citizen/layout.yaml', source: 'form:\n  id: test\n  title: Test\n  schema: Application\n  pages: []' },
+  { id: 'test-data', label: 'Test Data', filename: 'storybook/custom/test-app.citizen/test-data.yaml', source: 'name: test' },
+  { id: 'permissions', label: 'Permissions', filename: 'storybook/custom/test-app.citizen/permissions.yaml', source: 'role: applicant\ndefaults: editable' },
 ];
 
 function renderPreview({
@@ -45,14 +45,14 @@ function renderPreview({
   setVisible = vi.fn(),
   tabs = minimalTabs,
   contractId,
-  formTitle,
+  role,
 }: {
   isNarrow?: boolean;
   editorVisible?: boolean;
   setVisible?: (show: boolean) => void;
   tabs?: EditorTab[];
   contractId?: string;
-  formTitle?: string;
+  role?: string;
 } = {}) {
   mockIsNarrow = isNarrow;
   capturedSetShowSource = null;
@@ -61,7 +61,7 @@ function renderPreview({
       <ContractPreview
         tabs={tabs}
         contractId={contractId}
-        formTitle={formTitle}
+        role={role}
         onLayoutChange={vi.fn()}
         onPermissionsChange={vi.fn()}
         onTestDataChange={vi.fn()}
@@ -268,65 +268,120 @@ describe('ContractPreview editor visibility via context', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Save-as-Scenario button visibility
+// Custom story toolbar visibility
 // ---------------------------------------------------------------------------
 
-describe('Save-as-Scenario button visibility', () => {
+describe('Custom story toolbar visibility', () => {
   beforeEach(() => {
     mockIsNarrow = false;
     capturedSetShowSource = null;
   });
 
-  it('shows scenario button inside editor when editor is visible', () => {
-    renderPreview({ editorVisible: true, contractId: 'test-app', formTitle: 'Test' });
+  it('shows Save as Custom button when contractId and role are set', () => {
+    renderPreview({ editorVisible: true, contractId: 'test-app', role: 'applicant' });
 
-    expect(screen.getByRole('button', { name: /Save as Scenario/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save as Custom/ })).toBeInTheDocument();
   });
 
-  it('hides scenario button when editor is hidden', () => {
-    renderPreview({ editorVisible: false, contractId: 'test-app', formTitle: 'Test' });
+  it('shows Save as Custom button even when editor is hidden', () => {
+    renderPreview({ editorVisible: false, contractId: 'test-app', role: 'applicant' });
 
-    expect(screen.queryByRole('button', { name: /Save as Scenario/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save as Custom/ })).toBeInTheDocument();
     expect(screen.getByTestId('form-content')).toBeInTheDocument();
   });
 
-  it('hides scenario button in narrow viewport with editor hidden', () => {
-    renderPreview({ isNarrow: true, editorVisible: false, contractId: 'test-app', formTitle: 'Test' });
+  it('shows custom toolbar in narrow viewport with editor open', () => {
+    renderPreview({ isNarrow: true, editorVisible: true, contractId: 'test-app', role: 'applicant' });
 
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Save as Scenario/ })).not.toBeInTheDocument();
-    expect(screen.getByTestId('form-content')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save as Custom/ })).toBeInTheDocument();
   });
 
-  it('does not show scenario button when contractId is not set', () => {
+  it('does not show custom button when contractId is not set', () => {
     renderPreview({ editorVisible: true });
 
-    expect(screen.queryByRole('button', { name: /Save as Scenario/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Save as Custom/ })).not.toBeInTheDocument();
   });
 
-  it('hides update scenario button when editor is hidden', () => {
-    renderPreview({
-      editorVisible: false,
-      contractId: 'test-app',
-      formTitle: 'Test',
-      tabs: scenarioTabs,
-    });
-
-    expect(screen.queryByRole('button', { name: /Update Scenario/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Save as New Scenario/ })).not.toBeInTheDocument();
-    expect(screen.getByTestId('form-content')).toBeInTheDocument();
-  });
-
-  it('shows scenario buttons when viewing a scenario with editor visible', () => {
+  it('shows custom management buttons when viewing a custom story', () => {
     renderPreview({
       editorVisible: true,
       contractId: 'test-app',
-      formTitle: 'Test',
-      tabs: scenarioTabs,
+      role: 'applicant',
+      tabs: customTabs,
     });
 
-    expect(screen.getByRole('button', { name: /Update Scenario/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Save as New Scenario/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Update/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save as New Custom/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Rename/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Delete/ })).toBeInTheDocument();
+  });
+
+  it('shows custom management buttons even when editor is hidden', () => {
+    renderPreview({
+      editorVisible: false,
+      contractId: 'test-app',
+      role: 'applicant',
+      tabs: customTabs,
+    });
+
+    expect(screen.getByRole('button', { name: /Update/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save as New Custom/ })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Custom story detection (custom/ path matching)
+// ---------------------------------------------------------------------------
+
+describe('Custom story detection via custom/ path', () => {
+  beforeEach(() => {
+    mockIsNarrow = false;
+    capturedSetShowSource = null;
+  });
+
+  it('detects custom story from storybook/custom/ tab filenames', () => {
+    renderPreview({
+      editorVisible: true,
+      contractId: 'test-app',
+      role: 'applicant',
+      tabs: customTabs,
+    });
+
+    // Custom story mode: shows Update + Save as New Custom (not Save as Custom)
+    expect(screen.getByRole('button', { name: /Update/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save as New Custom/ })).toBeInTheDocument();
+  });
+
+  it('does NOT detect custom story from base story tabs (no custom/ path)', () => {
+    renderPreview({
+      editorVisible: true,
+      contractId: 'test-app',
+      role: 'applicant',
+      tabs: minimalTabs,
+    });
+
+    // Base story mode: shows Save as Custom (not Update/New)
+    expect(screen.getByRole('button', { name: /Save as Custom/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Update/ })).not.toBeInTheDocument();
+  });
+
+  it('does NOT detect custom story from old snapshots/ path in filenames', () => {
+    const legacyTabs: EditorTab[] = [
+      { id: 'layout', label: 'Layout', filename: 'storybook/snapshots/test-app.citizen/layout.yaml', source: 'form:\n  id: test\n  title: Test\n  schema: Application\n  pages: []' },
+      { id: 'test-data', label: 'Test Data', filename: 'storybook/snapshots/test-app.citizen/test-data.yaml', source: 'name: test' },
+      { id: 'permissions', label: 'Permissions', filename: 'storybook/snapshots/test-app.citizen/permissions.yaml', source: 'role: applicant\ndefaults: editable' },
+    ];
+
+    renderPreview({
+      editorVisible: true,
+      contractId: 'test-app',
+      role: 'applicant',
+      tabs: legacyTabs,
+    });
+
+    // Old snapshots/ path should NOT trigger custom story mode
+    expect(screen.getByRole('button', { name: /Save as Custom/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Update/ })).not.toBeInTheDocument();
   });
 });
 
