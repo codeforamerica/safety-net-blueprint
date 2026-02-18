@@ -834,6 +834,19 @@ export const ${pascalName}: StoryObj = {
 // =============================================================================
 
 /**
+ * Write file only if content has actually changed.
+ * Prevents unnecessary mtime updates that trigger Storybook's HMR watcher.
+ */
+function writeIfChanged(filePath, content) {
+  if (existsSync(filePath)) {
+    const existing = readFileSync(filePath, 'utf-8');
+    if (existing === content) return false;
+  }
+  writeFileSync(filePath, content, 'utf-8');
+  return true;
+}
+
+/**
  * Derive the filename stem for a contract within a domain directory.
  * Contract id is e.g. "application-intake", domain is "application".
  * The file is named by stripping the domain prefix: "intake.form.yaml".
@@ -880,8 +893,11 @@ function main() {
             ? generateReviewStory(doc, domain)
             : generateWizardStory(doc, domain);
 
-    writeFileSync(outPath, source, 'utf-8');
-    console.log(`  write  ${pascalName}.stories.tsx  (${layout})`);
+    if (writeIfChanged(outPath, source)) {
+      console.log(`  write  ${pascalName}.stories.tsx  (${layout})`);
+    } else {
+      console.log(`  skip   ${pascalName}.stories.tsx  (unchanged)`);
+    }
     generated++;
 
     // Discover and generate scenario stories (co-located with YAML files)
@@ -889,8 +905,11 @@ function main() {
     for (const { scenarioName, dir } of scenarios) {
       const scenarioOutPath = join(SCENARIOS_DIR, dir, 'index.stories.tsx');
       const scenarioSource = generateScenarioStory(doc, scenarioName, domain);
-      writeFileSync(scenarioOutPath, scenarioSource, 'utf-8');
-      console.log(`  write  scenarios/${dir}/index.stories.tsx`);
+      if (writeIfChanged(scenarioOutPath, scenarioSource)) {
+        console.log(`  write  scenarios/${dir}/index.stories.tsx`);
+      } else {
+        console.log(`  skip   scenarios/${dir}/index.stories.tsx  (unchanged)`);
+      }
       scenariosGenerated++;
     }
   }
