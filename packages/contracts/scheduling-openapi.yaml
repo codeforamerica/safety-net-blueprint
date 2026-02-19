@@ -1,0 +1,277 @@
+openapi: 3.1.0
+info:
+  title: Scheduling Service API
+  version: 0.1.0
+  x-domain: scheduling
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    REST API for managing scheduling entities such as appointments.
+
+    An appointment is a scheduled interaction between a staff member and a person
+    at a given time.
+
+    > **Status: Alpha** — Breaking changes expected.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+- url: https://api.example.com
+  description: Production server
+- url: http://localhost:8080
+  description: Local development server
+tags:
+- name: Appointments
+  description: Manage appointments.
+paths:
+  "/appointments":
+    get:
+      summary: List appointments
+      description: Retrieve a paginated list of appointments.
+      operationId: listAppointments
+      tags:
+      - Appointments
+      parameters:
+      - "$ref": "./components/parameters.yaml#/SearchQueryParam"
+      - "$ref": "./components/parameters.yaml#/LimitParam"
+      - "$ref": "./components/parameters.yaml#/OffsetParam"
+      responses:
+        '200':
+          description: A paginated collection of appointments.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AppointmentList"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    post:
+      summary: Create an appointment
+      description: Create a new appointment record.
+      operationId: createAppointment
+      tags:
+      - Appointments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/AppointmentCreate"
+      responses:
+        '201':
+          description: Appointment created successfully.
+          headers:
+            Location:
+              description: URL of the newly created appointment resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Appointment"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '422':
+          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+  "/appointments/{appointmentId}":
+    parameters:
+    - "$ref": "#/components/parameters/AppointmentIdParam"
+    get:
+      summary: Get an appointment
+      description: Retrieve a single appointment by identifier.
+      operationId: getAppointment
+      tags:
+      - Appointments
+      responses:
+        '200':
+          description: Appointment retrieved successfully.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Appointment"
+              examples:
+                AppointmentExample1:
+                  "$ref": "./scheduling-openapi-examples.yaml#/AppointmentExample1"
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update an appointment
+      description: Apply partial updates to an existing appointment.
+      operationId: updateAppointment
+      tags:
+      - Appointments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/AppointmentUpdate"
+      responses:
+        '200':
+          description: Appointment updated successfully.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Appointment"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '422':
+          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete an appointment
+      description: Permanently remove an appointment record.
+      operationId: deleteAppointment
+      tags:
+      - Appointments
+      responses:
+        '204':
+          description: Appointment deleted successfully.
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+components:
+  parameters:
+    AppointmentIdParam:
+      name: appointmentId
+      in: path
+      required: true
+      description: Unique identifier of the appointment.
+      schema:
+        type: string
+        format: uuid
+      example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+  schemas:
+    # Primary schema — a scheduled interaction between a staff member and a person
+    Appointment:
+      type: object
+      description: |
+        A scheduled interaction between a staff member and a person at a given time.
+      additionalProperties: false
+      required:
+        - id
+        - startAt
+        - endAt
+        - appointmentType
+        - status
+        - personId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        startAt:
+          type: string
+          format: date-time
+          description: When the appointment begins.
+        endAt:
+          type: string
+          format: date-time
+          description: When the appointment ends.
+        appointmentType:
+          type: string
+          maxLength: 100
+          description: Type of appointment (e.g., interview, recertification, orientation). Free-text, not enum — states define their own types.
+        status:
+          "$ref": "#/components/schemas/AppointmentStatus"
+        personId:
+          type: string
+          format: uuid
+          description: Reference to the Person record (the subject of the appointment).
+        assignedToId:
+          type: string
+          format: uuid
+          description: Reference to the User record (staff member conducting the appointment).
+        notes:
+          type: string
+          maxLength: 2000
+          description: Free-text notes about the appointment.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the appointment was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the appointment was last updated.
+
+    # Ancillary schemas (alphabetical)
+
+    AppointmentStatus:
+      type: string
+      description: Current status of the appointment.
+      enum:
+        - scheduled
+        - completed
+        - canceled
+        - no_show
+
+    # API schemas
+
+    AppointmentCreate:
+      allOf:
+      - "$ref": "#/components/schemas/Appointment"
+      - type: object
+        description: |
+          Payload to create a new appointment.
+
+          Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+        required:
+        - startAt
+        - endAt
+        - appointmentType
+        - status
+        - personId
+    AppointmentUpdate:
+      allOf:
+      - "$ref": "#/components/schemas/Appointment"
+      - type: object
+        description: |
+          Payload to update one or more mutable fields of an existing appointment. Partial updates are supported.
+
+          Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+        minProperties: 1
+    AppointmentList:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - limit
+      - offset
+      properties:
+        items:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Appointment"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of appointments available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of appointments requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more appointments are available beyond the current page.

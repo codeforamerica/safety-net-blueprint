@@ -21,7 +21,7 @@ The Safety Net Benefits API is organized into 7 domains, with 4 cross-cutting co
 | **Eligibility** | Not started | Program-specific interpretation and determination |
 | **Case Management** | Partial | Ongoing client relationships and staff assignments |
 | **Workflow** | Partial (pending approval) | Work items, tasks, SLAs, and verification |
-| **Scheduling** | Not started | Appointments and interviews |
+| **Scheduling** | Partial | Appointments and scheduling coordination |
 | **Document Management** | Not started | Files and uploads |
 
 **Cross-cutting concerns:**
@@ -151,13 +151,17 @@ Official notices and correspondence that can originate from any domain. **[Detai
 
 #### Scheduling
 
-Time-based coordination.
+Time-based coordination. **[Details →](domains/scheduling.md)**
 
 | Entity | Purpose |
 |--------|---------|
-| **Appointment** | Scheduled meeting |
-| **Interview** | Required interview for eligibility |
-| **Reminder** | Notification of upcoming events |
+| **Appointment** | Scheduled interaction between a staff member and a person |
+| **Schedule** | Staff/resource availability windows (future — [FHIR Schedule](https://hl7.org/fhir/schedule.html)) |
+| **Slot** | Bookable time segments within a schedule (future — [FHIR Slot](https://hl7.org/fhir/slot.html)) |
+
+**Key decisions:**
+- **Interview** is modeled as an `appointmentType` value, not a standalone entity — FHIR has no separate Interview resource
+- **Reminder** belongs in the Communication cross-cutting domain — FHIR handles notifications via Communication resources
 
 #### Document Management
 
@@ -277,9 +281,10 @@ Domain-specific design has been moved to separate files:
 |--------|------|
 | Workflow | [domains/workflow.md](domains/workflow.md) |
 | Case Management | [domains/case-management.md](domains/case-management.md) |
+| Scheduling | [domains/scheduling.md](domains/scheduling.md) |
 | Communication | [cross-cutting/communication.md](cross-cutting/communication.md) |
 
-*Note: Client Management, Intake, Eligibility, Scheduling, and Document Management will be added as those domains are designed. Reporting aggregates data from other domains and doesn't have its own design doc.*
+*Note: Client Management, Intake, Eligibility, and Document Management will be added as those domains are designed. Reporting aggregates data from other domains and doesn't have its own design doc.*
 
 For operational concerns (Configuration Management, Observability), see [API Architecture](api-architecture.md).
 
