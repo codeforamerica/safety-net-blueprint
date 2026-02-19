@@ -1,2 +1,2 @@
-# Normalize line endings to LF in the repo, convert to native on checkout
-* text=auto
+# Enforce LF line endings everywhere (repo and working tree)
+* text=auto eol=lf
