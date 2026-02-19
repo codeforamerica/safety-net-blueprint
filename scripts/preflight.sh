@@ -63,12 +63,14 @@ else
 fi
 
 step "Checking design reference is up to date"
+cp docs/schema-reference.html /tmp/design-ref-before.html 2>/dev/null || true
 npm run design:reference 2>&1 || true
-if git diff --quiet docs/schema-reference.html 2>/dev/null; then
+if diff -q docs/schema-reference.html /tmp/design-ref-before.html >/dev/null 2>&1; then
   pass "Design reference is up to date"
 else
-  fail "Design reference is out of date — run 'npm run design:reference' and commit the result"
+  fail "Design reference was out of date — it has been regenerated. Stage the updated file and re-run preflight."
 fi
+rm -f /tmp/design-ref-before.html
 
 step "Running integration tests (starting mock server)"
 MOCK_PID=""
@@ -79,6 +81,10 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+# Kill any orphaned mock server from a previous run
+lsof -ti :1080 | xargs kill -9 2>/dev/null || true
+sleep 1
 
 npm run mock:start 2>&1 &
 MOCK_PID=$!

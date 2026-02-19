@@ -10,7 +10,7 @@
 import http from 'http';
 import { URL } from 'url';
 import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
-import { discoverApiSpecs, getExamplesPath } from '@codeforamerica/safety-net-blueprint-contracts/loader';
+import { loadAllSpecs, getExamplesPath } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -125,8 +125,8 @@ function singularize(plural) {
  */
 async function testApi(api, examples) {
   const apiName = api.name;
-  const apiPath = `/${apiName}`;
-  const singularName = singularize(apiName);
+  const apiPath = api.baseResource || `/${apiName}`;
+  const singularName = singularize(apiPath.slice(1));
   const idParam = `${singularName}Id`;
   
   console.log(`\n${'='.repeat(70)}`);
@@ -516,7 +516,7 @@ async function runTests() {
   
   // Discover all APIs
   console.log('\n🔍 Discovering APIs...');
-  const apis = discoverApiSpecs({ specsDir });
+  const apis = await loadAllSpecs({ specsDir });
   
   if (apis.length === 0) {
     console.log('  ⚠️  No APIs found');
@@ -544,14 +544,14 @@ async function runTests() {
   try {
     console.log(`\n  Testing all ${apis.length} API(s) are accessible...`);
     const results = await Promise.all(
-      apis.map(api => fetch(`${BASE_URL}/${api.name}`))
+      apis.map(api => fetch(`${BASE_URL}${api.baseResource || '/' + api.name}`))
     );
 
     const allOk = results.every(r => r.ok);
     if (allOk) {
       console.log(`  ✓ PASS: All ${apis.length} API(s) accessible`);
       apis.forEach((api, i) => {
-        console.log(`    - /${api.name}: ${results[i].status}`);
+        console.log(`    - ${api.baseResource || '/' + api.name}: ${results[i].status}`);
       });
       totalPassed++;
     } else {

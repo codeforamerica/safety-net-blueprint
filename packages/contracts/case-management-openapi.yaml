@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  title: Case Management Service API
+  version: 0.1.0
+  x-domain: case-management
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    REST API for managing cases. A case is the long-lived relationship with a client or
+    household that spans years, multiple applications, and multiple programs.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+- url: https://api.example.com
+  description: Production server
+- url: http://localhost:8080
+  description: Local development server
+tags:
+- name: Cases
+  description: Manage cases.
+paths:
+  "/cases":
+    get:
+      summary: List cases
+      description: Retrieve a paginated list of cases.
+      operationId: listCases
+      tags:
+      - Cases
+      parameters:
+      - "$ref": "./components/parameters.yaml#/SearchQueryParam"
+      - "$ref": "./components/parameters.yaml#/LimitParam"
+      - "$ref": "./components/parameters.yaml#/OffsetParam"
+      responses:
+        '200':
+          description: A paginated collection of cases.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CaseList"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    post:
+      summary: Create a case
+      description: Create a new case record.
+      operationId: createCase
+      tags:
+      - Cases
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CaseCreate"
+      responses:
+        '201':
+          description: Case created successfully.
+          headers:
+            Location:
+              description: URL of the newly created case resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Case"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '422':
+          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+  "/cases/{caseId}":
+    parameters:
+    - "$ref": "#/components/parameters/CaseIdParam"
+    get:
+      summary: Get a case
+      description: Retrieve a single case by identifier.
+      operationId: getCase
+      tags:
+      - Cases
+      responses:
+        '200':
+          description: Case retrieved successfully.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Case"
+              examples:
+                CaseExample1:
+                  "$ref": "./case-management-openapi-examples.yaml#/CaseExample1"
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update a case
+      description: Apply partial updates to an existing case.
+      operationId: updateCase
+      tags:
+      - Cases
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CaseUpdate"
+      responses:
+        '200':
+          description: Case updated successfully.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Case"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '422':
+          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete a case
+      description: Permanently remove a case record.
+      operationId: deleteCase
+      tags:
+      - Cases
+      responses:
+        '204':
+          description: Case deleted successfully.
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+components:
+  parameters:
+    CaseIdParam:
+      name: caseId
+      in: path
+      required: true
+      description: Unique identifier of the case.
+      schema:
+        type: string
+        format: uuid
+      example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+  schemas:
+    # Primary schema — the long-lived relationship with a client/household
+    Case:
+      type: object
+      description: |
+        A case represents the ongoing relationship with a client or household. It spans
+        years, multiple applications, and multiple programs.
+      additionalProperties: false
+      required:
+        - id
+        - status
+        - primaryApplicantId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        status:
+          "$ref": "#/components/schemas/CaseStatus"
+        effectiveStartDate:
+          type: string
+          format: date
+          description: Date when coverage or the case relationship begins.
+        effectiveEndDate:
+          type:
+            - string
+            - "null"
+          format: date
+          description: Date when the case was closed. Null while active.
+        primaryApplicantId:
+          type: string
+          format: uuid
+          description: Reference to the Person record for the primary applicant.
+        members:
+          type: array
+          description: Household members associated with this case.
+          items:
+            "$ref": "#/components/schemas/CaseMember"
+        assignedToId:
+          type: string
+          format: uuid
+          description: Reference to the User record for the assigned case worker.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the case was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the case was last updated.
+
+    # Ancillary schemas (alphabetical)
+
+    CaseMember:
+      type: object
+      description: A person associated with a case and their relationship to the primary applicant.
+      additionalProperties: false
+      required:
+        - personId
+        - relationship
+      properties:
+        personId:
+          type: string
+          format: uuid
+          description: Reference to the Person record.
+        relationship:
+          type: string
+          description: Relationship to the primary applicant.
+
+    CaseStatus:
+      type: string
+      description: Current status of the case.
+      enum:
+        - active
+        - closed
+
+    # API schemas
+
+    CaseCreate:
+      allOf:
+      - "$ref": "#/components/schemas/Case"
+      - type: object
+        description: |
+          Payload to create a new case record.
+
+          Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+        required:
+        - primaryApplicantId
+    CaseUpdate:
+      allOf:
+      - "$ref": "#/components/schemas/Case"
+      - type: object
+        description: |
+          Payload to update one or more mutable fields of an existing case. Partial updates are supported.
+
+          Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+        minProperties: 1
+    CaseList:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - limit
+      - offset
+      properties:
+        items:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Case"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of cases available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of cases requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more cases are available beyond the current page.

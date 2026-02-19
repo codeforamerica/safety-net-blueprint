@@ -11,16 +11,17 @@ import { findById, deleteResource } from '../database-manager.js';
  * @returns {Function} Express handler
  */
 export function createDeleteHandler(apiMetadata, endpoint) {
+  const paramName = extractPathParam(endpoint.path);
   return (req, res) => {
     try {
-      const resourceId = req.params[`${apiMetadata.name.slice(0, -1)}Id`] || req.params.id;
-      
+      const resourceId = req.params[paramName] || req.params.id;
+
       // Check if resource exists
       const existing = findById(apiMetadata.name, resourceId);
       if (!existing) {
         return res.status(404).json({
           code: 'NOT_FOUND',
-          message: `${capitalize(apiMetadata.name.slice(0, -1))} not found`
+          message: `${capitalize(paramName.replace(/Id$/, ''))} not found`
         });
       }
       
@@ -37,6 +38,15 @@ export function createDeleteHandler(apiMetadata, endpoint) {
       });
     }
   };
+}
+
+/**
+ * Extract the path parameter name from an OpenAPI path pattern.
+ * Example: /cases/{caseId} => caseId
+ */
+function extractPathParam(path) {
+  const match = path.match(/\{([^}]+)\}/);
+  return match ? match[1] : 'id';
 }
 
 /**

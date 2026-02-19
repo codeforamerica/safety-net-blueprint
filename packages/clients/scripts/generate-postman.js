@@ -538,8 +538,8 @@ function generateApiRequests(apiMetadata) {
   // Sort endpoints: GET (list), GET (id), POST, PATCH, DELETE
   const sortedEndpoints = [...apiMetadata.endpoints].sort((a, b) => {
     const order = { GET: 0, POST: 1, PATCH: 2, DELETE: 3 };
-    const aOrder = order[a.method] || 999;
-    const bOrder = order[b.method] || 999;
+    const aOrder = order[a.method] ?? 999;
+    const bOrder = order[b.method] ?? 999;
     if (aOrder !== bOrder) return aOrder - bOrder;
     
     // GET list before GET by ID
