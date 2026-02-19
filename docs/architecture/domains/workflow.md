@@ -42,7 +42,7 @@ Both `applicationId` and `caseId` are optional on a Task — a task will have on
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| OpenAPI spec | Draft | REST APIs for tasks, queues, SLA types, task types, audit events. Prototype proves Task, Queue, SLAType, TaskAuditEvent, TaskClaimedEvent. |
+| OpenAPI spec | Alpha | `workflow-openapi.yaml` — Task CRUD endpoints live (`/workflow/tasks`). Base model from issue #36; additional fields (priority, queueId, programType, etc.) and entities (Queue, SLAType, TaskType, TaskAuditEvent) added in future issues. |
 | State machine YAML | Draft | Task lifecycle — states, transitions, guards, effects. Prototype proves 3 states (pending, in_progress, completed) and 3 transitions (claim, complete, release). |
 | Rules YAML | Draft | Assignment and priority routing rules. Prototype proves 2 assignment rules + 1 priority rule. |
 | Metrics YAML | Draft | Operational metrics. Prototype proves 3 metrics across 3 source types (duration, state count, transition count). |

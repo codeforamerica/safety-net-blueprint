@@ -27,7 +27,7 @@ See also: [Contract-Driven Architecture](../architecture/contract-driven-archite
 The toolkit provides base specs, scripts, and a mock server. States create their own repository and install the base packages:
 
 ```bash
-npm install @safety-net/contracts @safety-net/mock-server @safety-net/clients
+npm install @codeforamerica/safety-net-blueprint-contracts @codeforamerica/safety-net-blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
 ```
 
 See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup process, including overlays and resolved specs.
@@ -72,7 +72,7 @@ Visit http://localhost:3000 to see all endpoints and schemas.
 
 ### Generated TypeScript Clients
 
-The `@safety-net/clients` package generates typed SDK functions and Zod schemas from resolved specs:
+The `@codeforamerica/safety-net-blueprint-clients` package generates typed SDK functions and Zod schemas from resolved specs:
 
 ```typescript
 import {

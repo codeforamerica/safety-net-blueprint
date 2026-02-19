@@ -1,0 +1,68 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'contracts-v*'
+      - 'mock-server-v*'
+      - 'clients-v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Parse tag
+        id: tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG" =~ ^contracts-v(.+)$ ]]; then
+            echo "pkg=contracts" >> "$GITHUB_OUTPUT"
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "npm_package=@codeforamerica/safety-net-blueprint-contracts" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" =~ ^mock-server-v(.+)$ ]]; then
+            echo "pkg=mock-server" >> "$GITHUB_OUTPUT"
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "npm_package=@codeforamerica/safety-net-blueprint-mock-server" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" =~ ^clients-v(.+)$ ]]; then
+            echo "pkg=clients" >> "$GITHUB_OUTPUT"
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "npm_package=@codeforamerica/safety-net-blueprint-clients" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Unrecognized tag format: $TAG"
+            exit 1
+          fi
+
+      - name: Validate tag version matches package.json
+        run: |
+          PKG_VERSION=$(node -p "require('./packages/${{ steps.tag.outputs.pkg }}/package.json').version")
+          if [ "$PKG_VERSION" != "${{ steps.tag.outputs.version }}" ]; then
+            echo "::error::Tag version (${{ steps.tag.outputs.version }}) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - run: npm install
+
+      - name: Validate contracts
+        run: npm run validate
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build README
+        run: node scripts/build-package-readme.js
+
+      - name: Publish
+        run: npm publish -w ${{ steps.tag.outputs.npm_package }} --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

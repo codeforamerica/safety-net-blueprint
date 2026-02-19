@@ -5,7 +5,7 @@
  *
  * Usage:
  *   safety-net-generate-clients --specs=./resolved --out=./src/api
- *   node scripts/generate-clients.js --specs=./resolved --out=./src/api
+ *   node scripts/generate-clients-typescript.js --specs=./resolved --out=./src/api
  *
  * This script:
  * 1. Discovers all OpenAPI spec files in --specs directory
@@ -31,7 +31,7 @@
  */
 
 import { spawn } from 'child_process';
-import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, copyFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, copyFileSync, realpathSync } from 'fs';
 import { join, dirname, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -43,10 +43,10 @@ const templatesDir = join(clientsRoot, 'templates');
 /**
  * Parse command line arguments
  */
-function parseArgs() {
+function parseArgs(argv = process.argv.slice(2)) {
   const args = { specs: null, out: null, help: false };
 
-  for (const arg of process.argv.slice(2)) {
+  for (const arg of argv) {
     if (arg === '--help' || arg === '-h') {
       args.help = true;
     } else if (arg.startsWith('--specs=')) {
@@ -67,7 +67,7 @@ Generates TypeScript SDK with Zod schemas from resolved OpenAPI specs.
 
 Usage:
   safety-net-generate-clients --specs=<dir> --out=<dir>
-  node scripts/generate-clients.js --specs=<dir> --out=<dir>
+  node scripts/generate-clients-typescript.js --specs=<dir> --out=<dir>
 
 Flags:
   --specs=<dir>  Path to resolved specs directory (required)
@@ -191,20 +191,14 @@ async function main() {
   }
   mkdirSync(outputDir, { recursive: true });
 
-  // Discover all OpenAPI spec files
+  // Discover all OpenAPI spec files (match *-openapi.yaml convention)
   const specFiles = readdirSync(specsDir).filter(f => {
-    if (!f.endsWith('.yaml')) return false;
-    if (f.startsWith('.')) return false;
-    // Skip component files, examples, patterns
-    if (f.includes('component')) return false;
-    if (f.includes('example')) return false;
-    if (f.includes('pattern')) return false;
-    return true;
+    return f.endsWith('-openapi.yaml');
   });
 
   if (specFiles.length === 0) {
     console.error(`Error: No OpenAPI spec files found in ${specsDir}`);
-    console.error('Expected files like: persons.yaml, applications.yaml, etc.');
+    console.error('Expected files like: persons-openapi.yaml, applications-openapi.yaml, etc.');
     process.exit(1);
   }
 
@@ -214,7 +208,7 @@ async function main() {
 
   // Generate client for each domain
   for (const file of specFiles) {
-    const domain = file.replace('.yaml', '');
+    const domain = file.replace('-openapi.yaml', '');
     domains.push(domain);
     const specPath = join(specsDir, file);
     const domainOutputDir = join(outputDir, domain);
@@ -271,8 +265,13 @@ export { q, search } from './search-helpers.js';
   console.log(`  import { getPerson } from '@/api/${domains[0]}';`);
 }
 
-// Run main function
-main().catch(err => {
-  console.error('\nError:', err.message);
-  process.exit(1);
-});
+// Export for testing
+export { parseArgs, createOpenApiTsConfig, exec };
+
+// Run main function only if this is the entry point
+if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {
+  main().catch(err => {
+    console.error('\nError:', err.message);
+    process.exit(1);
+  });
+}

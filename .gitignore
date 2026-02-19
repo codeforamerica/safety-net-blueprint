@@ -9,6 +9,15 @@ packages/generated
 packages/clients/generated
 packages/clients/dist-packages
 packages/contracts/resolved
+resolved/
+resolved_ts/
+resolved_json_shcema/
+
+# Generated READMEs (built from README.content.md + template at prepack time)
+packages/*/README.md
+
+# npm pack tarballs
+*.tgz
 
 # Cursor AI working files
 cursor/

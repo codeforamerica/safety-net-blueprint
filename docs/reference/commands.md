@@ -39,7 +39,7 @@ Validates OpenAPI syntax only:
 npm run validate:syntax
 ```
 
-### `npm run validate:lint -w @safety-net/contracts`
+### `npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts`
 
 Runs Spectral linting only (available in the schemas package):
 - Naming conventions
@@ -47,7 +47,7 @@ Runs Spectral linting only (available in the schemas package):
 - Response codes
 
 ```bash
-npm run validate:lint -w @safety-net/contracts
+npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts
 ```
 
 ### `npm run validate:patterns`
@@ -65,17 +65,21 @@ npm run validate:patterns
 
 ### `npm run overlay:resolve`
 
-Resolves the overlay for the current STATE, writing to `openapi/resolved/`.
+Resolves overlays against base specs, producing resolved specifications. Pass arguments after `--`.
 
-Without STATE set, lists available states:
+Copy base specs unchanged (no overlay):
 ```bash
-npm run overlay:resolve
-# Output: Available states: <lists all configured states>
+npm run overlay:resolve -- --base=packages/contracts --out=packages/contracts/resolved
 ```
 
-With STATE set:
+Apply a state overlay:
 ```bash
-STATE=<your-state> npm run overlay:resolve
+npm run overlay:resolve -- --base=packages/contracts --overlays=packages/contracts/overlays/example --out=packages/contracts/resolved
+```
+
+See all flags:
+```bash
+npm run overlay:resolve -- --help
 ```
 
 ## Generation Commands

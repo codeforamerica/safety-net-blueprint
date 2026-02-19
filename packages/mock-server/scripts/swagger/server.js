@@ -9,7 +9,7 @@ import swaggerUi from 'swagger-ui-express';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { discoverApiSpecs } from '@safety-net/contracts/loader';
+import { discoverApiSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 
 function parseSpecsDir() {
   const args = process.argv.slice(2);

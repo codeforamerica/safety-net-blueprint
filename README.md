@@ -18,7 +18,7 @@ This repository contains the base contract artifacts, tooling, and documentation
 - **Client generation** — typed TypeScript SDK and Zod schemas from resolved specs
 - **State overlays** — states customize contracts without forking the base files
 
-States create their own repositories, install the base packages (`@safety-net/contracts`, `@safety-net/mock-server`, `@safety-net/clients`), and apply overlays. See the [State Setup Guide](./docs/guides/state-setup-guide.md).
+States create their own repositories, install the base packages (`@codeforamerica/safety-net-blueprint-contracts`, `@codeforamerica/safety-net-blueprint-mock-server`, `@codeforamerica/safety-net-blueprint-clients`), and apply overlays. See the [State Setup Guide](./docs/guides/state-setup-guide.md).
 
 The architecture is being proven through [steel thread prototypes](./docs/architecture/roadmap.md) that exercise the most complex parts of the design before domains are built out at scale.
 

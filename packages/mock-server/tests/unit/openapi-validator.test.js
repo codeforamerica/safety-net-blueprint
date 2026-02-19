@@ -5,8 +5,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { validateSpec, validateExamples, validateAll } from '@safety-net/contracts/validation';
-import { discoverApiSpecs } from '@safety-net/contracts/loader';
+import { validateSpec, validateExamples, validateAll } from '@codeforamerica/safety-net-blueprint-contracts/validation';
+import { discoverApiSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 

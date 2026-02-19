@@ -1,13 +1,18 @@
 {
-  "name": "@safety-net/mock-server",
+  "name": "@codeforamerica/safety-net-blueprint-mock-server",
   "version": "1.0.0",
   "description": "Mock API server for Safety Net API development and testing",
   "type": "module",
+  "files": [
+    "src/",
+    "scripts/"
+  ],
   "bin": {
     "safety-net-mock": "./scripts/server.js",
     "safety-net-swagger": "./scripts/swagger/server.js"
   },
   "scripts": {
+    "prepack": "node ../../scripts/build-package-readme.js",
     "start": "node scripts/server.js --specs=../contracts",
     "start:all": "node scripts/start-all.js --specs=../contracts",
     "swagger": "node scripts/swagger/server.js --specs=../contracts",
@@ -20,12 +25,24 @@
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
-    "@safety-net/contracts": "*",
+    "@codeforamerica/safety-net-blueprint-contracts": "^1.0.0",
     "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
     "swagger-ui-express": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "directory": "packages/mock-server"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "newman": "^6.2.1"

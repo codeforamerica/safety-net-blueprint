@@ -6,7 +6,7 @@ This guide covers how state-specific client packages are built from resolved Ope
 
 ## Overview
 
-The `@safety-net/clients` package generates state-specific TypeScript client packages containing:
+The `@codeforamerica/safety-net-blueprint-clients` package generates state-specific TypeScript client packages containing:
 
 - TypeScript SDK with typed functions for each API domain
 - Zod schemas for runtime validation

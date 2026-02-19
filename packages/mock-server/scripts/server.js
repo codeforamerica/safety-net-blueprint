@@ -7,6 +7,7 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
+import { realpathSync } from 'fs';
 import { resolve } from 'path';
 import { performSetup } from '../src/setup.js';
 import { registerAllRoutes } from '../src/route-generator.js';
@@ -192,7 +193,7 @@ async function isServerRunning(host = HOST, port = PORT) {
 export { startMockServer, stopServer, isServerRunning };
 
 // Only auto-start if run directly (not imported)
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {
   // Handle graceful shutdown
   process.on('SIGINT', () => stopServer(true));
   process.on('SIGTERM', () => stopServer(true));

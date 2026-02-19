@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { seedDatabase, seedAllDatabases } from '../../src/seeder.js';
-import { loadAllSpecs } from '@safety-net/contracts/loader';
+import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { count, findAll, closeAll } from '../../src/database-manager.js';
 import { unlinkSync, existsSync } from 'fs';
 import { join, dirname } from 'path';

@@ -36,7 +36,7 @@ npm run validate
 
 ### 2. Spectral Linting
 
-Run from the schemas package: `npm run validate:lint -w @safety-net/contracts`
+Run from the schemas package: `npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts`
 
 HTTP method rules:
 - POST must return 201
@@ -108,7 +108,6 @@ Edit `scripts/validate-patterns.js` to modify custom rules.
 
 Validation runs automatically during:
 - `npm run mock:setup`
-- `npm run clients:generate`
 - `npm run postman:generate`
 
 Skip with `SKIP_VALIDATION=true`.

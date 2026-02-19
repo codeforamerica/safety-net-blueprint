@@ -187,7 +187,7 @@ Split into 3 distinct repositories.
     "start": "npm start -w @safety-net/mock-server",
     "mock:start": "npm run start -w @safety-net/mock-server",
     "mock:setup": "npm run setup -w @safety-net/mock-server",
-    "clients:generate": "npm run generate -w @safety-net/clients",
+    "clients:typescript": "npm run generate -w @safety-net/clients",
     "postman:generate": "npm run postman -w @safety-net/clients",
     "test": "npm test --workspaces --if-present"
   }
@@ -262,7 +262,7 @@ Workspace packages reference each other in `package.json`:
 | Run tests | `npm test` | `npm test` (unchanged) |
 | Validate specs | `npm run validate` | `npm run validate` (unchanged) |
 | Start mock server | `npm start` | `npm start` (unchanged) |
-| Generate clients | `npm run clients:generate` | `npm run clients:generate` (unchanged) |
+| Generate clients | `npm run clients:typescript` | `npm run clients:typescript` (unchanged) |
 | Run one package's tests | N/A | `npm test -w @safety-net/mock-server` |
 | Add dep to mock-server | Edit package.json | `npm install express -w @safety-net/mock-server` |
 

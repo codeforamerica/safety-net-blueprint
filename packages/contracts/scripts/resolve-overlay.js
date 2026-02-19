@@ -24,7 +24,7 @@
  *   --env-file   Path to env file with key=value pairs for placeholder substitution (optional)
  */
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync, rmSync, realpathSync } from 'fs';
 import { join, dirname, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -40,9 +40,9 @@ const __dirname = dirname(__filename);
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
-    base: null,
+    base: 'packages/contracts',
     overlays: null,
-    out: null,
+    out: 'packages/contracts/resolved',
     env: null,
     envFile: null,
     help: false
@@ -485,12 +485,6 @@ function main() {
     process.exit(0);
   }
 
-  if (!options.base || !options.out) {
-    console.error('Error: --base and --out are required.\n');
-    showHelp();
-    process.exit(1);
-  }
-
   const baseDir = resolve(options.base);
   const outDir = resolve(options.out);
 
@@ -630,7 +624,7 @@ export {
 };
 
 // Run main when executed directly
-const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));
 if (isDirectRun) {
   main();
 }

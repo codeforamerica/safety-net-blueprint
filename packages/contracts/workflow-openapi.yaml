@@ -1,0 +1,277 @@
+openapi: 3.1.0
+info:
+  title: Workflow Service API
+  version: 0.1.0
+  x-domain: workflow
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    REST API for managing workflow entities such as tasks.
+
+    This service provides task lifecycle management for safety net benefits programs.
+    Tasks represent units of work assigned to caseworkers, supervisors, or automated
+    processes.
+
+    > **Status: Alpha** — Breaking changes expected.
+
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com
+    description: Production server
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Tasks
+    description: Manage workflow tasks.
+
+paths:
+  "/workflow/tasks":
+    get:
+      summary: List tasks
+      description: Retrieve a paginated list of tasks.
+      operationId: listTasks
+      tags:
+        - Tasks
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A paginated collection of tasks.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create a task
+      description: Create a new workflow task.
+      operationId: createTask
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreate"
+      responses:
+        "201":
+          description: Task created successfully.
+          headers:
+            Location:
+              description: URL of the newly created task resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  "/workflow/tasks/{taskId}":
+    parameters:
+      - $ref: "#/components/parameters/TaskIdParam"
+
+    get:
+      summary: Get a task
+      description: Retrieve a single task by identifier.
+      operationId: getTask
+      tags:
+        - Tasks
+      responses:
+        "200":
+          description: Task retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+              examples:
+                TaskExample1:
+                  $ref: "./workflow-openapi-examples.yaml#/TaskExample1"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update a task
+      description: Apply partial updates to an existing task.
+      operationId: updateTask
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Task updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Delete a task
+      description: Permanently remove a task record.
+      operationId: deleteTask
+      tags:
+        - Tasks
+      responses:
+        "204":
+          description: Task deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+components:
+  parameters:
+    TaskIdParam:
+      name: taskId
+      in: path
+      required: true
+      description: Unique identifier of the task.
+      schema:
+        type: string
+        format: uuid
+      example: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90
+
+  schemas:
+    Task:
+      type: object
+      description: A workflow task representing a unit of work in a safety net benefits program.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the task.
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Human-readable label for the task.
+        description:
+          type: string
+          maxLength: 2000
+          description: Detailed information about the task.
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - completed
+          description: Current lifecycle state.
+        startedAt:
+          type: string
+          format: date-time
+          description: When work began (status transitioned to in_progress).
+        completedAt:
+          type: string
+          format: date-time
+          description: When work finished.
+        assignedToId:
+          type: string
+          format: uuid
+          description: Reference to the User assigned to this task.
+        caseId:
+          type: string
+          format: uuid
+          description: Reference to the Case this task belongs to.
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the task was created.
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the task was last updated.
+          readOnly: true
+
+    TaskCreate:
+      allOf:
+        - $ref: "#/components/schemas/Task"
+        - type: object
+          description: |
+            Payload to create a new task. At minimum, name and status are required.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+          required:
+            - name
+            - status
+
+    TaskUpdate:
+      allOf:
+        - $ref: "#/components/schemas/Task"
+        - type: object
+          description: |
+            Payload to update one or more fields of an existing task. Partial updates are supported.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+          minProperties: 1
+
+    TaskList:
+      type: object
+      description: Paginated list of tasks.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of tasks available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of tasks requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more tasks are available beyond the current page.

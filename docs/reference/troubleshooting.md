@@ -112,16 +112,15 @@ Error: status must be equal to one of the allowed values
 
 **Solution:** Check the base schema and correct the path.
 
-### Unknown State
+### Overlay Not Found
 
 ```
-Error: Unknown state 'newstate'
-Available states: <lists configured states>
+Error: ENOENT: no such file or directory, open './overlays/modifications.yaml'
 ```
 
-**Cause:** No overlay file exists for the specified state.
+**Cause:** No overlay file exists in your application repository.
 
-**Solution:** Create `openapi/overlays/<new-state>/modifications.yaml`.
+**Solution:** Create `overlays/modifications.yaml` in your state application repository.
 
 ## Mock Server Issues
 
@@ -176,10 +175,22 @@ npm run mock:reset
 
 ## Client Generation Issues
 
-### Generation Fails
+### Generation Fails: Missing Arguments
 
 ```
-Error: Cannot find module '@zodios/core'
+Error: --specs and --out are required
+```
+
+**Solution:** Provide required arguments.
+
+```bash
+npm run clients:typescript -- --specs=./resolved --out=./src/api
+```
+
+### Generation Fails: Dependencies Missing
+
+```
+Error: Cannot find module '@hey-api/openapi-ts'
 ```
 
 **Solution:** Install dependencies.
@@ -194,10 +205,17 @@ npm install
 
 **Cause:** Spec changed but clients weren't regenerated.
 
-**Solution:** Regenerate clients.
+**Solution:** Resolve overlay and regenerate clients.
 
 ```bash
-STATE=<your-state> npm run clients:generate
+# Resolve overlay
+node safety-net-apis/packages/contracts/scripts/resolve-overlay.js \
+  --base=./safety-net-apis/packages/contracts \
+  --overlays=./overlays \
+  --out=./resolved
+
+# Regenerate clients
+npm run clients:typescript -- --specs=./resolved --out=./src/api
 ```
 
 ### Zod Validation Error at Runtime
@@ -221,7 +239,7 @@ Could not find collection file
 **Solution:** Generate the collection first.
 
 ```bash
-STATE=<your-state> npm run postman:generate
+npm run postman:generate
 ```
 
 ### Tests Fail with 404
@@ -256,17 +274,6 @@ Error: connect ECONNREFUSED 127.0.0.1:1080
     npm run mock:start &
     sleep 5
     curl --retry 10 --retry-delay 2 http://localhost:1080/persons
-```
-
-### State Not Set
-
-**Symptom:** Overlay not applied in CI.
-
-**Solution:** Set STATE environment variable.
-
-```yaml
-env:
-  STATE: <your-state>
 ```
 
 ### Permission Denied
