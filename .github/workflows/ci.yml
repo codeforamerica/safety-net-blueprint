@@ -19,19 +19,5 @@ jobs:
 
       - run: npm install
 
-      - name: Validate contracts
-        run: npm run validate
-
-      - name: Run unit tests
-        run: npm test
-
-      - name: Check design reference is up to date
-        run: |
-          npm run design:reference
-          if git diff --quiet docs/schema-reference.html; then
-            echo "Design reference is up to date"
-          else
-            echo "::error::Design reference is out of date. Run 'npm run design:reference' locally and commit the result."
-            git diff --stat docs/schema-reference.html
-            exit 1
-          fi
+      - name: Run preflight checks
+        run: npm run preflight

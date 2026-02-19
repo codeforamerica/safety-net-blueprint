@@ -6,7 +6,7 @@ import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import yaml from 'js-yaml';
-import { insertResource, count } from './database-manager.js';
+import { insertResource, count, clearAll } from './database-manager.js';
 import { getExamplesPath } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 
 /**
@@ -73,12 +73,8 @@ function extractIndividualResources(examples) {
  */
 export function seedDatabase(resourceName, specsDir) {
   try {
-    // Check if database already has data
-    const existingCount = count(resourceName);
-    if (existingCount > 0) {
-      console.log(`  Database ${resourceName}.db already has ${existingCount} records, skipping seed`);
-      return existingCount;
-    }
+    // Clear existing data to ensure a clean state
+    clearAll(resourceName);
 
     const examplesPath = getExamplesPath(resourceName, specsDir);
     

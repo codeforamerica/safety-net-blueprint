@@ -11,8 +11,6 @@ import http from 'http';
 import { URL } from 'url';
 import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
 import { discoverApiSpecs, getExamplesPath } from '@codeforamerica/safety-net-blueprint-contracts/loader';
-import { clearAll } from '../../src/database-manager.js';
-import { seedDatabase } from '../../src/seeder.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -527,19 +525,6 @@ async function runTests() {
   
   console.log(`  ✓ Found ${apis.length} API(s):`);
   apis.forEach(api => console.log(`    - ${api.name}`));
-  
-  // Reset databases with fresh data
-  console.log('\n🔄 Resetting databases with clean example data...');
-  for (const api of apis) {
-    try {
-      clearAll(api.name);
-      const count = seedDatabase(api.name, specsDir);
-      console.log(`  ✓ ${api.name}: ${count} resources`);
-    } catch (error) {
-      console.log(`  ⚠️  ${api.name}: ${error.message}`);
-    }
-  }
-  console.log('  ✓ All databases reset');
   
   // Test each API
   for (const api of apis) {

@@ -40,9 +40,9 @@ const __dirname = dirname(__filename);
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
-    base: null,
+    base: 'packages/contracts',
     overlays: null,
-    out: null,
+    out: 'packages/contracts/resolved',
     env: null,
     envFile: null,
     help: false
@@ -483,12 +483,6 @@ function main() {
   if (options.help) {
     showHelp();
     process.exit(0);
-  }
-
-  if (!options.base || !options.out) {
-    console.error('Error: --base and --out are required.\n');
-    showHelp();
-    process.exit(1);
   }
 
   const baseDir = resolve(options.base);
