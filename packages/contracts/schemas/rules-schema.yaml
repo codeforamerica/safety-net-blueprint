@@ -1,0 +1,99 @@
+# JSON Schema for Rules YAML
+# Validates structural correctness. Cross-artifact references
+# (e.g., context variables resolving to real fields) are validated by the validation script.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Rules
+description: Schema for behavioral contract rules YAML files.
+type: object
+required:
+  - version
+  - domain
+  - context
+  - ruleSets
+additionalProperties: false
+
+properties:
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  domain:
+    type: string
+    description: Domain namespace (e.g., workflow).
+
+  context:
+    type: array
+    description: Variable bindings available to rule conditions (e.g., "task.*").
+    items:
+      type: string
+    minItems: 1
+
+  ruleSets:
+    type: array
+    description: Grouped sets of rules, filterable by ruleType.
+    items:
+      $ref: "#/$defs/RuleSet"
+    minItems: 1
+
+$defs:
+  RuleSet:
+    type: object
+    description: A group of rules with a shared type and evaluation strategy.
+    required:
+      - id
+      - ruleType
+      - evaluation
+      - rules
+    properties:
+      id:
+        type: string
+        description: Unique identifier for overlay targeting.
+      ruleType:
+        type: string
+        description: Rule category (e.g., assignment, priority, escalation, alert).
+      evaluation:
+        type: string
+        enum:
+          - first-match-wins
+        description: How rules are evaluated — first match stops.
+      rules:
+        type: array
+        items:
+          $ref: "#/$defs/Rule"
+        minItems: 1
+    additionalProperties: false
+
+  Rule:
+    type: object
+    description: A single rule with a condition and action.
+    required:
+      - id
+      - order
+      - condition
+      - action
+    properties:
+      id:
+        type: string
+        description: Unique identifier for overlay targeting.
+      order:
+        type: integer
+        description: Evaluation order within the ruleSet.
+        minimum: 1
+      condition:
+        description: >
+          JSON Logic expression evaluated against context variables.
+          Use `true` for catch-all/default rules.
+      action:
+        type: object
+        description: Type-specific action map (e.g., assignToQueue, setPriority).
+        minProperties: 1
+        additionalProperties: true
+      fallbackAction:
+        type: object
+        description: Action to take if the primary action fails (e.g., queue not found).
+        additionalProperties: true
+      description:
+        type: string
+        description: Human-readable description of what this rule does.
+    additionalProperties: false

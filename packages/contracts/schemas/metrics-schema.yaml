@@ -1,0 +1,125 @@
+# JSON Schema for Metrics YAML
+# Validates structural correctness. Cross-artifact references
+# (e.g., states/triggers matching state machine) are validated by the validation script.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Metrics
+description: Schema for behavioral contract metrics YAML files.
+type: object
+required:
+  - version
+  - domain
+  - stateMachine
+  - metrics
+additionalProperties: false
+
+properties:
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  domain:
+    type: string
+    description: Domain namespace (e.g., workflow).
+
+  stateMachine:
+    type: string
+    description: Filename of the associated state machine YAML.
+
+  metrics:
+    type: array
+    description: Metrics definitions.
+    items:
+      $ref: "#/$defs/Metric"
+    minItems: 1
+
+$defs:
+  Metric:
+    type: object
+    description: A single metric definition with source and targets.
+    required:
+      - id
+      - name
+      - description
+      - source
+      - targets
+    properties:
+      id:
+        type: string
+        description: Unique identifier (e.g., task_time_to_claim).
+      name:
+        type: string
+        description: Human-readable metric name.
+      description:
+        type: string
+        description: What this metric measures.
+      source:
+        $ref: "#/$defs/MetricSource"
+      targets:
+        type: array
+        items:
+          $ref: "#/$defs/MetricTarget"
+        minItems: 1
+    additionalProperties: false
+
+  MetricSource:
+    type: object
+    description: Where the metric data comes from — linked to state machine states/transitions.
+    required:
+      - type
+    properties:
+      type:
+        type: string
+        enum:
+          - duration
+          - state_count
+          - transition_count
+        description: >
+          Source type: duration (time between states), state_count (objects in a state),
+          transition_count (how often a trigger fires).
+      from:
+        type: string
+        description: Source state (for duration metrics).
+      to:
+        type: string
+        description: Target state (for duration metrics).
+      trigger:
+        type: string
+        description: Transition trigger name (for duration or transition_count metrics).
+      state:
+        type: string
+        description: State to count objects in (for state_count metrics).
+      relativeTo:
+        type: string
+        description: Denominator for ratio metrics (e.g., "total" for rate calculations).
+    additionalProperties: false
+
+  MetricTarget:
+    type: object
+    description: A threshold or goal for the metric.
+    required:
+      - stat
+    properties:
+      stat:
+        type: string
+        description: >
+          Statistic type: p50, p95, p99, avg, max, trend, ratio, count.
+      operator:
+        type: string
+        enum:
+          - "<"
+          - "<="
+          - ">"
+          - ">="
+          - "=="
+        description: Comparison operator for the target value.
+      value:
+        type: string
+        description: Human-readable target value (e.g., "4h", "10%").
+      direction:
+        type: string
+        enum:
+          - up
+          - down
+        description: Desired trend direction (for trend-type targets).
+    additionalProperties: false
