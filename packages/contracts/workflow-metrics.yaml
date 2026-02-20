@@ -1,0 +1,44 @@
+# Workflow Metrics
+# Generated from spreadsheet tables — do not edit by hand.
+
+$schema: ./schemas/metrics-schema.yaml
+
+version: "1.0"
+domain: workflow
+stateMachine: workflow-state-machine.yaml
+
+metrics:
+  - id: task_time_to_claim
+    name: Task time to claim
+    description: Time from task creation to first claim
+    source:
+      type: duration
+      from: pending
+      to: in_progress
+      trigger: claim
+    targets:
+      - stat: p95
+        operator: "<"
+        value: 4h
+
+  - id: tasks_in_queue
+    name: Tasks in queue
+    description: Tasks waiting to be claimed
+    source:
+      type: state_count
+      state: pending
+    targets:
+      - stat: trend
+        direction: down
+
+  - id: release_rate
+    name: Release rate
+    description: Rate of tasks being released back to queue
+    source:
+      type: transition_count
+      trigger: release
+      relativeTo: total
+    targets:
+      - stat: ratio
+        operator: "<"
+        value: 10%
