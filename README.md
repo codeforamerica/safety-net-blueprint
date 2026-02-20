@@ -32,6 +32,8 @@ Choose your path based on your role:
 | **Backend Developer** | Author contracts, validate specs, build production adapters | [Backend Developer Guide](./docs/getting-started/backend-developers.md) |
 | **Frontend Developer** | Build UIs against REST and RPC APIs, use generated clients | [Frontend Developer Guide](./docs/getting-started/frontend-developers.md) |
 
+**Want a guided tour?** Follow the [Walkthrough Tutorial](./docs/tutorials/walkthrough.md) — build a pizza API, customize it with overlays, and explore the full blueprint in 30-45 minutes.
+
 ## Quick Start
 
 ```bash

@@ -192,6 +192,23 @@ Capabilities deferred beyond this prototype:
 
 ---
 
+## Behavioral Contract Tables
+
+A behavioral contract is composed of these table types. Each is authored in a spreadsheet and converted to YAML by scripts.
+
+| Table type | What it defines | Example |
+|---|---|---|
+| **State transition table** | Valid states, transitions, and which guards and effects apply to each | `pending` → `in_progress` via `claim`, guarded by "task is unassigned" |
+| **Guards catalog** | Named preconditions with field, operator, and value | `callerIsAssignedWorker`: `assignedToId` equals `$caller.id` |
+| **Effects catalog** | Named operations — what they do, what object they target, field mappings | `create_task`: creates a `task`, maps `programType` from source |
+| **Decision tables** | Rule sets evaluated against an object — first match wins | If `programType` = SNAP → route to `snap-intake` queue |
+| **Metrics table** | What to measure, source type (duration, count, state), and targets | `task_time_to_claim`: p95 < 4 hours |
+| **Audit requirements** | What every transition must produce | Every transition creates a `TaskAuditEvent` with `taskId`, `eventType`, `performedById`, `occurredAt` |
+
+The state transition table is the backbone — it references guards and effects by name. The catalogs define what those names mean. Decision tables are invoked by effects (e.g., `evaluate-rules`). Metrics and audit requirements are cross-cutting declarations validated against the state machine.
+
+---
+
 ## OpenAPI Schemas
 
 These are the REST API schemas for the prototype. The adapter exposes standard CRUD endpoints for each (`GET /workflow/tasks`, `POST /workflow/tasks`, `GET /workflow/tasks/:id`, etc.).
@@ -323,6 +340,28 @@ Any effect can include a **`when` clause** to make it conditional on a runtime v
 | release | `assignedToId` = null | TaskAuditEvent (`returned_to_queue`, reason: `$request.reason`) | — | Re-evaluate routing rules | — |
 
 `$request` refers to the request body sent with the action.
+
+### Cross-object effect wiring
+
+Some effects create objects that are governed by their own behavioral contracts. For example, the `submit` transition on an `application` might fire a `create_task` effect, and that task is then governed by the task state machine and routed by the `routing_rules` decision table. The state machine table stays clean — it just says `create_task`. But the mock server needs to know what object to create, what fields to map from the source, and what behavioral contracts apply to the result.
+
+This is a well-established problem. The industry standard approach separates it into layers:
+
+- **BPMN** uses **Service Tasks** for object creation and **Business Rule Tasks** for decision table invocation. Each task declares its inputs and outputs explicitly — what data flows in from the source object and what flows out to the next step. The cross-object wiring lives in the process definition, not in the state machine or decision table.
+- **DMN** decision tables are stateless and side-effect free by design. They receive inputs and return outputs. The caller is responsible for wiring the output (e.g., a queue assignment) to the target object.
+- **Temporal** and similar workflow engines use **child workflows** — a parent workflow spawns a child with explicit data passed at creation time.
+
+The common pattern: **the cross-object wiring lives in the effects catalog, not in the state machine or decision table.** The state table says *what* to do (`create_task`, `evaluate_routing_rules`). The effects catalog says *how* — including the target object type, field mappings from source to target, and which behavioral contracts to invoke on the result.
+
+For the blueprint, this means each effect in the catalog declares:
+
+- **target** — what object type it produces or acts on (e.g., `create_task` → `task`)
+- **mapping** — what fields flow from the source object to the target (e.g., `programType`, `slaTypeCode`, `applicationId` from the application to the task)
+- **triggers** — what behavioral contracts apply to the created object (e.g., the task's `onCreate` block evaluates `routing_rules`)
+
+This keeps the state machine table analyst-readable while giving the mock server enough information to chain effects across objects. A developer registers the effect and its wiring; an analyst composes effects into transition rows without needing to understand the plumbing.
+
+> **Open question (issues [#84](https://github.com/codeforamerica/safety-net-blueprint/issues/84), [#85](https://github.com/codeforamerica/safety-net-blueprint/issues/85)):** The exact schema for the effects catalog — how target, mapping, and triggers are declared in YAML — is not yet defined. The prototype's `create` effect type (which creates TaskAuditEvents within the same domain) is the simplest case. Cross-domain object creation (application → task) will require the catalog to declare the full wiring.
 
 ### Request bodies
 
