@@ -72,6 +72,16 @@ else
 fi
 rm -f /tmp/design-ref-before.html
 
+step "Checking contract tables are up to date"
+cp -r docs/contract-tables /tmp/contract-tables-before 2>/dev/null || true
+npm run contract-tables:export 2>&1 || true
+if diff -rq docs/contract-tables /tmp/contract-tables-before >/dev/null 2>&1; then
+  pass "Contract tables are up to date"
+else
+  fail "Contract tables were out of date — they have been regenerated. Stage the updated files and re-run preflight."
+fi
+rm -rf /tmp/contract-tables-before
+
 step "Running integration tests (starting mock server)"
 MOCK_PID=""
 cleanup() {

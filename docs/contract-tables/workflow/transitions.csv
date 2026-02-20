@@ -1,0 +1,5 @@
+From,To,Trigger,Actors,Guards,Effects
+(create),pending,create,supervisor; system,,Load SLA configuration by task's slaTypeCode; Compute SLA deadline from SLAType duration; Initialize SLA tracking info; Route task to queue and set priority; Audit record for task creation
+pending,in_progress,claim,caseworker,taskIsUnassigned; workerHasRequiredSkills,Assign task to the claiming worker; Audit record for task claim; Emit task claimed domain event
+in_progress,completed,complete,caseworker,callerIsAssignedWorker,Record completion outcome from request; Audit record for task completion; Create follow-up task when requested
+in_progress,pending,release,caseworker,callerIsAssignedWorker,Clear assignment so task returns to queue; Audit record for task release; Re-evaluate routing rules for released task

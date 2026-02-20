@@ -32,7 +32,9 @@
     "test:all": "npm run test:all -w @codeforamerica/safety-net-blueprint-mock-server",
     "preflight": "bash scripts/preflight.sh",
     "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html",
-    "design:reference": "npm run design:reference -w @codeforamerica/safety-net-blueprint-contracts"
+    "design:reference": "npm run design:reference -w @codeforamerica/safety-net-blueprint-contracts",
+    "contract-tables:export": "npm run contract-tables:export -w @codeforamerica/safety-net-blueprint-contracts",
+    "contract-tables:import": "npm run contract-tables:import -w @codeforamerica/safety-net-blueprint-contracts"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "^4.2.3"

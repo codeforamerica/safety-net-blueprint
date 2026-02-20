@@ -1,0 +1,4 @@
+Metric,Description,Source Type,Source,Target
+Task time to claim,Time from task creation to first claim,duration,from=pending; to=in_progress; trigger=claim,p95 < 4h
+Tasks in queue,Tasks waiting to be claimed,state_count,state=pending,trend down
+Release rate,Rate of tasks being released back to queue,transition_count,trigger=release; relativeTo=total,ratio < 10%
