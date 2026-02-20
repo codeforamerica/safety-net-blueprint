@@ -32,7 +32,9 @@
     "validate:patterns": "node scripts/validate-patterns.js --specs=.",
     "overlay:resolve": "node scripts/resolve-overlay.js --base=. --out=./resolved",
     "api:new": "node scripts/generate-api.js",
-    "design:reference": "node scripts/export-design-reference.js --specs=. --out=../../docs"
+    "design:reference": "node scripts/export-design-reference.js --specs=. --out=../../docs",
+    "contract-tables:export": "node scripts/export-contract-tables.js",
+    "contract-tables:import": "node scripts/import-contract-tables.js"
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
