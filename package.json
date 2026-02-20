@@ -15,6 +15,7 @@
     "validate": "npm run validate -w @codeforamerica/safety-net-blueprint-contracts",
     "validate:syntax": "npm run validate:syntax -w @codeforamerica/safety-net-blueprint-contracts",
     "validate:patterns": "npm run validate:patterns -w @codeforamerica/safety-net-blueprint-contracts",
+    "validate:schemas": "npm run validate:schemas -w @codeforamerica/safety-net-blueprint-contracts",
 "api:new": "npm run api:new -w @codeforamerica/safety-net-blueprint-contracts",
     "overlay:resolve": "node packages/contracts/scripts/resolve-overlay.js",
     "clients:typescript": "node packages/clients/scripts/generate-clients-typescript.js",
