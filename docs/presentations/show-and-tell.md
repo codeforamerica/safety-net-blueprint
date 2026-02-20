@@ -208,7 +208,7 @@ Open the state transition table from the workflow prototype.
 
 **Presenter B** (frontend developer)
 
-**Prerequisites:** Harness app already running (port 5173), Storybook already running (port 6006). Form definition files ready to open in editor.
+**Prerequisites:** Demo app already running (port 5173) with the applications list-detail as the landing page. Storybook already running (port 6006). Form definition files ready to open in editor.
 
 **Note:** Create demo-specific form layouts if needed to keep this tight. The pizza list-detail requires a `/pizzas` route in the harness app and a pizza list-detail form definition — create these before the demo.
 
@@ -234,7 +234,7 @@ Make a change — add a field, rename a label, change an input type. Save. The p
 
 *List-detail with mock data:* Open the applications list, click into one.
 
-> "Storybook is great for designing and iterating on forms, but this is an actual app. It's hitting the same mock server that [Presenter A] started earlier — the one serving the pizza shop and all the other APIs. The list, the detail view, the data — all real, all driven by definitions."
+> "Storybook is great for designing and iterating on forms, but this is an actual app. This is a list-detail pattern — a list of records, in this case applications - click one, and you're in the detail view. It's hitting the same mock server that [Presenter A] started earlier — the one serving the pizza shop and all the other APIs. The list, the detail view, the data — all real, all driven by definitions."
 
 *Pizza list-detail:* Navigate to `/pizzas`, click into the pizza.
 
@@ -263,7 +263,7 @@ And because it's open source, states build on each other's work. One state's SNA
 ## Pre-Demo Checklist
 
 **Already running before you start:**
-- [ ] Harness app running: `npm run harness:dev` (port 5173)
+- [ ] Harness app running: `npm run harness:dev` (port 5173), landing on applications list-detail
 - [ ] Storybook running: `npm run storybook` (port 6006)
 - [ ] Seed data ready (loads automatically when mock server starts)
 
