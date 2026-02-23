@@ -5,7 +5,7 @@ package-lock.json
 .idea
 
 # Generated artifacts (state-specific, regenerate as needed)
-packages/generated
+packages/mock-server/data
 packages/clients/generated
 packages/clients/dist-packages
 packages/contracts/resolved

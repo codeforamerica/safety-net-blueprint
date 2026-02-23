@@ -235,10 +235,10 @@ function generateWizardStory(contract, manifest, category) {
   return `// Auto-generated from ${contractPath}. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { FormRenderer } from '../../src/engine/FormRenderer';
-import { ContractPreview, type EditorTab } from '../../src/engine/ContractPreview';
+import { FormRenderer } from '@safety-net/form-engine-react';
+import { ContractPreview, type EditorTab } from '@safety-net/form-engine-react';
 import { ${zodExport} } from '../../${schemaModule}';
-import type { FormContract, Role, PermissionsPolicy } from '../../src/engine/types';
+import type { FormContract, Role, PermissionsPolicy } from '@safety-net/form-engine-react';
 
 // Layout
 import contract from '../../${contractPath}';
@@ -339,10 +339,10 @@ function generateSplitPanelStory(contract, manifest, category) {
   return `// Auto-generated from ${contractPath}. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { SplitPanelRenderer } from '../../src/engine/SplitPanelRenderer';
-import { ContractPreview, type EditorTab } from '../../src/engine/ContractPreview';
+import { SplitPanelRenderer } from '@safety-net/form-engine-react';
+import { ContractPreview, type EditorTab } from '@safety-net/form-engine-react';
 import { ${zodExport} } from '../../${schemaModule}';
-import type { FormContract, PermissionsPolicy, ViewMode } from '../../src/engine/types';
+import type { FormContract, PermissionsPolicy, ViewMode } from '@safety-net/form-engine-react';
 
 // Layout
 import contract from '../../${contractPath}';
@@ -481,7 +481,7 @@ function generateCustomStory(contract, manifest, customName, customDir, category
     const rightMode = panels?.right?.mode ?? 'readonly';
     const leftLabel = panels?.left?.label ?? 'Left Panel';
     const rightLabel = panels?.right?.label ?? 'Right Panel';
-    rendererImport = `import { SplitPanelRenderer } from '../../../src/engine/SplitPanelRenderer';`;
+    rendererImport = `import { SplitPanelRenderer } from '@safety-net/form-engine-react';`;
     rendererJsx = `      <SplitPanelRenderer
         contract={activeContract}
         schema={${zodExport}}
@@ -494,7 +494,7 @@ function generateCustomStory(contract, manifest, customName, customDir, category
         onSubmit={logSubmit}
       />`;
   } else {
-    rendererImport = `import { FormRenderer } from '../../../src/engine/FormRenderer';`;
+    rendererImport = `import { FormRenderer } from '@safety-net/form-engine-react';`;
     rendererJsx = `      <FormRenderer
         contract={activeContract}
         schema={${zodExport}}
@@ -512,9 +512,9 @@ function generateCustomStory(contract, manifest, customName, customDir, category
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 ${rendererImport}
-import { ContractPreview, type EditorTab } from '../../../src/engine/ContractPreview';
+import { ContractPreview, type EditorTab } from '@safety-net/form-engine-react';
 import { ${zodExport} } from '../../../${schemaModule}';
-import type { FormContract${roleType}, PermissionsPolicy${viewModeImport} } from '../../../src/engine/types';
+import type { FormContract${roleType}, PermissionsPolicy${viewModeImport} } from '@safety-net/form-engine-react';
 
 // Layout (from custom)
 import customLayout from './layout.yaml';
@@ -631,9 +631,9 @@ function generateDataTableCustomStory({ id, role, src, layers, allPerms, metaTit
   return `// Auto-generated custom story. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { DataTableRenderer } from '../../../src/engine/DataTableRenderer';
-import { ContractPreview, type EditorTab } from '../../../src/engine/ContractPreview';
-import type { FormContract, PermissionsPolicy, AnnotationLayer } from '../../../src/engine/types';
+import { DataTableRenderer } from '@safety-net/form-engine-react';
+import { ContractPreview, type EditorTab } from '@safety-net/form-engine-react';
+import type { FormContract, PermissionsPolicy, AnnotationLayer } from '@safety-net/form-engine-react';
 
 // Layout (from custom)
 import customLayout from './layout.yaml';
@@ -814,9 +814,9 @@ function generateDataTableStory(contract, manifest, category) {
   return `// Auto-generated from ${contractPath}. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { DataTableRenderer } from '../../src/engine/DataTableRenderer';
-import { ContractPreview, type EditorTab } from '../../src/engine/ContractPreview';
-import type { FormContract, PermissionsPolicy, AnnotationLayer } from '../../src/engine/types';
+import { DataTableRenderer } from '@safety-net/form-engine-react';
+import { ContractPreview, type EditorTab } from '@safety-net/form-engine-react';
+import type { FormContract, PermissionsPolicy, AnnotationLayer } from '@safety-net/form-engine-react';
 
 // Layout
 import contract from '../../${contractPath}';
@@ -908,10 +908,10 @@ function generateListDetailStory(contract, manifest, category) {
   return `// Auto-generated from ${contractPath}. Run \`npm run generate:stories\` to regenerate.
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { ListDetailRenderer } from '../../src/engine/ListDetailRenderer';
-import { ContractPreview, type EditorTab } from '../../src/engine/ContractPreview';
+import { ListDetailRenderer } from '@safety-net/form-engine-react';
+import { ContractPreview, type EditorTab } from '@safety-net/form-engine-react';
 import { ${detailZodExport} } from '../../${detailSchemaModule}';
-import type { FormContract, Role } from '../../src/engine/types';
+import type { FormContract, Role } from '@safety-net/form-engine-react';
 
 // Layout (list contract)
 import contract from '../../${contractPath}';

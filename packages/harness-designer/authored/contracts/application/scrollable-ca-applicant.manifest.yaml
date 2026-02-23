@@ -1,0 +1,7 @@
+sources:
+  contract: authored/contracts/application/scrollable-ca-applicant.form.yaml
+  schema: generated/schemas/application-california.ts
+  zodExport: applicationCreateSchema
+  fixtures: authored/fixtures/application-intake.yaml
+  permissions:
+    - authored/permissions/applicant.yaml

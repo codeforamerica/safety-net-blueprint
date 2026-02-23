@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { seedDatabase, seedAllDatabases } from '../../src/seeder.js';
 import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
-import { count, findAll, closeAll } from '../../src/database-manager.js';
+import { count, findAll, closeAll, DATA_DIR } from '../../src/database-manager.js';
 import { unlinkSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -20,7 +20,7 @@ const specsDir = join(__dirname, '../../../contracts');
 const cleanup = () => {
   closeAll();
   // Clean up test databases
-  const testDbPath = join(__dirname, '../../../generated/mock-data');
+  const testDbPath = DATA_DIR;
   try {
     if (existsSync(join(testDbPath, 'persons.db'))) {
       unlinkSync(join(testDbPath, 'persons.db'));

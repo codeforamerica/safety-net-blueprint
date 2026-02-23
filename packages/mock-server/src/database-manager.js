@@ -13,6 +13,9 @@ import { deepMerge } from './deep-merge.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+/** Absolute path to the data directory where SQLite databases are stored. */
+export const DATA_DIR = join(__dirname, '../data');
+
 // Store database connections
 const databases = new Map();
 
@@ -26,12 +29,11 @@ export function getDatabase(resourceName) {
     return databases.get(resourceName);
   }
   
-  const dataDir = join(__dirname, '../../generated/mock-data');
-  if (!existsSync(dataDir)) {
-    mkdirSync(dataDir, { recursive: true });
+  if (!existsSync(DATA_DIR)) {
+    mkdirSync(DATA_DIR, { recursive: true });
   }
-  
-  const dbPath = join(dataDir, `${resourceName}.db`);
+
+  const dbPath = join(DATA_DIR, `${resourceName}.db`);
   const db = new Database(dbPath);
   
   // Enable JSON support

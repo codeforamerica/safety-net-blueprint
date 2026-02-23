@@ -17,15 +17,17 @@ import { validateJSON } from '../src/validator.js';
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
 
-function parseSpecsDir() {
+function parseSpecsDirs() {
   const args = process.argv.slice(2);
-  const specsArg = args.find(a => a.startsWith('--specs='));
-  if (!specsArg) {
-    console.error('Error: --specs=<dir> is required.\n');
-    console.error('Usage: node scripts/server.js --specs=<dir>');
+  const specsDirs = args
+    .filter(a => a.startsWith('--specs='))
+    .map(a => resolve(a.split('=')[1]));
+  if (specsDirs.length === 0) {
+    console.error('Error: --specs=<dir> is required (may be repeated).\n');
+    console.error('Usage: node scripts/server.js --specs=<dir> [--specs=<dir2> ...]');
     process.exit(1);
   }
-  return resolve(specsArg.split('=')[1]);
+  return specsDirs;
 }
 
 let expressServer = null;
@@ -39,9 +41,13 @@ async function startMockServer() {
   console.log('='.repeat(70));
   
   try {
-    // Perform setup (load specs and seed databases)
-    const specsDir = parseSpecsDir();
-    const { apiSpecs } = await performSetup({ specsDir, verbose: true });
+    // Perform setup (load specs and seed databases) for each specs directory
+    const specsDirs = parseSpecsDirs();
+    let apiSpecs = [];
+    for (const specsDir of specsDirs) {
+      const result = await performSetup({ specsDir, verbose: true });
+      apiSpecs = apiSpecs.concat(result.apiSpecs);
+    }
     
     // Create Express app
     const app = express();

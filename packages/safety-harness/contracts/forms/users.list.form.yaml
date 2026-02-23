@@ -1,0 +1,23 @@
+form:
+  id: users-list
+  title: User Service API
+  schema: users
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: User Service API
+      source: api
+      columns:
+        - from: userId
+          label: User Id
+        - from: id
+          label: Id
+        - from: idpSubject
+          label: Idp Subject
+        - from: email
+          label: Email
+        - from: status
+          label: Status
+

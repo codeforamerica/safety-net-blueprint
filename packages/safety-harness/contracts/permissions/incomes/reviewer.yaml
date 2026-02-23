@@ -1,0 +1,6 @@
+role: reviewer
+defaults: read-only
+fields:
+  id: read-only
+  createdAt: read-only
+  updatedAt: read-only

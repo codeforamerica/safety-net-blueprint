@@ -1,0 +1,23 @@
+form:
+  id: forms-list
+  title: Form Service API
+  schema: forms
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: Form Service API
+      source: api
+      columns:
+        - from: id
+          label: Id
+        - from: name
+          label: Name
+        - from: description
+          label: Description
+        - from: status
+          label: Status
+        - from: version
+          label: Version
+

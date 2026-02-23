@@ -33,9 +33,10 @@
     "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html",
     "design:reference": "npm run design:reference -w @codeforamerica/safety-net-blueprint-contracts",
     "storybook": "npm run storybook -w @safety-net/harness-designer",
-    "harness:dev": "npm run dev -w @safety-net/harness-app",
+    "harness:dev": "npm run dev -w @safety-net/safety-harness",
     "harness:generate": "npm run generate -w @safety-net/harness-designer",
-    "harness:generate:api": "npm run generate:api -w @safety-net/harness-app"
+    "harness:generate:api": "npm run generate:api -w @safety-net/safety-harness",
+    "harness:start": "npm start -w @safety-net/safety-harness"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "^4.2.3"

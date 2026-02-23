@@ -1,0 +1,19 @@
+form:
+  id: applications-list
+  title: Application Service API
+  schema: applications
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: Application Service API
+      source: api
+      columns:
+        - from: id
+          label: Id
+        - from: state
+          label: State
+        - from: status
+          label: Status
+

@@ -1,0 +1,44 @@
+form:
+  id: forms-management
+  title: Form Definitions
+  schema: Form
+  layout:
+    navigation: none
+    display: data-table
+  resource:
+    endpoint: /forms
+    identity: formId
+  actions:
+    - id: save
+      label: Save
+      method: PATCH
+      style: default
+  columns:
+    - from: name
+      label: Name
+    - from: status
+      label: Status
+    - from: version
+      label: Version
+  pages:
+    - id: overview
+      title: Overview
+      fields:
+        - ref: name
+          component: text-input
+        - ref: description
+          component: textarea
+        - ref: status
+          component: select
+          labels:
+            draft: Draft
+            published: Published
+        - ref: version
+          component: text-input
+          width: half
+    - id: definition
+      title: Definition
+      fields:
+        - ref: definition
+          component: textarea
+          hint: Form contract definition (JSON)

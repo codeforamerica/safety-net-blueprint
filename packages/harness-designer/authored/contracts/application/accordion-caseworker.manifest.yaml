@@ -1,0 +1,10 @@
+sources:
+  contract: authored/contracts/application/accordion-caseworker.form.yaml
+  schema: generated/schemas/application-california.ts
+  zodExport: applicationUpdateSchema
+  fixtures: authored/fixtures/application-caseworker-review.yaml
+  permissions:
+    - authored/permissions/caseworker.yaml
+  annotations:
+    - generated/annotations/federal.yaml
+    - generated/annotations/california.yaml

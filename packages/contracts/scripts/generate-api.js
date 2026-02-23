@@ -119,7 +119,7 @@ function generateApiSpec(name, resource) {
 
   return `openapi: 3.1.0
 info:
-  title: ${resource} Service API
+  title: ${resource} API
   version: 1.0.0
   description: |
     REST API for managing ${resourcePluralLower}. The specification defines CRUD operations

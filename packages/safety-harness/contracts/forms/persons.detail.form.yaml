@@ -1,0 +1,321 @@
+form:
+  id: persons-detail
+  title: Person Service API
+  schema: persons
+  layout:
+    navigation: in-page
+    display: scrollable
+  pages:
+    - id: general
+      title: General
+      fields:
+        - ref: dateOfBirth
+          component: date-input
+        - ref: socialSecurityNumber
+          component: text-input
+        - ref: phoneNumber
+          component: text-input
+        - ref: email
+          component: text-input
+        - ref: id
+          component: text-input
+        - ref: consentToShareInformation
+          component: checkbox-group
+          labels:
+            "true": Consent To Share Information
+        - ref: createdAt
+          component: date-input
+        - ref: updatedAt
+          component: date-input
+    - id: name
+      title: Name
+      fields:
+        - ref: name.firstName
+          component: text-input
+        - ref: name.middleInitial
+          component: text-input
+        - ref: name.middleName
+          component: text-input
+        - ref: name.lastName
+          component: text-input
+        - ref: name.maidenName
+          component: text-input
+        - ref: name.suffix
+          component: text-input
+    - id: address
+      title: Address
+      fields:
+        - ref: address.addressLine1
+          component: text-input
+        - ref: address.addressLine2
+          component: text-input
+        - ref: address.city
+          component: text-input
+        - ref: address.stateProvince
+          component: text-input
+        - ref: address.postalCode
+          component: text-input
+        - ref: address.county
+          component: text-input
+    - id: demographicInfo
+      title: Demographic Info
+      fields:
+        - ref: demographicInfo.sex
+          component: select
+          labels:
+            male: Male
+            female: Female
+            unknown: Unknown
+        - ref: demographicInfo.maritalStatus
+          component: select
+          labels:
+            single: Single
+            married: Married
+            divorced: Divorced
+            separated: Separated
+            widowed: Widowed
+            civil_union: Civil Union
+            domestic_partnership: Domestic Partnership
+        - ref: demographicInfo.isHispanicOrLatino
+          component: checkbox-group
+          labels:
+            "true": Is Hispanic Or Latino
+        - ref: demographicInfo.race
+          component: checkbox-group
+          labels:
+            american_indian_alaskan_native: American Indian Alaskan Native
+            asian: Asian
+            black_african_american: Black African American
+            native_hawaiian_pacific_islander: Native Hawaiian Pacific Islander
+            white: White
+    - id: citizenshipInfo
+      title: Citizenship Info
+      fields:
+        - ref: citizenshipInfo.status
+          component: select
+          labels:
+            citizen: Citizen
+            permanent_resident: Permanent Resident
+            qualified_non_citizen: Qualified Non Citizen
+            undocumented: Undocumented
+            other: Other
+        - ref: citizenshipInfo.certificateNumber
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.status
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.documentType
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.documentNumber
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.alienOrI94Number
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.documentExpirationDate
+          component: date-input
+        - ref: citizenshipInfo.immigrationInfo.countryOfIssuance
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.hasSponsor
+          component: checkbox-group
+          labels:
+            "true": Has Sponsor
+        - ref: citizenshipInfo.immigrationInfo.sponsor.name.firstName
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.name.middleInitial
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.name.middleName
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.name.lastName
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.name.maidenName
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.name.suffix
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.dateOfBirth
+          component: date-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.socialSecurityNumber
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.address.addressLine1
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.address.addressLine2
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.address.city
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.address.stateProvince
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.address.postalCode
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.address.county
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.phoneNumber
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.email
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.firstName
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.middleInitial
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.middleName
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.lastName
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.maidenName
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.suffix
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.dateOfBirth
+          component: date-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.socialSecurityNumber
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.addressLine1
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.addressLine2
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.city
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.stateProvince
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.postalCode
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.county
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.phoneNumber
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.email
+          component: text-input
+        - ref: citizenshipInfo.immigrationInfo.sponsor.totalPeopleInHousehold
+          component: text-input
+    - id: contactInfo
+      title: Contact Info
+      fields:
+        - ref: contactInfo.otherPhoneNumber
+          component: text-input
+        - ref: contactInfo.mailingAddress.addressLine1
+          component: text-input
+        - ref: contactInfo.mailingAddress.addressLine2
+          component: text-input
+        - ref: contactInfo.mailingAddress.city
+          component: text-input
+        - ref: contactInfo.mailingAddress.stateProvince
+          component: text-input
+        - ref: contactInfo.mailingAddress.postalCode
+          component: text-input
+        - ref: contactInfo.mailingAddress.county
+          component: text-input
+        - ref: contactInfo.isHomeless
+          component: checkbox-group
+          labels:
+            "true": Is Homeless
+        - ref: contactInfo.preferredNoticeMethod
+          component: select
+          labels:
+            paper: Paper
+            email: Email
+            both: Both
+        - ref: contactInfo.languagePreference.written
+          component: text-input
+        - ref: contactInfo.languagePreference.spoken
+          component: text-input
+        - ref: contactInfo.preferredContactMethod
+          component: select
+          labels:
+            phone: Phone
+            email: Email
+            mail: Mail
+            sms: Sms
+    - id: employmentInfo
+      title: Employment Info
+      fields:
+        - ref: employmentInfo.jobs
+          component: field-array
+          fields:
+            - ref: employer.name
+              component: text-input
+            - ref: employer.phone
+              component: text-input
+            - ref: employer.address.addressLine1
+              component: text-input
+            - ref: employer.address.addressLine2
+              component: text-input
+            - ref: employer.address.city
+              component: text-input
+            - ref: employer.address.stateProvince
+              component: text-input
+            - ref: employer.address.postalCode
+              component: text-input
+            - ref: employer.address.county
+              component: text-input
+            - ref: employer.identificationNumber
+              component: text-input
+            - ref: startDate
+              component: date-input
+            - ref: endDate
+              component: date-input
+    - id: educationInfo
+      title: Education Info
+      fields:
+        - ref: educationInfo.lastGradeCompleted
+          component: text-input
+        - ref: educationInfo.isCurrentlyEnrolled
+          component: checkbox-group
+          labels:
+            "true": Is Currently Enrolled
+        - ref: educationInfo.schoolName
+          component: text-input
+        - ref: educationInfo.startDate
+          component: date-input
+        - ref: educationInfo.isFullTimeStudent
+          component: checkbox-group
+          labels:
+            "true": Is Full Time Student
+        - ref: educationInfo.expectedGraduationDate
+          component: date-input
+    - id: militaryInfo
+      title: Military Info
+      fields:
+        - ref: militaryInfo.isMilitaryServiceMember
+          component: checkbox-group
+          labels:
+            "true": Is Military Service Member
+        - ref: militaryInfo.veteranStatus
+          component: checkbox-group
+          labels:
+            "true": Veteran Status
+    - id: tribalInfo
+      title: Tribal Info
+      fields:
+        - ref: tribalInfo.tribeName
+          component: text-input
+        - ref: tribalInfo.tribeState
+          component: text-input
+        - ref: tribalInfo.hasReceivedServiceFromIndianHealthService
+          component: checkbox-group
+          labels:
+            "true": Has Received Service From Indian Health Service
+        - ref: tribalInfo.isEligibleForIndianHealthService
+          component: checkbox-group
+          labels:
+            "true": Is Eligible For Indian Health Service
+permissions:
+  - role: admin
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: applicant
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: caseworker
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: reviewer
+    defaults: read-only
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only

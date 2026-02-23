@@ -1,11 +1,11 @@
 import '@trussworks/react-uswds/lib/uswds.css';
 import '@trussworks/react-uswds/lib/index.css';
-import '../src/theme';
+import '@safety-net/form-engine-react/src/theme';
 
 import React, { useCallback } from 'react';
 import type { Preview } from '@storybook/react';
 import { useGlobals } from '@storybook/preview-api';
-import { EditorVisibilityProvider } from '../src/engine/EditorVisibilityContext';
+import { EditorVisibilityProvider } from '@safety-net/form-engine-react';
 
 const preview: Preview = {
   parameters: {

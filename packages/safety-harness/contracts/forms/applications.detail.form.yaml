@@ -1,0 +1,1598 @@
+form:
+  id: applications-detail
+  title: Application Service API
+  schema: applications
+  layout:
+    navigation: none
+    display: accordion
+  annotation_display:
+    label: override
+    source: badge
+    statute: tooltip
+    programs:
+      page: banner
+      field: exception-badge
+  pages:
+    - id: general
+      title: General
+      fields:
+        - ref: status
+          component: select
+          labels:
+            draft: Draft
+            submitted: Submitted
+            under_review: Under Review
+            approved: Approved
+            denied: Denied
+            pending_information: Pending Information
+            withdrawn: Withdrawn
+    - id: programs
+      title: Programs
+      fields:
+        - ref: programs.snap
+          component: checkbox-group
+          labels:
+            "true": Snap
+        - ref: programs.cashPrograms.tanfProgram
+          component: checkbox-group
+          labels:
+            "true": Tanf Program
+        - ref: programs.cashPrograms.adultFinancial
+          component: checkbox-group
+          labels:
+            "true": Adult Financial
+        - ref: programs.medicalAssistance
+          component: checkbox-group
+          labels:
+            "true": Medical Assistance
+    - id: household
+      title: Household
+      fields:
+        - ref: household.members
+          component: field-array
+          display: accordion
+          columns:
+            - from: name.firstName
+              label: First Name
+            - from: name.lastName
+              label: Last Name
+            - from: relationship
+              label: Relationship
+            - from: dateOfBirth
+              label: Date of Birth
+          groups:
+            - title: Personal & Contact
+              fields:
+                - name.firstName
+                - name.middleName
+                - name.lastName
+                - name.maidenName
+                - name.suffix
+                - dateOfBirth
+                - socialSecurityNumber
+                - relationship
+                - demographicInfo.sex
+                - demographicInfo.maritalStatus
+                - demographicInfo.isHispanicOrLatino
+                - demographicInfo.race
+                - address.addressLine1
+                - address.addressLine2
+                - address.city
+                - address.stateProvince
+                - address.postalCode
+                - address.county
+                - phoneNumber
+                - email
+                - contactInfo.otherPhoneNumber
+                - contactInfo.mailingAddress.addressLine1
+                - contactInfo.mailingAddress.addressLine2
+                - contactInfo.mailingAddress.city
+                - contactInfo.mailingAddress.stateProvince
+                - contactInfo.mailingAddress.postalCode
+                - contactInfo.mailingAddress.county
+                - contactInfo.isHomeless
+                - contactInfo.preferredNoticeMethod
+                - contactInfo.languagePreference.written
+                - contactInfo.languagePreference.spoken
+                - contactInfo.preferredContactMethod
+                - contactInfo.isStateResident
+            - title: Citizenship & Immigration
+              fields:
+                - citizenshipInfo.status
+                - citizenshipInfo.certificateNumber
+                - citizenshipInfo.immigrationInfo.status
+                - citizenshipInfo.immigrationInfo.documentType
+                - citizenshipInfo.immigrationInfo.documentNumber
+                - citizenshipInfo.immigrationInfo.alienOrI94Number
+                - citizenshipInfo.immigrationInfo.documentExpirationDate
+                - citizenshipInfo.immigrationInfo.countryOfIssuance
+                - citizenshipInfo.immigrationInfo.hasSponsor
+                - citizenshipInfo.immigrationInfo.sponsor.name.firstName
+                - citizenshipInfo.immigrationInfo.sponsor.name.middleName
+                - citizenshipInfo.immigrationInfo.sponsor.name.lastName
+                - citizenshipInfo.immigrationInfo.sponsor.name.maidenName
+                - citizenshipInfo.immigrationInfo.sponsor.name.suffix
+                - citizenshipInfo.immigrationInfo.sponsor.dateOfBirth
+                - citizenshipInfo.immigrationInfo.sponsor.socialSecurityNumber
+                - citizenshipInfo.immigrationInfo.sponsor.address.addressLine1
+                - citizenshipInfo.immigrationInfo.sponsor.address.addressLine2
+                - citizenshipInfo.immigrationInfo.sponsor.address.city
+                - citizenshipInfo.immigrationInfo.sponsor.address.stateProvince
+                - citizenshipInfo.immigrationInfo.sponsor.address.postalCode
+                - citizenshipInfo.immigrationInfo.sponsor.address.county
+                - citizenshipInfo.immigrationInfo.sponsor.phoneNumber
+                - citizenshipInfo.immigrationInfo.sponsor.email
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.name.firstName
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.name.middleName
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.name.lastName
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.name.maidenName
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.name.suffix
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.dateOfBirth
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.socialSecurityNumber
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.address.addressLine1
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.address.addressLine2
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.address.city
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.address.stateProvince
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.address.postalCode
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.address.county
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.phoneNumber
+                - citizenshipInfo.immigrationInfo.sponsor.spouse.email
+                - citizenshipInfo.immigrationInfo.sponsor.totalPeopleInHousehold
+                - citizenshipInfo.immigrationInfo.livedInUSSince1996
+                - citizenshipInfo.immigrationInfo.spouseOrParentIsVeteranOrActiveDuty
+                - nonCitizenApplicationInfo.wantsEmergencyMedicaid
+                - nonCitizenApplicationInfo.wantsReproductiveBenefits
+                - nonCitizenApplicationInfo.hasBeenAbandonedMistreatedOrAbused
+                - nonCitizenApplicationInfo.isPregnantOr20OrYounger
+                - nonCitizenApplicationInfo.livesWithSponsor
+                - nonCitizenApplicationInfo.receivesFreeRoomAndBoardFromSponsor
+                - nonCitizenApplicationInfo.receivesSupportFromSponsor
+            - title: Employment & Income
+              fields:
+                - employmentInfo.jobs
+                - employmentHistory
+                - selfEmployment
+                - strikeInfo.strikeBeginDate
+                - strikeInfo.lastPaycheckDate
+                - strikeInfo.lastPaycheckAmount
+                - unearnedIncomeSources
+                - lumpSumPayments
+                - incomeChangeInfo.changeReason
+                - incomeChangeInfo.expectedAnnualIncome
+                - incomeChangeInfo.expectedIncomeChange
+                - incomeChangeInfo.pastIncomeAmount
+                - incomeChangeInfo.pastDeductionsAmount
+                - incomeChangeInfo.deductionsChangeMonthly
+                - incomeChangeInfo.deductions
+                - educationInfo.lastGradeCompleted
+                - educationInfo.isCurrentlyEnrolled
+                - educationInfo.schoolName
+                - educationInfo.startDate
+                - educationInfo.isFullTimeStudent
+                - educationInfo.expectedGraduationDate
+                - financialAidInfo.hasFinancialAid
+                - financialAidInfo.grantsScholarshipsWorkStudyForLivingExpenses
+                - financialAidInfo.taxableGrantsScholarshipsWorkStudy
+            - title: Health & Benefits
+              fields:
+                - healthInfo.healthCoverage
+                - healthInfo.medicare.partA.isEntitledOrReceiving
+                - healthInfo.medicare.partA.startDate
+                - healthInfo.medicare.partA.isCurrentlyEnrolled
+                - healthInfo.medicare.partA.whoPaysPremium
+                - healthInfo.medicare.partA.isPremiumFree
+                - healthInfo.medicare.partB.isEntitledOrReceiving
+                - healthInfo.medicare.partB.startDate
+                - healthInfo.medicare.partB.premiumAmount
+                - healthInfo.medicare.partB.whoPaysPremium
+                - healthInfo.medicare.partC.isEntitledOrReceiving
+                - healthInfo.medicare.partC.startDate
+                - healthInfo.medicare.partD.isEntitledOrReceiving
+                - healthInfo.medicare.partD.startDate
+                - healthInfo.medicare.partD.premiumAmount
+                - healthInfo.medicare.partD.whoPaysPremium
+                - healthInfo.federalHealthBenefits
+                - healthInsuranceEnrollments
+                - retroactiveMedicalRequest.months
+                - retroactiveMedicalRequest.householdIncomeInThoseMonths
+                - disabilityInfo.hasDisability
+                - disabilityInfo.needsHelpWithSelfCare
+                - disabilityInfo.hasMedicalOrDevelopmentalCondition
+                - disabilityInfo.socialSecurityApplications
+                - disabilityInfo.hasReceivedSsiOrSsdi
+                - disabilityInfo.ssiOrSsdiEndDate
+                - hasLegalClaim
+                - institutionalizedInfo.isInstitutionalized
+                - institutionalizedInfo.dateEntered
+                - institutionalizedInfo.facilityName
+                - institutionalizedInfo.facilityType
+                - institutionalizedInfo.isPendingDisposition
+                - institutionalizedInfo.mealsProvided
+                - familyPlanningInfo.wantsFamilyPlanningBenefits
+                - familyPlanningInfo.dueDate
+                - familyPlanningInfo.numberOfBabiesExpected
+                - familyPlanningInfo.fatherName
+                - familyPlanningInfo.wantsGoodCauseFromChildSupport
+                - fosterCareInfo.nameUsedInOutOfStateFosterCare
+                - fosterCareInfo.dateLeftFosterCare
+                - fosterCareInfo.wasAdopted
+                - fosterCareInfo.returnedToFosterCareAfterAdoption
+                - fosterCareInfo.dateReturnedToFosterCare
+                - fosterCareInfo.dateOfStateResidency
+                - fosterCareInfo.needsHelpPayingMedicalBills
+                - fosterCareInfo.medicalBillsMonths
+                - absentParents
+                - militaryInfo.isMilitaryServiceMember
+                - militaryInfo.veteranStatus
+                - tribalInfo.tribeName
+                - tribalInfo.tribeState
+                - tribalInfo.hasReceivedServiceFromIndianHealthService
+                - tribalInfo.isEligibleForIndianHealthService
+                - tribalInfo.typeOfIncomeReceived
+                - tribalInfo.frequencyAndAmount
+            - title: Expenses & Housing
+              fields:
+                - expenses.rent
+                - expenses.mortgage
+                - expenses.utilities
+                - expenses.additionalExpenses
+            - title: Finances & Legal
+              fields:
+                - programsApplyingFor
+                - consentToShareInformation
+                - resourceInfo.financialResources
+                - resourceInfo.vehicles
+                - resourceInfo.insurancePolicies
+                - resourceInfo.realEstateProperties
+                - transferredAssets
+                - taxFilingInfo.willFileTaxes
+                - taxFilingInfo.filingJointlyWithSpouse
+                - taxFilingInfo.spouseName
+                - taxFilingInfo.willClaimDependents
+                - taxFilingInfo.dependentsToClaim
+                - taxFilingInfo.expectsToBeClaimedAsDependent
+                - taxFilingInfo.isClaimedAsDependent
+                - taxFilingInfo.nameOfPersonClaiming
+                - taxFilingInfo.isPersonClaimingListedOnApplication
+                - taxFilingInfo.isPersonClaimingNonCustodialParent
+                - taxFilingInfo.marriedFilingSeparatelyWithExceptionalCircumstances
+                - priorConvictions.convictedOfDuplicateSNAPBenefits
+                - priorConvictions.hidingFromLaw
+                - priorConvictions.convictedOfDrugFelony
+                - priorConvictions.convictedOfSNAPTrafficking
+                - priorConvictions.convictedOfTradingSNAPForWeapons
+                - priorConvictions.disqualifiedForIPVOrWelfareFraud
+                - priorConvictions.convictedOfViolentCrime
+                - pastBenefitsFromOtherStates.dateReceived
+                - pastBenefitsFromOtherStates.city
+                - pastBenefitsFromOtherStates.county
+                - pastBenefitsFromOtherStates.state
+          fields:
+            - ref: name.firstName
+              component: text-input
+              width: half
+            - ref: name.lastName
+              component: text-input
+              width: half
+            - ref: name.middleName
+              component: text-input
+              width: half
+            - ref: name.maidenName
+              component: text-input
+              width: half
+            - ref: name.suffix
+              component: text-input
+              width: half
+            - ref: dateOfBirth
+              component: date-input
+            - ref: socialSecurityNumber
+              component: text-input
+            - ref: address.addressLine1
+              component: text-input
+            - ref: address.addressLine2
+              component: text-input
+            - ref: address.city
+              component: text-input
+            - ref: address.stateProvince
+              component: text-input
+            - ref: address.postalCode
+              component: text-input
+            - ref: address.county
+              component: text-input
+            - ref: phoneNumber
+              component: text-input
+            - ref: email
+              component: text-input
+            - ref: demographicInfo.sex
+              component: select
+              labels:
+                male: Male
+                female: Female
+                unknown: Unknown
+            - ref: demographicInfo.maritalStatus
+              component: select
+              labels:
+                single: Single
+                married: Married
+                divorced: Divorced
+                separated: Separated
+                widowed: Widowed
+                civil_union: Civil Union
+                domestic_partnership: Domestic Partnership
+            - ref: demographicInfo.isHispanicOrLatino
+              component: checkbox-group
+              labels:
+                "true": Is Hispanic Or Latino
+            - ref: demographicInfo.race
+              component: checkbox-group
+              labels:
+                american_indian_alaskan_native: American Indian Alaskan Native
+                asian: Asian
+                black_african_american: Black African American
+                native_hawaiian_pacific_islander: Native Hawaiian Pacific Islander
+                white: White
+            - ref: citizenshipInfo.status
+              component: select
+              labels:
+                citizen: Citizen
+                permanent_resident: Permanent Resident
+                qualified_non_citizen: Qualified Non Citizen
+                undocumented: Undocumented
+                other: Other
+            - ref: citizenshipInfo.certificateNumber
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.status
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.documentType
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.documentNumber
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.alienOrI94Number
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.documentExpirationDate
+              component: date-input
+            - ref: citizenshipInfo.immigrationInfo.countryOfIssuance
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.hasSponsor
+              component: checkbox-group
+              labels:
+                "true": Has Sponsor
+            - ref: citizenshipInfo.immigrationInfo.sponsor.name.firstName
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.name.middleName
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.name.lastName
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.name.maidenName
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.name.suffix
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.dateOfBirth
+              component: date-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.socialSecurityNumber
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.address.addressLine1
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.address.addressLine2
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.address.city
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.address.stateProvince
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.address.postalCode
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.address.county
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.phoneNumber
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.email
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.firstName
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.middleName
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.lastName
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.maidenName
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.name.suffix
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.dateOfBirth
+              component: date-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.socialSecurityNumber
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.addressLine1
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.addressLine2
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.city
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.stateProvince
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.postalCode
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.address.county
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.phoneNumber
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.spouse.email
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.sponsor.totalPeopleInHousehold
+              component: text-input
+            - ref: citizenshipInfo.immigrationInfo.livedInUSSince1996
+              component: checkbox-group
+              labels:
+                "true": Lived In U S Since1996
+            - ref: citizenshipInfo.immigrationInfo.spouseOrParentIsVeteranOrActiveDuty
+              component: checkbox-group
+              labels:
+                "true": Spouse Or Parent Is Veteran Or Active Duty
+            - ref: contactInfo.otherPhoneNumber
+              component: text-input
+            - ref: contactInfo.mailingAddress.addressLine1
+              component: text-input
+            - ref: contactInfo.mailingAddress.addressLine2
+              component: text-input
+            - ref: contactInfo.mailingAddress.city
+              component: text-input
+            - ref: contactInfo.mailingAddress.stateProvince
+              component: text-input
+            - ref: contactInfo.mailingAddress.postalCode
+              component: text-input
+            - ref: contactInfo.mailingAddress.county
+              component: text-input
+            - ref: contactInfo.isHomeless
+              component: checkbox-group
+              labels:
+                "true": Is Homeless
+            - ref: contactInfo.preferredNoticeMethod
+              component: select
+              labels:
+                paper: Paper
+                email: Email
+                both: Both
+            - ref: contactInfo.languagePreference.written
+              component: text-input
+            - ref: contactInfo.languagePreference.spoken
+              component: text-input
+            - ref: contactInfo.preferredContactMethod
+              component: select
+              labels:
+                phone: Phone
+                email: Email
+                mail: Mail
+                sms: Sms
+            - ref: contactInfo.isStateResident
+              component: checkbox-group
+              labels:
+                "true": Is State Resident
+            - ref: employmentInfo.jobs
+              component: field-array
+              fields:
+                - ref: employer.name
+                  component: text-input
+                - ref: employer.phone
+                  component: text-input
+                - ref: employer.address.addressLine1
+                  component: text-input
+                - ref: employer.address.addressLine2
+                  component: text-input
+                - ref: employer.address.city
+                  component: text-input
+                - ref: employer.address.stateProvince
+                  component: text-input
+                - ref: employer.address.postalCode
+                  component: text-input
+                - ref: employer.address.county
+                  component: text-input
+                - ref: employer.identificationNumber
+                  component: text-input
+                - ref: startDate
+                  component: date-input
+                - ref: endDate
+                  component: date-input
+            - ref: educationInfo.lastGradeCompleted
+              component: text-input
+            - ref: educationInfo.isCurrentlyEnrolled
+              component: checkbox-group
+              labels:
+                "true": Is Currently Enrolled
+            - ref: educationInfo.schoolName
+              component: text-input
+            - ref: educationInfo.startDate
+              component: date-input
+            - ref: educationInfo.isFullTimeStudent
+              component: checkbox-group
+              labels:
+                "true": Is Full Time Student
+            - ref: educationInfo.expectedGraduationDate
+              component: date-input
+            - ref: militaryInfo.isMilitaryServiceMember
+              component: checkbox-group
+              labels:
+                "true": Is Military Service Member
+            - ref: militaryInfo.veteranStatus
+              component: checkbox-group
+              labels:
+                "true": Veteran Status
+            - ref: tribalInfo.tribeName
+              component: text-input
+            - ref: tribalInfo.tribeState
+              component: text-input
+            - ref: tribalInfo.hasReceivedServiceFromIndianHealthService
+              component: checkbox-group
+              labels:
+                "true": Has Received Service From Indian Health Service
+            - ref: tribalInfo.isEligibleForIndianHealthService
+              component: checkbox-group
+              labels:
+                "true": Is Eligible For Indian Health Service
+            - ref: tribalInfo.typeOfIncomeReceived
+              component: text-input
+            - ref: tribalInfo.frequencyAndAmount
+              component: text-input
+            - ref: consentToShareInformation
+              component: checkbox-group
+              labels:
+                "true": Consent To Share Information
+            - ref: relationship
+              component: select
+              labels:
+                self: Self
+                spouse: Spouse
+                child: Child
+                parent: Parent
+                sibling: Sibling
+                other_relative: Other Relative
+                non_relative: Non Relative
+            - ref: programsApplyingFor
+              component: checkbox-group
+              labels:
+                snap: Snap
+                tanf: Tanf
+                adult_financial: Adult Financial
+                medical_assistance: Medical Assistance
+            - ref: institutionalizedInfo.isInstitutionalized
+              component: checkbox-group
+              labels:
+                "true": Is Institutionalized
+            - ref: institutionalizedInfo.dateEntered
+              component: date-input
+            - ref: institutionalizedInfo.facilityName
+              component: text-input
+            - ref: institutionalizedInfo.facilityType
+              component: select
+              labels:
+                nursing_home: Nursing Home
+                hospital: Hospital
+                mental_health_institution: Mental Health Institution
+                incarceration: Incarceration
+                other: Other
+            - ref: institutionalizedInfo.isPendingDisposition
+              component: checkbox-group
+              labels:
+                "true": Is Pending Disposition
+            - ref: institutionalizedInfo.mealsProvided
+              component: checkbox-group
+              labels:
+                "true": Meals Provided
+            - ref: disabilityInfo.hasDisability
+              component: checkbox-group
+              labels:
+                "true": Has Disability
+            - ref: disabilityInfo.needsHelpWithSelfCare
+              component: checkbox-group
+              labels:
+                "true": Needs Help With Self Care
+            - ref: disabilityInfo.hasMedicalOrDevelopmentalCondition
+              component: checkbox-group
+              labels:
+                "true": Has Medical Or Developmental Condition
+            - ref: disabilityInfo.socialSecurityApplications
+              component: field-array
+              fields:
+                - ref: program
+                  component: select
+                  labels:
+                    SSI: S S I
+                    SSDI: S S D I
+                    other: Other
+                - ref: otherProgramName
+                  component: text-input
+                - ref: applicationDate
+                  component: date-input
+                - ref: status
+                  component: select
+                  labels:
+                    pending: Pending
+                    approved: Approved
+                    denied: Denied
+                    appealed: Appealed
+            - ref: disabilityInfo.hasReceivedSsiOrSsdi
+              component: checkbox-group
+              labels:
+                "true": Has Received Ssi Or Ssdi
+            - ref: disabilityInfo.ssiOrSsdiEndDate
+              component: date-input
+            - ref: hasLegalClaim
+              component: checkbox-group
+              labels:
+                "true": Has Legal Claim
+            - ref: expenses.rent
+              component: field-array
+              fields:
+                - ref: expenseType
+                  component: select
+                  labels:
+                    rent: Rent
+                    renters_insurance: Renters Insurance
+                    pet_fee: Pet Fee
+                    washer_dryer_fee: Washer Dryer Fee
+                    condo_fee: Condo Fee
+                    maintenance_fee: Maintenance Fee
+                    other: Other
+                - ref: expenseMonth
+                  component: date-input
+                - ref: amountPaid
+                  component: text-input
+            - ref: expenses.mortgage
+              component: field-array
+              fields:
+                - ref: expenseType
+                  component: select
+                  labels:
+                    mortgage: Mortgage
+                    homeowners_insurance: Homeowners Insurance
+                    property_taxes: Property Taxes
+                    hoa_fees: Hoa Fees
+                - ref: expenseMonth
+                  component: date-input
+                - ref: amountPaid
+                  component: text-input
+            - ref: expenses.utilities
+              component: field-array
+              fields:
+                - ref: utilityType
+                  component: select
+                  labels:
+                    electricity: Electricity
+                    gas: Gas
+                    water: Water
+                    phone: Phone
+                    trash: Trash
+                    sewer: Sewer
+                    firewood: Firewood
+                    propane: Propane
+                    other: Other
+                - ref: expenseMonth
+                  component: date-input
+                - ref: amountPaid
+                  component: text-input
+            - ref: expenses.additionalExpenses
+              component: field-array
+              fields:
+                - ref: expenseType
+                  component: select
+                  labels:
+                    child_daycare: Child Daycare
+                    adult_daycare: Adult Daycare
+                    legally_obligated_child_support: Legally Obligated Child Support
+                    child_support_arrears: Child Support Arrears
+                    medical_expenses: Medical Expenses
+                    student_loan_interest: Student Loan Interest
+                    alimony: Alimony
+                - ref: monthOfExpense
+                  component: date-input
+                - ref: amountPaid
+                  component: text-input
+                - ref: legallyObligatedAmount
+                  component: text-input
+            - ref: incomeChangeInfo.changeReason
+              component: select
+              labels:
+                stopped_working: Stopped Working
+                hours_changed: Hours Changed
+                employment_change: Employment Change
+                marriage_or_divorce: Marriage Or Divorce
+                other: Other
+            - ref: incomeChangeInfo.expectedAnnualIncome
+              component: text-input
+            - ref: incomeChangeInfo.expectedIncomeChange
+              component: select
+              labels:
+                same: Same
+                lower: Lower
+                higher: Higher
+                unknown: Unknown
+            - ref: incomeChangeInfo.pastIncomeAmount
+              component: text-input
+            - ref: incomeChangeInfo.pastDeductionsAmount
+              component: text-input
+            - ref: incomeChangeInfo.deductionsChangeMonthly
+              component: checkbox-group
+              labels:
+                "true": Deductions Change Monthly
+            - ref: incomeChangeInfo.deductions
+              component: field-array
+              fields:
+                - ref: deductionType
+                  component: select
+                  labels:
+                    alimony_paid: Alimony Paid
+                    capital_losses: Capital Losses
+                    early_withdrawal_penalty: Early Withdrawal Penalty
+                    student_loan_interest: Student Loan Interest
+                    domestic_production_activities: Domestic Production Activities
+                    reimbursement_of_expenses: Reimbursement Of Expenses
+                    hsa_deduction: Hsa Deduction
+                    moving_expenses: Moving Expenses
+                    traditional_ira_contribution: Traditional Ira Contribution
+                    reservist_performing_artist_government_official_expenses: Reservist Performing Artist Government Official Expenses
+                    other: Other
+                - ref: deductionTypeOther
+                  component: text-input
+                - ref: frequency
+                  component: select
+                  labels:
+                    one_time_only: One Time Only
+                    weekly: Weekly
+                    every_two_weeks: Every Two Weeks
+                    twice_monthly: Twice Monthly
+                    monthly: Monthly
+                    yearly: Yearly
+                - ref: currentAmount
+                  component: text-input
+                - ref: actualAnnualAmount
+                  component: text-input
+            - ref: fosterCareInfo.nameUsedInOutOfStateFosterCare
+              component: text-input
+            - ref: fosterCareInfo.dateLeftFosterCare
+              component: date-input
+            - ref: fosterCareInfo.wasAdopted
+              component: checkbox-group
+              labels:
+                "true": Was Adopted
+            - ref: fosterCareInfo.returnedToFosterCareAfterAdoption
+              component: checkbox-group
+              labels:
+                "true": Returned To Foster Care After Adoption
+            - ref: fosterCareInfo.dateReturnedToFosterCare
+              component: date-input
+            - ref: fosterCareInfo.dateOfStateResidency
+              component: date-input
+            - ref: fosterCareInfo.needsHelpPayingMedicalBills
+              component: checkbox-group
+              labels:
+                "true": Needs Help Paying Medical Bills
+            - ref: fosterCareInfo.medicalBillsMonths
+              component: text-input
+            - ref: absentParents
+              component: field-array
+              fields:
+                - ref: name.firstName
+                  component: text-input
+                - ref: name.middleInitial
+                  component: text-input
+                - ref: name.middleName
+                  component: text-input
+                - ref: name.lastName
+                  component: text-input
+                - ref: name.maidenName
+                  component: text-input
+                - ref: name.suffix
+                  component: text-input
+                - ref: dateOfBirth
+                  component: date-input
+                - ref: socialSecurityNumber
+                  component: text-input
+                - ref: address.addressLine1
+                  component: text-input
+                - ref: address.addressLine2
+                  component: text-input
+                - ref: address.city
+                  component: text-input
+                - ref: address.stateProvince
+                  component: text-input
+                - ref: address.postalCode
+                  component: text-input
+                - ref: address.county
+                  component: text-input
+                - ref: phoneNumber
+                  component: text-input
+                - ref: email
+                  component: text-input
+                - ref: triedToGetMedicalSupport
+                  component: checkbox-group
+                  labels:
+                    "true": Tried To Get Medical Support
+            - ref: employmentHistory
+              component: field-array
+              fields:
+                - ref: employer.name
+                  component: text-input
+                - ref: employer.phone
+                  component: text-input
+                - ref: employer.address.addressLine1
+                  component: text-input
+                - ref: employer.address.addressLine2
+                  component: text-input
+                - ref: employer.address.city
+                  component: text-input
+                - ref: employer.address.stateProvince
+                  component: text-input
+                - ref: employer.address.postalCode
+                  component: text-input
+                - ref: employer.address.county
+                  component: text-input
+                - ref: employer.identificationNumber
+                  component: text-input
+                - ref: startDate
+                  component: date-input
+                - ref: endDate
+                  component: date-input
+                - ref: monthlyWagesBeforeTaxes
+                  component: text-input
+                - ref: hourlyWage
+                  component: text-input
+                - ref: averageHoursPerWeek
+                  component: text-input
+                - ref: payFrequency
+                  component: select
+                  labels:
+                    hourly: Hourly
+                    weekly: Weekly
+                    every_two_weeks: Every Two Weeks
+                    twice_monthly: Twice Monthly
+                    monthly: Monthly
+                    yearly: Yearly
+                    daily: Daily
+                - ref: isTemporaryJob
+                  component: checkbox-group
+                  labels:
+                    "true": Is Temporary Job
+                - ref: incomeType
+                  component: select
+                  labels:
+                    seasonal_employment: Seasonal Employment
+                    commission_based_employment: Commission Based Employment
+                    regular_employment: Regular Employment
+                - ref: lastPaycheckDate
+                  component: date-input
+                - ref: lastPaycheckAmount
+                  component: text-input
+            - ref: selfEmployment
+              component: field-array
+              fields:
+                - ref: businessName
+                  component: text-input
+                - ref: oneMonthsGrossIncome
+                  component: text-input
+                - ref: monthOfIncome
+                  component: date-input
+                - ref: selfEmploymentType
+                  component: select
+                  labels:
+                    sole_proprietor: Sole Proprietor
+                    llc: Llc
+                    s_corp: S Corp
+                    independent_contractor: Independent Contractor
+                - ref: utilitiesPaidForBusiness
+                  component: text-input
+                - ref: businessTaxesPaid
+                  component: text-input
+                - ref: interestPaidForBusiness
+                  component: text-input
+                - ref: grossBusinessLaborCosts
+                  component: text-input
+                - ref: costOfMerchandise
+                  component: text-input
+                - ref: otherBusinessCosts
+                  component: field-array
+                  fields:
+                    - ref: type
+                      component: text-input
+                    - ref: amount
+                      component: text-input
+                - ref: totalNetIncome
+                  component: text-input
+            - ref: unearnedIncomeSources
+              component: field-array
+              fields:
+                - ref: incomeType
+                  component: select
+                  labels:
+                    unemployment_benefits: Unemployment Benefits
+                    SSI: S S I
+                    veterans_benefits: Veterans Benefits
+                    widow_benefits: Widow Benefits
+                    workers_comp: Workers Comp
+                    railroad_retirement: Railroad Retirement
+                    child_support: Child Support
+                    survivors_benefits: Survivors Benefits
+                    dividends_interest: Dividends Interest
+                    rental_income: Rental Income
+                    money_from_boarder: Money From Boarder
+                    disability_benefits: Disability Benefits
+                    retirement_pension: Retirement Pension
+                    SSDI: S S D I
+                    alimony: Alimony
+                    in_kind_income: In Kind Income
+                    social_security_benefits: Social Security Benefits
+                    public_assistance: Public Assistance
+                    plasma_donations: Plasma Donations
+                    gifts: Gifts
+                    loans: Loans
+                    foster_care_payments: Foster Care Payments
+                    tribal_benefits: Tribal Benefits
+                    other: Other
+                - ref: monthlyAmount
+                  component: text-input
+            - ref: lumpSumPayments
+              component: field-array
+              fields:
+                - ref: dateReceived
+                  component: date-input
+                - ref: type
+                  component: select
+                  labels:
+                    lawsuit_settlement: Lawsuit Settlement
+                    insurance_settlement: Insurance Settlement
+                    social_security_ssi_ssdi_payment: Social Security Ssi Ssdi Payment
+                    veterans: Veterans
+                    inheritance: Inheritance
+                    surrender_of_annuity: Surrender Of Annuity
+                    life_insurance_payout: Life Insurance Payout
+                    lottery_gambling_winnings: Lottery Gambling Winnings
+                    other: Other
+                - ref: amount
+                  component: text-input
+            - ref: strikeInfo.strikeBeginDate
+              component: date-input
+            - ref: strikeInfo.lastPaycheckDate
+              component: date-input
+            - ref: strikeInfo.lastPaycheckAmount
+              component: text-input
+            - ref: nonCitizenApplicationInfo.wantsEmergencyMedicaid
+              component: checkbox-group
+              labels:
+                "true": Wants Emergency Medicaid
+            - ref: nonCitizenApplicationInfo.wantsReproductiveBenefits
+              component: checkbox-group
+              labels:
+                "true": Wants Reproductive Benefits
+            - ref: nonCitizenApplicationInfo.hasBeenAbandonedMistreatedOrAbused
+              component: checkbox-group
+              labels:
+                "true": Has Been Abandoned Mistreated Or Abused
+            - ref: nonCitizenApplicationInfo.isPregnantOr20OrYounger
+              component: checkbox-group
+              labels:
+                "true": Is Pregnant Or20 Or Younger
+            - ref: nonCitizenApplicationInfo.livesWithSponsor
+              component: checkbox-group
+              labels:
+                "true": Lives With Sponsor
+            - ref: nonCitizenApplicationInfo.receivesFreeRoomAndBoardFromSponsor
+              component: checkbox-group
+              labels:
+                "true": Receives Free Room And Board From Sponsor
+            - ref: nonCitizenApplicationInfo.receivesSupportFromSponsor
+              component: checkbox-group
+              labels:
+                "true": Receives Support From Sponsor
+            - ref: familyPlanningInfo.wantsFamilyPlanningBenefits
+              component: checkbox-group
+              labels:
+                "true": Wants Family Planning Benefits
+            - ref: familyPlanningInfo.dueDate
+              component: date-input
+            - ref: familyPlanningInfo.numberOfBabiesExpected
+              component: text-input
+            - ref: familyPlanningInfo.fatherName
+              component: text-input
+            - ref: familyPlanningInfo.wantsGoodCauseFromChildSupport
+              component: checkbox-group
+              labels:
+                "true": Wants Good Cause From Child Support
+            - ref: financialAidInfo.hasFinancialAid
+              component: checkbox-group
+              labels:
+                "true": Has Financial Aid
+            - ref: financialAidInfo.grantsScholarshipsWorkStudyForLivingExpenses
+              component: text-input
+            - ref: financialAidInfo.taxableGrantsScholarshipsWorkStudy
+              component: text-input
+            - ref: priorConvictions.convictedOfDuplicateSNAPBenefits
+              component: checkbox-group
+              labels:
+                "true": Convicted Of Duplicate S N A P Benefits
+            - ref: priorConvictions.hidingFromLaw
+              component: checkbox-group
+              labels:
+                "true": Hiding From Law
+            - ref: priorConvictions.convictedOfDrugFelony
+              component: checkbox-group
+              labels:
+                "true": Convicted Of Drug Felony
+            - ref: priorConvictions.convictedOfSNAPTrafficking
+              component: checkbox-group
+              labels:
+                "true": Convicted Of S N A P Trafficking
+            - ref: priorConvictions.convictedOfTradingSNAPForWeapons
+              component: checkbox-group
+              labels:
+                "true": Convicted Of Trading S N A P For Weapons
+            - ref: priorConvictions.disqualifiedForIPVOrWelfareFraud
+              component: checkbox-group
+              labels:
+                "true": Disqualified For I P V Or Welfare Fraud
+            - ref: priorConvictions.convictedOfViolentCrime
+              component: checkbox-group
+              labels:
+                "true": Convicted Of Violent Crime
+            - ref: taxFilingInfo.willFileTaxes
+              component: checkbox-group
+              labels:
+                "true": Will File Taxes
+            - ref: taxFilingInfo.filingJointlyWithSpouse
+              component: checkbox-group
+              labels:
+                "true": Filing Jointly With Spouse
+            - ref: taxFilingInfo.spouseName
+              component: text-input
+            - ref: taxFilingInfo.willClaimDependents
+              component: checkbox-group
+              labels:
+                "true": Will Claim Dependents
+            - ref: taxFilingInfo.dependentsToClaim
+              component: text-input
+            - ref: taxFilingInfo.expectsToBeClaimedAsDependent
+              component: checkbox-group
+              labels:
+                "true": Expects To Be Claimed As Dependent
+            - ref: taxFilingInfo.isClaimedAsDependent
+              component: checkbox-group
+              labels:
+                "true": Is Claimed As Dependent
+            - ref: taxFilingInfo.nameOfPersonClaiming
+              component: text-input
+            - ref: taxFilingInfo.isPersonClaimingListedOnApplication
+              component: checkbox-group
+              labels:
+                "true": Is Person Claiming Listed On Application
+            - ref: taxFilingInfo.isPersonClaimingNonCustodialParent
+              component: checkbox-group
+              labels:
+                "true": Is Person Claiming Non Custodial Parent
+            - ref: taxFilingInfo.marriedFilingSeparatelyWithExceptionalCircumstances
+              component: checkbox-group
+              labels:
+                "true": Married Filing Separately With Exceptional Circumstances
+            - ref: resourceInfo.financialResources
+              component: field-array
+              fields:
+                - ref: resourceType
+                  component: select
+                  labels:
+                    cash_on_hand: Cash On Hand
+                    checking_account: Checking Account
+                    savings_account: Savings Account
+                    stocks: Stocks
+                    bonds: Bonds
+                    mutual_funds: Mutual Funds
+                    401k: 401k
+                    ira: Ira
+                    trusts: Trusts
+                    cds: Cds
+                    annuities: Annuities
+                    college_funds: College Funds
+                    pass_accounts: Pass Accounts
+                    idas: Idas
+                    promissory_notes: Promissory Notes
+                    education_accounts: Education Accounts
+                    other: Other
+                - ref: financialInstitutionName
+                  component: text-input
+                - ref: accountNumber
+                  component: text-input
+                - ref: currentValue
+                  component: text-input
+            - ref: resourceInfo.vehicles
+              component: field-array
+              fields:
+                - ref: year
+                  component: text-input
+                - ref: make
+                  component: text-input
+                - ref: model
+                  component: text-input
+                - ref: currentValue
+                  component: text-input
+            - ref: resourceInfo.insurancePolicies
+              component: field-array
+              fields:
+                - ref: policyType
+                  component: select
+                  labels:
+                    life_insurance: Life Insurance
+                    burial_insurance: Burial Insurance
+                - ref: company
+                  component: text-input
+                - ref: policyNumber
+                  component: text-input
+                - ref: revocableOrIrrevocable
+                  component: select
+                  labels:
+                    revocable: Revocable
+                    irrevocable: Irrevocable
+                - ref: faceValue
+                  component: text-input
+                - ref: cashSurrenderValue
+                  component: text-input
+            - ref: resourceInfo.realEstateProperties
+              component: field-array
+              fields:
+                - ref: propertyType
+                  component: text-input
+                - ref: propertyAddress.addressLine1
+                  component: text-input
+                - ref: propertyAddress.addressLine2
+                  component: text-input
+                - ref: propertyAddress.city
+                  component: text-input
+                - ref: propertyAddress.stateProvince
+                  component: text-input
+                - ref: propertyAddress.postalCode
+                  component: text-input
+                - ref: propertyAddress.county
+                  component: text-input
+                - ref: primaryPropertyUse
+                  component: checkbox-group
+                  labels:
+                    primary_home: Primary Home
+                    rental_income: Rental Income
+                    business_self_employment: Business Self Employment
+                    other: Other
+                - ref: primaryPropertyUseOther
+                  component: text-input
+                - ref: currentValue
+                  component: text-input
+            - ref: transferredAssets
+              component: field-array
+              fields:
+                - ref: dateOfTransfer
+                  component: date-input
+                - ref: assetDescription
+                  component: text-input
+                - ref: amountReceived
+                  component: text-input
+                - ref: fairMarketValue
+                  component: text-input
+            - ref: retroactiveMedicalRequest.months
+              component: text-input
+            - ref: retroactiveMedicalRequest.householdIncomeInThoseMonths
+              component: text-input
+            - ref: healthInfo.healthCoverage
+              component: field-array
+              fields:
+                - ref: typeOfCoverage
+                  component: select
+                  labels:
+                    medicare: Medicare
+                    tricare: Tricare
+                    va_health_care: Va Health Care
+                    peace_corps: Peace Corps
+                    cobra: Cobra
+                    retiree_health_plan: Retiree Health Plan
+                    current_employer_sponsored: Current Employer Sponsored
+                    railroad_retirement_insurance: Railroad Retirement Insurance
+                - ref: coverageStartDate
+                  component: date-input
+                - ref: coverageEndDate
+                  component: date-input
+                - ref: enrollmentStatus
+                  component: select
+                  labels:
+                    eligible: Eligible
+                    enrolled: Enrolled
+            - ref: healthInfo.medicare.partA.isEntitledOrReceiving
+              component: checkbox-group
+              labels:
+                "true": Is Entitled Or Receiving
+            - ref: healthInfo.medicare.partA.startDate
+              component: date-input
+            - ref: healthInfo.medicare.partA.isCurrentlyEnrolled
+              component: checkbox-group
+              labels:
+                "true": Is Currently Enrolled
+            - ref: healthInfo.medicare.partA.whoPaysPremium
+              component: text-input
+            - ref: healthInfo.medicare.partA.isPremiumFree
+              component: checkbox-group
+              labels:
+                "true": Is Premium Free
+            - ref: healthInfo.medicare.partB.isEntitledOrReceiving
+              component: checkbox-group
+              labels:
+                "true": Is Entitled Or Receiving
+            - ref: healthInfo.medicare.partB.startDate
+              component: date-input
+            - ref: healthInfo.medicare.partB.premiumAmount
+              component: text-input
+            - ref: healthInfo.medicare.partB.whoPaysPremium
+              component: text-input
+            - ref: healthInfo.medicare.partC.isEntitledOrReceiving
+              component: checkbox-group
+              labels:
+                "true": Is Entitled Or Receiving
+            - ref: healthInfo.medicare.partC.startDate
+              component: date-input
+            - ref: healthInfo.medicare.partD.isEntitledOrReceiving
+              component: checkbox-group
+              labels:
+                "true": Is Entitled Or Receiving
+            - ref: healthInfo.medicare.partD.startDate
+              component: date-input
+            - ref: healthInfo.medicare.partD.premiumAmount
+              component: text-input
+            - ref: healthInfo.medicare.partD.whoPaysPremium
+              component: text-input
+            - ref: healthInfo.federalHealthBenefits
+              component: field-array
+              fields:
+                - ref: programTypeOrName
+                  component: text-input
+                - ref: insuranceCompanyName
+                  component: text-input
+                - ref: policyNumber
+                  component: text-input
+            - ref: healthInsuranceEnrollments
+              component: field-array
+              fields:
+                - ref: planName
+                  component: text-input
+                - ref: status
+                  component: select
+                  labels:
+                    eligible: Eligible
+                    enrolled: Enrolled
+                - ref: coverageStartDate
+                  component: date-input
+                - ref: coverageEndDate
+                  component: date-input
+                - ref: couldStartCoverageDate
+                  component: date-input
+                - ref: lostCoverageDate
+                  component: date-input
+                - ref: premiumAmount
+                  component: text-input
+                - ref: premiumAmountUnknown
+                  component: checkbox-group
+                  labels:
+                    "true": Premium Amount Unknown
+                - ref: premiumFrequency
+                  component: select
+                  labels:
+                    weekly: Weekly
+                    every_two_weeks: Every Two Weeks
+                    twice_monthly: Twice Monthly
+                    monthly: Monthly
+                    yearly: Yearly
+            - ref: pastBenefitsFromOtherStates.dateReceived
+              component: date-input
+            - ref: pastBenefitsFromOtherStates.city
+              component: text-input
+            - ref: pastBenefitsFromOtherStates.county
+              component: text-input
+            - ref: pastBenefitsFromOtherStates.state
+              component: text-input
+          min_items: 1
+        - ref: household.otherOccupants
+          component: field-array
+          fields:
+            - ref: name.firstName
+              component: text-input
+            - ref: name.middleInitial
+              component: text-input
+            - ref: name.middleName
+              component: text-input
+            - ref: name.lastName
+              component: text-input
+            - ref: name.maidenName
+              component: text-input
+            - ref: name.suffix
+              component: text-input
+            - ref: dateOfBirth
+              component: date-input
+            - ref: socialSecurityNumber
+              component: text-input
+            - ref: address.addressLine1
+              component: text-input
+            - ref: address.addressLine2
+              component: text-input
+            - ref: address.city
+              component: text-input
+            - ref: address.stateProvince
+              component: text-input
+            - ref: address.postalCode
+              component: text-input
+            - ref: address.county
+              component: text-input
+            - ref: phoneNumber
+              component: text-input
+            - ref: email
+              component: text-input
+            - ref: occupantType
+              component: select
+              labels:
+                roomer: Roomer
+                boarder: Boarder
+                other: Other
+            - ref: rentPaidToHousehold
+              component: text-input
+            - ref: mealsIncluded
+              component: checkbox-group
+              labels:
+                "true": Meals Included
+        - ref: household.expenses.rent.utilitiesIncludedInRent
+          component: checkbox-group
+          labels:
+            "true": Utilities Included In Rent
+        - ref: household.expenses.rent.receivesSection8OrPublicHousing
+          component: checkbox-group
+          labels:
+            "true": Receives Section8 Or Public Housing
+        - ref: household.expenses.rent.housingAssistanceType
+          component: select
+          labels:
+            section8: Section8
+            public_housing: Public Housing
+        - ref: household.expenses.rent.items
+          component: field-array
+          hint: Rent Expenses
+          fields:
+            - ref: expenseType
+              component: select
+              labels:
+                rent: Rent
+                renters_insurance: Renters Insurance
+                pet_fee: Pet Fee
+                washer_dryer_fee: Washer Dryer Fee
+                condo_fee: Condo Fee
+                maintenance_fee: Maintenance Fee
+                mortgage: Mortgage
+                homeowners_insurance: Homeowners Insurance
+                property_taxes: Property Taxes
+                hoa_fees: Hoa Fees
+                other: Other
+            - ref: whoPays
+              component: text-input
+            - ref: isPayerInHome
+              component: checkbox-group
+              labels:
+                "true": Is Payer In Home
+            - ref: expenseFor
+              component: text-input
+            - ref: expenseMonth
+              component: date-input
+            - ref: amountPaid
+              component: text-input
+        - ref: household.expenses.mortgage.receivesSection8OrPublicHousing
+          component: checkbox-group
+          labels:
+            "true": Receives Section8 Or Public Housing
+        - ref: household.expenses.mortgage.housingAssistanceType
+          component: select
+          labels:
+            section8: Section8
+            public_housing: Public Housing
+        - ref: household.expenses.mortgage.items
+          component: field-array
+          hint: Mortgage Expenses
+          fields:
+            - ref: expenseType
+              component: select
+              labels:
+                rent: Rent
+                renters_insurance: Renters Insurance
+                pet_fee: Pet Fee
+                washer_dryer_fee: Washer Dryer Fee
+                condo_fee: Condo Fee
+                maintenance_fee: Maintenance Fee
+                mortgage: Mortgage
+                homeowners_insurance: Homeowners Insurance
+                property_taxes: Property Taxes
+                hoa_fees: Hoa Fees
+                other: Other
+            - ref: whoPays
+              component: text-input
+            - ref: isPayerInHome
+              component: checkbox-group
+              labels:
+                "true": Is Payer In Home
+            - ref: expenseFor
+              component: text-input
+            - ref: expenseMonth
+              component: date-input
+            - ref: amountPaid
+              component: text-input
+        - ref: household.expenses.utilities.heatingCoolingMethod
+          component: checkbox-group
+          labels:
+            electric: Electric
+            gas: Gas
+            firewood: Firewood
+            propane: Propane
+            swamp_cooler: Swamp Cooler
+            other: Other
+        - ref: household.expenses.utilities.otherHeatingCoolingType
+          component: text-input
+        - ref: household.expenses.utilities.receivedLEAP
+          component: checkbox-group
+          labels:
+            "true": Received L E A P
+        - ref: household.healthInsurancePlans
+          component: text-input
+    - id: expeditedSNAPInfo
+      title: Expedited S N A P Info
+      fields:
+        - ref: expeditedSNAPInfo.householdSize
+          component: text-input
+        - ref: expeditedSNAPInfo.isMigrantOrSeasonalFarmWorker
+          component: checkbox-group
+          labels:
+            "true": Is Migrant Or Seasonal Farm Worker
+        - ref: expeditedSNAPInfo.totalExpectedIncomeThisMonth
+          component: text-input
+        - ref: expeditedSNAPInfo.totalCashOnHand
+          component: text-input
+        - ref: expeditedSNAPInfo.monthlyMortgage
+          component: text-input
+        - ref: expeditedSNAPInfo.monthlyRent
+          component: text-input
+        - ref: expeditedSNAPInfo.utilityCosts.electricity
+          component: text-input
+        - ref: expeditedSNAPInfo.utilityCosts.water
+          component: text-input
+        - ref: expeditedSNAPInfo.utilityCosts.phone
+          component: text-input
+        - ref: expeditedSNAPInfo.utilityCosts.trash
+          component: text-input
+        - ref: expeditedSNAPInfo.utilityCosts.sewer
+          component: text-input
+        - ref: expeditedSNAPInfo.utilityCosts.other
+          component: text-input
+    - id: signatures
+      title: Signatures
+      fields:
+        - ref: signatures.applicantSignature.signature
+          component: text-input
+        - ref: signatures.applicantSignature.signatureDate
+          component: date-input
+        - ref: signatures.coApplicantSignature.signature
+          component: text-input
+        - ref: signatures.coApplicantSignature.signatureDate
+          component: date-input
+        - ref: signatures.applicantAuthorizedRepresentativeSignature.signature
+          component: text-input
+        - ref: signatures.applicantAuthorizedRepresentativeSignature.signatureDate
+          component: date-input
+        - ref: signatures.coApplicantAuthorizedRepresentativeSignature.signature
+          component: text-input
+        - ref: signatures.coApplicantAuthorizedRepresentativeSignature.signatureDate
+          component: date-input
+    - id: applicationAssister
+      title: Application Assister
+      fields:
+        - ref: applicationAssister.name.firstName
+          component: text-input
+        - ref: applicationAssister.name.middleInitial
+          component: text-input
+        - ref: applicationAssister.name.middleName
+          component: text-input
+        - ref: applicationAssister.name.lastName
+          component: text-input
+        - ref: applicationAssister.name.maidenName
+          component: text-input
+        - ref: applicationAssister.name.suffix
+          component: text-input
+        - ref: applicationAssister.dateOfBirth
+          component: date-input
+        - ref: applicationAssister.socialSecurityNumber
+          component: text-input
+        - ref: applicationAssister.address.addressLine1
+          component: text-input
+        - ref: applicationAssister.address.addressLine2
+          component: text-input
+        - ref: applicationAssister.address.city
+          component: text-input
+        - ref: applicationAssister.address.stateProvince
+          component: text-input
+        - ref: applicationAssister.address.postalCode
+          component: text-input
+        - ref: applicationAssister.address.county
+          component: text-input
+        - ref: applicationAssister.phoneNumber
+          component: text-input
+        - ref: applicationAssister.email
+          component: text-input
+    - id: authorizedRepresentative
+      title: Authorized Representative
+      fields:
+        - ref: authorizedRepresentative.name.firstName
+          component: text-input
+        - ref: authorizedRepresentative.name.middleInitial
+          component: text-input
+        - ref: authorizedRepresentative.name.middleName
+          component: text-input
+        - ref: authorizedRepresentative.name.lastName
+          component: text-input
+        - ref: authorizedRepresentative.name.maidenName
+          component: text-input
+        - ref: authorizedRepresentative.name.suffix
+          component: text-input
+        - ref: authorizedRepresentative.dateOfBirth
+          component: date-input
+        - ref: authorizedRepresentative.socialSecurityNumber
+          component: text-input
+        - ref: authorizedRepresentative.address.addressLine1
+          component: text-input
+        - ref: authorizedRepresentative.address.addressLine2
+          component: text-input
+        - ref: authorizedRepresentative.address.city
+          component: text-input
+        - ref: authorizedRepresentative.address.stateProvince
+          component: text-input
+        - ref: authorizedRepresentative.address.postalCode
+          component: text-input
+        - ref: authorizedRepresentative.address.county
+          component: text-input
+        - ref: authorizedRepresentative.phoneNumber
+          component: text-input
+        - ref: authorizedRepresentative.email
+          component: text-input
+        - ref: authorizedRepresentative.isIndividual
+          component: checkbox-group
+          labels:
+            "true": Is Individual
+        - ref: authorizedRepresentative.organizationId
+          component: text-input
+        - ref: authorizedRepresentative.inCareOf
+          component: text-input
+        - ref: authorizedRepresentative.receiveNotices
+          component: checkbox-group
+          labels:
+            "true": Receive Notices
+        - ref: authorizedRepresentative.applicantSignature.signature
+          component: text-input
+        - ref: authorizedRepresentative.applicantSignature.signatureDate
+          component: date-input
+        - ref: authorizedRepresentative.authorizedRepresentativeSignature.signature
+          component: text-input
+        - ref: authorizedRepresentative.authorizedRepresentativeSignature.signatureDate
+          component: date-input
+permissions:
+  - role: admin
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: applicant
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: caseworker
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: reviewer
+    defaults: read-only
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only

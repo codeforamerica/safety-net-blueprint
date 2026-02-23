@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { 
+import {
   getDatabase,
   findAll,
   findById,
@@ -14,21 +14,17 @@ import {
   update,
   deleteResource,
   count,
-  closeAll
+  closeAll,
+  DATA_DIR
 } from '../../src/database-manager.js';
 import { unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const testDbName = 'test-db';
 
 const cleanup = () => {
   closeAll();
-  const testDbPath = join(__dirname, `../../../generated/mock-data/${testDbName}.db`);
+  const testDbPath = join(DATA_DIR, `${testDbName}.db`);
   try {
     if (existsSync(testDbPath)) {
       unlinkSync(testDbPath);

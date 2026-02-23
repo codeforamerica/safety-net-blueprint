@@ -10,11 +10,11 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Forward --specs flag to child servers
-const specsArg = process.argv.slice(2).find(a => a.startsWith('--specs='));
-if (!specsArg) {
-  console.error('Error: --specs=<dir> is required.\n');
-  console.error('Usage: node scripts/start-all.js --specs=<dir>');
+// Forward all --specs flags to child servers
+const specsArgs = process.argv.slice(2).filter(a => a.startsWith('--specs='));
+if (specsArgs.length === 0) {
+  console.error('Error: --specs=<dir> is required (may be repeated).\n');
+  console.error('Usage: node scripts/start-all.js --specs=<dir> [--specs=<dir2> ...]');
   process.exit(1);
 }
 
@@ -25,7 +25,7 @@ console.log('\nPress Ctrl+C to stop both servers\n');
 
 // Start mock server
 console.log('Starting Mock Server on http://localhost:1080...');
-const mockServer = spawn('node', [join(__dirname, 'server.js'), specsArg], {
+const mockServer = spawn('node', [join(__dirname, 'server.js'), ...specsArgs], {
   stdio: 'inherit',
   shell: true
 });
@@ -35,7 +35,7 @@ await new Promise(resolve => setTimeout(resolve, 2000));
 
 // Start Swagger UI
 console.log('\nStarting Swagger UI on http://localhost:3000...');
-const swaggerServer = spawn('node', [join(__dirname, 'swagger/server.js'), specsArg], {
+const swaggerServer = spawn('node', [join(__dirname, 'swagger/server.js'), ...specsArgs], {
   stdio: 'inherit',
   shell: true
 });
