@@ -7,6 +7,7 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
+import { execSync } from 'child_process';
 import { realpathSync } from 'fs';
 import { resolve } from 'path';
 import { performSetup } from '../src/setup.js';
@@ -17,15 +18,48 @@ import { validateJSON } from '../src/validator.js';
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
 
-function parseSpecsDir() {
+function showHelp() {
+  console.log(`
+Mock API Server
+
+Dynamic Express server that discovers and serves OpenAPI specifications.
+
+Usage:
+  npm run mock:start [-- --specs=<dir> ...]
+
+Options:
+  --specs=<dir>   Directory containing *-openapi.yaml files (repeatable)
+                  Default: packages/contracts
+  --stop          Stop the running mock server
+  -h, --help      Show this help message
+
+Environment:
+  MOCK_SERVER_HOST   Host to bind to (default: localhost)
+  MOCK_SERVER_PORT   Port to listen on (default: 1080)
+
+Examples:
+  npm run mock:start
+  npm run mock:start -- --specs=packages/contracts/resolved
+  npm run mock:start -- --specs=packages/contracts --specs=/tmp/my-specs
+`);
+}
+
+function parseSpecsDirs() {
   const args = process.argv.slice(2);
-  const specsArg = args.find(a => a.startsWith('--specs='));
-  if (!specsArg) {
-    console.error('Error: --specs=<dir> is required.\n');
-    console.error('Usage: node scripts/server.js --specs=<dir>');
-    process.exit(1);
+
+  if (args.includes('--help') || args.includes('-h')) {
+    showHelp();
+    process.exit(0);
   }
-  return resolve(specsArg.split('=')[1]);
+
+  const specsDirs = args
+    .filter(a => a.startsWith('--specs='))
+    .map(a => resolve(a.split('=')[1]));
+  if (specsDirs.length === 0) {
+    // Default: packages/contracts relative to this script
+    specsDirs.push(resolve(import.meta.dirname, '..', '..', 'contracts'));
+  }
+  return specsDirs;
 }
 
 let expressServer = null;
@@ -37,15 +71,19 @@ async function startMockServer() {
   console.log('='.repeat(70));
   console.log('🚀 Starting Mock API Server');
   console.log('='.repeat(70));
-  
+
   try {
-    // Perform setup (load specs and seed databases)
-    const specsDir = parseSpecsDir();
-    const { apiSpecs } = await performSetup({ specsDir, verbose: true });
-    
+    // Perform setup (load specs and seed databases) for each specs directory
+    const specsDirs = parseSpecsDirs();
+    let apiSpecs = [];
+    for (const specsDir of specsDirs) {
+      const result = await performSetup({ specsDir, verbose: true });
+      apiSpecs = apiSpecs.concat(result.apiSpecs);
+    }
+
     // Create Express app
     const app = express();
-    
+
     // Middleware
     app.use(cors({
       origin: '*',
@@ -53,21 +91,21 @@ async function startMockServer() {
       allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true
     }));
-    
+
     app.use(express.json());
-    
+
     // JSON parse error handler
     app.use(validateJSON);
-    
+
     // Health check endpoint
     app.get('/health', (req, res) => {
       res.json({ status: 'ok', apis: apiSpecs.map(a => a.name) });
     });
-    
+
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
     const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl);
-    
+
     // 404 handler for undefined routes
     app.use((req, res) => {
       res.status(404).json({
@@ -75,7 +113,7 @@ async function startMockServer() {
         message: 'The requested endpoint does not exist'
       });
     });
-    
+
     // Global error handler
     app.use((err, req, res, next) => {
       console.error('Unhandled error:', err);
@@ -85,7 +123,7 @@ async function startMockServer() {
         details: [{ message: err.message }]
       });
     });
-    
+
     // Start Express server
     expressServer = app.listen(PORT, HOST, () => {
       console.log('\n' + '='.repeat(70));
@@ -94,15 +132,15 @@ async function startMockServer() {
       console.log(`\n📡 Mock Server:    http://${HOST}:${PORT}`);
       console.log(`❤️  Health Check:   http://${HOST}:${PORT}/health`);
     });
-    
+
     // Display available endpoints
     console.log('\n' + '='.repeat(70));
     console.log('Available Endpoints:');
     console.log('='.repeat(70));
-    
+
     for (const api of allEndpoints) {
       console.log(`\n${api.title}:`);
-      
+
       // Group by method
       const byMethod = {};
       for (const endpoint of api.endpoints) {
@@ -111,7 +149,7 @@ async function startMockServer() {
         }
         byMethod[endpoint.method].push(endpoint);
       }
-      
+
       // Display in order: GET, POST, PATCH, DELETE
       for (const method of ['GET', 'POST', 'PATCH', 'DELETE']) {
         if (byMethod[method]) {
@@ -121,22 +159,22 @@ async function startMockServer() {
         }
       }
     }
-    
+
     // Example curl commands
     console.log('\n' + '='.repeat(70));
     console.log('Example Commands:');
     console.log('='.repeat(70));
-    
+
     for (const api of allEndpoints) {
       const listEndpoint = api.endpoints.find(e => e.method === 'GET' && !e.path.includes('{'));
       if (listEndpoint) {
         console.log(`  curl http://${HOST}:${PORT}${listEndpoint.path}`);
       }
     }
-    
+
     console.log('\n' + '='.repeat(70));
     console.log('\n✓ Server ready to accept requests!\n');
-    
+
   } catch (error) {
     console.error('\n❌ Failed to start mock server:', error.message);
     console.error(error);
@@ -149,12 +187,12 @@ async function startMockServer() {
  */
 async function stopServer(exitProcess = true) {
   console.log('\n\nStopping server...');
-  
+
   try {
     // Close databases
     closeAll();
     console.log('✓ Databases closed');
-    
+
     // Stop Express server
     if (expressServer) {
       return new Promise((resolve) => {
@@ -168,7 +206,7 @@ async function stopServer(exitProcess = true) {
   } catch (error) {
     console.error('Error stopping server:', error);
   }
-  
+
   if (exitProcess) {
     process.exit(0);
   }
@@ -193,11 +231,23 @@ async function isServerRunning(host = HOST, port = PORT) {
 export { startMockServer, stopServer, isServerRunning };
 
 // Only auto-start if run directly (not imported)
-if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {
-  // Handle graceful shutdown
-  process.on('SIGINT', () => stopServer(true));
-  process.on('SIGTERM', () => stopServer(true));
-  
-  // Start the server
-  startMockServer();
+const entryUrl = process.argv[1] ? String(new URL(`file://${realpathSync(process.argv[1])}`)) : '';
+if (import.meta.url === entryUrl) {
+  const args = process.argv.slice(2);
+
+  if (args.includes('--stop')) {
+    try {
+      execSync(`npx kill-port ${PORT}`, { stdio: 'inherit' });
+      console.log(`Mock server stopped (port ${PORT}).`);
+    } catch {
+      console.log(`No process running on port ${PORT}.`);
+    }
+  } else {
+    // Handle graceful shutdown
+    process.on('SIGINT', () => stopServer(true));
+    process.on('SIGTERM', () => stopServer(true));
+
+    // Start the server
+    startMockServer();
+  }
 }

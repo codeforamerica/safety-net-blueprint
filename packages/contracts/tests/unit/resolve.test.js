@@ -19,7 +19,7 @@ import {
   filterByEnvironment,
   parseEnvFile,
   substitutePlaceholders
-} from '../../scripts/resolve-overlay.js';
+} from '../../scripts/resolve.js';
 
 // Use checkPathExists from the overlay module (same as the script does)
 import { checkPathExists } from '../../src/overlay/overlay-resolver.js';

@@ -49,7 +49,7 @@ else
 fi
 
 step "Resolving example overlay"
-if npm run overlay:resolve 2>&1; then
+if npm run resolve 2>&1; then
   pass "Overlay resolution succeeded"
 else
   fail "Overlay resolution failed"

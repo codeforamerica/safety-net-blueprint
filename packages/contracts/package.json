@@ -13,7 +13,7 @@
     "scripts/"
   ],
   "bin": {
-    "safety-net-resolve": "./scripts/resolve-overlay.js",
+    "safety-net-resolve": "./scripts/resolve.js",
     "safety-net-design-reference": "./scripts/export-design-reference.js"
   },
   "exports": {
@@ -30,7 +30,7 @@
     "validate:syntax": "node scripts/validate-openapi.js --specs=.",
     "validate:lint": "npx spectral lint '*-openapi.yaml' --ignore-unknown-format",
     "validate:patterns": "node scripts/validate-patterns.js --specs=.",
-    "overlay:resolve": "node scripts/resolve-overlay.js --base=. --out=./resolved",
+    "resolve": "node scripts/resolve.js --base=. --out=../resolved",
     "api:new": "node scripts/generate-api.js",
     "design:reference": "node scripts/export-design-reference.js --specs=. --out=../../docs",
     "contract-tables:export": "node scripts/export-contract-tables.js",

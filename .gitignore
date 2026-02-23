@@ -8,7 +8,7 @@ package-lock.json
 packages/generated
 packages/clients/generated
 packages/clients/dist-packages
-packages/contracts/resolved
+packages/resolved
 resolved/
 resolved_ts/
 resolved_json_shcema/

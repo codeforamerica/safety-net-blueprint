@@ -28,6 +28,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync
 import { join, dirname, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,15 +43,18 @@ function parseArgs() {
   const options = {
     base: 'packages/contracts',
     overlays: null,
-    out: 'packages/contracts/resolved',
+    out: 'packages/resolved',
     env: null,
     envFile: null,
+    bundle: false,
     help: false
   };
 
   for (const arg of args) {
     if (arg === '--help' || arg === '-h') {
       options.help = true;
+    } else if (arg === '--bundle') {
+      options.bundle = true;
     } else if (arg.startsWith('--base=')) {
       options.base = arg.split('=')[1];
     } else if (arg.startsWith('--overlays=')) {
@@ -69,30 +73,32 @@ function parseArgs() {
 
 function showHelp() {
   console.log(`
-Resolve OpenAPI Overlays
+Resolve OpenAPI Specifications
 
-Applies overlay transformations to base specs, producing resolved output.
+Bundles, applies overlays, and resolves specs into self-contained output.
 
 Usage:
-  node scripts/resolve-overlay.js --base=<dir> --out=<dir> [--overlays=<dir>] [--env=<env>] [--env-file=<file>]
+  npm run resolve [-- <flags>]
 
 Flags:
-  --base=<dir>       Path to base specs directory (required)
+  --base=<dir>       Path to base specs directory (default: packages/contracts)
   --overlays=<dir>   Path to overlay directory (optional)
-  --out=<dir>        Output directory for resolved specs (required)
+  --out=<dir>        Output directory for resolved specs (default: packages/resolved)
+  --bundle           Inline all external $refs to produce self-contained specs
   --env=<env>        Target environment for x-environments filtering (optional)
   --env-file=<file>  Path to env file for \${VAR} placeholder substitution (optional)
   -h, --help         Show this help message
 
 Without --overlays, base specs are copied to --out unchanged.
+With --bundle, all external $ref references are dereferenced inline.
 With --env, nodes whose x-environments array doesn't include the target env are removed.
 With --env-file, \${VAR} placeholders in string values are substituted (process.env overrides file values).
 
 Examples:
-  node scripts/resolve-overlay.js --base=./openapi --out=./resolved
-  node scripts/resolve-overlay.js --base=./openapi --overlays=./overlays/california --out=./resolved
-  node scripts/resolve-overlay.js --base=./openapi --out=./resolved --env=production
-  node scripts/resolve-overlay.js --base=./openapi --out=./resolved --env-file=.env
+  npm run resolve
+  npm run resolve -- --bundle --out=/tmp/demo
+  npm run resolve -- --overlays=packages/contracts/overlays/california --out=./resolved
+  npm run resolve -- --bundle --overlays=packages/contracts/overlays/california --out=./resolved
 `);
 }
 
@@ -477,7 +483,7 @@ function copyBaseSpecs(baseDir, outDir) {
 // Main
 // =============================================================================
 
-function main() {
+async function main() {
   const options = parseArgs();
 
   if (options.help) {
@@ -499,9 +505,9 @@ function main() {
   }
   mkdirSync(outDir, { recursive: true });
 
-  if (!options.overlays && !options.env && !options.envFile) {
+  if (!options.overlays && !options.env && !options.envFile && !options.bundle) {
     // No processing needed - copy base specs as-is
-    console.log('No --overlays, --env, or --env-file specified, copying base specs unchanged');
+    console.log('No flags specified, copying base specs unchanged');
     copyBaseSpecs(baseDir, outDir);
     console.log(`Base specs copied to ${outDir}`);
     return;
@@ -511,7 +517,26 @@ function main() {
   console.log(`Output:     ${outDir}`);
 
   // Collect base YAML files
-  const yamlFiles = collectYamlFiles(baseDir);
+  let yamlFiles = collectYamlFiles(baseDir);
+
+  // Bundle: dereference all external $refs to produce self-contained specs
+  if (options.bundle) {
+    console.log('\nBundling: inlining external $refs...');
+    const bundled = [];
+    for (const file of yamlFiles) {
+      // Only bundle top-level OpenAPI specs, not shared component files
+      if (file.spec?.openapi) {
+        const dereferenced = await $RefParser.dereference(file.sourcePath, {
+          dereference: { circular: 'ignore' }
+        });
+        bundled.push({ ...file, spec: dereferenced });
+        console.log(`  ✓ ${file.relativePath}`);
+      } else {
+        bundled.push(file);
+      }
+    }
+    yamlFiles = bundled;
+  }
   let allWarnings = [];
   let currentResults = null;
 
@@ -592,6 +617,15 @@ function main() {
     if (placeholderWarnings.length > 0) {
       for (const varName of placeholderWarnings) {
         allWarnings.push(`Unresolved placeholder: \${${varName}}`);
+      }
+    }
+  }
+
+  // When bundling, skip shared component files (they've been inlined)
+  if (options.bundle) {
+    for (const [relativePath] of currentResults) {
+      if (!relativePath.endsWith('-openapi.yaml') && !relativePath.endsWith('-openapi-examples.yaml')) {
+        currentResults.delete(relativePath);
       }
     }
   }

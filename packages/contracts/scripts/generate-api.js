@@ -26,8 +26,11 @@ function parseArgs() {
   const options = {
     name: null,
     resource: null,
+    out: null,
     help: false
   };
+
+  const positional = [];
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -39,12 +42,25 @@ function parseArgs() {
       case '-r':
         options.resource = args[++i];
         break;
+      case '--out':
+      case '-o':
+        options.out = args[++i];
+        break;
       case '--help':
       case '-h':
         options.help = true;
         break;
+      default:
+        if (!args[i].startsWith('-')) {
+          positional.push(args[i]);
+        }
+        break;
     }
   }
+
+  // Fall back to positional args: api:new -- pizza-shop Pizza
+  if (!options.name && positional.length >= 1) options.name = positional[0];
+  if (!options.resource && positional.length >= 2) options.resource = positional[1];
 
   return options;
 }
@@ -57,15 +73,18 @@ Generates a new OpenAPI spec with all established patterns pre-applied.
 
 Usage:
   npm run api:new -- --name <api-name> --resource <ResourceName>
+  npm run api:new -- <api-name> <ResourceName>
 
 Options:
   -n, --name <name>        API name in kebab-case (e.g., "benefits", "case-workers")
   -r, --resource <name>    Resource name in PascalCase (e.g., "Benefit", "CaseWorker")
+  -o, --out <dir>          Output directory (default: packages/contracts/)
   -h, --help               Show this help message
 
 Examples:
   npm run api:new -- --name benefits --resource Benefit
-  npm run api:new -- --name case-workers --resource CaseWorker
+  npm run api:new -- benefits Benefit
+  npm run api:new -- benefits Benefit --out /tmp
 
 Generated files:
   - {name}-openapi.yaml              Main API specification (schemas inline)
@@ -405,9 +424,10 @@ async function main() {
   console.log(`   Resource: ${resource}`);
   console.log('');
 
-  // Check if files already exist
-  const specPath = join(process.cwd(), `${name}-openapi.yaml`);
-  const examplesPath = join(process.cwd(), `${name}-openapi-examples.yaml`);
+  // Output to --out dir, or packages/contracts/ by default
+  const outDir = options.out || join(import.meta.dirname, '..');
+  const specPath = join(outDir, `${name}-openapi.yaml`);
+  const examplesPath = join(outDir, `${name}-openapi-examples.yaml`);
 
   if (existsSync(specPath)) {
     console.error(`Error: ${specPath} already exists.`);
