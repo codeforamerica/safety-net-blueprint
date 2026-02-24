@@ -1,0 +1,11 @@
+sources:
+  contract: authored/contracts/application/demo-4-annotations.form.yaml
+  schema: generated/schemas/application-california.ts
+  zodExport: applicationUpdateSchema
+  fixtures: authored/fixtures/application-california-caseworker-review.yaml
+  permissions:
+    - authored/permissions/caseworker.yaml
+  annotations:
+    - generated/annotations/federal.yaml
+    - generated/annotations/california.yaml
+category: Demo

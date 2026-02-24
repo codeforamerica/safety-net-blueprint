@@ -1,0 +1,67 @@
+form:
+  id: demo-1-single-page
+  title: 1. Single Page Application
+  schema: Application
+  layout:
+    navigation: none
+    display: scrollable
+  role: applicant
+  pages:
+    - id: application
+      title: Benefits Application
+      fields:
+        - ref: programsAppliedFor
+          component: checkbox-group
+          labels:
+            SNAP: CalFresh (Food Assistance)
+            Medicaid_MAGI: Medi-Cal (MAGI)
+            TANF: CalWORKs (Cash Assistance)
+        - ref: isExpedited
+          component: radio
+          labels:
+            "true": "Yes"
+            "false": "No"
+        - ref: household.members.0.firstName
+          component: text-input
+          width: half
+        - ref: household.members.0.lastName
+          component: text-input
+          width: half
+        - ref: household.members.0.dateOfBirth
+          component: date-input
+        - ref: household.members.0.ssn
+          component: text-input
+          hint: "XXX-XX-XXXX"
+          permissions:
+            reviewer: masked
+            applicant: editable
+            caseworker: editable
+        - ref: household.members.0.citizenshipStatus
+          component: select
+        - ref: household.size
+          component: text-input
+        - ref: household.livingArrangement
+          component: select
+        - ref: household.physicalAddress.street1
+          component: text-input
+        - ref: household.physicalAddress.city
+          component: text-input
+          width: half
+        - ref: household.physicalAddress.state
+          component: text-input
+          width: half
+        - ref: household.physicalAddress.zip
+          component: text-input
+          width: half
+        - ref: household.preferredLanguage
+          component: text-input
+          width: half
+        - ref: consentToVerifyInformation
+          component: radio
+          labels:
+            "true": "Yes, I consent"
+            "false": "No"
+        - ref: signatureOfApplicant
+          component: text-input
+        - ref: signatureDate
+          component: date-input
