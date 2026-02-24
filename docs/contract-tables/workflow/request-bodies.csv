@@ -1,4 +1,0 @@
-Trigger,Fields
-claim,(none)
-complete,outcome: string (required); notes: string; createFollowUp: boolean
-release,reason: string (required)

@@ -1,4 +1,0 @@
-Guard Name,Field,Operator,Value
-taskIsUnassigned,assignedToId,is_null,
-workerHasRequiredSkills,$caller.skills,contains_all,$object.requiredSkills
-callerIsAssignedWorker,assignedToId,equals,$caller.id

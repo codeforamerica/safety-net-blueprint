@@ -1,3 +1,0 @@
-Order,Condition,Action,Fallback,Description
-1,"{""=="":[{""var"":""task.programType""},""snap""]}","{""assignToQueue"":""snap-intake""}","{""assignToQueue"":""general-intake""}","Route SNAP tasks to the snap-intake queue, fall back to general-intake"
-2,true,"{""assignToQueue"":""general-intake""}",,Route all other tasks to general-intake (catch-all)

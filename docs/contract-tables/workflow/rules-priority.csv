@@ -1,2 +1,0 @@
-Order,Condition,Action,Fallback,Description
-1,"{""=="":[{""var"":""task.isExpedited""},true]}","{""setPriority"":""expedited""}",,Expedited tasks get expedited priority
