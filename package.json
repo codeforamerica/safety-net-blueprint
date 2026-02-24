@@ -18,6 +18,7 @@
     "validate:patterns": "npm run validate:patterns -w @codeforamerica/safety-net-blueprint-contracts",
     "validate:schemas": "npm run validate:schemas -w @codeforamerica/safety-net-blueprint-contracts",
     "api:new": "node packages/contracts/scripts/generate-api.js",
+    "api:update": "npm run api:update -w packages/contracts --",
     "resolve": "node packages/contracts/scripts/resolve.js",
     "clients:typescript": "node packages/clients/scripts/generate-clients-typescript.js",
     "clients:json-schema": "node packages/clients/scripts/generate-clients-json-schema.js",

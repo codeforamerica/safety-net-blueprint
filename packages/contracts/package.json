@@ -32,6 +32,7 @@
     "validate:patterns": "node scripts/validate-patterns.js --spec=.",
     "resolve": "node scripts/resolve.js --spec=. --out=../resolved",
     "api:new": "node scripts/generate-api.js",
+    "api:update": "node scripts/update-api.js",
     "design:reference": "node scripts/export-design-reference.js --spec=. --out=../../docs",
     "contract-tables:export": "node scripts/export-contract-tables.js",
     "contract-tables:import": "node scripts/import-contract-tables.js"
