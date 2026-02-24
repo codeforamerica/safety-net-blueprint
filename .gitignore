@@ -4,6 +4,9 @@ package-lock.json
 *.log
 .idea
 
+# Mock server SQLite databases
+packages/mock-server/data/
+
 # Generated artifacts (state-specific, regenerate as needed)
 dist/
 data/
