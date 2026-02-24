@@ -13,12 +13,7 @@ function parseSpecsDirs() {
   const specsDirs = args
     .filter(a => a.startsWith('--specs='))
     .map(a => resolve(a.split('=')[1]));
-  if (specsDirs.length === 0) {
-    console.error('Error: --specs=<dir> is required (may be repeated).\n');
-    console.error('Usage: node scripts/reset.js --specs=<dir> [--specs=<dir2> ...]');
-    process.exit(1);
-  }
-  return specsDirs;
+  return specsDirs.length > 0 ? specsDirs : [resolve('../contracts')];
 }
 
 async function reset() {

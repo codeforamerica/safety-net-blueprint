@@ -1,0 +1,233 @@
+openapi: 3.1.0
+info:
+  title: Pizza API
+  version: 1.0.0
+  description: |
+    REST API for managing pizzas. The specification defines CRUD operations
+    for creating, reading, updating, and deleting pizzas.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+- url: https://api.example.com
+  description: Production server
+- url: http://localhost:8080
+  description: Local development server
+tags:
+- name: Pizzas
+  description: Manage pizzas.
+paths:
+  "/pizzas":
+    get:
+      summary: List pizzas
+      description: Retrieve a paginated list of pizzas.
+      operationId: listPizzas
+      tags:
+      - Pizzas
+      parameters:
+      - "$ref": "./components/parameters.yaml#/SearchQueryParam"
+      - "$ref": "./components/parameters.yaml#/LimitParam"
+      - "$ref": "./components/parameters.yaml#/OffsetParam"
+      responses:
+        '200':
+          description: A paginated collection of pizzas.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/PizzaList"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    post:
+      summary: Create a pizza
+      description: Create a new pizza record.
+      operationId: createPizza
+      tags:
+      - Pizzas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/PizzaCreate"
+      responses:
+        '201':
+          description: Pizza created successfully.
+          headers:
+            Location:
+              description: URL of the newly created pizza resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Pizza"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '422':
+          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+  "/pizzas/{pizzaId}":
+    parameters:
+    - "$ref": "#/components/parameters/PizzaIdParam"
+    get:
+      summary: Get a pizza
+      description: Retrieve a single pizza by identifier.
+      operationId: getPizza
+      tags:
+      - Pizzas
+      responses:
+        '200':
+          description: Pizza retrieved successfully.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Pizza"
+              examples:
+                PizzaExample1:
+                  "$ref": "./pizza-shop-openapi-examples.yaml#/PizzaExample1"
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update a pizza
+      description: Apply partial updates to an existing pizza.
+      operationId: updatePizza
+      tags:
+      - Pizzas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/PizzaUpdate"
+      responses:
+        '200':
+          description: Pizza updated successfully.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Pizza"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '422':
+          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete a pizza
+      description: Permanently remove a pizza record.
+      operationId: deletePizza
+      tags:
+      - Pizzas
+      responses:
+        '204':
+          description: Pizza deleted successfully.
+        '404':
+          "$ref": "./components/responses.yaml#/NotFound"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+components:
+  parameters:
+    PizzaIdParam:
+      name: pizzaId
+      in: path
+      required: true
+      description: Unique identifier of the pizza.
+      schema:
+        type: string
+        format: uuid
+      example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+  schemas:
+    Pizza:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Name of the pizza.
+        description:
+          type: string
+          maxLength: 1000
+          description: Optional description.
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - pending
+          description: Current status.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the pizza was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the pizza was last updated.
+    PizzaCreate:
+      allOf:
+      - "$ref": "#/components/schemas/Pizza"
+      - type: object
+        description: |
+          Payload to create a new pizza record.
+
+          Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+    PizzaUpdate:
+      allOf:
+      - "$ref": "#/components/schemas/Pizza"
+      - type: object
+        description: |
+          Payload to update one or more mutable fields of an existing pizza. Partial updates are supported.
+
+          Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+        minProperties: 1
+    PizzaList:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - limit
+      - offset
+      properties:
+        items:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Pizza"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of pizzas available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of pizzas requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more pizzas are available beyond the current page.

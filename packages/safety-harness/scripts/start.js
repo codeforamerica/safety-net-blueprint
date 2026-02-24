@@ -16,18 +16,18 @@ console.log('Starting Safety Harness (Mock API + Vite Dev Server)');
 console.log('='.repeat(70));
 console.log('\nPress Ctrl+C to stop both servers\n');
 
-// Start mock server with backend contracts and forms specs
-// --specs paths are resolved by path.resolve() inside the mock server,
-// so they are relative to the mock server's CWD.
+// Forward --specs flags to the mock server (default: ../contracts)
+const specsArgs = process.argv.slice(2).filter(a => a.startsWith('--specs='));
+if (specsArgs.length === 0) specsArgs.push('--specs=../contracts');
+
 const mockServerScript = join(packagesDir, 'mock-server', 'scripts', 'server.js');
 const mockServerCwd = join(packagesDir, 'mock-server');
 console.log('Starting Mock Server on http://localhost:1080...');
 const mockServer = spawn('node', [
   mockServerScript,
-  '--specs=../contracts',
+  ...specsArgs,
 ], {
   stdio: 'inherit',
-  shell: true,
   cwd: mockServerCwd
 });
 
@@ -38,7 +38,6 @@ await new Promise(resolve => setTimeout(resolve, 2000));
 console.log('\nStarting Vite dev server...');
 const viteServer = spawn('npx', ['vite'], {
   stdio: 'inherit',
-  shell: true,
   cwd: join(__dirname, '..')
 });
 

@@ -22,12 +22,7 @@ function parseSpecsDirs() {
   const specsDirs = args
     .filter(a => a.startsWith('--specs='))
     .map(a => resolve(a.split('=')[1]));
-  if (specsDirs.length === 0) {
-    console.error('Error: --specs=<dir> is required (may be repeated).\n');
-    console.error('Usage: node scripts/server.js --specs=<dir> [--specs=<dir2> ...]');
-    process.exit(1);
-  }
-  return specsDirs;
+  return specsDirs.length > 0 ? specsDirs : [resolve('../contracts')];
 }
 
 let expressServer = null;
@@ -204,9 +199,8 @@ async function isServerRunning(host = HOST, port = PORT) {
 export { startMockServer, stopServer, isServerRunning };
 
 // Only auto-start if run directly (not imported)
-// Note: On Windows, realpathSync returns backslashes while import.meta.url uses forward slashes,
-// so we normalize both to forward slashes for comparison.
-const entryPath = process.argv[1] ? `file:///${realpathSync(process.argv[1]).replace(/\\/g, '/')}` : '';
+import { pathToFileURL } from 'url';
+const entryPath = process.argv[1] ? pathToFileURL(realpathSync(process.argv[1])).href : '';
 if (import.meta.url === entryPath) {
   // Handle graceful shutdown
   process.on('SIGINT', () => stopServer(true));

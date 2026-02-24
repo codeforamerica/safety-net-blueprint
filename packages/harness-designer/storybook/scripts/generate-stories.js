@@ -18,7 +18,7 @@
  *   Custom stories:   storybook/custom/{contract-id}.{custom-name}/index.stories.tsx
  */
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, statSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
 import { dirs } from '../config.js';
@@ -61,6 +61,7 @@ function writeIfChanged(filePath, content) {
     const existing = readFileSync(filePath, 'utf-8');
     if (existing === content) return false;
   }
+  mkdirSync(join(filePath, '..'), { recursive: true });
   writeFileSync(filePath, content, 'utf-8');
   return true;
 }

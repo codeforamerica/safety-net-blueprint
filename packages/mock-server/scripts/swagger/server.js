@@ -14,12 +14,7 @@ import { discoverApiSpecs } from '@codeforamerica/safety-net-blueprint-contracts
 function parseSpecsDir() {
   const args = process.argv.slice(2);
   const specsArg = args.find(a => a.startsWith('--specs='));
-  if (!specsArg) {
-    console.error('Error: --specs=<dir> is required.\n');
-    console.error('Usage: node scripts/swagger/server.js --specs=<dir>');
-    process.exit(1);
-  }
-  return resolve(specsArg.split('=')[1]);
+  return resolve(specsArg ? specsArg.split('=')[1] : '../contracts');
 }
 
 const __filename = fileURLToPath(import.meta.url);

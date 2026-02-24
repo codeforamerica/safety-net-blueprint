@@ -13,9 +13,7 @@ async function setup() {
     .filter(a => a.startsWith('--specs='))
     .map(a => resolve(a.split('=')[1]));
   if (specsDirs.length === 0) {
-    console.error('Error: --specs=<dir> is required (may be repeated).\n');
-    console.error('Usage: node scripts/setup.js --specs=<dir> [--specs=<dir2> ...]');
-    process.exit(1);
+    specsDirs.push(resolve('../contracts'));
   }
 
   console.log('='.repeat(70));

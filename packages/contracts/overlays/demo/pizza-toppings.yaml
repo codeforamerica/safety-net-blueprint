@@ -1,0 +1,26 @@
+overlay: 1.0.0
+info:
+  title: Custom Pizza Overlay
+  version: 1.0.0
+actions:
+  - target: $.components.schemas.Pizza.properties
+    description: Add toppings and crust type to Pizza
+    update:
+      toppings:
+        type: array
+        items:
+          type: string
+        description: List of toppings.
+      crustType:
+        type: string
+        enum:
+          - thin
+          - thick
+          - stuffed
+        description: Type of crust.
+  - target: $.components.schemas.Pizza.properties.status
+    description: Remove status field — not needed for pizzas
+    remove: true
+  - target: $.components.schemas.Pizza.properties.name
+    description: Rename name to pizzaName
+    rename: pizzaName
