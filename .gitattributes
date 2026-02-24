@@ -1,0 +1,2 @@
+# Enforce LF line endings everywhere (repo and working tree)
+* text=auto eol=lf
