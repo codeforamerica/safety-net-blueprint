@@ -465,8 +465,11 @@ function writeResolvedSpecs(results, targetDir) {
  * Copy base specs to output directory unchanged
  */
 function copyBaseSpecs(baseDir, outDir) {
+  const skip = new Set(['package.json', 'node_modules']);
   const files = readdirSync(baseDir, { withFileTypes: true });
   for (const file of files) {
+    if (skip.has(file.name)) continue;
+
     const source = join(baseDir, file.name);
     const target = join(outDir, file.name);
 

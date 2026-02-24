@@ -8,7 +8,8 @@
     "node": ">=20.19.0"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "!packages/resolved"
   ],
   "scripts": {
     "start": "npm start -w @codeforamerica/safety-net-blueprint-mock-server",
