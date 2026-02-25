@@ -694,6 +694,15 @@ function generateRpcRequests(apiMetadata, endpoint, examples) {
  */
 function generateApiRequests(apiMetadata) {
   const examples = extractIndividualResources(loadExamples(apiMetadata.name));
+
+  // Derive resource name from endpoint paths (e.g., "/tasks" → "tasks")
+  // This gives proper object names ("Task") instead of spec names ("Workflow")
+  const collectionPath = apiMetadata.endpoints.find(e => !e.path.includes('{'))?.path;
+  const resourceName = collectionPath
+    ? collectionPath.split('/').filter(s => s)[0]
+    : apiMetadata.name;
+  const displayMeta = { ...apiMetadata, name: resourceName };
+
   const items = [];
 
   // Sort endpoints: GET (list), GET (id), POST, PATCH, DELETE
@@ -717,23 +726,23 @@ function generateApiRequests(apiMetadata) {
     let requests = [];
 
     if (endpoint.method === 'GET' && isCollection) {
-      requests = generateListRequests(apiMetadata, endpoint, examples);
+      requests = generateListRequests(displayMeta, endpoint, examples);
     } else if (endpoint.method === 'GET' && isItem) {
-      requests = generateGetByIdRequests(apiMetadata, endpoint, examples);
+      requests = generateGetByIdRequests(displayMeta, endpoint, examples);
     } else if (endpoint.method === 'POST' && isCollection) {
-      requests = generateCreateRequests(apiMetadata, endpoint, examples);
+      requests = generateCreateRequests(displayMeta, endpoint, examples);
     } else if (endpoint.method === 'POST' && isItem) {
-      requests = generateRpcRequests(apiMetadata, endpoint, examples);
+      requests = generateRpcRequests(displayMeta, endpoint, examples);
     } else if (endpoint.method === 'PATCH' && isItem) {
-      requests = generateUpdateRequests(apiMetadata, endpoint, examples);
+      requests = generateUpdateRequests(displayMeta, endpoint, examples);
     } else if (endpoint.method === 'DELETE' && isItem) {
-      requests = generateDeleteRequests(apiMetadata, endpoint, examples);
+      requests = generateDeleteRequests(displayMeta, endpoint, examples);
     }
 
     items.push(...requests);
   }
 
-  return items;
+  return { resourceName, items };
 }
 
 // =============================================================================
@@ -822,15 +831,16 @@ Flags:
     ]
   };
 
-  // Add folder for each API
+  // Add folder for each API, named by resource type
   console.log('\nGenerating requests...');
   for (const api of apiSpecs) {
     console.log(`  Processing ${api.title}...`);
-    const requests = generateApiRequests(api);
-    console.log(`    Generated ${requests.length} requests`);
+    const { resourceName, items: requests } = generateApiRequests(api);
+    const folderName = capitalize(resourceName);
+    console.log(`    Generated ${requests.length} requests → ${folderName}`);
 
     collection.item.push({
-      name: api.title,
+      name: folderName,
       item: requests,
       description: api.title
     });
@@ -838,7 +848,7 @@ Flags:
     // Add resource ID variables
     const examples = extractIndividualResources(loadExamples(api.name));
     if (examples.length > 0) {
-      const varName = `${singularize(api.name)}Id`;
+      const varName = `${singularize(resourceName)}Id`;
       collection.variable.push({
         key: varName,
         value: examples[0].data.id,

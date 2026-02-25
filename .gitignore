@@ -14,6 +14,8 @@ packages/generated
 packages/clients/generated
 packages/clients/dist-packages
 packages/resolved
+packages/contracts/resolved
+packages/contracts/generated
 resolved/
 resolved_ts/
 resolved_json_shcema/
