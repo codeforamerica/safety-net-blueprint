@@ -32,6 +32,8 @@ function parseArgs() {
     console.log('  --out=<dir>        YAML output directory (default: contracts package root)');
     console.log('  --name=<domain>    Domain name, kebab-case (e.g., pizza-shop). Creates new YAML if none exists.');
     console.log('  --resource=<Name>  Resource name, PascalCase (e.g., Pizza). Required with --name.');
+    console.log('  --schema=<path>    Path to state machine JSON Schema for $schema field and validation.');
+    console.log('                     Default: ./schemas/state-machine-schema.yaml (relative to output)');
     console.log('  --file=<path>      Import only this CSV file');
     console.log('  -h, --help         Show this help message');
     process.exit(0);
@@ -41,7 +43,7 @@ function parseArgs() {
   const unknown = args.filter(a =>
     a !== '--help' && a !== '-h' &&
     !a.startsWith('--tables=') && !a.startsWith('--out=') && !a.startsWith('--file=') &&
-    !a.startsWith('--name=') && !a.startsWith('--resource=')
+    !a.startsWith('--name=') && !a.startsWith('--resource=') && !a.startsWith('--schema=')
   );
   if (unknown.length > 0) {
     console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
@@ -54,6 +56,7 @@ function parseArgs() {
   const fileArg = args.find(a => a.startsWith('--file='));
   const nameArg = args.find(a => a.startsWith('--name='));
   const resourceArg = args.find(a => a.startsWith('--resource='));
+  const schemaArg = args.find(a => a.startsWith('--schema='));
 
   return {
     tablesDir: tablesArg ? resolve(tablesArg.split('=')[1]) : resolve(packageRoot, '../../docs/contract-tables'),
@@ -61,6 +64,7 @@ function parseArgs() {
     singleFile: fileArg ? resolve(fileArg.split('=')[1]) : null,
     name: nameArg ? nameArg.split('=')[1] : null,
     resource: resourceArg ? resourceArg.split('=')[1] : null,
+    schema: schemaArg ? schemaArg.split('=')[1] : null,
   };
 }
 
@@ -449,7 +453,7 @@ function discoverCsvFiles(tablesDir, flatDomain) {
  * Extract unique states from a transitions CSV and build a skeleton YAML doc.
  * The first "from" state in the CSV becomes the initialState.
  */
-function createStateMachineSkeleton(domain, resource, csvs) {
+function createStateMachineSkeleton(domain, resource, csvs, schemaRef) {
   const states = new Set();
   let initialState = null;
 
@@ -474,7 +478,7 @@ function createStateMachineSkeleton(domain, resource, csvs) {
   }
 
   return {
-    $schema: './schemas/state-machine-schema.yaml',
+    $schema: schemaRef,
     version: '1.0',
     object: resource,
     domain,
@@ -492,7 +496,8 @@ function createStateMachineSkeleton(domain, resource, csvs) {
 // ---------------------------------------------------------------------------
 
 function main() {
-  const { tablesDir, outDir, singleFile, name, resource } = parseArgs();
+  const { tablesDir, outDir, singleFile, name, resource, schema } = parseArgs();
+  const schemaRef = schema || './schemas/state-machine-schema.yaml';
 
   // Determine which CSV files to process
   let csvFiles;
@@ -539,7 +544,7 @@ function main() {
         if (!name || !resource) {
           console.warn(`  Warning: --name and --resource not provided. Using placeholders (object: "${effectiveResource}", apiSpec: "${effectiveName}-openapi.yaml"). Edit the YAML to fix these.`);
         }
-        const skeleton = createStateMachineSkeleton(effectiveName, effectiveResource, csvs);
+        const skeleton = createStateMachineSkeleton(effectiveName, effectiveResource, csvs, schemaRef);
         const filePath = resolve(outDir, `${effectiveName}-state-machine.yaml`);
         mkdirSync(dirname(filePath), { recursive: true });
         const content = serializeYaml(skeleton);

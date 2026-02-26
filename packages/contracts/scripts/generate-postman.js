@@ -141,12 +141,18 @@ function computeTransitionOrder(stateMachine) {
   // BFS: state = { currentState, path: [trigger, ...], covered: Set }
   const queue = [{ currentState: initialState, path: [], covered: new Set() }];
   const visited = new Map(); // "state|coveredKey" → true
+  let bestPath = [];
 
   while (queue.length > 0) {
     const { currentState, path, covered } = queue.shift();
 
     if (covered.size === allTriggers.size) {
       return path;
+    }
+
+    // Track the longest path found so far
+    if (covered.size > bestPath.length) {
+      bestPath = path;
     }
 
     // Try each transition from current state
@@ -168,8 +174,40 @@ function computeTransitionOrder(stateMachine) {
     }
   }
 
-  // Fallback: return triggers in definition order (won't all pass, but won't crash)
-  return [...allTriggers];
+  // Return the longest reachable path; unreachable triggers become leftovers
+  return bestPath;
+}
+
+/**
+ * Derive a caller ID that satisfies guard definitions.
+ * Scans guards used by the transition ordering for a $caller.id check and
+ * returns the expected value so the Postman tests pass.  Falls back to the
+ * example's assignedToId or a generic test user ID.
+ */
+function deriveCallerId(stateMachine, transitionOrder, fallback) {
+  const guardDefs = stateMachine.guards || {};
+  const transitions = stateMachine.transitions || [];
+
+  // Collect guard names referenced by the ordered transitions
+  const guardNames = new Set();
+  for (const trigger of transitionOrder) {
+    const t = transitions.find(tr => tr.trigger === trigger);
+    if (t) {
+      for (const g of t.guards || []) {
+        guardNames.add(g);
+      }
+    }
+  }
+
+  // Look for a guard that checks $caller.id
+  for (const name of guardNames) {
+    const def = guardDefs[name];
+    if (def && def.field === '$caller.id' && def.value) {
+      return String(def.value);
+    }
+  }
+
+  return fallback;
 }
 
 /**
@@ -192,9 +230,8 @@ function planRpcExecution(stateMachine, examples) {
   // Try to find an example in the initial state
   const initialExample = examples.find(e => e.data.status === initialState);
   if (initialExample) {
-    // For the initial state, there's usually no assignedToId yet. The first
-    // transition (e.g. claim) will set it. Use a fixed caller ID.
-    const callerId = initialExample.data.assignedToId || 'postman-test-user';
+    const fallback = initialExample.data.assignedToId || 'postman-test-user';
+    const callerId = deriveCallerId(stateMachine, standardOrder, fallback);
     return { example: initialExample, callerId, transitionOrder: standardOrder };
   }
 
@@ -211,13 +248,15 @@ function planRpcExecution(stateMachine, examples) {
     // Compute ordering starting from example's current state
     const order = computeTransitionOrderFrom(stateMachine, exState);
     if (order && order.length > 0) {
-      const callerId = example.data.assignedToId || 'postman-test-user';
+      const fallback = example.data.assignedToId || 'postman-test-user';
+      const callerId = deriveCallerId(stateMachine, order, fallback);
       return { example, callerId, transitionOrder: order };
     }
   }
 
   // Last resort: use first example with standard ordering
-  const callerId = examples[0]?.data?.assignedToId || 'postman-test-user';
+  const fallback = examples[0]?.data?.assignedToId || 'postman-test-user';
+  const callerId = deriveCallerId(stateMachine, standardOrder, fallback);
   return { example: examples[0], callerId, transitionOrder: standardOrder };
 }
 
@@ -337,17 +376,25 @@ function generateTestScript(method, endpoint) {
 
 /**
  * Generate test script for an RPC (state transition) request
+ * @param {Object} options
+ * @param {boolean} options.expectConflict - If true, expect 409 (unreachable transition)
  */
-function generateRpcTestScript() {
+function generateRpcTestScript({ expectConflict = false } = {}) {
   const tests = [];
-  tests.push(`pm.test("Status code is 200", function () {`);
-  tests.push(`    pm.response.to.have.status(200);`);
-  tests.push(`});`);
-  tests.push(``);
-  tests.push(`pm.test("Response is JSON with id", function () {`);
-  tests.push(`    const jsonData = pm.response.json();`);
-  tests.push(`    pm.expect(jsonData).to.have.property('id');`);
-  tests.push(`});`);
+  if (expectConflict) {
+    tests.push(`pm.test("Status code is 409 (transition not valid from current state)", function () {`);
+    tests.push(`    pm.response.to.have.status(409);`);
+    tests.push(`});`);
+  } else {
+    tests.push(`pm.test("Status code is 200", function () {`);
+    tests.push(`    pm.response.to.have.status(200);`);
+    tests.push(`});`);
+    tests.push(``);
+    tests.push(`pm.test("Response is JSON with id", function () {`);
+    tests.push(`    const jsonData = pm.response.json();`);
+    tests.push(`    pm.expect(jsonData).to.have.property('id');`);
+    tests.push(`});`);
+  }
   return tests.join('\n');
 }
 
@@ -795,7 +842,7 @@ function generateExampleBody(schema) {
  * @param {Object} endpoint - The RPC endpoint
  * @param {Object} rpcContext - { example, callerId } from planRpcExecution
  */
-function generateRpcRequest(apiMetadata, endpoint, rpcContext) {
+function generateRpcRequest(apiMetadata, endpoint, rpcContext, { expectConflict = false } = {}) {
   // Extract trigger name from last path segment (/tasks/{taskId}/claim → claim)
   const pathSegments = endpoint.path.split('/').filter(s => s);
   const triggerName = pathSegments[pathSegments.length - 1];
@@ -821,13 +868,15 @@ function generateRpcRequest(apiMetadata, endpoint, rpcContext) {
     type: 'text'
   });
 
+  const testName = expectConflict ? `${displayName} (409 Conflict)` : displayName;
+
   return {
-    name: displayName,
+    name: testName,
     request,
     event: [{
       listen: 'test',
       script: {
-        exec: generateRpcTestScript().split('\n')
+        exec: generateRpcTestScript({ expectConflict }).split('\n')
       }
     }]
   };
@@ -861,9 +910,10 @@ function generateOrderedRpcRequests(apiMetadata, rpcEndpoints, examples, stateMa
     }
   }
 
-  // Append any RPC endpoints not in the state machine (shouldn't happen, but safe)
+  // Append any RPC endpoints not reachable in the transition sequence.
+  // These expect 409 since the resource is no longer in a valid "from" state.
   for (const [, ep] of endpointByTrigger) {
-    ordered.push(generateRpcRequest(apiMetadata, ep, rpcContext));
+    ordered.push(generateRpcRequest(apiMetadata, ep, rpcContext, { expectConflict: true }));
   }
 
   return { requests: ordered, callerId: rpcContext.callerId };
