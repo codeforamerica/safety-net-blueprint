@@ -554,6 +554,13 @@ validation:
         - List responses have required properties
         - Error responses use shared $refs
         - CRUD operations follow patterns
+      exemptions:
+        - description: |
+            Action/RPC endpoints (POST on paths with segments after the {id}
+            parameter, e.g. /pizzas/{pizzaId}/start-preparing) are exempt from
+            CRUD POST rules (request body, 201 response, Location header).
+            These are generated from state machine triggers and return 200
+            with the updated resource.
 
 # =============================================================================
 # Error Handling# =============================================================================

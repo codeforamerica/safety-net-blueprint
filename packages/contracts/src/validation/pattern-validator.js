@@ -268,6 +268,18 @@ export function isSingleResourcePath(path) {
 }
 
 /**
+ * Check if path is an action/RPC endpoint (has segments after the {id} parameter)
+ * Examples: /pizzas/{pizzaId}/start-preparing, /tasks/{taskId}/claim
+ * @param {string} path - The endpoint path
+ * @returns {boolean}
+ */
+export function isActionPath(path) {
+  const lastBrace = path.lastIndexOf('}');
+  if (lastBrace === -1) return false;
+  return path.substring(lastBrace + 1).includes('/');
+}
+
+/**
  * Main validation function for a single spec
  * @param {Object} spec - The OpenAPI spec object
  * @param {string} specName - Name of the spec file
@@ -293,9 +305,11 @@ export function validateSpec(spec, specName) {
       }
     }
 
-    // Validate POST endpoints
+    // Validate POST endpoints (skip CRUD checks for action/RPC endpoints)
     if (methods.post) {
-      validatePostEndpoint(path, methods.post, errors);
+      if (!isActionPath(path)) {
+        validatePostEndpoint(path, methods.post, errors);
+      }
       validateSharedErrorResponses(path, 'post', methods.post, errors);
     }
 

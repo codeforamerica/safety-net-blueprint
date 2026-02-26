@@ -14,6 +14,7 @@ import {
   validateSharedErrorResponses,
   isCollectionPath,
   isSingleResourcePath,
+  isActionPath,
   validateSpec
 } from '../../src/validation/pattern-validator.js';
 
@@ -46,6 +47,20 @@ test('Pattern Validator Tests', async (t) => {
     assert.strictEqual(isSingleResourcePath('/persons'), false);
     assert.strictEqual(isSingleResourcePath('/health'), false);
     console.log('  ✓ Rejects collection paths');
+  });
+
+  await t.test('isActionPath - returns true for paths with segments after {id}', () => {
+    assert.strictEqual(isActionPath('/pizzas/{pizzaId}/start-preparing'), true);
+    assert.strictEqual(isActionPath('/tasks/{taskId}/claim'), true);
+    assert.strictEqual(isActionPath('/orders/{orderId}/cancel'), true);
+    console.log('  ✓ Identifies action/RPC paths');
+  });
+
+  await t.test('isActionPath - returns false for CRUD paths', () => {
+    assert.strictEqual(isActionPath('/pizzas'), false);
+    assert.strictEqual(isActionPath('/pizzas/{pizzaId}'), false);
+    assert.strictEqual(isActionPath('/health'), false);
+    console.log('  ✓ Rejects CRUD paths');
   });
 
   // ==========================================================================
@@ -643,6 +658,72 @@ test('Pattern Validator Tests', async (t) => {
     // Should detect multiple issues
     assert.ok(errors.length > 5, `Expected multiple errors, got ${errors.length}`);
     console.log(`  ✓ Detects ${errors.length} issues in invalid spec`);
+  });
+
+  await t.test('validateSpec - exempts action/RPC endpoints from CRUD POST rules', () => {
+    const spec = {
+      paths: {
+        '/pizzas': {
+          get: {
+            parameters: [
+              { name: 'q', in: 'query' },
+              { name: 'limit', in: 'query' },
+              { name: 'offset', in: 'query' }
+            ],
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: { $ref: '#/components/schemas/PizzaList' }
+                  }
+                }
+              }
+            }
+          },
+          post: {
+            requestBody: { content: {} },
+            responses: {
+              '201': { headers: { Location: {} } }
+            }
+          }
+        },
+        '/pizzas/{pizzaId}': {
+          get: {
+            responses: { '200': {}, '404': { $ref: '#/NotFound' } }
+          },
+          patch: {
+            requestBody: { content: {} },
+            responses: { '200': {} }
+          },
+          delete: {
+            responses: { '204': {} }
+          }
+        },
+        '/pizzas/{pizzaId}/start-preparing': {
+          post: {
+            // No requestBody — RPC endpoints don't need one
+            responses: {
+              '200': { content: { 'application/json': { schema: {} } } },
+              '404': { $ref: '#/NotFound' },
+              '500': { $ref: '#/InternalError' }
+            }
+          }
+        },
+        '/pizzas/{pizzaId}/cancel': {
+          post: {
+            responses: {
+              '200': { content: { 'application/json': { schema: {} } } },
+              '500': { $ref: '#/InternalError' }
+            }
+          }
+        }
+      }
+    };
+
+    const errors = validateSpec(spec, 'pizza.yaml');
+    const postBodyErrors = errors.filter(e => e.rule === 'post-request-body');
+    assert.strictEqual(postBodyErrors.length, 0, 'RPC endpoints should not trigger post-request-body errors');
+    console.log('  ✓ RPC endpoints exempt from CRUD POST rules');
   });
 
   await t.test('validateSpec - adds spec name to all errors', () => {
