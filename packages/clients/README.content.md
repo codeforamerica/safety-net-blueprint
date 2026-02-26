@@ -12,7 +12,7 @@ Generate a TypeScript SDK with Zod schemas from resolved OpenAPI specs.
 
 ```json
 "scripts": {
-  "clients": "safety-net-generate-clients --specs=./resolved --out=./src/api"
+  "clients": "safety-net-generate-clients --spec=./resolved --out=./src/api"
 }
 ```
 
@@ -22,7 +22,7 @@ Convert OpenAPI component schemas to standalone JSON Schema files.
 
 ```json
 "scripts": {
-  "json-schema": "safety-net-generate-json-schema --specs=./resolved --out=./json-schemas"
+  "json-schema": "safety-net-generate-json-schema --spec=./resolved --out=./json-schemas"
 }
 ```
 
@@ -31,7 +31,7 @@ Convert OpenAPI component schemas to standalone JSON Schema files.
 ```json
 "scripts": {
   "resolve": "safety-net-resolve --base=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlays=./overlays --out=./resolved",
-  "clients": "safety-net-generate-clients --specs=./resolved --out=./src/api"
+  "clients": "safety-net-generate-clients --spec=./resolved --out=./src/api"
 }
 ```
 

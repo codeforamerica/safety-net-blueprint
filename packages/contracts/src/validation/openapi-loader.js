@@ -24,11 +24,11 @@ function loadYaml(filePath) {
  * Discover all API specification files in the given specs directory.
  * Matches files ending in -openapi.yaml (the naming convention for OpenAPI specs).
  * @param {Object} options
- * @param {string} options.specsDir - Path to the specs directory (required)
+ * @param {string} options.specsDir - Path to the specs file or directory (required)
  */
 export function discoverApiSpecs({ specsDir } = {}) {
   if (!specsDir) {
-    throw new Error('specsDir is required — pass --specs <dir> to specify the specs directory');
+    throw new Error('specsDir is required — pass --spec <path> to specify the specs file or directory');
   }
 
   const openapiDir = specsDir;

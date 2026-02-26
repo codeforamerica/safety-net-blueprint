@@ -4,11 +4,11 @@
  * Extracts schema definitions from OpenAPI and outputs pure JSON Schema files.
  *
  * Usage:
- *   openapi-to-json-schema --specs=./resolved --out=./json-schemas
- *   node scripts/generate-clients-json-schema.js --specs=./resolved --out=./json-schemas
+ *   openapi-to-json-schema --spec=./resolved --out=./json-schemas
+ *   node scripts/generate-clients-json-schema.js --spec=./resolved --out=./json-schemas
  *
  * This script:
- * 1. Discovers all OpenAPI spec files in --specs directory
+ * 1. Discovers all OpenAPI spec files in --spec file or directory
  * 2. Extracts components.schemas from each spec
  * 3. Converts OpenAPI 3.1 schemas to JSON Schema Draft 2020-12
  * 4. Outputs individual schema files organized by domain
@@ -41,31 +41,31 @@ const __dirname = dirname(__filename);
  * Parse command line arguments
  */
 function parseArgs() {
-  const args = { specs: null, out: null };
+  const args = { spec: null, out: null };
 
   for (const arg of process.argv.slice(2)) {
-    if (arg.startsWith('--specs=')) {
-      args.specs = arg.slice('--specs='.length);
+    if (arg.startsWith('--spec=')) {
+      args.spec = arg.slice('--spec='.length);
     } else if (arg.startsWith('--out=')) {
       args.out = arg.slice('--out='.length);
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
-Usage: openapi-to-json-schema --specs=<specs-dir> --out=<output-dir>
+Usage: openapi-to-json-schema --spec=<file-or-dir> --out=<output-dir>
 
 Options:
-  --specs=<dir>   Directory containing resolved OpenAPI spec files (required)
-  --out=<dir>     Output directory for JSON Schema files (required)
-  --help, -h      Show this help message
+  --spec=<file-or-dir>   Path to resolved spec file or directory (required)
+  --out=<dir>            Output directory for JSON Schema files (required)
+  --help, -h             Show this help message
 
 Example:
-  openapi-to-json-schema --specs=./resolved --out=./json-schemas
+  openapi-to-json-schema --spec=./resolved --out=./json-schemas
       `);
       process.exit(0);
     }
   }
 
-  if (!args.specs) {
-    console.error('Error: --specs parameter is required');
+  if (!args.spec) {
+    console.error('Error: --spec parameter is required');
     process.exit(1);
   }
 
@@ -217,11 +217,11 @@ async function main() {
 
   console.log('OpenAPI to JSON Schema Converter');
   console.log('=================================\n');
-  console.log(`Input directory:  ${args.specs}`);
+  console.log(`Input:           ${args.spec}`);
   console.log(`Output directory: ${args.out}\n`);
 
   // Discover specs
-  const specs = discoverSpecs(args.specs);
+  const specs = discoverSpecs(args.spec);
   console.log(`Found ${specs.length} OpenAPI spec file(s)\n`);
 
   if (specs.length === 0) {

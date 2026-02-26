@@ -4,10 +4,10 @@ import { parseArgs, createOpenApiTsConfig } from '../scripts/generate-clients-ty
 
 describe('Client Generation', () => {
   describe('parseArgs', () => {
-    it('should parse specs parameter', () => {
-      const result = parseArgs(['--specs=./resolved']);
+    it('should parse spec parameter', () => {
+      const result = parseArgs(['--spec=./resolved']);
 
-      assert.strictEqual(result.specs, './resolved');
+      assert.strictEqual(result.spec, './resolved');
       assert.strictEqual(result.out, null);
       assert.strictEqual(result.help, false);
     });
@@ -15,15 +15,15 @@ describe('Client Generation', () => {
     it('should parse out parameter', () => {
       const result = parseArgs(['--out=./src/api']);
 
-      assert.strictEqual(result.specs, null);
+      assert.strictEqual(result.spec, null);
       assert.strictEqual(result.out, './src/api');
       assert.strictEqual(result.help, false);
     });
 
-    it('should parse both specs and out parameters', () => {
-      const result = parseArgs(['--specs=./resolved', '--out=./src/api']);
+    it('should parse both spec and out parameters', () => {
+      const result = parseArgs(['--spec=./resolved', '--out=./src/api']);
 
-      assert.strictEqual(result.specs, './resolved');
+      assert.strictEqual(result.spec, './resolved');
       assert.strictEqual(result.out, './src/api');
       assert.strictEqual(result.help, false);
     });
@@ -41,37 +41,37 @@ describe('Client Generation', () => {
     });
 
     it('should handle help with other arguments', () => {
-      const result = parseArgs(['--specs=./resolved', '--help']);
+      const result = parseArgs(['--spec=./resolved', '--help']);
 
-      assert.strictEqual(result.specs, './resolved');
+      assert.strictEqual(result.spec, './resolved');
       assert.strictEqual(result.help, true);
     });
 
     it('should handle absolute paths', () => {
-      const result = parseArgs(['--specs=/absolute/path/resolved', '--out=/absolute/path/api']);
+      const result = parseArgs(['--spec=/absolute/path/resolved', '--out=/absolute/path/api']);
 
-      assert.strictEqual(result.specs, '/absolute/path/resolved');
+      assert.strictEqual(result.spec, '/absolute/path/resolved');
       assert.strictEqual(result.out, '/absolute/path/api');
     });
 
     it('should handle paths with spaces by preserving them', () => {
-      const result = parseArgs(['--specs=./path with spaces']);
+      const result = parseArgs(['--spec=./path with spaces']);
 
-      assert.strictEqual(result.specs, './path with spaces');
+      assert.strictEqual(result.spec, './path with spaces');
     });
 
     it('should return defaults when no arguments provided', () => {
       const result = parseArgs([]);
 
-      assert.strictEqual(result.specs, null);
+      assert.strictEqual(result.spec, null);
       assert.strictEqual(result.out, null);
       assert.strictEqual(result.help, false);
     });
 
     it('should ignore unrecognized arguments', () => {
-      const result = parseArgs(['--specs=./resolved', '--unknown=value']);
+      const result = parseArgs(['--spec=./resolved', '--unknown=value']);
 
-      assert.strictEqual(result.specs, './resolved');
+      assert.strictEqual(result.spec, './resolved');
       assert.strictEqual(result.out, null);
     });
   });

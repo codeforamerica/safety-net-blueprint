@@ -12,7 +12,8 @@
  */
 
 import { readdir } from 'fs/promises';
-import { join, basename, extname } from 'path';
+import { statSync } from 'fs';
+import { join, basename, extname, resolve } from 'path';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { validateSpec } from '../src/validation/pattern-validator.js';
 
@@ -39,26 +40,45 @@ async function findOpenAPISpecs(directory) {
 async function main() {
   const args = process.argv.slice(2);
 
-  // Parse --specs flag (also accept legacy --dir)
-  const specsArg = args.find(a => a.startsWith('--specs='));
-  const dirArgIndex = args.indexOf('--dir');
-  let openAPIDir;
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+Validate API Design Patterns
 
-  if (specsArg) {
-    openAPIDir = specsArg.split('=')[1];
-  } else if (dirArgIndex !== -1 && args[dirArgIndex + 1]) {
-    openAPIDir = args[dirArgIndex + 1];
-  } else {
-    console.error('Error: --specs=<dir> is required.\n');
-    console.error('Usage: node scripts/validate-patterns.js --specs=<dir>');
+Checks that OpenAPI specs follow established design patterns (search, pagination,
+list response shape, HTTP methods, response codes).
+
+Usage:
+  node scripts/validate-patterns.js --spec=<file|dir>
+
+Flags:
+  --spec=<path>  Path to spec file or directory of specs (required)
+  -h, --help     Show this help message
+`);
+    process.exit(0);
+  }
+
+  // Check for unknown arguments
+  const unknown = args.filter(a => a !== '--help' && a !== '-h' && !a.startsWith('--spec='));
+  if (unknown.length > 0) {
+    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
     process.exit(1);
   }
 
+  // Parse --spec flag
+  const specArg = args.find(a => a.startsWith('--spec='));
+  if (!specArg) {
+    console.error('Error: --spec=<file|dir> is required.\n');
+    console.error('Usage: node scripts/validate-patterns.js --spec=<file|dir>');
+    process.exit(1);
+  }
+  const specDir = resolve(specArg.split('=')[1]);
+  const isSingleFile = statSync(specDir).isFile();
+
   console.log('🔍 Validating API design patterns...\n');
-  console.log(`   Directory: ${openAPIDir}\n`);
+  console.log(`   ${isSingleFile ? 'File' : 'Directory'}: ${specDir}\n`);
 
   try {
-    const specPaths = await findOpenAPISpecs(openAPIDir);
+    const specPaths = isSingleFile ? [specDir] : await findOpenAPISpecs(specDir);
 
     if (specPaths.length === 0) {
       console.log('⚠️  No OpenAPI specifications found.');

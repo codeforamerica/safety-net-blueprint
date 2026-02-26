@@ -200,13 +200,13 @@ The `safety-net-resolve` CLI handles both overlay customizations and environment
   "scripts": {
     "resolve:dev": "safety-net-resolve --base=./node_modules/@safety-net/contracts --env=dev --overlays=./overlays --out=./resolved",
     "resolve:prod": "safety-net-resolve --base=./node_modules/@safety-net/contracts --env=production --overlays=./overlays --out=./resolved",
-    "validate": "safety-net-validate --specs ./resolved",
-    "mock:start": "safety-net-mock --specs ./resolved",
-    "swagger": "safety-net-swagger --specs ./resolved",
-    "clients:typescript": "safety-net-clients --specs ./resolved --out ./clients",
-    "postman": "safety-net-postman --specs ./resolved --out ./postman",
-    "test": "safety-net-test --specs ./resolved",
-    "design:reference": "safety-net-design-reference --specs ./resolved --out ./docs"
+    "validate": "safety-net-validate --spec ./resolved",
+    "mock:start": "safety-net-mock --spec ./resolved",
+    "swagger": "safety-net-swagger --spec ./resolved",
+    "clients:typescript": "safety-net-clients --spec ./resolved --out ./clients",
+    "postman": "safety-net-postman --spec ./resolved --out ./postman",
+    "test": "safety-net-test --spec ./resolved",
+    "design:reference": "safety-net-design-reference --spec ./resolved --out ./docs"
   },
   "dependencies": {
     "@safety-net-blueprint/schemas": "1.0.0"
@@ -321,17 +321,17 @@ The resolve, validate, and mock server scripts are currently internal to each pa
 
 **Security note:** CLI bin entries run with the installing user's permissions and have access to all environment variables. The resolve CLI intentionally reads `process.env` for placeholder substitution, so resolved output files may contain sensitive values (IDP URLs, API keys). States should `.gitignore` their `resolved/` directory and limit CI environment variables to what's needed.
 
-### 4.7 Parameterize all tooling to accept `--specs`
+### 4.7 Parameterize all tooling to accept `--spec`
 
-All tooling currently reads from hardcoded paths relative to their packages. Each CLI must accept a `--specs` flag so it can operate on resolved specs in any directory. The `--specs` flag is required — there is no default, since the tooling runs in different contexts (this repo, state repos, CI).
+All tooling currently reads from hardcoded paths relative to their packages. Each CLI must accept a `--spec` flag so it can operate on resolved specs in any directory. The `--spec` flag is required — there is no default, since the tooling runs in different contexts (this repo, state repos, CI).
 
 **Changes:**
-- Mock server: accept `--specs` to load specs from an arbitrary directory
-- Swagger UI: accept `--specs` to serve interactive API docs
-- Validation: accept `--specs` to validate specs from an arbitrary directory
-- Postman generator: accept `--specs` to generate collections from resolved specs
-- Test runner: accept `--specs` to run integration tests against resolved specs
-- Design reference: accept `--specs` to generate HTML from a single set of specs. The current script discovers state overlays by scanning `openapi/overlays/`, loads each overlay, and generates a multi-state comparison view. Remove the overlay discovery, loading, and application logic (`discoverOverlays`, `loadOverlay`, `applyOverlayToSchemas`) and simplify the HTML output to render a single set of specs rather than a multi-state comparison
+- Mock server: accept `--spec` to load specs from an arbitrary directory
+- Swagger UI: accept `--spec` to serve interactive API docs
+- Validation: accept `--spec` to validate specs from an arbitrary directory
+- Postman generator: accept `--spec` to generate collections from resolved specs
+- Test runner: accept `--spec` to run integration tests against resolved specs
+- Design reference: accept `--spec` to generate HTML from a single set of specs. The current script discovers state overlays by scanning `openapi/overlays/`, loads each overlay, and generates a multi-state comparison view. Remove the overlay discovery, loading, and application logic (`discoverOverlays`, `loadOverlay`, `applyOverlayToSchemas`) and simplify the HTML output to render a single set of specs rather than a multi-state comparison
 
 ### 4.8 Remove state overlays from this repository
 

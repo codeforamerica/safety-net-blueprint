@@ -8,6 +8,7 @@ import { createGetHandler } from './handlers/get-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler } from './handlers/update-handler.js';
 import { createDeleteHandler } from './handlers/delete-handler.js';
+import { createTransitionHandler } from './handlers/transition-handler.js';
 
 /**
  * Determine if a path is a collection endpoint (no {id} parameter)
@@ -116,4 +117,65 @@ export function registerAllRoutes(app, apiSpecs, baseUrl) {
   
   console.log('✓ All routes registered\n');
   return allEndpoints;
+}
+
+/**
+ * Register state machine RPC routes (e.g., POST /tasks/:taskId/claim).
+ * @param {Object} app - Express app
+ * @param {Array} stateMachines - Array from discoverStateMachines()
+ * @param {Array} apiSpecs - Array of API metadata objects
+ * @returns {Array} Array of registered RPC endpoint info
+ */
+export function registerStateMachineRoutes(app, stateMachines, apiSpecs) {
+  const registeredEndpoints = [];
+
+  for (const sm of stateMachines) {
+    // Match state machine to its API spec by domain
+    const apiSpec = apiSpecs.find(spec => spec.name === sm.domain);
+    if (!apiSpec) {
+      console.warn(`  No API spec found for domain "${sm.domain}" — skipping state machine routes`);
+      continue;
+    }
+
+    // Find the collection endpoint to derive the base path and param name
+    const itemEndpoint = apiSpec.endpoints.find(
+      e => e.method.toLowerCase() === 'get' && isItemEndpoint(e.path)
+    );
+    if (!itemEndpoint) {
+      console.warn(`  No item endpoint found for "${sm.domain}" — skipping state machine routes`);
+      continue;
+    }
+
+    const basePath = itemEndpoint.path; // e.g., /tasks/{taskId}
+    const paramMatch = basePath.match(/\{([^}]+)\}/);
+    const paramName = paramMatch ? paramMatch[1] : 'id';
+
+    console.log(`  Registering state machine routes for ${sm.domain}/${sm.object}...`);
+
+    for (const transition of sm.stateMachine.transitions) {
+      const rpcPath = `${basePath}/${transition.trigger}`;
+      const expressPath = convertPathFormat(rpcPath);
+
+      const handler = createTransitionHandler(
+        apiSpec.name,
+        sm.stateMachine,
+        transition.trigger,
+        paramName
+      );
+
+      app.post(expressPath, handler);
+
+      registeredEndpoints.push({
+        method: 'POST',
+        path: rpcPath,
+        expressPath,
+        description: `${transition.trigger}: ${transition.from} → ${transition.to}`,
+        trigger: transition.trigger
+      });
+
+      console.log(`    POST   ${expressPath} - ${transition.trigger}: ${transition.from} → ${transition.to}`);
+    }
+  }
+
+  return registeredEndpoints;
 }

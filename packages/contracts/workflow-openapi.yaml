@@ -29,7 +29,7 @@ tags:
     description: Manage workflow tasks.
 
 paths:
-  "/workflow/tasks":
+  "/tasks":
     get:
       summary: List tasks
       description: Retrieve a paginated list of tasks.
@@ -84,7 +84,7 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  "/workflow/tasks/{taskId}":
+  "/tasks/{taskId}":
     parameters:
       - $ref: "#/components/parameters/TaskIdParam"
 

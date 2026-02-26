@@ -18,7 +18,7 @@ Start the mock API server.
 
 ```json
 "scripts": {
-  "mock": "safety-net-mock --specs=./resolved"
+  "mock": "safety-net-mock --spec=./resolved"
 }
 ```
 
@@ -28,7 +28,7 @@ Start the Swagger UI server.
 
 ```json
 "scripts": {
-  "swagger": "safety-net-swagger --specs=./resolved"
+  "swagger": "safety-net-swagger --spec=./resolved"
 }
 ```
 

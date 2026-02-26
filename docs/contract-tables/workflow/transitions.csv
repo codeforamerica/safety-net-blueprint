@@ -1,0 +1,4 @@
+From,To,Trigger,Actors,Guards,Effects
+pending,in_progress,claim,,taskIsUnassigned,set assignedToId = $caller.id
+in_progress,completed,complete,,callerIsAssignedWorker,
+in_progress,pending,release,,callerIsAssignedWorker,set assignedToId = null

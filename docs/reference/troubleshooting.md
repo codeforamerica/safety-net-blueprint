@@ -178,13 +178,13 @@ npm run mock:reset
 ### Generation Fails: Missing Arguments
 
 ```
-Error: --specs and --out are required
+Error: --spec and --out are required
 ```
 
 **Solution:** Provide required arguments.
 
 ```bash
-npm run clients:typescript -- --specs=./resolved --out=./src/api
+npm run clients:typescript -- --spec=./resolved --out=./src/api
 ```
 
 ### Generation Fails: Dependencies Missing
@@ -215,7 +215,7 @@ node safety-net-apis/packages/contracts/scripts/resolve-overlay.js \
   --out=./resolved
 
 # Regenerate clients
-npm run clients:typescript -- --specs=./resolved --out=./src/api
+npm run clients:typescript -- --spec=./resolved --out=./src/api
 ```
 
 ### Zod Validation Error at Runtime

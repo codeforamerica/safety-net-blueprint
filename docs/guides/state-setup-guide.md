@@ -55,9 +55,9 @@ resolved/
   "scripts": {
     "resolve": "safety-net-resolve --base=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlays=./overlays --out=./resolved",
     "resolve:prod": "safety-net-resolve --base=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlays=./overlays --out=./resolved --env=production --env-file=.env",
-    "validate": "node ./node_modules/@codeforamerica/safety-net-blueprint-contracts/scripts/validate-openapi.js --specs=./resolved --skip-examples",
-    "mock:start": "safety-net-mock --specs=./resolved",
-    "swagger": "safety-net-swagger --specs=./resolved",
+    "validate": "node ./node_modules/@codeforamerica/safety-net-blueprint-contracts/scripts/validate-openapi.js --spec=./resolved --skip-examples",
+    "mock:start": "safety-net-mock --spec=./resolved",
+    "swagger": "safety-net-swagger --spec=./resolved",
     "build": "npm run resolve && npm run validate"
   }
 }

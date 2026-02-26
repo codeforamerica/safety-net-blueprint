@@ -1,0 +1,73 @@
+$schema: ./schemas/state-machine-schema.yaml
+version: "1.0"
+object: Task
+domain: workflow
+apiSpec: workflow-openapi.yaml
+
+states:
+  pending: {}
+  in_progress: {}
+  completed: {}
+
+initialState: pending
+
+guards:
+  taskIsUnassigned:
+    field: assignedToId
+    operator: is_null
+  callerIsAssignedWorker:
+    field: assignedToId
+    operator: equals
+    value: $caller.id
+
+transitions:
+  - trigger: claim
+    from: pending
+    to: in_progress
+    guards:
+      - taskIsUnassigned
+    effects:
+      - type: set
+        field: assignedToId
+        value: $caller.id
+        description: Assign task to the claiming worker
+
+  - trigger: complete
+    from: in_progress
+    to: completed
+    guards:
+      - callerIsAssignedWorker
+    effects: []
+
+  - trigger: release
+    from: in_progress
+    to: pending
+    guards:
+      - callerIsAssignedWorker
+    effects:
+      - type: set
+        field: assignedToId
+        value: null
+        description: Clear assignment so task returns to queue
+
+requestBodies:
+  claim: {}
+  complete:
+    type: object
+    properties:
+      outcome:
+        type: string
+        description: Completion outcome (e.g., approved, denied)
+      notes:
+        type: string
+        description: Optional notes about the completion
+    required:
+      - outcome
+  release:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: Why the task is being released
+    required:
+      - reason

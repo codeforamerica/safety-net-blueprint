@@ -420,7 +420,7 @@ async function testApi(api, examples) {
  * Run Postman collection tests using Newman
  */
 async function runPostmanTests() {
-  const collectionPath = join(__dirname, '../../../clients/generated/postman-collection.json');
+  const collectionPath = join(__dirname, '../../../contracts/generated/postman-collection.json');
 
   console.log(`\n${'='.repeat(70)}`);
   console.log('Postman Collection Tests (Newman)');
@@ -536,6 +536,217 @@ async function runTests() {
     totalTests += results.total;
   }
   
+  // =========================================================================
+  // State Machine RPC Tests
+  // =========================================================================
+  const workflowApi = apis.find(api => api.name === 'workflow');
+  if (workflowApi) {
+    const taskPath = workflowApi.baseResource || '/workflow';
+    console.log(`\n${'='.repeat(70)}`);
+    console.log(`State Machine RPC Tests: ${taskPath}`);
+    console.log('='.repeat(70));
+
+    let rpcTaskId = null;
+
+    // RPC Test 1: Create a pending task for RPC testing
+    try {
+      console.log('\n  RPC-1. Create a pending task for transition tests');
+      const response = await fetch(`${BASE_URL}${taskPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'RPC test task',
+          description: 'Task for state machine transition tests',
+          status: 'pending'
+        })
+      });
+
+      if (response.status === 201) {
+        const data = await response.json();
+        rpcTaskId = data.id;
+        if (data.status === 'pending') {
+          console.log(`     ✓ PASS: Created pending task ${rpcTaskId}`);
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: Task status is "${data.status}", expected "pending"`);
+          totalFailed++;
+        }
+      } else {
+        console.log(`     ✗ FAIL: Expected 201, got ${response.status}`);
+        totalFailed++;
+      }
+      totalTests++;
+    } catch (error) {
+      console.log(`     ✗ FAIL: ${error.message}`);
+      totalFailed++;
+      totalTests++;
+    }
+
+    // RPC Test 2: Claim the task (pending → in_progress)
+    if (rpcTaskId) {
+      try {
+        console.log(`\n  RPC-2. POST ${taskPath}/{id}/claim (pending → in_progress)`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/claim`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Caller-Id': 'worker-aaa'
+          }
+        });
+
+        if (response.status === 200) {
+          const data = await response.json();
+          if (data.status === 'in_progress' && data.assignedToId === 'worker-aaa') {
+            console.log('     ✓ PASS: Task claimed, status=in_progress, assignedToId=worker-aaa');
+            totalPassed++;
+          } else {
+            console.log(`     ✗ FAIL: status=${data.status}, assignedToId=${data.assignedToId}`);
+            totalFailed++;
+          }
+        } else {
+          console.log(`     ✗ FAIL: Expected 200, got ${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // RPC Test 3: Claim again with different worker → 409 (wrong status)
+    if (rpcTaskId) {
+      try {
+        console.log(`\n  RPC-3. POST ${taskPath}/{id}/claim again → 409`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/claim`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Caller-Id': 'worker-bbb'
+          }
+        });
+
+        if (response.status === 409) {
+          const data = await response.json();
+          if (data.code === 'CONFLICT') {
+            console.log('     ✓ PASS: Returns 409 CONFLICT for invalid transition');
+            totalPassed++;
+          } else {
+            console.log(`     ✗ FAIL: Expected CONFLICT code, got ${data.code}`);
+            totalFailed++;
+          }
+        } else {
+          console.log(`     ✗ FAIL: Expected 409, got ${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // RPC Test 4: Complete with wrong worker → 409 (guard fails)
+    if (rpcTaskId) {
+      try {
+        console.log(`\n  RPC-4. POST ${taskPath}/{id}/complete with wrong worker → 409`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/complete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Caller-Id': 'worker-bbb'
+          },
+          body: JSON.stringify({ outcome: 'approved' })
+        });
+
+        if (response.status === 409) {
+          const data = await response.json();
+          if (data.code === 'CONFLICT') {
+            console.log('     ✓ PASS: Returns 409 CONFLICT for guard failure');
+            totalPassed++;
+          } else {
+            console.log(`     ✗ FAIL: Expected CONFLICT code, got ${data.code}`);
+            totalFailed++;
+          }
+        } else {
+          console.log(`     ✗ FAIL: Expected 409, got ${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // RPC Test 5: Release the task (in_progress → pending)
+    if (rpcTaskId) {
+      try {
+        console.log(`\n  RPC-5. POST ${taskPath}/{id}/release (in_progress → pending)`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/release`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Caller-Id': 'worker-aaa'
+          },
+          body: JSON.stringify({ reason: 'Integration test release' })
+        });
+
+        if (response.status === 200) {
+          const data = await response.json();
+          if (data.status === 'pending' && data.assignedToId === null) {
+            console.log('     ✓ PASS: Task released, status=pending, assignedToId=null');
+            totalPassed++;
+          } else {
+            console.log(`     ✗ FAIL: status=${data.status}, assignedToId=${data.assignedToId}`);
+            totalFailed++;
+          }
+        } else {
+          console.log(`     ✗ FAIL: Expected 200, got ${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // RPC Test 6: Missing X-Caller-Id → 400
+    if (rpcTaskId) {
+      try {
+        console.log(`\n  RPC-6. POST ${taskPath}/{id}/claim without X-Caller-Id → 400`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.status === 400) {
+          const data = await response.json();
+          if (data.code === 'BAD_REQUEST') {
+            console.log('     ✓ PASS: Returns 400 BAD_REQUEST without X-Caller-Id');
+            totalPassed++;
+          } else {
+            console.log(`     ✗ FAIL: Expected BAD_REQUEST code, got ${data.code}`);
+            totalFailed++;
+          }
+        } else {
+          console.log(`     ✗ FAIL: Expected 400, got ${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+  }
+
   // Multi-API test: Verify all APIs are accessible
   console.log(`\n${'='.repeat(70)}`);
   console.log(`Cross-API Test: All APIs Accessible`);

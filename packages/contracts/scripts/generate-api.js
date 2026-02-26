@@ -14,8 +14,13 @@
  */
 
 import { writeFile } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync, mkdirSync, realpathSync } from 'fs';
+import { join, relative, resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+// NOTE: Do NOT add a --bundle flag to this generator. Source specs must use
+// $ref so that overlays propagate changes to Create/Update/List schemas.
+// Bundling (inlining $refs) is only for output — use resolve.js --bundle.
 
 // =============================================================================
 // Argument Parsing
@@ -26,8 +31,12 @@ function parseArgs() {
   const options = {
     name: null,
     resource: null,
+    out: null,
+    ref: null,
     help: false
   };
+
+  const positional = [];
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -39,12 +48,31 @@ function parseArgs() {
       case '-r':
         options.resource = args[++i];
         break;
+      case '--out':
+      case '-o':
+        options.out = args[++i];
+        break;
+      case '--ref':
+        options.ref = args[++i];
+        break;
       case '--help':
       case '-h':
         options.help = true;
         break;
+      default:
+        if (!args[i].startsWith('-')) {
+          positional.push(args[i]);
+        } else {
+          console.error(`Error: Unknown argument: ${args[i]}`);
+          process.exit(1);
+        }
+        break;
     }
   }
+
+  // Fall back to positional args: api:new -- pizza-shop Pizza
+  if (!options.name && positional.length >= 1) options.name = positional[0];
+  if (!options.resource && positional.length >= 2) options.resource = positional[1];
 
   return options;
 }
@@ -57,15 +85,20 @@ Generates a new OpenAPI spec with all established patterns pre-applied.
 
 Usage:
   npm run api:new -- --name <api-name> --resource <ResourceName>
+  npm run api:new -- <api-name> <ResourceName>
 
 Options:
   -n, --name <name>        API name in kebab-case (e.g., "benefits", "case-workers")
   -r, --resource <name>    Resource name in PascalCase (e.g., "Benefit", "CaseWorker")
+  -o, --out <dir>          Output directory (default: packages/contracts/)
+      --ref <dir>          Path to shared components directory (for correct $ref paths
+                           when --out is outside the contracts package)
   -h, --help               Show this help message
 
 Examples:
   npm run api:new -- --name benefits --resource Benefit
-  npm run api:new -- --name case-workers --resource CaseWorker
+  npm run api:new -- benefits Benefit
+  npm run api:new -- benefits Benefit --out /tmp
 
 Generated files:
   - {name}-openapi.yaml              Main API specification (schemas inline)
@@ -111,7 +144,7 @@ function pluralize(str) {
 // Template Generators
 // =============================================================================
 
-function generateApiSpec(name, resource) {
+function generateApiSpec(name, resource, componentsPrefix = './components') {
   const kebabName = toKebabCase(name);
   const resourcePlural = pluralize(resource);
   const resourcePluralLower = resourcePlural.toLowerCase();
@@ -144,9 +177,9 @@ paths:
       tags:
       - ${resourcePlural}
       parameters:
-      - "$ref": "./components/parameters.yaml#/SearchQueryParam"
-      - "$ref": "./components/parameters.yaml#/LimitParam"
-      - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/SearchQueryParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/LimitParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/OffsetParam"
       responses:
         '200':
           description: A paginated collection of ${resourcePluralLower}.
@@ -155,9 +188,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}List"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     post:
       summary: Create a ${resource.toLowerCase()}
       description: Create a new ${resource.toLowerCase()} record.
@@ -184,11 +217,11 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '422':
-          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+          "$ref": "${componentsPrefix}/responses.yaml#/UnprocessableEntity"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
   "/${resourcePluralLower}/{${resourceIdParam}}":
     parameters:
     - "$ref": "#/components/parameters/${resource}IdParam"
@@ -209,9 +242,9 @@ paths:
                 ${resource}Example1:
                   "$ref": "./${kebabName}-openapi-examples.yaml#/${resource}Example1"
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     patch:
       summary: Update a ${resource.toLowerCase()}
       description: Apply partial updates to an existing ${resource.toLowerCase()}.
@@ -232,13 +265,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '422':
-          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+          "$ref": "${componentsPrefix}/responses.yaml#/UnprocessableEntity"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     delete:
       summary: Delete a ${resource.toLowerCase()}
       description: Permanently remove a ${resource.toLowerCase()} record.
@@ -249,9 +282,9 @@ paths:
         '204':
           description: ${resource} deleted successfully.
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
 components:
   parameters:
     ${resource}IdParam:
@@ -405,37 +438,61 @@ async function main() {
   console.log(`   Resource: ${resource}`);
   console.log('');
 
-  // Check if files already exist
-  const specPath = join(process.cwd(), `${name}-openapi.yaml`);
-  const examplesPath = join(process.cwd(), `${name}-openapi-examples.yaml`);
+  // Output to --out dir, or packages/contracts/ by default
+  const contractsDir = resolve(import.meta.dirname, '..');
+  const outDir = options.out || contractsDir;
+  const specFile = `${name}-openapi.yaml`;
+  const examplesFile = `${name}-openapi-examples.yaml`;
+  const specPath = join(outDir, specFile);
+  const examplesPath = join(outDir, examplesFile);
 
   if (existsSync(specPath)) {
     console.error(`Error: ${specPath} already exists.`);
     process.exit(1);
   }
 
+  // Compute components prefix for $ref paths
+  let componentsPrefix = './components';
+  if (options.ref) {
+    const absComponents = resolve(options.ref);
+    let rel = relative(outDir, absComponents);
+    if (!rel.startsWith('.')) rel = './' + rel;
+    componentsPrefix = rel;
+  }
+
+  // Ensure output directory exists
+  mkdirSync(outDir, { recursive: true });
+
   // Generate files
   console.log('📝 Generating files...\n');
 
-  await writeFile(specPath, generateApiSpec(name, resource));
-  console.log(`   ✅ ${specPath}`);
-
+  // Always write examples to outDir (no external $refs to resolve)
   await writeFile(examplesPath, generateExamples(name, resource));
   console.log(`   ✅ ${examplesPath}`);
+
+  await writeFile(specPath, generateApiSpec(name, resource, componentsPrefix));
+  console.log(`   ✅ ${specPath}`);
 
   console.log(`
 ✨ API generated successfully!
 
 Next steps:
-  1. Edit ${name}-openapi.yaml to customize your resource schema
-  2. Update ${name}-openapi-examples.yaml with realistic example data
+  1. Edit ${specFile} to customize your resource schema
+  2. Update ${examplesFile} with realistic example data
   3. Run validation: npm run validate
   4. Generate clients: npm run clients:generate
   5. Start mock server: npm run mock:start
 `);
 }
 
-main().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+// Export for testing
+export { parseArgs, toKebabCase, toCamelCase, toPascalCase, pluralize, generateApiSpec, generateExamples };
+
+// Run main when executed directly
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));
+if (isDirectRun) {
+  main().catch(error => {
+    console.error('Error:', error.message);
+    process.exit(1);
+  });
+}

@@ -1,0 +1,109 @@
+overlay: 1.0.0
+info:
+  title: workflow RPC Overlay
+  version: 1.0.0
+  description: Auto-generated RPC endpoints from workflow-state-machine.yaml
+actions:
+  - target: $.paths
+    file: workflow-openapi.yaml
+    description: Add state machine transition endpoints for workflow tasks
+    update:
+      /tasks/{taskId}/claim:
+        post:
+          summary: Claim task
+          description: Trigger the claim transition (pending → in_progress).
+          operationId: claimTask
+          tags:
+            - Tasks
+          parameters:
+            - $ref: "#/components/parameters/TaskIdParam"
+          responses:
+            "200":
+              description: Transition applied successfully.
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Task"
+            "400":
+              $ref: ./components/responses.yaml#/BadRequest
+            "404":
+              $ref: ./components/responses.yaml#/NotFound
+            "409":
+              $ref: ./components/responses.yaml#/Conflict
+            "500":
+              $ref: ./components/responses.yaml#/InternalError
+      /tasks/{taskId}/complete:
+        post:
+          summary: Complete task
+          description: Trigger the complete transition (in_progress → completed).
+          operationId: completeTask
+          tags:
+            - Tasks
+          parameters:
+            - $ref: "#/components/parameters/TaskIdParam"
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    outcome:
+                      type: string
+                      description: Completion outcome (e.g., approved, denied)
+                    notes:
+                      type: string
+                      description: Optional notes about the completion
+                  required:
+                    - outcome
+          responses:
+            "200":
+              description: Transition applied successfully.
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Task"
+            "400":
+              $ref: ./components/responses.yaml#/BadRequest
+            "404":
+              $ref: ./components/responses.yaml#/NotFound
+            "409":
+              $ref: ./components/responses.yaml#/Conflict
+            "500":
+              $ref: ./components/responses.yaml#/InternalError
+      /tasks/{taskId}/release:
+        post:
+          summary: Release task
+          description: Trigger the release transition (in_progress → pending).
+          operationId: releaseTask
+          tags:
+            - Tasks
+          parameters:
+            - $ref: "#/components/parameters/TaskIdParam"
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    reason:
+                      type: string
+                      description: Why the task is being released
+                  required:
+                    - reason
+          responses:
+            "200":
+              description: Transition applied successfully.
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Task"
+            "400":
+              $ref: ./components/responses.yaml#/BadRequest
+            "404":
+              $ref: ./components/responses.yaml#/NotFound
+            "409":
+              $ref: ./components/responses.yaml#/Conflict
+            "500":
+              $ref: ./components/responses.yaml#/InternalError

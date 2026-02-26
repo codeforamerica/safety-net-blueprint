@@ -49,7 +49,7 @@ else
 fi
 
 step "Resolving example overlay"
-if npm run overlay:resolve 2>&1; then
+if npm run resolve 2>&1; then
   pass "Overlay resolution succeeded"
 else
   fail "Overlay resolution failed"
@@ -71,6 +71,16 @@ else
   fail "Design reference was out of date — it has been regenerated. Stage the updated file and re-run preflight."
 fi
 rm -f /tmp/design-ref-before.html
+
+step "Checking contract tables are up to date"
+cp -r docs/contract-tables /tmp/contract-tables-before 2>/dev/null || true
+npm run contract-tables:export 2>&1 || true
+if diff -rq docs/contract-tables /tmp/contract-tables-before >/dev/null 2>&1; then
+  pass "Contract tables are up to date"
+else
+  fail "Contract tables were out of date — they have been regenerated. Stage the updated files and re-run preflight."
+fi
+rm -rf /tmp/contract-tables-before
 
 step "Running integration tests (starting mock server)"
 MOCK_PID=""

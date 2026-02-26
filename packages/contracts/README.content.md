@@ -27,7 +27,7 @@ Export an HTML design reference from OpenAPI specs.
 
 ```json
 "scripts": {
-  "design-reference": "safety-net-design-reference --specs=. --out=./docs"
+  "design-reference": "safety-net-design-reference --spec=. --out=./docs"
 }
 ```
 

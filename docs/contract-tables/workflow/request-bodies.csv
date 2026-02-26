@@ -1,0 +1,4 @@
+Trigger,Fields
+claim,(none)
+complete,outcome: string (required); notes: string
+release,reason: string (required)

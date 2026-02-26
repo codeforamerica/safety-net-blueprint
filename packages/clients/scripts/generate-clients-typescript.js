@@ -4,11 +4,11 @@
  * For use in state application repositories.
  *
  * Usage:
- *   safety-net-generate-clients --specs=./resolved --out=./src/api
- *   node scripts/generate-clients-typescript.js --specs=./resolved --out=./src/api
+ *   safety-net-generate-clients --spec=./resolved --out=./src/api
+ *   node scripts/generate-clients-typescript.js --spec=./resolved --out=./src/api
  *
  * This script:
- * 1. Discovers all OpenAPI spec files in --specs directory
+ * 1. Discovers all OpenAPI spec files in --spec file or directory
  * 2. Generates typed API client using @hey-api/openapi-ts for each domain
  * 3. Creates search helper utilities
  * 4. Creates index.ts that re-exports all domains
@@ -44,13 +44,13 @@ const templatesDir = join(clientsRoot, 'templates');
  * Parse command line arguments
  */
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { specs: null, out: null, help: false };
+  const args = { spec: null, out: null, help: false };
 
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') {
       args.help = true;
-    } else if (arg.startsWith('--specs=')) {
-      args.specs = arg.split('=')[1];
+    } else if (arg.startsWith('--spec=')) {
+      args.spec = arg.split('=')[1];
     } else if (arg.startsWith('--out=')) {
       args.out = arg.split('=')[1];
     }
@@ -66,17 +66,17 @@ Generate TypeScript Clients
 Generates TypeScript SDK with Zod schemas from resolved OpenAPI specs.
 
 Usage:
-  safety-net-generate-clients --specs=<dir> --out=<dir>
-  node scripts/generate-clients-typescript.js --specs=<dir> --out=<dir>
+  safety-net-generate-clients --spec=<file-or-dir> --out=<dir>
+  node scripts/generate-clients-typescript.js --spec=<file-or-dir> --out=<dir>
 
 Flags:
-  --specs=<dir>  Path to resolved specs directory (required)
-  --out=<dir>    Output directory for generated clients (required)
-  -h, --help     Show this help message
+  --spec=<file-or-dir>  Path to resolved spec file or directory (required)
+  --out=<dir>           Output directory for generated clients (required)
+  -h, --help            Show this help message
 
 Example:
   # From state application repo
-  safety-net-generate-clients --specs=./resolved --out=./src/api
+  safety-net-generate-clients --spec=./resolved --out=./src/api
 
 Output structure:
   {out}/
@@ -103,7 +103,6 @@ function exec(command, args, options = {}) {
     console.log(`  Running: ${command} ${args.join(' ')}`);
     const child = spawn(command, args, {
       stdio: 'inherit',
-      shell: true,
       ...options
     });
 
@@ -159,20 +158,20 @@ export default {
  * Main generation function
  */
 async function main() {
-  const { specs, out, help } = parseArgs();
+  const { spec, out, help } = parseArgs();
 
   if (help) {
     showHelp();
     process.exit(0);
   }
 
-  if (!specs || !out) {
-    console.error('Error: --specs and --out are required.\n');
+  if (!spec || !out) {
+    console.error('Error: --spec and --out are required.\n');
     showHelp();
     process.exit(1);
   }
 
-  const specsDir = resolvePath(specs);
+  const specsDir = resolvePath(spec);
   const outputDir = resolvePath(out);
 
   if (!existsSync(specsDir)) {

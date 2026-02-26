@@ -6,7 +6,7 @@
  * Includes state-specific variations via overlay system
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import yaml from 'js-yaml';
@@ -3256,21 +3256,32 @@ ${contentHtml}
 async function main() {
   // Parse flags
   const args = process.argv.slice(2);
-  const specsArg = args.find(a => a.startsWith('--specs='));
-  const outArg = args.find(a => a.startsWith('--out='));
-  if (!specsArg || !outArg) {
-    console.error('Error: --specs=<dir> and --out=<dir> are required.\n');
-    console.error('Usage: node scripts/export-design-reference.js --specs=<dir> --out=<dir>');
+
+  // Check for unknown arguments
+  const unknown = args.filter(a => !a.startsWith('--spec=') && !a.startsWith('--out='));
+  if (unknown.length > 0) {
+    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
     process.exit(1);
   }
-  const specsDir = resolve(specsArg.split('=')[1]);
+
+  const specArg = args.find(a => a.startsWith('--spec='));
+  const outArg = args.find(a => a.startsWith('--out='));
+  if (!specArg || !outArg) {
+    console.error('Error: --spec=<file|dir> and --out=<dir> are required.\n');
+    console.error('Usage: node scripts/export-design-reference.js --spec=<file|dir> --out=<dir>');
+    process.exit(1);
+  }
+  const specDir = resolve(specArg.split('=')[1]);
   const outDir = resolve(outArg.split('=')[1]);
+  const isSingleFile = statSync(specDir).isFile();
 
   console.log('Generating ORCA Design Reference...\n');
-  console.log(`Specs: ${specsDir}\n`);
+  console.log(`Specs: ${specDir}\n`);
 
   try {
-    const apiSpecs = discoverApiSpecs({ specsDir });
+    const apiSpecs = isSingleFile
+      ? [{ name: specDir.replace(/-openapi\.yaml$/, '').split(/[\\/]/).pop(), specPath: specDir }]
+      : discoverApiSpecs({ specsDir: specDir });
     console.log(`Found ${apiSpecs.length} API specifications`);
 
     const baseSchemas = {};

@@ -143,6 +143,37 @@ task-time-to-claim:
     p95: 4h                # 95th percentile target (also supports p50, p99, max, avg, etc.)
 ```
 
+#### Standards alignment
+
+The behavioral contract formats (state machine, rules, metrics) are custom YAML but informed by established standards. No single standard covers the full use case (declarative behavioral contracts for government benefits workflows, authored in tables, validated against OpenAPI specs), but the core patterns have well-known precedents.
+
+| Our concept | Standard | How it aligns |
+|---|---|---|
+| States, transitions, guards, effects | [Statecharts](https://statecharts.dev/) / [SCXML](https://www.w3.org/TR/scxml/) (W3C) | Same formal model — finite states with guarded transitions and entry/exit actions. Our effects map to SCXML's executable content. |
+| Trigger → RPC endpoint generation | [WS-HumanTask](http://docs.oasis-open.org/bpel4people/ws-humantask-1.1-spec-cs-01.html) (OASIS) | WS-HumanTask defines claim, complete, release, delegate as standard task operations. Our triggers mirror these. |
+| SLA clock behavior (running/stopped/paused) | BPMN Timer Events, Camunda SLA tracking | Same concept — clock state tied to object state. BPMN uses timer boundary events; we use declarative per-state clock config. |
+| Decision tables with first-match-wins | [DMN](https://www.omg.org/spec/DMN/) (OMG) | DMN defines decision tables with hit policies (first, unique, any, collect). Our `first-match-wins` maps to DMN's "First" hit policy. |
+| JSON Logic for conditions | [Form.io](https://form.io/), [json-logic-js](https://github.com/jwadhams/json-logic-js) | Lightweight, serializable expression format with broad adoption. Alternatives: CEL (more powerful), FEEL (DMN-native), FHIRPath (healthcare-specific). |
+| Metrics with source linkage to states/transitions | [OpenTelemetry](https://opentelemetry.io/) semantic conventions | Same pattern — metrics defined by what they measure (duration, count), linked to the operations that produce data. Our targets (p95, p50) align with standard histogram buckets. |
+| Audit requirements as declarative spec | [OASIS WS-HumanTask](http://docs.oasis-open.org/bpel4people/ws-humantask-1.1-spec-cs-01.html) audit trail | WS-HumanTask mandates audit records for task state changes. Our `audit` block makes this a validatable contract requirement. |
+
+**Design decisions:**
+
+- **Why not SCXML?** SCXML is XML-based and designed for runtime execution, not table-based authoring. The semantics transfer; the format doesn't fit our YAML/spreadsheet pipeline.
+- **Why not BPMN/Camunda format?** BPMN is a visual modeling standard with XML serialization. It's more expressive than we need (parallel gateways, message flows, subprocesses) and the tooling assumes a graphical editor. States that prefer Camunda Modeler can author in it and use conversion scripts to generate our YAML.
+- **Why not DMN for rules?** DMN's FEEL expression language is more powerful than JSON Logic but has fewer lightweight implementations. JSON Logic is consistent with our form definition conditions and has implementations in every major language. States can author in DMN and convert.
+
+**Planned extensions (additive, no breaking changes):**
+
+| Capability | How it extends the format | Standard precedent |
+|---|---|---|
+| Parallel/hierarchical states | Add `children` or `parallel` property to state definitions | SCXML `<parallel>`, statechart nested states |
+| Timer/timeout transitions | Add `onTimeout` top-level field with duration and effects | BPMN timer boundary events, Camunda timer tasks |
+| OR guard composition | Accept guard objects with `any`/`all` keys alongside current string refs | SCXML `<if>`/`<elseif>` compound conditions |
+| Rule chaining | Add `next` property to ruleSets for sequential evaluation | DMN decision requirements graphs |
+| Cross-domain rule context | Expand `context` bindings (e.g., `application.*` alongside `task.*`) | DMN business knowledge models |
+| Notification effects | Add `notify` effect type with channel, recipient, template | WS-HumanTask notification tasks |
+
 ### Form definitions
 
 Form definitions describe context-dependent form structure — which sections and fields to display, visibility conditions, validation rules, and field dependencies. They link to the OpenAPI spec (field names, types, enums), not the state machine — they're about rendering data, not lifecycle.

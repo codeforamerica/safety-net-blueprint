@@ -8,6 +8,7 @@ import { discoverApiSpecs, getExamplesPath } from '../src/validation/openapi-loa
 import { validateAll, formatResults } from '../src/validation/openapi-validator.js';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import { statSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,9 +25,9 @@ async function main() {
 
   if (args.includes('--help') || args.includes('-h')) {
     console.log('OpenAPI Specification & Examples Validator\n');
-    console.log('Usage: node scripts/validate-openapi.js --specs=<dir> [options]\n');
+    console.log('Usage: node scripts/validate-openapi.js --spec=<file|dir> [options]\n');
     console.log('Flags:');
-    console.log('  --specs=<dir>     Path to specs directory (required)');
+    console.log('  --spec=<file|dir> Path to spec file or directory (required)');
     console.log('  --skip-examples   Skip example validation (schema-only)');
     console.log('  -d, --detailed    Show all validation errors (default)');
     console.log('  -b, --brief       Show only first 3 errors per example');
@@ -34,14 +35,28 @@ async function main() {
     process.exit(0);
   }
 
-  // Parse --specs flag
-  const specsArg = args.find(a => a.startsWith('--specs='));
-  if (!specsArg) {
-    console.error('Error: --specs=<dir> is required.\n');
-    console.error('Usage: node scripts/validate-openapi.js --specs=<dir>');
+  // Check for unknown arguments
+  const unknown = args.filter(a =>
+    a !== '--help' && a !== '-h' &&
+    a !== '--detailed' && a !== '-d' &&
+    a !== '--brief' && a !== '-b' &&
+    a !== '--skip-examples' &&
+    !a.startsWith('--spec=')
+  );
+  if (unknown.length > 0) {
+    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
     process.exit(1);
   }
-  const specsDir = resolve(specsArg.split('=')[1]);
+
+  // Parse --spec flag
+  const specArg = args.find(a => a.startsWith('--spec='));
+  if (!specArg) {
+    console.error('Error: --spec=<file|dir> is required.\n');
+    console.error('Usage: node scripts/validate-openapi.js --spec=<file|dir>');
+    process.exit(1);
+  }
+  const specDir = resolve(specArg.split('=')[1]);
+  const isSingleFile = statSync(specDir).isFile();
 
   console.log('='.repeat(70));
   console.log('OpenAPI Specification & Examples Validator');
@@ -50,8 +65,10 @@ async function main() {
   try {
     // Discover API specs
     console.log('\nDiscovering OpenAPI specifications...');
-    console.log(`  Specs: ${specsDir}`);
-    const apiSpecs = discoverApiSpecs({ specsDir });
+    console.log(`  Specs: ${specDir}`);
+    const apiSpecs = isSingleFile
+      ? [{ name: specDir.replace(/-openapi\.yaml$/, '').split(/[\\/]/).pop(), specPath: specDir }]
+      : discoverApiSpecs({ specsDir: specDir });
 
     if (apiSpecs.length === 0) {
       console.error('\n❌ No OpenAPI specifications found');
@@ -63,7 +80,7 @@ async function main() {
     // Add examples paths (unless skipping)
     const specsWithExamples = apiSpecs.map(spec => ({
       ...spec,
-      examplesPath: skipExamples ? null : getExamplesPath(spec.name, specsDir)
+      examplesPath: skipExamples ? null : getExamplesPath(spec.name, isSingleFile ? dirname(specDir) : specDir)
     }));
 
     // Validate specs (and examples unless --skip-examples)

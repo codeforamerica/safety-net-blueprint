@@ -1,0 +1,257 @@
+# JSON Schema for State Machine YAML
+# Validates structural correctness. Cross-artifact references
+# (e.g., states matching OpenAPI enums) are validated by the validation script.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: State Machine
+description: Schema for behavioral contract state machine YAML files.
+type: object
+required:
+  - version
+  - object
+  - domain
+  - apiSpec
+  - states
+  - initialState
+  - transitions
+additionalProperties: false
+
+properties:
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  object:
+    type: string
+    description: The governed entity type (e.g., Task).
+
+  domain:
+    type: string
+    description: Domain namespace (e.g., workflow).
+
+  apiSpec:
+    type: string
+    description: Filename of the associated OpenAPI spec.
+
+  states:
+    type: object
+    description: Map of state names to state configuration.
+    minProperties: 1
+    additionalProperties:
+      $ref: "#/$defs/State"
+
+  initialState:
+    type: string
+    description: The state an object starts in after creation.
+
+  guards:
+    type: object
+    description: Named guard definitions, referenced by string in transitions.
+    additionalProperties:
+      $ref: "#/$defs/Guard"
+
+  onCreate:
+    $ref: "#/$defs/OnCreate"
+
+  transitions:
+    type: array
+    description: Ordered list of valid state transitions.
+    minItems: 1
+    items:
+      $ref: "#/$defs/Transition"
+
+  requestBodies:
+    type: object
+    description: Request body schemas keyed by trigger name.
+    additionalProperties:
+      $ref: "#/$defs/RequestBody"
+
+  audit:
+    $ref: "#/$defs/Audit"
+
+$defs:
+  State:
+    type: object
+    description: Configuration for a single state.
+    properties:
+      slaClock:
+        type: string
+        enum:
+          - running
+          - stopped
+          - paused
+        description: SLA clock behavior while in this state.
+    additionalProperties: true
+
+  Guard:
+    type: object
+    description: A named condition that must be true for a transition to fire.
+    required:
+      - field
+      - operator
+    properties:
+      field:
+        type: string
+        description: Field or variable reference to evaluate.
+      operator:
+        type: string
+        enum:
+          - is_null
+          - is_not_null
+          - equals
+          - not_equals
+          - contains_all
+          - contains_any
+        description: Comparison operator.
+      value:
+        description: Value to compare against (omit for is_null/is_not_null).
+    additionalProperties: false
+
+  OnCreate:
+    type: object
+    description: Effects that run when the object is created (no "from" state).
+    required:
+      - effects
+    properties:
+      actors:
+        type: array
+        items:
+          type: string
+        description: Who can create the object.
+      effects:
+        type: array
+        items:
+          $ref: "#/$defs/Effect"
+        minItems: 1
+    additionalProperties: false
+
+  Transition:
+    type: object
+    description: A valid state change with guards and effects.
+    required:
+      - trigger
+      - from
+      - to
+    properties:
+      trigger:
+        type: string
+        description: Action name — becomes the RPC endpoint.
+      from:
+        type: string
+        description: Source state.
+      to:
+        type: string
+        description: Target state.
+      actors:
+        type: array
+        items:
+          type: string
+        description: Roles that can trigger this transition.
+      guards:
+        type: array
+        items:
+          type: string
+        description: Guard names that must all pass.
+      effects:
+        type: array
+        items:
+          $ref: "#/$defs/Effect"
+        description: Side effects that occur when the transition fires.
+    additionalProperties: false
+
+  Effect:
+    type: object
+    description: A side effect that occurs during a transition or onCreate.
+    required:
+      - type
+    properties:
+      type:
+        type: string
+        enum:
+          - set
+          - create
+          - lookup
+          - evaluate-rules
+          - event
+        description: Effect type discriminator.
+      field:
+        type: string
+        description: Target field (for set effects).
+      value:
+        description: Value to set, or payload template.
+      entity:
+        type: string
+        description: Target entity (for create/lookup effects).
+      fields:
+        type: object
+        description: Field values for created records.
+        additionalProperties: true
+      lookupField:
+        type: string
+        description: Field to look up by (for lookup effects).
+      bindTo:
+        type: string
+        description: Variable to bind lookup results to.
+      relativeTo:
+        type: string
+        description: Reference point for relative values (e.g., $now).
+      name:
+        type: string
+        description: Event name (for event effects).
+      schema:
+        type: string
+        description: Event payload schema name (for event effects).
+      payload:
+        type: object
+        description: Event payload template (for event effects).
+        additionalProperties: true
+      ruleTypes:
+        type: array
+        items:
+          type: string
+        description: Rule types to evaluate (for evaluate-rules effects).
+      when:
+        description: JSON Logic condition — effect only fires when true.
+      description:
+        type: string
+        description: Human-readable description of what this effect does.
+    additionalProperties: false
+
+  RequestBody:
+    description: OpenAPI-style schema for a trigger's request body.
+    type: object
+    properties:
+      type:
+        type: string
+      properties:
+        type: object
+        additionalProperties: true
+      required:
+        type: array
+        items:
+          type: string
+    additionalProperties: true
+
+  Audit:
+    type: object
+    description: Declarative audit requirements for validation.
+    required:
+      - entity
+      - scope
+      - requiredFields
+    properties:
+      entity:
+        type: string
+        description: The audit record entity type.
+      scope:
+        type: string
+        enum:
+          - all
+          - transitions-only
+        description: Whether audit covers all transitions + onCreate, or transitions only.
+      requiredFields:
+        type: array
+        items:
+          type: string
+        description: Fields that must be present on every audit record.
+    additionalProperties: false
