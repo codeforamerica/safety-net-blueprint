@@ -15,7 +15,7 @@
 
 import { writeFile } from 'fs/promises';
 import { existsSync, mkdirSync, realpathSync } from 'fs';
-import { join, resolve } from 'path';
+import { join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 // NOTE: Do NOT add a --bundle flag to this generator. Source specs must use
@@ -32,6 +32,7 @@ function parseArgs() {
     name: null,
     resource: null,
     out: null,
+    ref: null,
     help: false
   };
 
@@ -50,6 +51,9 @@ function parseArgs() {
       case '--out':
       case '-o':
         options.out = args[++i];
+        break;
+      case '--ref':
+        options.ref = args[++i];
         break;
       case '--help':
       case '-h':
@@ -87,6 +91,8 @@ Options:
   -n, --name <name>        API name in kebab-case (e.g., "benefits", "case-workers")
   -r, --resource <name>    Resource name in PascalCase (e.g., "Benefit", "CaseWorker")
   -o, --out <dir>          Output directory (default: packages/contracts/)
+      --ref <dir>          Path to shared components directory (for correct $ref paths
+                           when --out is outside the contracts package)
   -h, --help               Show this help message
 
 Examples:
@@ -138,7 +144,7 @@ function pluralize(str) {
 // Template Generators
 // =============================================================================
 
-function generateApiSpec(name, resource) {
+function generateApiSpec(name, resource, componentsPrefix = './components') {
   const kebabName = toKebabCase(name);
   const resourcePlural = pluralize(resource);
   const resourcePluralLower = resourcePlural.toLowerCase();
@@ -171,9 +177,9 @@ paths:
       tags:
       - ${resourcePlural}
       parameters:
-      - "$ref": "./components/parameters.yaml#/SearchQueryParam"
-      - "$ref": "./components/parameters.yaml#/LimitParam"
-      - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/SearchQueryParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/LimitParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/OffsetParam"
       responses:
         '200':
           description: A paginated collection of ${resourcePluralLower}.
@@ -182,9 +188,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}List"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     post:
       summary: Create a ${resource.toLowerCase()}
       description: Create a new ${resource.toLowerCase()} record.
@@ -211,11 +217,11 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '422':
-          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+          "$ref": "${componentsPrefix}/responses.yaml#/UnprocessableEntity"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
   "/${resourcePluralLower}/{${resourceIdParam}}":
     parameters:
     - "$ref": "#/components/parameters/${resource}IdParam"
@@ -236,9 +242,9 @@ paths:
                 ${resource}Example1:
                   "$ref": "./${kebabName}-openapi-examples.yaml#/${resource}Example1"
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     patch:
       summary: Update a ${resource.toLowerCase()}
       description: Apply partial updates to an existing ${resource.toLowerCase()}.
@@ -259,13 +265,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '422':
-          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+          "$ref": "${componentsPrefix}/responses.yaml#/UnprocessableEntity"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     delete:
       summary: Delete a ${resource.toLowerCase()}
       description: Permanently remove a ${resource.toLowerCase()} record.
@@ -276,9 +282,9 @@ paths:
         '204':
           description: ${resource} deleted successfully.
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
 components:
   parameters:
     ${resource}IdParam:
@@ -445,6 +451,15 @@ async function main() {
     process.exit(1);
   }
 
+  // Compute components prefix for $ref paths
+  let componentsPrefix = './components';
+  if (options.ref) {
+    const absComponents = resolve(options.ref);
+    let rel = relative(outDir, absComponents);
+    if (!rel.startsWith('.')) rel = './' + rel;
+    componentsPrefix = rel;
+  }
+
   // Ensure output directory exists
   mkdirSync(outDir, { recursive: true });
 
@@ -455,7 +470,7 @@ async function main() {
   await writeFile(examplesPath, generateExamples(name, resource));
   console.log(`   ✅ ${examplesPath}`);
 
-  await writeFile(specPath, generateApiSpec(name, resource));
+  await writeFile(specPath, generateApiSpec(name, resource, componentsPrefix));
   console.log(`   ✅ ${specPath}`);
 
   console.log(`

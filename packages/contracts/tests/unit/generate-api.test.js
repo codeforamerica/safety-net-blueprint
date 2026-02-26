@@ -164,6 +164,17 @@ test('generate-api tests', async (t) => {
     }
   });
 
+  await t.test('parseArgs - parses --ref', () => {
+    const original = process.argv;
+    try {
+      process.argv = ['node', 'generate-api.js', '--name', 'x', '--resource', 'X', '--ref', '/some/path'];
+      const opts = parseArgs();
+      assert.strictEqual(opts.ref, '/some/path');
+    } finally {
+      process.argv = original;
+    }
+  });
+
   await t.test('parseArgs - defaults when no args given', () => {
     const original = process.argv;
     try {
@@ -172,6 +183,7 @@ test('generate-api tests', async (t) => {
       assert.strictEqual(opts.name, null);
       assert.strictEqual(opts.resource, null);
       assert.strictEqual(opts.out, null);
+      assert.strictEqual(opts.ref, null);
       assert.strictEqual(opts.help, false);
     } finally {
       process.argv = original;
@@ -215,6 +227,26 @@ test('generate-api tests', async (t) => {
   await t.test('generateApiSpec - examples $ref points to examples file', () => {
     const spec = generateApiSpec('benefits', 'Benefit');
     assert.ok(spec.includes('"$ref": "./benefits-openapi-examples.yaml#/BenefitExample1"'));
+  });
+
+  await t.test('generateApiSpec - uses default ./components prefix', () => {
+    const spec = generateApiSpec('benefits', 'Benefit');
+    assert.ok(spec.includes('"$ref": "./components/parameters.yaml#/SearchQueryParam"'));
+    assert.ok(spec.includes('"$ref": "./components/responses.yaml#/BadRequest"'));
+    assert.ok(spec.includes('"$ref": "./components/responses.yaml#/InternalError"'));
+  });
+
+  await t.test('generateApiSpec - uses custom components prefix', () => {
+    const spec = generateApiSpec('benefits', 'Benefit', '../../shared/components');
+    assert.ok(spec.includes('"$ref": "../../shared/components/parameters.yaml#/SearchQueryParam"'));
+    assert.ok(spec.includes('"$ref": "../../shared/components/parameters.yaml#/LimitParam"'));
+    assert.ok(spec.includes('"$ref": "../../shared/components/parameters.yaml#/OffsetParam"'));
+    assert.ok(spec.includes('"$ref": "../../shared/components/responses.yaml#/BadRequest"'));
+    assert.ok(spec.includes('"$ref": "../../shared/components/responses.yaml#/NotFound"'));
+    assert.ok(spec.includes('"$ref": "../../shared/components/responses.yaml#/UnprocessableEntity"'));
+    assert.ok(spec.includes('"$ref": "../../shared/components/responses.yaml#/InternalError"'));
+    // Internal schema $refs should NOT be affected
+    assert.ok(spec.includes('"$ref": "#/components/schemas/Benefit"'));
   });
 
   // ===========================================================================
