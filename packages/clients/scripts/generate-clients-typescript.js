@@ -38,7 +38,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const clientsRoot = join(__dirname, '..');
-const templatesDir = join(clientsRoot, 'templates');
+const utilityDIr = join(clientsRoot, 'utility');
 
 /**
  * Parse command line arguments
@@ -250,7 +250,8 @@ export { q, search } from './search-helpers.js';
   console.log('  ✓ Created index.ts');
 
   // Copy search helpers
-  const searchHelpersSource = join(templatesDir, 'search-helpers.ts');
+  const searchHelpersSource = join(utilityDIr, 'search-helpers.ts');
+  console.log(searchHelpersSource);
   if (existsSync(searchHelpersSource)) {
     const searchHelpersDest = join(outputDir, 'search-helpers.ts');
     copyFileSync(searchHelpersSource, searchHelpersDest);
