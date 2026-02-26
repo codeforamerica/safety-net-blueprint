@@ -31,6 +31,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
 import { bundleSpec } from '../src/bundle.js';
+import { discoverStateMachines, extractItemEndpoint, generateOverlay } from './generate-rpc-overlay.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -446,6 +447,102 @@ function substitutePlaceholders(node, vars, warnings = []) {
 }
 
 // =============================================================================
+// RPC Overlay Auto-Generation
+// =============================================================================
+
+/**
+ * Detect the $ref prefix used for external component references in a spec.
+ * Walks the spec tree looking for $ref strings containing 'components/',
+ * then extracts whatever precedes 'components/' (e.g., './' or '../../contracts/').
+ * Returns './' as the default if no external component refs are found.
+ */
+function detectComponentPrefix(spec) {
+  function findRefPrefix(node) {
+    if (node === null || node === undefined || typeof node !== 'object') return null;
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const found = findRefPrefix(item);
+        if (found !== null) return found;
+      }
+      return null;
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string') {
+        // Match external file refs like ./components/ or ../../contracts/components/
+        // Skip internal refs (#/components/...)
+        const match = value.match(/^(?!#)(.*?)components\//);
+        if (match) return match[1];
+      }
+      if (typeof value === 'object') {
+        const found = findRefPrefix(value);
+        if (found !== null) return found;
+      }
+    }
+    return null;
+  }
+
+  return findRefPrefix(spec) || './';
+}
+
+/**
+ * Rewrite $ref paths in an overlay, replacing one prefix with another.
+ * Used to align generated overlay refs with the target spec's conventions.
+ */
+function rewriteOverlayRefs(overlay, fromPrefix, toPrefix) {
+  if (fromPrefix === toPrefix) return overlay;
+
+  function walk(node) {
+    if (node === null || node === undefined || typeof node !== 'object') return node;
+    if (Array.isArray(node)) return node.map(walk);
+
+    const result = {};
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string' && value.startsWith(fromPrefix + 'components/')) {
+        result[key] = toPrefix + value.substring(fromPrefix.length);
+      } else {
+        result[key] = (typeof value === 'object') ? walk(value) : value;
+      }
+    }
+    return result;
+  }
+
+  return walk(overlay);
+}
+
+/**
+ * Discover state machines and generate in-memory RPC overlays.
+ * Returns an array of { overlay, stateMachine } ready for application.
+ */
+function generateRpcOverlays(specPath, yamlFiles) {
+  const machines = discoverStateMachines(specPath);
+  if (machines.length === 0) return [];
+
+  const overlays = [];
+
+  for (const { stateMachine } of machines) {
+    const apiSpecFile = stateMachine.apiSpec;
+    if (!apiSpecFile) continue;
+
+    const endpointInfo = extractItemEndpoint(specPath, apiSpecFile);
+    if (!endpointInfo) continue;
+
+    let overlay = generateOverlay(stateMachine, endpointInfo);
+
+    // Detect the component $ref prefix used by the target spec and rewrite if needed
+    const targetFile = yamlFiles.find(f => f.relativePath === apiSpecFile);
+    if (targetFile) {
+      const prefix = detectComponentPrefix(targetFile.spec);
+      overlay = rewriteOverlayRefs(overlay, './', prefix);
+    }
+
+    overlays.push({ overlay, stateMachine });
+  }
+
+  return overlays;
+}
+
+// =============================================================================
 // Output
 // =============================================================================
 
@@ -520,7 +617,10 @@ async function main() {
   }
   mkdirSync(outDir, { recursive: true });
 
-  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples) {
+  // Discover state machines for RPC auto-generation (directory mode only)
+  const stateMachines = !specIsFile ? discoverStateMachines(specPath) : [];
+
+  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && stateMachines.length === 0) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -547,6 +647,26 @@ async function main() {
 
   let allWarnings = [];
   let currentResults = null;
+
+  // Auto-generate and apply RPC overlays from state machine files (before explicit overlays)
+  if (stateMachines.length > 0) {
+    const rpcOverlays = generateRpcOverlays(specPath, yamlFiles);
+
+    for (const { overlay, stateMachine } of rpcOverlays) {
+      const inputFiles = currentResults
+        ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+        : yamlFiles;
+
+      const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+      const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+      allWarnings = allWarnings.concat(warnings);
+
+      currentResults = applyOverlayWithTargets(inputFiles, overlay, actionTargets, specPath);
+
+      const transitionCount = stateMachine.transitions?.length || 0;
+      console.log(`  \u2713 Auto-generated: ${stateMachine.domain} RPC Overlay (${transitionCount} transitions)`);
+    }
+  }
 
   // Apply overlays if specified
   if (options.overlay) {
@@ -710,7 +830,11 @@ export {
   getVersionFromFilename,
   filterByEnvironment,
   parseEnvFile,
-  substitutePlaceholders
+  substitutePlaceholders,
+  applyOverlayWithTargets,
+  detectComponentPrefix,
+  rewriteOverlayRefs,
+  generateRpcOverlays
 };
 
 // Run main when executed directly
