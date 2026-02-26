@@ -611,9 +611,11 @@ async function main() {
 
   const specIsFile = statSync(specPath).isFile();
 
-  // Clean and recreate output directory
-  if (existsSync(outDir)) {
-    rmSync(outDir, { recursive: true });
+  // Clean and recreate output directory (skip when resolving in place)
+  if (resolve(specPath) !== resolve(outDir)) {
+    if (existsSync(outDir)) {
+      rmSync(outDir, { recursive: true });
+    }
   }
   mkdirSync(outDir, { recursive: true });
 

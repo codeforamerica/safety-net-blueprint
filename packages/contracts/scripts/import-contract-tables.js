@@ -414,9 +414,21 @@ function writeYaml(filePath, doc, originalContent) {
 // Discover CSV files to import
 // ---------------------------------------------------------------------------
 
-function discoverCsvFiles(tablesDir) {
+function discoverCsvFiles(tablesDir, flatDomain) {
   const results = [];
   if (!existsSync(tablesDir)) return results;
+
+  // When flatDomain is provided, also look for CSVs directly in tablesDir
+  if (flatDomain) {
+    for (const file of readdirSync(tablesDir)) {
+      if (file.endsWith('.csv') && statSync(resolve(tablesDir, file)).isFile()) {
+        results.push({ domain: flatDomain, csvFile: file, csvPath: resolve(tablesDir, file) });
+      }
+    }
+    if (results.length > 0) return results;
+  }
+
+  // Default: look in domain subdirectories
   for (const domain of readdirSync(tablesDir)) {
     const domainDir = resolve(tablesDir, domain);
     if (!statSync(domainDir).isDirectory()) continue;
@@ -490,7 +502,7 @@ function main() {
     const domain = basename(dirname(singleFile));
     csvFiles = [{ domain, csvFile, csvPath: singleFile }];
   } else {
-    csvFiles = discoverCsvFiles(tablesDir);
+    csvFiles = discoverCsvFiles(tablesDir, name);
   }
 
   if (csvFiles.length === 0) {
