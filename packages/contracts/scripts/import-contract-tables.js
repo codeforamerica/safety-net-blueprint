@@ -5,7 +5,7 @@
  * Validates the output against JSON Schemas.
  */
 
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname, basename, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -25,11 +25,15 @@ function parseArgs() {
     console.log('Import Contract Tables\n');
     console.log('Usage: node scripts/import-contract-tables.js [options]\n');
     console.log('Reads CSV tables and produces valid behavioral contract YAML.\n');
+    console.log('Merges into existing YAML when found, or creates a new state machine\n');
+    console.log('when --name and --resource are provided.\n');
     console.log('Options:');
-    console.log('  --tables=<dir>  CSV tables directory (default: ../../docs/contract-tables)');
-    console.log('  --out=<dir>     YAML output directory (default: contracts package root)');
-    console.log('  --file=<path>   Import only this CSV file');
-    console.log('  -h, --help      Show this help message');
+    console.log('  --tables=<dir>     CSV tables directory (default: ../../docs/contract-tables)');
+    console.log('  --out=<dir>        YAML output directory (default: contracts package root)');
+    console.log('  --name=<domain>    Domain name, kebab-case (e.g., pizza-shop). Creates new YAML if none exists.');
+    console.log('  --resource=<Name>  Resource name, PascalCase (e.g., Pizza). Required with --name.');
+    console.log('  --file=<path>      Import only this CSV file');
+    console.log('  -h, --help         Show this help message');
     process.exit(0);
   }
 
@@ -37,11 +41,15 @@ function parseArgs() {
   const tablesArg = args.find(a => a.startsWith('--tables='));
   const outArg = args.find(a => a.startsWith('--out='));
   const fileArg = args.find(a => a.startsWith('--file='));
+  const nameArg = args.find(a => a.startsWith('--name='));
+  const resourceArg = args.find(a => a.startsWith('--resource='));
 
   return {
     tablesDir: tablesArg ? resolve(tablesArg.split('=')[1]) : resolve(packageRoot, '../../docs/contract-tables'),
     outDir: outArg ? resolve(outArg.split('=')[1]) : packageRoot,
     singleFile: fileArg ? resolve(fileArg.split('=')[1]) : null,
+    name: nameArg ? nameArg.split('=')[1] : null,
+    resource: resourceArg ? resourceArg.split('=')[1] : null,
   };
 }
 
@@ -411,11 +419,57 @@ function discoverCsvFiles(tablesDir) {
 }
 
 // ---------------------------------------------------------------------------
+// Skeleton creation for new state machines
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract unique states from a transitions CSV and build a skeleton YAML doc.
+ * The first "from" state in the CSV becomes the initialState.
+ */
+function createStateMachineSkeleton(domain, resource, csvs) {
+  const states = new Set();
+  let initialState = null;
+
+  // Find the transitions CSV and extract states from it
+  const transitionsCsv = csvs.find(c => c.section === 'transitions');
+  if (transitionsCsv) {
+    const content = readFileSync(transitionsCsv.csvPath, 'utf8');
+    const parsed = parseCsv(content);
+    for (const row of parsed.data) {
+      const [from, to] = row;
+      if (from && from !== '(create)') {
+        states.add(from);
+        if (!initialState) initialState = from;
+      }
+      if (to) states.add(to);
+    }
+  }
+
+  const statesObj = {};
+  for (const s of states) {
+    statesObj[s] = {};
+  }
+
+  return {
+    $schema: './schemas/state-machine-schema.yaml',
+    version: '1.0',
+    object: resource,
+    domain,
+    apiSpec: `${domain}-openapi.yaml`,
+    states: statesObj,
+    initialState: initialState || 'pending',
+    guards: {},
+    transitions: [],
+    requestBodies: {},
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 function main() {
-  const { tablesDir, outDir, singleFile } = parseArgs();
+  const { tablesDir, outDir, singleFile, name, resource } = parseArgs();
 
   // Determine which CSV files to process
   let csvFiles;
@@ -453,12 +507,27 @@ function main() {
   for (const [, group] of groups) {
     const { domain, schemaKey, csvs } = group;
 
-    // Find the target YAML file
-    const found = findYamlForDomain(outDir, domain, schemaKey);
+    // Find the target YAML file, or create a new one if --name/--resource provided
+    let found = findYamlForDomain(outDir, domain, schemaKey);
     if (!found) {
-      console.error(`  No YAML file found for domain="${domain}" with schema containing "${schemaKey}"`);
-      hasErrors = true;
-      continue;
+      if (schemaKey === 'state-machine-schema') {
+        const effectiveName = name || domain;
+        const effectiveResource = resource || 'RESOURCE';
+        if (!name || !resource) {
+          console.warn(`  Warning: --name and --resource not provided. Using placeholders (object: "${effectiveResource}", apiSpec: "${effectiveName}-openapi.yaml"). Edit the YAML to fix these.`);
+        }
+        const skeleton = createStateMachineSkeleton(effectiveName, effectiveResource, csvs);
+        const filePath = resolve(outDir, `${effectiveName}-state-machine.yaml`);
+        mkdirSync(dirname(filePath), { recursive: true });
+        const content = serializeYaml(skeleton);
+        writeFileSync(filePath, content, 'utf8');
+        found = { filePath, doc: skeleton, rawContent: content };
+        console.log(`  Created ${relative(outDir, filePath)}`);
+      } else {
+        console.error(`  No YAML file found for domain="${domain}" with schema containing "${schemaKey}"`);
+        hasErrors = true;
+        continue;
+      }
     }
 
     let doc = { ...found.doc };
@@ -492,15 +561,19 @@ function main() {
       console.log(`  ${domain}/${csv.csvFile} → ${relative(outDir, found.filePath)}`);
     }
 
-    // Validate against schema
+    // Validate against schema (skip if schema file not found)
     const schemaPath = resolve(dirname(found.filePath), doc.$schema);
-    const errors = validateAgainstSchema(doc, schemaPath);
-    if (errors.length > 0) {
-      console.error(`  Validation errors in ${relative(outDir, found.filePath)}:`);
-      for (const err of errors) {
-        console.error(`    - ${err}`);
+    if (existsSync(schemaPath)) {
+      const errors = validateAgainstSchema(doc, schemaPath);
+      if (errors.length > 0) {
+        console.error(`  Validation errors in ${relative(outDir, found.filePath)}:`);
+        for (const err of errors) {
+          console.error(`    - ${err}`);
+        }
+        hasErrors = true;
       }
-      hasErrors = true;
+    } else {
+      console.log(`  Schema not found at ${doc.$schema}, skipping validation`);
     }
 
     // Write the updated YAML
