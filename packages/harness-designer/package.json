@@ -15,7 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@safety-net/contracts": "*",
+    "@codeforamerica/safety-net-blueprint-contracts": "*",
     "@safety-net/form-engine": "*",
     "@trussworks/react-uswds": "^10.0.0",
     "js-yaml": "^4.1.0",

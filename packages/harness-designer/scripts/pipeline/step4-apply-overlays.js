@@ -13,7 +13,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname, basename } from 'path';
 import yaml from 'js-yaml';
-import { applyOverlay } from '@safety-net/contracts/overlay';
+import { applyOverlay } from '@codeforamerica/safety-net-blueprint-contracts/overlay';
 
 /**
  * @param {string} basePath - Path to base OpenAPI schema
