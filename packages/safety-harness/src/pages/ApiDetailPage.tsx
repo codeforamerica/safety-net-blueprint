@@ -7,7 +7,7 @@ import type { ActionDefinition, FormContract, PermissionsPolicy, Role, Annotatio
 import { useApiData } from '../hooks/useApiData';
 import { useRole } from '../context/RoleContext';
 import { genericApi } from '../api/generic';
-import { generateContract } from '../lib/generateContract';
+import { generateContract, markRequiredFields, coerceFormData } from '../lib/generateContract';
 import type { ApiSpec } from '../hooks/useManifest';
 
 /**
@@ -289,7 +289,29 @@ export function ApiDetailPage() {
     );
   }, [savedContract, api]);
 
-  const contract = savedContract ?? generated?.contract;
+  // Resolve the primary schema (used for required markers + data coercion)
+  const primarySchema = useMemo(() => {
+    if (!api?.schemas) return undefined;
+    const names = Object.keys(api.schemas);
+    const primaryName = names.find(
+      (n) =>
+        !n.includes('List') &&
+        !n.includes('Create') &&
+        !n.includes('Update') &&
+        !n.includes('Error') &&
+        !n.includes('Pagination'),
+    );
+    if (!primaryName) return undefined;
+    const rawSchema = api.schemas[primaryName] as Record<string, unknown>;
+    return resolveSchema(rawSchema);
+  }, [api]);
+
+  // Enrich contract fields with required markers from the OpenAPI schema
+  const rawContract = savedContract ?? generated?.contract;
+  const contract = useMemo(() => {
+    if (!rawContract || !primarySchema) return rawContract;
+    return markRequiredFields(rawContract, primarySchema as Parameters<typeof markRequiredFields>[1]);
+  }, [rawContract, primarySchema]);
   const schema = generated?.schema ?? z.record(z.string(), z.unknown());
 
   // Resolve permissions for current role:
@@ -346,13 +368,16 @@ export function ApiDetailPage() {
       // Compute a PATCH payload: only send fields that differ from the original.
       // This avoids sending type-coerced values (e.g. booleans as strings) for
       // fields the user didn't touch.
-      const patch = buildPatch(data as Record<string, unknown> | undefined, formData);
+      const coerced = primarySchema
+        ? coerceFormData(formData, primarySchema as Parameters<typeof coerceFormData>[1])
+        : formData;
+      const patch = buildPatch(data as Record<string, unknown> | undefined, coerced);
       if (Object.keys(patch).length === 0) {
-        setSubmitSuccess('No changes to save.');
+        navigate(`/explore/${apiName}`);
         return;
       }
       await genericApi(basePath).update(id!, patch);
-      setSubmitSuccess('Record updated successfully.');
+      navigate(`/explore/${apiName}`);
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : String(err));
     }

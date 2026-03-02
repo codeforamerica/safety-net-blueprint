@@ -6,7 +6,7 @@ import { FormRenderer } from '@safety-net/form-engine';
 import type { FormContract, PermissionsPolicy } from '@safety-net/form-engine';
 import { useRole } from '../context/RoleContext';
 import { genericApi } from '../api/generic';
-import { generateContract } from '../lib/generateContract';
+import { generateContract, markRequiredFields, coerceFormData } from '../lib/generateContract';
 import type { ApiSpec } from '../hooks/useManifest';
 
 // Eagerly load all saved detail contracts at build time (create uses the same form layout).
@@ -94,7 +94,29 @@ export function ApiCreatePage() {
     );
   }, [savedContract, api]);
 
-  const contract = savedContract ?? generated?.contract;
+  // Resolve the create schema (used for required markers + data coercion)
+  const createSchema = useMemo(() => {
+    if (!api?.schemas) return undefined;
+    const names = Object.keys(api.schemas);
+    const createName = names.find((n) => n.includes('Create'));
+    const primaryName = createName ?? names.find(
+      (n) =>
+        !n.includes('List') &&
+        !n.includes('Update') &&
+        !n.includes('Error') &&
+        !n.includes('Pagination'),
+    );
+    if (!primaryName) return undefined;
+    const rawSchema = api.schemas[primaryName] as Record<string, unknown>;
+    return resolveSchema(rawSchema);
+  }, [api]);
+
+  // Enrich contract fields with required markers from the OpenAPI schema
+  const rawContract = savedContract ?? generated?.contract;
+  const contract = useMemo(() => {
+    if (!rawContract || !createSchema) return rawContract;
+    return markRequiredFields(rawContract, createSchema as Parameters<typeof markRequiredFields>[1]);
+  }, [rawContract, createSchema]);
   const schema = generated?.schema ?? z.record(z.string(), z.unknown());
 
   const permissionsPolicy = useMemo<PermissionsPolicy | undefined>(() => {
@@ -114,13 +136,11 @@ export function ApiCreatePage() {
   const handleSubmit = async (formData: Record<string, unknown>) => {
     setSubmitError(null);
     try {
-      const result = await genericApi(basePath).create(formData);
-      const newId = (result as { id?: string }).id;
-      if (newId) {
-        navigate(`/explore/${apiName}/${newId}`);
-      } else {
-        navigate(`/explore/${apiName}`);
-      }
+      const coerced = createSchema
+        ? coerceFormData(formData, createSchema as Parameters<typeof coerceFormData>[1])
+        : formData;
+      const result = await genericApi(basePath).create(coerced);
+      navigate(`/explore/${apiName}`);
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : String(err));
     }

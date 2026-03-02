@@ -84,6 +84,7 @@ function generateFields(
   properties: Record<string, SchemaProperty>,
   prefix: string,
   readOnlyFields: Map<string, true>,
+  requiredKeys: Set<string> = new Set(),
 ): FieldDefinition[] {
   const fields: FieldDefinition[] = [];
 
@@ -99,7 +100,7 @@ function generateFields(
 
     // Nested object → flatten its fields with dot-path refs
     if (prop.type === 'object' && prop.properties) {
-      const nested = generateFields(prop.properties, ref, readOnlyFields);
+      const nested = generateFields(prop.properties, ref, readOnlyFields, new Set(prop.required ?? []));
       fields.push(...nested);
       continue;
     }
@@ -108,7 +109,7 @@ function generateFields(
     if (prop.type === 'array' && prop.items) {
       const itemSchema = resolveAllOf(prop.items);
       if (itemSchema.type === 'object' && itemSchema.properties) {
-        const subFields = generateFields(itemSchema.properties, '', readOnlyFields);
+        const subFields = generateFields(itemSchema.properties, '', readOnlyFields, new Set(itemSchema.required ?? []));
         fields.push({
           ref,
           component: 'field-array',
@@ -124,6 +125,7 @@ function generateFields(
           ref,
           component: 'checkbox-group',
           labels: Object.fromEntries(prop.items.enum.map((v) => [v, titleCase(v)])),
+          ...(requiredKeys.has(key) ? { required: true } : {}),
         });
         continue;
       }
@@ -133,6 +135,7 @@ function generateFields(
     const field: FieldDefinition = {
       ref,
       component: mapComponent(prop),
+      ...(requiredKeys.has(key) ? { required: true } : {}),
     };
 
     // Add labels for enum values
@@ -191,6 +194,7 @@ export function generateContract(
 ): GenerateContractResult {
   const resolved = resolveAllOf(schema);
   const properties = resolved.properties ?? {};
+  const topRequired = new Set(resolved.required ?? []);
   const readOnlyFields = new Map<string, true>();
 
   // Partition top-level properties into "object pages" vs "general fields"
@@ -204,7 +208,7 @@ export function generateContract(
 
     // Top-level objects get their own page
     if (prop.type === 'object' && prop.properties) {
-      const fields = generateFields(prop.properties, key, readOnlyFields);
+      const fields = generateFields(prop.properties, key, readOnlyFields, new Set(prop.required ?? []));
       if (fields.length > 0) {
         pages.push({
           id: key,
@@ -226,7 +230,7 @@ export function generateContract(
     if (prop.type === 'array' && prop.items) {
       const itemSchema = resolveAllOf(prop.items);
       if (itemSchema.type === 'object' && itemSchema.properties) {
-        const subFields = generateFields(itemSchema.properties, '', readOnlyFields);
+        const subFields = generateFields(itemSchema.properties, '', readOnlyFields, new Set(itemSchema.required ?? []));
         pages.push({
           id: key,
           title: titleCase(key),
@@ -248,6 +252,7 @@ export function generateContract(
     const field: FieldDefinition = {
       ref,
       component: mapComponent(prop),
+      ...(topRequired.has(key) ? { required: true } : {}),
     };
     if (prop.enum) {
       field.labels = Object.fromEntries(prop.enum.map((v) => [v, titleCase(v)]));
@@ -433,4 +438,130 @@ export function generateListContract(
   };
 
   return { contract, columns };
+}
+
+// ── Schema-driven form data coercion ────────────────────────────────────────
+
+/**
+ * Coerce form data values to match the types declared in the OpenAPI schema.
+ * HTML inputs always produce strings; this converts them to integers, numbers,
+ * booleans, etc. as needed. Also strips empty-string values for optional fields
+ * so they don't fail enum/type validation on the server.
+ *
+ * Works generically for any API — reads types from the schema at runtime.
+ */
+export function coerceFormData(
+  data: Record<string, unknown>,
+  schema: SchemaProperty,
+): Record<string, unknown> {
+  const resolved = resolveAllOf(schema);
+  const props = resolved.properties ?? {};
+  const requiredKeys = new Set(resolved.required ?? []);
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    const prop = props[key] ? resolveAllOf(props[key]) : undefined;
+
+    // Skip unknown fields or undefined values
+    if (!prop || value === undefined) {
+      if (value !== undefined) result[key] = value;
+      continue;
+    }
+
+    // Strip empty strings for optional fields (avoids enum validation failures)
+    if (value === '' && !requiredKeys.has(key)) continue;
+
+    // Coerce based on schema type
+    if (prop.type === 'integer' && typeof value === 'string') {
+      if (value === '') continue;
+      const n = parseInt(value, 10);
+      if (!isNaN(n)) { result[key] = n; continue; }
+    }
+    if (prop.type === 'number' && typeof value === 'string') {
+      if (value === '') continue;
+      const n = parseFloat(value);
+      if (!isNaN(n)) { result[key] = n; continue; }
+    }
+    if (prop.type === 'boolean') {
+      if (typeof value === 'string') { result[key] = value === 'true'; continue; }
+      if (Array.isArray(value)) { result[key] = value.includes('true'); continue; }
+    }
+
+    // Recurse into nested objects
+    if (prop.type === 'object' && prop.properties && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      result[key] = coerceFormData(value as Record<string, unknown>, prop);
+      continue;
+    }
+
+    result[key] = value;
+  }
+
+  return result;
+}
+
+// ── Schema-driven required marking ──────────────────────────────────────────
+
+/**
+ * Build a set of dot-path field refs that are required according to the schema.
+ * Walks nested objects so both top-level and nested required fields are captured.
+ */
+function collectRequiredRefs(
+  schema: SchemaProperty,
+  prefix: string,
+  out: Set<string>,
+): void {
+  const resolved = resolveAllOf(schema);
+  const requiredKeys = new Set(resolved.required ?? []);
+  const props = resolved.properties ?? {};
+
+  for (const [key, rawProp] of Object.entries(props)) {
+    const ref = prefix ? `${prefix}.${key}` : key;
+    if (requiredKeys.has(key)) out.add(ref);
+
+    const prop = resolveAllOf(rawProp);
+    if (prop.type === 'object' && prop.properties) {
+      collectRequiredRefs(prop, ref, out);
+    }
+    if (prop.type === 'array' && prop.items) {
+      const itemSchema = resolveAllOf(prop.items);
+      if (itemSchema.type === 'object' && itemSchema.properties) {
+        // Array item fields use the bare key (no index), matching generateFields behavior
+        collectRequiredRefs(itemSchema, '', out);
+      }
+    }
+  }
+}
+
+/**
+ * Enrich a FormContract's fields with `required: true` based on the OpenAPI schema's
+ * `required` arrays. Works for both hand-written YAML contracts and generated ones.
+ * Returns a new contract (does not mutate the input).
+ */
+export function markRequiredFields(
+  contract: FormContract,
+  schema: SchemaProperty,
+): FormContract {
+  const requiredRefs = new Set<string>();
+  collectRequiredRefs(schema, '', requiredRefs);
+  if (requiredRefs.size === 0) return contract;
+
+  function enrichFields(fields: FieldDefinition[]): FieldDefinition[] {
+    return fields.map((f) => {
+      const enriched = { ...f };
+      if (requiredRefs.has(f.ref)) enriched.required = true;
+      if (f.fields) enriched.fields = enrichFields(f.fields);
+      return enriched;
+    });
+  }
+
+  return {
+    ...contract,
+    form: {
+      ...contract.form,
+      pages: contract.form.pages.map((page) => ({
+        ...page,
+        fields: page.fields ? enrichFields(page.fields) : page.fields,
+      })),
+    },
+  };
 }
