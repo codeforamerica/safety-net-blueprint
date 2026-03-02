@@ -1,0 +1,23 @@
+form:
+  id: incomes-list
+  title: Income Service API
+  schema: incomes
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: Income Service API
+      source: api
+      columns:
+        - from: id
+          label: Id
+        - from: personId
+          label: Person Id
+        - from: employerId
+          label: Employer Id
+        - from: type
+          label: Type
+        - from: unearnedType
+          label: Unearned Type
+

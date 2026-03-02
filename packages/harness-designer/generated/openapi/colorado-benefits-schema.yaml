@@ -1,0 +1,2184 @@
+openapi: 3.1.0
+info:
+  title: Federal Benefits Data Model
+  version: 1.0.0
+  description: Generated from federal-benefits-data-model.csv
+  x-api-id: colorado-benefits-schema
+paths: {}
+components:
+  schemas:
+    Application:
+      type: object
+      properties:
+        applicationDate:
+          type: string
+          format: date
+          description: Application Date
+          x-source: system
+          x-statute: 7 CFR 273.2(b) (SNAP); 42 CFR 435.912 (Medicaid); 45 CFR 206.10 (TANF)
+          x-snap: Required
+        programsAppliedFor:
+          type: array
+          items:
+            type: string
+            enum:
+              - SNAP
+              - Medicaid_MAGI
+              - Medicaid_NonMAGI
+              - TANF
+              - SSI
+              - WIC
+              - CHIP
+              - Section_8_Housing
+              - LIHEAP
+              - Summer_EBT
+          description: Programs Applied For
+          x-source: applicant
+        isExpedited:
+          type: boolean
+          description: Expedited Processing Requested/Needed
+          x-source: derived
+          x-statute: 7 CFR 273.2(i)
+          x-snap: Required
+        signatureOfApplicant:
+          type: boolean
+          description: Applicant Signature Obtained
+          x-source: applicant
+          x-statute: 7 CFR 273.2(c)(7) (SNAP); 42 CFR 435.907(f) (Medicaid)
+        signatureDate:
+          type: string
+          format: date
+          description: Signature Date
+          x-source: applicant
+        signatureMethod:
+          type: string
+          enum:
+            - in_person
+            - electronic
+            - telephonic
+            - mark
+          description: Signature Method
+          x-source: applicant
+          x-statute: 42 CFR 435.907(f) (Medicaid allows telephonic/electronic)
+        rightsAndResponsibilitiesAcknowledged:
+          type: boolean
+          description: Rights and Responsibilities Acknowledged
+          x-source: applicant
+          x-statute: 7 CFR 273.2(e)(2) (SNAP)
+        penaltyOfPerjuryAcknowledged:
+          type: boolean
+          description: Penalty of Perjury Acknowledged
+          x-source: applicant
+          x-statute: 7 CFR 273.2(c)(7) (SNAP)
+        consentToVerifyInformation:
+          type: boolean
+          description: Consent to Verify Information
+          x-source: applicant
+        consentToShareData:
+          type: boolean
+          description: Consent to Share Data Between Programs
+          x-source: applicant
+        voterRegistrationOffered:
+          type: boolean
+          description: Voter Registration Offered
+          x-source: system
+          x-statute: 52 USC 20506 (NVRA Section 7)
+        voterRegistrationResponse:
+          type: string
+          enum:
+            - register
+            - already_registered
+            - decline
+          description: Voter Registration Response
+          x-source: applicant
+          x-statute: 52 USC 20506(a)(6)
+        noticeDeliveryPreference:
+          type: string
+          enum:
+            - mail
+            - email
+            - electronic_portal
+            - text
+          description: Notice Delivery Preference
+          x-source: applicant
+        paymentMethodPreference:
+          type: string
+          enum:
+            - ebt_card
+            - direct_deposit
+            - check
+          description: Payment/Benefit Delivery Preference
+          x-source: applicant
+        accommodationNeeded:
+          type: boolean
+          description: Accessibility Accommodation Needed
+          x-source: applicant
+          x-statute: 29 USC 794 (Section 504); 42 USC 12132 (ADA Title II)
+        accommodationType:
+          type: string
+          enum:
+            - large_print
+            - braille
+            - screen_reader
+            - sign_language_interpreter
+            - tty_tdd
+            - wheelchair_accessible
+            - in_home_interview
+            - other
+          description: Accommodation Type
+          x-source: applicant
+          x-statute: 29 USC 794 (Section 504); 42 USC 12132 (ADA Title II)
+        household:
+          $ref: '#/components/schemas/Household'
+        peakConfirmationNumber:
+          type: string
+          description: PEAK Confirmation Number
+          x-co-statute: 10 CCR 2506-1
+          x-co-notes: PEAK online portal or CBMS application tracking number
+          x-source: system
+          x-co-snap: Required
+          x-health-first-co-magi: Required
+          x-health-first-co-non-magi: Required
+          x-colorado-works: Required
+          x-chp-plus: Required
+          x-leap: Required
+          x-oap: Required
+          x-and: Required
+          x-ab: Required
+    Household:
+      type: object
+      properties:
+        size:
+          type: integer
+          description: Household Size
+          x-source: derived
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+        purchasePrepareFoodTogether:
+          type: boolean
+          description: Purchase and Prepare Food Together
+          x-source: applicant
+          x-statute: 7 CFR 273.1(a)
+          x-snap: Required
+        livingArrangement:
+          type: string
+          enum:
+            - own_home
+            - rent
+            - living_with_others
+            - institutional
+            - other
+          description: Living Arrangement
+          x-source: applicant
+          x-statute: 7 CFR 273.1 (SNAP); 42 CFR 435.1010 (Medicaid); 20 CFR 416.1132 (SSI)
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+        sharedQuartersWithNonMembers:
+          type: boolean
+          description: Shared Quarters with Non-Household Members
+          x-source: applicant
+          x-snap: Required
+          x-liheap: Required
+        isHomeless:
+          type: boolean
+          description: Homeless Status
+          x-source: applicant
+          x-snap: Required
+          x-tanf: Required
+          x-section-8-housing: Required
+          x-summer-ebt: Required
+        stateResidencySinceDate:
+          type: string
+          format: date
+          description: State Residency Since
+          x-source: applicant
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+        previousHousingAssistance:
+          type: boolean
+          description: Previous Participation in Housing Assistance
+          x-source: applicant
+          x-statute: 24 CFR 982.552
+          x-section-8-housing: Required
+        familyType:
+          type: string
+          enum:
+            - family
+            - elderly
+            - disabled
+            - displaced
+            - single_person
+            - remaining_family
+          description: Family Type
+          x-source: applicant
+          x-statute: 24 CFR 982.201
+          x-section-8-housing: Required
+        energySupplierName:
+          type: string
+          description: Energy Supplier Name
+          x-source: applicant
+          x-liheap: Required
+        energySupplierAccountNumber:
+          type: string
+          description: Energy Supplier Account Number
+          x-source: applicant
+          x-liheap: Required
+        primaryHeatingFuelType:
+          type: string
+          enum:
+            - natural_gas
+            - electricity
+            - propane
+            - fuel_oil
+            - kerosene
+            - wood
+            - pellet
+            - coal
+            - solar
+            - other
+          description: Primary Heating Fuel Type
+          x-source: applicant
+          x-statute: 42 USC 8624(b)(5)
+          x-liheap: Required
+          x-co-statute: 10 CCR 2507-1
+          x-co-notes: Added pellet fuel type; common in Colorado mountain communities
+        primaryContactPhone:
+          type: string
+          description: Primary Contact Phone
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+        primaryContactEmail:
+          type: string
+          description: Primary Contact Email
+          x-source: applicant
+        preferredLanguage:
+          type: string
+          enum:
+            - english
+            - spanish
+            - chinese
+            - vietnamese
+            - korean
+            - tagalog
+            - arabic
+            - french
+            - haitian_creole
+            - russian
+            - portuguese
+            - somali
+            - burmese
+            - nepali
+            - amharic
+            - other
+          description: Preferred Language
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+          x-co-statute: 10 CCR 2506-1
+          x-co-notes: Added somali|burmese|nepali|amharic for Colorado refugee communities
+        physicalAddress:
+          type: object
+          properties:
+            street1:
+              type: string
+              description: Physical Address Line 1
+              x-source: applicant
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+            street2:
+              type: string
+              description: Physical Address Line 2
+              x-source: applicant
+            city:
+              type: string
+              description: Physical Address City
+              x-source: applicant
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+            state:
+              type: string
+              description: Physical Address State
+              x-source: applicant
+              x-statute: 7 CFR 273.3 (SNAP); 42 CFR 435.403 (Medicaid)
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+            county:
+              type: string
+              description: Physical Address County
+              x-source: applicant
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+            zip:
+              type: string
+              description: Physical Address ZIP
+              x-source: applicant
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+        mailingAddress:
+          type: object
+          properties:
+            street1:
+              type: string
+              description: Mailing Address Line 1
+              x-source: applicant
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-wic: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+            street2:
+              type: string
+              description: Mailing Address Line 2
+              x-source: applicant
+            city:
+              type: string
+              description: Mailing Address City
+              x-source: applicant
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-wic: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+            state:
+              type: string
+              description: Mailing Address State
+              x-source: applicant
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-wic: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+            zip:
+              type: string
+              description: Mailing Address ZIP
+              x-source: applicant
+              x-snap: Required
+              x-medicaid-magi: Required
+              x-medicaid-non-magi: Required
+              x-tanf: Required
+              x-ssi: Required
+              x-wic: Required
+              x-chip: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-summer-ebt: Required
+        shelterCosts:
+          type: object
+          properties:
+            rent:
+              type: number
+              description: Monthly Rent Amount
+              x-source: applicant
+              x-statute: 7 CFR 273.9(d)(6) (SNAP shelter deduction); 24 CFR 982.503 (Section 8 payment standard)
+              x-snap: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+            mortgage:
+              type: number
+              description: Monthly Mortgage Amount
+              x-source: applicant
+              x-snap: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+            propertyTax:
+              type: number
+              description: Monthly Property Tax
+              x-source: applicant
+              x-statute: 7 CFR 273.9(d)(6)(ii)
+              x-snap: Required
+            insurance:
+              type: number
+              description: Monthly Homeowner Insurance
+              x-source: applicant
+              x-statute: 7 CFR 273.9(d)(6)(ii)
+              x-snap: Required
+        utilityCosts:
+          type: object
+          properties:
+            heating:
+              type: number
+              description: Heating/Cooling Cost
+              x-source: applicant
+              x-statute: 7 CFR 273.9(d)(6)(iii) (SNAP SUA or actual); 42 USC 8624 (LIHEAP)
+              x-snap: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+              x-co-statute: 10 CCR 2507-1
+              x-co-notes: 'Heat/eat: minimal LEAP benefit confers SNAP Standard Utility Allowance (SUA) eligibility'
+            electric:
+              type: number
+              description: Electric Cost
+              x-source: applicant
+              x-snap: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+            gas:
+              type: number
+              description: Gas Cost
+              x-source: applicant
+              x-snap: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+            water:
+              type: number
+              description: Water/Sewer Cost
+              x-source: applicant
+              x-snap: Required
+              x-section-8-housing: Required
+              x-liheap: Required
+            telephone:
+              type: number
+              description: Telephone Cost
+              x-source: applicant
+              x-statute: 7 CFR 273.9(d)(6)(iii)
+              x-snap: Required
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+        leapHeatingSeasonActive:
+          type: boolean
+          description: LEAP Heating Season Active
+          x-co-statute: 10 CCR 2507-1 § 4.100
+          x-co-notes: LEAP available November 1 through April 30 only; heating season restriction
+          x-source: derived
+          x-leap: Required
+        countyOfficeCode:
+          type: string
+          description: County Office Code
+          x-co-statute: C.R.S. § 26-1-108
+          x-co-notes: 64 Colorado counties each administer benefits; CBMS county code identifies administering office
+          x-source: system
+          x-co-snap: Required
+          x-health-first-co-magi: Required
+          x-health-first-co-non-magi: Required
+          x-colorado-works: Required
+          x-colorado-wic: Required
+          x-chp-plus: Required
+          x-leap: Required
+          x-co-summer-ebt: Required
+          x-oap: Required
+          x-and: Required
+          x-ab: Required
+          x-cccap: Required
+        coloradoResidencyVerified:
+          type: boolean
+          description: Colorado Residency Verified
+          x-co-statute: 10 CCR 2506-1
+          x-co-notes: Verification of Colorado residency required for all state-administered programs
+          x-source: verified
+          x-co-snap: Required
+          x-health-first-co-magi: Required
+          x-health-first-co-non-magi: Required
+          x-colorado-works: Required
+          x-colorado-wic: Required
+          x-chp-plus: Required
+          x-leap: Required
+          x-co-summer-ebt: Required
+          x-oap: Required
+          x-and: Required
+          x-ab: Required
+          x-cccap: Required
+    Person:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: First Name
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+        middleName:
+          type: string
+          description: Middle Name
+          x-source: applicant
+        lastName:
+          type: string
+          description: Last Name
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+        suffix:
+          type: string
+          description: Name Suffix
+          x-source: applicant
+        dateOfBirth:
+          type: string
+          format: date
+          description: Date of Birth
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+          x-co-statute: C.R.S. § 26-2-111; C.R.S. § 26-2-803
+          x-co-notes: Required for all state-only programs; OAP requires age 60+
+          x-oap: Required
+          x-and: Required
+          x-ab: Required
+          x-cccap: Required
+        ssn:
+          type: string
+          description: Social Security Number
+          x-source: applicant
+          x-statute: 7 CFR 273.6 (SNAP); 42 CFR 435.910 (Medicaid); 20 CFR 416.708 (SSI)
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-summer-ebt: Required
+          x-co-statute: C.R.S. § 26-2-111; C.R.S. § 26-2-803
+          x-co-notes: Required for all state-only programs
+          x-oap: Required
+          x-and: Required
+          x-ab: Required
+          x-cccap: Required
+        gender:
+          type: string
+          enum:
+            - male
+            - female
+            - other
+          description: Sex/Gender
+          x-source: applicant
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+        race:
+          type: array
+          items:
+            type: string
+            enum:
+              - white
+              - black
+              - asian
+              - american_indian_alaska_native
+              - native_hawaiian_pacific_islander
+              - other
+              - multiracial
+          description: Race
+          x-source: applicant
+        ethnicity:
+          type: string
+          enum:
+            - hispanic_latino
+            - not_hispanic_latino
+          description: Ethnicity
+          x-source: applicant
+        relationshipToApplicant:
+          type: string
+          enum:
+            - self
+            - spouse
+            - child
+            - stepchild
+            - parent
+            - sibling
+            - grandchild
+            - grandparent
+            - aunt_uncle
+            - niece_nephew
+            - cousin
+            - other_relative
+            - unrelated_adult
+            - unrelated_child
+          description: Relationship to Applicant/Head
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-summer-ebt: Required
+        maritalStatus:
+          type: string
+          enum:
+            - single
+            - married
+            - separated
+            - divorced
+            - widowed
+          description: Marital Status
+          x-source: applicant
+          x-statute: 7 CFR 273.1(b)(1) (SNAP);
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-summer-ebt: 42 CFR 435.603 (MAGI); 42 USC 1396r-5 (Non-MAGI spousal impoverishment)
+        isApplicant:
+          type: boolean
+          description: Is Applicant/Head of Household
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+        citizenshipStatus:
+          type: string
+          enum:
+            - us_citizen
+            - us_national
+            - lawful_permanent_resident
+            - refugee
+            - asylee
+            - cuban_haitian_entrant
+            - cofa_citizen
+            - conditional_entrant
+            - paroled_for_one_year
+            - battered_spouse_child
+            - victim_of_trafficking
+            - qualified_alien_other
+            - prucol
+            - undocumented
+            - other
+          description: Citizenship Status
+          x-source: applicant
+          x-statute: 7 CFR 273.4 (SNAP); 42 CFR 435.406 (Medicaid); 8 USC 1611-1615 (PRWORA); OBBBA Section 10108
+          x-obbba: Modified
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+          x-co-statute: C.R.S. § 25.5-8-109
+          x-co-notes: CHP+ Prenatal covers pregnant women up to 260% FPL regardless of immigration status
+        immigrationDocumentType:
+          type: string
+          enum:
+            - permanent_resident_card
+            - employment_authorization
+            - arrival_departure_record
+            - refugee_travel_document
+            - other
+          description: Immigration Document Type
+          x-source: applicant
+          x-statute: Required when non-citizen; 7 CFR 273.4; 42 CFR 435.406
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-section-8-housing: Required
+        immigrationDocumentNumber:
+          type: string
+          description: Immigration Document Number
+          x-source: applicant
+          x-statute: Required when non-citizen
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-section-8-housing: Required
+        alienRegistrationNumber:
+          type: string
+          description: Alien Registration Number
+          x-source: applicant
+          x-statute: Required when non-citizen
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-section-8-housing: Required
+        dateOfEntryToUS:
+          type: string
+          format: date
+          description: Date of Entry to US
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-summer-ebt: Required when non-citizen; 8 USC 1613 (5-year bar)
+        qualifiedAlienCategory:
+          type: string
+          enum:
+            - lawful_permanent_resident
+            - refugee
+            - asylee
+            - cuban_haitian_entrant
+            - paroled_for_one_year
+            - battered_spouse_child
+            - victim_of_trafficking
+            - conditional_entrant
+            - other
+          description: Qualified Alien Status Category
+          x-source: applicant
+          x-statute: 8 USC 1641
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+        isPregnant:
+          type: boolean
+          description: Pregnancy Status
+          x-source: applicant
+          x-statute: 7 CFR 273.24(c)(6) (SNAP ABAWD exemption);
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-wic: Required
+          x-chip: Required
+          x-summer-ebt: 42 CFR 435.116 (MAGI); 42 CFR 435.170 (Non-MAGI); 7 CFR 246.7 (WIC)
+        expectedDueDate:
+          type: string
+          format: date
+          description: Expected Due Date
+          x-source: applicant
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-wic: Required
+          x-chip: Required
+          x-summer-ebt: Medicaid counts unborn in household size (MAGI); WIC eligibility
+        numberOfExpectedChildren:
+          type: integer
+          description: Number of Expected Children
+          x-source: applicant
+          x-medicaid-magi: Required
+        isBreastfeeding:
+          type: boolean
+          description: Breastfeeding Status
+          x-source: applicant
+          x-statute: WIC eligibility for breastfeeding women
+          x-wic: Required
+          x-summer-ebt: 7 CFR 246.7(c)
+        deliveryDate:
+          type: string
+          format: date
+          description: Delivery Date
+          x-source: applicant
+          x-wic: Required
+          x-summer-ebt: Used to determine postpartum status for WIC (up to 6 months post-delivery)
+        isPostpartum:
+          type: boolean
+          description: Postpartum Status (within 6 months of delivery)
+          x-source: derived
+          x-statute: Derived from deliveryDate; within 6 months
+          x-wic: Required
+          x-summer-ebt: 7 CFR 246.7(c)(2)
+        wicParticipantCategory:
+          type: string
+          enum:
+            - pregnant_woman
+            - breastfeeding_woman
+            - postpartum_woman
+            - infant
+            - child
+          description: WIC Participant Category
+          x-source: derived
+          x-statute: 7 CFR 246.7
+          x-wic: Required
+        nutritionalRiskLevel:
+          type: string
+          enum:
+            - high
+            - medium
+            - low
+            - none
+          description: Nutritional Risk Level
+          x-source: assessed
+          x-statute: Determined by WIC-qualified professional
+          x-wic: Required
+          x-summer-ebt: 7 CFR 246.7(e)
+        nutritionalRiskConditions:
+          type: array
+          items:
+            type: string
+            enum:
+              - anthropometric
+              - biochemical
+              - dietary_inadequacy
+              - medical_condition
+              - predisposing_condition
+              - other
+          description: Nutritional Risk Conditions
+          x-source: assessed
+          x-statute: A person may have multiple risk conditions simultaneously.
+          x-wic: Required
+          x-summer-ebt: 7 CFR 246.7(e)
+        isInFosterCare:
+          type: boolean
+          description: Foster Care Status
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-section-8-housing: Required
+          x-summer-ebt: Required
+        isFormerFosterYouth:
+          type: boolean
+          description: Former Foster Youth (age 18-26)
+          x-source: applicant
+          x-obbba: Medicaid to age 26 for former foster youth
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+        isEnrolledInSchool:
+          type: boolean
+          description: Enrolled in School
+          x-source: applicant
+          x-statute: Must be enrolled in NSLP/SBP-participating school
+          x-liheap: Required
+          x-summer-ebt: 42 USC 1762; 7 CFR 292
+        schoolName:
+          type: string
+          description: School Name
+          x-source: applicant
+          x-statute: Identifies the school for Summer EBT verification
+          x-liheap: Required
+        schoolDistrict:
+          type: string
+          description: School District
+          x-source: applicant
+          x-statute: Used to verify school participates in NSLP/SBP
+          x-liheap: Required
+        gradeLevel:
+          type: string
+          enum:
+            - pre_k
+            - k
+            - '1'
+            - '2'
+            - '3'
+            - '4'
+            - '5'
+            - '6'
+            - '7'
+            - '8'
+            - '9'
+            - '10'
+            - '11'
+            - '12'
+          description: Grade Level
+          x-source: applicant
+          x-statute: Confirms school-age enrollment
+          x-liheap: Required
+        isMigrantYouth:
+          type: boolean
+          description: Migrant Youth Status
+          x-source: applicant
+          x-statute: Migrant youth categorically eligible for Summer EBT
+          x-liheap: Required
+        isRunawayYouth:
+          type: boolean
+          description: Runaway Youth Status
+          x-source: applicant
+          x-statute: Runaway youth categorically eligible for Summer EBT
+          x-liheap: Required
+        isHeadStartParticipant:
+          type: boolean
+          description: Head Start Participant
+          x-source: applicant
+          x-statute: Head Start participants categorically eligible for Summer EBT
+          x-liheap: Required
+        age:
+          type: integer
+          description: Age
+          x-source: derived
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+        isSchoolAge:
+          type: boolean
+          description: School Age (approx 5-18)
+          x-source: derived
+          x-statute: Derived from dateOfBirth; must be school-age for Summer EBT
+          x-liheap: Required
+        isElderlyOrDisabled:
+          type: boolean
+          description: Elderly or Disabled (SNAP)
+          x-source: derived
+          x-obbba: Modified
+          x-snap: Required
+        isAbawdEligible:
+          type: boolean
+          description: ABAWD Status
+          x-source: derived
+          x-statute: 7 CFR 273.24; OBBBA Section 10107
+          x-obbba: Modified
+          x-snap: Required
+          x-co-statute: 10 CCR 2506-1 § 4.414
+          x-co-notes: County-specific ABAWD time-limit waivers available in qualifying areas
+        disabilityStatus:
+          type: boolean
+          description: Disability Status (meets SSA definition)
+          x-source: applicant
+          x-statute: 20 CFR 416.905 (SSI)
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-co-statute: C.R.S. § 26-2-111
+          x-co-notes: Must meet disability criteria for AND eligibility
+          x-and: Required
+        disabilityType:
+          type: string
+          description: Type of Disability/Impairment
+          x-source: applicant
+          x-statute: 20 CFR 416.920-416.929
+          x-tanf: Required
+          x-ssi: Required
+        meetsGainfulActivityTest:
+          type: boolean
+          description: Unable to Engage in Substantial Gainful Activity
+          x-source: assessed
+          x-statute: 20 CFR 416.971-416.975
+          x-tanf: Required
+          x-ssi: Required
+        disabilityDuration:
+          type: boolean
+          description: Disability Duration (12+ months or terminal)
+          x-source: assessed
+          x-statute: 20 CFR 416.909
+          x-tanf: Required
+          x-ssi: Required
+        isBlind:
+          type: boolean
+          description: Blind (meets SSA definition)
+          x-source: applicant
+          x-statute: 20 CFR 416.981
+          x-tanf: Required
+          x-ssi: Required
+          x-co-statute: C.R.S. § 26-2-111
+          x-co-notes: Must meet SSA blindness definition for AB eligibility
+          x-ab: Required
+        employerInsuranceAvailable:
+          type: boolean
+          description: Employer-Sponsored Insurance Available
+          x-source: applicant
+          x-statute: CHIP waiting period for employer coverage
+          x-medicaid-magi: Required
+          x-wic: Required
+          x-summer-ebt: 42 CFR 457.310(c)
+        employerInsuranceAffordable:
+          type: boolean
+          description: Employer Insurance Affordable
+          x-source: applicant
+          x-medicaid-magi: Required
+        veteranStatus:
+          type: boolean
+          description: Veteran Status
+          x-source: applicant
+          x-section-8-housing: Required
+        isIndianTribalMember:
+          type: boolean
+          description: Indian/Tribal Member Status
+          x-source: applicant
+          x-statute: Indian Health Care Improvement Act; OBBBA Sections 10107 and 2501
+          x-obbba: New field
+          x-snap: Required
+          x-medicaid-magi: Required
+        isStudent:
+          type: boolean
+          description: Student Status (higher education)
+          x-source: applicant
+          x-obbba: >-
+            Students in higher education generally ineligible for SNAP; Section 8 restricts full-time student heads of
+            household
+          x-snap: Required
+          x-liheap: Required
+        studentWorkStudy:
+          type: boolean
+          description: Participating in Work-Study
+          x-source: applicant
+          x-statute: Exemption to SNAP student ineligibility
+          x-snap: Required
+          x-summer-ebt: 7 CFR 273.5(b)
+        studentEmployedMinHours:
+          type: boolean
+          description: Employed 20+ Hours Per Week
+          x-source: applicant
+          x-statute: Exemption to SNAP student ineligibility
+          x-snap: Required
+          x-summer-ebt: 7 CFR 273.5(b)
+        studentExemptionReason:
+          type: string
+          enum:
+            - age_under_18_or_over_49
+            - physically_mentally_unfit
+            - receiving_tanf
+            - single_parent_child_under_12
+            - responsible_child_under_6
+            - responsible_child_6_to_11_no_childcare
+            - enrolled_in_employment_training
+            - on_the_job_training
+            - work_study
+            - employed_20_plus_hours
+            - other
+          description: Student Exemption Reason
+          x-source: applicant
+          x-statute: 7 CFR 273.5(b)
+          x-snap: Required
+        employmentStatus:
+          type: string
+          enum:
+            - employed
+            - self_employed
+            - unemployed
+            - retired
+            - disabled_not_working
+            - student
+            - homemaker
+            - other
+          description: Employment Status
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-co-statute: C.R.S. § 26-2-803
+          x-co-notes: Must be employed or in training/education for CCCAP
+          x-cccap: Required
+        snapWorkRegistered:
+          type: boolean
+          description: SNAP Work Registration
+          x-source: applicant
+          x-statute: Most SNAP applicants 16-59 must register for work; separate from ABAWD requirement
+          x-snap: Required
+          x-summer-ebt: 7 CFR 273.7
+        snapWorkRegistrationExempt:
+          type: boolean
+          description: SNAP Work Registration Exempt
+          x-source: applicant
+          x-statute: 'Exempt: disabled, caretaker of child under 6, student, already working 30+ hrs, etc.'
+          x-snap: Required
+          x-summer-ebt: 7 CFR 273.7(b)
+        abawdWorkHoursPerWeek:
+          type: integer
+          description: ABAWD Work Hours Per Week
+          x-source: applicant
+          x-statute: Must work/train 20+ hours/week
+          x-snap: Required
+          x-summer-ebt: 7 CFR 273.24(a)(1)
+        abawdCountableMonths:
+          type: integer
+          description: ABAWD Countable Months Used
+          x-source: applicant
+          x-statute: 7 CFR 273.24(b)
+          x-snap: Required
+        abawdExemptionReason:
+          type: string
+          enum:
+            - pregnant
+            - physically_mentally_unfit
+            - caring_for_child_under_14
+            - indian_tribal_member
+            - exempt_from_work_registration
+            - other
+            - none
+          description: ABAWD Exemption Reason
+          x-source: applicant
+          x-statute: 7 CFR 273.24(c); OBBBA Section 10107
+          x-obbba: Modified
+          x-snap: Required
+        medicaidWorkExemptionReason:
+          type: string
+          enum:
+            - pregnant
+            - postpartum
+            - caregiver_child_13_or_under
+            - caregiver_disabled
+            - medically_frail
+            - blind_or_disabled
+            - substance_use_disorder_treatment
+            - disabling_mental_disorder
+            - serious_medical_condition
+            - recently_incarcerated
+            - foster_youth_under_26
+            - indian_or_alaska_native
+            - disabled_veteran
+            - meeting_tanf_snap_work_req
+            - under_age_19
+            - medicare_enrollee
+            - institutionalized_prior_3_months
+            - hardship
+            - none
+          description: Medicaid Community Engagement Exemption Reason
+          x-source: applicant
+          x-statute: OBBBA Section 2501; effective January 1, 2027
+          x-obbba: New field
+          x-medicaid-magi: Required
+        medicaidWorkHoursPerMonth:
+          type: integer
+          description: Medicaid Community Engagement Hours Per Month
+          x-source: applicant
+          x-statute: OBBBA Section 2501
+          x-obbba: New field
+          x-medicaid-magi: Required
+        medicaidEnrollmentGroup:
+          type: string
+          enum:
+            - expansion
+            - traditional
+          description: Medicaid Enrollment Group
+          x-source: derived
+          x-statute: 42 CFR 435.119 (expansion); OBBBA Section 71107
+          x-obbba: New field
+          x-medicaid-magi: Required
+        tanfMonthsUsed:
+          type: integer
+          description: TANF Time Limit Months Used
+          x-source: applicant
+          x-statute: 42 USC 608(a)(7)
+          x-co-statute: C.R.S. § 26-2-709
+          x-co-notes: 60-month federal lifetime limit applies; counties may grant extensions based on hardship
+        tanfSanctionStatus:
+          type: string
+          enum:
+            - none
+            - partial
+            - full
+          description: TANF Sanction Status
+          x-source: applicant
+          x-statute: 42 USC 607(e); 45 CFR 261.14
+          x-tanf: Required
+        tanfTotalWorkHoursPerWeek:
+          type: integer
+          description: TANF Total Work Hours Per Week
+          x-source: derived
+          x-statute: 45 CFR 261.31
+        twoParentFamily:
+          type: boolean
+          description: Two-Parent Family
+          x-source: derived
+          x-statute: 42 USC 607(a); 45 CFR 261.23
+          x-tanf: Required
+        tanfCooperatesWithChildSupport:
+          type: boolean
+          description: Cooperates with Child Support Enforcement
+          x-source: applicant
+          x-statute: 42 USC 608(a)(2)
+          x-tanf: Required
+          x-co-statute: C.R.S. § 26-2-709(3)
+          x-co-notes: CO good cause exemption includes domestic violence per Family Violence Option (C.R.S. § 26-2-708)
+        tanfChildSupportGoodCause:
+          type: boolean
+          description: Child Support Cooperation Good Cause Exemption
+          x-source: applicant
+          x-statute: 42 USC 608(a)(2)
+          x-tanf: Required
+        isMinorParent:
+          type: boolean
+          description: Minor Parent
+          x-source: derived
+          x-statute: 'Derived: age < 18 and has child'
+          x-tanf: Required
+        minorParentLivingArrangement:
+          type: string
+          enum:
+            - with_parent_guardian
+            - adult_supervised_setting
+            - independent_with_exemption
+          description: Minor Parent Living Arrangement
+          x-source: applicant
+          x-statute: 42 USC 608(a)(5)
+          x-tanf: Required
+        goodCauseExemptionFromWork:
+          type: boolean
+          description: Good Cause Exemption from Work Requirements
+          x-source: applicant
+          x-snap: Required
+          x-tanf: Required
+        goodCauseExemptionReason:
+          type: string
+          enum:
+            - domestic_violence
+            - disability
+            - lack_of_childcare
+            - lack_of_transportation
+            - caring_for_ill_family_member
+            - distance_to_work_site
+            - discrimination
+            - other
+          description: Good Cause Exemption Reason
+          x-source: applicant
+          x-snap: Required
+          x-tanf: Required
+        fleeingFelonStatus:
+          type: boolean
+          description: Fleeing Felon/Parole Violator
+          x-source: applicant
+          x-snap: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-summer-ebt: 7 CFR 273.11(n) (SNAP); 42 USC 608(a)(9) (TANF); 42 USC 1382(e)(4) (SSI)
+        drugFelonyConviction:
+          type: boolean
+          description: Drug Felony Conviction
+          x-source: applicant
+          x-statute: Applies to SNAP and TANF
+          x-snap: Required
+          x-tanf: Required
+          x-liheap: 21 USC 862a; states may opt out
+        drugFelonyConvictionDate:
+          type: string
+          format: date
+          description: Drug Felony Conviction Date
+          x-source: applicant
+          x-snap: Required
+          x-tanf: Required
+          x-liheap: Required if drugFelonyConviction is true
+        ipvHistory:
+          type: boolean
+          description: Intentional Program Violation History
+          x-source: applicant
+          x-statute: Disqualification periods apply
+          x-snap: Required
+          x-tanf: Required
+          x-summer-ebt: 7 CFR 273.16 (SNAP)
+        ipvDisqualificationEndDate:
+          type: string
+          format: date
+          description: IPV Disqualification End Date
+          x-source: applicant
+          x-snap: Required
+          x-tanf: Required
+        strikerStatus:
+          type: boolean
+          description: Striker Status
+          x-source: applicant
+          x-statute: 7 CFR 273.1(e)
+          x-snap: Required
+        institutionalStatus:
+          type: string
+          enum:
+            - none
+            - nursing_facility
+            - icf_iid
+            - incarcerated
+            - psychiatric_facility
+            - other
+          description: Institutional Status
+          x-source: applicant
+          x-statute: Inmates ineligible for most programs; nursing_facility triggers Medicaid LTC pathway
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-ssi: Required
+          x-summer-ebt: 7 CFR 273.11(g) (SNAP); 42 CFR 435.1010 (Medicaid); 20 CFR 416.211 (SSI)
+        expectedReleaseDate:
+          type: string
+          format: date
+          description: Expected Release Date
+          x-source: applicant
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-ssi: Required
+        needsLongTermCare:
+          type: boolean
+          description: Needs Long-Term Care
+          x-source: applicant
+          x-statute: 42 USC 1396a(a)(10); 42 CFR 435.217
+          x-medicaid-non-magi: Required
+        levelOfCareAssessment:
+          type: string
+          enum:
+            - nursing_facility_level
+            - intermediate_care_level
+            - home_and_community_based
+            - not_assessed
+          description: Level of Care Assessment
+          x-source: assessed
+          x-statute: 42 CFR 441.302; 42 USC 1396n(c)
+          x-medicaid-non-magi: Required
+        spouseIsInstitutionalized:
+          type: boolean
+          description: Spouse Is Institutionalized
+          x-source: applicant
+          x-statute: 42 USC 1396r-5
+          x-medicaid-non-magi: Required
+        institutionalizationDate:
+          type: string
+          format: date
+          description: Date of Institutionalization
+          x-source: applicant
+          x-statute: 42 USC 1396r-5(c)(1)
+          x-medicaid-non-magi: Required
+        sexOffenderRegistryStatus:
+          type: boolean
+          description: Sex Offender Registry Status
+          x-source: applicant
+          x-statute: 42 USC 13663
+          x-section-8-housing: Required
+        drugRelatedCriminalActivity:
+          type: boolean
+          description: Drug-Related Criminal Activity
+          x-source: applicant
+          x-statute: 42 USC 13661-13663; 24 CFR 982.553
+          x-section-8-housing: Required
+        methamphetamineProductionConviction:
+          type: boolean
+          description: Meth Production Conviction on Federally Assisted Premises
+          x-source: applicant
+          x-statute: 42 USC 1437n(f); 24 CFR 982.553(a)(1)(ii)(C)
+          x-section-8-housing: Required
+        violentCriminalActivity:
+          type: boolean
+          description: Violent Criminal Activity
+          x-source: applicant
+          x-statute: 24 CFR 982.553
+          x-section-8-housing: Required
+        alcoholAbusePattern:
+          type: boolean
+          description: Alcohol Abuse Pattern
+          x-source: applicant
+          x-statute: 24 CFR 982.553(a)(3)
+          x-section-8-housing: Required
+        priorEvictionFromPublicHousing:
+          type: boolean
+          description: Prior Eviction from Public Housing
+          x-source: applicant
+          x-statute: 24 CFR 982.552(c)
+          x-section-8-housing: Required
+        priorEvictionDate:
+          type: string
+          format: date
+          description: Prior Public Housing Eviction Date
+          x-source: applicant
+          x-statute: 24 CFR 982.553(a)(1)(i)
+          x-section-8-housing: Required
+        receivesOtherBenefits:
+          type: boolean
+          description: Receives Other Public Benefits
+          x-source: derived
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-wic: Required
+          x-chip: Required
+          x-summer-ebt: Required
+        deemedIncomeFromSpouse:
+          type: number
+          description: Deemed Income from Spouse
+          x-source: derived
+          x-statute: 20 CFR 416.1163
+          x-tanf: Required
+        deemedIncomeFromParent:
+          type: number
+          description: Deemed Income from Parent
+          x-source: derived
+          x-statute: 20 CFR 416.1165
+          x-tanf: Required
+        deemedIncomeFromSponsor:
+          type: number
+          description: Deemed Income from Sponsor
+          x-source: derived
+          x-statute: 20 CFR 416.1166a
+          x-ssi: Required
+        deemedResourcesFromParent:
+          type: number
+          description: Deemed Resources from Parent
+          x-source: derived
+          x-statute: 20 CFR 416.1202(b)
+          x-ssi: Required
+        deemedResourcesFromSpouse:
+          type: number
+          description: Deemed Resources from Spouse
+          x-source: derived
+          x-statute: 20 CFR 416.1202(a)
+          x-ssi: Required
+        taxFilingStatus:
+          type: string
+          enum:
+            - will_file
+            - will_not_file
+            - not_required
+          description: Tax Filing Status
+          x-source: applicant
+          x-statute: Medicaid MAGI household determination; not used for non-MAGI
+          x-medicaid-magi: Required
+          x-chip: Required
+          x-summer-ebt: 42 CFR 435.603(b)-(d)
+        taxFilingJointly:
+          type: boolean
+          description: Filing Jointly with Spouse
+          x-source: applicant
+          x-medicaid-magi: Required
+          x-chip: Required
+          x-summer-ebt: 42 CFR 435.603(f)(1)
+        taxClaimedAsDependent:
+          type: boolean
+          description: Claimed as Tax Dependent by Another
+          x-source: applicant
+          x-medicaid-magi: Required
+          x-chip: Required
+          x-summer-ebt: 42 CFR 435.603(f)(2)
+        taxClaimedByPersonId:
+          type: string
+          format: uuid
+          description: Claimed as Dependent By (Person ID)
+          x-source: applicant
+          x-statute: FK to Person who claims this person as dependent
+          x-medicaid-magi: Required
+          x-chip: Required
+        taxClaimsDependents:
+          type: boolean
+          description: Will Claim Tax Dependents
+          x-source: applicant
+          x-medicaid-magi: Required
+          x-chip: Required
+          x-summer-ebt: 42 CFR 435.603(f)(3)
+        incomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Income'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+        medicaidBuyInEligible:
+          type: boolean
+          description: Medicaid Buy-In Eligible
+          x-co-statute: C.R.S. § 25.5-6-202
+          x-co-notes: Health First Colorado Buy-In for Working Adults with Disabilities
+          x-source: derived
+          x-health-first-co-non-magi: Required
+        medicaidBuyInEmploymentVerified:
+          type: boolean
+          description: Buy-In Employment Verified
+          x-co-statute: C.R.S. § 25.5-6-202
+          x-co-notes: Must demonstrate current employment for Buy-In eligibility
+          x-source: verified
+          x-health-first-co-non-magi: Required
+        coStateSupplementAmount:
+          type: number
+          description: CO State Supplement Amount
+          x-co-statute: C.R.S. § 26-2-201
+          x-co-notes: >-
+            Colorado mandatory state supplement to SSI; administered by SSA (1634 state); amount varies by living
+            arrangement
+          x-source: system
+          x-co-ssi: Required
+        childCareNeeded:
+          type: boolean
+          description: Child Care Needed
+          x-co-statute: C.R.S. § 26-2-803
+          x-co-notes: Child must need care due to parent employment/training/education
+          x-source: applicant
+          x-cccap: Required
+        cbmsClientId:
+          type: string
+          description: CBMS Client ID
+          x-co-statute: 10 CCR 2506-1
+          x-co-notes: Colorado Benefits Management System client identifier
+          x-source: system
+          x-co-snap: Required
+          x-health-first-co-magi: Required
+          x-health-first-co-non-magi: Required
+          x-colorado-works: Required
+          x-colorado-wic: Required
+          x-chp-plus: Required
+          x-leap: Required
+          x-co-summer-ebt: Required
+          x-oap: Required
+          x-and: Required
+          x-ab: Required
+          x-cccap: Required
+    Income:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - employment
+            - self_employment
+            - social_security_oasdi
+            - ssi
+            - unemployment
+            - workers_compensation
+            - child_support_received
+            - alimony
+            - pension_retirement
+            - veterans_benefits
+            - interest_dividends
+            - rental
+            - royalties
+            - tribal_per_capita
+            - lottery_gambling
+            - in_kind_support
+            - other
+          description: Income Type
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+          x-co-statute: C.R.S. § 26-2-111; C.R.S. § 26-2-803
+          x-co-notes: Income type required for all state-only programs
+          x-oap: Required
+          x-and: Required
+          x-ab: Required
+          x-cccap: Required
+        grossAmount:
+          type: number
+          description: Gross Amount
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+          x-co-statute: C.R.S. § 26-2-111; C.R.S. § 26-2-803
+          x-co-notes: Income verification required for all state-only programs
+          x-oap: Required
+          x-and: Required
+          x-ab: Required
+          x-cccap: Required
+        netAmount:
+          type: number
+          description: Net Amount
+          x-source: derived
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-summer-ebt: >-
+            Derived: grossAmount minus applicable deductions; 7 CFR 273.9(d) for SNAP 20% earned income deduction;
+            non-MAGI uses SSI-methodology deductions in most states
+        frequency:
+          type: string
+          enum:
+            - hourly
+            - daily
+            - weekly
+            - every_two_weeks
+            - twice_monthly
+            - monthly
+            - quarterly
+            - annually
+            - one_time
+          description: Pay Frequency
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+          x-summer-ebt: Required
+        isSeasonalOrIrregular:
+          type: boolean
+          description: Seasonal or Irregular Income
+          x-source: applicant
+          x-statute: Affects how income is annualized for eligibility determination
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+        hoursPerWeek:
+          type: integer
+          description: Hours Worked Per Week
+          x-source: applicant
+          x-snap: Required
+          x-summer-ebt: For employment/self-employment; ABAWD and TANF work requirements
+        employerName:
+          type: string
+          description: Employer Name
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        employerStreet:
+          type: string
+          description: Employer Address Street
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        employerCity:
+          type: string
+          description: Employer Address City
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        employerState:
+          type: string
+          description: Employer Address State
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        employerZip:
+          type: string
+          description: Employer Address ZIP
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        tipsAndCommissions:
+          type: number
+          description: Tips and Commissions
+          x-source: applicant
+          x-statute: For employment type; included in gross income
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-chip: Required
+          x-section-8-housing: Required
+        businessExpenses:
+          type: number
+          description: Self-Employment Business Expenses
+          x-source: applicant
+          x-statute: For self_employment type; deducted from gross
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-summer-ebt: 7 CFR 273.11(b) (SNAP); 20 CFR 416.1110 (SSI)
+        startDate:
+          type: string
+          format: date
+          description: Income Start Date
+          x-source: applicant
+        endDate:
+          type: string
+          format: date
+          description: Income End Date
+          x-source: applicant
+          x-summer-ebt: Null if ongoing
+        verificationSource:
+          type: string
+          enum:
+            - pay_stub
+            - employer_letter
+            - tax_return
+            - benefit_letter
+            - bank_statement
+            - self_attestation
+            - other
+          description: Verification Source
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-magi: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-wic: Required
+          x-chip: Required
+          x-section-8-housing: Required
+          x-liheap: Required
+    Asset:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - cash
+            - checking
+            - savings
+            - money_market
+            - cd
+            - stocks_bonds
+            - mutual_funds
+            - retirement_ira
+            - retirement_401k
+            - retirement_other
+            - vehicle
+            - real_property
+            - life_insurance
+            - burial_fund
+            - burial_arrangement
+            - trust
+            - able_account
+            - other
+          description: Asset Type
+          x-source: applicant
+          x-statute: 7 CFR 273.8 (SNAP); 42 CFR 435.840 (Medicaid non-MAGI); 20 CFR 416.1201 (SSI); 24 CFR 5.603 (Section 8)
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+          x-co-statute: 10 CCR 2506-1 § 4.603
+          x-co-notes: BBCE eliminates asset test for CO SNAP
+          x-co-snap: Not Required
+        value:
+          type: number
+          description: Current Value/Balance
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+          x-co-statute: 10 CCR 2506-1 § 4.603
+          x-co-notes: Asset values not required for CO SNAP under BBCE
+          x-co-snap: Not Required
+        institutionName:
+          type: string
+          description: Institution/Description
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+        accountNumber:
+          type: string
+          description: Account Number
+          x-source: applicant
+        isJointlyOwned:
+          type: boolean
+          description: Jointly Owned
+          x-source: applicant
+          x-statute: Affects how value is counted
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+        jointOwnerName:
+          type: string
+          description: Joint Owner Name
+          x-source: applicant
+          x-tanf: Required
+          x-ssi: Required
+        vehicleMake:
+          type: string
+          description: Vehicle Make
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        vehicleModel:
+          type: string
+          description: Vehicle Model
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        vehicleYear:
+          type: integer
+          description: Vehicle Year
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        vehicleFairMarketValue:
+          type: number
+          description: Vehicle Fair Market Value
+          x-source: applicant
+          x-statute: 7 CFR 273.8(f) (SNAP vehicle exclusion); 20 CFR 416.1218 (SSI auto exclusion)
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        vehicleUseType:
+          type: string
+          enum:
+            - primary_transportation
+            - income_producing
+            - modified_for_disability
+            - other
+          description: Vehicle Use
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        propertyDescription:
+          type: string
+          description: Property Description
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+        propertyFairMarketValue:
+          type: number
+          description: Property Fair Market Value
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+        propertyEquity:
+          type: number
+          description: Property Equity
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+        homeEquityValue:
+          type: number
+          description: Home Equity Value
+          x-source: applicant
+          x-statute: 42 USC 1396p(f); 20 CFR 416.1212; OBBBA Section 71108
+          x-obbba: New field
+          x-medicaid-non-magi: Required
+          x-ssi: Required
+        isHomestead:
+          type: boolean
+          description: Is Primary Residence
+          x-source: applicant
+          x-statute: 7 CFR 273.8(e)(3) (SNAP home exclusion); 20 CFR 416.1212 (SSI home exclusion)
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        lifeInsuranceFaceValue:
+          type: number
+          description: Life Insurance Face Value
+          x-source: applicant
+          x-statute: 20 CFR 416.1230
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        lifeInsuranceCashValue:
+          type: number
+          description: Life Insurance Cash Surrender Value
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+        burialFundAmount:
+          type: number
+          description: Burial Fund Amount
+          x-source: applicant
+          x-statute: 20 CFR 416.1231
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        burialArrangementValue:
+          type: number
+          description: Burial Arrangement Value
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        trustType:
+          type: string
+          enum:
+            - revocable
+            - irrevocable
+            - special_needs
+            - pooled
+            - other
+          description: Trust Type
+          x-source: applicant
+          x-statute: 20 CFR 416.1201(a); 42 USC 1396p(d)
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        trustValue:
+          type: number
+          description: Trust Value
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        recentAssetTransfer:
+          type: boolean
+          description: Assets Transferred or Sold Recently
+          x-source: applicant
+          x-obbba: >-
+            SSI uses 36-month look-back; Medicaid non-MAGI LTC uses 60-month look-back. Application should collect all
+            transfers within 60 months to cover both.
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        transferDate:
+          type: string
+          format: date
+          description: Transfer Date
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        transferAmount:
+          type: number
+          description: Transfer Amount/Value
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+        verificationSource:
+          type: string
+          enum:
+            - bank_statement
+            - title
+            - deed
+            - appraisal
+            - policy_document
+            - self_attestation
+            - other
+          description: Verification Source
+          x-source: applicant
+          x-statute: All programs with asset tests require verification
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-ssi: Required
+          x-section-8-housing: Required
+          x-co-statute: 10 CCR 2506-1 § 4.603
+          x-co-notes: Asset verification not required for CO SNAP under BBCE
+          x-co-snap: Not Required
+    Expense:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - dependent_care
+            - child_support_paid
+            - medical_insurance_premium
+            - medical_recurring
+            - medical_one_time
+            - court_ordered
+            - disability_assistance
+            - other
+          description: Expense Type
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-section-8-housing: Required
+        amount:
+          type: number
+          description: Amount
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-section-8-housing: Required
+        frequency:
+          type: string
+          enum:
+            - weekly
+            - every_two_weeks
+            - twice_monthly
+            - monthly
+            - quarterly
+            - annually
+            - one_time
+          description: Frequency
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-section-8-housing: Required
+        recipientOrProvider:
+          type: string
+          description: Recipient or Provider
+          x-source: applicant
+          x-statute: E.g., daycare name for dependent_care; child name for child_support_paid
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+        description:
+          type: string
+          description: Description
+          x-source: applicant
+        forPersonId:
+          type: string
+          format: uuid
+          description: For Person ID (if dependent care)
+          x-source: applicant
+          x-snap: Required
+          x-summer-ebt: FK to Person; identifies which dependent the care expense is for
+        courtOrderNumber:
+          type: string
+          description: Court Order Number (if court ordered)
+          x-source: applicant
+          x-liheap: For child_support_paid and court_ordered types
+        verificationSource:
+          type: string
+          enum:
+            - receipt
+            - bill
+            - court_order
+            - provider_letter
+            - insurance_statement
+            - self_attestation
+            - other
+          description: Verification Source
+          x-source: applicant
+          x-snap: Required
+          x-medicaid-non-magi: Required
+          x-tanf: Required
+          x-section-8-housing: Required
+    ApplicationCreate:
+      $ref: '#/components/schemas/Application'
+    ApplicationUpdate:
+      description: Partial update — all fields optional
+      allOf:
+        - $ref: '#/components/schemas/Application'

@@ -14,11 +14,13 @@
  */
 
 import { writeFile } from 'fs/promises';
-import { existsSync, mkdirSync, unlinkSync, realpathSync } from 'fs';
-import { join, resolve } from 'path';
+import { existsSync, mkdirSync, realpathSync } from 'fs';
+import { join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
-import { bundleSpec } from '../src/bundle.js';
+
+// NOTE: Do NOT add a --bundle flag to this generator. Source specs must use
+// $ref so that overlays propagate changes to Create/Update/List schemas.
+// Bundling (inlining $refs) is only for output — use resolve.js --bundle.
 
 // =============================================================================
 // Argument Parsing
@@ -30,7 +32,7 @@ function parseArgs() {
     name: null,
     resource: null,
     out: null,
-    bundle: false,
+    ref: null,
     help: false
   };
 
@@ -50,8 +52,8 @@ function parseArgs() {
       case '-o':
         options.out = args[++i];
         break;
-      case '--bundle':
-        options.bundle = true;
+      case '--ref':
+        options.ref = args[++i];
         break;
       case '--help':
       case '-h':
@@ -60,6 +62,9 @@ function parseArgs() {
       default:
         if (!args[i].startsWith('-')) {
           positional.push(args[i]);
+        } else {
+          console.error(`Error: Unknown argument: ${args[i]}`);
+          process.exit(1);
         }
         break;
     }
@@ -86,14 +91,14 @@ Options:
   -n, --name <name>        API name in kebab-case (e.g., "benefits", "case-workers")
   -r, --resource <name>    Resource name in PascalCase (e.g., "Benefit", "CaseWorker")
   -o, --out <dir>          Output directory (default: packages/contracts/)
-      --bundle             Inline all external $refs to produce a self-contained spec
+      --ref <dir>          Path to shared components directory (for correct $ref paths
+                           when --out is outside the contracts package)
   -h, --help               Show this help message
 
 Examples:
   npm run api:new -- --name benefits --resource Benefit
   npm run api:new -- benefits Benefit
   npm run api:new -- benefits Benefit --out /tmp
-  npm run api:new -- benefits Benefit --out /tmp --bundle
 
 Generated files:
   - {name}-openapi.yaml              Main API specification (schemas inline)
@@ -139,7 +144,7 @@ function pluralize(str) {
 // Template Generators
 // =============================================================================
 
-function generateApiSpec(name, resource) {
+function generateApiSpec(name, resource, componentsPrefix = './components') {
   const kebabName = toKebabCase(name);
   const resourcePlural = pluralize(resource);
   const resourcePluralLower = resourcePlural.toLowerCase();
@@ -172,9 +177,9 @@ paths:
       tags:
       - ${resourcePlural}
       parameters:
-      - "$ref": "./components/parameters.yaml#/SearchQueryParam"
-      - "$ref": "./components/parameters.yaml#/LimitParam"
-      - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/SearchQueryParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/LimitParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/OffsetParam"
       responses:
         '200':
           description: A paginated collection of ${resourcePluralLower}.
@@ -183,9 +188,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}List"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     post:
       summary: Create a ${resource.toLowerCase()}
       description: Create a new ${resource.toLowerCase()} record.
@@ -212,11 +217,11 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '422':
-          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+          "$ref": "${componentsPrefix}/responses.yaml#/UnprocessableEntity"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
   "/${resourcePluralLower}/{${resourceIdParam}}":
     parameters:
     - "$ref": "#/components/parameters/${resource}IdParam"
@@ -237,9 +242,9 @@ paths:
                 ${resource}Example1:
                   "$ref": "./${kebabName}-openapi-examples.yaml#/${resource}Example1"
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     patch:
       summary: Update a ${resource.toLowerCase()}
       description: Apply partial updates to an existing ${resource.toLowerCase()}.
@@ -260,13 +265,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/${resource}"
         '400':
-          "$ref": "./components/responses.yaml#/BadRequest"
+          "$ref": "${componentsPrefix}/responses.yaml#/BadRequest"
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '422':
-          "$ref": "./components/responses.yaml#/UnprocessableEntity"
+          "$ref": "${componentsPrefix}/responses.yaml#/UnprocessableEntity"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
     delete:
       summary: Delete a ${resource.toLowerCase()}
       description: Permanently remove a ${resource.toLowerCase()} record.
@@ -277,9 +282,9 @@ paths:
         '204':
           description: ${resource} deleted successfully.
         '404':
-          "$ref": "./components/responses.yaml#/NotFound"
+          "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '500':
-          "$ref": "./components/responses.yaml#/InternalError"
+          "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
 components:
   parameters:
     ${resource}IdParam:
@@ -446,6 +451,15 @@ async function main() {
     process.exit(1);
   }
 
+  // Compute components prefix for $ref paths
+  let componentsPrefix = './components';
+  if (options.ref) {
+    const absComponents = resolve(options.ref);
+    let rel = relative(outDir, absComponents);
+    if (!rel.startsWith('.')) rel = './' + rel;
+    componentsPrefix = rel;
+  }
+
   // Ensure output directory exists
   mkdirSync(outDir, { recursive: true });
 
@@ -456,42 +470,8 @@ async function main() {
   await writeFile(examplesPath, generateExamples(name, resource));
   console.log(`   ✅ ${examplesPath}`);
 
-  if (options.bundle) {
-    // Write raw spec to a temp file inside the contracts directory so that
-    // relative $refs (e.g. ./components/parameters.yaml) resolve correctly.
-    const tempSpecPath = join(contractsDir, `.tmp-${name}-openapi.yaml`);
-    // The spec template references "./{name}-openapi-examples.yaml" so the temp
-    // examples file must use the real name (not a .tmp- prefix) for $ref resolution.
-    const tempExamplesPath = join(contractsDir, `${name}-openapi-examples.yaml`);
-    try {
-      await writeFile(tempSpecPath, generateApiSpec(name, resource));
-      // Write examples adjacent to the temp spec so the examples $ref resolves
-      await writeFile(tempExamplesPath, generateExamples(name, resource));
-
-      console.log('   📦 Bundling (inlining external $refs)...');
-      const bundled = await bundleSpec(tempSpecPath);
-
-      const output = yaml.dump(bundled, {
-        lineWidth: -1,
-        noRefs: true,
-        quotingType: '"',
-        forceQuotes: false
-      });
-      await writeFile(specPath, output);
-      console.log(`   ✅ ${specPath} (bundled)`);
-    } finally {
-      // Clean up temp files
-      try { unlinkSync(tempSpecPath); } catch { /* ignore */ }
-      // Only clean up the temp examples if outDir differs from contractsDir,
-      // otherwise the examples file IS the final output and must be kept.
-      if (resolve(outDir) !== resolve(contractsDir)) {
-        try { unlinkSync(tempExamplesPath); } catch { /* ignore */ }
-      }
-    }
-  } else {
-    await writeFile(specPath, generateApiSpec(name, resource));
-    console.log(`   ✅ ${specPath}`);
-  }
+  await writeFile(specPath, generateApiSpec(name, resource, componentsPrefix));
+  console.log(`   ✅ ${specPath}`);
 
   console.log(`
 ✨ API generated successfully!

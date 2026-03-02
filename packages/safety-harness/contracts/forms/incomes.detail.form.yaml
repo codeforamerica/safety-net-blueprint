@@ -1,0 +1,107 @@
+form:
+  id: incomes-detail
+  title: Income Service API
+  schema: incomes
+  layout:
+    navigation: in-page
+    display: scrollable
+  pages:
+    - id: general
+      title: General
+      fields:
+        - ref: id
+          component: text-input
+        - ref: personId
+          component: text-input
+        - ref: employerId
+          component: text-input
+        - ref: type
+          component: select
+          labels:
+            employed: Employed
+            self_employed: Self Employed
+            unearned: Unearned
+        - ref: unearnedType
+          component: select
+          labels:
+            unemployment: Unemployment
+            kinship_payment: Kinship Payment
+            veterans_programs: Veterans Programs
+            adoption_and_refugee_services: Adoption And Refugee Services
+            ssi_or_ssdi: Ssi Or Ssdi
+            private_disability: Private Disability
+            workers_compensation: Workers Compensation
+            disability_from_veterans_programs: Disability From Veterans Programs
+            legal_form_or_settlement: Legal Form Or Settlement
+            scholarship: Scholarship
+            educational_grant: Educational Grant
+            work_study: Work Study
+            spousal_support: Spousal Support
+            child_support: Child Support
+            retirement_or_pension_plan: Retirement Or Pension Plan
+            investment_interest_and_dividends: Investment Interest And Dividends
+            social_security_retirement: Social Security Retirement
+            renting_home: Renting Home
+            renting_room: Renting Room
+            renting_equipment: Renting Equipment
+            gambling_lottery_or_other_winnings: Gambling Lottery Or Other Winnings
+            donations_or_gifts: Donations Or Gifts
+            income_from_loan_or_mortgage: Income From Loan Or Mortgage
+            payment_for_participating_in_research: Payment For Participating In Research
+            other_money_not_reported: Other Money Not Reported
+        - ref: incomeBasis
+          component: select
+          labels:
+            net: Net
+            gross: Gross
+        - ref: amount
+          component: text-input
+        - ref: frequency
+          component: select
+          labels:
+            hourly: Hourly
+            daily: Daily
+            weekly: Weekly
+            every_2_weeks: Every 2 Weeks
+            twice_a_month: Twice A Month
+            monthly: Monthly
+            yearly: Yearly
+        - ref: reportedOn
+          component: date-input
+        - ref: source
+          component: select
+          labels:
+            client: Client
+            authorized_assister: Authorized Assister
+            county_worker: County Worker
+        - ref: startDate
+          component: date-input
+        - ref: endDate
+          component: date-input
+        - ref: isVerified
+          component: checkbox-group
+          labels:
+            "true": Is Verified
+        - ref: verifiedDate
+          component: date-input
+        - ref: verifiedBy
+          component: text-input
+        - ref: verificationSourceIds
+          component: text-input
+permissions:
+  - role: admin
+    defaults: editable
+    fields:
+      id: read-only
+  - role: applicant
+    defaults: editable
+    fields:
+      id: read-only
+  - role: caseworker
+    defaults: editable
+    fields:
+      id: read-only
+  - role: reviewer
+    defaults: read-only
+    fields:
+      id: read-only

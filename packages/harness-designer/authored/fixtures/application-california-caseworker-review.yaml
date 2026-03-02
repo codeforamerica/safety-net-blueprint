@@ -1,0 +1,93 @@
+# Test data for California Application Caseworker Review.
+# CalFresh + Medi-Cal, 2-person household in Los Angeles County.
+
+applicationDate: "2026-02-15"
+calsawsCaseNumber: "CSW-2026-LA-001234"
+programsAppliedFor:
+  - SNAP
+  - Medicaid_MAGI
+isExpedited: false
+
+household:
+  size: 2
+  countyCode: "19"
+  californiaResidencyVerified: true
+  purchasePrepareFoodTogether: true
+  livingArrangement: rent
+  isHomeless: false
+  physicalAddress:
+    street1: 1425 Figueroa Street
+    city: Los Angeles
+    state: CA
+    county: Los Angeles
+    zip: "90015"
+  mailingAddress:
+    street1: 1425 Figueroa Street
+    city: Los Angeles
+    state: CA
+    zip: "90015"
+  shelterCosts:
+    rent: 1850
+    mortgage: 0
+    propertyTax: 0
+    insurance: 0
+  utilityCosts:
+    heating: 40
+    electric: 95
+    water: 50
+    telephone: 55
+  primaryContactPhone: "213-555-0142"
+  primaryContactEmail: ana.reyes@example.com
+  preferredLanguage: spanish
+  members:
+    - firstName: Ana
+      middleName: Isabel
+      lastName: Reyes
+      dateOfBirth: "1990-07-14"
+      ssn: "234-56-7890"
+      gender: female
+      race:
+        - white
+      ethnicity: hispanic_or_latino
+      relationshipToApplicant: self
+      maritalStatus: single
+      isApplicant: true
+      citizenshipStatus: lawful_permanent_resident
+      immigrationDocumentType: permanent_resident_card
+      immigrationDocumentNumber: SRC-2019001234
+      isPregnant: false
+      disabilityStatus: false
+      employmentStatus: employed
+      calsawsClientId: "CSW-CL-7890123"
+      mediCalAidCode: "3G"
+      incomes:
+        - type: employment
+          grossAmount: 2200
+          frequency: monthly
+          employerName: LA County General Hospital
+      assets:
+        - type: checking
+          value: 900
+          institutionName: Union Bank
+    - firstName: Diego
+      lastName: Reyes
+      dateOfBirth: "2020-03-22"
+      gender: male
+      race:
+        - white
+      ethnicity: hispanic_or_latino
+      relationshipToApplicant: child
+      maritalStatus: single
+      isApplicant: false
+      citizenshipStatus: us_citizen
+      isPregnant: false
+      disabilityStatus: false
+      incomes: []
+      assets: []
+
+consentToVerifyInformation: true
+consentToShareData: true
+signatureOfApplicant: Ana Isabel Reyes
+signatureDate: "2026-02-15"
+noticeDeliveryPreference: email
+accommodationNeeded: ""

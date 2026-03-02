@@ -32,7 +32,9 @@ export function resolveValue(value, context) {
  * @returns {{ pass: boolean, reason: string }}
  */
 export function evaluateGuard(guard, resource, context) {
-  const fieldValue = resource[guard.field];
+  const fieldValue = guard.field.startsWith('$')
+    ? resolveValue(guard.field, context)
+    : resource[guard.field];
 
   switch (guard.operator) {
     case 'is_null':

@@ -44,6 +44,13 @@ async function main() {
     process.exit(0);
   }
 
+  // Check for unknown arguments
+  const unknown = args.filter(a => a !== '--help' && a !== '-h' && !a.startsWith('--spec='));
+  if (unknown.length > 0) {
+    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
+    process.exit(1);
+  }
+
   const specArg = args.find(a => a.startsWith('--spec='));
   if (!specArg) {
     console.error('Error: --spec=<file|dir> is required.\n');
@@ -57,7 +64,9 @@ async function main() {
   console.log('Schema Validator');
   console.log('='.repeat(70));
 
-  console.log(`\nDiscovering YAML files with $schema declarations...`);
+  console.log(`\nValidating YAML files against their declared JSON Schemas...`);
+  console.log(`  Looks for YAML files with a $schema field (e.g., state machines)`);
+  console.log(`  and validates each file against its referenced JSON Schema.`);
   console.log(`  ${isSingleFile ? 'File' : 'Directory'}: ${specDir}`);
 
   const yamlFiles = isSingleFile ? [specDir] : findYamlFiles(specDir);

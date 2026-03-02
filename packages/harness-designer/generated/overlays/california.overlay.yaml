@@ -1,0 +1,285 @@
+overlay: 1.0.0
+info:
+  title: California Benefits Overlay
+  version: 1.0.0
+actions:
+  - target: $.components.schemas.Asset.properties.type
+    description: 'CA update: Asset.type'
+    update:
+      x-ca-statute: WIC § 18901.1; MPP 63-503
+      x-ca-notes: CalFresh BBCE eliminates asset test; AB 1811 (2018)
+      x-calfresh: Not Required
+  - target: $.components.schemas.Asset.properties.value
+    description: 'CA update: Asset.value'
+    update:
+      x-ca-statute: WIC § 18901.1; MPP 63-503
+      x-ca-notes: Asset values not required for CalFresh under BBCE
+      x-calfresh: Not Required
+  - target: $.components.schemas.Asset.properties.verificationSource
+    description: 'CA update: Asset.verificationSource'
+    update:
+      x-ca-statute: WIC § 18901.1; MPP 63-503
+      x-ca-notes: Asset verification not required for CalFresh under BBCE
+      x-calfresh: Not Required
+  - target: $.components.schemas.Person.properties.substantialLotteryWinnings
+    description: 'CA remove: Person.substantialLotteryWinnings'
+    remove: true
+  - target: $.components.schemas.Person.properties.lotteryWinningsAmount
+    description: 'CA remove: Person.lotteryWinningsAmount'
+    remove: true
+  - target: $.components.schemas.Person.properties.isAbawdEligible
+    description: 'CA update: Person.isAbawdEligible'
+    update:
+      x-ca-statute: MPP 63-410
+      x-ca-notes: County-specific ABAWD time-limit waivers available in qualifying areas
+  - target: $.components.schemas.Person.properties.citizenshipStatus
+    description: 'CA update: Person.citizenshipStatus'
+    update:
+      x-ca-statute: WIC § 14007.5; AB 133; SB 56; WIC § 18937; WIC § 18930
+      x-ca-notes: >-
+        Medi-Cal covers all income-eligible adults regardless of immigration status (state-funded). Full-scope Medi-Cal
+        for undocumented adults effective 2024. CAPI: non-citizens ineligible for SSI. CFAP: qualified aliens ineligible
+        for federal SNAP.
+      x-capi: Required
+      x-cfap: Required
+  - target: $.components.schemas.Asset.properties.recentAssetTransfer
+    description: 'CA update: Asset.recentAssetTransfer'
+    update:
+      x-ca-statute: WIC § 14015
+      x-ca-notes: >-
+        Medi-Cal Non-MAGI: 30-month look-back for asset transfers (vs federal 60-month). CA chose shorter look-back
+        period.
+  - target: $.components.schemas.Person.properties
+    description: 'CA add: Person.medicaidBuyInEligible'
+    update:
+      medicaidBuyInEligible:
+        type: boolean
+        description: Working Disabled Buy-In Eligible
+        x-ca-statute: WIC § 14007.9
+        x-ca-notes: 'Medi-Cal Working Disabled Program: 250% FPL for working individuals with disabilities'
+        x-source: derived
+        x-medi-cal-non-magi: Required
+  - target: $.components.schemas.Person.properties
+    description: 'CA add: Person.medicaidBuyInEmploymentVerified'
+    update:
+      medicaidBuyInEmploymentVerified:
+        type: boolean
+        description: Buy-In Employment Verified
+        x-ca-statute: WIC § 14007.9
+        x-ca-notes: Must demonstrate current employment for Working Disabled Buy-In eligibility
+        x-source: verified
+        x-medi-cal-non-magi: Required
+  - target: $.components.schemas.Person.properties
+    description: 'CA add: Person.shareOfCostAmount'
+    update:
+      shareOfCostAmount:
+        type: number
+        description: Share of Cost Amount
+        x-ca-statute: WIC § 14005.7
+        x-ca-notes: Medically needy spend-down amount; person must incur medical expenses above this threshold each month
+        x-source: derived
+        x-medi-cal-non-magi: Required
+  - target: $.components.schemas.Person.properties.tanfMonthsUsed
+    description: 'CA update: Person.tanfMonthsUsed'
+    update:
+      x-ca-statute: WIC § 11320.3; AB 1542
+      x-ca-notes: >-
+        CalWORKs 48-month state time limit (vs 60-month federal). Safety Net: children continue cash aid after adult
+        times out. Cal-Learn mandatory for pregnant/parenting teens.
+  - target: $.components.schemas.Person.properties.tanfCooperatesWithChildSupport
+    description: 'CA update: Person.tanfCooperatesWithChildSupport'
+    update:
+      x-ca-statute: WIC § 11477.04
+      x-ca-notes: CalWORKs good cause exemption includes domestic violence per Family Violence Option
+  - target: $.components.schemas.Person.properties
+    description: 'CA add: Person.sspAmount'
+    update:
+      sspAmount:
+        type: number
+        description: SSP Amount
+        x-ca-statute: WIC § 12200
+        x-ca-notes: >-
+          State Supplementary Payment amount; varies by living arrangement. CA is a 1616(a) state — CDSS sets SSP
+          amounts but SSA makes combined SSI/SSP payment.
+        x-source: system
+        x-ssi-ssp: Required
+  - target: $.components.schemas.Person.properties
+    description: 'CA add: Person.sspLivingArrangementCategory'
+    update:
+      sspLivingArrangementCategory:
+        type: string
+        enum:
+          - independent_living
+          - living_in_household_of_another
+          - board_and_care
+          - skilled_nursing
+          - other
+        description: SSP Living Arrangement Category
+        x-ca-statute: WIC § 12200
+        x-ca-notes: Determines SSP payment amount; independent living receives highest supplement
+        x-source: system
+        x-ssi-ssp: Required
+  - target: $.components.schemas.Household.properties.utilityCosts.properties.heating
+    description: 'CA update: Household.utilityCostHeating'
+    update:
+      x-ca-statute: 22 CCR 39-103
+      x-ca-notes: 'Heat/eat: minimal CA LIHEAP benefit confers CalFresh Standard Utility Allowance (SUA) eligibility'
+  - target: $.components.schemas.Person.properties.dateOfBirth
+    description: 'CA update: Person.dateOfBirth'
+    update:
+      x-ca-statute: WIC § 18937; WIC § 18930; WIC § 17000
+      x-ca-notes: Required for all state-only programs; CAPI requires age 65+ or blind/disabled
+      x-capi: Required
+      x-cfap: Required
+      x-ga-gr: Required
+  - target: $.components.schemas.Person.properties.ssn
+    description: 'CA update: Person.ssn'
+    update:
+      x-ca-statute: WIC § 18937; WIC § 18930; WIC § 17000
+      x-ca-notes: Required for all state-only programs
+      x-capi: Required
+      x-cfap: Required
+      x-ga-gr: Required
+  - target: $.components.schemas.Person.properties.disabilityStatus
+    description: 'CA update: Person.disabilityStatus'
+    update:
+      x-ca-statute: WIC § 18937
+      x-ca-notes: Must meet SSA disability criteria for CAPI if not aged 65+
+      x-capi: Required
+  - target: $.components.schemas.Person.properties.isBlind
+    description: 'CA update: Person.isBlind'
+    update:
+      x-ca-statute: WIC § 18937
+      x-ca-notes: Must meet SSA blindness definition for CAPI blind pathway
+      x-capi: Required
+  - target: $.components.schemas.Income.properties.type
+    description: 'CA update: Income.type'
+    update:
+      x-ca-statute: WIC § 18937; WIC § 18930; WIC § 17000
+      x-ca-notes: Income type required for all state-only programs
+      x-capi: Required
+      x-cfap: Required
+      x-ga-gr: Required
+  - target: $.components.schemas.Income.properties.grossAmount
+    description: 'CA update: Income.grossAmount'
+    update:
+      x-ca-statute: WIC § 18937; WIC § 18930; WIC § 17000
+      x-ca-notes: Income verification required for all state-only programs
+      x-capi: Required
+      x-cfap: Required
+      x-ga-gr: Required
+  - target: $.components.schemas.Household.properties
+    description: 'CA add: Household.countyCode'
+    update:
+      countyCode:
+        type: string
+        description: County Code
+        x-ca-statute: WIC § 12301
+        x-ca-notes: California 58 counties each administer benefits; county code identifies administering office
+        x-source: system
+        x-calfresh: Required
+        x-medi-cal-magi: Required
+        x-medi-cal-non-magi: Required
+        x-calworks: Required
+        x-california-wic: Required
+        x-medi-cal-children: Required
+        x-ca-liheap: Required
+        x-sun-bucks: Required
+        x-capi: Required
+        x-cfap: Required
+        x-ga-gr: Required
+  - target: $.components.schemas.Application.properties
+    description: 'CA add: Application.calsawsCaseNumber'
+    update:
+      calsawsCaseNumber:
+        type: string
+        description: CalSAWS Case Number
+        x-ca-statute: MPP 10-100
+        x-ca-notes: California Statewide Automated Welfare System case tracking number
+        x-source: system
+        x-calfresh: Required
+        x-medi-cal-magi: Required
+        x-medi-cal-non-magi: Required
+        x-calworks: Required
+        x-medi-cal-children: Required
+        x-ca-liheap: Required
+        x-sun-bucks: Required
+        x-capi: Required
+        x-cfap: Required
+  - target: $.components.schemas.Household.properties
+    description: 'CA add: Household.californiaResidencyVerified'
+    update:
+      californiaResidencyVerified:
+        type: boolean
+        description: California Residency Verified
+        x-ca-statute: WIC § 11100; MPP 40-105
+        x-ca-notes: Verification of California residency required for all state-administered programs
+        x-source: verified
+        x-calfresh: Required
+        x-medi-cal-magi: Required
+        x-medi-cal-non-magi: Required
+        x-calworks: Required
+        x-california-wic: Required
+        x-medi-cal-children: Required
+        x-ca-liheap: Required
+        x-sun-bucks: Required
+        x-capi: Required
+        x-cfap: Required
+        x-ga-gr: Required
+  - target: $.components.schemas.Person.properties
+    description: 'CA add: Person.calsawsClientId'
+    update:
+      calsawsClientId:
+        type: string
+        description: CalSAWS Client ID
+        x-ca-statute: MPP 10-100
+        x-ca-notes: California Statewide Automated Welfare System client identifier
+        x-source: system
+        x-calfresh: Required
+        x-medi-cal-magi: Required
+        x-medi-cal-non-magi: Required
+        x-calworks: Required
+        x-california-wic: Required
+        x-medi-cal-children: Required
+        x-ca-liheap: Required
+        x-sun-bucks: Required
+        x-capi: Required
+        x-cfap: Required
+  - target: $.components.schemas.Person.properties
+    description: 'CA add: Person.mediCalAidCode'
+    update:
+      mediCalAidCode:
+        type: string
+        description: Medi-Cal Aid Code
+        x-ca-statute: WIC § 14005; 22 CCR 50000
+        x-ca-notes: Determines benefit package and funding source (federal vs state-funded). Over 200 aid codes in use.
+        x-source: system
+        x-medi-cal-magi: Required
+        x-medi-cal-non-magi: Required
+        x-medi-cal-children: Required
+  - target: $.components.schemas.Household.properties.preferredLanguage
+    description: 'CA update: Household.preferredLanguage'
+    update:
+      x-ca-statute: MPP 21-115
+      x-ca-notes: >-
+        Added armenian|farsi|hmong|cambodian|thai|japanese for California language communities per Dymally-Alatorre
+        Bilingual Services Act
+      enum:
+        - english
+        - spanish
+        - chinese
+        - vietnamese
+        - korean
+        - tagalog
+        - arabic
+        - french
+        - haitian_creole
+        - russian
+        - portuguese
+        - armenian
+        - farsi
+        - hmong
+        - cambodian
+        - thai
+        - japanese
+        - other

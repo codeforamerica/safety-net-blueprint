@@ -1,0 +1,60 @@
+form:
+  id: workflow-detail
+  title: Workflow Service API
+  schema: workflow
+  layout:
+    navigation: in-page
+    display: scrollable
+  pages:
+    - id: general
+      title: General
+      fields:
+        - ref: id
+          component: text-input
+        - ref: name
+          component: text-input
+        - ref: description
+          component: text-input
+        - ref: status
+          component: select
+          labels:
+            pending: Pending
+            in_progress: In Progress
+            completed: Completed
+        - ref: startedAt
+          component: date-input
+        - ref: completedAt
+          component: date-input
+        - ref: assignedToId
+          component: text-input
+        - ref: caseId
+          component: text-input
+        - ref: createdAt
+          component: date-input
+        - ref: updatedAt
+          component: date-input
+permissions:
+  - role: admin
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: applicant
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: caseworker
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: reviewer
+    defaults: read-only
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only

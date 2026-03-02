@@ -5,6 +5,7 @@ info:
   description: Auto-generated RPC endpoints from workflow-state-machine.yaml
 actions:
   - target: $.paths
+    file: workflow-openapi.yaml
     description: Add state machine transition endpoints for workflow tasks
     update:
       /tasks/{taskId}/claim:

@@ -1,0 +1,17 @@
+form:
+  id: households-list
+  title: Household Service API
+  schema: households
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: Household Service API
+      source: api
+      columns:
+        - from: id
+          label: Id
+        - from: phoneNumber
+          label: Phone Number
+

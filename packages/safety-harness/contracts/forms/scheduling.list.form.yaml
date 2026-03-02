@@ -1,0 +1,23 @@
+form:
+  id: scheduling-list
+  title: Scheduling Service API
+  schema: scheduling
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: Scheduling Service API
+      source: api
+      columns:
+        - from: id
+          label: Id
+        - from: appointmentType
+          label: Appointment Type
+        - from: status
+          label: Status
+        - from: personId
+          label: Person Id
+        - from: assignedToId
+          label: Assigned To Id
+

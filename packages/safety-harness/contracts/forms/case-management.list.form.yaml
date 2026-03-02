@@ -1,0 +1,23 @@
+form:
+  id: case-management-list
+  title: Case Management Service API
+  schema: case-management
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: Case Management Service API
+      source: api
+      columns:
+        - from: id
+          label: Id
+        - from: status
+          label: Status
+        - from: effectiveStartDate
+          label: Effective Start Date
+        - from: effectiveEndDate
+          label: Effective End Date
+        - from: primaryApplicantId
+          label: Primary Applicant Id
+

@@ -1,0 +1,61 @@
+form:
+  id: scheduling-detail
+  title: Scheduling Service API
+  schema: scheduling
+  layout:
+    navigation: in-page
+    display: scrollable
+  pages:
+    - id: general
+      title: General
+      fields:
+        - ref: id
+          component: text-input
+        - ref: startAt
+          component: date-input
+        - ref: endAt
+          component: date-input
+        - ref: appointmentType
+          component: text-input
+        - ref: status
+          component: select
+          labels:
+            scheduled: Scheduled
+            completed: Completed
+            canceled: Canceled
+            no_show: No Show
+        - ref: personId
+          component: text-input
+        - ref: assignedToId
+          component: text-input
+        - ref: notes
+          component: text-input
+        - ref: createdAt
+          component: date-input
+        - ref: updatedAt
+          component: date-input
+permissions:
+  - role: admin
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: applicant
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: caseworker
+    defaults: editable
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only
+  - role: reviewer
+    defaults: read-only
+    fields:
+      id: read-only
+      createdAt: read-only
+      updatedAt: read-only

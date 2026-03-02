@@ -420,7 +420,7 @@ async function testApi(api, examples) {
  * Run Postman collection tests using Newman
  */
 async function runPostmanTests() {
-  const collectionPath = join(__dirname, '../../../clients/generated/postman-collection.json');
+  const collectionPath = join(__dirname, '../../../contracts/generated/postman-collection.json');
 
   console.log(`\n${'='.repeat(70)}`);
   console.log('Postman Collection Tests (Newman)');

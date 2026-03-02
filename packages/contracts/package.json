@@ -35,6 +35,8 @@
     "api:update": "node scripts/update-api.js",
     "generate:rpc-overlay": "node scripts/generate-rpc-overlay.js --spec=.",
     "design:reference": "node scripts/export-design-reference.js --spec=. --out=../../docs",
+    "postman": "node scripts/generate-postman.js",
+    "reconcile-examples": "node scripts/reconcile-examples.js",
     "contract-tables:export": "node scripts/export-contract-tables.js",
     "contract-tables:import": "node scripts/import-contract-tables.js"
   },

@@ -14,7 +14,6 @@
     "prepack": "node ../../scripts/build-package-readme.js",
     "typescript": "node scripts/generate-clients-typescript.js",
     "json-schema": "node scripts/generate-clients-json-schema.js",
-    "postman": "node scripts/generate-postman.js",
     "test": "node --test tests/"
   },
   "engines": {

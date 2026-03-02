@@ -7,8 +7,8 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
-import { execSync } from 'child_process';
-import { realpathSync } from 'fs';
+import { execSync, spawn } from 'child_process';
+import { realpathSync, openSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
@@ -31,6 +31,8 @@ Usage:
 Options:
   --spec=<dir>    File or directory containing *-openapi.yaml files (repeatable)
                   Default: packages/contracts
+  --detach        Start server in the background (logs to mock-server.log)
+  --log=<path>    Log file or directory for --detach output (default: spec dir)
   --stop          Stop the running mock server
   -h, --help      Show this help message
 
@@ -51,6 +53,17 @@ function parseSpecDirs() {
   if (args.includes('--help') || args.includes('-h')) {
     showHelp();
     process.exit(0);
+  }
+
+  // Check for unknown arguments
+  const unknown = args.filter(a =>
+    a !== '--help' && a !== '-h' &&
+    a !== '--detach' && a !== '--stop' &&
+    !a.startsWith('--spec=') && !a.startsWith('--log=')
+  );
+  if (unknown.length > 0) {
+    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
+    process.exit(1);
   }
 
   const specDirs = args
@@ -105,6 +118,12 @@ async function startMockServer() {
     app.get('/health', (req, res) => {
       res.json({ status: 'ok', apis: apiSpecs.map(a => a.name) });
     });
+
+    // Manifest endpoint — returns full API metadata for dynamic discovery
+    app.get('/_manifest', (req, res) => {
+      res.json({ apis: apiSpecs });
+    });
+
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
@@ -258,6 +277,28 @@ if (import.meta.url === entryUrl) {
     } catch {
       console.log(`No process running on port ${PORT}.`);
     }
+  } else if (args.includes('--detach')) {
+    // Re-spawn this script without --detach, fully detached
+    const logArg = args.find(a => a.startsWith('--log='))?.split('=')[1];
+    const forwardArgs = args.filter(a => a !== '--detach' && !a.startsWith('--log='));
+    let logFile;
+    if (logArg) {
+      const logResolved = resolve(logArg);
+      try { logFile = statSync(logResolved).isDirectory() ? resolve(logResolved, 'mock-server.log') : logResolved; }
+      catch { logFile = logResolved; }
+    } else {
+      const specDir = args.find(a => a.startsWith('--spec='))?.split('=')[1] || 'packages/contracts';
+      logFile = resolve(specDir, 'mock-server.log');
+    }
+    const out = openSync(logFile, 'w');
+    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...forwardArgs], {
+      detached: true,
+      stdio: ['ignore', out, out],
+    });
+    child.unref();
+    console.log(`Mock server started in background (pid ${child.pid})`);
+    console.log(`Logs: ${logFile}`);
+    console.log(`Stop:  npm run mock:stop`);
   } else {
     // Handle graceful shutdown
     process.on('SIGINT', () => stopServer(true));

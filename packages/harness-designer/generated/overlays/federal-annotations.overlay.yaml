@@ -1,0 +1,1588 @@
+overlay: 1.0.0
+info:
+  title: Federal Benefits Data Model — Annotations
+  version: 1.0.0
+actions:
+  - target: $.components.schemas.Application.properties.applicationDate
+    description: Application.applicationDate
+    update:
+      x-source: system
+      x-statute: 7 CFR 273.2(b) (SNAP); 42 CFR 435.912 (Medicaid); 45 CFR 206.10 (TANF)
+      x-snap: Required
+  - target: $.components.schemas.Application.properties.programsAppliedFor
+    description: Application.programsAppliedFor
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Application.properties.isExpedited
+    description: Application.isExpedited
+    update:
+      x-source: derived
+      x-statute: 7 CFR 273.2(i)
+      x-snap: Required
+  - target: $.components.schemas.Application.properties.signatureOfApplicant
+    description: Application.signatureOfApplicant
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.2(c)(7) (SNAP); 42 CFR 435.907(f) (Medicaid)
+  - target: $.components.schemas.Application.properties.signatureDate
+    description: Application.signatureDate
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Application.properties.signatureMethod
+    description: Application.signatureMethod
+    update:
+      x-source: applicant
+      x-statute: 42 CFR 435.907(f) (Medicaid allows telephonic/electronic)
+  - target: $.components.schemas.Application.properties.rightsAndResponsibilitiesAcknowledged
+    description: Application.rightsAndResponsibilitiesAcknowledged
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.2(e)(2) (SNAP)
+  - target: $.components.schemas.Application.properties.penaltyOfPerjuryAcknowledged
+    description: Application.penaltyOfPerjuryAcknowledged
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.2(c)(7) (SNAP)
+  - target: $.components.schemas.Application.properties.consentToVerifyInformation
+    description: Application.consentToVerifyInformation
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Application.properties.consentToShareData
+    description: Application.consentToShareData
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Application.properties.voterRegistrationOffered
+    description: Application.voterRegistrationOffered
+    update:
+      x-source: system
+      x-statute: 52 USC 20506 (NVRA Section 7)
+  - target: $.components.schemas.Application.properties.voterRegistrationResponse
+    description: Application.voterRegistrationResponse
+    update:
+      x-source: applicant
+      x-statute: 52 USC 20506(a)(6)
+  - target: $.components.schemas.Application.properties.noticeDeliveryPreference
+    description: Application.noticeDeliveryPreference
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Application.properties.paymentMethodPreference
+    description: Application.paymentMethodPreference
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Application.properties.accommodationNeeded
+    description: Application.accommodationNeeded
+    update:
+      x-source: applicant
+      x-statute: 29 USC 794 (Section 504); 42 USC 12132 (ADA Title II)
+  - target: $.components.schemas.Application.properties.accommodationType
+    description: Application.accommodationType
+    update:
+      x-source: applicant
+      x-statute: 29 USC 794 (Section 504); 42 USC 12132 (ADA Title II)
+  - target: $.components.schemas.Household.properties.size
+    description: Household.size
+    update:
+      x-source: derived
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.purchasePrepareFoodTogether
+    description: Household.purchasePrepareFoodTogether
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.1(a)
+      x-snap: Required
+  - target: $.components.schemas.Household.properties.livingArrangement
+    description: Household.livingArrangement
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.1 (SNAP); 42 CFR 435.1010 (Medicaid); 20 CFR 416.1132 (SSI)
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Household.properties.sharedQuartersWithNonMembers
+    description: Household.sharedQuartersWithNonMembers
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.isHomeless
+    description: Household.isHomeless
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-tanf: Required
+      x-section-8-housing: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.physicalAddress.properties.street1
+    description: Household.physicalStreet1
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.physicalAddress.properties.street2
+    description: Household.physicalStreet2
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Household.properties.physicalAddress.properties.city
+    description: Household.physicalCity
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.physicalAddress.properties.state
+    description: Household.physicalState
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.3 (SNAP); 42 CFR 435.403 (Medicaid)
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.physicalAddress.properties.county
+    description: Household.physicalCounty
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.physicalAddress.properties.zip
+    description: Household.physicalZip
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.mailingAddress.properties.street1
+    description: Household.mailingStreet1
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.mailingAddress.properties.street2
+    description: Household.mailingStreet2
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Household.properties.mailingAddress.properties.city
+    description: Household.mailingCity
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.mailingAddress.properties.state
+    description: Household.mailingState
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.mailingAddress.properties.zip
+    description: Household.mailingZip
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.stateResidencySinceDate
+    description: Household.stateResidencySinceDate
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+  - target: $.components.schemas.Household.properties.previousHousingAssistance
+    description: Household.previousHousingAssistance
+    update:
+      x-source: applicant
+      x-statute: 24 CFR 982.552
+      x-section-8-housing: Required
+  - target: $.components.schemas.Household.properties.familyType
+    description: Household.familyType
+    update:
+      x-source: applicant
+      x-statute: 24 CFR 982.201
+      x-section-8-housing: Required
+  - target: $.components.schemas.Household.properties.shelterCosts.properties.rent
+    description: Household.shelterCostRent
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.9(d)(6) (SNAP shelter deduction); 24 CFR 982.503 (Section 8 payment standard)
+      x-snap: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.shelterCosts.properties.mortgage
+    description: Household.shelterCostMortgage
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.shelterCosts.properties.propertyTax
+    description: Household.shelterCostPropertyTax
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.9(d)(6)(ii)
+      x-snap: Required
+  - target: $.components.schemas.Household.properties.shelterCosts.properties.insurance
+    description: Household.shelterCostInsurance
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.9(d)(6)(ii)
+      x-snap: Required
+  - target: $.components.schemas.Household.properties.utilityCosts.properties.heating
+    description: Household.utilityCostHeating
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.9(d)(6)(iii) (SNAP SUA or actual); 42 USC 8624 (LIHEAP)
+      x-snap: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.utilityCosts.properties.electric
+    description: Household.utilityCostElectric
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.utilityCosts.properties.gas
+    description: Household.utilityCostGas
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.utilityCosts.properties.water
+    description: Household.utilityCostWater
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.utilityCosts.properties.telephone
+    description: Household.utilityCostTelephone
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.9(d)(6)(iii)
+      x-snap: Required
+  - target: $.components.schemas.Household.properties.energySupplierName
+    description: Household.energySupplierName
+    update:
+      x-source: applicant
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.energySupplierAccountNumber
+    description: Household.energySupplierAccountNumber
+    update:
+      x-source: applicant
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.primaryHeatingFuelType
+    description: Household.primaryHeatingFuelType
+    update:
+      x-source: applicant
+      x-statute: 42 USC 8624(b)(5)
+      x-liheap: Required
+  - target: $.components.schemas.Household.properties.primaryContactPhone
+    description: Household.primaryContactPhone
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Household.properties.primaryContactEmail
+    description: Household.primaryContactEmail
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Household.properties.preferredLanguage
+    description: Household.preferredLanguage
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.firstName
+    description: Person.firstName
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.middleName
+    description: Person.middleName
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Person.properties.lastName
+    description: Person.lastName
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.suffix
+    description: Person.suffix
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Person.properties.dateOfBirth
+    description: Person.dateOfBirth
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.ssn
+    description: Person.ssn
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.6 (SNAP); 42 CFR 435.910 (Medicaid); 20 CFR 416.708 (SSI)
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.gender
+    description: Person.gender
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+  - target: $.components.schemas.Person.properties.race
+    description: Person.race
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Person.properties.ethnicity
+    description: Person.ethnicity
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Person.properties.relationshipToApplicant
+    description: Person.relationshipToApplicant
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.maritalStatus
+    description: Person.maritalStatus
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.1(b)(1) (SNAP);
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-summer-ebt: 42 CFR 435.603 (MAGI); 42 USC 1396r-5 (Non-MAGI spousal impoverishment)
+  - target: $.components.schemas.Person.properties.isApplicant
+    description: Person.isApplicant
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.citizenshipStatus
+    description: Person.citizenshipStatus
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.4 (SNAP); 42 CFR 435.406 (Medicaid); 8 USC 1611-1615 (PRWORA); OBBBA Section 10108
+      x-obbba: Modified
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.immigrationDocumentType
+    description: Person.immigrationDocumentType
+    update:
+      x-source: applicant
+      x-statute: Required when non-citizen; 7 CFR 273.4; 42 CFR 435.406
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.immigrationDocumentNumber
+    description: Person.immigrationDocumentNumber
+    update:
+      x-source: applicant
+      x-statute: Required when non-citizen
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.alienRegistrationNumber
+    description: Person.alienRegistrationNumber
+    update:
+      x-source: applicant
+      x-statute: Required when non-citizen
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.dateOfEntryToUS
+    description: Person.dateOfEntryToUS
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-summer-ebt: Required when non-citizen; 8 USC 1613 (5-year bar)
+  - target: $.components.schemas.Person.properties.qualifiedAlienCategory
+    description: Person.qualifiedAlienCategory
+    update:
+      x-source: applicant
+      x-statute: 8 USC 1641
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+  - target: $.components.schemas.Person.properties.isPregnant
+    description: Person.isPregnant
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.24(c)(6) (SNAP ABAWD exemption);
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-wic: Required
+      x-chip: Required
+      x-summer-ebt: 42 CFR 435.116 (MAGI); 42 CFR 435.170 (Non-MAGI); 7 CFR 246.7 (WIC)
+  - target: $.components.schemas.Person.properties.expectedDueDate
+    description: Person.expectedDueDate
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-wic: Required
+      x-chip: Required
+      x-summer-ebt: Medicaid counts unborn in household size (MAGI); WIC eligibility
+  - target: $.components.schemas.Person.properties.numberOfExpectedChildren
+    description: Person.numberOfExpectedChildren
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+  - target: $.components.schemas.Person.properties.isBreastfeeding
+    description: Person.isBreastfeeding
+    update:
+      x-source: applicant
+      x-statute: WIC eligibility for breastfeeding women
+      x-wic: Required
+      x-summer-ebt: 7 CFR 246.7(c)
+  - target: $.components.schemas.Person.properties.deliveryDate
+    description: Person.deliveryDate
+    update:
+      x-source: applicant
+      x-wic: Required
+      x-summer-ebt: Used to determine postpartum status for WIC (up to 6 months post-delivery)
+  - target: $.components.schemas.Person.properties.isPostpartum
+    description: Person.isPostpartum
+    update:
+      x-source: derived
+      x-statute: Derived from deliveryDate; within 6 months
+      x-wic: Required
+      x-summer-ebt: 7 CFR 246.7(c)(2)
+  - target: $.components.schemas.Person.properties.wicParticipantCategory
+    description: Person.wicParticipantCategory
+    update:
+      x-source: derived
+      x-statute: 7 CFR 246.7
+      x-wic: Required
+  - target: $.components.schemas.Person.properties.nutritionalRiskLevel
+    description: Person.nutritionalRiskLevel
+    update:
+      x-source: assessed
+      x-statute: Determined by WIC-qualified professional
+      x-wic: Required
+      x-summer-ebt: 7 CFR 246.7(e)
+  - target: $.components.schemas.Person.properties.nutritionalRiskConditions
+    description: Person.nutritionalRiskConditions
+    update:
+      x-source: assessed
+      x-statute: A person may have multiple risk conditions simultaneously.
+      x-wic: Required
+      x-summer-ebt: 7 CFR 246.7(e)
+  - target: $.components.schemas.Person.properties.isInFosterCare
+    description: Person.isInFosterCare
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-section-8-housing: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.isFormerFosterYouth
+    description: Person.isFormerFosterYouth
+    update:
+      x-source: applicant
+      x-obbba: Medicaid to age 26 for former foster youth
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+  - target: $.components.schemas.Person.properties.isEnrolledInSchool
+    description: Person.isEnrolledInSchool
+    update:
+      x-source: applicant
+      x-statute: Must be enrolled in NSLP/SBP-participating school
+      x-liheap: Required
+      x-summer-ebt: 42 USC 1762; 7 CFR 292
+  - target: $.components.schemas.Person.properties.schoolName
+    description: Person.schoolName
+    update:
+      x-source: applicant
+      x-statute: Identifies the school for Summer EBT verification
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.schoolDistrict
+    description: Person.schoolDistrict
+    update:
+      x-source: applicant
+      x-statute: Used to verify school participates in NSLP/SBP
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.gradeLevel
+    description: Person.gradeLevel
+    update:
+      x-source: applicant
+      x-statute: Confirms school-age enrollment
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.isMigrantYouth
+    description: Person.isMigrantYouth
+    update:
+      x-source: applicant
+      x-statute: Migrant youth categorically eligible for Summer EBT
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.isRunawayYouth
+    description: Person.isRunawayYouth
+    update:
+      x-source: applicant
+      x-statute: Runaway youth categorically eligible for Summer EBT
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.isHeadStartParticipant
+    description: Person.isHeadStartParticipant
+    update:
+      x-source: applicant
+      x-statute: Head Start participants categorically eligible for Summer EBT
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.age
+    description: Person.age
+    update:
+      x-source: derived
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.isSchoolAge
+    description: Person.isSchoolAge
+    update:
+      x-source: derived
+      x-statute: Derived from dateOfBirth; must be school-age for Summer EBT
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.isElderlyOrDisabled
+    description: Person.isElderlyOrDisabled
+    update:
+      x-source: derived
+      x-obbba: Modified
+      x-snap: Required
+  - target: $.components.schemas.Person.properties.isAbawdEligible
+    description: Person.isAbawdEligible
+    update:
+      x-source: derived
+      x-statute: 7 CFR 273.24; OBBBA Section 10107
+      x-obbba: Modified
+      x-snap: Required
+  - target: $.components.schemas.Person.properties.disabilityStatus
+    description: Person.disabilityStatus
+    update:
+      x-source: applicant
+      x-statute: 20 CFR 416.905 (SSI)
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.disabilityType
+    description: Person.disabilityType
+    update:
+      x-source: applicant
+      x-statute: 20 CFR 416.920-416.929
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.meetsGainfulActivityTest
+    description: Person.meetsGainfulActivityTest
+    update:
+      x-source: assessed
+      x-statute: 20 CFR 416.971-416.975
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.disabilityDuration
+    description: Person.disabilityDuration
+    update:
+      x-source: assessed
+      x-statute: 20 CFR 416.909
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.isBlind
+    description: Person.isBlind
+    update:
+      x-source: applicant
+      x-statute: 20 CFR 416.981
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.employerInsuranceAvailable
+    description: Person.employerInsuranceAvailable
+    update:
+      x-source: applicant
+      x-statute: CHIP waiting period for employer coverage
+      x-medicaid-magi: Required
+      x-wic: Required
+      x-summer-ebt: 42 CFR 457.310(c)
+  - target: $.components.schemas.Person.properties.employerInsuranceAffordable
+    description: Person.employerInsuranceAffordable
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+  - target: $.components.schemas.Person.properties.veteranStatus
+    description: Person.veteranStatus
+    update:
+      x-source: applicant
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.isIndianTribalMember
+    description: Person.isIndianTribalMember
+    update:
+      x-source: applicant
+      x-statute: Indian Health Care Improvement Act; OBBBA Sections 10107 and 2501
+      x-obbba: New field
+      x-snap: Required
+      x-medicaid-magi: Required
+  - target: $.components.schemas.Person.properties.isStudent
+    description: Person.isStudent
+    update:
+      x-source: applicant
+      x-obbba: >-
+        Students in higher education generally ineligible for SNAP; Section 8 restricts full-time student heads of
+        household
+      x-snap: Required
+      x-liheap: Required
+  - target: $.components.schemas.Person.properties.studentWorkStudy
+    description: Person.studentWorkStudy
+    update:
+      x-source: applicant
+      x-statute: Exemption to SNAP student ineligibility
+      x-snap: Required
+      x-summer-ebt: 7 CFR 273.5(b)
+  - target: $.components.schemas.Person.properties.studentEmployedMinHours
+    description: Person.studentEmployedMinHours
+    update:
+      x-source: applicant
+      x-statute: Exemption to SNAP student ineligibility
+      x-snap: Required
+      x-summer-ebt: 7 CFR 273.5(b)
+  - target: $.components.schemas.Person.properties.studentExemptionReason
+    description: Person.studentExemptionReason
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.5(b)
+      x-snap: Required
+  - target: $.components.schemas.Person.properties.employmentStatus
+    description: Person.employmentStatus
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.snapWorkRegistered
+    description: Person.snapWorkRegistered
+    update:
+      x-source: applicant
+      x-statute: Most SNAP applicants 16-59 must register for work; separate from ABAWD requirement
+      x-snap: Required
+      x-summer-ebt: 7 CFR 273.7
+  - target: $.components.schemas.Person.properties.snapWorkRegistrationExempt
+    description: Person.snapWorkRegistrationExempt
+    update:
+      x-source: applicant
+      x-statute: 'Exempt: disabled, caretaker of child under 6, student, already working 30+ hrs, etc.'
+      x-snap: Required
+      x-summer-ebt: 7 CFR 273.7(b)
+  - target: $.components.schemas.Person.properties.abawdWorkHoursPerWeek
+    description: Person.abawdWorkHoursPerWeek
+    update:
+      x-source: applicant
+      x-statute: Must work/train 20+ hours/week
+      x-snap: Required
+      x-summer-ebt: 7 CFR 273.24(a)(1)
+  - target: $.components.schemas.Person.properties.abawdCountableMonths
+    description: Person.abawdCountableMonths
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.24(b)
+      x-snap: Required
+  - target: $.components.schemas.Person.properties.abawdExemptionReason
+    description: Person.abawdExemptionReason
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.24(c); OBBBA Section 10107
+      x-obbba: Modified
+      x-snap: Required
+  - target: $.components.schemas.Person.properties.medicaidWorkExemptionReason
+    description: Person.medicaidWorkExemptionReason
+    update:
+      x-source: applicant
+      x-statute: OBBBA Section 2501; effective January 1, 2027
+      x-obbba: New field
+      x-medicaid-magi: Required
+  - target: $.components.schemas.Person.properties.medicaidWorkHoursPerMonth
+    description: Person.medicaidWorkHoursPerMonth
+    update:
+      x-source: applicant
+      x-statute: OBBBA Section 2501
+      x-obbba: New field
+      x-medicaid-magi: Required
+  - target: $.components.schemas.Person.properties.medicaidEnrollmentGroup
+    description: Person.medicaidEnrollmentGroup
+    update:
+      x-source: derived
+      x-statute: 42 CFR 435.119 (expansion); OBBBA Section 71107
+      x-obbba: New field
+      x-medicaid-magi: Required
+  - target: $.components.schemas.Person.properties.tanfMonthsUsed
+    description: Person.tanfMonthsUsed
+    update:
+      x-source: applicant
+      x-statute: 42 USC 608(a)(7)
+  - target: $.components.schemas.Person.properties.tanfSanctionStatus
+    description: Person.tanfSanctionStatus
+    update:
+      x-source: applicant
+      x-statute: 42 USC 607(e); 45 CFR 261.14
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.tanfTotalWorkHoursPerWeek
+    description: Person.tanfTotalWorkHoursPerWeek
+    update:
+      x-source: derived
+      x-statute: 45 CFR 261.31
+  - target: $.components.schemas.Person.properties.twoParentFamily
+    description: Person.twoParentFamily
+    update:
+      x-source: derived
+      x-statute: 42 USC 607(a); 45 CFR 261.23
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.tanfCooperatesWithChildSupport
+    description: Person.tanfCooperatesWithChildSupport
+    update:
+      x-source: applicant
+      x-statute: 42 USC 608(a)(2)
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.tanfChildSupportGoodCause
+    description: Person.tanfChildSupportGoodCause
+    update:
+      x-source: applicant
+      x-statute: 42 USC 608(a)(2)
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.isMinorParent
+    description: Person.isMinorParent
+    update:
+      x-source: derived
+      x-statute: 'Derived: age < 18 and has child'
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.minorParentLivingArrangement
+    description: Person.minorParentLivingArrangement
+    update:
+      x-source: applicant
+      x-statute: 42 USC 608(a)(5)
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.goodCauseExemptionFromWork
+    description: Person.goodCauseExemptionFromWork
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.goodCauseExemptionReason
+    description: Person.goodCauseExemptionReason
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.fleeingFelonStatus
+    description: Person.fleeingFelonStatus
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-summer-ebt: 7 CFR 273.11(n) (SNAP); 42 USC 608(a)(9) (TANF); 42 USC 1382(e)(4) (SSI)
+  - target: $.components.schemas.Person.properties.drugFelonyConviction
+    description: Person.drugFelonyConviction
+    update:
+      x-source: applicant
+      x-statute: Applies to SNAP and TANF
+      x-snap: Required
+      x-tanf: Required
+      x-liheap: 21 USC 862a; states may opt out
+  - target: $.components.schemas.Person.properties.drugFelonyConvictionDate
+    description: Person.drugFelonyConvictionDate
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-tanf: Required
+      x-liheap: Required if drugFelonyConviction is true
+  - target: $.components.schemas.Person.properties.ipvHistory
+    description: Person.ipvHistory
+    update:
+      x-source: applicant
+      x-statute: Disqualification periods apply
+      x-snap: Required
+      x-tanf: Required
+      x-summer-ebt: 7 CFR 273.16 (SNAP)
+  - target: $.components.schemas.Person.properties.ipvDisqualificationEndDate
+    description: Person.ipvDisqualificationEndDate
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.strikerStatus
+    description: Person.strikerStatus
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.1(e)
+      x-snap: Required
+  - target: $.components.schemas.Person.properties.institutionalStatus
+    description: Person.institutionalStatus
+    update:
+      x-source: applicant
+      x-statute: Inmates ineligible for most programs; nursing_facility triggers Medicaid LTC pathway
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-ssi: Required
+      x-summer-ebt: 7 CFR 273.11(g) (SNAP); 42 CFR 435.1010 (Medicaid); 20 CFR 416.211 (SSI)
+  - target: $.components.schemas.Person.properties.expectedReleaseDate
+    description: Person.expectedReleaseDate
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.needsLongTermCare
+    description: Person.needsLongTermCare
+    update:
+      x-source: applicant
+      x-statute: 42 USC 1396a(a)(10); 42 CFR 435.217
+      x-medicaid-non-magi: Required
+  - target: $.components.schemas.Person.properties.levelOfCareAssessment
+    description: Person.levelOfCareAssessment
+    update:
+      x-source: assessed
+      x-statute: 42 CFR 441.302; 42 USC 1396n(c)
+      x-medicaid-non-magi: Required
+  - target: $.components.schemas.Person.properties.spouseIsInstitutionalized
+    description: Person.spouseIsInstitutionalized
+    update:
+      x-source: applicant
+      x-statute: 42 USC 1396r-5
+      x-medicaid-non-magi: Required
+  - target: $.components.schemas.Person.properties.institutionalizationDate
+    description: Person.institutionalizationDate
+    update:
+      x-source: applicant
+      x-statute: 42 USC 1396r-5(c)(1)
+      x-medicaid-non-magi: Required
+  - target: $.components.schemas.Person.properties.sexOffenderRegistryStatus
+    description: Person.sexOffenderRegistryStatus
+    update:
+      x-source: applicant
+      x-statute: 42 USC 13663
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.drugRelatedCriminalActivity
+    description: Person.drugRelatedCriminalActivity
+    update:
+      x-source: applicant
+      x-statute: 42 USC 13661-13663; 24 CFR 982.553
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.methamphetamineProductionConviction
+    description: Person.methamphetamineProductionConviction
+    update:
+      x-source: applicant
+      x-statute: 42 USC 1437n(f); 24 CFR 982.553(a)(1)(ii)(C)
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.violentCriminalActivity
+    description: Person.violentCriminalActivity
+    update:
+      x-source: applicant
+      x-statute: 24 CFR 982.553
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.alcoholAbusePattern
+    description: Person.alcoholAbusePattern
+    update:
+      x-source: applicant
+      x-statute: 24 CFR 982.553(a)(3)
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.priorEvictionFromPublicHousing
+    description: Person.priorEvictionFromPublicHousing
+    update:
+      x-source: applicant
+      x-statute: 24 CFR 982.552(c)
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.priorEvictionDate
+    description: Person.priorEvictionDate
+    update:
+      x-source: applicant
+      x-statute: 24 CFR 982.553(a)(1)(i)
+      x-section-8-housing: Required
+  - target: $.components.schemas.Person.properties.substantialLotteryWinnings
+    description: Person.substantialLotteryWinnings
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.11(r)
+      x-snap: Required
+  - target: $.components.schemas.Person.properties.lotteryWinningsAmount
+    description: Person.lotteryWinningsAmount
+    update:
+      x-source: applicant
+      x-snap: Required
+  - target: $.components.schemas.Person.properties.receivesOtherBenefits
+    description: Person.receivesOtherBenefits
+    update:
+      x-source: derived
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-wic: Required
+      x-chip: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Person.properties.deemedIncomeFromSpouse
+    description: Person.deemedIncomeFromSpouse
+    update:
+      x-source: derived
+      x-statute: 20 CFR 416.1163
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.deemedIncomeFromParent
+    description: Person.deemedIncomeFromParent
+    update:
+      x-source: derived
+      x-statute: 20 CFR 416.1165
+      x-tanf: Required
+  - target: $.components.schemas.Person.properties.deemedIncomeFromSponsor
+    description: Person.deemedIncomeFromSponsor
+    update:
+      x-source: derived
+      x-statute: 20 CFR 416.1166a
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.deemedResourcesFromParent
+    description: Person.deemedResourcesFromParent
+    update:
+      x-source: derived
+      x-statute: 20 CFR 416.1202(b)
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.deemedResourcesFromSpouse
+    description: Person.deemedResourcesFromSpouse
+    update:
+      x-source: derived
+      x-statute: 20 CFR 416.1202(a)
+      x-ssi: Required
+  - target: $.components.schemas.Person.properties.taxFilingStatus
+    description: Person.taxFilingStatus
+    update:
+      x-source: applicant
+      x-statute: Medicaid MAGI household determination; not used for non-MAGI
+      x-medicaid-magi: Required
+      x-chip: Required
+      x-summer-ebt: 42 CFR 435.603(b)-(d)
+  - target: $.components.schemas.Person.properties.taxFilingJointly
+    description: Person.taxFilingJointly
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+      x-chip: Required
+      x-summer-ebt: 42 CFR 435.603(f)(1)
+  - target: $.components.schemas.Person.properties.taxClaimedAsDependent
+    description: Person.taxClaimedAsDependent
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+      x-chip: Required
+      x-summer-ebt: 42 CFR 435.603(f)(2)
+  - target: $.components.schemas.Person.properties.taxClaimedByPersonId
+    description: Person.taxClaimedByPersonId
+    update:
+      x-source: applicant
+      x-statute: FK to Person who claims this person as dependent
+      x-medicaid-magi: Required
+      x-chip: Required
+  - target: $.components.schemas.Person.properties.taxClaimsDependents
+    description: Person.taxClaimsDependents
+    update:
+      x-source: applicant
+      x-medicaid-magi: Required
+      x-chip: Required
+      x-summer-ebt: 42 CFR 435.603(f)(3)
+  - target: $.components.schemas.Income.properties.type
+    description: Income.type
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Income.properties.grossAmount
+    description: Income.grossAmount
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Income.properties.netAmount
+    description: Income.netAmount
+    update:
+      x-source: derived
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-summer-ebt: >-
+        Derived: grossAmount minus applicable deductions; 7 CFR 273.9(d) for SNAP 20% earned income deduction; non-MAGI
+        uses SSI-methodology deductions in most states
+  - target: $.components.schemas.Income.properties.frequency
+    description: Income.frequency
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+      x-summer-ebt: Required
+  - target: $.components.schemas.Income.properties.isSeasonalOrIrregular
+    description: Income.isSeasonalOrIrregular
+    update:
+      x-source: applicant
+      x-statute: Affects how income is annualized for eligibility determination
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Income.properties.hoursPerWeek
+    description: Income.hoursPerWeek
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-summer-ebt: For employment/self-employment; ABAWD and TANF work requirements
+  - target: $.components.schemas.Income.properties.employerName
+    description: Income.employerName
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Income.properties.employerStreet
+    description: Income.employerStreet
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Income.properties.employerCity
+    description: Income.employerCity
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Income.properties.employerState
+    description: Income.employerState
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Income.properties.employerZip
+    description: Income.employerZip
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Income.properties.tipsAndCommissions
+    description: Income.tipsAndCommissions
+    update:
+      x-source: applicant
+      x-statute: For employment type; included in gross income
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-chip: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Income.properties.businessExpenses
+    description: Income.businessExpenses
+    update:
+      x-source: applicant
+      x-statute: For self_employment type; deducted from gross
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-summer-ebt: 7 CFR 273.11(b) (SNAP); 20 CFR 416.1110 (SSI)
+  - target: $.components.schemas.Income.properties.startDate
+    description: Income.startDate
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Income.properties.endDate
+    description: Income.endDate
+    update:
+      x-source: applicant
+      x-summer-ebt: Null if ongoing
+  - target: $.components.schemas.Income.properties.verificationSource
+    description: Income.verificationSource
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-magi: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-wic: Required
+      x-chip: Required
+      x-section-8-housing: Required
+      x-liheap: Required
+  - target: $.components.schemas.Asset.properties.type
+    description: Asset.type
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.8 (SNAP); 42 CFR 435.840 (Medicaid non-MAGI); 20 CFR 416.1201 (SSI); 24 CFR 5.603 (Section 8)
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Asset.properties.value
+    description: Asset.value
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Asset.properties.institutionName
+    description: Asset.institutionName
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Asset.properties.accountNumber
+    description: Asset.accountNumber
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Asset.properties.isJointlyOwned
+    description: Asset.isJointlyOwned
+    update:
+      x-source: applicant
+      x-statute: Affects how value is counted
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Asset.properties.jointOwnerName
+    description: Asset.jointOwnerName
+    update:
+      x-source: applicant
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.vehicleMake
+    description: Asset.vehicleMake
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.vehicleModel
+    description: Asset.vehicleModel
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.vehicleYear
+    description: Asset.vehicleYear
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.vehicleFairMarketValue
+    description: Asset.vehicleFairMarketValue
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.8(f) (SNAP vehicle exclusion); 20 CFR 416.1218 (SSI auto exclusion)
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.vehicleUseType
+    description: Asset.vehicleUseType
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.propertyDescription
+    description: Asset.propertyDescription
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Asset.properties.propertyFairMarketValue
+    description: Asset.propertyFairMarketValue
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Asset.properties.propertyEquity
+    description: Asset.propertyEquity
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Asset.properties.homeEquityValue
+    description: Asset.homeEquityValue
+    update:
+      x-source: applicant
+      x-statute: 42 USC 1396p(f); 20 CFR 416.1212; OBBBA Section 71108
+      x-obbba: New field
+      x-medicaid-non-magi: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.isHomestead
+    description: Asset.isHomestead
+    update:
+      x-source: applicant
+      x-statute: 7 CFR 273.8(e)(3) (SNAP home exclusion); 20 CFR 416.1212 (SSI home exclusion)
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.lifeInsuranceFaceValue
+    description: Asset.lifeInsuranceFaceValue
+    update:
+      x-source: applicant
+      x-statute: 20 CFR 416.1230
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.lifeInsuranceCashValue
+    description: Asset.lifeInsuranceCashValue
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Asset.properties.burialFundAmount
+    description: Asset.burialFundAmount
+    update:
+      x-source: applicant
+      x-statute: 20 CFR 416.1231
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.burialArrangementValue
+    description: Asset.burialArrangementValue
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.trustType
+    description: Asset.trustType
+    update:
+      x-source: applicant
+      x-statute: 20 CFR 416.1201(a); 42 USC 1396p(d)
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.trustValue
+    description: Asset.trustValue
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.recentAssetTransfer
+    description: Asset.recentAssetTransfer
+    update:
+      x-source: applicant
+      x-obbba: >-
+        SSI uses 36-month look-back; Medicaid non-MAGI LTC uses 60-month look-back. Application should collect all
+        transfers within 60 months to cover both.
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.transferDate
+    description: Asset.transferDate
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.transferAmount
+    description: Asset.transferAmount
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+  - target: $.components.schemas.Asset.properties.verificationSource
+    description: Asset.verificationSource
+    update:
+      x-source: applicant
+      x-statute: All programs with asset tests require verification
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-ssi: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Expense.properties.type
+    description: Expense.type
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Expense.properties.amount
+    description: Expense.amount
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Expense.properties.frequency
+    description: Expense.frequency
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-section-8-housing: Required
+  - target: $.components.schemas.Expense.properties.recipientOrProvider
+    description: Expense.recipientOrProvider
+    update:
+      x-source: applicant
+      x-statute: E.g., daycare name for dependent_care; child name for child_support_paid
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+  - target: $.components.schemas.Expense.properties.description
+    description: Expense.description
+    update:
+      x-source: applicant
+  - target: $.components.schemas.Expense.properties.forPersonId
+    description: Expense.forPersonId
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-summer-ebt: FK to Person; identifies which dependent the care expense is for
+  - target: $.components.schemas.Expense.properties.courtOrderNumber
+    description: Expense.courtOrderNumber
+    update:
+      x-source: applicant
+      x-liheap: For child_support_paid and court_ordered types
+  - target: $.components.schemas.Expense.properties.verificationSource
+    description: Expense.verificationSource
+    update:
+      x-source: applicant
+      x-snap: Required
+      x-medicaid-non-magi: Required
+      x-tanf: Required
+      x-section-8-housing: Required

@@ -6,17 +6,28 @@ import { getDatabase } from '../database-manager.js';
 import { executeSearch } from '../search-engine.js';
 
 /**
- * Default searchable fields for full-text search
- * These are common fields that most resources have
+ * Extract all string-typed field paths from an OpenAPI schema.
+ * Walks one level into object properties to support nested fields
+ * like name.firstName.
  */
-const DEFAULT_SEARCHABLE_FIELDS = [
-  'name',
-  'name.firstName',
-  'name.lastName',
-  'email',
-  'description',
-  'title'
-];
+function extractStringFields(schemas) {
+  const fields = [];
+  for (const schema of Object.values(schemas)) {
+    if (!schema.properties) continue;
+    for (const [key, prop] of Object.entries(schema.properties)) {
+      if (prop.type === 'string') {
+        fields.push(key);
+      } else if (prop.type === 'object' && prop.properties) {
+        for (const [nested, nestedProp] of Object.entries(prop.properties)) {
+          if (nestedProp.type === 'string') {
+            fields.push(`${key}.${nested}`);
+          }
+        }
+      }
+    }
+  }
+  return [...new Set(fields)];
+}
 
 /**
  * Create list handler for a resource
@@ -25,6 +36,9 @@ const DEFAULT_SEARCHABLE_FIELDS = [
  * @returns {Function} Express handler
  */
 export function createListHandler(apiMetadata, endpoint) {
+  // Derive searchable fields from schema string properties
+  const schemaFields = extractStringFields(apiMetadata.schemas || {});
+
   return (req, res) => {
     try {
       // Get database (this will create it if it doesn't exist)
@@ -33,13 +47,11 @@ export function createListHandler(apiMetadata, endpoint) {
       // Ensure req.query exists
       const queryParams = req.query || {};
 
-      // Determine searchable fields for full-text search
-      // Check if the endpoint has a `q` or `search` parameter
+      // Enable full-text search when the endpoint has a `q` or `search` parameter
       let searchableFields = [];
       for (const param of endpoint.parameters || []) {
         if (param.in === 'query' && (param.name === 'q' || param.name === 'search')) {
-          // Use default searchable fields for full-text queries
-          searchableFields = DEFAULT_SEARCHABLE_FIELDS;
+          searchableFields = schemaFields;
           break;
         }
       }

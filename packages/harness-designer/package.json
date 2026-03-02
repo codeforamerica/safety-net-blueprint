@@ -1,0 +1,42 @@
+{
+  "name": "@safety-net/harness-designer",
+  "version": "1.0.0",
+  "description": "Harness Designer - Storybook sandbox for exploring the contract-driven approach",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "typecheck": "tsc --noEmit",
+    "generate:pipeline": "node scripts/pipeline/generate-pipeline.js",
+    "generate:stories": "node storybook/scripts/generate-stories.js",
+    "generate": "npm run generate:pipeline && npm run generate:stories",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@codeforamerica/safety-net-blueprint-contracts": "*",
+    "@safety-net/form-engine": "*",
+    "@trussworks/react-uswds": "^10.0.0",
+    "js-yaml": "^4.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@modyfi/vite-plugin-yaml": "^1.1.1",
+    "@storybook/addon-essentials": "^8.6.0",
+    "@storybook/react-vite": "^8.6.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/js-yaml": "^4.0.9",
+"@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "jsdom": "^28.1.0",
+    "storybook": "^8.6.0",
+    "storybook-addon-tag-badges": "^1.4.0",
+    "typescript": "^5.3.3",
+    "vite": "^6.0.0",
+    "vitest": "^4.0.18"
+  }
+}

@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { writeFileSync, mkdirSync, rmSync } from 'fs';
+import { writeFileSync, readFileSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
@@ -15,10 +15,14 @@ import {
   discoverOverlayFiles,
   analyzeTargetLocations,
   resolveActionTargets,
+  applyOverlayWithTargets,
   getVersionFromFilename,
   filterByEnvironment,
   parseEnvFile,
-  substitutePlaceholders
+  substitutePlaceholders,
+  detectComponentPrefix,
+  rewriteOverlayRefs,
+  generateRpcOverlays
 } from '../../scripts/resolve.js';
 
 // Use checkPathExists from the overlay module (same as the script does)
@@ -515,6 +519,352 @@ test('resolve-overlay tests', async (t) => {
     assert.strictEqual(warnings.length, 2);
     assert.ok(warnings.includes('X'));
     assert.ok(warnings.includes('Y'));
+  });
+
+  // ===========================================================================
+  // detectComponentPrefix
+  // ===========================================================================
+
+  await t.test('detectComponentPrefix - detects ./ prefix from external $ref', () => {
+    const spec = {
+      paths: {
+        '/items': {
+          get: {
+            responses: {
+              '400': { $ref: './components/responses.yaml#/BadRequest' }
+            }
+          }
+        }
+      }
+    };
+    assert.strictEqual(detectComponentPrefix(spec), './');
+  });
+
+  await t.test('detectComponentPrefix - detects relative path prefix', () => {
+    const spec = {
+      paths: {
+        '/items': {
+          get: {
+            responses: {
+              '400': { $ref: '../../contracts/components/responses.yaml#/BadRequest' }
+            }
+          }
+        }
+      }
+    };
+    assert.strictEqual(detectComponentPrefix(spec), '../../contracts/');
+  });
+
+  await t.test('detectComponentPrefix - skips internal refs (#/components/...)', () => {
+    const spec = {
+      paths: {
+        '/items': {
+          get: {
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: { $ref: '#/components/schemas/Item' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+    // No external component refs found, should return default
+    assert.strictEqual(detectComponentPrefix(spec), './');
+  });
+
+  await t.test('detectComponentPrefix - returns ./ when no refs found', () => {
+    const spec = { info: { title: 'Test' } };
+    assert.strictEqual(detectComponentPrefix(spec), './');
+  });
+
+  // ===========================================================================
+  // rewriteOverlayRefs
+  // ===========================================================================
+
+  await t.test('rewriteOverlayRefs - rewrites ./ prefix to new prefix', () => {
+    const overlay = {
+      actions: [{
+        target: '$.paths',
+        update: {
+          '/items/{id}/approve': {
+            post: {
+              responses: {
+                '400': { $ref: './components/responses.yaml#/BadRequest' },
+                '404': { $ref: './components/responses.yaml#/NotFound' }
+              }
+            }
+          }
+        }
+      }]
+    };
+
+    const result = rewriteOverlayRefs(overlay, './', '../../contracts/');
+    const responses = result.actions[0].update['/items/{id}/approve'].post.responses;
+    assert.strictEqual(responses['400'].$ref, '../../contracts/components/responses.yaml#/BadRequest');
+    assert.strictEqual(responses['404'].$ref, '../../contracts/components/responses.yaml#/NotFound');
+  });
+
+  await t.test('rewriteOverlayRefs - returns same object when prefixes match', () => {
+    const overlay = { actions: [{ target: '$.paths', update: {} }] };
+    const result = rewriteOverlayRefs(overlay, './', './');
+    assert.deepStrictEqual(result, overlay);
+  });
+
+  await t.test('rewriteOverlayRefs - does not rewrite non-component $refs', () => {
+    const overlay = {
+      actions: [{
+        target: '$.paths',
+        update: {
+          '/items/{id}/approve': {
+            post: {
+              responses: {
+                '200': {
+                  content: {
+                    'application/json': {
+                      schema: { $ref: '#/components/schemas/Item' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }]
+    };
+
+    const result = rewriteOverlayRefs(overlay, './', '../../contracts/');
+    const schema = result.actions[0].update['/items/{id}/approve'].post.responses['200'].content['application/json'].schema;
+    assert.strictEqual(schema.$ref, '#/components/schemas/Item');
+  });
+
+  // ===========================================================================
+  // generateRpcOverlays (integration-style, uses temp dir)
+  // ===========================================================================
+
+  await t.test('generateRpcOverlays - generates overlay from state machine + API spec', () => {
+    const dir = createTmpDir();
+    try {
+      // Write a minimal API spec
+      writeYaml(dir, 'test-openapi.yaml', {
+        openapi: '3.1.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/items': {
+            get: {
+              summary: 'List items',
+              operationId: 'listItems',
+              tags: ['Items'],
+              responses: { '200': { description: 'OK' } }
+            }
+          },
+          '/items/{itemId}': {
+            parameters: [{ $ref: '#/components/parameters/ItemIdParam' }],
+            get: {
+              summary: 'Get item',
+              operationId: 'getItem',
+              tags: ['Items'],
+              responses: {
+                '200': {
+                  description: 'OK',
+                  content: {
+                    'application/json': {
+                      schema: { $ref: '#/components/schemas/Item' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        components: {
+          parameters: {
+            ItemIdParam: { name: 'itemId', in: 'path', required: true, schema: { type: 'string' } }
+          },
+          schemas: {
+            Item: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string' } } }
+          }
+        }
+      });
+
+      // Write a state machine
+      writeYaml(dir, 'test-state-machine.yaml', {
+        domain: 'test',
+        object: 'Item',
+        apiSpec: 'test-openapi.yaml',
+        states: { draft: {}, published: {} },
+        initialState: 'draft',
+        transitions: [
+          { trigger: 'publish', from: 'draft', to: 'published' }
+        ],
+        requestBodies: { publish: {} }
+      });
+
+      // Collect yaml files the same way resolve.js does
+      const yamlFiles = [
+        {
+          relativePath: 'test-openapi.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+        }
+      ];
+
+      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+
+      assert.strictEqual(rpcOverlays.length, 1);
+
+      const { overlay, stateMachine } = rpcOverlays[0];
+      assert.strictEqual(stateMachine.domain, 'test');
+      assert.strictEqual(overlay.info.title, 'test RPC Overlay');
+      assert.strictEqual(overlay.actions.length, 1);
+
+      // The overlay should target $.paths and add the RPC endpoint
+      const action = overlay.actions[0];
+      assert.strictEqual(action.target, '$.paths');
+      assert.ok(action.update['/items/{itemId}/publish']);
+      assert.strictEqual(action.update['/items/{itemId}/publish'].post.operationId, 'publishItem');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  await t.test('generateRpcOverlays - applies overlay to add RPC paths to spec', () => {
+    const dir = createTmpDir();
+    try {
+      // Write a minimal API spec with external component $refs
+      writeYaml(dir, 'test-openapi.yaml', {
+        openapi: '3.1.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/items/{itemId}': {
+            parameters: [{ $ref: '#/components/parameters/ItemIdParam' }],
+            get: {
+              tags: ['Items'],
+              responses: {
+                '200': {
+                  description: 'OK',
+                  content: { 'application/json': { schema: { $ref: '#/components/schemas/Item' } } }
+                },
+                '400': { $ref: './components/responses.yaml#/BadRequest' }
+              }
+            }
+          }
+        },
+        components: {
+          parameters: { ItemIdParam: { name: 'itemId', in: 'path', required: true, schema: { type: 'string' } } },
+          schemas: { Item: { type: 'object' } }
+        }
+      });
+
+      writeYaml(dir, 'test-state-machine.yaml', {
+        domain: 'test',
+        object: 'Item',
+        apiSpec: 'test-openapi.yaml',
+        states: { draft: {}, published: {} },
+        initialState: 'draft',
+        transitions: [
+          { trigger: 'publish', from: 'draft', to: 'published' },
+          { trigger: 'archive', from: 'published', to: 'draft' }
+        ],
+        requestBodies: { publish: {}, archive: {} }
+      });
+
+      const yamlFiles = [
+        {
+          relativePath: 'test-openapi.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+        }
+      ];
+
+      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+      assert.strictEqual(rpcOverlays.length, 1);
+
+      // Now apply the overlay through the full pipeline
+      const { overlay } = rpcOverlays[0];
+      const actionFileMap = analyzeTargetLocations(overlay, yamlFiles);
+      const { actionTargets } = resolveActionTargets(actionFileMap);
+      const results = applyOverlayWithTargets(yamlFiles, overlay, actionTargets, dir);
+
+      const resolved = results.get('test-openapi.yaml');
+      assert.ok(resolved.paths['/items/{itemId}/publish'], 'Should have publish RPC path');
+      assert.ok(resolved.paths['/items/{itemId}/archive'], 'Should have archive RPC path');
+      assert.strictEqual(resolved.paths['/items/{itemId}/publish'].post.operationId, 'publishItem');
+      assert.strictEqual(resolved.paths['/items/{itemId}/archive'].post.operationId, 'archiveItem');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  await t.test('generateRpcOverlays - returns empty when no state machines exist', () => {
+    const dir = createTmpDir();
+    try {
+      writeYaml(dir, 'test-openapi.yaml', { openapi: '3.1.0', info: { title: 'Test' } });
+      const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { openapi: '3.1.0' } }];
+      const result = generateRpcOverlays(dir, yamlFiles);
+      assert.strictEqual(result.length, 0);
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  await t.test('generateRpcOverlays - rewrites $ref prefix when spec uses non-default prefix', () => {
+    const dir = createTmpDir();
+    try {
+      // API spec uses a different component prefix
+      writeYaml(dir, 'test-openapi.yaml', {
+        openapi: '3.1.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/items/{itemId}': {
+            parameters: [{ $ref: '#/components/parameters/ItemIdParam' }],
+            get: {
+              tags: ['Items'],
+              responses: {
+                '200': {
+                  description: 'OK',
+                  content: { 'application/json': { schema: { $ref: '#/components/schemas/Item' } } }
+                },
+                '400': { $ref: '../../contracts/components/responses.yaml#/BadRequest' }
+              }
+            }
+          }
+        },
+        components: {
+          parameters: { ItemIdParam: { name: 'itemId', in: 'path', required: true, schema: { type: 'string' } } },
+          schemas: { Item: { type: 'object' } }
+        }
+      });
+
+      writeYaml(dir, 'test-state-machine.yaml', {
+        domain: 'test',
+        object: 'Item',
+        apiSpec: 'test-openapi.yaml',
+        states: { draft: {}, published: {} },
+        initialState: 'draft',
+        transitions: [{ trigger: 'publish', from: 'draft', to: 'published' }],
+        requestBodies: { publish: {} }
+      });
+
+      const yamlFiles = [{
+        relativePath: 'test-openapi.yaml',
+        spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+      }];
+
+      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+      const { overlay } = rpcOverlays[0];
+
+      // Response $refs should use the detected prefix, not ./
+      const publishEndpoint = overlay.actions[0].update['/items/{itemId}/publish'];
+      assert.strictEqual(
+        publishEndpoint.post.responses['400'].$ref,
+        '../../contracts/components/responses.yaml#/BadRequest'
+      );
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
   });
 
 });

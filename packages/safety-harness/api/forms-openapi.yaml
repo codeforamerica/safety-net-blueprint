@@ -1,0 +1,309 @@
+openapi: 3.1.0
+info:
+  title: Form Service API
+  version: 1.0.0
+  x-domain: forms
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    REST API for managing form contract definitions. Provides CRUD operations
+    for creating, reading, updating, and deleting form contracts that drive
+    the form engine rendering pipeline.
+servers:
+  - url: http://localhost:1080
+    description: Local mock server
+tags:
+  - name: Forms
+    description: Manage form contract definitions.
+paths:
+  /forms:
+    get:
+      summary: List forms
+      description: Retrieve a paginated list of form definitions.
+      operationId: listForms
+      tags:
+        - Forms
+      parameters:
+        - $ref: "#/components/parameters/SearchQueryParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      responses:
+        "200":
+          description: A paginated collection of forms.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      summary: Create a form
+      description: Create a new form contract definition.
+      operationId: createForm
+      tags:
+        - Forms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FormCreate"
+      responses:
+        "201":
+          description: Form created successfully.
+          headers:
+            Location:
+              description: URL of the newly created form resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Form"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /forms/{formId}:
+    parameters:
+      - $ref: "#/components/parameters/FormIdParam"
+    get:
+      summary: Get a form
+      description: Retrieve a single form contract definition by identifier.
+      operationId: getForm
+      tags:
+        - Forms
+      responses:
+        "200":
+          description: Form retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Form"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      summary: Update a form
+      description: Apply partial updates to an existing form contract definition.
+      operationId: updateForm
+      tags:
+        - Forms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FormUpdate"
+      responses:
+        "200":
+          description: Form updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Form"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      summary: Delete a form
+      description: Permanently remove a form contract definition.
+      operationId: deleteForm
+      tags:
+        - Forms
+      responses:
+        "204":
+          description: Form deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+components:
+  parameters:
+    FormIdParam:
+      name: formId
+      in: path
+      required: true
+      description: Unique identifier of the form.
+      schema:
+        type: string
+        format: uuid
+      example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    # Inlined from shared components/parameters.yaml pattern
+    SearchQueryParam:
+      name: q
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.
+    LimitParam:
+      name: limit
+      in: query
+      description: Maximum number of items to return (1-100).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    OffsetParam:
+      name: offset
+      in: query
+      description: Number of items to skip before collecting results.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  schemas:
+    # Inlined from shared components/responses.yaml#/Error pattern
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error description.
+        details:
+          type: array
+          description: Additional error details.
+          items:
+            type: object
+            additionalProperties: true
+    Form:
+      type: object
+      description: |
+        A form contract definition that drives the form engine rendering pipeline.
+        Contains metadata about the form and its full definition payload.
+      required:
+        - name
+        - status
+        - definition
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the form.
+          readOnly: true
+        name:
+          type: string
+          description: Human-readable name for the form contract.
+          maxLength: 200
+        description:
+          type: string
+          description: Brief description of the form's purpose.
+          maxLength: 1000
+        status:
+          type: string
+          description: Lifecycle status of the form contract.
+          enum:
+            - draft
+            - published
+        definition:
+          type: object
+          description: |
+            The full FormContract payload that drives the form engine.
+            Conforms to the form-contract.schema.json JSON Schema
+            in packages/safety-harness/contracts/.
+        version:
+          type: string
+          description: Semantic version of the form contract.
+          maxLength: 50
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the form was created.
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the form was last updated.
+          readOnly: true
+    FormCreate:
+      allOf:
+        - $ref: "#/components/schemas/Form"
+        - type: object
+          description: |
+            Payload to create a new form contract definition.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+    FormUpdate:
+      allOf:
+        - $ref: "#/components/schemas/Form"
+        - type: object
+          description: |
+            Payload to update one or more mutable fields of an existing form. Partial updates are supported.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+          minProperties: 1
+    FormList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Form"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of forms available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of forms requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more forms are available beyond the current page.
+  # Inlined from shared components/responses.yaml pattern
+  responses:
+    BadRequest:
+      description: The request is malformed or contains invalid parameters.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    UnprocessableEntity:
+      description: The request was well-formed but contained semantic errors.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalError:
+      description: An unexpected error occurred on the server.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

@@ -1,0 +1,1057 @@
+openapi: 3.1.0
+info:
+  title: Federal Benefits Data Model
+  version: 1.0.0
+  description: Generated from federal-benefits-data-model.csv
+  x-api-id: applications
+paths: {}
+components:
+  schemas:
+    Application:
+      type: object
+      properties:
+        applicationDate:
+          type: string
+          format: date
+          description: Application Date
+        programsAppliedFor:
+          type: array
+          items:
+            type: string
+            enum:
+              - SNAP
+              - Medicaid_MAGI
+              - Medicaid_NonMAGI
+              - TANF
+              - SSI
+              - WIC
+              - CHIP
+              - Section_8_Housing
+              - LIHEAP
+              - Summer_EBT
+          description: Programs Applied For
+        isExpedited:
+          type: boolean
+          description: Expedited Processing Requested/Needed
+        signatureOfApplicant:
+          type: boolean
+          description: Applicant Signature Obtained
+        signatureDate:
+          type: string
+          format: date
+          description: Signature Date
+        signatureMethod:
+          type: string
+          enum:
+            - in_person
+            - electronic
+            - telephonic
+            - mark
+          description: Signature Method
+        rightsAndResponsibilitiesAcknowledged:
+          type: boolean
+          description: Rights and Responsibilities Acknowledged
+        penaltyOfPerjuryAcknowledged:
+          type: boolean
+          description: Penalty of Perjury Acknowledged
+        consentToVerifyInformation:
+          type: boolean
+          description: Consent to Verify Information
+        consentToShareData:
+          type: boolean
+          description: Consent to Share Data Between Programs
+        voterRegistrationOffered:
+          type: boolean
+          description: Voter Registration Offered
+        voterRegistrationResponse:
+          type: string
+          enum:
+            - register
+            - already_registered
+            - decline
+          description: Voter Registration Response
+        noticeDeliveryPreference:
+          type: string
+          enum:
+            - mail
+            - email
+            - electronic_portal
+            - text
+          description: Notice Delivery Preference
+        paymentMethodPreference:
+          type: string
+          enum:
+            - ebt_card
+            - direct_deposit
+            - check
+          description: Payment/Benefit Delivery Preference
+        accommodationNeeded:
+          type: boolean
+          description: Accessibility Accommodation Needed
+        accommodationType:
+          type: string
+          enum:
+            - large_print
+            - braille
+            - screen_reader
+            - sign_language_interpreter
+            - tty_tdd
+            - wheelchair_accessible
+            - in_home_interview
+            - other
+          description: Accommodation Type
+        household:
+          $ref: '#/components/schemas/Household'
+    Household:
+      type: object
+      properties:
+        size:
+          type: integer
+          description: Household Size
+        purchasePrepareFoodTogether:
+          type: boolean
+          description: Purchase and Prepare Food Together
+        livingArrangement:
+          type: string
+          enum:
+            - own_home
+            - rent
+            - living_with_others
+            - institutional
+            - other
+          description: Living Arrangement
+        sharedQuartersWithNonMembers:
+          type: boolean
+          description: Shared Quarters with Non-Household Members
+        isHomeless:
+          type: boolean
+          description: Homeless Status
+        stateResidencySinceDate:
+          type: string
+          format: date
+          description: State Residency Since
+        previousHousingAssistance:
+          type: boolean
+          description: Previous Participation in Housing Assistance
+        familyType:
+          type: string
+          enum:
+            - family
+            - elderly
+            - disabled
+            - displaced
+            - single_person
+            - remaining_family
+          description: Family Type
+        energySupplierName:
+          type: string
+          description: Energy Supplier Name
+        energySupplierAccountNumber:
+          type: string
+          description: Energy Supplier Account Number
+        primaryHeatingFuelType:
+          type: string
+          enum:
+            - natural_gas
+            - electricity
+            - propane
+            - fuel_oil
+            - kerosene
+            - wood
+            - coal
+            - solar
+            - other
+          description: Primary Heating Fuel Type
+        primaryContactPhone:
+          type: string
+          description: Primary Contact Phone
+        primaryContactEmail:
+          type: string
+          description: Primary Contact Email
+        preferredLanguage:
+          type: string
+          enum:
+            - english
+            - spanish
+            - chinese
+            - vietnamese
+            - korean
+            - tagalog
+            - arabic
+            - french
+            - haitian_creole
+            - russian
+            - portuguese
+            - other
+          description: Preferred Language
+        physicalAddress:
+          type: object
+          properties:
+            street1:
+              type: string
+              description: Physical Address Line 1
+            street2:
+              type: string
+              description: Physical Address Line 2
+            city:
+              type: string
+              description: Physical Address City
+            state:
+              type: string
+              description: Physical Address State
+            county:
+              type: string
+              description: Physical Address County
+            zip:
+              type: string
+              description: Physical Address ZIP
+        mailingAddress:
+          type: object
+          properties:
+            street1:
+              type: string
+              description: Mailing Address Line 1
+            street2:
+              type: string
+              description: Mailing Address Line 2
+            city:
+              type: string
+              description: Mailing Address City
+            state:
+              type: string
+              description: Mailing Address State
+            zip:
+              type: string
+              description: Mailing Address ZIP
+        shelterCosts:
+          type: object
+          properties:
+            rent:
+              type: number
+              description: Monthly Rent Amount
+            mortgage:
+              type: number
+              description: Monthly Mortgage Amount
+            propertyTax:
+              type: number
+              description: Monthly Property Tax
+            insurance:
+              type: number
+              description: Monthly Homeowner Insurance
+        utilityCosts:
+          type: object
+          properties:
+            heating:
+              type: number
+              description: Heating/Cooling Cost
+            electric:
+              type: number
+              description: Electric Cost
+            gas:
+              type: number
+              description: Gas Cost
+            water:
+              type: number
+              description: Water/Sewer Cost
+            telephone:
+              type: number
+              description: Telephone Cost
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+    Person:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: First Name
+        middleName:
+          type: string
+          description: Middle Name
+        lastName:
+          type: string
+          description: Last Name
+        suffix:
+          type: string
+          description: Name Suffix
+        dateOfBirth:
+          type: string
+          format: date
+          description: Date of Birth
+        ssn:
+          type: string
+          description: Social Security Number
+        gender:
+          type: string
+          enum:
+            - male
+            - female
+            - other
+          description: Sex/Gender
+        race:
+          type: array
+          items:
+            type: string
+            enum:
+              - white
+              - black
+              - asian
+              - american_indian_alaska_native
+              - native_hawaiian_pacific_islander
+              - other
+              - multiracial
+          description: Race
+        ethnicity:
+          type: string
+          enum:
+            - hispanic_latino
+            - not_hispanic_latino
+          description: Ethnicity
+        relationshipToApplicant:
+          type: string
+          enum:
+            - self
+            - spouse
+            - child
+            - stepchild
+            - parent
+            - sibling
+            - grandchild
+            - grandparent
+            - aunt_uncle
+            - niece_nephew
+            - cousin
+            - other_relative
+            - unrelated_adult
+            - unrelated_child
+          description: Relationship to Applicant/Head
+        maritalStatus:
+          type: string
+          enum:
+            - single
+            - married
+            - separated
+            - divorced
+            - widowed
+          description: Marital Status
+        isApplicant:
+          type: boolean
+          description: Is Applicant/Head of Household
+        citizenshipStatus:
+          type: string
+          enum:
+            - us_citizen
+            - us_national
+            - lawful_permanent_resident
+            - refugee
+            - asylee
+            - cuban_haitian_entrant
+            - cofa_citizen
+            - conditional_entrant
+            - paroled_for_one_year
+            - battered_spouse_child
+            - victim_of_trafficking
+            - qualified_alien_other
+            - prucol
+            - undocumented
+            - other
+          description: Citizenship Status
+        immigrationDocumentType:
+          type: string
+          enum:
+            - permanent_resident_card
+            - employment_authorization
+            - arrival_departure_record
+            - refugee_travel_document
+            - other
+          description: Immigration Document Type
+        immigrationDocumentNumber:
+          type: string
+          description: Immigration Document Number
+        alienRegistrationNumber:
+          type: string
+          description: Alien Registration Number
+        dateOfEntryToUS:
+          type: string
+          format: date
+          description: Date of Entry to US
+        qualifiedAlienCategory:
+          type: string
+          enum:
+            - lawful_permanent_resident
+            - refugee
+            - asylee
+            - cuban_haitian_entrant
+            - paroled_for_one_year
+            - battered_spouse_child
+            - victim_of_trafficking
+            - conditional_entrant
+            - other
+          description: Qualified Alien Status Category
+        isPregnant:
+          type: boolean
+          description: Pregnancy Status
+        expectedDueDate:
+          type: string
+          format: date
+          description: Expected Due Date
+        numberOfExpectedChildren:
+          type: integer
+          description: Number of Expected Children
+        isBreastfeeding:
+          type: boolean
+          description: Breastfeeding Status
+        deliveryDate:
+          type: string
+          format: date
+          description: Delivery Date
+        isPostpartum:
+          type: boolean
+          description: Postpartum Status (within 6 months of delivery)
+        wicParticipantCategory:
+          type: string
+          enum:
+            - pregnant_woman
+            - breastfeeding_woman
+            - postpartum_woman
+            - infant
+            - child
+          description: WIC Participant Category
+        nutritionalRiskLevel:
+          type: string
+          enum:
+            - high
+            - medium
+            - low
+            - none
+          description: Nutritional Risk Level
+        nutritionalRiskConditions:
+          type: array
+          items:
+            type: string
+            enum:
+              - anthropometric
+              - biochemical
+              - dietary_inadequacy
+              - medical_condition
+              - predisposing_condition
+              - other
+          description: Nutritional Risk Conditions
+        isInFosterCare:
+          type: boolean
+          description: Foster Care Status
+        isFormerFosterYouth:
+          type: boolean
+          description: Former Foster Youth (age 18-26)
+        isEnrolledInSchool:
+          type: boolean
+          description: Enrolled in School
+        schoolName:
+          type: string
+          description: School Name
+        schoolDistrict:
+          type: string
+          description: School District
+        gradeLevel:
+          type: string
+          enum:
+            - pre_k
+            - k
+            - '1'
+            - '2'
+            - '3'
+            - '4'
+            - '5'
+            - '6'
+            - '7'
+            - '8'
+            - '9'
+            - '10'
+            - '11'
+            - '12'
+          description: Grade Level
+        isMigrantYouth:
+          type: boolean
+          description: Migrant Youth Status
+        isRunawayYouth:
+          type: boolean
+          description: Runaway Youth Status
+        isHeadStartParticipant:
+          type: boolean
+          description: Head Start Participant
+        age:
+          type: integer
+          description: Age
+        isSchoolAge:
+          type: boolean
+          description: School Age (approx 5-18)
+        isElderlyOrDisabled:
+          type: boolean
+          description: Elderly or Disabled (SNAP)
+        isAbawdEligible:
+          type: boolean
+          description: ABAWD Status
+        disabilityStatus:
+          type: boolean
+          description: Disability Status (meets SSA definition)
+        disabilityType:
+          type: string
+          description: Type of Disability/Impairment
+        meetsGainfulActivityTest:
+          type: boolean
+          description: Unable to Engage in Substantial Gainful Activity
+        disabilityDuration:
+          type: boolean
+          description: Disability Duration (12+ months or terminal)
+        isBlind:
+          type: boolean
+          description: Blind (meets SSA definition)
+        employerInsuranceAvailable:
+          type: boolean
+          description: Employer-Sponsored Insurance Available
+        employerInsuranceAffordable:
+          type: boolean
+          description: Employer Insurance Affordable
+        veteranStatus:
+          type: boolean
+          description: Veteran Status
+        isIndianTribalMember:
+          type: boolean
+          description: Indian/Tribal Member Status
+        isStudent:
+          type: boolean
+          description: Student Status (higher education)
+        studentWorkStudy:
+          type: boolean
+          description: Participating in Work-Study
+        studentEmployedMinHours:
+          type: boolean
+          description: Employed 20+ Hours Per Week
+        studentExemptionReason:
+          type: string
+          enum:
+            - age_under_18_or_over_49
+            - physically_mentally_unfit
+            - receiving_tanf
+            - single_parent_child_under_12
+            - responsible_child_under_6
+            - responsible_child_6_to_11_no_childcare
+            - enrolled_in_employment_training
+            - on_the_job_training
+            - work_study
+            - employed_20_plus_hours
+            - other
+          description: Student Exemption Reason
+        employmentStatus:
+          type: string
+          enum:
+            - employed
+            - self_employed
+            - unemployed
+            - retired
+            - disabled_not_working
+            - student
+            - homemaker
+            - other
+          description: Employment Status
+        snapWorkRegistered:
+          type: boolean
+          description: SNAP Work Registration
+        snapWorkRegistrationExempt:
+          type: boolean
+          description: SNAP Work Registration Exempt
+        abawdWorkHoursPerWeek:
+          type: integer
+          description: ABAWD Work Hours Per Week
+        abawdCountableMonths:
+          type: integer
+          description: ABAWD Countable Months Used
+        abawdExemptionReason:
+          type: string
+          enum:
+            - pregnant
+            - physically_mentally_unfit
+            - caring_for_child_under_14
+            - indian_tribal_member
+            - exempt_from_work_registration
+            - other
+            - none
+          description: ABAWD Exemption Reason
+        medicaidWorkExemptionReason:
+          type: string
+          enum:
+            - pregnant
+            - postpartum
+            - caregiver_child_13_or_under
+            - caregiver_disabled
+            - medically_frail
+            - blind_or_disabled
+            - substance_use_disorder_treatment
+            - disabling_mental_disorder
+            - serious_medical_condition
+            - recently_incarcerated
+            - foster_youth_under_26
+            - indian_or_alaska_native
+            - disabled_veteran
+            - meeting_tanf_snap_work_req
+            - under_age_19
+            - medicare_enrollee
+            - institutionalized_prior_3_months
+            - hardship
+            - none
+          description: Medicaid Community Engagement Exemption Reason
+        medicaidWorkHoursPerMonth:
+          type: integer
+          description: Medicaid Community Engagement Hours Per Month
+        medicaidEnrollmentGroup:
+          type: string
+          enum:
+            - expansion
+            - traditional
+          description: Medicaid Enrollment Group
+        tanfMonthsUsed:
+          type: integer
+          description: TANF Time Limit Months Used
+        tanfSanctionStatus:
+          type: string
+          enum:
+            - none
+            - partial
+            - full
+          description: TANF Sanction Status
+        tanfTotalWorkHoursPerWeek:
+          type: integer
+          description: TANF Total Work Hours Per Week
+        twoParentFamily:
+          type: boolean
+          description: Two-Parent Family
+        tanfCooperatesWithChildSupport:
+          type: boolean
+          description: Cooperates with Child Support Enforcement
+        tanfChildSupportGoodCause:
+          type: boolean
+          description: Child Support Cooperation Good Cause Exemption
+        isMinorParent:
+          type: boolean
+          description: Minor Parent
+        minorParentLivingArrangement:
+          type: string
+          enum:
+            - with_parent_guardian
+            - adult_supervised_setting
+            - independent_with_exemption
+          description: Minor Parent Living Arrangement
+        goodCauseExemptionFromWork:
+          type: boolean
+          description: Good Cause Exemption from Work Requirements
+        goodCauseExemptionReason:
+          type: string
+          enum:
+            - domestic_violence
+            - disability
+            - lack_of_childcare
+            - lack_of_transportation
+            - caring_for_ill_family_member
+            - distance_to_work_site
+            - discrimination
+            - other
+          description: Good Cause Exemption Reason
+        fleeingFelonStatus:
+          type: boolean
+          description: Fleeing Felon/Parole Violator
+        drugFelonyConviction:
+          type: boolean
+          description: Drug Felony Conviction
+        drugFelonyConvictionDate:
+          type: string
+          format: date
+          description: Drug Felony Conviction Date
+        ipvHistory:
+          type: boolean
+          description: Intentional Program Violation History
+        ipvDisqualificationEndDate:
+          type: string
+          format: date
+          description: IPV Disqualification End Date
+        strikerStatus:
+          type: boolean
+          description: Striker Status
+        institutionalStatus:
+          type: string
+          enum:
+            - none
+            - nursing_facility
+            - icf_iid
+            - incarcerated
+            - psychiatric_facility
+            - other
+          description: Institutional Status
+        expectedReleaseDate:
+          type: string
+          format: date
+          description: Expected Release Date
+        needsLongTermCare:
+          type: boolean
+          description: Needs Long-Term Care
+        levelOfCareAssessment:
+          type: string
+          enum:
+            - nursing_facility_level
+            - intermediate_care_level
+            - home_and_community_based
+            - not_assessed
+          description: Level of Care Assessment
+        spouseIsInstitutionalized:
+          type: boolean
+          description: Spouse Is Institutionalized
+        institutionalizationDate:
+          type: string
+          format: date
+          description: Date of Institutionalization
+        sexOffenderRegistryStatus:
+          type: boolean
+          description: Sex Offender Registry Status
+        drugRelatedCriminalActivity:
+          type: boolean
+          description: Drug-Related Criminal Activity
+        methamphetamineProductionConviction:
+          type: boolean
+          description: Meth Production Conviction on Federally Assisted Premises
+        violentCriminalActivity:
+          type: boolean
+          description: Violent Criminal Activity
+        alcoholAbusePattern:
+          type: boolean
+          description: Alcohol Abuse Pattern
+        priorEvictionFromPublicHousing:
+          type: boolean
+          description: Prior Eviction from Public Housing
+        priorEvictionDate:
+          type: string
+          format: date
+          description: Prior Public Housing Eviction Date
+        substantialLotteryWinnings:
+          type: boolean
+          description: Substantial Lottery/Gambling Winnings
+        lotteryWinningsAmount:
+          type: number
+          description: Lottery/Gambling Winnings Amount
+        receivesOtherBenefits:
+          type: boolean
+          description: Receives Other Public Benefits
+        deemedIncomeFromSpouse:
+          type: number
+          description: Deemed Income from Spouse
+        deemedIncomeFromParent:
+          type: number
+          description: Deemed Income from Parent
+        deemedIncomeFromSponsor:
+          type: number
+          description: Deemed Income from Sponsor
+        deemedResourcesFromParent:
+          type: number
+          description: Deemed Resources from Parent
+        deemedResourcesFromSpouse:
+          type: number
+          description: Deemed Resources from Spouse
+        taxFilingStatus:
+          type: string
+          enum:
+            - will_file
+            - will_not_file
+            - not_required
+          description: Tax Filing Status
+        taxFilingJointly:
+          type: boolean
+          description: Filing Jointly with Spouse
+        taxClaimedAsDependent:
+          type: boolean
+          description: Claimed as Tax Dependent by Another
+        taxClaimedByPersonId:
+          type: string
+          format: uuid
+          description: Claimed as Dependent By (Person ID)
+        taxClaimsDependents:
+          type: boolean
+          description: Will Claim Tax Dependents
+        incomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Income'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+    Income:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - employment
+            - self_employment
+            - social_security_oasdi
+            - ssi
+            - unemployment
+            - workers_compensation
+            - child_support_received
+            - alimony
+            - pension_retirement
+            - veterans_benefits
+            - interest_dividends
+            - rental
+            - royalties
+            - tribal_per_capita
+            - lottery_gambling
+            - in_kind_support
+            - other
+          description: Income Type
+        grossAmount:
+          type: number
+          description: Gross Amount
+        netAmount:
+          type: number
+          description: Net Amount
+        frequency:
+          type: string
+          enum:
+            - hourly
+            - daily
+            - weekly
+            - every_two_weeks
+            - twice_monthly
+            - monthly
+            - quarterly
+            - annually
+            - one_time
+          description: Pay Frequency
+        isSeasonalOrIrregular:
+          type: boolean
+          description: Seasonal or Irregular Income
+        hoursPerWeek:
+          type: integer
+          description: Hours Worked Per Week
+        employerName:
+          type: string
+          description: Employer Name
+        employerStreet:
+          type: string
+          description: Employer Address Street
+        employerCity:
+          type: string
+          description: Employer Address City
+        employerState:
+          type: string
+          description: Employer Address State
+        employerZip:
+          type: string
+          description: Employer Address ZIP
+        tipsAndCommissions:
+          type: number
+          description: Tips and Commissions
+        businessExpenses:
+          type: number
+          description: Self-Employment Business Expenses
+        startDate:
+          type: string
+          format: date
+          description: Income Start Date
+        endDate:
+          type: string
+          format: date
+          description: Income End Date
+        verificationSource:
+          type: string
+          enum:
+            - pay_stub
+            - employer_letter
+            - tax_return
+            - benefit_letter
+            - bank_statement
+            - self_attestation
+            - other
+          description: Verification Source
+    Asset:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - cash
+            - checking
+            - savings
+            - money_market
+            - cd
+            - stocks_bonds
+            - mutual_funds
+            - retirement_ira
+            - retirement_401k
+            - retirement_other
+            - vehicle
+            - real_property
+            - life_insurance
+            - burial_fund
+            - burial_arrangement
+            - trust
+            - able_account
+            - other
+          description: Asset Type
+        value:
+          type: number
+          description: Current Value/Balance
+        institutionName:
+          type: string
+          description: Institution/Description
+        accountNumber:
+          type: string
+          description: Account Number
+        isJointlyOwned:
+          type: boolean
+          description: Jointly Owned
+        jointOwnerName:
+          type: string
+          description: Joint Owner Name
+        vehicleMake:
+          type: string
+          description: Vehicle Make
+        vehicleModel:
+          type: string
+          description: Vehicle Model
+        vehicleYear:
+          type: integer
+          description: Vehicle Year
+        vehicleFairMarketValue:
+          type: number
+          description: Vehicle Fair Market Value
+        vehicleUseType:
+          type: string
+          enum:
+            - primary_transportation
+            - income_producing
+            - modified_for_disability
+            - other
+          description: Vehicle Use
+        propertyDescription:
+          type: string
+          description: Property Description
+        propertyFairMarketValue:
+          type: number
+          description: Property Fair Market Value
+        propertyEquity:
+          type: number
+          description: Property Equity
+        homeEquityValue:
+          type: number
+          description: Home Equity Value
+        isHomestead:
+          type: boolean
+          description: Is Primary Residence
+        lifeInsuranceFaceValue:
+          type: number
+          description: Life Insurance Face Value
+        lifeInsuranceCashValue:
+          type: number
+          description: Life Insurance Cash Surrender Value
+        burialFundAmount:
+          type: number
+          description: Burial Fund Amount
+        burialArrangementValue:
+          type: number
+          description: Burial Arrangement Value
+        trustType:
+          type: string
+          enum:
+            - revocable
+            - irrevocable
+            - special_needs
+            - pooled
+            - other
+          description: Trust Type
+        trustValue:
+          type: number
+          description: Trust Value
+        recentAssetTransfer:
+          type: boolean
+          description: Assets Transferred or Sold Recently
+        transferDate:
+          type: string
+          format: date
+          description: Transfer Date
+        transferAmount:
+          type: number
+          description: Transfer Amount/Value
+        verificationSource:
+          type: string
+          enum:
+            - bank_statement
+            - title
+            - deed
+            - appraisal
+            - policy_document
+            - self_attestation
+            - other
+          description: Verification Source
+    Expense:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - dependent_care
+            - child_support_paid
+            - medical_insurance_premium
+            - medical_recurring
+            - medical_one_time
+            - court_ordered
+            - disability_assistance
+            - other
+          description: Expense Type
+        amount:
+          type: number
+          description: Amount
+        frequency:
+          type: string
+          enum:
+            - weekly
+            - every_two_weeks
+            - twice_monthly
+            - monthly
+            - quarterly
+            - annually
+            - one_time
+          description: Frequency
+        recipientOrProvider:
+          type: string
+          description: Recipient or Provider
+        description:
+          type: string
+          description: Description
+        forPersonId:
+          type: string
+          format: uuid
+          description: For Person ID (if dependent care)
+        courtOrderNumber:
+          type: string
+          description: Court Order Number (if court ordered)
+        verificationSource:
+          type: string
+          enum:
+            - receipt
+            - bill
+            - court_order
+            - provider_letter
+            - insurance_statement
+            - self_attestation
+            - other
+          description: Verification Source
+    ApplicationCreate:
+      $ref: '#/components/schemas/Application'
+    ApplicationUpdate:
+      description: Partial update — all fields optional
+      allOf:
+        - $ref: '#/components/schemas/Application'

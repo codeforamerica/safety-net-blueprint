@@ -1,0 +1,12 @@
+# Permissions policy for the reviewer role.
+#
+# defaults: permission level applied to all fields unless overridden.
+#   Allowed values: editable | read-only | masked | hidden
+#
+# fields: per-field overrides (use the field ref from the form contract).
+#   Each value must be one of: editable | read-only | masked | hidden
+
+role: reviewer
+defaults: read-only
+fields:
+  socialSecurityNumber: masked

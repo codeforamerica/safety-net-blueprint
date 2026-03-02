@@ -31,6 +31,9 @@ function parseArgs() {
       options.specsDir = args[++i];
     } else if (args[i] === '--help' || args[i] === '-h') {
       options.help = true;
+    } else {
+      console.error(`Error: Unknown argument: ${args[i]}`);
+      process.exit(1);
     }
   }
 
@@ -218,6 +221,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
     actions: [
       {
         target: '$.paths',
+        file: stateMachine.apiSpec,
         description: `Add state machine transition endpoints for ${stateMachine.domain} ${stateMachine.object.toLowerCase()}s`,
         update: pathsUpdate
       }

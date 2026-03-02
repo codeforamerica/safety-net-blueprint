@@ -1,0 +1,241 @@
+schema: applications/Application
+fields:
+  applicationDate:
+    label: Application Date
+    source: system
+    programs:
+      SNAP: Required
+  programsAppliedFor:
+    label: Programs Applied For
+    source: applicant
+  isExpedited:
+    label: Expedited Processing Requested/Needed
+    source: derived
+    programs:
+      SNAP: Required
+  signatureOfApplicant:
+    label: Applicant Signature Obtained
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+  signatureDate:
+    label: Signature Date
+    source: applicant
+  signatureMethod:
+    label: Signature Method
+    source: applicant
+    programs:
+      Medicaid: Required
+  rightsAndResponsibilitiesAcknowledged:
+    label: Rights and Responsibilities Acknowledged
+    source: applicant
+    programs:
+      SNAP: Required
+  penaltyOfPerjuryAcknowledged:
+    label: Penalty of Perjury Acknowledged
+    source: applicant
+    programs:
+      SNAP: Required
+  consentToVerifyInformation:
+    label: Consent to Verify Information
+    source: applicant
+  consentToShareData:
+    label: Consent to Share Data Between Programs
+    source: applicant
+  voterRegistrationOffered:
+    label: Voter Registration Offered
+    source: system
+  voterRegistrationResponse:
+    label: Voter Registration Response
+    source: applicant
+  noticeDeliveryPreference:
+    label: Notice Delivery Preference
+    source: applicant
+  paymentMethodPreference:
+    label: Payment/Benefit Delivery Preference
+    source: applicant
+  accommodationNeeded:
+    label: Accessibility Accommodation Needed
+    source: applicant
+  accommodationType:
+    label: Accommodation Type
+    source: applicant
+  status:
+    label: Application Status
+    source: system
+  household.size:
+    label: Household Size
+    source: derived
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+      WIC: Required
+      CHIP: Required
+  household.purchasePrepareFoodTogether:
+    label: Purchase and Prepare Food Together
+    source: applicant
+    programs:
+      SNAP: Required
+  household.livingArrangement:
+    label: Living Arrangement
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+  household.isHomeless:
+    label: Homeless Status
+    source: applicant
+    programs:
+      SNAP: Required
+      TANF: Required
+  household.primaryContactPhone:
+    label: Primary Contact Phone
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+  household.primaryContactEmail:
+    label: Primary Contact Email
+    source: applicant
+  household.preferredLanguage:
+    label: Preferred Language
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+  household.members.firstName:
+    label: First Name
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+  household.members.lastName:
+    label: Last Name
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+  household.members.dateOfBirth:
+    label: Date of Birth
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+      WIC: Required
+      CHIP: Required
+  household.members.ssn:
+    label: Social Security Number
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+      CHIP: Required
+  household.members.gender:
+    label: Sex/Gender
+    source: applicant
+    programs:
+      Medicaid: Required
+      SSI: Required
+      WIC: Required
+      CHIP: Required
+  household.members.relationshipToApplicant:
+    label: Relationship to Applicant/Head
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      WIC: Required
+      CHIP: Required
+  household.members.citizenshipStatus:
+    label: Citizenship Status
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+      WIC: Required
+      CHIP: Required
+  household.members.isPregnant:
+    label: Pregnancy Status
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      WIC: Required
+      CHIP: Required
+  household.members.employmentStatus:
+    label: Employment Status
+    source: applicant
+    programs:
+      SNAP: Required
+      TANF: Required
+  household.members.incomes.type:
+    label: Income Type
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+  household.members.incomes.grossAmount:
+    label: Gross Amount
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+  household.members.incomes.frequency:
+    label: Pay Frequency
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+  household.members.assets.type:
+    label: Asset Type
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+  household.members.assets.value:
+    label: Current Value/Balance
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+      SSI: Required
+  household.members.expenses.type:
+    label: Expense Type
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required
+  household.members.expenses.amount:
+    label: Amount
+    source: applicant
+    programs:
+      SNAP: Required
+      Medicaid: Required
+      TANF: Required

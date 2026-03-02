@@ -32,6 +32,16 @@ function parseArgs() {
     process.exit(0);
   }
 
+  // Check for unknown arguments
+  const unknown = args.filter(a =>
+    a !== '--help' && a !== '-h' &&
+    !a.startsWith('--spec=') && !a.startsWith('--out=') && !a.startsWith('--file=')
+  );
+  if (unknown.length > 0) {
+    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
+    process.exit(1);
+  }
+
   const packageRoot = resolve(__dirname, '..');
   const specArg = args.find(a => a.startsWith('--spec='));
   const outArg = args.find(a => a.startsWith('--out='));
@@ -112,6 +122,16 @@ function csvTable(headers, rows) {
 // State machine → CSV renderers
 // ---------------------------------------------------------------------------
 
+/** Format a single effect as a readable expression (e.g., "set assignedToId = $caller.id") */
+function formatEffect(e) {
+  if (e.type === 'set' && e.field) {
+    const val = e.value === null ? 'null' : (e.value != null ? String(e.value) : '');
+    return `set ${e.field} = ${val}`;
+  }
+  // Fall back to type for unknown effect types
+  return e.type || '';
+}
+
 function renderTransitions(doc) {
   const headers = ['From', 'To', 'Trigger', 'Actors', 'Guards', 'Effects'];
   const rows = [];
@@ -119,14 +139,14 @@ function renderTransitions(doc) {
   // onCreate as a pseudo-transition (no "from" state)
   if (doc.onCreate) {
     const actors = (doc.onCreate.actors || []).join('; ');
-    const effects = (doc.onCreate.effects || []).map(e => e.description || e.type).join('; ');
+    const effects = (doc.onCreate.effects || []).map(formatEffect).join('; ');
     rows.push(['(create)', doc.initialState || '', 'create', actors, '', effects]);
   }
 
   for (const t of doc.transitions || []) {
     const actors = (t.actors || []).join('; ');
     const guards = (t.guards || []).join('; ');
-    const effects = (t.effects || []).map(e => e.description || e.type).join('; ');
+    const effects = (t.effects || []).map(formatEffect).join('; ');
     rows.push([t.from, t.to, t.trigger, actors, guards, effects]);
   }
 

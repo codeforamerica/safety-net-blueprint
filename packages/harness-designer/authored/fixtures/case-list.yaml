@@ -1,0 +1,20 @@
+- id: APP-001
+  programsAppliedFor: SNAP, Medicaid
+  status: Pending Review
+  applicantName: Jane Smith
+- id: APP-002
+  programsAppliedFor: TANF
+  status: Approved
+  applicantName: John Doe
+- id: APP-003
+  programsAppliedFor: SNAP, CalWORKs
+  status: In Progress
+  applicantName: Maria Garcia
+- id: APP-004
+  programsAppliedFor: Medicaid
+  status: Denied
+  applicantName: Robert Chen
+- id: APP-005
+  programsAppliedFor: SNAP
+  status: Pending Review
+  applicantName: Sarah Johnson

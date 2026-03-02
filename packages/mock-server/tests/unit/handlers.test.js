@@ -6,20 +6,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { seedDatabase } from '../../src/seeder.js';
-import { 
-  findAll, 
-  findById, 
-  create, 
-  update, 
+import {
+  findAll,
+  findById,
+  create,
+  update,
   deleteResource,
   count,
   closeAll,
-  insertResource
+  insertResource,
+  DATA_DIR
 } from '../../src/database-manager.js';
 import { unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,7 +27,7 @@ const specsDir = join(__dirname, '../../../contracts');
 
 const cleanup = () => {
   closeAll();
-  const testDbPath = join(__dirname, '../../../generated/mock-data/persons.db');
+  const testDbPath = join(DATA_DIR, 'persons.db');
   try {
     if (existsSync(testDbPath)) {
       unlinkSync(testDbPath);

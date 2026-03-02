@@ -1,0 +1,24 @@
+form:
+  id: application-case-list-caseworker
+  title: Case List (Caseworker)
+  schema: Application
+  layout:
+    navigation: none
+    display: data-table
+  role: caseworker
+  pages:
+    - id: applications
+      title: Applications
+      source: api
+      columns:
+        - from: id
+          label: Case ID
+        - from: programsAppliedFor
+          label: Programs
+        - from: status
+          label: Status
+        - from: applicantName
+          label: Applicant
+      detail:
+        form: application-step-indicator-applicant
+        fetch: /api/applications/{id}

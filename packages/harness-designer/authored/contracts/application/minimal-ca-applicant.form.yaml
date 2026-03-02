@@ -1,0 +1,41 @@
+form:
+  id: application-minimal-ca-applicant
+  title: Minimal (CA - Applicant)
+  schema: Application
+  layout:
+    navigation: none
+    display: paginated
+  role: applicant
+  pages:
+    - id: programs
+      title: Programs
+      fields:
+        - ref: programsAppliedFor
+          component: checkbox-group
+          labels:
+            SNAP: CalFresh (Food Assistance)
+            Medicaid_MAGI: Medi-Cal (MAGI)
+            TANF: CalWORKs (Cash Assistance)
+
+    - id: personal-info
+      title: Personal Information
+      fields:
+        - ref: household.members.0.firstName
+          component: text-input
+          width: half
+        - ref: household.members.0.lastName
+          component: text-input
+          width: half
+        - ref: household.members.0.dateOfBirth
+          component: date-input
+
+    - id: review-sign
+      title: Review & Sign
+      fields:
+        - ref: consentToVerifyInformation
+          component: radio
+          labels:
+            "true": "Yes"
+            "false": "No"
+        - ref: signatureOfApplicant
+          component: text-input

@@ -40,6 +40,30 @@ async function findOpenAPISpecs(directory) {
 async function main() {
   const args = process.argv.slice(2);
 
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+Validate API Design Patterns
+
+Checks that OpenAPI specs follow established design patterns (search, pagination,
+list response shape, HTTP methods, response codes).
+
+Usage:
+  node scripts/validate-patterns.js --spec=<file|dir>
+
+Flags:
+  --spec=<path>  Path to spec file or directory of specs (required)
+  -h, --help     Show this help message
+`);
+    process.exit(0);
+  }
+
+  // Check for unknown arguments
+  const unknown = args.filter(a => a !== '--help' && a !== '-h' && !a.startsWith('--spec='));
+  if (unknown.length > 0) {
+    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
+    process.exit(1);
+  }
+
   // Parse --spec flag
   const specArg = args.find(a => a.startsWith('--spec='));
   if (!specArg) {

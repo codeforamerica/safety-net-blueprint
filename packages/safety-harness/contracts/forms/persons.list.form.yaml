@@ -1,0 +1,23 @@
+form:
+  id: persons-list
+  title: Person Service API
+  schema: persons
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: Person Service API
+      source: api
+      columns:
+        - from: dateOfBirth
+          label: Date Of Birth
+        - from: socialSecurityNumber
+          label: Social Security Number
+        - from: phoneNumber
+          label: Phone Number
+        - from: email
+          label: Email
+        - from: id
+          label: Id
+

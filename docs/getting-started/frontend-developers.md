@@ -193,6 +193,7 @@ See [Contract-Driven Architecture — Development to production](../architecture
 
 ## Next Steps
 
+- [Design System Adapters](../guides/design-system-adapters.md) — Switch between Honeycrisp, vanilla USWDS, or a custom design system
 - [State Setup Guide](../guides/state-setup-guide.md) — Setting up a state repository with overlays
 - [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) — How contracts define the API surface
 - [Workflow Prototype](../prototypes/workflow-prototype.md) — Example of behavioral contracts in action (state machine, rules, metrics)

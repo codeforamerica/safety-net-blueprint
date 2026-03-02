@@ -31,6 +31,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
 import { bundleSpec } from '../src/bundle.js';
+import { discoverStateMachines, extractItemEndpoint, generateOverlay } from './generate-rpc-overlay.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -48,6 +49,7 @@ function parseArgs() {
     env: null,
     envFile: null,
     bundle: false,
+    reconcileExamples: false,
     help: false
   };
 
@@ -66,6 +68,11 @@ function parseArgs() {
       options.env = arg.split('=')[1];
     } else if (arg.startsWith('--env-file=')) {
       options.envFile = arg.split('=')[1];
+    } else if (arg === '--reconcile-examples') {
+      options.reconcileExamples = true;
+    } else {
+      console.error(`Error: Unknown argument: ${arg}`);
+      process.exit(1);
     }
   }
 
@@ -88,12 +95,14 @@ Flags:
   --bundle           Inline all external $refs to produce self-contained specs
   --env=<env>        Target environment for x-environments filtering (optional)
   --env-file=<file>  Path to env file for \${VAR} placeholder substitution (optional)
+  --reconcile-examples  Reconcile examples against resolved schemas after output
   -h, --help         Show this help message
 
 Without --overlay, base specs are copied to --out unchanged.
 With --bundle, all external $ref references are dereferenced inline.
 With --env, nodes whose x-environments array doesn't include the target env are removed.
 With --env-file, \${VAR} placeholders in string values are substituted (process.env overrides file values).
+With --reconcile-examples, example data is reconciled against the resolved schemas after output.
 
 Examples:
   npm run resolve
@@ -438,6 +447,102 @@ function substitutePlaceholders(node, vars, warnings = []) {
 }
 
 // =============================================================================
+// RPC Overlay Auto-Generation
+// =============================================================================
+
+/**
+ * Detect the $ref prefix used for external component references in a spec.
+ * Walks the spec tree looking for $ref strings containing 'components/',
+ * then extracts whatever precedes 'components/' (e.g., './' or '../../contracts/').
+ * Returns './' as the default if no external component refs are found.
+ */
+function detectComponentPrefix(spec) {
+  function findRefPrefix(node) {
+    if (node === null || node === undefined || typeof node !== 'object') return null;
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const found = findRefPrefix(item);
+        if (found !== null) return found;
+      }
+      return null;
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string') {
+        // Match external file refs like ./components/ or ../../contracts/components/
+        // Skip internal refs (#/components/...)
+        const match = value.match(/^(?!#)(.*?)components\//);
+        if (match) return match[1];
+      }
+      if (typeof value === 'object') {
+        const found = findRefPrefix(value);
+        if (found !== null) return found;
+      }
+    }
+    return null;
+  }
+
+  return findRefPrefix(spec) || './';
+}
+
+/**
+ * Rewrite $ref paths in an overlay, replacing one prefix with another.
+ * Used to align generated overlay refs with the target spec's conventions.
+ */
+function rewriteOverlayRefs(overlay, fromPrefix, toPrefix) {
+  if (fromPrefix === toPrefix) return overlay;
+
+  function walk(node) {
+    if (node === null || node === undefined || typeof node !== 'object') return node;
+    if (Array.isArray(node)) return node.map(walk);
+
+    const result = {};
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string' && value.startsWith(fromPrefix + 'components/')) {
+        result[key] = toPrefix + value.substring(fromPrefix.length);
+      } else {
+        result[key] = (typeof value === 'object') ? walk(value) : value;
+      }
+    }
+    return result;
+  }
+
+  return walk(overlay);
+}
+
+/**
+ * Discover state machines and generate in-memory RPC overlays.
+ * Returns an array of { overlay, stateMachine } ready for application.
+ */
+function generateRpcOverlays(specPath, yamlFiles) {
+  const machines = discoverStateMachines(specPath);
+  if (machines.length === 0) return [];
+
+  const overlays = [];
+
+  for (const { stateMachine } of machines) {
+    const apiSpecFile = stateMachine.apiSpec;
+    if (!apiSpecFile) continue;
+
+    const endpointInfo = extractItemEndpoint(specPath, apiSpecFile);
+    if (!endpointInfo) continue;
+
+    let overlay = generateOverlay(stateMachine, endpointInfo);
+
+    // Detect the component $ref prefix used by the target spec and rewrite if needed
+    const targetFile = yamlFiles.find(f => f.relativePath === apiSpecFile);
+    if (targetFile) {
+      const prefix = detectComponentPrefix(targetFile.spec);
+      overlay = rewriteOverlayRefs(overlay, './', prefix);
+    }
+
+    overlays.push({ overlay, stateMachine });
+  }
+
+  return overlays;
+}
+
+// =============================================================================
 // Output
 // =============================================================================
 
@@ -465,7 +570,7 @@ function writeResolvedSpecs(results, targetDir) {
  * Copy base specs to output directory unchanged
  */
 function copyBaseSpecs(baseDir, outDir) {
-  const skip = new Set(['package.json', 'node_modules']);
+  const skip = new Set(['package.json', 'node_modules', 'overlays']);
   const files = readdirSync(baseDir, { withFileTypes: true });
   for (const file of files) {
     if (skip.has(file.name)) continue;
@@ -506,13 +611,18 @@ async function main() {
 
   const specIsFile = statSync(specPath).isFile();
 
-  // Clean and recreate output directory
-  if (existsSync(outDir)) {
-    rmSync(outDir, { recursive: true });
+  // Clean and recreate output directory (skip when resolving in place)
+  if (resolve(specPath) !== resolve(outDir)) {
+    if (existsSync(outDir)) {
+      rmSync(outDir, { recursive: true });
+    }
   }
   mkdirSync(outDir, { recursive: true });
 
-  if (!options.overlay && !options.env && !options.envFile && !options.bundle) {
+  // Discover state machines for RPC auto-generation (directory mode only)
+  const stateMachines = !specIsFile ? discoverStateMachines(specPath) : [];
+
+  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && stateMachines.length === 0) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -537,24 +647,28 @@ async function main() {
     yamlFiles = collectYamlFiles(specPath);
   }
 
-  // Bundle: dereference all external $refs to produce self-contained specs
-  if (options.bundle) {
-    console.log('\nBundling: inlining external $refs...');
-    const bundled = [];
-    for (const file of yamlFiles) {
-      // Only bundle top-level OpenAPI specs, not shared component files
-      if (file.spec?.openapi) {
-        const dereferenced = await bundleSpec(file.sourcePath);
-        bundled.push({ ...file, spec: dereferenced });
-        console.log(`  ✓ ${file.relativePath}`);
-      } else {
-        bundled.push(file);
-      }
-    }
-    yamlFiles = bundled;
-  }
   let allWarnings = [];
   let currentResults = null;
+
+  // Auto-generate and apply RPC overlays from state machine files (before explicit overlays)
+  if (stateMachines.length > 0) {
+    const rpcOverlays = generateRpcOverlays(specPath, yamlFiles);
+
+    for (const { overlay, stateMachine } of rpcOverlays) {
+      const inputFiles = currentResults
+        ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+        : yamlFiles;
+
+      const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+      const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+      allWarnings = allWarnings.concat(warnings);
+
+      currentResults = applyOverlayWithTargets(inputFiles, overlay, actionTargets, specPath);
+
+      const transitionCount = stateMachine.transitions?.length || 0;
+      console.log(`  \u2713 Auto-generated: ${stateMachine.domain} RPC Overlay (${transitionCount} transitions)`);
+    }
+  }
 
   // Apply overlays if specified
   if (options.overlay) {
@@ -640,17 +754,62 @@ async function main() {
     }
   }
 
-  // When bundling, skip shared component files (they've been inlined)
-  if (options.bundle) {
-    for (const [relativePath] of currentResults) {
-      if (!relativePath.endsWith('-openapi.yaml') && !relativePath.endsWith('-openapi-examples.yaml')) {
-        currentResults.delete(relativePath);
-      }
+  // Remove overlay files from output (they've been applied)
+  for (const [relativePath] of currentResults) {
+    if (relativePath.startsWith('overlays/') || relativePath.startsWith('overlays\\')) {
+      currentResults.delete(relativePath);
     }
   }
 
   // Write resolved specs
   writeResolvedSpecs(currentResults, outDir);
+
+  // Bundle: dereference all external $refs to produce self-contained specs
+  // Done after overlays so that $ref targets reflect overlay changes
+  if (options.bundle) {
+    console.log('\nBundling: inlining external $refs...');
+    for (const [relativePath] of currentResults) {
+      if (!relativePath.endsWith('-openapi.yaml')) continue;
+      const filePath = join(outDir, relativePath);
+      const dereferenced = await bundleSpec(filePath);
+      const output = yaml.dump(dereferenced, {
+        lineWidth: -1,
+        noRefs: true,
+        quotingType: '"',
+        forceQuotes: false
+      });
+      writeFileSync(filePath, output);
+      console.log(`  ✓ ${relativePath}`);
+    }
+
+    // Remove shared component files (they've been inlined)
+    for (const [relativePath] of currentResults) {
+      if (!relativePath.endsWith('-openapi.yaml') && !relativePath.endsWith('-openapi-examples.yaml')) {
+        const filePath = join(outDir, relativePath);
+        if (existsSync(filePath)) {
+          rmSync(filePath, { recursive: true });
+        }
+      }
+    }
+    // Remove empty component directories
+    const outEntries = readdirSync(outDir, { withFileTypes: true });
+    for (const entry of outEntries) {
+      if (entry.isDirectory()) {
+        const dirPath = join(outDir, entry.name);
+        const contents = readdirSync(dirPath);
+        if (contents.length === 0) {
+          rmSync(dirPath, { recursive: true });
+        }
+      }
+    }
+  }
+
+  // Reconcile examples against resolved schemas
+  if (options.reconcileExamples) {
+    console.log('\nReconciling examples against resolved schemas...');
+    const { reconcileAllExamples } = await import('./reconcile-examples.js');
+    await reconcileAllExamples({ specsDir: outDir });
+  }
 
   // Display warnings if any
   if (allWarnings.length > 0) {
@@ -673,7 +832,11 @@ export {
   getVersionFromFilename,
   filterByEnvironment,
   parseEnvFile,
-  substitutePlaceholders
+  substitutePlaceholders,
+  applyOverlayWithTargets,
+  detectComponentPrefix,
+  rewriteOverlayRefs,
+  generateRpcOverlays
 };
 
 // Run main when executed directly

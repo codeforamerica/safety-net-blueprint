@@ -1,0 +1,279 @@
+overlay: 1.0.0
+info:
+  title: Colorado Benefits Overlay
+  version: 1.0.0
+actions:
+  - target: $.components.schemas.Asset.properties.type
+    description: 'CO update: Asset.type'
+    update:
+      x-co-statute: 10 CCR 2506-1 § 4.603
+      x-co-notes: BBCE eliminates asset test for CO SNAP
+      x-co-snap: Not Required
+  - target: $.components.schemas.Asset.properties.value
+    description: 'CO update: Asset.value'
+    update:
+      x-co-statute: 10 CCR 2506-1 § 4.603
+      x-co-notes: Asset values not required for CO SNAP under BBCE
+      x-co-snap: Not Required
+  - target: $.components.schemas.Asset.properties.verificationSource
+    description: 'CO update: Asset.verificationSource'
+    update:
+      x-co-statute: 10 CCR 2506-1 § 4.603
+      x-co-notes: Asset verification not required for CO SNAP under BBCE
+      x-co-snap: Not Required
+  - target: $.components.schemas.Person.properties.substantialLotteryWinnings
+    description: 'CO remove: Person.substantialLotteryWinnings'
+    remove: true
+  - target: $.components.schemas.Person.properties.lotteryWinningsAmount
+    description: 'CO remove: Person.lotteryWinningsAmount'
+    remove: true
+  - target: $.components.schemas.Person.properties.isAbawdEligible
+    description: 'CO update: Person.isAbawdEligible'
+    update:
+      x-co-statute: 10 CCR 2506-1 § 4.414
+      x-co-notes: County-specific ABAWD time-limit waivers available in qualifying areas
+  - target: $.components.schemas.Person.properties
+    description: 'CO add: Person.medicaidBuyInEligible'
+    update:
+      medicaidBuyInEligible:
+        type: boolean
+        description: Medicaid Buy-In Eligible
+        x-co-statute: C.R.S. § 25.5-6-202
+        x-co-notes: Health First Colorado Buy-In for Working Adults with Disabilities
+        x-source: derived
+        x-health-first-co-non-magi: Required
+  - target: $.components.schemas.Person.properties
+    description: 'CO add: Person.medicaidBuyInEmploymentVerified'
+    update:
+      medicaidBuyInEmploymentVerified:
+        type: boolean
+        description: Buy-In Employment Verified
+        x-co-statute: C.R.S. § 25.5-6-202
+        x-co-notes: Must demonstrate current employment for Buy-In eligibility
+        x-source: verified
+        x-health-first-co-non-magi: Required
+  - target: $.components.schemas.Person.properties.citizenshipStatus
+    description: 'CO update: Person.citizenshipStatus'
+    update:
+      x-co-statute: C.R.S. § 25.5-8-109
+      x-co-notes: CHP+ Prenatal covers pregnant women up to 260% FPL regardless of immigration status
+  - target: $.components.schemas.Person.properties.tanfMonthsUsed
+    description: 'CO update: Person.tanfMonthsUsed'
+    update:
+      x-co-statute: C.R.S. § 26-2-709
+      x-co-notes: 60-month federal lifetime limit applies; counties may grant extensions based on hardship
+  - target: $.components.schemas.Person.properties.tanfCooperatesWithChildSupport
+    description: 'CO update: Person.tanfCooperatesWithChildSupport'
+    update:
+      x-co-statute: C.R.S. § 26-2-709(3)
+      x-co-notes: CO good cause exemption includes domestic violence per Family Violence Option (C.R.S. § 26-2-708)
+  - target: $.components.schemas.Household.properties
+    description: 'CO add: Household.leapHeatingSeasonActive'
+    update:
+      leapHeatingSeasonActive:
+        type: boolean
+        description: LEAP Heating Season Active
+        x-co-statute: 10 CCR 2507-1 § 4.100
+        x-co-notes: LEAP available November 1 through April 30 only; heating season restriction
+        x-source: derived
+        x-leap: Required
+  - target: $.components.schemas.Household.properties.utilityCosts.properties.heating
+    description: 'CO update: Household.utilityCostHeating'
+    update:
+      x-co-statute: 10 CCR 2507-1
+      x-co-notes: 'Heat/eat: minimal LEAP benefit confers SNAP Standard Utility Allowance (SUA) eligibility'
+  - target: $.components.schemas.Person.properties
+    description: 'CO add: Person.coStateSupplementAmount'
+    update:
+      coStateSupplementAmount:
+        type: number
+        description: CO State Supplement Amount
+        x-co-statute: C.R.S. § 26-2-201
+        x-co-notes: >-
+          Colorado mandatory state supplement to SSI; administered by SSA (1634 state); amount varies by living
+          arrangement
+        x-source: system
+        x-co-ssi: Required
+  - target: $.components.schemas.Person.properties.dateOfBirth
+    description: 'CO update: Person.dateOfBirth'
+    update:
+      x-co-statute: C.R.S. § 26-2-111; C.R.S. § 26-2-803
+      x-co-notes: Required for all state-only programs; OAP requires age 60+
+      x-oap: Required
+      x-and: Required
+      x-ab: Required
+      x-cccap: Required
+  - target: $.components.schemas.Person.properties.ssn
+    description: 'CO update: Person.ssn'
+    update:
+      x-co-statute: C.R.S. § 26-2-111; C.R.S. § 26-2-803
+      x-co-notes: Required for all state-only programs
+      x-oap: Required
+      x-and: Required
+      x-ab: Required
+      x-cccap: Required
+  - target: $.components.schemas.Person.properties.disabilityStatus
+    description: 'CO update: Person.disabilityStatus'
+    update:
+      x-co-statute: C.R.S. § 26-2-111
+      x-co-notes: Must meet disability criteria for AND eligibility
+      x-and: Required
+  - target: $.components.schemas.Person.properties.isBlind
+    description: 'CO update: Person.isBlind'
+    update:
+      x-co-statute: C.R.S. § 26-2-111
+      x-co-notes: Must meet SSA blindness definition for AB eligibility
+      x-ab: Required
+  - target: $.components.schemas.Person.properties.employmentStatus
+    description: 'CO update: Person.employmentStatus'
+    update:
+      x-co-statute: C.R.S. § 26-2-803
+      x-co-notes: Must be employed or in training/education for CCCAP
+      x-cccap: Required
+  - target: $.components.schemas.Income.properties.type
+    description: 'CO update: Income.type'
+    update:
+      x-co-statute: C.R.S. § 26-2-111; C.R.S. § 26-2-803
+      x-co-notes: Income type required for all state-only programs
+      x-oap: Required
+      x-and: Required
+      x-ab: Required
+      x-cccap: Required
+  - target: $.components.schemas.Income.properties.grossAmount
+    description: 'CO update: Income.grossAmount'
+    update:
+      x-co-statute: C.R.S. § 26-2-111; C.R.S. § 26-2-803
+      x-co-notes: Income verification required for all state-only programs
+      x-oap: Required
+      x-and: Required
+      x-ab: Required
+      x-cccap: Required
+  - target: $.components.schemas.Person.properties
+    description: 'CO add: Person.childCareNeeded'
+    update:
+      childCareNeeded:
+        type: boolean
+        description: Child Care Needed
+        x-co-statute: C.R.S. § 26-2-803
+        x-co-notes: Child must need care due to parent employment/training/education
+        x-source: applicant
+        x-cccap: Required
+  - target: $.components.schemas.Household.properties
+    description: 'CO add: Household.countyOfficeCode'
+    update:
+      countyOfficeCode:
+        type: string
+        description: County Office Code
+        x-co-statute: C.R.S. § 26-1-108
+        x-co-notes: 64 Colorado counties each administer benefits; CBMS county code identifies administering office
+        x-source: system
+        x-co-snap: Required
+        x-health-first-co-magi: Required
+        x-health-first-co-non-magi: Required
+        x-colorado-works: Required
+        x-colorado-wic: Required
+        x-chp-plus: Required
+        x-leap: Required
+        x-co-summer-ebt: Required
+        x-oap: Required
+        x-and: Required
+        x-ab: Required
+        x-cccap: Required
+  - target: $.components.schemas.Application.properties
+    description: 'CO add: Application.peakConfirmationNumber'
+    update:
+      peakConfirmationNumber:
+        type: string
+        description: PEAK Confirmation Number
+        x-co-statute: 10 CCR 2506-1
+        x-co-notes: PEAK online portal or CBMS application tracking number
+        x-source: system
+        x-co-snap: Required
+        x-health-first-co-magi: Required
+        x-health-first-co-non-magi: Required
+        x-colorado-works: Required
+        x-chp-plus: Required
+        x-leap: Required
+        x-oap: Required
+        x-and: Required
+        x-ab: Required
+  - target: $.components.schemas.Household.properties
+    description: 'CO add: Household.coloradoResidencyVerified'
+    update:
+      coloradoResidencyVerified:
+        type: boolean
+        description: Colorado Residency Verified
+        x-co-statute: 10 CCR 2506-1
+        x-co-notes: Verification of Colorado residency required for all state-administered programs
+        x-source: verified
+        x-co-snap: Required
+        x-health-first-co-magi: Required
+        x-health-first-co-non-magi: Required
+        x-colorado-works: Required
+        x-colorado-wic: Required
+        x-chp-plus: Required
+        x-leap: Required
+        x-co-summer-ebt: Required
+        x-oap: Required
+        x-and: Required
+        x-ab: Required
+        x-cccap: Required
+  - target: $.components.schemas.Person.properties
+    description: 'CO add: Person.cbmsClientId'
+    update:
+      cbmsClientId:
+        type: string
+        description: CBMS Client ID
+        x-co-statute: 10 CCR 2506-1
+        x-co-notes: Colorado Benefits Management System client identifier
+        x-source: system
+        x-co-snap: Required
+        x-health-first-co-magi: Required
+        x-health-first-co-non-magi: Required
+        x-colorado-works: Required
+        x-colorado-wic: Required
+        x-chp-plus: Required
+        x-leap: Required
+        x-co-summer-ebt: Required
+        x-oap: Required
+        x-and: Required
+        x-ab: Required
+        x-cccap: Required
+  - target: $.components.schemas.Household.properties.preferredLanguage
+    description: 'CO update: Household.preferredLanguage'
+    update:
+      x-co-statute: 10 CCR 2506-1
+      x-co-notes: Added somali|burmese|nepali|amharic for Colorado refugee communities
+      enum:
+        - english
+        - spanish
+        - chinese
+        - vietnamese
+        - korean
+        - tagalog
+        - arabic
+        - french
+        - haitian_creole
+        - russian
+        - portuguese
+        - somali
+        - burmese
+        - nepali
+        - amharic
+        - other
+  - target: $.components.schemas.Household.properties.primaryHeatingFuelType
+    description: 'CO update: Household.primaryHeatingFuelType'
+    update:
+      x-co-statute: 10 CCR 2507-1
+      x-co-notes: Added pellet fuel type; common in Colorado mountain communities
+      enum:
+        - natural_gas
+        - electricity
+        - propane
+        - fuel_oil
+        - kerosene
+        - wood
+        - pellet
+        - coal
+        - solar
+        - other

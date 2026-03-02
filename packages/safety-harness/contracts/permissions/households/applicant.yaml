@@ -1,0 +1,7 @@
+role: applicant
+defaults: editable
+fields:
+  id: read-only
+  createdAt: read-only
+  updatedAt: read-only
+  socialSecurityNumber: editable

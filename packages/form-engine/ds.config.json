@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "Design system configuration for the blueprint form renderer.",
+    "",
+    "classPrefix: A string prepended to each component role to generate CSS class names.",
+    "  The renderer applies these classes to @trussworks/react-uswds components so the",
+    "  active design system's styles take effect.",
+    "",
+    "  Examples:",
+    "    \"cfa\"       → cfa-form, cfa-input, cfa-button, ...   (Honeycrisp)",
+    "    \"\"          → no extra classes                        (vanilla USWDS)",
+    "    \"mystate\"   → mystate-form, mystate-input, ...       (custom theme)",
+    "",
+    "classOverrides: Optional per-component overrides when the design system's class",
+    "  names don't follow the {prefix}-{role} convention.  Only specify the keys that",
+    "  differ — unspecified keys use the generated name from classPrefix.",
+    "",
+    "  Available keys: form, formGroup, label, input, select, fieldset, radio,",
+    "                  checkbox, button, accordion",
+    "",
+    "  Example: if your design system uses 'branded-text-field' instead of",
+    "  'branded-input', set:",
+    "    \"classOverrides\": { \"input\": \"branded-text-field\" }",
+    "",
+    "  Multiple classes are supported:",
+    "    \"classOverrides\": { \"input\": \"branded-input form-control\" }"
+  ],
+  "classPrefix": "cfa",
+  "classOverrides": {}
+}

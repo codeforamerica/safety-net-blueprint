@@ -1,0 +1,23 @@
+form:
+  id: workflow-list
+  title: Workflow Service API
+  schema: workflow
+  layout:
+    navigation: none
+    display: data-table
+  pages:
+    - id: list
+      title: Workflow Service API
+      source: api
+      columns:
+        - from: id
+          label: Id
+        - from: name
+          label: Name
+        - from: description
+          label: Description
+        - from: status
+          label: Status
+        - from: assignedToId
+          label: Assigned To Id
+

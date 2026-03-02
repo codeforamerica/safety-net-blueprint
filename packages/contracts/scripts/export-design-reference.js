@@ -2,7 +2,7 @@
 /**
  * Export Design Reference
  * Generates a designer-friendly HTML reference from OpenAPI schemas
- * Uses OOUX/ORCA methodology for better designer usability
+ * Uses OOUX/ORCA (Objects, Relationships, CTAs, Attributes) methodology
  * Includes state-specific variations via overlay system
  */
 
@@ -155,6 +155,179 @@ function getDomainConfig(domainKey) {
 
 // Primary schemas that get full ORCA treatment
 const PRIMARY_SCHEMAS = ['Person', 'Household', 'Application', 'Income', 'HouseholdMember'];
+
+// Annotation data indexed by schema name (populated in main if --annotations provided)
+// Shape: { "Application": { fields: { "fieldName": { source, statute, programs, notes } } } }
+let annotationsBySchema = {};
+
+/**
+ * Load annotation YAML files from a directory.
+ * Each file has `schema: "apiName/SchemaName"` and `fields: { ... }`.
+ * Multiple files targeting the same schema are merged (later files win on conflict).
+ */
+function loadAnnotations(annotationsDir) {
+  const result = {};
+  if (!existsSync(annotationsDir)) return result;
+
+  const files = readdirSync(annotationsDir).filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+  for (const file of files) {
+    try {
+      const content = readFileSync(join(annotationsDir, file), 'utf8');
+      const doc = yaml.load(content);
+      if (!doc?.schema || !doc?.fields) continue;
+
+      const schemaName = doc.schema.includes('/') ? doc.schema.split('/').pop() : doc.schema;
+
+      if (!result[schemaName]) {
+        result[schemaName] = { fields: {} };
+      }
+      Object.assign(result[schemaName].fields, doc.fields);
+    } catch (err) {
+      console.warn(`  Warning: Could not load annotation file ${file}: ${err.message}`);
+    }
+  }
+  return result;
+}
+
+// Source badge styles
+const SOURCE_STYLES = {
+  system:    { color: '#2980b9', bg: '#ebf5fb' },
+  applicant: { color: '#27ae60', bg: '#e8f8f0' },
+  derived:   { color: '#8e44ad', bg: '#f5eef8' },
+  federal:   { color: '#2c3e50', bg: '#ebedef' },
+  state:     { color: '#d35400', bg: '#fdf2e9' },
+  manual:    { color: '#f39c12', bg: '#fef9e7' },
+};
+
+/**
+ * Generate Annotations tab content for a schema.
+ * Renders a program requirement matrix with source badges and expandable statute details.
+ */
+function generateAnnotationsTab(schemaName) {
+  const annotations = annotationsBySchema[schemaName];
+  if (!annotations || !annotations.fields || Object.keys(annotations.fields).length === 0) {
+    return '<p class="no-annotations">No annotations available for this object.</p>';
+  }
+
+  const fields = annotations.fields;
+
+  // Collect all unique programs across all fields
+  const allPrograms = new Set();
+  for (const fieldData of Object.values(fields)) {
+    if (fieldData.programs) {
+      for (const prog of Object.keys(fieldData.programs)) {
+        allPrograms.add(prog);
+      }
+    }
+  }
+  const programs = [...allPrograms].sort();
+
+  // Group fields by dot-path prefix
+  const groups = new Map();
+  for (const [fieldPath, fieldData] of Object.entries(fields)) {
+    const parts = fieldPath.split('.');
+    const prefix = parts.length > 1 ? parts[0] : '';
+    const fieldName = parts.length > 1 ? parts.slice(1).join('.') : fieldPath;
+
+    if (!groups.has(prefix)) groups.set(prefix, []);
+    groups.get(prefix).push({ path: fieldPath, fieldName, data: fieldData });
+  }
+
+  // Sort: top-level first, then alphabetical groups
+  const sortedGroups = [...groups.entries()].sort((a, b) => {
+    if (a[0] === '' && b[0] !== '') return -1;
+    if (a[0] !== '' && b[0] === '') return 1;
+    return a[0].localeCompare(b[0]);
+  });
+
+  let html = '<div class="annotations-content">\n';
+
+  // Legend
+  const usedSources = new Set();
+  for (const fieldData of Object.values(fields)) {
+    if (fieldData.source) usedSources.add(fieldData.source);
+  }
+  html += '<div class="annotations-legend">\n';
+  html += '  <span class="legend-label">Source:</span>\n';
+  for (const [key, style] of Object.entries(SOURCE_STYLES)) {
+    if (!usedSources.has(key)) continue;
+    html += `  <span class="source-badge" style="color: ${style.color}; background: ${style.bg};">${key}</span>\n`;
+  }
+  html += '</div>\n';
+
+  // Matrix table
+  html += '<table class="annotations-table">\n';
+  html += '  <thead>\n';
+  html += '    <tr>\n';
+  html += '      <th class="ann-field-col">Field</th>\n';
+  html += '      <th class="ann-source-col">Source</th>\n';
+  for (const prog of programs) {
+    html += `      <th class="ann-program-col"><span class="program-header">${escapeHtml(prog)}</span></th>\n`;
+  }
+  html += '      <th class="ann-detail-col"></th>\n';
+  html += '    </tr>\n';
+  html += '  </thead>\n';
+  html += '  <tbody>\n';
+
+  for (const [prefix, groupFields] of sortedGroups) {
+    if (prefix) {
+      const groupLabel = prefix.replace(/([a-z])([A-Z])/g, '$1 $2');
+      const capitalizedLabel = groupLabel.charAt(0).toUpperCase() + groupLabel.slice(1);
+      html += `    <tr class="ann-group-row">\n`;
+      html += `      <td colspan="${programs.length + 3}" class="ann-group-label">${escapeHtml(capitalizedLabel)}</td>\n`;
+      html += `    </tr>\n`;
+    }
+
+    for (const { path, fieldName, data } of groupFields) {
+      const source = data.source || '';
+      const sourceStyle = SOURCE_STYLES[source] || { color: '#95a5a6', bg: '#f8f9f9' };
+      const hasDetail = data.statute || data.notes;
+      const detailId = `ann-${schemaName}-${path.replace(/\./g, '-')}`;
+
+      html += `    <tr class="ann-field-row">\n`;
+
+      // Field name — use camelCase → readable conversion
+      const displayName = fieldName.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
+      html += `      <td class="ann-field-name">${escapeHtml(displayName)}</td>\n`;
+      html += `      <td class="ann-source"><span class="source-badge" style="color: ${sourceStyle.color}; background: ${sourceStyle.bg};">${escapeHtml(source)}</span></td>\n`;
+
+      for (const prog of programs) {
+        const req = data.programs?.[prog];
+        if (req) {
+          html += `      <td class="ann-program-cell ann-required"><span class="ann-dot" title="${escapeHtml(prog)}: ${escapeHtml(req)}"></span></td>\n`;
+        } else {
+          html += `      <td class="ann-program-cell"></td>\n`;
+        }
+      }
+
+      if (hasDetail) {
+        html += `      <td class="ann-detail-toggle"><button class="ann-info-btn" data-detail="${detailId}" title="Show details">i</button></td>\n`;
+      } else {
+        html += `      <td class="ann-detail-toggle"></td>\n`;
+      }
+      html += `    </tr>\n`;
+
+      if (hasDetail) {
+        html += `    <tr class="ann-detail-row" id="${detailId}" style="display: none;">\n`;
+        html += `      <td colspan="${programs.length + 3}" class="ann-detail-content">\n`;
+        if (data.statute) {
+          html += `        <div class="ann-statute"><strong>Statute:</strong> ${escapeHtml(data.statute)}</div>\n`;
+        }
+        if (data.notes) {
+          html += `        <div class="ann-notes"><strong>Notes:</strong> ${escapeHtml(data.notes)}</div>\n`;
+        }
+        html += `      </td>\n`;
+        html += `    </tr>\n`;
+      }
+    }
+  }
+
+  html += '  </tbody>\n';
+  html += '</table>\n';
+  html += '</div>\n';
+
+  return html;
+}
 
 // Map of property refs: { "SchemaName.propertyName": "TargetSchemaName" }
 // Populated before dereferencing to preserve type information
@@ -1128,11 +1301,15 @@ function generateOrcaSection(schemaName, schema, relationships, operations, stat
   html += `  </div>\n`;
 
   // ORCA Tabs
+  const hasAnnotations = annotationsBySchema[schemaName] && Object.keys(annotationsBySchema[schemaName].fields || {}).length > 0;
   html += `  <div class="orca-tabs">\n`;
   html += `    <button class="orca-tab active" data-tab="overview">Overview</button>\n`;
   html += `    <button class="orca-tab" data-tab="relationships">Relationships</button>\n`;
   html += `    <button class="orca-tab" data-tab="actions">Actions</button>\n`;
   html += `    <button class="orca-tab" data-tab="attributes">Attributes</button>\n`;
+  if (hasAnnotations) {
+    html += `    <button class="orca-tab" data-tab="annotations">Annotations</button>\n`;
+  }
   html += `  </div>\n`;
 
   // Tab Panels
@@ -1167,6 +1344,13 @@ function generateOrcaSection(schemaName, schema, relationships, operations, stat
   html += `    <div class="orca-panel" data-tab="attributes">\n`;
   html += generateAttributesWithStateVariants(schemaName, schema, stateSchemas, states);
   html += `    </div>\n`;
+
+  // Annotations Panel (only if annotations loaded)
+  if (hasAnnotations) {
+    html += `    <div class="orca-panel" data-tab="annotations">\n`;
+    html += generateAnnotationsTab(schemaName);
+    html += `    </div>\n`;
+  }
 
   html += `  </div>\n`; // End orca-panels
   html += `</section>\n\n`;
@@ -1864,38 +2048,6 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
     .intro-domains li:nth-child(7) { border-left-color: #95a5a6; } /* Document Management */
     .intro-domains li:nth-child(8) { border-left-color: #7f8c8d; } /* Cross-cutting */
 
-    .sidebar-state-selector {
-      margin-bottom: 15px;
-    }
-
-    .sidebar-state-buttons {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .sidebar-state-buttons .state-selector-btn {
-      padding: 6px 12px;
-      font-size: 0.8rem;
-      border: 1px solid #456;
-      background: transparent;
-      color: #bdc3c7;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .sidebar-state-buttons .state-selector-btn:hover {
-      border-color: #3498db;
-      color: #3498db;
-    }
-
-    .sidebar-state-buttons .state-selector-btn.active {
-      background: #3498db;
-      border-color: #3498db;
-      color: white;
-    }
-
     .search-container {
       position: relative;
       margin-bottom: 15px;
@@ -2536,9 +2688,151 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
       font-size: 0.85rem;
     }
 
-    .no-rels {
+    .no-rels, .no-annotations {
       color: #95a5a6;
       font-style: italic;
+    }
+
+    /* Annotations panel */
+    .annotations-content {
+      overflow-x: auto;
+    }
+
+    .annotations-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .legend-label {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+
+    .source-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .annotations-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .annotations-table th {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 2px solid #dee2e6;
+      font-weight: 600;
+      color: #2c3e50;
+      white-space: nowrap;
+    }
+
+    .ann-field-col {
+      min-width: 160px;
+    }
+
+    .ann-source-col {
+      min-width: 90px;
+    }
+
+    .ann-program-col {
+      text-align: center !important;
+      min-width: 50px;
+    }
+
+    .program-header {
+      font-size: 0.8rem;
+      writing-mode: vertical-lr;
+      transform: rotate(180deg);
+      white-space: nowrap;
+      display: inline-block;
+      max-height: 80px;
+    }
+
+    .ann-detail-col {
+      width: 30px;
+    }
+
+    .ann-group-row td {
+      padding: 10px 10px 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-top: 1px solid #dee2e6;
+    }
+
+    .ann-field-row td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .ann-field-name {
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    .ann-program-cell {
+      text-align: center;
+    }
+
+    .ann-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #3498db;
+    }
+
+    .ann-required .ann-dot {
+      background: #3498db;
+    }
+
+    .ann-info-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid #bdc3c7;
+      background: #f8f9fa;
+      color: #7f8c8d;
+      font-size: 0.75rem;
+      font-style: italic;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: Georgia, serif;
+      line-height: 1;
+    }
+
+    .ann-info-btn:hover {
+      background: #ecf0f1;
+      border-color: #95a5a6;
+      color: #2c3e50;
+    }
+
+    .ann-detail-row td {
+      padding: 0;
+    }
+
+    .ann-detail-content {
+      padding: 10px 15px 12px 20px;
+      background: #f8f9fa;
+      border-left: 3px solid #3498db;
+      font-size: 0.85rem;
+      color: #495057;
+    }
+
+    .ann-statute {
+      margin-bottom: 4px;
     }
 
     /* Actions panel */
@@ -2910,66 +3204,6 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
       background: #ebf5fb;
     }
 
-    /* Global State Selector */
-    .state-selector {
-      background: white;
-      border-radius: 8px;
-      padding: 20px 25px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .state-selector-label {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-
-    .state-selector-buttons {
-      display: flex;
-      gap: 8px;
-    }
-
-    .state-selector-btn {
-      padding: 8px 16px;
-      border: 2px solid #ecf0f1;
-      background: white;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-
-    .state-selector-btn:hover {
-      border-color: #3498db;
-      color: #3498db;
-    }
-
-    .state-selector-btn.active {
-      background: #3498db;
-      border-color: #3498db;
-      color: white;
-    }
-
-    .state-selector-note {
-      color: #7f8c8d;
-      font-size: 0.85rem;
-      margin-left: auto;
-    }
-
-    /* State-specific field highlighting */
-    .state-added-field {
-      background: #e8f8f0 !important;
-    }
-
-    .state-added-field td:first-child::after {
-      content: ' (state-specific)';
-      color: #27ae60;
-      font-size: 0.75rem;
-    }
   </style>
 </head>
 <body>
@@ -2977,12 +3211,6 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
     <aside class="sidebar">
       <div class="sidebar-header">
         <a href="#orca-intro" class="sidebar-title"><h1>ORCA Design Reference</h1></a>
-        <div class="sidebar-state-selector">
-          <div class="sidebar-state-buttons">
-            <button class="state-selector-btn active" data-state="base">Base</button>
-            ${states.map(s => `<button class="state-selector-btn" data-state="${s.state}">${s.name}</button>`).join('\n            ')}
-          </div>
-        </div>
         <div class="search-container">
           <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
           <div id="search-results" class="search-results"></div>
@@ -2997,12 +3225,14 @@ ${sidebarHtml}
 
     <main class="main">
       <section id="orca-intro" class="intro-section">
-        <h1>ORCA: Object-Relationship Content Attributes</h1>
+        <h1>ORCA: Objects, Relationships, CTAs, Attributes</h1>
         <p class="intro-description">
-          ORCA is a methodology for organizing and presenting data models in a way that's intuitive for designers.
-          This reference documents the Safety Net API data model—the standardized fields, types, and relationships
-          used across benefit program applications. Use this reference to understand what data exists, how it's
-          structured, and what values are valid for each field.
+          ORCA is a methodology from <a href="https://www.ooux.com/" style="color: #3498db;">OOUX</a> for organizing
+          and presenting data models in a way that's intuitive for designers. Each entity is described through four
+          lenses: the <strong>Object</strong> itself (what it is), its <strong>Relationships</strong> to other objects,
+          its <strong>CTAs</strong> (calls to action — what users can do with it), and its <strong>Attributes</strong>
+          (the fields and data it contains).
+          This reference documents the Safety Net API data model using that structure.
         </p>
         <div class="intro-domains">
           <h3>Data Domains</h3>
@@ -3032,7 +3262,7 @@ ${contentHtml}
 
   <script>
     // ORCA tabs - with persistence across all schemas
-    let activeTab = localStorage.getItem('orcaActiveTab') || 'overview';
+    let activeTab = localStorage.getItem('orcaActiveTab') || 'attributes';
 
     // Function to set active tab across all sections
     function setActiveTabGlobally(tabName) {
@@ -3059,6 +3289,17 @@ ${contentHtml}
         tab.addEventListener('click', () => {
           setActiveTabGlobally(tab.dataset.tab);
         });
+      });
+    });
+
+    // Annotation detail toggle
+    document.querySelectorAll('.ann-info-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const detailRow = document.getElementById(btn.dataset.detail);
+        if (detailRow) {
+          const isVisible = detailRow.style.display !== 'none';
+          detailRow.style.display = isVisible ? 'none' : 'table-row';
+        }
       });
     });
 
@@ -3215,36 +3456,6 @@ ${contentHtml}
       });
     });
 
-    // Global state selector
-    const stateBtns = document.querySelectorAll('.state-selector-btn');
-    const stateContents = document.querySelectorAll('[data-state-content]');
-
-    stateBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const selectedState = btn.dataset.state;
-
-        // Update active button
-        stateBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Show/hide state-specific content
-        stateContents.forEach(content => {
-          const contentState = content.dataset.stateContent;
-          content.style.display = (contentState === selectedState) ? '' : 'none';
-        });
-
-        // Highlight state-specific fields
-        document.querySelectorAll('.state-added-field').forEach(row => {
-          row.classList.remove('state-added-field');
-        });
-
-        if (selectedState !== 'base') {
-          document.querySelectorAll(\`[data-state-field="\${selectedState}"]\`).forEach(row => {
-            row.classList.add('state-added-field');
-          });
-        }
-      });
-    });
   </script>
 </body>
 </html>`;
@@ -3256,11 +3467,20 @@ ${contentHtml}
 async function main() {
   // Parse flags
   const args = process.argv.slice(2);
+
+  // Check for unknown arguments
+  const unknown = args.filter(a => !a.startsWith('--spec=') && !a.startsWith('--out=') && !a.startsWith('--annotations='));
+  if (unknown.length > 0) {
+    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
+    process.exit(1);
+  }
+
   const specArg = args.find(a => a.startsWith('--spec='));
   const outArg = args.find(a => a.startsWith('--out='));
+  const annotationsArg = args.find(a => a.startsWith('--annotations='));
   if (!specArg || !outArg) {
     console.error('Error: --spec=<file|dir> and --out=<dir> are required.\n');
-    console.error('Usage: node scripts/export-design-reference.js --spec=<file|dir> --out=<dir>');
+    console.error('Usage: node scripts/export-design-reference.js --spec=<file|dir> --out=<dir> [--annotations=<dir>]');
     process.exit(1);
   }
   const specDir = resolve(specArg.split('=')[1]);
@@ -3313,6 +3533,19 @@ async function main() {
       validSchemaNames.add(inlineName);
     }
     console.log(`Discovered ${inlineObjectSchemas.size} inline nested objects`);
+
+    // Load annotations (optional)
+    if (annotationsArg) {
+      const annotationsDir = resolve(annotationsArg.split('=')[1]);
+      console.log(`\nLoading annotations from: ${annotationsDir}`);
+      annotationsBySchema = loadAnnotations(annotationsDir);
+      const annotatedSchemas = Object.keys(annotationsBySchema);
+      if (annotatedSchemas.length > 0) {
+        console.log(`Loaded annotations for: ${annotatedSchemas.join(', ')}`);
+      } else {
+        console.log('No annotation files found');
+      }
+    }
 
     // Extract relationships
     console.log('Extracting relationships...');

@@ -22,7 +22,7 @@
     "resolve": "node packages/contracts/scripts/resolve.js",
     "clients:typescript": "node packages/clients/scripts/generate-clients-typescript.js",
     "clients:json-schema": "node packages/clients/scripts/generate-clients-json-schema.js",
-    "postman:generate": "node packages/clients/scripts/generate-postman.js",
+    "postman:generate": "node packages/contracts/scripts/resolve.js --spec=packages/contracts --overlay=packages/contracts/overlays --out=packages/resolved && node packages/contracts/scripts/generate-postman.js --spec=packages/resolved",
     "mock:start": "node packages/mock-server/scripts/server.js",
     "mock:stop": "node packages/mock-server/scripts/server.js --stop",
     "mock:start:all": "node packages/mock-server/scripts/start-all.js --spec=packages/contracts",
@@ -35,9 +35,15 @@
     "test:all": "node packages/mock-server/tests/run-all-tests.js --all",
     "preflight": "bash scripts/preflight.sh",
     "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html",
-    "design:reference": "node packages/contracts/scripts/export-design-reference.js --spec=packages/contracts --out=docs",
+    "design:reference": "npm run design:reference -w @codeforamerica/safety-net-blueprint-contracts",
+    "reconcile-examples": "node packages/contracts/scripts/reconcile-examples.js",
     "contract-tables:export": "node packages/contracts/scripts/export-contract-tables.js",
-    "contract-tables:import": "node packages/contracts/scripts/import-contract-tables.js"
+    "contract-tables:import": "node packages/contracts/scripts/import-contract-tables.js",
+    "storybook": "npm run storybook -w @safety-net/harness-designer",
+    "harness:dev": "npm run dev -w @safety-net/safety-harness",
+    "harness:generate": "npm run generate -w @safety-net/harness-designer",
+    "harness:generate:api": "npm run generate:api -w @safety-net/safety-harness",
+    "harness:start": "npm start -w @safety-net/safety-harness"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "^4.2.3"

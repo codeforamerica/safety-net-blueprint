@@ -1,0 +1,10 @@
+sources:
+  contract: authored/contracts/application/side-nav-split-co-caseworker.form.yaml
+  schema: generated/schemas/application-colorado.ts
+  zodExport: applicationUpdateSchema
+  fixtures: authored/fixtures/application-colorado-caseworker-review.yaml
+  permissions:
+    - authored/permissions/caseworker.yaml
+  annotations:
+    - generated/annotations/federal.yaml
+    - generated/annotations/colorado.yaml
