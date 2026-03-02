@@ -132,38 +132,6 @@
     .intro-domains li:nth-child(7) { border-left-color: #95a5a6; } /* Document Management */
     .intro-domains li:nth-child(8) { border-left-color: #7f8c8d; } /* Cross-cutting */
 
-    .sidebar-state-selector {
-      margin-bottom: 15px;
-    }
-
-    .sidebar-state-buttons {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .sidebar-state-buttons .state-selector-btn {
-      padding: 6px 12px;
-      font-size: 0.8rem;
-      border: 1px solid #456;
-      background: transparent;
-      color: #bdc3c7;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .sidebar-state-buttons .state-selector-btn:hover {
-      border-color: #3498db;
-      color: #3498db;
-    }
-
-    .sidebar-state-buttons .state-selector-btn.active {
-      background: #3498db;
-      border-color: #3498db;
-      color: white;
-    }
-
     .search-container {
       position: relative;
       margin-bottom: 15px;
@@ -804,9 +772,151 @@
       font-size: 0.85rem;
     }
 
-    .no-rels {
+    .no-rels, .no-annotations {
       color: #95a5a6;
       font-style: italic;
+    }
+
+    /* Annotations panel */
+    .annotations-content {
+      overflow-x: auto;
+    }
+
+    .annotations-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .legend-label {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+
+    .source-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .annotations-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .annotations-table th {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 2px solid #dee2e6;
+      font-weight: 600;
+      color: #2c3e50;
+      white-space: nowrap;
+    }
+
+    .ann-field-col {
+      min-width: 160px;
+    }
+
+    .ann-source-col {
+      min-width: 90px;
+    }
+
+    .ann-program-col {
+      text-align: center !important;
+      min-width: 50px;
+    }
+
+    .program-header {
+      font-size: 0.8rem;
+      writing-mode: vertical-lr;
+      transform: rotate(180deg);
+      white-space: nowrap;
+      display: inline-block;
+      max-height: 80px;
+    }
+
+    .ann-detail-col {
+      width: 30px;
+    }
+
+    .ann-group-row td {
+      padding: 10px 10px 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-top: 1px solid #dee2e6;
+    }
+
+    .ann-field-row td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .ann-field-name {
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    .ann-program-cell {
+      text-align: center;
+    }
+
+    .ann-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #3498db;
+    }
+
+    .ann-required .ann-dot {
+      background: #3498db;
+    }
+
+    .ann-info-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid #bdc3c7;
+      background: #f8f9fa;
+      color: #7f8c8d;
+      font-size: 0.75rem;
+      font-style: italic;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: Georgia, serif;
+      line-height: 1;
+    }
+
+    .ann-info-btn:hover {
+      background: #ecf0f1;
+      border-color: #95a5a6;
+      color: #2c3e50;
+    }
+
+    .ann-detail-row td {
+      padding: 0;
+    }
+
+    .ann-detail-content {
+      padding: 10px 15px 12px 20px;
+      background: #f8f9fa;
+      border-left: 3px solid #3498db;
+      font-size: 0.85rem;
+      color: #495057;
+    }
+
+    .ann-statute {
+      margin-bottom: 4px;
     }
 
     /* Actions panel */
@@ -1178,66 +1288,6 @@
       background: #ebf5fb;
     }
 
-    /* Global State Selector */
-    .state-selector {
-      background: white;
-      border-radius: 8px;
-      padding: 20px 25px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .state-selector-label {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-
-    .state-selector-buttons {
-      display: flex;
-      gap: 8px;
-    }
-
-    .state-selector-btn {
-      padding: 8px 16px;
-      border: 2px solid #ecf0f1;
-      background: white;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-
-    .state-selector-btn:hover {
-      border-color: #3498db;
-      color: #3498db;
-    }
-
-    .state-selector-btn.active {
-      background: #3498db;
-      border-color: #3498db;
-      color: white;
-    }
-
-    .state-selector-note {
-      color: #7f8c8d;
-      font-size: 0.85rem;
-      margin-left: auto;
-    }
-
-    /* State-specific field highlighting */
-    .state-added-field {
-      background: #e8f8f0 !important;
-    }
-
-    .state-added-field td:first-child::after {
-      content: ' (state-specific)';
-      color: #27ae60;
-      font-size: 0.75rem;
-    }
   </style>
 </head>
 <body>
@@ -1245,12 +1295,6 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <a href="#orca-intro" class="sidebar-title"><h1>ORCA Design Reference</h1></a>
-        <div class="sidebar-state-selector">
-          <div class="sidebar-state-buttons">
-            <button class="state-selector-btn active" data-state="base">Base</button>
-            
-          </div>
-        </div>
         <div class="search-container">
           <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
           <div id="search-results" class="search-results"></div>
@@ -1368,12 +1412,14 @@
 
     <main class="main">
       <section id="orca-intro" class="intro-section">
-        <h1>ORCA: Object-Relationship Content Attributes</h1>
+        <h1>ORCA: Objects, Relationships, CTAs, Attributes</h1>
         <p class="intro-description">
-          ORCA is a methodology for organizing and presenting data models in a way that's intuitive for designers.
-          This reference documents the Safety Net API data model—the standardized fields, types, and relationships
-          used across benefit program applications. Use this reference to understand what data exists, how it's
-          structured, and what values are valid for each field.
+          ORCA is a methodology from <a href="https://www.ooux.com/" style="color: #3498db;">OOUX</a> for organizing
+          and presenting data models in a way that's intuitive for designers. Each entity is described through four
+          lenses: the <strong>Object</strong> itself (what it is), its <strong>Relationships</strong> to other objects,
+          its <strong>CTAs</strong> (calls to action — what users can do with it), and its <strong>Attributes</strong>
+          (the fields and data it contains).
+          This reference documents the Safety Net API data model using that structure.
         </p>
         <div class="intro-domains">
           <h3>Data Domains</h3>
@@ -10329,7 +10375,7 @@ Examples: applications:read, persons:update, users:create
 
   <script>
     // ORCA tabs - with persistence across all schemas
-    let activeTab = localStorage.getItem('orcaActiveTab') || 'overview';
+    let activeTab = localStorage.getItem('orcaActiveTab') || 'attributes';
 
     // Function to set active tab across all sections
     function setActiveTabGlobally(tabName) {
@@ -10356,6 +10402,17 @@ Examples: applications:read, persons:update, users:create
         tab.addEventListener('click', () => {
           setActiveTabGlobally(tab.dataset.tab);
         });
+      });
+    });
+
+    // Annotation detail toggle
+    document.querySelectorAll('.ann-info-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const detailRow = document.getElementById(btn.dataset.detail);
+        if (detailRow) {
+          const isVisible = detailRow.style.display !== 'none';
+          detailRow.style.display = isVisible ? 'none' : 'table-row';
+        }
       });
     });
 
@@ -10512,36 +10569,6 @@ Examples: applications:read, persons:update, users:create
       });
     });
 
-    // Global state selector
-    const stateBtns = document.querySelectorAll('.state-selector-btn');
-    const stateContents = document.querySelectorAll('[data-state-content]');
-
-    stateBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const selectedState = btn.dataset.state;
-
-        // Update active button
-        stateBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Show/hide state-specific content
-        stateContents.forEach(content => {
-          const contentState = content.dataset.stateContent;
-          content.style.display = (contentState === selectedState) ? '' : 'none';
-        });
-
-        // Highlight state-specific fields
-        document.querySelectorAll('.state-added-field').forEach(row => {
-          row.classList.remove('state-added-field');
-        });
-
-        if (selectedState !== 'base') {
-          document.querySelectorAll(`[data-state-field="${selectedState}"]`).forEach(row => {
-            row.classList.add('state-added-field');
-          });
-        }
-      });
-    });
   </script>
 </body>
 </html>
