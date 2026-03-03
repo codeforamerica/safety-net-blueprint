@@ -65,7 +65,7 @@ REACT_APP_API_URL=http://localhost:1080 npm start
 Browse all endpoints — REST and RPC — via Swagger UI:
 
 ```bash
-STATE=<your-state> npm start
+STATE=<your-state> npm run mock:start:all
 ```
 
 Visit http://localhost:3000 to see all endpoints and schemas.

@@ -41,7 +41,7 @@ npm install
 export STATE=<your-state>
 
 # Start mock server + Swagger UI
-npm start
+npm run mock:start:all
 ```
 
 Visit `http://localhost:3000` for interactive API docs.
@@ -50,7 +50,8 @@ Visit `http://localhost:3000` for interactive API docs.
 
 | Command | Description |
 |---------|-------------|
-| `npm start` | Start mock server + Swagger UI |
+| `npm start` | Start mock server |
+| `npm run mock:start:all` | Start mock server + Swagger UI |
 | `npm run validate` | Validate OpenAPI specs |
 | `npm run overlay:resolve` | Resolve state overlay (requires STATE) |
 | `npm run api:new` | Scaffold a new API spec |

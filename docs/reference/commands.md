@@ -8,7 +8,8 @@ All available npm scripts in the Safety Net APIs toolkit.
 
 | Command | Description |
 |---------|-------------|
-| `npm start` | Start mock server + Swagger UI |
+| `npm start` | Start mock server only |
+| `npm run mock:start:all` | Start mock server + Swagger UI |
 | `npm run validate` | Validate base specs |
 | `npm run mock:start` | Start mock server only |
 | `npm run mock:reset` | Reset database to example data |
@@ -121,10 +122,20 @@ The package is built using `@hey-api/openapi-ts` with the following plugins:
 
 ### `npm start`
 
-Starts both the mock server and Swagger UI.
+Starts the mock server only.
 
 ```bash
 STATE=<your-state> npm start
+```
+
+Default: http://localhost:1080
+
+### `npm run mock:start:all`
+
+Starts both the mock server and Swagger UI.
+
+```bash
+STATE=<your-state> npm run mock:start:all
 ```
 
 - Mock server: http://localhost:1080

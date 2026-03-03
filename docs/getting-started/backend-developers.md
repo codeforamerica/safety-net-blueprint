@@ -125,14 +125,14 @@ Today the mock server serves REST APIs (CRUD endpoints from OpenAPI specs). The 
 
 ```bash
 # Within this repository
-STATE=<your-state> npm start
+STATE=<your-state> npm run mock:start:all
 
 # Or in a state repository with resolved specs
 npm run mock:start
 ```
 
-- **Swagger UI:** http://localhost:3000 — browse endpoints
 - **Mock server:** http://localhost:1080 — API endpoints with in-memory database
+- **Swagger UI:** http://localhost:3000 — browse endpoints
 
 The target: adding a transition is a table row, not endpoint code.
 

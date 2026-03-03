@@ -107,7 +107,7 @@ No more "I thought you were sending `firstName`, not `first_name`" conversations
 - Try API calls directly in your browser
 - No coding required to explore
 
-**Access:** `npm start` then visit `http://localhost:3000`
+**Access:** `npm run mock:start:all` then visit `http://localhost:3000`
 
 ---
 
@@ -562,7 +562,7 @@ npm install
 export STATE=california
 
 # Start exploring
-npm start
+npm run mock:start:all
 ```
 
 **Visit `http://localhost:3000` to browse the APIs**
