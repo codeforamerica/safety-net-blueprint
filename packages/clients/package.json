@@ -4,7 +4,8 @@
   "description": "Generated API clients and collections for Safety Net APIs",
   "type": "module",
   "files": [
-    "scripts/"
+    "scripts/",
+    "utility/"
   ],
   "bin": {
     "safety-net-generate-clients": "./scripts/generate-clients-typescript.js",
