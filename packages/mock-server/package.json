@@ -1,6 +1,6 @@
 {
   "name": "@codeforamerica/safety-net-blueprint-mock-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Mock API server for Safety Net API development and testing",
   "type": "module",
   "files": [

@@ -1,6 +1,6 @@
 {
   "name": "@codeforamerica/safety-net-blueprint-contracts",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Behavioral contracts, OpenAPI specs, validation, and overlay resolution for Safety Net APIs",
   "type": "module",
   "files": [
