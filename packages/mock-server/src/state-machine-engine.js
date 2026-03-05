@@ -156,12 +156,13 @@ export function applyCreateEffect(effect, context) {
  * @param {Array} effects - Array of effect definitions
  * @param {Object} resource - The resource to modify (mutated in place)
  * @param {Object} context - Context with caller info
- * @returns {{ pendingCreates: Array<{ entity: string, data: Object }> }}
+ * @returns {{ pendingCreates: Array<{ entity: string, data: Object }>, pendingRuleEvaluations: Array<{ ruleType: string }> }}
  */
 export function applyEffects(effects, resource, context) {
   const pendingCreates = [];
+  const pendingRuleEvaluations = [];
 
-  if (!effects) return { pendingCreates };
+  if (!effects) return { pendingCreates, pendingRuleEvaluations };
 
   for (const effect of effects) {
     switch (effect.type) {
@@ -171,11 +172,14 @@ export function applyEffects(effects, resource, context) {
       case 'create':
         pendingCreates.push(applyCreateEffect(effect, context));
         break;
+      case 'evaluate-rules':
+        pendingRuleEvaluations.push({ ruleType: effect.ruleType });
+        break;
       default:
         // Silently skip unimplemented effect types (forward-compatible)
         break;
     }
   }
 
-  return { pendingCreates };
+  return { pendingCreates, pendingRuleEvaluations };
 }

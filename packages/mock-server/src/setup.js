@@ -7,6 +7,7 @@ import { loadAllSpecs, discoverApiSpecs } from '@codeforamerica/safety-net-bluep
 import { seedAllDatabases } from './seeder.js';
 import { validateAll, getValidationStatus } from '@codeforamerica/safety-net-blueprint-contracts/validation';
 import { discoverStateMachines } from './state-machine-loader.js';
+import { discoverRules } from './rules-loader.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -90,10 +91,17 @@ export async function performSetup({ specsDir, verbose = true, skipValidation = 
     stateMachines.forEach(sm => console.log(`  - ${sm.domain}/${sm.object}`));
   }
 
+  // Discover rule contracts
+  const rules = discoverRules(specsDir);
+  if (verbose && rules.length > 0) {
+    console.log(`\n✓ Discovered ${rules.length} rule set(s):`);
+    rules.forEach(r => console.log(`  - ${r.domain} (${r.ruleSets.length} ruleSet(s))`));
+  }
+
   // Seed databases from example files
   const summary = seedAllDatabases(apiSpecs, specsDir);
 
-  return { apiSpecs, stateMachines, summary };
+  return { apiSpecs, stateMachines, rules, summary };
 }
 
 /**

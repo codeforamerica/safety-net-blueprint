@@ -191,16 +191,15 @@ export async function validateExamples(specPath, examplesPath) {
       return { valid: true, errors, warnings };
     }
     
-    // Find the main resource schema (usually capitalized singular form)
-    // Try to match schema names with common patterns
-    const resourceSchemas = Object.keys(schemas).filter(name => 
-      !name.includes('List') && 
-      !name.includes('Create') && 
+    // Find resource schemas (excluding List, Create, Update, Error, Response suffixes)
+    const resourceSchemas = Object.keys(schemas).filter(name =>
+      !name.includes('List') &&
+      !name.includes('Create') &&
       !name.includes('Update') &&
       !name.includes('Error') &&
       !name.includes('Response')
     );
-    
+
     if (resourceSchemas.length === 0) {
       warnings.push({
         type: 'schema',
@@ -209,10 +208,7 @@ export async function validateExamples(specPath, examplesPath) {
       });
       return { valid: true, errors, warnings };
     }
-    
-    // Use the first matching schema (typically the main resource)
-    const mainSchema = schemas[resourceSchemas[0]];
-    
+
     // Create AJV validator
     const ajv = new Ajv({
       strict: false,
@@ -221,7 +217,7 @@ export async function validateExamples(specPath, examplesPath) {
       coerceTypes: false
     });
     addFormats(ajv);
-    
+
     // Add all schemas to AJV for reference resolution
     for (const [schemaName, schema] of Object.entries(schemas)) {
       try {
@@ -230,23 +226,39 @@ export async function validateExamples(specPath, examplesPath) {
         // Schema might already be added or have issues, continue
       }
     }
-    
-    // Validate each example
-    const validate = ajv.compile(mainSchema);
-    
+
+    // Build compiled validators for each resource schema
+    const validators = {};
+    for (const schemaName of resourceSchemas) {
+      try {
+        validators[schemaName] = ajv.compile(schemas[schemaName]);
+      } catch (error) {
+        // Skip schemas that fail to compile
+      }
+    }
+
+    // Default validator: first resource schema (for single-resource APIs)
+    const defaultValidate = validators[resourceSchemas[0]];
+
     for (const [exampleName, exampleData] of Object.entries(examples)) {
       // Skip list examples and payload examples
       if (exampleData?.items && Array.isArray(exampleData.items)) {
         continue; // This is a list example
       }
-      
+
       const lowerName = exampleName.toLowerCase();
-      if (lowerName.includes('payload') || 
-          lowerName.includes('create') || 
+      if (lowerName.includes('payload') ||
+          lowerName.includes('create') ||
           lowerName.includes('update')) {
         continue; // This is a payload example (for requests)
       }
-      
+
+      // Match example to schema by name prefix (e.g., QueueExample1 → Queue)
+      // Sort resource schemas by length descending so longer prefixes match first
+      const sortedSchemas = resourceSchemas.slice().sort((a, b) => b.length - a.length);
+      const matchedSchema = sortedSchemas.find(name => exampleName.startsWith(name));
+      const validate = (matchedSchema && validators[matchedSchema]) || defaultValidate;
+
       // Validate example against schema
       const valid = validate(exampleData);
       

@@ -1,0 +1,48 @@
+$schema: ./schemas/rules-schema.yaml
+version: "1.0"
+domain: workflow
+context:
+  - "task.*"
+
+ruleSets:
+  - id: workflow-assignment
+    ruleType: assignment
+    evaluation: first-match-wins
+    rules:
+      - id: snap-to-snap-queue
+        order: 1
+        description: Route SNAP tasks to the SNAP intake queue.
+        condition:
+          "==":
+            - var: "task.programType"
+            - "snap"
+        action:
+          assignToQueue: snap-intake
+        fallbackAction:
+          assignToQueue: general-intake
+      - id: default-to-general-queue
+        order: 2
+        description: Route all other tasks to the general intake queue.
+        condition: true
+        action:
+          assignToQueue: general-intake
+
+  - id: workflow-priority
+    ruleType: priority
+    evaluation: first-match-wins
+    rules:
+      - id: expedited-flag
+        order: 1
+        description: Set expedited priority when the task is flagged as expedited.
+        condition:
+          "==":
+            - var: "task.isExpedited"
+            - true
+        action:
+          setPriority: expedited
+      - id: default-priority
+        order: 2
+        description: Set normal priority for all other tasks.
+        condition: true
+        action:
+          setPriority: normal

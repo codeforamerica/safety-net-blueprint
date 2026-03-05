@@ -192,6 +192,52 @@ export function getExamplesPath(apiName, specsDir) {
 }
 
 /**
+ * Convert a kebab-case collection name to its PascalCase singular schema prefix.
+ * Used to match example keys to collections (e.g., "queues" → "Queue",
+ * "task-audit-events" → "TaskAuditEvent").
+ * @param {string} collectionName - Database collection name
+ * @returns {string} PascalCase schema prefix
+ */
+export function collectionToSchemaPrefix(collectionName) {
+  const segments = collectionName.split('-');
+  return segments.map((seg, i) => {
+    let s = seg;
+    if (i === segments.length - 1) {
+      if (s.endsWith('ies')) s = s.slice(0, -3) + 'y';
+      else if (s.endsWith('ses')) s = s.slice(0, -2);
+      else if (s.endsWith('s')) s = s.slice(0, -1);
+    }
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }).join('');
+}
+
+/**
+ * Extract individual resources from an examples object.
+ * Filters out list examples, payload examples, and non-object entries.
+ * Returns resources sorted by key name for consistent ordering.
+ * @param {Object} examples - Examples object from YAML (key → value)
+ * @returns {Array<{key: string, name: string, data: Object}>} Sorted array of resources
+ */
+export function extractIndividualResources(examples) {
+  const resources = [];
+
+  for (const [key, value] of Object.entries(examples)) {
+    if (!value || typeof value !== 'object') continue;
+    if (value.items && Array.isArray(value.items)) continue;
+
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes('payload') || lowerKey.includes('create') || lowerKey.includes('update')) continue;
+
+    if (value.id) {
+      resources.push({ key, name: key, data: value });
+    }
+  }
+
+  resources.sort((a, b) => a.key.localeCompare(b.key));
+  return resources;
+}
+
+/**
  * Load all API specifications
  * @param {Object} options
  * @param {string} options.specsDir - Path to the specs directory (required)

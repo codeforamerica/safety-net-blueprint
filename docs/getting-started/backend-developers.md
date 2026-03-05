@@ -6,7 +6,7 @@ This guide is for developers who work with the contract artifacts — OpenAPI sp
 
 See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
 
-> **Note:** OpenAPI specs, validation, overlays, the mock server for CRUD operations, and the core state machine engine (transitions, guards, `set`/`create` effects) work today. Additional behavioral tooling — conversion scripts, cross-artifact validation, rule evaluation, and metrics — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes both the current and target developer experience.
+> **Note:** OpenAPI specs, validation, overlays, the mock server for CRUD operations, the state machine engine (transitions, guards, `set`/`create`/`evaluate-rules` effects), and rule evaluation (assignment and priority) work today. Additional behavioral tooling — conversion scripts, cross-artifact validation, and metrics — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes both the current and target developer experience.
 
 ## What You'll Do
 
@@ -121,7 +121,7 @@ npm run validate
 
 ### 4. Test with the Mock Server
 
-The mock server serves REST APIs (CRUD endpoints from OpenAPI specs) and a core behavioral engine that interprets state machine YAML — auto-generating RPC endpoints from triggers, enforcing transitions, evaluating guards, and executing `set`/`create` effects. Additional capabilities (rule evaluation, metrics tracking, `lookup`/`event` effects) are planned.
+The mock server serves REST APIs (CRUD endpoints from OpenAPI specs) and a behavioral engine that interprets state machine and rules YAML — auto-generating RPC endpoints from triggers, enforcing transitions, evaluating guards, executing `set`/`create`/`evaluate-rules` effects, and running assignment and priority rules. Additional capabilities (metrics tracking, `lookup`/`event` effects) are planned.
 
 ```bash
 # Within this repository
