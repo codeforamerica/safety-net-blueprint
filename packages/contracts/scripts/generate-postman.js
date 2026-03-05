@@ -13,7 +13,7 @@
  *   -h, --help     Show this help message
  */
 
-import { loadAllSpecs, getExamplesPath } from '../src/validation/openapi-loader.js';
+import { loadAllSpecs, getExamplesPath, collectionToSchemaPrefix, extractIndividualResources } from '../src/validation/openapi-loader.js';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, realpathSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
@@ -72,40 +72,6 @@ function loadExamples(resourceName) {
   return yaml.load(content) || {};
 }
 
-/**
- * Extract individual resources from examples
- */
-function extractIndividualResources(examples) {
-  const resources = [];
-
-  for (const [key, value] of Object.entries(examples)) {
-    if (!value || typeof value !== 'object') {
-      continue;
-    }
-
-    // Skip list examples
-    if (value.items && Array.isArray(value.items)) {
-      continue;
-    }
-
-    // Skip payload examples
-    const lowerKey = key.toLowerCase();
-    if (lowerKey.includes('payload') || lowerKey.includes('create') || lowerKey.includes('update')) {
-      continue;
-    }
-
-    // Only include resources that have an 'id' field
-    if (value.id) {
-      resources.push({
-        key,
-        name: key,
-        data: value
-      });
-    }
-  }
-
-  return resources;
-}
 
 // =============================================================================
 // State Machine Support
@@ -927,7 +893,7 @@ function generateOrderedRpcRequests(apiMetadata, rpcEndpoints, examples, stateMa
  * Generate all requests for an API
  */
 function generateApiRequests(apiMetadata) {
-  const allExamples = extractIndividualResources(loadExamples(apiMetadata.name));
+  const rawExamples = loadExamples(apiMetadata.name);
 
   // Derive resource name from endpoint paths (e.g., "/tasks" → "tasks")
   // This gives proper object names ("Task") instead of spec names ("Workflow")
@@ -961,11 +927,15 @@ function generateApiRequests(apiMetadata) {
     // RPC = POST on a sub-path like /tasks/{taskId}/claim (more than one '{' segment's worth)
     const isRpc = endpoint.method === 'POST' && isItem;
 
-    // Only use examples for endpoints whose path matches the primary collection;
-    // secondary resources (e.g., /task-audit-events, /token/claims) don't share
-    // seeded example data with the primary resource.
+    // Match examples to endpoints by resource type using the same schema prefix
+    // logic as the seeder — e.g., /queues gets QueueExample*, /tasks gets TaskExample*
     const endpointCollection = endpoint.path.split('/').filter(s => s)[0];
-    const examples = (endpointCollection === primaryCollection) ? allExamples : [];
+    const schemaPrefix = collectionToSchemaPrefix(endpointCollection);
+    const filtered = {};
+    for (const [key, value] of Object.entries(rawExamples)) {
+      if (key.startsWith(schemaPrefix)) filtered[key] = value;
+    }
+    const examples = extractIndividualResources(filtered);
 
     let requests = [];
 
@@ -992,12 +962,20 @@ function generateApiRequests(apiMetadata) {
   if (rpcEndpoints.length > 0) {
     const stateMachine = loadStateMachine(apiMetadata.name);
     if (stateMachine) {
-      const result = generateOrderedRpcRequests(displayMeta, rpcEndpoints, allExamples, stateMachine);
+      // Use the state machine's object name to find matching examples
+      const smPrefix = stateMachine.object || collectionToSchemaPrefix(primaryCollection);
+      const smFiltered = {};
+      for (const [key, value] of Object.entries(rawExamples)) {
+        if (key.startsWith(smPrefix)) smFiltered[key] = value;
+      }
+      const smExamples = extractIndividualResources(smFiltered);
+      const result = generateOrderedRpcRequests(displayMeta, rpcEndpoints, smExamples, stateMachine);
       items.push(...result.requests);
       callerId = result.callerId;
     } else {
       // No state machine — generate RPC requests in definition order with basic context
-      const rpcContext = { example: allExamples[0], callerId: 'postman-test-user' };
+      const primaryExamples = extractIndividualResources(rawExamples);
+      const rpcContext = { example: primaryExamples[0], callerId: 'postman-test-user' };
       for (const ep of rpcEndpoints) {
         items.push(generateRpcRequest(displayMeta, ep, rpcContext));
       }
