@@ -1,5 +1,5 @@
 From,To,Trigger,Actors,Guards,Effects
-(create),pending,create,,,"Record a ""created"" audit event when a task is first created"
-pending,in_progress,claim,,taskIsUnassigned,"Assign task to the claiming worker; Record an ""assigned"" audit event"
-in_progress,completed,complete,,callerIsAssignedWorker,"Record a ""completed"" audit event"
-in_progress,pending,release,,callerIsAssignedWorker,"Clear assignment so task returns to queue; Record a ""returned_to_queue"" audit event"
+(create),pending,create,,,create
+pending,in_progress,claim,,taskIsUnassigned,set assignedToId = $caller.id; create
+in_progress,completed,complete,,callerIsAssignedWorker,create
+in_progress,pending,release,,callerIsAssignedWorker,set assignedToId = null; create

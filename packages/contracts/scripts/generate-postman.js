@@ -927,15 +927,15 @@ function generateOrderedRpcRequests(apiMetadata, rpcEndpoints, examples, stateMa
  * Generate all requests for an API
  */
 function generateApiRequests(apiMetadata) {
-  const examples = extractIndividualResources(loadExamples(apiMetadata.name));
+  const allExamples = extractIndividualResources(loadExamples(apiMetadata.name));
 
   // Derive resource name from endpoint paths (e.g., "/tasks" → "tasks")
   // This gives proper object names ("Task") instead of spec names ("Workflow")
   const collectionPath = apiMetadata.endpoints.find(e => !e.path.includes('{'))?.path;
-  const resourceName = collectionPath
+  const primaryCollection = collectionPath
     ? collectionPath.split('/').filter(s => s)[0]
     : apiMetadata.name;
-  const displayMeta = { ...apiMetadata, name: resourceName };
+  const displayMeta = { ...apiMetadata, name: primaryCollection };
 
   const items = [];
   const rpcEndpoints = [];
@@ -960,6 +960,12 @@ function generateApiRequests(apiMetadata) {
     const isItem = endpoint.path.includes('{');
     // RPC = POST on a sub-path like /tasks/{taskId}/claim (more than one '{' segment's worth)
     const isRpc = endpoint.method === 'POST' && isItem;
+
+    // Only use examples for endpoints whose path matches the primary collection;
+    // secondary resources (e.g., /task-audit-events, /token/claims) don't share
+    // seeded example data with the primary resource.
+    const endpointCollection = endpoint.path.split('/').filter(s => s)[0];
+    const examples = (endpointCollection === primaryCollection) ? allExamples : [];
 
     let requests = [];
 
@@ -986,19 +992,19 @@ function generateApiRequests(apiMetadata) {
   if (rpcEndpoints.length > 0) {
     const stateMachine = loadStateMachine(apiMetadata.name);
     if (stateMachine) {
-      const result = generateOrderedRpcRequests(displayMeta, rpcEndpoints, examples, stateMachine);
+      const result = generateOrderedRpcRequests(displayMeta, rpcEndpoints, allExamples, stateMachine);
       items.push(...result.requests);
       callerId = result.callerId;
     } else {
       // No state machine — generate RPC requests in definition order with basic context
-      const rpcContext = { example: examples[0], callerId: 'postman-test-user' };
+      const rpcContext = { example: allExamples[0], callerId: 'postman-test-user' };
       for (const ep of rpcEndpoints) {
         items.push(generateRpcRequest(displayMeta, ep, rpcContext));
       }
     }
   }
 
-  return { resourceName, items, callerId };
+  return { resourceName: primaryCollection, items, callerId };
 }
 
 // =============================================================================
