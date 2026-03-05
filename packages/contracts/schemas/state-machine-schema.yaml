@@ -205,6 +205,9 @@ $defs:
         type: object
         description: Event payload template (for event effects).
         additionalProperties: true
+      ruleType:
+        type: string
+        description: Single rule type to evaluate (for evaluate-rules effects).
       ruleTypes:
         type: array
         items:

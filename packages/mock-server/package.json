@@ -30,6 +30,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
+    "json-logic-js": "^2.0.5",
     "swagger-ui-express": "^5.0.1"
   },
   "engines": {

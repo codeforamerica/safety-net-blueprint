@@ -541,7 +541,7 @@ async function runTests() {
   // =========================================================================
   const workflowApi = apis.find(api => api.name === 'workflow');
   if (workflowApi) {
-    const taskPath = workflowApi.baseResource || '/workflow';
+    const taskPath = '/tasks';
     console.log(`\n${'='.repeat(70)}`);
     console.log(`State Machine RPC Tests: ${taskPath}`);
     console.log('='.repeat(70));
@@ -795,9 +795,9 @@ async function runTests() {
         const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${auditTaskId}`);
         const listData = await listResponse.json();
 
-        if (listData.items && listData.items.length === 1) {
-          const event = listData.items[0];
-          if (event.eventType === 'assigned' &&
+        if (listData.items && listData.items.length === 2) {
+          const event = listData.items.find(e => e.eventType === 'assigned');
+          if (event &&
               event.taskId === auditTaskId &&
               event.previousValue === 'pending' &&
               event.newValue === 'in_progress' &&
@@ -806,40 +806,6 @@ async function runTests() {
             totalPassed++;
           } else {
             console.log(`     ✗ FAIL: Audit event fields incorrect: ${JSON.stringify(event)}`);
-            totalFailed++;
-          }
-        } else {
-          console.log(`     ✗ FAIL: Expected 1 audit event, got ${listData.items?.length ?? 0}`);
-          totalFailed++;
-        }
-        totalTests++;
-      } catch (error) {
-        console.log(`     ✗ FAIL: ${error.message}`);
-        totalFailed++;
-        totalTests++;
-      }
-    }
-
-    // Audit Test 3: Release → verify 2 audit events (assigned + returned_to_queue)
-    if (auditTaskId) {
-      try {
-        console.log(`\n  AUDIT-3. Release task → verify 2 audit events`);
-        await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/release`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' },
-          body: JSON.stringify({ reason: 'Testing audit events' })
-        });
-
-        const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${auditTaskId}`);
-        const listData = await listResponse.json();
-
-        if (listData.items && listData.items.length === 2) {
-          const types = listData.items.map(e => e.eventType).sort();
-          if (types.includes('assigned') && types.includes('returned_to_queue')) {
-            console.log('     ✓ PASS: 2 audit events (assigned + returned_to_queue)');
-            totalPassed++;
-          } else {
-            console.log(`     ✗ FAIL: Unexpected event types: ${types.join(', ')}`);
             totalFailed++;
           }
         } else {
@@ -854,10 +820,44 @@ async function runTests() {
       }
     }
 
-    // Audit Test 4: Claim again + complete → verify 4 total audit events
+    // Audit Test 3: Release → verify 3 audit events (created + assigned + returned_to_queue)
     if (auditTaskId) {
       try {
-        console.log(`\n  AUDIT-4. Claim + complete → verify 4 total audit events`);
+        console.log(`\n  AUDIT-3. Release task → verify 3 audit events`);
+        await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/release`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' },
+          body: JSON.stringify({ reason: 'Testing audit events' })
+        });
+
+        const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${auditTaskId}`);
+        const listData = await listResponse.json();
+
+        if (listData.items && listData.items.length === 3) {
+          const types = listData.items.map(e => e.eventType).sort();
+          if (types.includes('assigned') && types.includes('created') && types.includes('returned_to_queue')) {
+            console.log('     ✓ PASS: 3 audit events (created + assigned + returned_to_queue)');
+            totalPassed++;
+          } else {
+            console.log(`     ✗ FAIL: Unexpected event types: ${types.join(', ')}`);
+            totalFailed++;
+          }
+        } else {
+          console.log(`     ✗ FAIL: Expected 3 audit events, got ${listData.items?.length ?? 0}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // Audit Test 4: Claim again + complete → verify 5 total audit events
+    if (auditTaskId) {
+      try {
+        console.log(`\n  AUDIT-4. Claim + complete → verify 5 total audit events`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/claim`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' }
@@ -871,17 +871,17 @@ async function runTests() {
         const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${auditTaskId}`);
         const listData = await listResponse.json();
 
-        if (listData.items && listData.items.length === 4) {
+        if (listData.items && listData.items.length === 5) {
           const types = listData.items.map(e => e.eventType).sort();
-          if (types.includes('assigned') && types.includes('completed') && types.includes('returned_to_queue')) {
-            console.log('     ✓ PASS: 4 audit events total');
+          if (types.includes('assigned') && types.includes('completed') && types.includes('created') && types.includes('returned_to_queue')) {
+            console.log('     ✓ PASS: 5 audit events total');
             totalPassed++;
           } else {
             console.log(`     ✗ FAIL: Unexpected event types: ${types.join(', ')}`);
             totalFailed++;
           }
         } else {
-          console.log(`     ✗ FAIL: Expected 4 audit events, got ${listData.items?.length ?? 0}`);
+          console.log(`     ✗ FAIL: Expected 5 audit events, got ${listData.items?.length ?? 0}`);
           totalFailed++;
         }
         totalTests++;
@@ -918,6 +918,211 @@ async function runTests() {
           }
         } else {
           console.log('     ✗ FAIL: No audit events to test GET by ID');
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+  }
+
+  // =========================================================================
+  // Rule Evaluation Tests
+  // =========================================================================
+  if (workflowApi) {
+    const taskPath = '/tasks';
+    console.log(`\n${'='.repeat(70)}`);
+    console.log('Rule Evaluation Tests');
+    console.log('='.repeat(70));
+
+    // RULE-1: Create SNAP task with isExpedited=true → verify queueId and priority
+    let snapTaskId = null;
+    let snapIntakeQueueId = null;
+    let generalIntakeQueueId = null;
+
+    // Look up queue IDs first
+    try {
+      const queuesRes = await fetch(`${BASE_URL}/queues`);
+      const queuesData = await queuesRes.json();
+      for (const q of queuesData.items) {
+        if (q.name === 'snap-intake') snapIntakeQueueId = q.id;
+        if (q.name === 'general-intake') generalIntakeQueueId = q.id;
+      }
+    } catch (error) {
+      console.log(`     Could not load queues: ${error.message}`);
+    }
+
+    try {
+      console.log('\n  RULE-1. Create SNAP+expedited task → assigned to snap-intake, priority=expedited');
+      const response = await fetch(`${BASE_URL}${taskPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1' },
+        body: JSON.stringify({
+          name: 'SNAP expedited task',
+          status: 'pending',
+          programType: 'snap',
+          isExpedited: true
+        })
+      });
+
+      if (response.status === 201) {
+        const data = await response.json();
+        snapTaskId = data.id;
+        let pass = true;
+        const issues = [];
+
+        if (data.queueId !== snapIntakeQueueId) {
+          issues.push(`queueId=${data.queueId}, expected=${snapIntakeQueueId}`);
+          pass = false;
+        }
+        if (data.priority !== 'expedited') {
+          issues.push(`priority=${data.priority}, expected=expedited`);
+          pass = false;
+        }
+
+        if (pass) {
+          console.log('     ✓ PASS: SNAP task → snap-intake queue, expedited priority');
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: ${issues.join('; ')}`);
+          totalFailed++;
+        }
+      } else {
+        const err = await response.json();
+        console.log(`     ✗ FAIL: Expected 201, got ${response.status}: ${JSON.stringify(err)}`);
+        totalFailed++;
+      }
+      totalTests++;
+    } catch (error) {
+      console.log(`     ✗ FAIL: ${error.message}`);
+      totalFailed++;
+      totalTests++;
+    }
+
+    // RULE-2: Create non-SNAP task → assigned to general-intake, priority=normal
+    try {
+      console.log('\n  RULE-2. Create non-SNAP task → assigned to general-intake, priority=normal');
+      const response = await fetch(`${BASE_URL}${taskPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-2' },
+        body: JSON.stringify({
+          name: 'Medical Assistance task',
+          status: 'pending',
+          programType: 'medical_assistance',
+          isExpedited: false
+        })
+      });
+
+      if (response.status === 201) {
+        const data = await response.json();
+        let pass = true;
+        const issues = [];
+
+        if (data.queueId !== generalIntakeQueueId) {
+          issues.push(`queueId=${data.queueId}, expected=${generalIntakeQueueId}`);
+          pass = false;
+        }
+        if (data.priority !== 'normal') {
+          issues.push(`priority=${data.priority}, expected=normal`);
+          pass = false;
+        }
+
+        if (pass) {
+          console.log('     ✓ PASS: Non-SNAP task → general-intake queue, normal priority');
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: ${issues.join('; ')}`);
+          totalFailed++;
+        }
+      } else {
+        console.log(`     ✗ FAIL: Expected 201, got ${response.status}`);
+        totalFailed++;
+      }
+      totalTests++;
+    } catch (error) {
+      console.log(`     ✗ FAIL: ${error.message}`);
+      totalFailed++;
+      totalTests++;
+    }
+
+    // RULE-3: Claim + release → verify rules re-evaluated (queueId still correct)
+    if (snapTaskId) {
+      try {
+        console.log('\n  RULE-3. Claim + release SNAP task → rules re-evaluated');
+
+        // Claim
+        await fetch(`${BASE_URL}${taskPath}/${snapTaskId}/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1' }
+        });
+
+        // Release
+        const releaseRes = await fetch(`${BASE_URL}${taskPath}/${snapTaskId}/release`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1' },
+          body: JSON.stringify({ reason: 'Testing rule re-evaluation' })
+        });
+
+        if (releaseRes.status === 200) {
+          const data = await releaseRes.json();
+          let pass = true;
+          const issues = [];
+
+          if (data.queueId !== snapIntakeQueueId) {
+            issues.push(`queueId=${data.queueId}, expected=${snapIntakeQueueId}`);
+            pass = false;
+          }
+          if (data.priority !== 'expedited') {
+            issues.push(`priority=${data.priority}, expected=expedited`);
+            pass = false;
+          }
+          if (data.status !== 'pending') {
+            issues.push(`status=${data.status}, expected=pending`);
+            pass = false;
+          }
+
+          if (pass) {
+            console.log('     ✓ PASS: After release, queueId and priority re-evaluated correctly');
+            totalPassed++;
+          } else {
+            console.log(`     ✗ FAIL: ${issues.join('; ')}`);
+            totalFailed++;
+          }
+        } else {
+          console.log(`     ✗ FAIL: Release returned ${releaseRes.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // RULE-4: Verify audit event created on task creation (onCreate effects)
+    if (snapTaskId) {
+      try {
+        console.log('\n  RULE-4. Verify "created" audit event from onCreate effects');
+        const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${snapTaskId}`);
+        const listData = await listResponse.json();
+
+        // Should have at least a "created" event from onCreate
+        const createdEvents = listData.items?.filter(e => e.eventType === 'created') || [];
+        if (createdEvents.length >= 1) {
+          const event = createdEvents[0];
+          if (event.taskId === snapTaskId && event.newValue === 'pending') {
+            console.log('     ✓ PASS: "created" audit event exists with correct fields');
+            totalPassed++;
+          } else {
+            console.log(`     ✗ FAIL: Audit event fields incorrect: ${JSON.stringify(event)}`);
+            totalFailed++;
+          }
+        } else {
+          console.log(`     ✗ FAIL: Expected "created" audit event, got ${createdEvents.length}`);
           totalFailed++;
         }
         totalTests++;

@@ -47,9 +47,11 @@ function deriveCollectionName(path) {
  * @param {Object} app - Express app
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {string} baseUrl - Base URL for Location headers
+ * @param {Object|null} stateMachine - State machine contract for this API's domain (null if none)
+ * @param {Array|null} rules - Rules for this API's domain (null if none)
  * @returns {Array} Array of registered endpoint info
  */
-export function registerRoutes(app, apiMetadata, baseUrl) {
+export function registerRoutes(app, apiMetadata, baseUrl, stateMachine, rules) {
   const registeredEndpoints = [];
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
@@ -74,7 +76,10 @@ export function registerRoutes(app, apiMetadata, baseUrl) {
       description = 'Get resource by ID';
     } else if (method === 'post' && isCollectionEndpoint(endpoint.path)) {
       // POST /resources - Create
-      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl);
+      // Only pass state machine to the collection that matches the governed object
+      const smForEndpoint = stateMachine?.object?.toLowerCase() + 's' === collectionName
+        ? stateMachine : null;
+      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, rules);
       description = 'Create resource';
     } else if (method === 'patch' && isItemEndpoint(endpoint.path)) {
       // PATCH /resources/{id} - Update
@@ -111,22 +116,27 @@ export function registerRoutes(app, apiMetadata, baseUrl) {
  * @param {Object} app - Express app
  * @param {Array} apiSpecs - Array of API metadata objects
  * @param {string} baseUrl - Base URL for Location headers
+ * @param {Array} stateMachines - Array from discoverStateMachines()
+ * @param {Array} rules - Array from discoverRules()
  * @returns {Array} Array of all registered endpoints grouped by API
  */
-export function registerAllRoutes(app, apiSpecs, baseUrl) {
+export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], rules = []) {
   console.log('\nRegistering API routes...');
-  
+
   const allEndpoints = [];
-  
+
   for (const apiSpec of apiSpecs) {
-    const endpoints = registerRoutes(app, apiSpec, baseUrl);
+    // Match state machine and rules by domain name
+    const sm = stateMachines.find(s => s.domain === apiSpec.name);
+    const matchedStateMachine = sm ? sm.stateMachine : null;
+    const endpoints = registerRoutes(app, apiSpec, baseUrl, matchedStateMachine, rules);
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,
       endpoints
     });
   }
-  
+
   console.log('✓ All routes registered\n');
   return allEndpoints;
 }
@@ -136,9 +146,10 @@ export function registerAllRoutes(app, apiSpecs, baseUrl) {
  * @param {Object} app - Express app
  * @param {Array} stateMachines - Array from discoverStateMachines()
  * @param {Array} apiSpecs - Array of API metadata objects
+ * @param {Array} rules - Array from discoverRules()
  * @returns {Array} Array of registered RPC endpoint info
  */
-export function registerStateMachineRoutes(app, stateMachines, apiSpecs) {
+export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules = []) {
   const registeredEndpoints = [];
 
   for (const sm of stateMachines) {
@@ -149,9 +160,12 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs) {
       continue;
     }
 
-    // Find the first item endpoint that matches the state machine object
+    // Find the item endpoint that matches the state machine object
+    // e.g., object "Task" matches path "/tasks/{taskId}"
+    const objectCollection = sm.object.toLowerCase() + 's';
     const itemEndpoint = apiSpec.endpoints.find(
       e => e.method.toLowerCase() === 'get' && isItemEndpoint(e.path)
+        && deriveCollectionName(e.path) === objectCollection
     );
     if (!itemEndpoint) {
       console.warn(`  No item endpoint found for "${sm.domain}" — skipping state machine routes`);
@@ -175,7 +189,8 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs) {
         collectionName,
         sm.stateMachine,
         transition.trigger,
-        paramName
+        paramName,
+        rules
       );
 
       app.post(expressPath, handler);

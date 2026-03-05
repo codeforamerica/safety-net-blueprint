@@ -357,7 +357,49 @@ test('applyEffects — handles null effects gracefully', () => {
 
 test('applyEffects — handles empty effects array', () => {
   const resource = { status: 'pending' };
-  const { pendingCreates } = applyEffects([], resource, {});
+  const { pendingCreates, pendingRuleEvaluations } = applyEffects([], resource, {});
   assert.strictEqual(resource.status, 'pending');
   assert.deepStrictEqual(pendingCreates, []);
+  assert.deepStrictEqual(pendingRuleEvaluations, []);
+});
+
+// =============================================================================
+// applyEffects — evaluate-rules
+// =============================================================================
+
+test('applyEffects — collects evaluate-rules in pendingRuleEvaluations', () => {
+  const resource = { status: 'pending' };
+  const effects = [
+    { type: 'evaluate-rules', ruleType: 'assignment' },
+    { type: 'evaluate-rules', ruleType: 'priority' }
+  ];
+  const { pendingCreates, pendingRuleEvaluations } = applyEffects(effects, resource, {});
+  assert.deepStrictEqual(pendingCreates, []);
+  assert.deepStrictEqual(pendingRuleEvaluations, [
+    { ruleType: 'assignment' },
+    { ruleType: 'priority' }
+  ]);
+});
+
+test('applyEffects — mixes set, create, and evaluate-rules effects', () => {
+  const resource = { assignedToId: null };
+  const context = { caller: { id: 'worker-1' }, object: { id: 'task-1' }, now: '2025-01-15T10:00:00.000Z' };
+  const effects = [
+    { type: 'set', field: 'assignedToId', value: '$caller.id' },
+    { type: 'create', entity: 'audit', fields: { taskId: '$object.id' } },
+    { type: 'evaluate-rules', ruleType: 'assignment' }
+  ];
+  const { pendingCreates, pendingRuleEvaluations } = applyEffects(effects, resource, context);
+  assert.strictEqual(resource.assignedToId, 'worker-1');
+  assert.strictEqual(pendingCreates.length, 1);
+  assert.deepStrictEqual(pendingRuleEvaluations, [{ ruleType: 'assignment' }]);
+});
+
+test('applyEffects — returns empty pendingRuleEvaluations when no evaluate-rules effects', () => {
+  const resource = { status: 'pending' };
+  const effects = [
+    { type: 'set', field: 'status', value: 'active' }
+  ];
+  const { pendingRuleEvaluations } = applyEffects(effects, resource, {});
+  assert.deepStrictEqual(pendingRuleEvaluations, []);
 });

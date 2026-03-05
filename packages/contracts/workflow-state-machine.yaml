@@ -79,6 +79,12 @@ transitions:
           newValue: pending
           performedById: $caller.id
           occurredAt: $now
+      - type: evaluate-rules
+        ruleType: assignment
+        description: Re-evaluate assignment rules after release
+      - type: evaluate-rules
+        ruleType: priority
+        description: Re-evaluate priority rules after release
 
 onCreate:
   effects:
@@ -92,6 +98,12 @@ onCreate:
         newValue: $object.status
         performedById: $caller.id
         occurredAt: $now
+    - type: evaluate-rules
+      ruleType: assignment
+      description: Evaluate assignment rules to route task to a queue
+    - type: evaluate-rules
+      ruleType: priority
+      description: Evaluate priority rules to set task priority
 
 requestBodies:
   claim: {}
