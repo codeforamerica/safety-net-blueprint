@@ -139,7 +139,7 @@ Steps 1-3 prove the authoring pipeline. Steps 4+ prove the runtime behavior.
 
 ## Prototype Scope
 
-This document follows the **steel thread** approach — the thinnest end-to-end slice needed to prove a specific part of the [contract-driven architecture](../architecture/contract-driven-architecture.md). This prototype proves the **behavioral contract artifacts** (state machine, rules, metrics) at depth, applied to the task lifecycle. The [application review prototype](application-review-prototype.md) complements this by proving form definitions — the one artifact type this prototype doesn't touch. Between the two, every artifact type is covered. They can be done in either order.
+This document follows the **steel thread** approach — the thinnest end-to-end slice needed to prove a specific part of the [contract-driven architecture](../architecture/contract-driven-architecture.md). This prototype proves the **behavioral contract artifacts** (state machine, rules, metrics) at depth, applied to the task lifecycle. The [application review prototype](application-review-prototype.md) complements this by proving field metadata — the one artifact type this prototype doesn't touch. Between the two, every artifact type is covered. They can be done in either order.
 
 > **Authoring note:** The tables in this document are the authoring format. Conversion scripts read them and generate the state machine YAML, rules YAML, and metrics YAML — the YAML is a build artifact that nobody edits by hand. In a spreadsheet, each table would be a separate sheet (transitions, guards, effects, rules, metrics), and the conversion script joins them by trigger or guard name. See [Authoring Experience](../architecture/contract-driven-architecture.md#authoring-experience) for the full workflow.
 
@@ -173,7 +173,7 @@ Each row is a concept from the [contract-driven architecture](../architecture/co
 | Request bodies | Defined for each action |
 | Event payload schema | TaskClaimedEvent |
 | Conversion scripts (tables → YAML) | State transition table → state machine YAML, decision tables → rules YAML, metrics table → metrics YAML |
-| Form definitions | Not exercised here — see [application review prototype](application-review-prototype.md) |
+| Field metadata | Not exercised here — see [application review prototype](application-review-prototype.md) |
 
 ### What's not in the prototype
 
@@ -185,7 +185,7 @@ Capabilities deferred beyond this prototype:
 - **Cross-domain rule context** — rules that reference `application.*` or `case.*` data (e.g., household composition). Requires context binding beyond `task.*`.
 - **Notifications** — effects that send emails or alerts on transitions. Would add a `notify` effect type.
 - **Full SLA configuration** — clock pausing on awaiting states, configurable warning thresholds per SLA type.
-- **Form definitions** — context-dependent task forms. Exercised by the [application review prototype](application-review-prototype.md) instead.
+- **Field metadata** — context-dependent field annotations. Exercised by the [application review prototype](application-review-prototype.md) instead.
 - **Alert rules** — operational alert thresholds (`ruleType: alert`).
 - **Skill matching strategies** — `round_robin`, `least_loaded`, `skill_match` assignment actions.
 - **Task type configuration** — `TaskType` lookup with default SLA, priority, and required skills.

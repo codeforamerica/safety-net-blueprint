@@ -2,7 +2,9 @@
 
 > **Status: Work in progress** — The system is being designed incrementally, domain by domain, and proven through [steel thread prototypes](./docs/architecture/roadmap.md).
 
-A systems integration blueprint for safety net benefits programs. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and form definitions — define the full API surface for both backend and frontend development. States adopt the blueprint, customize it with overlays, and build adapters to their vendor systems. Frontends develop against a mock server and declarative form definitions without waiting for a production backend.
+A systems integration blueprint for safety net benefits programs. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and field metadata — define the full API surface for backend development. States adopt the blueprint, customize it with overlays, and build adapters to their vendor systems. Frontends develop against a mock server without waiting for a production backend.
+
+> **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness).
 
 **New here?** Start with the [Executive Summary](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/executive-summary.html) for a one-page overview, the [Blueprint Overview](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-blueprint/docs/schema-reference.html) to browse the data model.
 
@@ -10,11 +12,11 @@ A systems integration blueprint for safety net benefits programs. Contract artif
 
 This repository contains the base contract artifacts, tooling, and documentation for the [contract-driven architecture](./docs/architecture/contract-driven-architecture.md). It provides:
 
-- **Base contract artifacts** — OpenAPI specs, state machine definitions, decision rules, metrics, and form definitions that define both data operations (REST) and behavioral operations (RPC)
+- **Base contract artifacts** — OpenAPI specs, state machine definitions, decision rules, metrics, and field metadata that define both data operations (REST) and behavioral operations (RPC)
 - **Conversion scripts** — generate contract YAML from tables (spreadsheets) so business users can author requirements directly
 - **Validation** — check OpenAPI specs and cross-artifact consistency
 - **Mock server** — interprets contracts with an in-memory database for development without a production backend, serving REST APIs, RPC APIs, and event streams
-- **Form definitions** — declarative YAML that drives context-dependent UI rendering — sections, fields, visibility conditions, and annotations — so the frontend doesn't hardcode domain-specific logic
+- **Field metadata** — annotations (program relevance, verification requirements, regulatory citations), field-level permissions, and multilingual labels as contract artifacts served by the backend
 - **Client generation** — typed TypeScript SDK and Zod schemas from resolved specs
 - **State overlays** — states customize contracts without forking the base files
 
@@ -71,7 +73,7 @@ Visit `http://localhost:3000` for interactive API docs.
 
 ### Prototypes
 - [Workflow Prototype](./docs/prototypes/workflow-prototype.md) — Behavioral contracts (state machine, rules, metrics)
-- [Application Review Prototype](./docs/prototypes/application-review-prototype.md) — Form definitions and context-dependent UI
+- [Application Review Prototype](./docs/prototypes/application-review-prototype.md) — Field metadata contracts and context-dependent review
 
 ### Guides
 - [State Setup Guide](./docs/guides/state-setup-guide.md) — Set up a state repository with overlays and CI
@@ -84,7 +86,7 @@ Visit `http://localhost:3000` for interactive API docs.
 ### Integration
 - [API Clients](./docs/integration/api-clients.md) — Generated TypeScript clients
 - [CI/CD for Backend](./docs/integration/ci-cd-backend.md) — Contract test your API implementation
-- [CI/CD for Frontend](./docs/integration/ci-cd-frontend.md) — Build and test frontend apps
+- [CI/CD for Frontend](https://github.com/codeforamerica/safety-net-harness/blob/main/docs/integration/ci-cd-frontend.md) — Build and test frontend apps (in harness repo)
 
 ### Reference
 - [Commands](./docs/reference/commands.md) — All available npm scripts

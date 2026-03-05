@@ -39,15 +39,15 @@ The architecture is being proven through **steel thread prototypes** — the thi
 
 1. **Behavioral contracts work** — State machines, rules, and metrics can be defined declaratively and interpreted by a mock server, generating RPC endpoints from transitions without hand-written orchestration code.
 2. **The authoring pipeline works** — Business users and developers can author contracts in tables (spreadsheets), and conversion scripts generate valid YAML. The tables-to-YAML-to-mock-server chain works end to end.
-3. **Business users can work with the artifacts** — The table-based authoring format is accessible to program managers, policy analysts, and business analysts — not just developers. If business users can't read and modify state transition tables, decision tables, and form definition tables, the architecture fails regardless of technical correctness.
-4. **Form definitions drive context-dependent UI** — The frontend can render multi-program forms from declarative definitions without hardcoding domain-specific logic.
+3. **Business users can work with the artifacts** — The table-based authoring format is accessible to program managers, policy analysts, and business analysts — not just developers. If business users can't read and modify state transition tables, decision tables, and field metadata tables, the architecture fails regardless of technical correctness.
+4. **Field metadata drives context-dependent UI** — The backend serves field-level metadata (annotations, permissions, labels) that frontends consume to render multi-program forms without hardcoding domain-specific logic.
 
 Two prototypes cover every contract artifact type between them:
 
 | Prototype | What it proves | Key artifacts |
 |-----------|---------------|---------------|
 | [Workflow Prototype](../prototypes/workflow-prototype.md) | Behavioral contracts — state machine, rules, metrics, audit | OpenAPI schemas, state machine YAML, rules YAML, metrics YAML |
-| [Application Review Prototype](../prototypes/application-review-prototype.md) | Form definitions — program-driven sections, field annotations, record creation | OpenAPI schemas, form definition YAML |
+| [Application Review Prototype](../prototypes/application-review-prototype.md) | Field metadata — program-driven annotations, record creation | OpenAPI schemas, field metadata YAML |
 
 They can be done in either order. Together they prove the full artifact set before any domain is built out at scale.
 
@@ -67,13 +67,13 @@ The prototypes require new tooling and updates to existing tooling. This is the 
 - State machine tables → state machine YAML (states, transitions, guards, effects)
 - Decision tables → rules YAML (routing, assignment, priority)
 - Metrics tables → metrics YAML (metric names, source linkage, targets)
-- Form definition tables → form definition YAML (sections, fields, annotations, program requirements)
+- Field metadata tables → field metadata YAML (annotations, permissions, labels, program requirements)
 
 **Validation scripts (update existing + new)** — extend `npm run validate` to check cross-artifact consistency:
 - State machine states match OpenAPI status enums
 - Effect targets reference schemas that exist
 - Rule context variables resolve to real fields
-- Form definition field source paths resolve to OpenAPI schema fields
+- Field metadata source paths resolve to OpenAPI schema fields
 - Transitions include required audit effects
 - Metric sources reference states/transitions that exist
 
@@ -83,7 +83,7 @@ The prototypes require new tooling and updates to existing tooling. This is the 
 - Execute effects (set fields, create records, lookup references, evaluate rules, emit events)
 - Evaluate decision rules for routing, assignment, and priority
 - Track metrics linked to states and transitions
-- Serve form definitions and create work item records from program requirements
+- Serve field metadata and create work item records from program requirements
 
 #### Prototype deliverables
 
@@ -95,10 +95,10 @@ The prototypes require new tooling and updates to existing tooling. This is the 
 - Business users review the authoring tables for clarity and usability
 
 **Application review prototype:**
-- Conversion scripts generate form definition YAML from authored tables
-- Validation script catches internal inconsistencies (field source paths → OpenAPI schemas, section IDs match between program requirements and section definitions)
-- Mock server serves form definitions and creates SectionReview records from program requirements on submission
-- Minimal frontend renders context-dependent sections and field annotations from the form definition
+- Conversion scripts generate field metadata YAML from authored tables
+- Validation script catches internal inconsistencies (field source paths → OpenAPI schemas, program requirements reference valid fields)
+- Mock server serves field metadata and creates SectionReview records from program requirements on submission
+- Frontend consumes field metadata to render context-dependent field annotations (form rendering handled by [safety-net-harness](https://github.com/codeforamerica/safety-net-harness))
 - Business users review program requirements and field annotation tables
 
 **What success looks like:**
@@ -106,13 +106,14 @@ The prototypes require new tooling and updates to existing tooling. This is the 
 - Validation catches structural inconsistencies (missing states, dangling references, unresolvable field paths)
 - Mock server runs the full walkthrough for both prototypes without hand-written endpoint code
 - Business stakeholders can read the tables, understand what they mean, and propose changes
+- Form rendering and layout validated separately in [safety-net-harness](https://github.com/codeforamerica/safety-net-harness)
 
 ### Phase 2: Expand proven domains
 
 With the architecture validated, expand the domains that were started in the prototypes.
 
 - **Workflow** — Add remaining states and transitions (escalate, reassign, cancel, awaiting states), verification workflow, cross-domain rule context, notification effects, full SLA configuration
-- **Intake** — Add additional sections (assets, expenses, employment), additional programs (TANF, WIC, CHIP), conditional section requirements, applicant-facing forms
+- **Intake** — Add additional field metadata (assets, expenses, employment), additional programs (TANF, WIC, CHIP), conditional requirements, field-level permissions and labels
 - **Case Management** — Define contract artifacts (OpenAPI spec, case lifecycle state machine, assignment rules)
 - **Communication** — Define contract artifacts (notice lifecycle state machine, delivery tracking)
 

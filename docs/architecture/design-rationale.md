@@ -250,7 +250,7 @@ This keeps verification logic declarative (in workflow rules) rather than hardco
 
 ### What should the mock server cover?
 
-> **Superseded** by [Contract-Driven Architecture](contract-driven-architecture.md). The mock server interprets all contract artifacts — OpenAPI specs, state machine YAML, rules, metrics, and form definitions. It serves as the development adapter, generating both REST and RPC endpoints from contracts.
+> **Superseded** by [Contract-Driven Architecture](contract-driven-architecture.md). The mock server interprets all contract artifacts — OpenAPI specs, state machine YAML, rules, metrics, and field metadata. It serves as the development adapter, generating both REST and RPC endpoints from contracts.
 
 | Option | Considered | Chosen |
 |--------|------------|--------|

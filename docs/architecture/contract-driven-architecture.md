@@ -21,7 +21,7 @@ Safety net program implementations depend on a range of backend systems and must
 
 At the **backend**, contracts provide vendor independence. The adapter pattern translates between contracts and vendor-specific systems — swap vendors by reimplementing the adapter, not the frontend. The contract complexity varies by system type: **data-shaped** systems (databases, document stores, identity providers) need only an API interface (OpenAPI spec), while **behavior-shaped** systems (workflow engines, rules engines, notification platforms) need richer behavioral contracts — state machines, rules, and metrics — that capture what the system must enforce, decide, and measure.
 
-At the **frontend**, form definition contracts provide independence from domain-specific rendering logic. The frontend renders sections, fields, and annotations from declarative definitions without hardcoding decisions about what to show based on programs, roles, or eligibility groups. Adding a program, changing which sections a role sees, or introducing eligibility-driven fields is a contract change, not a code change.
+At the **frontend**, field metadata contracts provide independence from domain-specific rendering logic. The backend serves field-level metadata — annotations (program relevance, verification requirements, regulatory citations), permissions, and labels — as contract artifacts. The frontend consumes this metadata to render context-dependent UI without hardcoding decisions about what to show based on programs, roles, or eligibility groups. Adding a program or changing which fields a role sees is a contract change, not a code change. Form rendering and layout are frontend concerns handled by the [safety-net-harness](https://github.com/codeforamerica/safety-net-harness) packages.
 
 This proposal describes how to define contracts for both layers, organized around two API types. **REST** (Representational State Transfer) APIs model resources with standard CRUD operations — create, read, update, delete. These serve data-shaped domains where the value is in the data model itself. **RPC** (Remote Procedure Call) APIs expose named operations that trigger behavior — state transitions, rule evaluation, and side effects. These serve behavior-shaped domains where the value is in orchestration and enforcement. The contract complexity differs: REST APIs need only an interface definition, while RPC APIs need richer behavioral contracts.
 
@@ -64,17 +64,17 @@ A generic CRUD adapter loses most of this value. The adapter pattern still appli
 
 Every behavior-shaped domain needs a state machine — that's what makes it behavior-shaped. Rules are an additional artifact for domains that need condition-based decisions evaluated against broader context. Metrics are an additional artifact for domains that need operational monitoring. For example, workflow management needs state machine + rules + metrics. A simple approval process may only need the state machine.
 
-### Any domain: form definitions
+### Any domain: field metadata
 
 Regardless of API type, any domain may also need:
 
-- **Form definition YAML** (optional) — defines form structure, field visibility conditions, field-level validation, and dependencies between fields. Needed when the frontend must render forms differently based on context (e.g., which program a person is applying for determines which sections and fields appear). Unlike the behavioral contracts above, the form definition's primary consumer is the **frontend**, which interprets it to render context-dependent UI. The adapter may also use parts of it for server-side logic (e.g., which records to create based on program requirements). A data-shaped domain with multi-program forms needs OpenAPI + form definition. A behavior-shaped domain like application review needs OpenAPI + state machine + form definition.
+- **Field metadata YAML** (optional) — defines field-level annotations (program relevance, verification requirements, regulatory citations), permissions, and labels/translations. Needed when fields carry context that varies by program, role, or eligibility group. The backend serves field metadata as a contract artifact; frontends and other consumers retrieve it via API. A data-shaped domain with multi-program field context needs OpenAPI + field metadata. A behavior-shaped domain like application review needs OpenAPI + state machine + field metadata. Form rendering and layout concerns (sections, navigation, component mapping) are handled by the frontend — see [safety-net-harness](https://github.com/codeforamerica/safety-net-harness).
 
 ---
 
 ## How the Contracts Work
 
-Each contract artifact captures a different concern. **Behavioral contracts** (state machine, rules, metrics) define what the backend must enforce, decide, and measure — the adapter or vendor system interprets them. **Form definitions** define what the frontend must render — the frontend interprets them. Together they cover both portability layers.
+Each contract artifact captures a different concern. **Behavioral contracts** (state machine, rules, metrics) define what the backend must enforce, decide, and measure — the adapter or vendor system interprets them. **Field metadata** defines what context accompanies each field — the backend serves it and frontends consume it. Together they cover both portability layers.
 
 ### State machine
 
@@ -161,7 +161,7 @@ The behavioral contract formats (state machine, rules, metrics) are custom YAML 
 
 - **Why not SCXML?** SCXML is XML-based and designed for runtime execution, not table-based authoring. The semantics transfer; the format doesn't fit our YAML/spreadsheet pipeline.
 - **Why not BPMN/Camunda format?** BPMN is a visual modeling standard with XML serialization. It's more expressive than we need (parallel gateways, message flows, subprocesses) and the tooling assumes a graphical editor. States that prefer Camunda Modeler can author in it and use conversion scripts to generate our YAML.
-- **Why not DMN for rules?** DMN's FEEL expression language is more powerful than JSON Logic but has fewer lightweight implementations. JSON Logic is consistent with our form definition conditions and has implementations in every major language. States can author in DMN and convert.
+- **Why not DMN for rules?** DMN's FEEL expression language is more powerful than JSON Logic but has fewer lightweight implementations. JSON Logic is consistent with our field metadata conditions and has implementations in every major language. States can author in DMN and convert.
 
 **Planned extensions (additive, no breaking changes):**
 
@@ -174,57 +174,63 @@ The behavioral contract formats (state machine, rules, metrics) are custom YAML 
 | Cross-domain rule context | Expand `context` bindings (e.g., `application.*` alongside `task.*`) | DMN business knowledge models |
 | Notification effects | Add `notify` effect type with channel, recipient, template | WS-HumanTask notification tasks |
 
-### Form definitions
+### Field metadata
 
-Form definitions describe context-dependent form structure — which sections and fields to display, visibility conditions, validation rules, and field dependencies. They link to the OpenAPI spec (field names, types, enums), not the state machine — they're about rendering data, not lifecycle.
+Field metadata describes context-dependent information about fields — annotations (program relevance, verification requirements, regulatory citations), permissions, and labels/translations. Field metadata links to the OpenAPI spec (field names, types, enums), not the state machine — it's about what context accompanies data fields, not lifecycle.
 
 ```yaml
-# Simplified example — show SNAP-specific fields only for SNAP applications
-sections:
-  - id: snap-details
-    label: SNAP Information
-    visibleWhen: { "in": [{ "var": "application.programs" }, "SNAP"] }  # Same expression format as rules (e.g. JSON Logic)
-    fields:
-      - id: householdSize
-        type: integer
-        required: true
+# Simplified example — field-level annotations for multi-program context
+fields:
+  income.amount:
+    annotations:
+      - type: relevance
+        context: SNAP
+        value: gross amount counted
+      - type: relevance
+        context: Medicaid
+        value: net amount for MAGI
+      - type: verification
+        value: pay stub, employer letter, or tax return
+      - type: regulation
+        context: SNAP
+        value: 7 CFR 273.9(a) — Gross income determination
+    permissions:
+      caseworker: read-write
+      applicant: read-only
 ```
 
-**Source paths** — Field definitions use dot-notation paths to link UI fields to OpenAPI schema fields. The first segment is the schema name (e.g., `member` for ApplicationMember, `income` for Income); subsequent segments are field names, including nested paths (e.g., `member.citizenshipInfo.status`). The validation script verifies these paths resolve — if a field definition references a path that doesn't exist in the schema, validation fails.
+**Source paths** — Field metadata uses dot-notation paths to link to OpenAPI schema fields. The first segment is the schema name (e.g., `member` for ApplicationMember, `income` for Income); subsequent segments are field names, including nested paths (e.g., `member.citizenshipInfo.status`). The validation script verifies these paths resolve — if field metadata references a path that doesn't exist in the schema, validation fails.
 
-**How the frontend uses form definitions:**
+**How field metadata is served:**
 
-1. **Section list** — The server creates work item records (e.g., SectionReview) from the form definition's program requirements on submission. The frontend fetches these records and uses each record's `sectionId` to look up the matching section in the form definition. The form definition provides labels, field definitions, and annotations — the work item records provide the list.
+1. **Metadata API** — The backend serves field metadata via a dedicated endpoint (e.g., `GET /intake/field-metadata`). The frontend fetches this at load time and uses it to drive rendering decisions.
 
-2. **Section visibility** — `visibleWhen` conditions on section definitions act as client-side checks. In practice, these agree with the server-created records — if no record exists for a section, the `visibleWhen` condition would also be false. Both mechanisms reinforce each other.
+2. **Program requirements** — The server uses field metadata's program requirements to determine which records to create on submission (e.g., which SectionReview records to create based on which programs a member is applying for).
 
-3. **Field rendering with annotations** — Within a section, each field renders with its annotations. The frontend iterates over whatever annotation types exist and renders them — it doesn't need to know what they mean.
+3. **Annotation consumption** — Consumers iterate over whatever annotation types exist and render them — they don't need to know what any specific annotation type means. Adding a new annotation type is a metadata change, not a code change.
 
-The adapter's role is to serve form definitions to the frontend (possibly after resolving state overlays) and to use parts of them for server-side logic (e.g., determining which records to create during `onCreate`). Visibility conditions use the same expression format as rule conditions (e.g., JSON Logic), so the same evaluation library works for both. See [Extensibility and customization](#extensibility-and-customization) for how annotation types scale.
+The adapter's role is to serve field metadata to consumers (possibly after resolving state overlays) and to use parts of it for server-side logic (e.g., determining which records to create during `onCreate`). See [Extensibility and customization](#extensibility-and-customization) for how annotation types scale.
 
 #### Standards alignment
 
-The form definition format is custom but informed by established standards. No single standard covers the full use case (declarative form structure with program-specific annotations for government benefits), but the core patterns have well-known precedents.
+The field metadata format is custom but informed by established standards. No single standard covers the full use case (field-level metadata with program-specific annotations for government benefits), but the core patterns have well-known precedents.
 
 | Our concept | Standard | How it aligns |
 |---|---|---|
-| OpenAPI schemas (data) + form definition (UI) | [JSONForms](https://jsonforms.io/) / [RJSF](https://rjsf-team.github.io/react-jsonschema-form/) dual-schema | Same separation — JSON Schema defines data types and constraints, a separate UI artifact defines presentation and layout. Our OpenAPI schemas are the data schema; our form definition YAML is the UI schema. |
-| `visibleWhen` conditions | FHIR Questionnaire [`enableWhen`](https://hl7.org/fhir/questionnaire.html), ODK XForms [`relevant`](https://getodk.github.io/xforms-spec/) | Same concept — a condition on a form element that controls whether it appears. FHIR uses operator-based comparisons; ODK uses XPath expressions; we use JSON Logic expressions. |
-| JSON Logic as expression language | [Form.io](https://form.io/) conditional visibility, [SurveyJS](https://surveyjs.io/) | Form.io uses JSON Logic for advanced form conditions — same library, same purpose. JSON Logic is lightweight, serializable, and has implementations in most languages. |
-| Sections with scope (per-member) | ODK XForms [groups and repeats](https://getodk.github.io/xforms-spec/) | ODK's `repeat` element allows sections to occur 0-N times — our `per-member` scope is the same concept. |
-| Field `source` paths (dot-notation) | JSONForms [JSON Pointer](https://datatracker.ietf.org/doc/html/rfc6901) (`#/properties/name`) | Same concept — linking a UI field to its data source. JSONForms uses RFC 6901 JSON Pointer syntax; we use dot-notation for readability in tables. |
+| Field-level annotations as part of data model | [FHIR ElementDefinition](https://build.fhir.org/elementdefinition.html) | FHIR defines field-level constraints, labels, and extensions as part of the data model's StructureDefinition — metadata about fields served by the backend, not a frontend rendering concern. |
+| Field-level permissions | [FHIR Security Labels](https://build.fhir.org/security-labels.html), [FHIR DS4P](https://build.fhir.org/ig/HL7/fhir-security-label-ds4p/inline_security_labels.html) | FHIR uses inline security labels for element-level access control — field permissions as part of the data contract, enforced by the backend. |
+| Multilingual labels | [FHIR Languages](https://build.fhir.org/languages.html) | FHIR defines multilingual designations served by the backend via CodeSystem and ValueSet resources — labels as backend-served metadata, not hardcoded in the frontend. |
 | Field annotations (relevance, verification, regulatory citations) | FHIR Questionnaire [extensions](https://hl7.org/fhir/questionnaire.html) | Novel — no standard has per-field annotations describing how different contexts use a field. FHIR's extension system is the closest model. Our approach is simpler: annotation types as table columns, scaling to a generalized annotations table. |
-| Program requirements table | *(no direct equivalent)* | Novel — a matrix of which sections each program requires, used for server-side record creation on submission. Specific to multi-program eligibility domains. |
+| JSON Logic as expression language | [Form.io](https://form.io/) conditional visibility, [SurveyJS](https://surveyjs.io/) | Form.io uses JSON Logic for advanced conditions — same library, same purpose. JSON Logic is lightweight, serializable, and has implementations in most languages. |
 
 **Design decisions:**
 
-- **Why not adopt FHIR Questionnaire wholesale?** FHIR Questionnaire is healthcare-specific and carries significant structural overhead (nested item trees, answer option sets, coded values). Our use case is caseworker review forms, not patient questionnaires. The patterns transfer; the format doesn't.
-- **Why not adopt JSONForms wholesale?** JSONForms is a runtime rendering framework, not a contract format. We borrow its dual-schema architecture but define our own YAML structure suited to table-based authoring and the conversion pipeline.
-- **Why JSON Logic over alternatives?** JSON Logic is the lightest serializable expression language with broad adoption in form frameworks. Alternatives: FHIRPath (healthcare-specific), XPath (verbose, XML-oriented), CEL (more powerful but less adopted in form tooling). JSON Logic fits our authoring model — conditions that non-developers can read in a table cell.
+- **Why field metadata in the backend, not form rendering?** Field metadata (what annotations a field carries, who can see it, what it's called in different languages) is data model metadata — it applies regardless of which frontend renders it. Form rendering (layout, sections, component mapping, navigation) is a frontend concern that varies by application. Separating them follows the same pattern as FHIR, where ElementDefinition is part of the data model and rendering is left to the presentation layer.
+- **Why JSON Logic over alternatives?** JSON Logic is the lightest serializable expression language with broad adoption. Alternatives: FHIRPath (healthcare-specific), XPath (verbose, XML-oriented), CEL (more powerful but less adopted). JSON Logic fits our authoring model — conditions that non-developers can read in a table cell.
 
 ### Extensibility and customization
 
-All contract artifacts — state machine, rules, metrics, form definitions — are declarative YAML governed by JSON Schema, making them diffable and reviewable in PRs. The common extensibility principle: adding capabilities means adding entries to existing structures (rows, fields, types), not restructuring the format. Consumers — adapters, frontends, validation scripts — iterate over whatever they find rather than hardcoding expectations about specific entries.
+All contract artifacts — state machine, rules, metrics, field metadata — are declarative YAML governed by JSON Schema, making them diffable and reviewable in PRs. The common extensibility principle: adding capabilities means adding entries to existing structures (rows, fields, types), not restructuring the format. Consumers — adapters, frontends, validation scripts — iterate over whatever they find rather than hardcoding expectations about specific entries.
 
 **State machine** — New effect types (e.g., `audit`, `notify`, `call`) are added to the schema and implemented as handlers in the adapter. Adding an effect type doesn't change existing transitions. New guard types (role-based, time-based, external service checks) follow the same pattern — the evaluation engine dispatches on guard type. Domains extend the base schema with top-level fields as requirements emerge (e.g., `onCreate`, `onTimeout`, `bulkActions`).
 
@@ -232,7 +238,7 @@ All contract artifacts — state machine, rules, metrics, form definitions — a
 
 **Metrics** — New source types (state duration, transition count, field value aggregation) and new dimensions for slicing (by program, by worker, by time period) are additive. Adding a metric is adding rows to the metrics table.
 
-**Form definitions** — Field-level annotations (program relevance, verification requirements, role-based guidance) are extensible by type. Adding an annotation type means adding rows to an annotations table — the frontend renders whatever types it encounters without knowing what they mean. Annotation values can be structured — strings for simple guidance, arrays of acceptable items, or objects with links to external APIs, policy documents, or verification services. Authoring tables can use either format: columns for annotation types that apply to most fields, or a separate table for sparse types. Both produce the same generalized structure:
+**Field metadata** — Field-level annotations (program relevance, verification requirements, role-based guidance), permissions, and labels are extensible by type. Adding an annotation type means adding rows to an annotations table — consumers render whatever types they encounter without knowing what they mean. Annotation values can be structured — strings for simple guidance, arrays of acceptable items, or objects with links to external APIs, policy documents, or verification services. Authoring tables can use either format: columns for annotation types that apply to most fields, or a separate table for sparse types. Both produce the same generalized structure:
 
 | Section | Field | Annotation Type | Context | Value |
 |---------|-------|-----------------|---------|-------|
@@ -241,7 +247,7 @@ All contract artifacts — state machine, rules, metrics, form definitions — a
 | income | amount | verification | all | pay stub, employer letter, or tax return |
 | income | amount | regulation | SNAP | 7 CFR 273.9(a) — Gross income determination |
 
-Adding a new annotation type or a new audience adds rows — no structural change to the table or the frontend.
+Adding a new annotation type or a new audience adds rows — no structural change to the table or the consumers.
 
 All artifacts include a `version` field for change tracking. The validation script can diff two versions of any artifact and report breaking vs. non-breaking changes — removing a state, transition, rule, metric, or form field is breaking; adding one is not. This applies consistently across all artifact types, the same way OpenAPI spec versioning works.
 
@@ -273,7 +279,7 @@ Because the YAML is always generated from the tables, nobody edits it by hand. W
 |---------|-----|--------|
 | claim | `assignedToId` = `$caller.id` | TaskAuditEvent (`assigned`) |
 
-The same pattern applies to decision tables (conditions and actions with field references) and metrics tables (metric names, source linkage to states and transitions, targets).
+The same pattern applies to decision tables (conditions and actions with field references), metrics tables (metric names, source linkage to states and transitions, targets), and field metadata tables (annotations, permissions, labels).
 
 **Tool-agnostic:** The conversion scripts are the integration point, not the authoring tool. The default workflow uses spreadsheets (Excel, Google Sheets), but if a state prefers Camunda Modeler for state machines or a DMN editor for rules, they need a conversion script for that tool's export format. The tool produces the business-level content; developer implementation details come from a companion source (additional columns, a separate sheet, or annotations in the tool — whatever fits). The output is always the same YAML.
 
@@ -354,19 +360,19 @@ This project provides contracts and development tooling. States build their own 
 | State machine YAML | Developers | Define the RPC API surface (states, transitions, guards, effects, events, notifications, audit requirements) |
 | Rules YAML | Developers | Define condition-based decisions: routing, assignment, priority, alerts |
 | Metrics YAML | Developers | Define what to measure: metric names, labels, source linkage, targets |
-| Form definition YAML | Developers | Define context-dependent form structure, field visibility, validation, and dependencies |
+| Field metadata YAML | Developers | Define field-level annotations, permissions, and labels served by the backend |
 | Validation script | Developers | Verify contract artifacts are internally consistent (state machine states match OpenAPI enums, effect targets reference real schemas, event payloads resolve, audit requirements satisfied) — runs in CI |
 | Mock server | Developers | Self-contained adapter with in-memory database for frontend development and integration testing |
 | Integration test suite | Developers | Auto-generated from contracts (transition tests, guard tests, effect verification, event emission checks). Tests verify outcomes, not implementation — it doesn't matter whether the adapter or vendor executed an effect, as long as the expected side effects occurred |
 | Decision tables | Business analysts + developers | Spreadsheets defining conditions and actions for routing, assignment, priority — conversion scripts generate the rules YAML |
 | State transition tables | Business analysts + developers | Spreadsheets defining transitions, guards, and effects across related tables — conversion scripts generate the state machine YAML |
-| Form definition tables | UI designers + developers | Spreadsheets defining sections, fields, visibility conditions, and validation — conversion scripts generate the form definition YAML |
+| Field metadata tables | Developers + business analysts | Spreadsheets defining field annotations, permissions, and labels — conversion scripts generate the field metadata YAML |
 | State machine visualizations | Business analysts | Auto-generated diagrams from the state machine YAML showing states, transitions, and actors |
 | ORCA data explorer | All | Interactive tool for exploring API contracts — schemas, endpoints, relationships, and domain structure |
 
-Adding a new domain to the mock server is declarative — define artifacts, not code. Add an OpenAPI spec and the mock auto-generates CRUD endpoints; add a state machine YAML and it auto-generates RPC API endpoints with transition enforcement, effects, and rule evaluation.
+Adding a new domain to the mock server is declarative — define artifacts, not code. Add an OpenAPI spec and the mock auto-generates CRUD endpoints; add a state machine YAML and it auto-generates RPC API endpoints with transition enforcement, effects, and rule evaluation. Add field metadata YAML and the mock serves it via a metadata API endpoint.
 
-States don't have to use the base contracts as-is. An overlay system lets states customize any contract artifact — OpenAPI specs, state machine YAML, rules, metrics, form definitions — without forking the base files. Overlays use JSONPath targeting to add, modify, or remove specific elements (e.g., add a state-specific rule, adjust a metric target, modify a transition's guard, add fields to a form section). The base contracts plus overlays produce a merged result that the validation script and integration tests run against, so customizations are still verified for consistency.
+States don't have to use the base contracts as-is. An overlay system lets states customize any contract artifact — OpenAPI specs, state machine YAML, rules, metrics, field metadata — without forking the base files. Overlays use JSONPath targeting to add, modify, or remove specific elements (e.g., add a state-specific rule, adjust a metric target, modify a transition's guard, add fields to a form section). The base contracts plus overlays produce a merged result that the validation script and integration tests run against, so customizations are still verified for consistency.
 
 **How a state uses this:**
 
@@ -396,9 +402,9 @@ States don't have to use the base contracts as-is. An overlay system lets states
 | Risk | Mitigation | Residual risk |
 |------|-----------|---------------|
 | **Authoring pipeline reliability** — Tables-to-YAML conversion scripts are a critical path. If conversion is lossy or buggy, the generated YAML won't match what was authored. | The conversion scripts are tested against real domains prototyped in this repo, not just documented as a pattern. The validation script runs on every generated YAML, catching structural inconsistencies (missing states, dangling references, invalid transitions). Round-trip tests can verify that table → YAML → rendered output preserves intent. | Semantic errors — a condition that's logically wrong but structurally valid — won't be caught by validation. Review of the generated YAML is still needed for correctness, the same way generated code needs review. |
-| **Adoption curve** — Business analysts author tables, developers understand artifact connections, frontend developers interpret form definitions. Each audience has a learning curve. | States adopt proven, working domains — not abstract patterns. The authoring experience is table-based, not YAML-based — nobody edits YAML directly. Steel thread prototypes prove each artifact type end-to-end, and the base contracts serve as working examples that states customize rather than build from scratch. | States customizing existing domains face a much lower learning curve than building new ones. Adding an entirely new domain that doesn't exist in the base contracts requires deeper architectural understanding. |
-| **Form definition scope creep** — Form definitions could grow to encode increasingly complex UI logic, blurring the line between declarative contract and application code. | The format is deliberately constrained — visibility conditions, field validation, and annotations. Layout, styling, interaction patterns, and navigation are frontend concerns, not contract concerns. The JSON Schema governing the format enforces these boundaries. | Pressure to add "just one more" capability to the form definition is ongoing. Each addition needs to be evaluated against whether it belongs in the contract or the frontend. |
-| **Overlay brittleness for behavioral artifacts** — Overlays targeting states, transitions, or rules are more fragile than schema overlays. Renaming a state or transition has cascading effects across multiple artifacts (state machine, rules, metrics). | The validation script checks cross-artifact references — if an overlay renames a state, validation fails if metrics or rules still reference the old name. The resolve CLI warns on stale overlay targets. | States customizing behavioral contracts need deeper understanding of artifact connections than states only customizing schemas. The overlay authoring guide needs to cover these dependencies explicitly. |
+| **Adoption curve** — Business analysts author tables, developers understand artifact connections, frontend developers consume field metadata. Each audience has a learning curve. | States adopt proven, working domains — not abstract patterns. The authoring experience is table-based, not YAML-based — nobody edits YAML directly. Steel thread prototypes prove each artifact type end-to-end, and the base contracts serve as working examples that states customize rather than build from scratch. | States customizing existing domains face a much lower learning curve than building new ones. Adding an entirely new domain that doesn't exist in the base contracts requires deeper architectural understanding. |
+| **Field metadata scope creep** — Field metadata could grow to encode form rendering logic, blurring the line between backend-served metadata and frontend application code. | The format is deliberately constrained — annotations, permissions, and labels. Layout, sections, component mapping, and navigation are frontend concerns handled by the [harness repo](https://github.com/codeforamerica/safety-net-harness), not contract concerns. | Pressure to add rendering concerns to field metadata is ongoing. Each addition needs to be evaluated against whether it belongs in the data model (metadata) or the presentation layer (harness). |
+| **Overlay brittleness for behavioral artifacts** — Overlays targeting states, transitions, or rules are more fragile than schema overlays. Renaming a state or transition has cascading effects across multiple artifacts (state machine, rules, metrics, field metadata). | The validation script checks cross-artifact references — if an overlay renames a state, validation fails if metrics or rules still reference the old name. The resolve CLI warns on stale overlay targets. | States customizing behavioral contracts need deeper understanding of artifact connections than states only customizing schemas. The overlay authoring guide needs to cover these dependencies explicitly. |
 
 ### Highest implementation risk
 

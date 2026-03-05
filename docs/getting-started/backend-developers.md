@@ -2,7 +2,7 @@
 
 > **Status: Draft**
 
-This guide is for developers who work with the contract artifacts — OpenAPI specs, state machines, rules, metrics, and form definitions — and build production adapters that satisfy those contracts.
+This guide is for developers who work with the contract artifacts — OpenAPI specs, state machines, rules, metrics, and field metadata — and build production adapters that satisfy those contracts.
 
 See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
 
@@ -10,8 +10,8 @@ See also: [Contract-Driven Architecture](../architecture/contract-driven-archite
 
 ## What You'll Do
 
-- [**Author contract artifacts**](#1-author-in-tables) — work with tables (spreadsheets) that define state transitions, decision rules, metrics, and form definitions
-- [**Run conversion scripts**](#2-generate-yaml) — generate YAML from authored tables (state machine, rules, metrics, form definition)
+- [**Author contract artifacts**](#1-author-in-tables) — work with tables (spreadsheets) that define state transitions, decision rules, metrics, and field metadata
+- [**Run conversion scripts**](#2-generate-yaml) — generate YAML from authored tables (state machine, rules, metrics, field metadata)
 - [**Validate contracts**](#3-validate) — check cross-artifact consistency (states match OpenAPI enums, effect targets reference real schemas, field source paths resolve)
 - [**Test against the mock server**](#4-test-with-the-mock-server) — the mock server serves both REST and RPC APIs, interpreting behavioral contracts directly and auto-generating RPC endpoints from state machine triggers
 - [**Build production adapters**](#building-a-production-adapter) — implement the adapter that translates between contracts and your vendor systems
@@ -69,9 +69,9 @@ Every domain needs contracts. What contracts you need depends on whether the dom
 | **State machine YAML** | Behavior-shaped domains | States, transitions, guards, effects, SLA behavior, audit requirements |
 | **Rules YAML** | Domains with condition-based decisions | Routing, assignment, priority, escalation rules as decision tables |
 | **Metrics YAML** | Domains needing operational monitoring | Metric names, source linkage to states/transitions, targets |
-| **Form definition YAML** | Domains with context-dependent forms | Sections, field visibility, annotations, program requirements |
+| **Field metadata YAML** | Domains with context-dependent fields | Field annotations, permissions, labels, program requirements |
 
-Data-shaped domains (persons, documents) need only an OpenAPI spec. Behavior-shaped domains (workflow, application review) need richer contracts. See [Contract-Driven Architecture](../architecture/contract-driven-architecture.md#contract-artifacts) for the full breakdown.
+Data-shaped domains (persons, documents) need only an OpenAPI spec. Behavior-shaped domains (workflow, application review) need richer contracts. See [Contract-Driven Architecture](../architecture/contract-driven-architecture.md#contract-artifacts) for the full breakdown. Form rendering and layout are frontend concerns handled by the [safety-net-harness](https://github.com/codeforamerica/safety-net-harness) packages.
 
 ## Authoring Workflow
 
@@ -86,9 +86,9 @@ Each concern gets its own table (sheet in a spreadsheet):
 - **Effects** — Trigger, effect details (set, create, lookup, evaluate-rules, event)
 - **Decision rules** — Conditions and actions for routing, assignment, priority
 - **Metrics** — Metric name, source type, source linkage, target
-- **Form definitions** — Program requirements, section definitions, field definitions with annotations
+- **Field metadata** — Field annotations, permissions, labels, program requirements
 
-See the [Workflow Prototype](../prototypes/workflow-prototype.md) for complete examples of state transition, guard, effect, and decision tables. See the [Application Review Prototype](../prototypes/application-review-prototype.md) for form definition tables.
+See the [Workflow Prototype](../prototypes/workflow-prototype.md) for complete examples of state transition, guard, effect, and decision tables. See the [Application Review Prototype](../prototypes/application-review-prototype.md) for field metadata tables.
 
 ### 2. Generate YAML
 
@@ -114,7 +114,7 @@ npm run validate
 # - State machine states don't match OpenAPI status enums
 # - Effect targets reference schemas that don't exist
 # - Rule context variables don't resolve to real fields
-# - Form definition field source paths don't resolve to OpenAPI schema fields
+# - Field metadata source paths don't resolve to OpenAPI schema fields
 # - Transitions missing required audit effects
 # - Metric sources reference states/transitions that don't exist
 ```
@@ -187,6 +187,6 @@ See the [State Setup Guide](../guides/state-setup-guide.md) for equivalent comma
 - [State Setup Guide](../guides/state-setup-guide.md) — Setting up a state repository with overlays, CI, and resolved specs
 - [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) — How contracts define the API surface and enable portability
 - [Workflow Prototype](../prototypes/workflow-prototype.md) — Complete example of behavioral contracts (state machine, rules, metrics)
-- [Application Review Prototype](../prototypes/application-review-prototype.md) — Complete example of form definitions
+- [Application Review Prototype](../prototypes/application-review-prototype.md) — Complete example of field metadata contracts
 - [State Overlays](../guides/state-overlays.md) — How state variations work
 - [Creating APIs](../guides/creating-apis.md) — Designing new API specifications

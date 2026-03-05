@@ -2,7 +2,7 @@
 
 > **Status: Draft**
 
-> **Note:** OpenAPI validation (syntax, linting, and pattern checks) works today. Behavioral contract validation — cross-artifact consistency checks for state machines, rules, metrics, and form definitions — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md).
+> **Note:** OpenAPI validation (syntax, linting, and pattern checks) works today. Behavioral contract validation — cross-artifact consistency checks for state machines, rules, metrics, and field metadata — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md).
 
 ## Quick Start
 
@@ -121,7 +121,7 @@ The prototypes will extend validation to check cross-artifact consistency:
 - State machine states match OpenAPI status enums
 - Effect targets reference schemas that exist
 - Rule context variables resolve to real fields
-- Form definition field source paths resolve to OpenAPI schema fields
+- Field metadata source paths resolve to OpenAPI schema fields
 - Transitions include required audit effects
 - Metric sources reference states/transitions that exist
 

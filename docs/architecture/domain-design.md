@@ -67,7 +67,7 @@ The application as the client experiences it — what they report. See the [appl
 **Key decisions:**
 - This is the "source of truth" for what the client told us
 - ApplicationMember captures different types of people on an application (household members, other occupants, related parties, representatives) via the `relationship` field
-- Each member specifies which programs they are applying for (`programsApplyingFor`), which drives form definition rendering and section review creation
+- Each member specifies which programs they are applying for (`programsApplyingFor`), which drives field metadata context and section review creation
 - Application is client-facing; eligibility interpretation happens in Eligibility domain
 
 #### Eligibility

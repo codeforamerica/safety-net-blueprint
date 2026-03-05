@@ -9,7 +9,7 @@ This directory contains architecture documentation for the Safety Net Benefits A
 | Document | What it covers |
 |----------|---------------|
 | [Domain Design](domain-design.md) | Domain organization, entities, data flow, and domain status |
-| [Contract-Driven Architecture](contract-driven-architecture.md) | Contract artifacts for backend and frontend portability |
+| [Contract-Driven Architecture](contract-driven-architecture.md) | Contract artifacts for backend and frontend portability. Frontend harness packages are in a [separate repo](https://github.com/codeforamerica/safety-net-harness). |
 | [API Architecture](api-architecture.md) | API organization, operational concerns, quality attributes |
 | [Design Rationale](design-rationale.md) | Key decisions with rationale and alternatives |
 | [Roadmap](roadmap.md) | Implementation phases, prototypes, future considerations |

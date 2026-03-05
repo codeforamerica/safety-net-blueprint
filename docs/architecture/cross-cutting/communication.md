@@ -37,7 +37,7 @@ Following the [contract-driven architecture](../contract-driven-architecture.md#
 
 - **Notice lifecycle** — What states and transitions does a notice go through? Which transitions require supervisor approval?
 - **Delivery channels** — How are multiple delivery methods (postal, email, portal) modeled? Per-notice or per-delivery-record?
-- **Template system** — How do notice templates connect to the form definition or configuration artifacts?
+- **Template system** — How do notice templates connect to the field metadata or configuration artifacts?
 - **Event triggers** — How do other domains trigger notices? Direct RPC calls, or event-driven (e.g., an eligibility determination transition fires a `notify` effect)?
 - **Retry behavior** — How are failed deliveries retried? Automatic via state machine timeout, or manual via RPC operation?
 

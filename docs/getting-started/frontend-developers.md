@@ -2,17 +2,19 @@
 
 > **Status: Draft**
 
-This guide is for developers building frontend applications that consume Safety Net APIs. The APIs include both REST endpoints (CRUD operations on resources) and RPC endpoints (behavioral operations like claiming a task or submitting an application). Form definitions drive context-dependent UI rendering — the frontend doesn't hardcode domain-specific logic.
+This guide is for developers building frontend applications that consume Safety Net APIs. The APIs include both REST endpoints (CRUD operations on resources) and RPC endpoints (behavioral operations like claiming a task or submitting an application). Field metadata contracts drive context-dependent UI rendering — the backend serves field annotations, permissions, and labels that the frontend consumes without hardcoding domain-specific logic.
+
+> **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness). See that repo for form rendering, layout, component mapping, and navigation.
 
 See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
 
-> **Note:** The REST APIs and mock server for CRUD operations work today. The behavioral contract capabilities described below — RPC APIs, form definitions, event streams — are being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes the target developer experience.
+> **Note:** The REST APIs and mock server for CRUD operations work today. The behavioral contract capabilities described below — RPC APIs, field metadata, event streams — are being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes the target developer experience.
 
 ## What You'll Work With
 
 - [**REST APIs**](#rest-apis-data-operations) — standard CRUD operations on resources (`GET /workflow/tasks`, `POST /intake/applications`)
 - [**RPC APIs**](#rpc-apis-behavioral-operations) — behavioral operations generated from state machine triggers (`POST /workflow/tasks/:id/claim`, `POST /intake/applications/:id/submit`)
-- [**Form definitions**](#form-definitions-context-dependent-ui) — declarative YAML that determines which sections and fields to display, visibility conditions, and field annotations (program relevance, verification requirements, regulatory citations)
+- [**Field metadata**](#field-metadata-context-dependent-ui) — backend-served field annotations (program relevance, verification requirements, regulatory citations), permissions, and labels
 - [**Event streams**](#event-streams-real-time-updates) — real-time updates via Server-Sent Events (`GET /events/stream?domain=workflow`)
 - [**Mock server**](#develop-against-the-mock-server) — development adapter that interprets behavioral contracts (state machines, rules, metrics) with an in-memory database — no production backend needed
 
@@ -122,36 +124,32 @@ await completeTask({
 
 A 409 response means either the transition is invalid from the current state or a guard condition failed. The response body includes details about which guard failed.
 
-### Form Definitions (Context-Dependent UI)
+### Field Metadata (Context-Dependent UI)
 
-Form definitions tell the frontend what to render without hardcoding domain-specific logic. The frontend fetches the form definition and uses it to determine sections, fields, visibility conditions, and annotations.
+Field metadata tells the frontend how fields relate to programs, what verification is needed, and who can access them — without hardcoding domain-specific logic. The frontend fetches field metadata from the backend and uses it to drive rendering decisions.
 
 ```typescript
-// 1. Fetch the form definition
-const formDef = await getFormDefinition();
+// 1. Fetch field metadata from the backend
+const fieldMetadata = await getFieldMetadata({ query: { domain: 'intake' } });
 
 // 2. Fetch work item records (e.g., SectionReview) for a member
 const sectionReviews = await listSectionReviews({
   query: { memberId: member.id }
 });
 
-// 3. For each SectionReview, look up the matching section in the form definition
+// 3. For each field in a section, look up its metadata
 for (const review of sectionReviews) {
-  const section = formDef.sections.find(s => s.id === review.sectionId);
+  const sectionFields = fieldMetadata.fields.filter(f => f.section === review.sectionId);
 
-  // 4. Evaluate visibleWhen condition against the member's data
-  // (uses the same expression format as rule conditions, e.g., JSON Logic)
-  if (evaluateCondition(section.visibleWhen, { member })) {
-    // 5. Render fields with annotations — the frontend iterates over
+  for (const field of sectionFields) {
+    // 4. Render field with annotations — the frontend iterates over
     //    whatever annotation types exist without knowing what they mean
-    for (const field of section.fields) {
-      renderField(field, field.annotations);
-    }
+    renderField(field, field.annotations);
   }
 }
 ```
 
-The key principle: the frontend renders annotations generically. It doesn't know what "program relevance" or "verification requirement" means — it just displays them. Adding a new annotation type is a form definition change, not a code change.
+The key principle: the frontend renders annotations generically. It doesn't know what "program relevance" or "verification requirement" means — it just displays them. Adding a new annotation type is a field metadata change, not a code change. Form layout and rendering are handled by the [safety-net-harness](https://github.com/codeforamerica/safety-net-harness) packages.
 
 ### Event Streams (Real-Time Updates)
 
@@ -196,5 +194,5 @@ See [Contract-Driven Architecture — Development to production](../architecture
 - [State Setup Guide](../guides/state-setup-guide.md) — Setting up a state repository with overlays
 - [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) — How contracts define the API surface
 - [Workflow Prototype](../prototypes/workflow-prototype.md) — Example of behavioral contracts in action (state machine, rules, metrics)
-- [Application Review Prototype](../prototypes/application-review-prototype.md) — Example of form definitions in action
+- [Application Review Prototype](../prototypes/application-review-prototype.md) — Example of field metadata contracts in action
 - [API Clients](../integration/api-clients.md) — Generated TypeScript clients and framework integrations

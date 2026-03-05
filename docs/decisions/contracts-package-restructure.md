@@ -10,11 +10,11 @@
 
 ## Context
 
-The [contract-driven architecture](../architecture/contract-driven-architecture.md) introduces behavioral contracts — state machines, rules, metrics, form definitions — alongside the existing OpenAPI specs. The current `@safety-net/schemas` package and its `openapi/` subdirectory structure assume that OpenAPI specs are the only artifact type. As new artifact types are added, the package name and directory structure need to reflect the broader scope.
+The [contract-driven architecture](../architecture/contract-driven-architecture.md) introduces behavioral contracts — state machines, rules, metrics, field metadata — alongside the existing OpenAPI specs. The current `@safety-net/schemas` package and its `openapi/` subdirectory structure assume that OpenAPI specs are the only artifact type. As new artifact types are added, the package name and directory structure need to reflect the broader scope.
 
 ### Goals
 
-- **Package name reflects scope** — consumers see `@safety-net/schemas` in import statements, which is misleading when the package also contains state machines, rules, metrics, and form definitions
+- **Package name reflects scope** — consumers see `@safety-net/schemas` in import statements, which is misleading when the package also contains state machines, rules, metrics, and field metadata
 - **Naming convention supports multiple artifact types** — each domain may have 1–6 artifacts (OpenAPI, state machine, rules, metrics, forms, examples); the convention must make it easy to discover all artifacts for a domain and validate cross-artifact consistency
 - **No dependency on directory structure** — tooling discovers artifacts by filename convention (recursive glob `**/*-{suffix}.yaml`), not by directory path. The naming convention encodes domain and artifact type in the filename itself, so files can be reorganized into subdirectories later without breaking discovery, validation, or overlay resolution. The initial layout is flat (all artifacts at the package root) for simplicity and cross-artifact visibility, but this is a convention, not a constraint that tooling enforces
 - **Convention is documented and enforced by tooling** — naming conventions only hold if they're discoverable by developers and violations are caught by validation before merge
@@ -181,7 +181,7 @@ Established by this restructure and documented in updated `project-structure.md`
 | State machine | `-state-machine` | Authored table (CSV) |
 | Rules | `-rules` | Authored table (CSV) |
 | Metrics | `-metrics` | Authored table (CSV) |
-| Form definitions | `-forms` | Authored table (CSV) |
+| Field metadata | `-field-metadata` | Authored table (CSV) |
 
 **Versioning:** no suffix = v1, `-v2`/`-v3` for breaking changes. Files live side by side.
 
@@ -195,12 +195,12 @@ packages/contracts/
   applications-state-machine.yaml      # generated from authored table
   applications-rules.yaml              # generated from authored table
   applications-metrics.yaml            # generated from authored table
-  applications-forms.yaml              # generated from authored table
+  applications-field-metadata.yaml     # generated from authored table
   authored/
     applications-state-machine.csv     # source for state machine YAML
     applications-rules.csv             # source for rules YAML
     applications-metrics.csv           # source for metrics YAML
-    applications-forms.csv             # source for forms YAML
+    applications-field-metadata.csv    # source for field metadata YAML
   components/                          # shared OpenAPI components
   patterns/                            # API pattern definitions
   examples/                            # runnable examples (prototypes)
