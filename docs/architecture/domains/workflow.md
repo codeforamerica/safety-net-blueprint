@@ -66,9 +66,7 @@ onCreate:
       ruleType: priority
 ```
 
-**Evaluation model:** Each rule set uses `first-match-wins` — rules are evaluated in `order` and the first matching rule's action is executed. Every rule set should end with a catch-all rule (`condition: true`) to ensure a default is always applied.
-
-**Baseline rules:** The rules in `workflow-rules.yaml` are a starting baseline. States are expected to replace or extend them with their own program-specific routing and priority logic. See [Customizing Rules](#customizing-rules) below.
+**Evaluation model:** Each rule set uses `first-match-wins` — rules are evaluated in `order` and the first matching rule's action is executed. The baseline rules in `workflow-rules.yaml` are a starting point; states replace them with their own logic. See [Customization](#customization) below.
 
 ### State Machine
 
@@ -84,47 +82,9 @@ Key behavioral patterns:
 - Effects include: `set` (update fields), `create` (audit events), `evaluate-rules` (routing/priority), `lookup` (SLA config, planned), `event` (domain events, planned)
 - SLA clock pauses on `awaiting_client` and `awaiting_verification` states (planned)
 
-## Customizing Rules
+## Customization
 
-The baseline rules in `workflow-rules.yaml` route SNAP tasks to a SNAP-specific queue and set priority based on an expedited flag. States will have different programs, queues, and priority logic.
-
-**To replace the baseline rules**, create a state-specific `workflow-rules.yaml` in your state repository. The mock server discovers rules by convention (`{domain}-rules.yaml`), so your file replaces the base one entirely.
-
-**Example: Adding a Medicaid queue and urgency-based priority:**
-
-```yaml
-ruleSets:
-  - id: workflow-assignment
-    ruleType: assignment
-    evaluation: first-match-wins
-    rules:
-      - id: snap-to-snap-queue
-        order: 1
-        description: Route SNAP tasks to SNAP intake.
-        condition:
-          "==": [{ "var": "task.programType" }, "snap"]
-        action:
-          assignToQueue: snap-intake
-      - id: medicaid-to-medicaid-queue
-        order: 2
-        description: Route Medicaid tasks to Medicaid intake.
-        condition:
-          "==": [{ "var": "task.programType" }, "medicaid"]
-        action:
-          assignToQueue: medicaid-intake
-      - id: default-to-general-queue
-        order: 99
-        description: Everything else goes to general intake.
-        condition: true
-        action:
-          assignToQueue: general-intake
-```
-
-**Key points for rule authors:**
-- Conditions use [JSON Logic](https://jsonlogic.com/) syntax — `var` references task fields (e.g., `task.programType`, `task.isExpedited`)
-- Available actions: `assignToQueue` (sets `queueId` by looking up a queue by name), `setPriority` (sets `priority` field directly)
-- Rules are evaluated in `order` — lower numbers match first
-- Always include a catch-all rule as the last entry
+The baseline rules are a starting point — states replace them with their own program-specific routing and priority logic. See the [State Setup Guide](../../guides/state-setup-guide.md#customizing-behavioral-artifacts) for how to customize rules and other behavioral artifacts.
 
 ## Future Work
 
