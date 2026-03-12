@@ -286,31 +286,17 @@ components:
           The `type` field cannot be changed after creation.
         minProperties: 1
     IncomeList:
-      type: object
-      additionalProperties: false
-      required:
-      - items
-      - total
-      - limit
-      - offset
-      properties:
-        items:
-          type: array
+      unevaluatedProperties: false
+      allOf:
+      - "$ref": "./components/pagination.yaml#/Pagination"
+      - type: object
+        required:
+        - items
+        properties:
           items:
-            "$ref": "#/components/schemas/Income"
-        total:
-          type: integer
-          minimum: 0
-          description: Total number of income available.
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Maximum number of income requested.
-        offset:
-          type: integer
-          minimum: 0
-          description: Number of items skipped before the current page.
+            type: array
+            items:
+              "$ref": "#/components/schemas/Income"
     Employer:
       type: object
       description: An employer of one or more people.

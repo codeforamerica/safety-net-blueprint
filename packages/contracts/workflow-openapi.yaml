@@ -360,63 +360,29 @@ components:
           readOnly: true
 
     TaskAuditEventList:
-      type: object
       description: Paginated list of task audit events.
-      additionalProperties: false
-      required:
-        - items
-        - total
-        - limit
-        - offset
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/TaskAuditEvent"
-        total:
-          type: integer
-          minimum: 0
-          description: Total number of task audit events available.
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Maximum number of task audit events requested.
-        offset:
-          type: integer
-          minimum: 0
-          description: Number of items skipped before the current page.
-        hasNext:
-          type: boolean
-          description: Indicates whether more task audit events are available beyond the current page.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/TaskAuditEvent"
 
     TaskList:
-      type: object
       description: Paginated list of tasks.
-      additionalProperties: false
-      required:
-        - items
-        - total
-        - limit
-        - offset
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Task"
-        total:
-          type: integer
-          minimum: 0
-          description: Total number of tasks available.
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Maximum number of tasks requested.
-        offset:
-          type: integer
-          minimum: 0
-          description: Number of items skipped before the current page.
-        hasNext:
-          type: boolean
-          description: Indicates whether more tasks are available beyond the current page.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Task"

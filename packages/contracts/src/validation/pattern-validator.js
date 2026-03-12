@@ -98,7 +98,26 @@ export function validateListResponseSchema(path, operation, errors) {
     return;
   }
 
-  const properties = schema.properties || {};
+  // Collect properties from allOf branches (supports shared Pagination component)
+  let properties = schema.properties || {};
+  if (schema.allOf) {
+    properties = {};
+    for (const branch of schema.allOf) {
+      if (branch.properties) {
+        Object.assign(properties, branch.properties);
+      }
+      // Recognize $ref to pagination.yaml as providing pagination properties
+      if (branch.$ref && branch.$ref.includes('pagination.yaml')) {
+        Object.assign(properties, {
+          total: { type: 'integer' },
+          limit: { type: 'integer' },
+          offset: { type: 'integer' },
+          hasNext: { type: 'boolean' }
+        });
+      }
+    }
+  }
+
   const requiredProps = ['items', 'total', 'limit', 'offset'];
 
   for (const prop of requiredProps) {

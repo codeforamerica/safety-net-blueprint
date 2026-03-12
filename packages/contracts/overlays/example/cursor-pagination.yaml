@@ -1,0 +1,48 @@
+overlay: 1.0.0
+info:
+  title: Cursor-Based Pagination
+  version: 1.0.0
+  description: |
+    Example overlay that swaps the default offset-based pagination for
+    cursor-based pagination. Apply this overlay to replace the shared
+    Pagination component and the OffsetParam query parameter.
+
+    After applying:
+    - Response fields: total, cursor, hasNext (instead of total, limit, offset, hasNext)
+    - Query parameter: cursor (instead of offset)
+
+actions:
+  # Replace the shared Pagination schema with cursor-based fields.
+  # Because all list schemas compose Pagination via allOf, this single
+  # change propagates to every {Resource}List response.
+  - target: $.Pagination
+    file: components/pagination.yaml
+    description: Replace offset pagination with cursor-based pagination
+    update:
+      type: object
+      required:
+      - total
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items available.
+        cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page. Null when no more results.
+        hasNext:
+          type: boolean
+          description: Whether more items are available beyond the current page.
+
+  # Replace the offset query parameter with a cursor parameter.
+  # OffsetParam is in components/common-parameters.yaml (top-level).
+  - target: $.OffsetParam
+    file: components/common-parameters.yaml
+    description: Replace offset parameter with cursor parameter
+    update:
+      name: cursor
+      in: query
+      schema:
+        type: string
+      description: Opaque cursor returned from a previous page. Omit for the first page.

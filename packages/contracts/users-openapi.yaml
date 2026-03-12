@@ -423,31 +423,15 @@ components:
           $ref: "#/components/schemas/UserPreferences"
 
     UserList:
-      type: object
       description: Paginated list of users.
-      required:
-        - items
-        - total
-        - limit
-        - offset
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/User"
-        total:
-          type: integer
-          minimum: 0
-          description: Total number of users matching the query.
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Maximum number of users requested.
-        offset:
-          type: integer
-          minimum: 0
-          description: Number of users skipped.
-        hasNext:
-          type: boolean
-          description: Whether more users exist beyond this page.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/User"

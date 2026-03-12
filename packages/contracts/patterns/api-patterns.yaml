@@ -64,8 +64,13 @@ list_endpoints:
       name: offset
       description: Number of items to skip (default 0)
 
-  # Response schema must include these properties
+  # Response schema must include these properties.
+  # Pagination fields (total, limit, offset, hasNext) are defined in a shared
+  # component and composed into each list schema via allOf:
+  #   $ref: "./components/pagination.yaml#/Pagination"
+  # States can swap the pagination strategy with a single overlay on Pagination.
   response:
+    pagination_component: "./components/pagination.yaml#/Pagination"
     required_properties:
       - name: items
         type: array

@@ -290,6 +290,16 @@ For operational concerns (Configuration Management, Observability), see [API Arc
 
 ---
 
+## 5. Shared Components
+
+### Pagination
+
+All list endpoints share a single `Pagination` schema ([`components/pagination.yaml`](../../packages/contracts/components/pagination.yaml)) composed into each `{Resource}List` schema via `allOf`. The default strategy uses offset-based pagination (`total`, `limit`, `offset`, `hasNext`).
+
+States can swap the pagination strategy (e.g., cursor-based) by applying a single overlay to the `Pagination` component. See [`overlays/example/cursor-pagination.yaml`](../../packages/contracts/overlays/example/cursor-pagination.yaml) for an example.
+
+---
+
 ## Related Documents
 
 | Document | Description |

@@ -247,31 +247,14 @@ components:
           Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
         minProperties: 1
     AppointmentList:
-      type: object
-      additionalProperties: false
-      required:
-      - items
-      - total
-      - limit
-      - offset
-      properties:
-        items:
-          type: array
+      unevaluatedProperties: false
+      allOf:
+      - "$ref": "./components/pagination.yaml#/Pagination"
+      - type: object
+        required:
+        - items
+        properties:
           items:
-            "$ref": "#/components/schemas/Appointment"
-        total:
-          type: integer
-          minimum: 0
-          description: Total number of appointments available.
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Maximum number of appointments requested.
-        offset:
-          type: integer
-          minimum: 0
-          description: Number of items skipped before the current page.
-        hasNext:
-          type: boolean
-          description: Indicates whether more appointments are available beyond the current page.
+            type: array
+            items:
+              "$ref": "#/components/schemas/Appointment"
