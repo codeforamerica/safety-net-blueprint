@@ -208,6 +208,74 @@ When multiple API versions exist (e.g., `applications.yaml` and `applications-v2
   description: Target a specific API
 ```
 
+## Customizing behavioral artifacts
+
+Overlays customize OpenAPI specs (schemas, enums, endpoints). Behavioral artifacts — state machines, rules, metrics — use a different customization model: states provide their own YAML files that replace the baseline entirely.
+
+The mock server discovers behavioral artifacts by file naming convention in the specs directory:
+
+| Artifact | Convention | Example |
+|----------|-----------|---------|
+| State machine | `{domain}-state-machine.yaml` | `workflow-state-machine.yaml` |
+| Rules | `{domain}-rules.yaml` | `workflow-rules.yaml` |
+| Metrics | `{domain}-metrics.yaml` | `workflow-metrics.yaml` (planned) |
+
+To customize, place your own file with the same name in your state's resolved specs directory. It replaces the base file entirely — there is no merge.
+
+### State machine
+
+The base `workflow-state-machine.yaml` defines 3 states and 4 transitions. States can replace this with their own lifecycle — adding states, transitions, guards, and effects.
+
+**Common customizations:**
+- Add states (e.g., `awaiting_client`, `escalated`, `supervisor_review`)
+- Add transitions between states (each trigger becomes an RPC endpoint automatically)
+- Add or modify guards (preconditions for transitions)
+- Add effects to transitions (`set` fields, `create` audit events, `evaluate-rules`)
+
+See the [Workflow domain](../architecture/domains/workflow.md#state-machine) for the full state machine architecture and effect types.
+
+### Rules
+
+The base `workflow-rules.yaml` provides starter assignment and priority rules. States replace these with their own program-specific routing and priority logic.
+
+**Example: Adding a Medicaid queue and urgency-based priority:**
+
+```yaml
+ruleSets:
+  - id: workflow-assignment
+    ruleType: assignment
+    evaluation: first-match-wins
+    rules:
+      - id: snap-to-snap-queue
+        order: 1
+        description: Route SNAP tasks to SNAP intake.
+        condition:
+          "==": [{ "var": "task.programType" }, "snap"]
+        action:
+          assignToQueue: snap-intake
+      - id: medicaid-to-medicaid-queue
+        order: 2
+        description: Route Medicaid tasks to Medicaid intake.
+        condition:
+          "==": [{ "var": "task.programType" }, "medicaid"]
+        action:
+          assignToQueue: medicaid-intake
+      - id: default-to-general-queue
+        order: 99
+        description: Everything else goes to general intake.
+        condition: true
+        action:
+          assignToQueue: general-intake
+```
+
+**Key points for rule authors:**
+- Conditions use [JSON Logic](https://jsonlogic.com/) syntax — `var` references task fields (e.g., `task.programType`, `task.isExpedited`)
+- Available actions: `assignToQueue` (sets `queueId` by looking up a queue by name), `setPriority` (sets `priority` field directly)
+- Rules are evaluated in `order` — lower numbers match first
+- Every rule set should end with a catch-all rule (`condition: true`) to ensure a default is always applied
+
+See the [Workflow domain](../architecture/domains/workflow.md#rules) for the full rule architecture and how rules connect to the state machine.
+
 ## Working with shared types
 
 Shared types (Address, Name, etc.) live in `components/*.yaml` and are referenced by multiple API specs via `$ref`. There are two approaches to customizing them:

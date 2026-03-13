@@ -6,11 +6,11 @@ info:
   x-status: alpha
   x-visibility: internal
   description: |
-    REST API for managing workflow entities such as tasks.
+    REST API for managing workflow entities such as tasks and queues.
 
     This service provides task lifecycle management for safety net benefits programs.
     Tasks represent units of work assigned to caseworkers, supervisors, or automated
-    processes.
+    processes. Queues organize tasks by team, program, or skill for routing.
 
     > **Status: Alpha** — Breaking changes expected.
 
@@ -29,8 +29,132 @@ tags:
     description: Manage workflow tasks.
   - name: Task Audit Events
     description: Read-only audit trail for task state transitions.
+  - name: Queues
+    description: Manage task routing queues.
 
 paths:
+  "/queues":
+    get:
+      summary: List queues
+      description: Retrieve a paginated list of queues.
+      operationId: listQueues
+      tags:
+        - Queues
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A paginated collection of queues.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueueList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create a queue
+      description: Create a new routing queue.
+      operationId: createQueue
+      tags:
+        - Queues
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueueCreate"
+      responses:
+        "201":
+          description: Queue created successfully.
+          headers:
+            Location:
+              description: URL of the newly created queue resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Queue"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  "/queues/{queueId}":
+    parameters:
+      - $ref: "#/components/parameters/QueueIdParam"
+
+    get:
+      summary: Get a queue
+      description: Retrieve a single queue by identifier.
+      operationId: getQueue
+      tags:
+        - Queues
+      responses:
+        "200":
+          description: Queue retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Queue"
+              examples:
+                QueueExample1:
+                  $ref: "./workflow-openapi-examples.yaml#/QueueExample1"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update a queue
+      description: Apply partial updates to an existing queue.
+      operationId: updateQueue
+      tags:
+        - Queues
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueueUpdate"
+      responses:
+        "200":
+          description: Queue updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Queue"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Delete a queue
+      description: Permanently remove a queue record.
+      operationId: deleteQueue
+      tags:
+        - Queues
+      responses:
+        "204":
+          description: Queue deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
   "/tasks":
     get:
       summary: List tasks
@@ -200,6 +324,16 @@ paths:
 
 components:
   parameters:
+    QueueIdParam:
+      name: queueId
+      in: path
+      required: true
+      description: Unique identifier of the queue.
+      schema:
+        type: string
+        format: uuid
+      example: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+
     TaskIdParam:
       name: taskId
       in: path
@@ -221,6 +355,93 @@ components:
       example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
 
   schemas:
+    Queue:
+      type: object
+      description: A routing queue that organizes tasks by team, program, or skill.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the queue.
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Machine-readable name for the queue (e.g., snap-intake).
+        description:
+          type: string
+          maxLength: 2000
+          description: Human-readable description of the queue's purpose.
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the queue was created.
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the queue was last updated.
+          readOnly: true
+
+    QueueCreate:
+      allOf:
+        - $ref: "#/components/schemas/Queue"
+        - type: object
+          description: |
+            Payload to create a new queue. Name is required.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+          required:
+            - name
+
+    QueueList:
+      type: object
+      description: Paginated list of queues.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Queue"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of queues available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of queues requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more queues are available beyond the current page.
+
+    QueueUpdate:
+      allOf:
+        - $ref: "#/components/schemas/Queue"
+        - type: object
+          description: |
+            Payload to update one or more fields of an existing queue. Partial updates are supported.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+          minProperties: 1
+
     Task:
       type: object
       description: A workflow task representing a unit of work in a safety net benefits program.
@@ -253,6 +474,24 @@ components:
             - in_progress
             - completed
           description: Current lifecycle state.
+        programType:
+          $ref: "./components/common.yaml#/Program"
+          description: The benefits program this task is associated with.
+        isExpedited:
+          type: boolean
+          description: Whether this task requires expedited processing.
+        queueId:
+          type: string
+          format: uuid
+          description: Reference to the Queue this task is routed to.
+        priority:
+          type: string
+          enum:
+            - expedited
+            - high
+            - normal
+            - low
+          description: Task processing priority.
         startedAt:
           type: string
           format: date-time
@@ -279,28 +518,6 @@ components:
           format: date-time
           description: Timestamp when the task was last updated.
           readOnly: true
-
-    TaskCreate:
-      allOf:
-        - $ref: "#/components/schemas/Task"
-        - type: object
-          description: |
-            Payload to create a new task. At minimum, name and status are required.
-
-            Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
-          required:
-            - name
-            - status
-
-    TaskUpdate:
-      allOf:
-        - $ref: "#/components/schemas/Task"
-        - type: object
-          description: |
-            Payload to update one or more fields of an existing task. Partial updates are supported.
-
-            Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
-          minProperties: 1
 
     TaskAuditEvent:
       type: object
@@ -373,6 +590,18 @@ components:
               items:
                 $ref: "#/components/schemas/TaskAuditEvent"
 
+    TaskCreate:
+      allOf:
+        - $ref: "#/components/schemas/Task"
+        - type: object
+          description: |
+            Payload to create a new task. At minimum, name and status are required.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+          required:
+            - name
+            - status
+
     TaskList:
       description: Paginated list of tasks.
       unevaluatedProperties: false
@@ -386,3 +615,13 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Task"
+
+    TaskUpdate:
+      allOf:
+        - $ref: "#/components/schemas/Task"
+        - type: object
+          description: |
+            Payload to update one or more fields of an existing task. Partial updates are supported.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+          minProperties: 1

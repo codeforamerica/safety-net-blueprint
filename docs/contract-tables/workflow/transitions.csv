@@ -1,5 +1,5 @@
 From,To,Trigger,Actors,Guards,Effects
-(create),pending,create,,,create
+(create),pending,create,,,create; evaluate-rules; evaluate-rules
 pending,in_progress,claim,,taskIsUnassigned,set assignedToId = $caller.id; create
 in_progress,completed,complete,,callerIsAssignedWorker,create
-in_progress,pending,release,,callerIsAssignedWorker,set assignedToId = null; create
+in_progress,pending,release,,callerIsAssignedWorker,set assignedToId = null; create; evaluate-rules; evaluate-rules

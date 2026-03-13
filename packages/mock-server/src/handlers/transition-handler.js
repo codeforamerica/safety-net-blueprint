@@ -2,8 +2,9 @@
  * Handler for POST /resources/{id}/{trigger} (state machine transitions)
  */
 
-import { findById, update, create } from '../database-manager.js';
+import { findById, findAll, update, create } from '../database-manager.js';
 import { findTransition, evaluateGuards, applyEffects } from '../state-machine-engine.js';
+import { processRuleEvaluations } from './rule-evaluation.js';
 
 /**
  * Create a transition handler for an RPC endpoint.
@@ -11,9 +12,10 @@ import { findTransition, evaluateGuards, applyEffects } from '../state-machine-e
  * @param {Object} stateMachine - The state machine contract
  * @param {string} trigger - Transition trigger name (e.g., "claim")
  * @param {string} paramName - URL parameter name for the resource ID
+ * @param {Array} rules - Array from discoverRules()
  * @returns {Function} Express handler
  */
-export function createTransitionHandler(resourceName, stateMachine, trigger, paramName) {
+export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, rules) {
   return (req, res) => {
     try {
       const resourceId = req.params[paramName];
@@ -69,8 +71,11 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
 
       // Clone resource, apply effects, update status
       const updated = { ...resource };
-      const { pendingCreates } = applyEffects(transition.effects, updated, context);
+      const { pendingCreates, pendingRuleEvaluations } = applyEffects(transition.effects, updated, context);
       updated.status = transition.to;
+
+      // Process pending rule evaluations
+      processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine.domain);
 
       // Compute diff (only changed fields)
       const diff = {};

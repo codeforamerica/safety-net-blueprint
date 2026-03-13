@@ -112,11 +112,11 @@ test('Database Seeder Tests', async (t) => {
     const summary = seedAllDatabases(apiSpecs, specsDir);
     
     assert.ok(typeof summary === 'object', 'Should return summary object');
-    assert.strictEqual(Object.keys(summary).length, apiSpecs.length,
-                      'Should have entry for each API');
-    
+    assert.ok(Object.keys(summary).length >= apiSpecs.length,
+              'Should have at least one entry per API');
+
     const totalSeeded = Object.values(summary).reduce((sum, count) => sum + count, 0);
-    console.log(`  ✓ Seeded ${apiSpecs.length} API(s), ${totalSeeded} total records`);
+    console.log(`  ✓ Seeded ${Object.keys(summary).length} collection(s), ${totalSeeded} total records`);
     
     for (const [apiName, count] of Object.entries(summary)) {
       console.log(`    - ${apiName}: ${count} records`);

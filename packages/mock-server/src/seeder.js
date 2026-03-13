@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import yaml from 'js-yaml';
 import { insertResource, count, clearAll } from './database-manager.js';
-import { getExamplesPath } from '@codeforamerica/safety-net-blueprint-contracts/loader';
+import { getExamplesPath, collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 
 /**
  * Load examples from YAML file
@@ -21,48 +21,6 @@ function loadExamples(examplesPath) {
   
   const content = readFileSync(examplesPath, 'utf8');
   return yaml.load(content) || {};
-}
-
-/**
- * Extract individual resources from examples
- * Filters out list examples and payload examples
- * Returns resources sorted by example name (Example1, Example2, etc.)
- * @param {Object} examples - Examples object from YAML
- * @returns {Array} Array of individual resource objects in sorted order
- */
-function extractIndividualResources(examples) {
-  const resources = [];
-  
-  // First, collect all valid examples with their keys
-  const validExamples = [];
-  
-  for (const [key, value] of Object.entries(examples)) {
-    if (!value || typeof value !== 'object') {
-      continue;
-    }
-    
-    // Skip list examples (have 'items' array property)
-    if (value.items && Array.isArray(value.items)) {
-      continue;
-    }
-    
-    // Skip payload examples (typically used for Create/Update requests)
-    const lowerKey = key.toLowerCase();
-    if (lowerKey.includes('payload') || lowerKey.includes('create') || lowerKey.includes('update')) {
-      continue;
-    }
-    
-    // Only include resources that have an 'id' field
-    if (value.id) {
-      validExamples.push({ key, value });
-    }
-  }
-  
-  // Sort by key name to ensure consistent order (Example1, Example2, Example3)
-  validExamples.sort((a, b) => a.key.localeCompare(b.key));
-  
-  // Extract just the values in sorted order
-  return validExamples.map(ex => ex.value);
 }
 
 /**
@@ -104,7 +62,7 @@ export function seedDatabase(collectionName, specsDir, apiName) {
     for (let i = 0; i < resources.length; i++) {
       try {
         // Create a copy to avoid mutating the original
-        const resource = { ...resources[i] };
+        const resource = { ...resources[i].data };
 
         // Override createdAt/updatedAt to ensure proper ordering
         // Example1 (i=0) gets newest timestamp, Example2 (i=1) gets older, etc.
@@ -117,7 +75,7 @@ export function seedDatabase(collectionName, specsDir, apiName) {
         insertResource(collectionName, resource);
         seededCount++;
       } catch (error) {
-        console.warn(`  Warning: Could not seed resource ${resources[i].id}:`, error.message);
+        console.warn(`  Warning: Could not seed resource ${resources[i].data.id}:`, error.message);
       }
     }
 
@@ -165,6 +123,24 @@ function deriveAllCollectionNames(api) {
   return [...names];
 }
 
+/**
+ * Extract resources from examples that belong to a specific collection.
+ * Matches example keys by schema prefix (e.g., "QueueExample1" matches "Queue" prefix).
+ * @param {Object} examples - All examples from the YAML file
+ * @param {string} collectionName - Target collection name
+ * @returns {Array} Array of resource objects for this collection
+ */
+function extractResourcesForCollection(examples, collectionName) {
+  const prefix = collectionToSchemaPrefix(collectionName);
+  const filtered = {};
+  for (const [key, value] of Object.entries(examples)) {
+    if (key.startsWith(prefix)) {
+      filtered[key] = value;
+    }
+  }
+  return extractIndividualResources(filtered);
+}
+
 export function seedAllDatabases(apiSpecs, specsDir) {
   console.log('\nSeeding databases from example files...');
 
@@ -172,15 +148,61 @@ export function seedAllDatabases(apiSpecs, specsDir) {
 
   for (const api of apiSpecs) {
     try {
+      const allCollections = deriveAllCollectionNames(api);
+
       // Clear all collections for this API (primary + secondary)
-      for (const name of deriveAllCollectionNames(api)) {
+      for (const name of allCollections) {
         clearAll(name);
       }
 
-      // Seed only the primary collection (which has the examples file)
-      const collectionName = deriveCollectionName(api);
-      const count = seedDatabase(collectionName, specsDir, api.name);
-      summary[collectionName] = count;
+      // Load examples once for the API
+      const examplesPath = getExamplesPath(api.name, specsDir);
+      if (!existsSync(examplesPath)) {
+        console.log(`  No examples file found for ${api.name}, databases will be empty`);
+        for (const name of allCollections) {
+          summary[name] = 0;
+        }
+        continue;
+      }
+
+      const examples = loadExamples(examplesPath);
+      if (!examples || Object.keys(examples).length === 0) {
+        console.log(`  No examples found in ${api.name}.yaml, databases will be empty`);
+        for (const name of allCollections) {
+          summary[name] = 0;
+        }
+        continue;
+      }
+
+      // Seed each collection with its matching examples
+      for (const collectionName of allCollections) {
+        const resources = extractResourcesForCollection(examples, collectionName);
+
+        if (resources.length === 0) {
+          summary[collectionName] = 0;
+          continue;
+        }
+
+        let seededCount = 0;
+        const baseTimestamp = new Date('2024-01-01T00:00:00Z').getTime();
+
+        for (let i = 0; i < resources.length; i++) {
+          try {
+            const resource = { ...resources[i].data };
+            const minutesOffset = (resources.length - 1 - i) * 60000;
+            const timestamp = new Date(baseTimestamp + minutesOffset).toISOString();
+            resource.createdAt = timestamp;
+            resource.updatedAt = timestamp;
+            insertResource(collectionName, resource);
+            seededCount++;
+          } catch (error) {
+            console.warn(`  Warning: Could not seed resource ${resources[i].data.id}:`, error.message);
+          }
+        }
+
+        console.log(`  Seeded ${seededCount} ${collectionName} from examples`);
+        summary[collectionName] = seededCount;
+      }
     } catch (error) {
       console.warn(`  Warning: Could not seed ${api.name}:`, error.message);
       summary[api.name] = 0;
