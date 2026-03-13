@@ -119,6 +119,11 @@ async function startMockServer() {
       res.json({ status: 'ok', apis: apiSpecs.map(a => a.name) });
     });
 
+    // API manifest — returns full spec metadata for each loaded API
+    app.get('/_manifest', (req, res) => {
+      res.json({ apis: apiSpecs });
+    });
+
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
     const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl);
