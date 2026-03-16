@@ -22,7 +22,7 @@ With the uniform shape, new resource types are automatically supported — the b
 
 ### Typed attributes
 
-Each attribute carries a `type` hint (`string`, `date`, `status`, `tag`, `currency`, `identifier`) so clients can apply smart formatting (e.g., render dates in the user's locale, display statuses as badges, show identifiers in monospace). This avoids both untyped key-value pairs (where clients can't format anything) and per-resource-type schemas (where clients must know every type).
+Each attribute carries a `field` (machine-readable key like `dob`, `status`), an optional `label` (human-readable display name like "Date of Birth"), and a `type` hint (`string`, `date`, `currency`) so clients can apply smart formatting (e.g., render dates in the user's locale, format currency values). Clients that need custom display names key off `field`; clients that just want a default label use `label` as-is.
 
 ### Title mapping left to implementers
 
@@ -42,7 +42,7 @@ Any search UI needs per-type counts to show "People (12) | Cases (5) | Applicati
 |----------|-----------|
 | **GraphQL search query** | Second paradigm and toolchain; search is simple query-in/list-out; no real-world precedent for global search via GraphQL |
 | **Polymorphic results** (per-type schemas) | Clients need per-type rendering; adding resource types requires client changes |
-| **Untyped attributes** (label + value only) | Clients can't format values intelligently; every value is plain text |
+| **Untyped attributes** (field + value only) | Clients can't format values intelligently; every value is plain text |
 
 ## Future Considerations
 

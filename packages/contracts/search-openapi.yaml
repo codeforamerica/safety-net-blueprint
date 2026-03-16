@@ -132,13 +132,16 @@ components:
       description: A typed key-value pair for rendering search result details.
       additionalProperties: false
       required:
-        - label
+        - field
         - value
         - type
       properties:
+        field:
+          type: string
+          description: Machine-readable field key (e.g., "dob", "status", "caseNumber").
         label:
           type: string
-          description: Human-readable label (e.g., "Date of Birth", "Status", "Case Number").
+          description: Human-readable display label (e.g., "Date of Birth", "Status", "Case Number").
         value:
           type: string
           description: Display value, pre-formatted as a string regardless of type.
@@ -146,19 +149,13 @@ components:
           type: string
           description: |
             Value type hint for client rendering:
-            - `string` — plain text
+            - `string` — plain text (default)
             - `date` — date value (client may reformat)
-            - `status` — status badge
-            - `tag` — label/tag chip
             - `currency` — monetary amount (client may reformat)
-            - `identifier` — ID or reference number (monospace display)
           enum:
             - string
             - date
-            - status
-            - tag
             - currency
-            - identifier
 
     SearchResultList:
       type: object
@@ -169,7 +166,6 @@ components:
         - total
         - limit
         - offset
-        - facets
       properties:
         items:
           type: array

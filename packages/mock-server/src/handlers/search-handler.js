@@ -24,9 +24,9 @@ const RESOURCE_MAP = {
     },
     url: (r) => `/persons/${r.id}`,
     attributes: (r) => [
-      r.email && { label: 'Email', value: r.email, type: 'string' },
-      r.dateOfBirth && { label: 'Date of Birth', value: r.dateOfBirth, type: 'date' },
-      r.phoneNumber && { label: 'Phone', value: r.phoneNumber, type: 'string' },
+      r.email && { field: 'email', label: 'Email', value: r.email, type: 'string' },
+      r.dateOfBirth && { field: 'dateOfBirth', label: 'Date of Birth', value: r.dateOfBirth, type: 'date' },
+      r.phoneNumber && { field: 'phoneNumber', label: 'Phone', value: r.phoneNumber, type: 'string' },
     ].filter(Boolean),
   },
 
@@ -36,8 +36,8 @@ const RESOURCE_MAP = {
     title: (r) => r.id,
     url: (r) => `/cases/${r.id}`,
     attributes: (r) => [
-      r.status && { label: 'Status', value: r.status, type: 'status' },
-      r.effectiveStartDate && { label: 'Start Date', value: r.effectiveStartDate, type: 'date' },
+      r.status && { field: 'status', label: 'Status', value: r.status, type: 'string' },
+      r.effectiveStartDate && { field: 'effectiveStartDate', label: 'Start Date', value: r.effectiveStartDate, type: 'date' },
     ].filter(Boolean),
   },
 
@@ -55,8 +55,8 @@ const RESOURCE_MAP = {
     },
     url: (r) => `/applications/${r.id}`,
     attributes: (r) => [
-      r.status && { label: 'Status', value: r.status, type: 'status' },
-      r.state && { label: 'State', value: r.state, type: 'tag' },
+      r.status && { field: 'status', label: 'Status', value: r.status, type: 'string' },
+      r.state && { field: 'state', label: 'State', value: r.state, type: 'string' },
     ].filter(Boolean),
   },
 
@@ -66,8 +66,8 @@ const RESOURCE_MAP = {
     title: (r) => r.name || r.id,
     url: (r) => `/tasks/${r.id}`,
     attributes: (r) => [
-      r.status && { label: 'Status', value: r.status, type: 'status' },
-      r.description && { label: 'Description', value: r.description, type: 'string' },
+      r.status && { field: 'status', label: 'Status', value: r.status, type: 'string' },
+      r.description && { field: 'description', label: 'Description', value: r.description, type: 'string' },
     ].filter(Boolean),
   },
 
@@ -81,9 +81,9 @@ const RESOURCE_MAP = {
     },
     url: (r) => `/appointments/${r.id}`,
     attributes: (r) => [
-      r.status && { label: 'Status', value: r.status, type: 'status' },
-      r.appointmentType && { label: 'Type', value: r.appointmentType, type: 'tag' },
-      r.startAt && { label: 'Start', value: r.startAt, type: 'date' },
+      r.status && { field: 'status', label: 'Status', value: r.status, type: 'string' },
+      r.appointmentType && { field: 'appointmentType', label: 'Type', value: r.appointmentType, type: 'string' },
+      r.startAt && { field: 'startAt', label: 'Start', value: r.startAt, type: 'date' },
     ].filter(Boolean),
   },
 };
