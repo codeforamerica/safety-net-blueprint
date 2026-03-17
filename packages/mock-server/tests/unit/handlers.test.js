@@ -16,16 +16,17 @@ import {
   clearAll,
   insertResource
 } from '../../src/database-manager.js';
-import { join } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { join, dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const specsDir = join(__dirname, '../../../contracts');
 const seedDir = join(__dirname, '../../seed');
 
-const cleanup = () => { clearAll('persons'); };
+const cleanup = () => {
+  clearAll('persons');
+};
 
 test('CRUD Handler Tests', async (t) => {
   
