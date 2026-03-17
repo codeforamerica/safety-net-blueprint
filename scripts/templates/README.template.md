@@ -13,6 +13,10 @@ npm install {{packageName}}
 
 {{content}}
 
+## Changelog
+
+See [CHANGELOG.md](https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/{{packageDir}}/CHANGELOG.md) for release history.
+
 ## Documentation
 
 See the [Safety Net Blueprint documentation](https://github.com/codeforamerica/safety-net-blueprint) for full guides and reference.

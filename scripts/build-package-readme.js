@@ -24,6 +24,7 @@ for (const pkg of packages) {
 
   const readme = template
     .replaceAll('{{packageName}}', pkgJson.name)
+    .replaceAll('{{packageDir}}', pkg)
     .replaceAll('{{description}}', pkgJson.description)
     .replaceAll('{{version}}', pkgJson.version)
     .replace('{{content}}', content);
