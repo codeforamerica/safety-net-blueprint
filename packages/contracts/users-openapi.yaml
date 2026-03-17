@@ -107,6 +107,28 @@ paths:
         "422":
           $ref: "./components/responses.yaml#/UnprocessableEntity"
 
+  /users/me:
+    get:
+      summary: Get the authenticated user
+      description: |
+        Returns the authenticated user's own record. Resolves the caller identity
+        from the auth context without requiring the caller to know their own ID.
+
+        No additional permissions required beyond valid authentication.
+      operationId: getCurrentUser
+      tags: [Users]
+      responses:
+        "200":
+          description: Authenticated user details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "./components/responses.yaml#/Unauthorized"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+
   /users/{userId}:
     parameters:
       - $ref: "#/components/parameters/UserIdParam"

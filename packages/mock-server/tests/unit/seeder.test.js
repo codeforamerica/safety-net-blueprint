@@ -7,8 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { seedDatabase, seedAllDatabases } from '../../src/seeder.js';
 import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
-import { count, findAll, closeAll } from '../../src/database-manager.js';
-import { unlinkSync, existsSync } from 'fs';
+import { count, findAll, clearAll } from '../../src/database-manager.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -16,18 +15,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const specsDir = join(__dirname, '../../../contracts');
 
-// Cleanup function
+// Cleanup function — uses clearAll() instead of file deletion so it works
+// even when SQLite files are locked (common on Windows). Opening the DB
+// before clearing also forces WAL replay, so stale data from prior runs
+// is absorbed and then wiped rather than leaking into the seed count.
 const cleanup = () => {
-  closeAll();
-  // Clean up test databases
-  const testDbPath = join(__dirname, '../../../generated/mock-data');
-  try {
-    if (existsSync(join(testDbPath, 'persons.db'))) {
-      unlinkSync(join(testDbPath, 'persons.db'));
-    }
-  } catch (e) {
-    // Ignore cleanup errors
-  }
+  clearAll('persons');
 };
 
 test('Database Seeder Tests', async (t) => {

@@ -5,6 +5,7 @@
 
 import { createListHandler } from './handlers/list-handler.js';
 import { createGetHandler } from './handlers/get-handler.js';
+import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler } from './handlers/update-handler.js';
 import { createDeleteHandler } from './handlers/delete-handler.js';
@@ -71,6 +72,10 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachine, rules) {
       // Cross-resource search endpoint — custom handler
       handler = createSearchHandler(apiMetadata);
       description = 'Cross-resource search';
+    } else if (method === 'get' && endpoint.path.endsWith('/me')) {
+      // GET /resource/me — current-user singleton
+      handler = createCurrentUserHandler(apiMetadata, endpointWithCollection);
+      description = 'Get authenticated user';
     } else if (method === 'get' && isCollectionEndpoint(endpoint.path)) {
       // GET /resources - List/search
       handler = createListHandler(apiMetadata, endpointWithCollection);
