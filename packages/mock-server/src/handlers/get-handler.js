@@ -4,6 +4,7 @@
 
 import { findById } from '../database-manager.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
+import { extractAuthContext } from '../auth-context.js';
 
 /**
  * Create get-by-id handler for a resource
@@ -20,7 +21,18 @@ export function createGetHandler(apiMetadata, endpoint) {
         return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
       }
 
-      const resourceId = req.params[paramName] || req.params.id;
+      let resourceId = req.params[paramName] || req.params.id;
+
+      if (resourceId === 'me') {
+        const auth = extractAuthContext(req);
+        if (!auth) {
+          return res.status(401).json({
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required'
+          });
+        }
+        resourceId = auth.userId;
+      }
 
       const resource = findById(endpoint.collectionName, resourceId);
 
