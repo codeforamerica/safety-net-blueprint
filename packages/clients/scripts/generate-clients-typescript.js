@@ -140,6 +140,7 @@ export default {
     },
     {
       name: 'zod',
+      dates: { offset: true },
     },
     {
       name: '@hey-api/client-axios',
