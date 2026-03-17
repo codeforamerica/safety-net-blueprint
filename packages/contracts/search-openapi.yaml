@@ -1,0 +1,204 @@
+openapi: 3.1.0
+info:
+  title: Search Service API
+  version: 0.1.0
+  x-domain: search
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    REST API for cross-resource search across all domains.
+
+    Provides a single `GET /search` endpoint that returns a uniform result shape
+    regardless of resource type, enabling clients to render results without
+    per-type logic.
+
+    > **Status: Alpha** — Breaking changes expected.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+- url: https://api.example.com
+  description: Production server
+- url: http://localhost:8080
+  description: Local development server
+tags:
+- name: Search
+  description: Cross-resource search.
+paths:
+  "/search":
+    get:
+      summary: Search across resources
+      description: |
+        Search across all resource types (persons, cases, applications, tasks,
+        appointments) and return a unified result list. Results include typed
+        attributes for consistent client rendering and facet counts per resource type.
+      operationId: search
+      tags:
+      - Search
+      parameters:
+      - "$ref": "./components/parameters.yaml#/SearchQueryParam"
+      - "$ref": "./components/parameters.yaml#/LimitParam"
+      - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - name: types
+        in: query
+        required: false
+        description: Filter results to specific resource types. When omitted, all types are searched.
+        schema:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SearchResultType"
+      responses:
+        '200':
+          description: A paginated list of search results with facet counts.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SearchResultList"
+        '400':
+          "$ref": "./components/responses.yaml#/BadRequest"
+        '500':
+          "$ref": "./components/responses.yaml#/InternalError"
+components:
+  schemas:
+    # Primary schema — a single search result
+    SearchResult:
+      type: object
+      description: |
+        A single search result with a uniform shape regardless of the underlying
+        resource type. Attributes provide typed key-value pairs for consistent
+        client rendering.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - title
+        - url
+        - attributes
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the matched resource.
+        type:
+          "$ref": "#/components/schemas/SearchResultType"
+        title:
+          type: string
+          description: Display title for the result (e.g., person name, case number).
+        url:
+          type: string
+          format: uri
+          description: Canonical API URL of the matched resource.
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Relevance score between 0 and 1. Higher is more relevant.
+        attributes:
+          type: array
+          description: Typed key-value pairs describing the result (e.g., status, date of birth, case number).
+          items:
+            "$ref": "#/components/schemas/SearchResultAttribute"
+        createdAt:
+          type: string
+          format: date-time
+          description: When the matched resource was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the matched resource was last updated.
+
+    # Ancillary schemas (alphabetical)
+
+    SearchFacet:
+      type: object
+      description: A result count for a single resource type, enabling UI to show type-based filtering.
+      additionalProperties: false
+      required:
+        - type
+        - count
+      properties:
+        type:
+          "$ref": "#/components/schemas/SearchResultType"
+        count:
+          type: integer
+          minimum: 0
+          description: Number of matching results for this type.
+
+    SearchResultAttribute:
+      type: object
+      description: A typed key-value pair for rendering search result details.
+      additionalProperties: false
+      required:
+        - field
+        - value
+        - type
+      properties:
+        field:
+          type: string
+          description: Machine-readable field key (e.g., "dob", "status", "caseNumber").
+        label:
+          type: string
+          description: Human-readable display label (e.g., "Date of Birth", "Status", "Case Number").
+        value:
+          type: string
+          description: Display value, pre-formatted as a string regardless of type.
+        type:
+          type: string
+          description: |
+            Value type hint for client rendering:
+            - `string` — plain text (default)
+            - `date` — date value (client may reformat)
+            - `currency` — monetary amount (client may reformat)
+          enum:
+            - string
+            - date
+            - currency
+
+    SearchResultList:
+      type: object
+      description: Paginated search results with facet counts.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SearchResult"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of matching results across all types.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of results requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more results are available beyond the current page.
+        facets:
+          type: array
+          description: Result counts per resource type.
+          items:
+            "$ref": "#/components/schemas/SearchFacet"
+
+    SearchResultType:
+      type: string
+      description: The type of resource matched by the search.
+      enum:
+        - person
+        - case
+        - application
+        - task
+        - appointment

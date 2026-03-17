@@ -12,7 +12,7 @@ See also: [API Architecture](api-architecture.md) | [Design Rationale](design-ra
 
 ### Overview
 
-The Safety Net Benefits API is organized into 7 domains, with 4 cross-cutting concerns:
+The Safety Net Benefits API is organized into 7 domains, with 5 cross-cutting concerns:
 
 | Domain | Design Status | Purpose |
 |--------|---------------|---------|
@@ -29,6 +29,7 @@ The Safety Net Benefits API is organized into 7 domains, with 4 cross-cutting co
 - **Reporting** - Each domain exposes data that reporting systems consume; audit events live where actions happen
 - **Configuration Management** - Business-configurable rules, thresholds, and settings that can be changed without code deployments
 - **Observability** - Health checks, metrics, logging, and tracing for operations staff
+- **Search** - Cross-resource search spanning all domains
 
 ### Domain Details
 
@@ -149,6 +150,20 @@ Official notices and correspondence that can originate from any domain. **[Detai
   - Case Management: "Case worker assigned"
 - Entities live in a Communication domain but are consumed/triggered by all domains
 
+#### Search (Cross-Cutting)
+
+Cross-resource search spanning all domains. **[Details →](cross-cutting/search.md)**
+
+| Entity | Purpose |
+|--------|---------|
+| **SearchResult** | Uniform result shape with typed attributes for consistent rendering |
+| **SearchFacets** | Per-type result counts for filtering UI |
+
+**Key decisions:**
+- Search is cross-cutting because it queries across all domains (persons, households, cases, applications)
+- Uniform result shape — clients render results without per-type logic; new resource types are automatically supported
+- Typed attributes enable smart UI formatting (dates, statuses, currency) without per-type rendering code
+
 #### Scheduling
 
 Time-based coordination. **[Details →](domains/scheduling.md)**
@@ -177,9 +192,9 @@ Files and uploads.
 ## 2. Data Flow Between Domains
 
 ```
-╔═════════════════════════════════════════════════════════════════════════════╗
-║  CROSS-CUTTING: Communication, Reporting, Configuration Mgmt, Observability ║
-╚═════════════════════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════════════════════════╗
+║  CROSS-CUTTING: Communication, Search, Reporting, Configuration Mgmt, Observability  ║
+╚══════════════════════════════════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLIENT PERSPECTIVE                          │
@@ -283,6 +298,7 @@ Domain-specific design has been moved to separate files:
 | Case Management | [domains/case-management.md](domains/case-management.md) |
 | Scheduling | [domains/scheduling.md](domains/scheduling.md) |
 | Communication | [cross-cutting/communication.md](cross-cutting/communication.md) |
+| Search | [cross-cutting/search.md](cross-cutting/search.md) |
 
 *Note: Client Management, Intake, Eligibility, and Document Management will be added as those domains are designed. Reporting aggregates data from other domains and doesn't have its own design doc.*
 

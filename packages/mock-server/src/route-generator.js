@@ -9,6 +9,7 @@ import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler } from './handlers/update-handler.js';
 import { createDeleteHandler } from './handlers/delete-handler.js';
 import { createTransitionHandler } from './handlers/transition-handler.js';
+import { createSearchHandler } from './handlers/search-handler.js';
 
 /**
  * Determine if a path is a collection endpoint (no {id} parameter)
@@ -66,7 +67,11 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachine, rules) {
     let description = '';
 
     // Determine handler based on method and path type
-    if (method === 'get' && isCollectionEndpoint(endpoint.path)) {
+    if (endpoint.operationId === 'search') {
+      // Cross-resource search endpoint — custom handler
+      handler = createSearchHandler(apiMetadata);
+      description = 'Cross-resource search';
+    } else if (method === 'get' && isCollectionEndpoint(endpoint.path)) {
       // GET /resources - List/search
       handler = createListHandler(apiMetadata, endpointWithCollection);
       description = 'List/search resources';

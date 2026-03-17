@@ -275,31 +275,37 @@ async function testApi(api, examples) {
   }
   
   // Test 6: POST - Validation error (422)
-  try {
-    console.log(`\n  6. POST ${apiPath} - validation error`);
-    const response = await fetch(`${BASE_URL}${apiPath}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invalidField: 'value' })
-    });
-    
-    if (response.status === 422) {
-      const data = await response.json();
-      if (data.code === 'VALIDATION_ERROR' && data.details) {
-        console.log(`     ✓ PASS: Returns 422 with validation details`);
-        console.log(`       Errors: ${data.details.length}`);
-        passed++;
+  // Skip if the API has no POST endpoint (e.g., search is GET-only)
+  const hasPostEndpoint = api.endpoints.some(e => e.method === 'POST');
+  if (hasPostEndpoint) {
+    try {
+      console.log(`\n  6. POST ${apiPath} - validation error`);
+      const response = await fetch(`${BASE_URL}${apiPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invalidField: 'value' })
+      });
+
+      if (response.status === 422) {
+        const data = await response.json();
+        if (data.code === 'VALIDATION_ERROR' && data.details) {
+          console.log(`     ✓ PASS: Returns 422 with validation details`);
+          console.log(`       Errors: ${data.details.length}`);
+          passed++;
+        } else {
+          console.log('     ✗ FAIL: 422 response structure incorrect');
+          failed++;
+        }
       } else {
-        console.log('     ✗ FAIL: 422 response structure incorrect');
+        console.log(`     ✗ FAIL: Expected 422, got ${response.status}`);
         failed++;
       }
-    } else {
-      console.log(`     ✗ FAIL: Expected 422, got ${response.status}`);
+    } catch (error) {
+      console.log(`     ✗ FAIL: ${error.message}`);
       failed++;
     }
-  } catch (error) {
-    console.log(`     ✗ FAIL: ${error.message}`);
-    failed++;
+  } else {
+    console.log(`\n  6. POST ${apiPath} - SKIPPED (no POST endpoint)`);
   }
   
   // Test 7: PATCH - Update resource (use existing example or created resource)

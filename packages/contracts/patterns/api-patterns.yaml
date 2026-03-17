@@ -50,6 +50,21 @@ naming:
   files: kebab-case
 
 # =============================================================================
+# Spec Authoring Style
+# =============================================================================
+authoring_style:
+  # Do not specify OpenAPI properties that merely restate the default behavior.
+  # Omitting defaults keeps specs concise and consistent.
+  omit_defaults:
+    description: |
+      Do not include OpenAPI fields whose values are already the default.
+      Examples of defaults to omit:
+      - style: form (default for query parameters)
+      - explode: true (default for query style: form)
+      - explode: false (prefer omitting; only include when behavior is ambiguous)
+      - required: false (default for parameters)
+
+# =============================================================================
 # List Endpoint Pattern# =============================================================================
 list_endpoints:
   # All REST list endpoints (GET /resources) must include these parameters
@@ -464,6 +479,7 @@ api_classification:
         - communication         # Notices and correspondence
         - configuration         # Business rules and settings
         - reporting             # Aggregated data and audit events
+        - search                # Cross-resource search
       example: |
         info:
           title: Applications API
