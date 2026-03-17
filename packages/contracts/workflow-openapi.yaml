@@ -27,8 +27,8 @@ servers:
 tags:
   - name: Tasks
     description: Manage workflow tasks.
-  - name: Task Audit Events
-    description: Read-only audit trail for task state transitions.
+  - name: Events
+    description: Read-only domain event log for task lifecycle transitions.
   - name: Queues
     description: Manage task routing queues.
 
@@ -277,46 +277,49 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  "/task-audit-events":
+  "/events":
     get:
-      summary: List task audit events
-      description: Retrieve a paginated list of task audit events.
-      operationId: listTaskAuditEvents
+      summary: List domain events
+      description: Retrieve a paginated list of domain events across all resources.
+      operationId: listEvents
       tags:
-        - Task Audit Events
+        - Events
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
       responses:
         "200":
-          description: A paginated collection of task audit events.
+          description: A paginated collection of domain events.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TaskAuditEventList"
+                $ref: "#/components/schemas/DomainEventList"
         "400":
           $ref: "./components/responses.yaml#/BadRequest"
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  "/task-audit-events/{taskAuditEventId}":
+  "/events/{eventId}":
     parameters:
-      - $ref: "#/components/parameters/TaskAuditEventIdParam"
+      - $ref: "#/components/parameters/EventIdParam"
 
     get:
-      summary: Get a task audit event
-      description: Retrieve a single task audit event by identifier.
-      operationId: getTaskAuditEvent
+      summary: Get a domain event
+      description: Retrieve a single domain event by identifier.
+      operationId: getEvent
       tags:
-        - Task Audit Events
+        - Events
       responses:
         "200":
-          description: Task audit event retrieved successfully.
+          description: Domain event retrieved successfully.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TaskAuditEvent"
+                $ref: "#/components/schemas/DomainEvent"
+              examples:
+                DomainEventExample1:
+                  $ref: "./workflow-openapi-examples.yaml#/DomainEventExample1"
         "404":
           $ref: "./components/responses.yaml#/NotFound"
         "500":
@@ -344,11 +347,11 @@ components:
         format: uuid
       example: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90
 
-    TaskAuditEventIdParam:
-      name: taskAuditEventId
+    EventIdParam:
+      name: eventId
       in: path
       required: true
-      description: Unique identifier of the task audit event.
+      description: Unique identifier of the domain event.
       schema:
         type: string
         format: uuid
@@ -508,6 +511,12 @@ components:
           type: string
           format: uuid
           description: Reference to the Case this task belongs to.
+        outcome:
+          type: string
+          description: Completion outcome recorded when the task was completed (e.g., approved, denied).
+        completionNotes:
+          type: string
+          description: Optional notes recorded when the task was completed.
         createdAt:
           type: string
           format: date-time
@@ -519,65 +528,11 @@ components:
           description: Timestamp when the task was last updated.
           readOnly: true
 
-    TaskAuditEvent:
-      type: object
-      description: An immutable record of a task state transition.
-      additionalProperties: false
-      required:
-        - id
-        - taskId
-        - eventType
-        - occurredAt
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier for the audit event.
-          readOnly: true
-        taskId:
-          type: string
-          format: uuid
-          description: Reference to the task that transitioned.
-        eventType:
-          type: string
-          enum:
-            - created
-            - assigned
-            - completed
-            - returned_to_queue
-          description: The type of lifecycle event.
-        previousValue:
-          type: string
-          description: The status before the transition.
-        newValue:
-          type: string
-          description: The status after the transition.
-        performedById:
-          type: string
-          format: uuid
-          description: Reference to the user who triggered the transition.
-        reason:
-          type: string
-          description: Optional reason provided for the transition.
-        occurredAt:
-          type: string
-          format: date-time
-          description: When the transition occurred.
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp when the audit event was created.
-          readOnly: true
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp when the audit event was last updated.
-          readOnly: true
+    DomainEvent:
+      $ref: "./components/events.yaml#/DomainEvent"
 
-    TaskAuditEventList:
-      description: Paginated list of task audit events.
+    DomainEventList:
+      description: Paginated list of domain events.
       unevaluatedProperties: false
       allOf:
         - $ref: "./components/pagination.yaml#/Pagination"
@@ -588,7 +543,7 @@ components:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/TaskAuditEvent"
+                $ref: "#/components/schemas/DomainEvent"
 
     TaskCreate:
       allOf:

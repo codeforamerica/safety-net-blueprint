@@ -1,6 +1,6 @@
 # Workflow Domain
 
-> **Status:** Task, TaskAuditEvent, and Queue APIs implemented (alpha). State machine engine supports transitions, guards, `set`, `create`, and `evaluate-rules` effects. Rule evaluation engine handles assignment and priority rules. Additional entities and behavioral artifacts (metrics, events) are future work. The [workflow prototype](../../prototypes/workflow-prototype.md) designs the full set of patterns.
+> **Status:** Task, Queue, and Events APIs implemented (alpha). State machine engine supports transitions, guards, `set`, `create`, `evaluate-rules`, and `event` effects with conditional execution via `when` clauses. Rule evaluation engine handles assignment and priority rules. Additional entities and behavioral artifacts (metrics) are future work. The [workflow prototype](../../prototypes/workflow-prototype.md) designs the full set of patterns.
 
 See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
@@ -21,9 +21,9 @@ Based on: [WS-HumanTask](https://docs.oasis-open.org/bpel4people/ws-humantask-1.
 - Single-owner assignment — follows WS-HumanTask's `actualOwner` pattern. Group/queue assignment is future work.
 - Minimal status enum — the base set (`pending`, `in_progress`, `completed`) maps to the universal core of every task system. States extend via overlay.
 
-### TaskAuditEvent
+### Domain Events
 
-Immutable audit trail for task state transitions. Created automatically by the state machine engine's `create` effects — read-only API (no POST/PATCH/DELETE). [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
+Immutable records emitted whenever a state machine transition fires or an object is created. The `event` effect type in the state machine YAML declares what action to record and what transition-specific data to include. All domains write to the same events collection — `domain`, `resource`, and `action` identify the event type. Read-only API (no POST/PATCH/DELETE). [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml), [Schema: `components/events.yaml`](../../../packages/contracts/components/events.yaml)
 
 | Concept | Industry Source |
 |---------|----------------|
@@ -70,7 +70,7 @@ onCreate:
 
 ### State Machine
 
-The task lifecycle defines 12 transitions across 9 states. 4 transitions are implemented today (`create`, `claim`, `complete`, `release`) with guards and `set`/`create`/`evaluate-rules` effects working in the mock server. See [`workflow-state-machine.yaml`](../../../packages/contracts/workflow-state-machine.yaml). The remaining transitions use the same effect types and patterns.
+The task lifecycle defines 12 transitions across 9 states. 4 transitions are implemented today (`create`, `claim`, `complete`, `release`) with guards and `set`/`create`/`evaluate-rules`/`event` effects working in the mock server. See [`workflow-state-machine.yaml`](../../../packages/contracts/workflow-state-machine.yaml). The remaining transitions use the same effect types and patterns.
 
 **Implemented:** `pending`, `in_progress`, `completed` (3 states, 4 transitions including `onCreate`)
 
@@ -79,7 +79,8 @@ The task lifecycle defines 12 transitions across 9 states. 4 transitions are imp
 Key behavioral patterns:
 - Each transition trigger becomes an RPC API endpoint (e.g., `claim` -> `POST /workflow/tasks/:id/claim`)
 - Guards enforce preconditions (e.g., task is unassigned, caller has required skills)
-- Effects include: `set` (update fields), `create` (audit events), `evaluate-rules` (routing/priority), `lookup` (SLA config, planned), `event` (domain events, planned)
+- Effects include: `set` (update fields), `create` (create related records), `evaluate-rules` (routing/priority), `event` (domain events), `lookup` (SLA config, planned)
+- Conditional effects: `when` clause (JSON Logic) on any effect — fires only when the condition matches the request or resource context
 - SLA clock pauses on `awaiting_client` and `awaiting_verification` states (planned)
 
 ## Customization
@@ -116,8 +117,8 @@ Four categories of operational metrics, with the prototype proving one metric fr
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| OpenAPI spec | Alpha | `workflow-openapi.yaml` — Task CRUD, Queue CRUD, TaskAuditEvent (read-only). Additional entities in future issues |
-| State machine YAML | Alpha | `workflow-state-machine.yaml` — 4 transitions with guards, `set`/`create`/`evaluate-rules` effects. 8 more planned. See [workflow prototype](../../prototypes/workflow-prototype.md) |
+| OpenAPI spec | Alpha | `workflow-openapi.yaml` — Task CRUD, Queue CRUD, Events (read-only). Additional entities in future issues |
+| State machine YAML | Alpha | `workflow-state-machine.yaml` — 4 transitions with guards, `set`/`create`/`evaluate-rules`/`event` effects, `when` conditional execution. 8 more planned. See [workflow prototype](../../prototypes/workflow-prototype.md) |
 | Rules YAML | Alpha | `workflow-rules.yaml` — Assignment and priority rule sets with JSON Logic conditions. See [Customizing Rules](#customizing-rules) |
 | Metrics YAML | Draft | 4 metric categories; designed in prototype, not yet implemented |
 

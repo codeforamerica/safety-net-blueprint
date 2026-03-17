@@ -7,8 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { seedDatabase, seedAllDatabases } from '../../src/seeder.js';
 import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
-import { count, findAll, closeAll } from '../../src/database-manager.js';
-import { unlinkSync, existsSync } from 'fs';
+import { count, findAll, clearAll } from '../../src/database-manager.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -16,19 +15,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const specsDir = join(__dirname, '../../../contracts');
 
-// Cleanup function
-const cleanup = () => {
-  closeAll();
-  // Clean up test databases
-  const testDbPath = join(__dirname, '../../../generated/mock-data');
-  try {
-    if (existsSync(join(testDbPath, 'persons.db'))) {
-      unlinkSync(join(testDbPath, 'persons.db'));
-    }
-  } catch (e) {
-    // Ignore cleanup errors
-  }
-};
+// Cleanup function — uses SQL DELETE rather than file deletion to
+// avoid SQLite WAL replay issues (deleting .db but not .db-wal/.db-shm
+// causes WAL to be replayed into the new file, restoring deleted rows).
+const cleanup = () => { clearAll('persons'); };
 
 test('Database Seeder Tests', async (t) => {
   

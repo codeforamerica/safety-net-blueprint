@@ -1,0 +1,66 @@
+# Shared domain event schema
+#
+# DomainEvent is the unified audit trail record emitted whenever a state machine
+# transition fires or an object is created. All domains write to the same events
+# collection; domain + resource + action identify the event type.
+#
+# Used by: workflow-openapi.yaml
+
+DomainEvent:
+  type: object
+  description: |
+    An immutable record of a state transition or significant lifecycle event.
+    Emitted by the state machine engine whenever a transition fires or an object
+    is first created.
+  additionalProperties: false
+  required:
+    - id
+    - domain
+    - resource
+    - action
+    - resourceId
+    - performedById
+    - occurredAt
+    - createdAt
+    - updatedAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the event.
+      readOnly: true
+    domain:
+      type: string
+      description: Domain that owns the event (e.g., workflow).
+    resource:
+      type: string
+      description: Resource type the event relates to (e.g., task).
+    action:
+      type: string
+      description: The action that occurred (e.g., created, claimed, completed).
+    resourceId:
+      type: string
+      format: uuid
+      description: Identifier of the resource that generated the event.
+    performedById:
+      type: string
+      format: uuid
+      description: User who triggered the event.
+    occurredAt:
+      type: string
+      format: date-time
+      description: When the event occurred.
+    data:
+      type: object
+      description: Transition-specific payload. Schema varies by action.
+      additionalProperties: true
+    createdAt:
+      type: string
+      format: date-time
+      description: Timestamp when the event record was created.
+      readOnly: true
+    updatedAt:
+      type: string
+      format: date-time
+      description: Timestamp when the event record was last updated.
+      readOnly: true

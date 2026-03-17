@@ -52,6 +52,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       const context = {
         caller: { id: callerId },
         object: { ...resource },  // Pre-transition snapshot
+        request: req.body || {},
         now
       };
 
@@ -71,7 +72,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
 
       // Clone resource, apply effects, update status
       const updated = { ...resource };
-      const { pendingCreates, pendingRuleEvaluations } = applyEffects(transition.effects, updated, context);
+      const { pendingCreates, pendingRuleEvaluations, pendingEvents } = applyEffects(transition.effects, updated, context);
       updated.status = transition.to;
 
       // Process pending rule evaluations
@@ -88,13 +89,29 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       // Persist changes
       const result = update(resourceName, resourceId, diff);
 
-      // Execute pending creates (audit events, etc.)
+      // Execute pending creates
       for (const { entity, data } of pendingCreates) {
         try {
           create(entity, data);
         } catch (createError) {
-          // Audit failures should not break transitions
           console.error(`Failed to create ${entity}:`, createError.message);
+        }
+      }
+
+      // Emit pending domain events
+      for (const event of pendingEvents) {
+        try {
+          create('events', {
+            domain: stateMachine.domain,
+            resource: stateMachine.object.toLowerCase(),
+            action: event.action,
+            resourceId: resource.id,
+            performedById: callerId,
+            occurredAt: now,
+            data: event.data
+          });
+        } catch (eventError) {
+          console.error(`Failed to emit event "${event.action}":`, eventError.message);
         }
       }
 

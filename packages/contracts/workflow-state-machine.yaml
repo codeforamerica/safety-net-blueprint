@@ -31,16 +31,9 @@ transitions:
         field: assignedToId
         value: $caller.id
         description: Assign task to the claiming worker
-      - type: create
-        entity: task-audit-events
-        description: Record an "assigned" audit event
-        fields:
-          taskId: $object.id
-          eventType: assigned
-          previousValue: $object.status
-          newValue: in_progress
-          performedById: $caller.id
-          occurredAt: $now
+      - type: event
+        action: claimed
+        description: Emit a domain event recording the claim
 
   - trigger: complete
     from: in_progress
@@ -48,16 +41,34 @@ transitions:
     guards:
       - callerIsAssignedWorker
     effects:
+      - type: set
+        field: completedAt
+        value: $now
+        description: Record when work finished
+      - type: set
+        field: outcome
+        value: $request.outcome
+        description: Store the completion outcome from the request
+      - type: set
+        field: completionNotes
+        value: $request.notes
+        description: Store optional completion notes from the request
+      - type: event
+        action: completed
+        data:
+          outcome: $request.outcome
+        description: Emit a domain event recording the completion and its outcome
       - type: create
-        entity: task-audit-events
-        description: Record a "completed" audit event
+        entity: tasks
+        when: {"==": [{"var": "request.createFollowUp"}, true]}
+        description: Create a follow-up task when the caller requests one
         fields:
-          taskId: $object.id
-          eventType: completed
-          previousValue: $object.status
-          newValue: completed
-          performedById: $caller.id
-          occurredAt: $now
+          name: $object.name
+          description: $object.description
+          programType: $object.programType
+          isExpedited: $object.isExpedited
+          caseId: $object.caseId
+          status: pending
 
   - trigger: release
     from: in_progress
@@ -69,16 +80,11 @@ transitions:
         field: assignedToId
         value: null
         description: Clear assignment so task returns to queue
-      - type: create
-        entity: task-audit-events
-        description: Record a "returned_to_queue" audit event
-        fields:
-          taskId: $object.id
-          eventType: returned_to_queue
-          previousValue: $object.status
-          newValue: pending
-          performedById: $caller.id
-          occurredAt: $now
+      - type: event
+        action: released
+        data:
+          reason: $request.reason
+        description: Emit a domain event recording the release and its reason
       - type: evaluate-rules
         ruleType: assignment
         description: Re-evaluate assignment rules after release
@@ -88,16 +94,9 @@ transitions:
 
 onCreate:
   effects:
-    - type: create
-      entity: task-audit-events
-      description: Record a "created" audit event when a task is first created
-      fields:
-        taskId: $object.id
-        eventType: created
-        previousValue: null
-        newValue: $object.status
-        performedById: $caller.id
-        occurredAt: $now
+    - type: event
+      action: created
+      description: Emit a domain event when a task is first created
     - type: evaluate-rules
       ruleType: assignment
       description: Evaluate assignment rules to route task to a queue
@@ -116,6 +115,9 @@ requestBodies:
       notes:
         type: string
         description: Optional notes about the completion
+      createFollowUp:
+        type: boolean
+        description: When true, a follow-up task is automatically created
     required:
       - outcome
   release:

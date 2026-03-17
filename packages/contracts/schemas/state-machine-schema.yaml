@@ -195,15 +195,12 @@ $defs:
       relativeTo:
         type: string
         description: Reference point for relative values (e.g., $now).
-      name:
+      action:
         type: string
-        description: Event name (for event effects).
-      schema:
-        type: string
-        description: Event payload schema name (for event effects).
-      payload:
+        description: Event action name (for event effects, e.g. "claimed", "completed").
+      data:
         type: object
-        description: Event payload template (for event effects).
+        description: Transition-specific data to include in the event payload.
         additionalProperties: true
       ruleType:
         type: string

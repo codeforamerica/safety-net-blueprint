@@ -4,6 +4,8 @@
  * based on a state machine contract.
  */
 
+import jsonLogic from 'json-logic-js';
+
 /**
  * Resolve a value expression against a context.
  * Supports $caller.*, $object.*, $now, null, and literal values.
@@ -29,6 +31,11 @@ export function resolveValue(value, context) {
     if (value.startsWith('$object.')) {
       const field = value.slice('$object.'.length);
       return context.object?.[field] ?? null;
+    }
+
+    if (value.startsWith('$request.')) {
+      const field = value.slice('$request.'.length);
+      return context.request?.[field] ?? null;
     }
   }
 
@@ -152,25 +159,55 @@ export function applyCreateEffect(effect, context) {
 }
 
 /**
+ * Apply a single event effect — resolves data fields and returns the event to emit.
+ * The engine populates envelope fields (domain, resource, resourceId, etc.) automatically
+ * from context; the effect only specifies action and optional data.
+ * @param {Object} effect - Effect definition with action and optional data
+ * @param {Object} context - Context with caller, object, and now info
+ * @returns {{ action: string, data: Object }}
+ */
+export function applyEventEffect(effect, context) {
+  const data = {};
+  for (const [key, value] of Object.entries(effect.data || {})) {
+    data[key] = resolveValue(value, context);
+  }
+  return { action: effect.action, data };
+}
+
+/**
  * Apply all effects of supported types. Skips unimplemented types silently.
+ * Evaluates any `when` clause (JSON Logic) before executing each effect —
+ * effects whose condition is false are skipped.
  * @param {Array} effects - Array of effect definitions
  * @param {Object} resource - The resource to modify (mutated in place)
- * @param {Object} context - Context with caller info
- * @returns {{ pendingCreates: Array<{ entity: string, data: Object }>, pendingRuleEvaluations: Array<{ ruleType: string }> }}
+ * @param {Object} context - Context with caller, object, request, and now info
+ * @returns {{ pendingCreates: Array, pendingRuleEvaluations: Array, pendingEvents: Array }}
  */
 export function applyEffects(effects, resource, context) {
   const pendingCreates = [];
   const pendingRuleEvaluations = [];
+  const pendingEvents = [];
 
-  if (!effects) return { pendingCreates, pendingRuleEvaluations };
+  if (!effects) return { pendingCreates, pendingRuleEvaluations, pendingEvents };
 
   for (const effect of effects) {
+    // Evaluate `when` clause before executing the effect
+    if (effect.when !== undefined) {
+      const logicData = { request: context.request || {}, object: context.object || {} };
+      if (!jsonLogic.apply(effect.when, logicData)) {
+        continue;
+      }
+    }
+
     switch (effect.type) {
       case 'set':
         applySetEffect(effect, resource, context);
         break;
       case 'create':
         pendingCreates.push(applyCreateEffect(effect, context));
+        break;
+      case 'event':
+        pendingEvents.push(applyEventEffect(effect, context));
         break;
       case 'evaluate-rules':
         pendingRuleEvaluations.push({ ruleType: effect.ruleType });
@@ -181,5 +218,5 @@ export function applyEffects(effects, resource, context) {
     }
   }
 
-  return { pendingCreates, pendingRuleEvaluations };
+  return { pendingCreates, pendingRuleEvaluations, pendingEvents };
 }
