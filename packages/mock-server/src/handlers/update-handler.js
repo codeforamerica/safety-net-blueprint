@@ -4,6 +4,7 @@
 
 import { findById, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
+import { extractAuthContext } from '../auth-context.js';
 
 /**
  * Create update handler for a resource
@@ -15,7 +16,18 @@ export function createUpdateHandler(apiMetadata, endpoint) {
   const paramName = extractPathParam(endpoint.path);
   return (req, res) => {
     try {
-      const resourceId = req.params[paramName] || req.params.id;
+      let resourceId = req.params[paramName] || req.params.id;
+
+      if (resourceId === 'me') {
+        const auth = extractAuthContext(req);
+        if (!auth) {
+          return res.status(401).json({
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required'
+          });
+        }
+        resourceId = auth.userId;
+      }
 
       // Check if resource exists
       const existing = findById(endpoint.collectionName, resourceId);
