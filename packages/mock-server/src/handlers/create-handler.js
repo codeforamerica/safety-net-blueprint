@@ -6,6 +6,7 @@ import { create, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { applyEffects } from '../state-machine-engine.js';
 import { processRuleEvaluations } from './rule-evaluation.js';
+import { eventBus } from '../event-bus.js';
 
 /**
  * Create create handler for a resource
@@ -51,10 +52,11 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         const context = {
           caller: { id: callerId },
           object: { ...resource },
+          request: req.body || {},
           now
         };
 
-        const { pendingCreates, pendingRuleEvaluations } = applyEffects(
+        const { pendingCreates, pendingRuleEvaluations, pendingEvents } = applyEffects(
           stateMachine.onCreate.effects,
           resource,
           context
@@ -78,12 +80,30 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
           Object.assign(resource, diff);
         }
 
-        // Execute pending creates (audit events, etc.)
+        // Execute pending creates
         for (const { entity, data } of pendingCreates) {
           try {
             create(entity, data);
           } catch (createError) {
             console.error(`Failed to create ${entity}:`, createError.message);
+          }
+        }
+
+        // Emit pending domain events
+        for (const event of pendingEvents) {
+          try {
+            const stored = create('events', {
+              domain: stateMachine.domain,
+              resource: stateMachine.object.toLowerCase(),
+              action: event.action,
+              resourceId: resource.id,
+              performedById: callerId,
+              occurredAt: now,
+              data: event.data
+            });
+            eventBus.emit('domain-event', stored);
+          } catch (eventError) {
+            console.error(`Failed to emit event "${event.action}":`, eventError.message);
           }
         }
       }

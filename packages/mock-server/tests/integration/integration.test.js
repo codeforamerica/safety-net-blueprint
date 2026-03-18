@@ -753,17 +753,17 @@ async function runTests() {
     }
 
     // =========================================================================
-    // Audit Event Integration Tests
+    // Domain Event Integration Tests
     // =========================================================================
     console.log(`\n${'='.repeat(70)}`);
-    console.log('Audit Event Integration Tests');
+    console.log('Domain Event Integration Tests');
     console.log('='.repeat(70));
 
     let auditTaskId = null;
 
-    // Audit Test 1: Create a fresh task for audit testing
+    // Event Test 1: Create a fresh task for event testing
     try {
-      console.log('\n  AUDIT-1. Create a fresh task for audit event tests');
+      console.log('\n  EVENT-1. Create a fresh task for domain event tests');
       const response = await fetch(`${BASE_URL}${taskPath}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -789,33 +789,31 @@ async function runTests() {
       totalTests++;
     }
 
-    // Audit Test 2: Claim → verify "assigned" audit event
+    // Event Test 2: Claim → verify "claimed" domain event
     if (auditTaskId) {
       try {
-        console.log(`\n  AUDIT-2. Claim task → verify "assigned" audit event`);
+        console.log(`\n  EVENT-2. Claim task → verify "claimed" domain event`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/claim`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' }
         });
 
-        const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${auditTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
         const listData = await listResponse.json();
 
         if (listData.items && listData.items.length === 2) {
-          const event = listData.items.find(e => e.eventType === 'assigned');
+          const event = listData.items.find(e => e.action === 'claimed');
           if (event &&
-              event.taskId === auditTaskId &&
-              event.previousValue === 'pending' &&
-              event.newValue === 'in_progress' &&
+              event.resourceId === auditTaskId &&
               event.performedById === 'worker-audit-1') {
-            console.log('     ✓ PASS: "assigned" audit event created with correct fields');
+            console.log('     ✓ PASS: "claimed" domain event created with correct fields');
             totalPassed++;
           } else {
-            console.log(`     ✗ FAIL: Audit event fields incorrect: ${JSON.stringify(event)}`);
+            console.log(`     ✗ FAIL: Domain event fields incorrect: ${JSON.stringify(event)}`);
             totalFailed++;
           }
         } else {
-          console.log(`     ✗ FAIL: Expected 2 audit events, got ${listData.items?.length ?? 0}`);
+          console.log(`     ✗ FAIL: Expected 2 domain events, got ${listData.items?.length ?? 0}`);
           totalFailed++;
         }
         totalTests++;
@@ -826,30 +824,30 @@ async function runTests() {
       }
     }
 
-    // Audit Test 3: Release → verify 3 audit events (created + assigned + returned_to_queue)
+    // Event Test 3: Release → verify 3 domain events (created + claimed + released)
     if (auditTaskId) {
       try {
-        console.log(`\n  AUDIT-3. Release task → verify 3 audit events`);
+        console.log(`\n  EVENT-3. Release task → verify 3 domain events`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/release`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' },
-          body: JSON.stringify({ reason: 'Testing audit events' })
+          body: JSON.stringify({ reason: 'Testing domain events' })
         });
 
-        const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${auditTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
         const listData = await listResponse.json();
 
         if (listData.items && listData.items.length === 3) {
-          const types = listData.items.map(e => e.eventType).sort();
-          if (types.includes('assigned') && types.includes('created') && types.includes('returned_to_queue')) {
-            console.log('     ✓ PASS: 3 audit events (created + assigned + returned_to_queue)');
+          const actions = listData.items.map(e => e.action).sort();
+          if (actions.includes('claimed') && actions.includes('created') && actions.includes('released')) {
+            console.log('     ✓ PASS: 3 domain events (created + claimed + released)');
             totalPassed++;
           } else {
-            console.log(`     ✗ FAIL: Unexpected event types: ${types.join(', ')}`);
+            console.log(`     ✗ FAIL: Unexpected event actions: ${actions.join(', ')}`);
             totalFailed++;
           }
         } else {
-          console.log(`     ✗ FAIL: Expected 3 audit events, got ${listData.items?.length ?? 0}`);
+          console.log(`     ✗ FAIL: Expected 3 domain events, got ${listData.items?.length ?? 0}`);
           totalFailed++;
         }
         totalTests++;
@@ -860,10 +858,10 @@ async function runTests() {
       }
     }
 
-    // Audit Test 4: Claim again + complete → verify 5 total audit events
+    // Event Test 4: Claim again + complete → verify 5 total domain events
     if (auditTaskId) {
       try {
-        console.log(`\n  AUDIT-4. Claim + complete → verify 5 total audit events`);
+        console.log(`\n  EVENT-4. Claim + complete → verify 5 total domain events`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/claim`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' }
@@ -874,20 +872,20 @@ async function runTests() {
           body: JSON.stringify({ outcome: 'approved' })
         });
 
-        const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${auditTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
         const listData = await listResponse.json();
 
         if (listData.items && listData.items.length === 5) {
-          const types = listData.items.map(e => e.eventType).sort();
-          if (types.includes('assigned') && types.includes('completed') && types.includes('created') && types.includes('returned_to_queue')) {
-            console.log('     ✓ PASS: 5 audit events total');
+          const actions = listData.items.map(e => e.action).sort();
+          if (actions.includes('claimed') && actions.includes('completed') && actions.includes('created') && actions.includes('released')) {
+            console.log('     ✓ PASS: 5 domain events total');
             totalPassed++;
           } else {
-            console.log(`     ✗ FAIL: Unexpected event types: ${types.join(', ')}`);
+            console.log(`     ✗ FAIL: Unexpected event actions: ${actions.join(', ')}`);
             totalFailed++;
           }
         } else {
-          console.log(`     ✗ FAIL: Expected 5 audit events, got ${listData.items?.length ?? 0}`);
+          console.log(`     ✗ FAIL: Expected 5 domain events, got ${listData.items?.length ?? 0}`);
           totalFailed++;
         }
         totalTests++;
@@ -898,21 +896,21 @@ async function runTests() {
       }
     }
 
-    // Audit Test 5: GET single audit event by ID
+    // Event Test 5: GET single domain event by ID
     if (auditTaskId) {
       try {
-        console.log(`\n  AUDIT-5. GET single audit event by ID`);
-        const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${auditTaskId}`);
+        console.log(`\n  EVENT-5. GET single domain event by ID`);
+        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
         const listData = await listResponse.json();
 
         if (listData.items && listData.items.length > 0) {
           const eventId = listData.items[0].id;
-          const getResponse = await fetch(`${BASE_URL}/task-audit-events/${eventId}`);
+          const getResponse = await fetch(`${BASE_URL}/events/${eventId}`);
 
           if (getResponse.status === 200) {
             const event = await getResponse.json();
-            if (event.id === eventId && event.taskId === auditTaskId && event.occurredAt) {
-              console.log(`     ✓ PASS: GET /task-audit-events/${eventId} returns correct event`);
+            if (event.id === eventId && event.resourceId === auditTaskId && event.occurredAt) {
+              console.log(`     ✓ PASS: GET /events/${eventId} returns correct event`);
               totalPassed++;
             } else {
               console.log(`     ✗ FAIL: Event fields incorrect`);
@@ -923,7 +921,7 @@ async function runTests() {
             totalFailed++;
           }
         } else {
-          console.log('     ✗ FAIL: No audit events to test GET by ID');
+          console.log('     ✗ FAIL: No domain events to test GET by ID');
           totalFailed++;
         }
         totalTests++;
@@ -1109,26 +1107,26 @@ async function runTests() {
       }
     }
 
-    // RULE-4: Verify audit event created on task creation (onCreate effects)
+    // RULE-4: Verify "created" domain event from onCreate effects
     if (snapTaskId) {
       try {
-        console.log('\n  RULE-4. Verify "created" audit event from onCreate effects');
-        const listResponse = await fetch(`${BASE_URL}/task-audit-events?q=taskId:${snapTaskId}`);
+        console.log('\n  RULE-4. Verify "created" domain event from onCreate effects');
+        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${snapTaskId}`);
         const listData = await listResponse.json();
 
         // Should have at least a "created" event from onCreate
-        const createdEvents = listData.items?.filter(e => e.eventType === 'created') || [];
+        const createdEvents = listData.items?.filter(e => e.action === 'created') || [];
         if (createdEvents.length >= 1) {
           const event = createdEvents[0];
-          if (event.taskId === snapTaskId && event.newValue === 'pending') {
-            console.log('     ✓ PASS: "created" audit event exists with correct fields');
+          if (event.resourceId === snapTaskId && event.occurredAt) {
+            console.log('     ✓ PASS: "created" domain event exists with correct fields');
             totalPassed++;
           } else {
-            console.log(`     ✗ FAIL: Audit event fields incorrect: ${JSON.stringify(event)}`);
+            console.log(`     ✗ FAIL: Domain event fields incorrect: ${JSON.stringify(event)}`);
             totalFailed++;
           }
         } else {
-          console.log(`     ✗ FAIL: Expected "created" audit event, got ${createdEvents.length}`);
+          console.log(`     ✗ FAIL: Expected "created" domain event, got ${createdEvents.length}`);
           totalFailed++;
         }
         totalTests++;

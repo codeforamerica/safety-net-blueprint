@@ -895,16 +895,9 @@ function generateOrderedRpcRequests(apiMetadata, rpcEndpoints, examples, stateMa
 function generateApiRequests(apiMetadata) {
   const rawExamples = loadExamples(apiMetadata.name);
 
-  // Derive resource name from endpoint paths (e.g., "/tasks" → "tasks")
-  // This gives proper object names ("Task") instead of spec names ("Workflow")
-  const collectionPath = apiMetadata.endpoints.find(e => !e.path.includes('{'))?.path;
-  const primaryCollection = collectionPath
-    ? collectionPath.split('/').filter(s => s)[0]
-    : apiMetadata.name;
-  const displayMeta = { ...apiMetadata, name: primaryCollection };
-
-  const items = [];
-  const rpcEndpoints = [];
+  // Group endpoints by their top-level resource path (e.g., /tasks, /queues, /events)
+  // This ensures multi-resource specs like workflow get separate folders per resource.
+  const resourceGroups = new Map();
 
   // Sort endpoints: GET (list), GET (id), POST (create), PATCH, DELETE
   // RPC endpoints (POST on item sub-paths) are collected separately for ordering.
@@ -922,14 +915,23 @@ function generateApiRequests(apiMetadata) {
   });
 
   for (const endpoint of sortedEndpoints) {
+    // Skip endpoints that don't return JSON (e.g., SSE streams, file downloads)
+    if (endpoint.method === 'GET' && !endpoint.responseSchema) {
+      continue;
+    }
+
+    const endpointCollection = endpoint.path.split('/').filter(s => s)[0];
+    if (!resourceGroups.has(endpointCollection)) {
+      resourceGroups.set(endpointCollection, { items: [], rpcEndpoints: [] });
+    }
+    const group = resourceGroups.get(endpointCollection);
+
+    const displayMeta = { ...apiMetadata, name: endpointCollection };
     const isCollection = !endpoint.path.includes('{');
     const isItem = endpoint.path.includes('{');
-    // RPC = POST on a sub-path like /tasks/{taskId}/claim (more than one '{' segment's worth)
     const isRpc = endpoint.method === 'POST' && isItem;
 
-    // Match examples to endpoints by resource type using the same schema prefix
-    // logic as the seeder — e.g., /queues gets QueueExample*, /tasks gets TaskExample*
-    const endpointCollection = endpoint.path.split('/').filter(s => s)[0];
+    // Match examples to endpoints by resource type
     const schemaPrefix = collectionToSchemaPrefix(endpointCollection);
     const filtered = {};
     for (const [key, value] of Object.entries(rawExamples)) {
@@ -946,7 +948,7 @@ function generateApiRequests(apiMetadata) {
     } else if (endpoint.method === 'POST' && isCollection) {
       requests = generateCreateRequests(displayMeta, endpoint, examples);
     } else if (isRpc) {
-      rpcEndpoints.push(endpoint);
+      group.rpcEndpoints.push(endpoint);
       continue; // handled below
     } else if (endpoint.method === 'PATCH' && isItem) {
       requests = generateUpdateRequests(displayMeta, endpoint, examples);
@@ -954,35 +956,41 @@ function generateApiRequests(apiMetadata) {
       requests = generateDeleteRequests(displayMeta, endpoint, examples);
     }
 
-    items.push(...requests);
+    group.items.push(...requests);
   }
 
-  // Generate RPC requests ordered by valid state machine transitions
+  // Generate RPC requests per resource group
+  const folders = [];
   let callerId = null;
-  if (rpcEndpoints.length > 0) {
-    const stateMachine = loadStateMachine(apiMetadata.name);
-    if (stateMachine) {
-      // Use the state machine's object name to find matching examples
-      const smPrefix = stateMachine.object || collectionToSchemaPrefix(primaryCollection);
-      const smFiltered = {};
-      for (const [key, value] of Object.entries(rawExamples)) {
-        if (key.startsWith(smPrefix)) smFiltered[key] = value;
-      }
-      const smExamples = extractIndividualResources(smFiltered);
-      const result = generateOrderedRpcRequests(displayMeta, rpcEndpoints, smExamples, stateMachine);
-      items.push(...result.requests);
-      callerId = result.callerId;
-    } else {
-      // No state machine — generate RPC requests in definition order with basic context
-      const primaryExamples = extractIndividualResources(rawExamples);
-      const rpcContext = { example: primaryExamples[0], callerId: 'postman-test-user' };
-      for (const ep of rpcEndpoints) {
-        items.push(generateRpcRequest(displayMeta, ep, rpcContext));
+
+  for (const [resourceName, group] of resourceGroups) {
+    const displayMeta = { ...apiMetadata, name: resourceName };
+
+    if (group.rpcEndpoints.length > 0) {
+      const stateMachine = loadStateMachine(apiMetadata.name);
+      if (stateMachine) {
+        const smPrefix = stateMachine.object || collectionToSchemaPrefix(resourceName);
+        const smFiltered = {};
+        for (const [key, value] of Object.entries(rawExamples)) {
+          if (key.startsWith(smPrefix)) smFiltered[key] = value;
+        }
+        const smExamples = extractIndividualResources(smFiltered);
+        const result = generateOrderedRpcRequests(displayMeta, group.rpcEndpoints, smExamples, stateMachine);
+        group.items.push(...result.requests);
+        callerId = result.callerId;
+      } else {
+        const primaryExamples = extractIndividualResources(rawExamples);
+        const rpcContext = { example: primaryExamples[0], callerId: 'postman-test-user' };
+        for (const ep of group.rpcEndpoints) {
+          group.items.push(generateRpcRequest(displayMeta, ep, rpcContext));
+        }
       }
     }
+
+    folders.push({ resourceName, items: group.items });
   }
 
-  return { resourceName: primaryCollection, items, callerId };
+  return { folders, callerId };
 }
 
 // =============================================================================
@@ -1074,29 +1082,38 @@ Flags:
     ]
   };
 
-  // Add folder for each API, named by resource type
+  // Add folder for each resource (multi-resource specs get multiple folders)
   console.log('\nGenerating requests...');
   for (const api of apiSpecs) {
     console.log(`  Processing ${api.title}...`);
-    const { resourceName, items: requests, callerId } = generateApiRequests(api);
-    const folderName = capitalize(resourceName);
-    console.log(`    Generated ${requests.length} requests → ${folderName}`);
+    const { folders, callerId } = generateApiRequests(api);
 
-    collection.item.push({
-      name: folderName,
-      item: requests,
-      description: api.title
-    });
+    for (const { resourceName, items: requests } of folders) {
+      const folderName = capitalize(resourceName);
+      console.log(`    Generated ${requests.length} requests → ${folderName}`);
 
-    // Add resource ID variables
-    const examples = extractIndividualResources(loadExamples(api.name));
-    if (examples.length > 0) {
-      const varName = `${singularize(resourceName)}Id`;
-      collection.variable.push({
-        key: varName,
-        value: examples[0].data.id,
-        type: 'string'
+      collection.item.push({
+        name: folderName,
+        item: requests,
+        description: api.title
       });
+
+      // Add resource ID variables
+      const rawExamples = loadExamples(api.name);
+      const schemaPrefix = collectionToSchemaPrefix(resourceName);
+      const filtered = {};
+      for (const [key, value] of Object.entries(rawExamples)) {
+        if (key.startsWith(schemaPrefix)) filtered[key] = value;
+      }
+      const examples = extractIndividualResources(filtered);
+      if (examples.length > 0) {
+        const varName = `${singularize(resourceName)}Id`;
+        collection.variable.push({
+          key: varName,
+          value: examples[0].data.id,
+          type: 'string'
+        });
+      }
     }
 
     // Add callerId variable if this API has state machine transitions

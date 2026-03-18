@@ -15,6 +15,7 @@ import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
 import { closeAll } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
+import { createSseHandler } from '../src/handlers/sse-handler.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -120,6 +121,10 @@ async function startMockServer() {
     app.get('/health', (req, res) => {
       res.json({ status: 'ok', apis: apiSpecs.map(a => a.name) });
     });
+
+    // Register SSE stream endpoint before item routes to avoid :id capture
+    app.get('/events/stream', createSseHandler());
+    console.log('  GET    /events/stream - Domain event stream (SSE)');
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;

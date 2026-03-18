@@ -114,7 +114,8 @@ rules:
       field: "application/json"
       function: truthy
 
-  # All responses should use application/json (except 204)
+  # All responses should use application/json (except 204 and non-JSON content types
+  # like text/event-stream for SSE endpoints)
   response-body-json-only:
     description: Response bodies must use application/json
     severity: error
@@ -122,3 +123,9 @@ rules:
     then:
       field: "application/json"
       function: truthy
+
+overrides:
+  # SSE streaming endpoints use text/event-stream, not application/json
+  - files: ["packages/contracts/workflow-openapi.yaml#/paths/~1events~1stream"]
+    rules:
+      response-body-json-only: off

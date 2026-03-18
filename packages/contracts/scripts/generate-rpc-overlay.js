@@ -83,9 +83,10 @@ export function discoverStateMachines(specsDir) {
  * Read the base API spec and extract the item endpoint path and parameter refs.
  * @param {string} specsDir - Path to the specs directory
  * @param {string} apiSpecFile - Filename of the API spec (e.g., "workflow-openapi.yaml")
+ * @param {string} [objectName] - State machine object name (e.g., "Task") to match the correct resource in multi-resource specs
  * @returns {{ itemPath: string, paramRefs: Array, tag: string } | null}
  */
-export function extractItemEndpoint(specsDir, apiSpecFile) {
+export function extractItemEndpoint(specsDir, apiSpecFile, objectName) {
   const specPath = join(specsDir, apiSpecFile);
   let spec;
   try {
@@ -95,6 +96,14 @@ export function extractItemEndpoint(specsDir, apiSpecFile) {
   }
 
   const paths = spec.paths || {};
+
+  // If objectName is provided, derive the expected collection path (e.g., "Task" → "/tasks")
+  const expectedCollection = objectName
+    ? `/${objectName.toLowerCase()}s`
+    : null;
+
+  let fallback = null;
+
   for (const [pathKey, pathItem] of Object.entries(paths)) {
     // Item endpoints contain a path parameter like {taskId}
     if (!pathKey.includes('{')) continue;
@@ -109,10 +118,20 @@ export function extractItemEndpoint(specsDir, apiSpecFile) {
     // Get the resource schema ref from the GET 200 response
     const schemaRef = getOp.responses?.['200']?.content?.['application/json']?.schema?.$ref || null;
 
-    return { itemPath: pathKey, paramRefs, tag, schemaRef };
+    const result = { itemPath: pathKey, paramRefs, tag, schemaRef };
+
+    // If we have an object name, match the path to the correct resource
+    if (expectedCollection && pathKey.startsWith(expectedCollection + '/')) {
+      return result;
+    }
+
+    // Keep first match as fallback for single-resource specs
+    if (!fallback) {
+      fallback = result;
+    }
   }
 
-  return null;
+  return fallback;
 }
 
 // =============================================================================
@@ -267,7 +286,7 @@ function main() {
       continue;
     }
 
-    const endpointInfo = extractItemEndpoint(specsDir, apiSpecFile);
+    const endpointInfo = extractItemEndpoint(specsDir, apiSpecFile, stateMachine.object);
     if (!endpointInfo) {
       console.warn(`  Skipping ${stateMachine.domain}: could not find item endpoint in ${apiSpecFile}`);
       continue;

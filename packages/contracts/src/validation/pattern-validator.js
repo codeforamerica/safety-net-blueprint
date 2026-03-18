@@ -269,6 +269,15 @@ export function validateSharedErrorResponses(path, method, operation, errors) {
 }
 
 /**
+ * Check if a GET operation returns application/json (not SSE, file downloads, etc.)
+ * @param {Object} operation - The OpenAPI operation object
+ * @returns {boolean}
+ */
+export function hasJsonResponse(operation) {
+  return !!operation.responses?.['200']?.content?.['application/json'];
+}
+
+/**
  * Check if path is a collection endpoint (no {id} parameter)
  * @param {string} path - The endpoint path
  * @returns {boolean}
@@ -312,8 +321,8 @@ export function validateSpec(spec, specName) {
   }
 
   for (const [path, methods] of Object.entries(spec.paths)) {
-    // Validate GET endpoints
-    if (methods.get) {
+    // Validate GET endpoints (skip non-JSON endpoints like SSE streams)
+    if (methods.get && hasJsonResponse(methods.get)) {
       if (isCollectionPath(path)) {
         // List endpoint validations
         validateListEndpointParameters(path, methods.get, errors);
