@@ -30,6 +30,7 @@ import { join, dirname, relative, resolve, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
+import { extractConfig, validateConfig } from '../src/overlay/config.js';
 import { bundleSpec } from '../src/bundle.js';
 import { discoverStateMachines, extractItemEndpoint, generateOverlay } from './generate-rpc-overlay.js';
 
@@ -682,6 +683,26 @@ async function main() {
     const overlayIsFile = statSync(overlayInput).isFile();
     const overlayFiles = overlayIsFile ? [overlayInput] : discoverOverlayFiles(overlayInput);
     const overlayDir = overlayIsFile ? dirname(overlayInput) : overlayInput;
+
+    // Extract and validate config from overlay files
+    const { config, errors: configErrors } = extractConfig(overlayFiles);
+    allWarnings = allWarnings.concat(configErrors);
+
+    if (config) {
+      const { errors: validationErrors, warnings: configWarnings } = validateConfig(config);
+      allWarnings = allWarnings.concat(validationErrors);
+      allWarnings = allWarnings.concat(configWarnings);
+
+      const summary = Object.entries(config)
+        .map(([k, v]) => {
+          if (typeof v === 'object') {
+            return Object.entries(v).map(([prop, val]) => `${k}.${prop}=${val}`).join(', ');
+          }
+          return `${k}=${v}`;
+        })
+        .join(', ');
+      console.log(`Config: ${summary}`);
+    }
 
     if (overlayFiles.length === 0) {
       console.log('No overlay files found');

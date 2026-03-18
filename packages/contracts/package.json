@@ -17,6 +17,7 @@
     "safety-net-design-reference": "./scripts/export-design-reference.js"
   },
   "exports": {
+    "./config": "./src/overlay/config.js",
     "./overlay": "./src/overlay/overlay-resolver.js",
     "./validation": "./src/validation/openapi-validator.js",
     "./loader": "./src/validation/openapi-loader.js",

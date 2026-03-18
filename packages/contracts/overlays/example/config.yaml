@@ -1,0 +1,74 @@
+# =============================================================================
+# Example Config Overlay
+# =============================================================================
+#
+# States declare cross-cutting preferences here instead of scattering
+# individual changes across many overlay files. The resolver reads the
+# `config` key and passes it to downstream transforms.
+#
+# How it works:
+#   - Add a `config` key to any overlay file, or use a dedicated file like
+#     this one. Each config key (e.g., x-casing) must appear in only one
+#     file across your overlay directory — duplicates cause an error.
+#   - Keys you omit keep their defaults (shown below).
+#   - The `actions` list can be empty if this file is config-only.
+#
+# To use: copy this file into your state overlay directory and uncomment
+# the keys you want to change.
+# =============================================================================
+
+overlay: 1.0.0
+info:
+  title: Example Config
+  version: 1.0.0
+  description: |
+    Declares cross-cutting API style preferences.
+    Uncomment and change values below to customize.
+
+config:
+  # ---------------------------------------------------------------------------
+  # x-casing — Controls naming convention for fields, parameters, and paths.
+  #
+  # Values:
+  #   camelCase   — fieldName, createdAt       (default)
+  #   snake_case  — field_name, created_at
+  # ---------------------------------------------------------------------------
+  x-casing: camelCase
+
+  # ---------------------------------------------------------------------------
+  # x-pagination — Controls how list endpoints paginate results.
+  #
+  # style values:
+  #   offset  — limit/offset query params, numeric paging  (default)
+  #   cursor  — opaque cursor token for next page
+  #   page    — page number / page size
+  #   links   — hypermedia links (next/prev URLs in response)
+  # ---------------------------------------------------------------------------
+  x-pagination:
+    style: offset
+
+  # ---------------------------------------------------------------------------
+  # x-search — Controls how list endpoints accept search/filter input.
+  #
+  # style values:
+  #   simple       — single `q` query parameter              (default)
+  #   filtered     — per-field query parameters (e.g., ?status=active)
+  #   post-search  — POST body with structured filter object
+  # ---------------------------------------------------------------------------
+  x-search:
+    style: simple
+
+  # ---------------------------------------------------------------------------
+  # x-relationship — Controls how related resources are represented.
+  #
+  # style values:
+  #   links-only  — related resources as URL links            (default)
+  #   expand      — ?expand=resource query param to inline related data
+  #   include     — JSON:API-style `included` sideloading
+  #   embed       — always inline related resources in response
+  # ---------------------------------------------------------------------------
+  x-relationship:
+    style: links-only
+
+# No overlay actions needed — this file is config-only.
+actions: []
