@@ -1,0 +1,25 @@
+overlay: 1.0.0
+info:
+  title: Example Relationship Overrides
+  version: 1.0.0
+  description: |
+    Demonstrates per-field relationship style overrides.
+
+    The global default style comes from config.yaml (x-relationship.style).
+    Individual fields can override the style and specify which fields to include
+    when using the expand style.
+
+actions:
+  # Expand Task.assignedToId with a field subset — useful when you want to
+  # display the assignee name alongside the task without a second API call.
+  - target: $.components.schemas.Task.properties.assignedToId
+    file: workflow-openapi.yaml
+    description: Add relationship metadata to Task.assignedToId
+    update:
+      type: string
+      format: uuid
+      description: Reference to the User assigned to this task.
+      x-relationship:
+        resource: User
+        style: expand
+        fields: [id, name, email]

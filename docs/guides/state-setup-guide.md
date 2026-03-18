@@ -418,14 +418,45 @@ jobs:
           npm test
 ```
 
+### Configuring relationships
+
+States can declare how FK fields represent related resources. Set a global default in your config overlay and optionally override per field.
+
+**1. Set global style in config:**
+
+```yaml
+config:
+  x-relationship:
+    style: expand
+```
+
+**2. Add `x-relationship` to FK fields via overlay actions:**
+
+```yaml
+actions:
+  - target: $.components.schemas.Task.properties.assignedToId
+    file: workflow-openapi.yaml
+    description: Expand assignedToId with field subset
+    update:
+      type: string
+      format: uuid
+      description: Reference to the User assigned to this task.
+      x-relationship:
+        resource: User
+        fields: [id, name, email]
+```
+
+When `style: expand` is set globally, individual actions only need `resource` and optionally `fields`. See the [Relationship Configuration](state-overlays.md#relationship-configuration) section in the overlays guide for full details.
+
 ### Processing order
 
 The resolver applies transformations in this order:
 
 1. Copy base specs to output directory
 2. Apply overlay actions
-3. Filter by `x-environments` (if `--env` provided)
-4. Substitute `${VAR}` placeholders (if `--env-file` provided or env vars exist)
+3. Resolve `x-relationship` annotations (if any FK fields are annotated)
+4. Filter by `x-environments` (if `--env` provided)
+5. Substitute `${VAR}` placeholders (if `--env-file` provided or env vars exist)
 
 ## Updating base specs
 

@@ -31,6 +31,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
 import { extractConfig, validateConfig } from '../src/overlay/config.js';
+import { discoverRelationships, buildSchemaIndex, resolveRelationships } from '../src/overlay/relationship-resolver.js';
 import { bundleSpec } from '../src/bundle.js';
 import { discoverStateMachines, extractItemEndpoint, generateOverlay } from './generate-rpc-overlay.js';
 
@@ -650,6 +651,7 @@ async function main() {
 
   let allWarnings = [];
   let currentResults = null;
+  let overlayConfig = null;
 
   // Auto-generate and apply RPC overlays from state machine files (before explicit overlays)
   if (stateMachines.length > 0) {
@@ -686,6 +688,7 @@ async function main() {
 
     // Extract and validate config from overlay files
     const { config, errors: configErrors } = extractConfig(overlayFiles);
+    overlayConfig = config;
     allWarnings = allWarnings.concat(configErrors);
 
     if (config) {
@@ -738,6 +741,23 @@ async function main() {
     currentResults = new Map();
     for (const { relativePath, spec } of yamlFiles) {
       currentResults.set(relativePath, JSON.parse(JSON.stringify(spec)));
+    }
+  }
+
+  // Resolve x-relationship annotations (after overlays, before env filtering)
+  {
+    const schemaIndex = buildSchemaIndex(currentResults);
+    const relationshipStyle = overlayConfig?.['x-relationship']?.style || 'links-only';
+
+    for (const [relativePath, spec] of currentResults) {
+      const found = discoverRelationships(spec);
+      if (found.length === 0) continue;
+
+      const { result, warnings } = resolveRelationships(spec, relationshipStyle, schemaIndex);
+      currentResults.set(relativePath, result);
+      allWarnings = allWarnings.concat(warnings);
+
+      console.log(`Relationships: ${relativePath} (${found.length} fields, style: ${relationshipStyle})`);
     }
   }
 

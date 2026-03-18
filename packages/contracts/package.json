@@ -21,7 +21,8 @@
     "./overlay": "./src/overlay/overlay-resolver.js",
     "./validation": "./src/validation/openapi-validator.js",
     "./loader": "./src/validation/openapi-loader.js",
-    "./patterns": "./src/validation/pattern-validator.js"
+    "./patterns": "./src/validation/pattern-validator.js",
+    "./relationships": "./src/overlay/relationship-resolver.js"
   },
   "scripts": {
     "prepack": "npm run design:reference && node ../../scripts/build-package-readme.js",

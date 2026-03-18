@@ -61,11 +61,17 @@ config:
   # ---------------------------------------------------------------------------
   # x-relationship — Controls how related resources are represented.
   #
+  # FK fields annotated with x-relationship (via overlays) are transformed
+  # at resolve time based on the style. Fields without x-relationship pass
+  # through unchanged.
+  #
   # style values:
-  #   links-only  — related resources as URL links            (default)
-  #   expand      — ?expand=resource query param to inline related data
-  #   include     — JSON:API-style `included` sideloading
-  #   embed       — always inline related resources in response
+  #   links-only  — related resources as URL links            (default, implemented)
+  #   expand      — ?expand=resource query param to inline related data (implemented)
+  #   include     — JSON:API-style `included` sideloading     (planned)
+  #   embed       — always inline related resources in response (planned)
+  #
+  # Per-field style overrides are supported — see relationships.yaml for examples.
   # ---------------------------------------------------------------------------
   x-relationship:
     style: links-only

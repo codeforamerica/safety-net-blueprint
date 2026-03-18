@@ -121,6 +121,87 @@ The entire property definition (type, description, pattern, enum, etc.) is prese
 - You want to align API field names with state system field names
 - The base schema uses a generic name that should be state-specific
 
+## Relationship Configuration
+
+FK fields in the base specs are plain string IDs. States can declare how related resources are represented in responses by adding `x-relationship` to FK fields via overlays. The resolver transforms the spec at build time based on the chosen style.
+
+### Available styles
+
+| Style | Description | Status |
+|-------|-------------|--------|
+| `links-only` | Adds a `links` object with URIs to related resources | Default, implemented |
+| `expand` | Converts FK to `oneOf[string, object]`, adds `?expand` query param | Implemented |
+| `include` | JSON:API-style sideloading in an `included` array | Planned |
+| `embed` | Always inline related resources in the response | Planned |
+
+### Setting a global default
+
+Set the default style for all relationships in your config overlay:
+
+```yaml
+config:
+  x-relationship:
+    style: expand
+```
+
+### Per-field configuration
+
+Add `x-relationship` to specific FK fields via overlay actions. Per-field `style` overrides the global default:
+
+```yaml
+actions:
+  - target: $.components.schemas.Task.properties.assignedToId
+    file: workflow-openapi.yaml
+    description: Expand assignedToId with field subset
+    update:
+      type: string
+      format: uuid
+      description: Reference to the User assigned to this task.
+      x-relationship:
+        resource: User
+        style: expand
+        fields: [id, name, email]
+```
+
+- `resource` (required) — the target schema name (e.g., `User`, `Case`)
+- `style` (optional) — overrides the global style for this field
+- `fields` (optional, expand only) — subset of fields to include in the expanded object
+
+### What each style produces
+
+**links-only** adds a read-only `links` object to the parent schema:
+
+```yaml
+Task:
+  properties:
+    assignedToId:
+      type: string
+      format: uuid
+    links:
+      type: object
+      readOnly: true
+      properties:
+        assignedTo:
+          type: string
+          format: uri
+```
+
+**expand** converts the FK field to a `oneOf` and adds an `expand` query parameter to GET endpoints:
+
+```yaml
+Task:
+  properties:
+    assignedToId:
+      oneOf:
+        - type: string
+          format: uuid
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            email: { type: string, format: email }
+```
+
 ## Target Path Syntax
 
 Targets use JSONPath-like syntax:
