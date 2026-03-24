@@ -1,18 +1,37 @@
 /**
- * OpenAPI Specification and Examples Validator
- * Validates OpenAPI specs and examples against schemas
+ * OpenAPI Specification Validator
+ * Validates OpenAPI specs for structural correctness and $ref resolution
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
+import { validateExamples } from './example-validator.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+/**
+ * Validate components/examples values against their corresponding schemas.
+ * @param {Object} spec - Dereferenced OpenAPI spec
+ * @param {Array} errors - Errors array to push into
+ */
+function validateInlineExamples(spec, errors) {
+  const componentExamples = spec?.components?.examples;
+  const schemas = spec?.components?.schemas;
+  if (!componentExamples || !schemas) return;
+
+  // Unwrap OpenAPI example objects ({ summary, value }) to flat { key: dataValue }
+  const flat = {};
+  for (const [key, example] of Object.entries(componentExamples)) {
+    if (example?.value && typeof example.value === 'object') flat[key] = example.value;
+  }
+
+  for (const { key, instancePath, message } of validateExamples(flat, schemas)) {
+    errors.push({
+      type: 'example',
+      path: key,
+      message: `Example '${key}'${instancePath}: ${message}`
+    });
+  }
+}
 
 /**
  * Validation result structure
@@ -89,8 +108,9 @@ export async function validateSpec(specPath) {
     }
     
     // Try to dereference (resolve all $refs)
+    let dereferencedSpec;
     try {
-      await $RefParser.dereference(specPath, {
+      dereferencedSpec = await $RefParser.dereference(specPath, {
         dereference: {
           circular: 'ignore'
         }
@@ -103,6 +123,9 @@ export async function validateSpec(specPath) {
       });
       return { valid: false, errors, warnings };
     }
+
+    // Validate inline examples against their schemas
+    validateInlineExamples(dereferencedSpec, errors);
     
   } catch (error) {
     errors.push({
@@ -120,224 +143,21 @@ export async function validateSpec(specPath) {
 }
 
 /**
- * Validate examples against their schemas
- * @param {string} specPath - Path to OpenAPI spec file
- * @param {string} examplesPath - Path to examples YAML file
- * @returns {Promise<ValidationResult>} Validation result
- */
-export async function validateExamples(specPath, examplesPath) {
-  const errors = [];
-  const warnings = [];
-  
-  try {
-    // Check if examples file exists
-    if (!existsSync(examplesPath)) {
-      warnings.push({
-        type: 'file',
-        path: examplesPath,
-        message: 'Examples file does not exist (optional)'
-      });
-      return { valid: true, errors, warnings };
-    }
-    
-    // Load examples
-    let examples;
-    try {
-      const content = readFileSync(examplesPath, 'utf8');
-      examples = yaml.load(content);
-    } catch (error) {
-      errors.push({
-        type: 'parse',
-        path: examplesPath,
-        message: `Failed to parse examples file: ${error.message}`
-      });
-      return { valid: false, errors, warnings };
-    }
-    
-    if (!examples || Object.keys(examples).length === 0) {
-      warnings.push({
-        type: 'content',
-        path: examplesPath,
-        message: 'Examples file is empty'
-      });
-      return { valid: true, errors, warnings };
-    }
-    
-    // Load and dereference spec
-    let spec;
-    try {
-      spec = await $RefParser.dereference(specPath, {
-        dereference: {
-          circular: 'ignore'
-        }
-      });
-    } catch (error) {
-      errors.push({
-        type: 'spec',
-        path: specPath,
-        message: `Failed to load spec: ${error.message}`
-      });
-      return { valid: false, errors, warnings };
-    }
-    
-    // Extract schemas from spec
-    const schemas = spec.components?.schemas || {};
-    if (Object.keys(schemas).length === 0) {
-      warnings.push({
-        type: 'schema',
-        path: specPath,
-        message: 'No schemas defined in specification'
-      });
-      return { valid: true, errors, warnings };
-    }
-    
-    // Find resource schemas (excluding List, Create, Update, Error, Response suffixes)
-    const resourceSchemas = Object.keys(schemas).filter(name =>
-      !name.includes('List') &&
-      !name.includes('Create') &&
-      !name.includes('Update') &&
-      !name.includes('Error') &&
-      !name.includes('Response')
-    );
-
-    if (resourceSchemas.length === 0) {
-      warnings.push({
-        type: 'schema',
-        path: specPath,
-        message: 'Could not identify main resource schema for validation'
-      });
-      return { valid: true, errors, warnings };
-    }
-
-    // Create AJV validator
-    const ajv = new Ajv({
-      strict: false,
-      validateFormats: true,
-      allErrors: true,
-      coerceTypes: false
-    });
-    addFormats(ajv);
-
-    // Add all schemas to AJV for reference resolution
-    for (const [schemaName, schema] of Object.entries(schemas)) {
-      try {
-        ajv.addSchema(schema, schemaName);
-      } catch (error) {
-        // Schema might already be added or have issues, continue
-      }
-    }
-
-    // Build compiled validators for each resource schema
-    const validators = {};
-    for (const schemaName of resourceSchemas) {
-      try {
-        validators[schemaName] = ajv.compile(schemas[schemaName]);
-      } catch (error) {
-        // Skip schemas that fail to compile
-      }
-    }
-
-    // Default validator: first resource schema (for single-resource APIs)
-    const defaultValidate = validators[resourceSchemas[0]];
-
-    for (const [exampleName, exampleData] of Object.entries(examples)) {
-      // Skip list examples and payload examples
-      if (exampleData?.items && Array.isArray(exampleData.items)) {
-        continue; // This is a list example
-      }
-
-      const lowerName = exampleName.toLowerCase();
-      if (lowerName.includes('payload') ||
-          lowerName.includes('create') ||
-          lowerName.includes('update')) {
-        continue; // This is a payload example (for requests)
-      }
-
-      // Match example to schema by name prefix (e.g., QueueExample1 → Queue)
-      // Sort resource schemas by length descending so longer prefixes match first
-      const sortedSchemas = resourceSchemas.slice().sort((a, b) => b.length - a.length);
-      const matchedSchema = sortedSchemas.find(name => exampleName.startsWith(name));
-      const validate = (matchedSchema && validators[matchedSchema]) || defaultValidate;
-
-      // Validate example against schema
-      const valid = validate(exampleData);
-      
-      if (!valid) {
-        const validationErrors = validate.errors || [];
-        for (const err of validationErrors) {
-          const field = err.instancePath ? err.instancePath.substring(1).replace(/\//g, '.') : 'root';
-          
-          // Enhanced error message with more context
-          let message = err.message || 'validation failed';
-          
-          // For additionalProperties errors, show which property is not allowed
-          if (err.keyword === 'additionalProperties' && err.params?.additionalProperty) {
-            const fieldPath = field === 'root' ? '' : field + '.';
-            message = `must NOT have additional property '${fieldPath}${err.params.additionalProperty}'`;
-          }
-          // For required properties, show which property is missing
-          else if (err.keyword === 'required' && err.params?.missingProperty) {
-            const fieldPath = field === 'root' ? '' : field + '.';
-            message = `must have required property '${fieldPath}${err.params.missingProperty}'`;
-          }
-          // For enum errors, show allowed values
-          else if (err.keyword === 'enum' && err.params?.allowedValues) {
-            message = `${message} (allowed: ${err.params.allowedValues.join(', ')})`;
-          }
-          // For type errors, be more specific
-          else if (err.keyword === 'type' && err.params?.type) {
-            message = `must be ${err.params.type}`;
-          }
-          
-          errors.push({
-            type: 'validation',
-            path: examplesPath,
-            example: exampleName,
-            field,
-            message,
-            keyword: err.keyword,
-            details: err
-          });
-        }
-      }
-    }
-    
-  } catch (error) {
-    errors.push({
-      type: 'unknown',
-      path: examplesPath,
-      message: `Unexpected error: ${error.message}`
-    });
-  }
-  
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings
-  };
-}
-
-/**
- * Validate all OpenAPI specs and their examples
- * @param {Array} apiSpecs - Array of {name, specPath, examplesPath} objects
- * @returns {Promise<Object>} Validation results for all specs
+ * Validate all OpenAPI specs
+ * @param {Array} apiSpecs - Array of {name, specPath} objects
+ * @returns {Promise<Object>} Validation results keyed by API name
  */
 export async function validateAll(apiSpecs) {
   const results = {};
-  
+
   for (const api of apiSpecs) {
     const specResult = await validateSpec(api.specPath);
-    const examplesResult = api.examplesPath
-      ? await validateExamples(api.specPath, api.examplesPath)
-      : { valid: true, errors: [], warnings: [] };
-
     results[api.name] = {
       spec: specResult,
-      examples: examplesResult,
-      valid: specResult.valid && examplesResult.valid
+      valid: specResult.valid
     };
   }
-  
+
   return results;
 }
 
@@ -349,31 +169,27 @@ export async function validateAll(apiSpecs) {
  * @returns {string} Formatted output
  */
 export function formatResults(results, options = {}) {
-  const { detailed = false } = options;
   const lines = [];
   let totalErrors = 0;
   let totalWarnings = 0;
   let validCount = 0;
-  
+
   for (const [apiName, result] of Object.entries(results)) {
     const specErrors = result.spec.errors.length;
     const specWarnings = result.spec.warnings.length;
-    const exampleErrors = result.examples.errors.length;
-    const exampleWarnings = result.examples.warnings.length;
-    
-    totalErrors += specErrors + exampleErrors;
-    totalWarnings += specWarnings + exampleWarnings;
-    
+
+    totalErrors += specErrors;
+    totalWarnings += specWarnings;
+
     if (result.valid) {
       validCount++;
       lines.push(`  ✓ ${apiName}`);
-      if (specWarnings > 0 || exampleWarnings > 0) {
-        lines.push(`    ${specWarnings + exampleWarnings} warning(s)`);
+      if (specWarnings > 0) {
+        lines.push(`    ${specWarnings} warning(s)`);
       }
     } else {
       lines.push(`  ✗ ${apiName}`);
-      
-      // Show spec errors
+
       if (specErrors > 0) {
         lines.push(`    Spec: ${specErrors} error(s)`);
         for (const error of result.spec.errors.slice(0, 3)) {
@@ -381,50 +197,6 @@ export function formatResults(results, options = {}) {
         }
         if (specErrors > 3) {
           lines.push(`      ... and ${specErrors - 3} more`);
-        }
-      }
-      
-      // Show example errors
-      if (exampleErrors > 0) {
-        lines.push(`    Examples: ${exampleErrors} error(s)`);
-        const grouped = {};
-        for (const error of result.examples.errors) {
-          const key = error.example || 'unknown';
-          if (!grouped[key]) grouped[key] = [];
-          grouped[key].push(error);
-        }
-        
-        const maxExamples = detailed ? Object.keys(grouped).length : 3;
-        let shownExamples = 0;
-        
-        for (const [example, errs] of Object.entries(grouped)) {
-          if (shownExamples >= maxExamples) break;
-          
-          // Show first error for this example
-          const firstErr = errs[0];
-          const propertyPath = firstErr.field === 'root' ? '(root)' : firstErr.field;
-          lines.push(`      - ${example}: ${propertyPath} ${firstErr.message}`);
-          
-          // Show additional errors for same example
-          const maxErrsPerExample = detailed ? errs.length : 3;
-          for (let i = 1; i < Math.min(maxErrsPerExample, errs.length); i++) {
-            const err = errs[i];
-            const path = err.field === 'root' ? '(root)' : err.field;
-            lines.push(`        ${path} ${err.message}`);
-          }
-          
-          if (!detailed && errs.length > 3) {
-            lines.push(`        ... and ${errs.length - 3} more error(s) in this example`);
-          }
-          
-          shownExamples++;
-        }
-        
-        if (!detailed) {
-          const remainingExamples = Object.keys(grouped).length - shownExamples;
-          if (remainingExamples > 0) {
-            lines.push(`      ... and ${remainingExamples} more example(s) with errors`);
-          }
         }
       }
     }

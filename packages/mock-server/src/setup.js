@@ -5,10 +5,11 @@
 
 import { loadAllSpecs, discoverApiSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { seedAllDatabases } from './seeder.js';
+import { validateSeedData } from './seed-validator.js';
 import { validateAll, getValidationStatus } from '@codeforamerica/safety-net-blueprint-contracts/validation';
 import { discoverStateMachines } from './state-machine-loader.js';
 import { discoverRules } from './rules-loader.js';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -48,19 +49,15 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     apiSpecs.forEach(api => console.log(`  - ${api.title} (${api.name})`));
   }
 
-  // Validate specs and examples (unless skipped)
+  // Validate specs (unless skipped)
   if (!skipValidation) {
     if (verbose) {
-      console.log('\nValidating specifications and examples...');
+      console.log('\nValidating specifications...');
     }
 
     const discoveredSpecs = discoverApiSpecs({ specsDir });
-    const specsWithExamples = discoveredSpecs.map(spec => ({
-      ...spec,
-      examplesPath: join(specsDir, `${spec.name}-openapi-examples.yaml`)
-    }));
 
-    const validationResults = await validateAll(specsWithExamples);
+    const validationResults = await validateAll(discoveredSpecs);
 
     // Check for validation errors
     const hasErrors = Object.values(validationResults).some(r => !r.valid);
@@ -68,12 +65,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     if (verbose) {
       for (const [apiName, result] of Object.entries(validationResults)) {
         const status = getValidationStatus(result.spec);
-        const examplesStatus = getValidationStatus(result.examples);
-
         console.log(`  ${status.emoji} ${apiName}: ${status.message}`);
-        if (result.examples.warnings.length > 0 || result.examples.errors.length > 0) {
-          console.log(`    Examples: ${examplesStatus.message}`);
-        }
       }
     }
 
@@ -102,6 +94,20 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
 
   // Seed databases from example files
   const summary = seedAllDatabases(apiSpecs, specsDir, seedDir);
+
+  // Validate seed data against schemas
+  if (!skipValidation) {
+    const seedErrors = validateSeedData(seedDir, apiSpecs);
+    if (seedErrors.length > 0) {
+      const msg = seedErrors
+        .map(e => `  ${e.api}${e.key ? ` [${e.key}]` : ''}: ${e.message}`)
+        .join('\n');
+      throw new Error(`Seed data validation failed:\n${msg}`);
+    }
+    if (verbose) {
+      console.log('✓ Seed data valid');
+    }
+  }
 
   return { apiSpecs, stateMachines, rules, summary };
 }
