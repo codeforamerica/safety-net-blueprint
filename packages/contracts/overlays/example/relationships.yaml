@@ -22,4 +22,4 @@ actions:
       x-relationship:
         resource: User
         style: expand
-        fields: [id, name, email]
+        fields: [id, email]
