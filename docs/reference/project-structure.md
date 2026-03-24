@@ -16,7 +16,6 @@ safety-net-blueprint/
 │   ├── contracts/                  # Behavioral contracts, OpenAPI specs, validation, overlays
 │   │   ├── package.json
 │   │   ├── *-openapi.yaml          # Main API specs (persons-openapi.yaml, etc.)
-│   │   ├── *-openapi-examples.yaml # Example data for seeding
 │   │   ├── *-state-machine.yaml    # State machine definitions (transitions, guards, effects)
 │   │   ├── components/             # Shared schemas and parameters
 │   │   │   ├── common.yaml         # Reusable schemas (Address, Name)
@@ -101,7 +100,6 @@ npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica
 | Type | Convention | Example |
 |------|------------|---------|
 | API specs | `{domain}-openapi.yaml` | `case-workers-openapi.yaml` |
-| Example files | `{domain}-openapi-examples.yaml` | `case-workers-openapi-examples.yaml` |
 | Component schemas | kebab-case in `components/` | `components/common.yaml` |
 | Overlay files | `overlays/{state}/modifications.yaml` | `overlays/california/modifications.yaml` |
 | Scripts | kebab-case | `generate-clients-typescript.js` |
@@ -132,8 +130,7 @@ npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica
 
 | File | Purpose |
 |------|---------|
-| `packages/contracts/*-openapi.yaml` | Main API specifications |
-| `packages/contracts/*-openapi-examples.yaml` | Example data |
+| `packages/contracts/*-openapi.yaml` | Main API specifications (inline examples in `components/examples`) |
 | `packages/contracts/components/*.yaml` | Shared schemas and parameters |
 | `packages/contracts/overlays/*/modifications.yaml` | State variations |
 
@@ -149,8 +146,7 @@ npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica
 
 When adding a new API resource:
 
-1. **API spec**: `packages/contracts/{resources}-openapi.yaml` (schemas inline)
-2. **Examples**: `packages/contracts/{resources}-openapi-examples.yaml`
+1. **API spec**: `packages/contracts/{resources}-openapi.yaml` — schemas inline, one `components/examples/{Resource}Example1` entry in `components/examples`
 
 Use the generator:
 

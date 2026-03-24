@@ -22,8 +22,7 @@ import {
   parseArgs,
   toKebabCase,
   toPascalCase,
-  generateApiSpec,
-  generateExamples
+  generateApiSpec
 } from './generate-api.js';
 
 // =============================================================================
@@ -135,24 +134,16 @@ function mergeResource(existingSpec, name, resource) {
     generatedSpec.components.schemas
   );
 
+  // Merge inline examples
+  if (generatedSpec.components?.examples) {
+    if (!existingSpec.components.examples) existingSpec.components.examples = {};
+    Object.assign(
+      existingSpec.components.examples,
+      generatedSpec.components.examples
+    );
+  }
+
   return existingSpec;
-}
-
-// =============================================================================
-// Examples append
-// =============================================================================
-
-/**
- * Append new examples to existing examples content, stripping the header
- * comment lines from the new examples text.
- */
-function appendExamples(existingContent, newExamplesText) {
-  const dataOnly = newExamplesText
-    .split('\n')
-    .filter((line) => !line.startsWith('#'))
-    .join('\n')
-    .trim();
-  return existingContent.trimEnd() + '\n\n' + dataOnly + '\n';
 }
 
 // =============================================================================
@@ -180,9 +171,7 @@ async function main() {
   const contractsDir = resolve(import.meta.dirname, '..');
   const outDir = options.out || contractsDir;
   const specFile = `${name}-openapi.yaml`;
-  const examplesFile = `${name}-openapi-examples.yaml`;
   const specPath = join(outDir, specFile);
-  const examplesPath = join(outDir, examplesFile);
 
   // Spec file must exist
   if (!existsSync(specPath)) {
@@ -210,7 +199,7 @@ async function main() {
     forceQuotes: false
   });
   await writeFile(specPath, output);
-  console.log(`   Updated ${specPath}`);
+  console.log(`  Updated ${specPath}`);
 
   // Handle bundle
   if (options.bundle) {
@@ -223,31 +212,22 @@ async function main() {
       forceQuotes: false
     });
     await writeFile(specPath, bundledOutput);
-    console.log(`   ${specPath} (bundled)`);
+    console.log(`  ${specPath} (bundled)`);
   }
-
-  // Append examples
-  const newExamples = generateExamples(name, resource);
-  if (existsSync(examplesPath)) {
-    const existingExamplesContent = await readFile(examplesPath, 'utf8');
-    await writeFile(examplesPath, appendExamples(existingExamplesContent, newExamples));
-  } else {
-    await writeFile(examplesPath, newExamples);
-  }
-  console.log(`   Updated ${examplesPath}`);
 
   console.log(`
 Done! Resource "${resource}" added to ${specFile}.
 
 Next steps:
   1. Edit ${specFile} to customize the ${resource} schema
-  2. Update ${examplesFile} with realistic example data
-  3. Run validation: npm run validate
+  2. Update the ${resource}Example1 in components/examples with realistic data
+  3. Run: npm run mock:seed   # regenerate seed data
+  4. Run: npm run validate
 `);
 }
 
 // Export for testing
-export { detectUrlPrefix, mergeResource, appendExamples };
+export { detectUrlPrefix, mergeResource };
 
 // Run main when executed directly
 const isDirectRun =

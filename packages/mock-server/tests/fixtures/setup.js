@@ -2,14 +2,10 @@
  * Fixture directory setup for integration tests.
  *
  * Creates a temporary directory containing the real contract specs with
- * fixture seed data overlaid in place of the contracts example files.
- * Fixture examples use the same key names (*Example1) expected by spec
- * $refs, but with stable, namespaced IDs instead of the contracts' random
- * UUIDs. This lets the spec loader resolve $refs, lets the Postman
- * collection use fixture IDs, and gives tests predictable IDs to assert on.
- *
- * Naming decoupling (e.g., PersonFixture1 vs PersonExample1) is tracked
- * in issue #167.
+ * fixture seed files overlaid. Fixture seed files use the same key names
+ * (*Example1) as the inline spec examples, but with stable, namespaced IDs
+ * instead of placeholder UUIDs. This lets the Postman collection use
+ * fixture IDs and gives tests predictable IDs to assert on.
  *
  * ID namespace map:
  *   00000001-*  persons

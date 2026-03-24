@@ -70,8 +70,6 @@ function parseArgs() {
       options.env = arg.split('=')[1];
     } else if (arg.startsWith('--env-file=')) {
       options.envFile = arg.split('=')[1];
-    } else if (arg === '--reconcile-examples') {
-      options.reconcileExamples = true;
     } else {
       console.error(`Error: Unknown argument: ${arg}`);
       process.exit(1);
@@ -97,14 +95,12 @@ Flags:
   --bundle           Inline all external $refs to produce self-contained specs
   --env=<env>        Target environment for x-environments filtering (optional)
   --env-file=<file>  Path to env file for \${VAR} placeholder substitution (optional)
-  --reconcile-examples  Reconcile examples against resolved schemas after output
   -h, --help         Show this help message
 
 Without --overlay, base specs are copied to --out unchanged.
 With --bundle, all external $ref references are dereferenced inline.
 With --env, nodes whose x-environments array doesn't include the target env are removed.
 With --env-file, \${VAR} placeholders in string values are substituted (process.env overrides file values).
-With --reconcile-examples, example data is reconciled against the resolved schemas after output.
 
 Examples:
   npm run resolve
@@ -843,7 +839,7 @@ async function main() {
 
     // Remove shared component files (they've been inlined)
     for (const [relativePath] of currentResults) {
-      if (!relativePath.endsWith('-openapi.yaml') && !relativePath.endsWith('-openapi-examples.yaml')) {
+      if (!relativePath.endsWith('-openapi.yaml')) {
         const filePath = join(outDir, relativePath);
         if (existsSync(filePath)) {
           rmSync(filePath, { recursive: true });
@@ -861,13 +857,6 @@ async function main() {
         }
       }
     }
-  }
-
-  // Reconcile examples against resolved schemas
-  if (options.reconcileExamples) {
-    console.log('\nReconciling examples against resolved schemas...');
-    const { reconcileAllExamples } = await import('./reconcile-examples.js');
-    await reconcileAllExamples({ specsDir: outDir });
   }
 
   // Display warnings if any

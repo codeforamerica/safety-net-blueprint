@@ -98,6 +98,9 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Income"
+              examples:
+                IncomeExample1:
+                  $ref: "#/components/examples/IncomeExample1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':
@@ -175,6 +178,8 @@ components:
           type: string
           format: uuid
           description: Optional foreign key reference to the employer, third-party or self related to this income.
+          x-relationship:
+            resource: External
         type:
           type: string
           enum:
@@ -310,3 +315,24 @@ components:
           format: uuid
           readOnly: true
           description: Unique identifier for the verification source.
+
+  examples:
+    IncomeExample1:
+      summary: Employed income — bi-weekly wages from Acme Logistics
+      value:
+        id: 1a2b3c4d-5e6f-7890-abcd-111111111111
+        personId: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+        type: employed
+        employerId: a1b2c3d4-e5f6-7890-abcd-111111111111
+        incomeBasis: gross
+        amount: 3100
+        frequency: every_2_weeks
+        reportedOn: '2024-06-01'
+        source: client
+        startDate: '2022-03-15'
+        isVerified: true
+        verifiedDate: '2024-06-05'
+        verifiedBy: 9f8e7d6c-5b4a-3210-fedc-ba9876543210
+        verificationSourceIds:
+          - 1a2b3c4d-5e6f-7890-abcd-1234567890ab
+          - 2b3c4d5e-6f7a-8b9c-0d1e-2345678901bc

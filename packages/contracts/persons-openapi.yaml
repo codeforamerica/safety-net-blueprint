@@ -94,7 +94,7 @@ paths:
                 "$ref": "#/components/schemas/Person"
               examples:
                 PersonExample1:
-                  "$ref": "./persons-openapi-examples.yaml#/PersonExample1"
+                  $ref: "#/components/examples/PersonExample1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':
@@ -493,6 +493,51 @@ components:
             type: array
             items:
               "$ref": "#/components/schemas/Person"
+  examples:
+    PersonExample1:
+      summary: Avery Johnson — a person record with full demographics
+      value:
+        id: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+        name:
+          firstName: Avery
+          lastName: Johnson
+          middleName: Marie
+        email: avery.johnson@example.com
+        socialSecurityNumber: 123-45-6789
+        dateOfBirth: '1985-04-12'
+        phoneNumber: "+1-555-123-4567"
+        address:
+          addressLine1: 123 Main St
+          addressLine2: Apt 4B
+          city: Springfield
+          stateProvince: IL
+          postalCode: '62704'
+          county: Sangamon
+        demographicInfo:
+          sex: unknown
+          maritalStatus: married
+          isHispanicOrLatino: false
+          race:
+            - white
+        citizenshipInfo:
+          status: citizen
+        contactInfo:
+          languagePreference:
+            written: en-US
+            spoken: en-US
+          preferredContactMethod: email
+        employmentInfo:
+          jobs:
+            - employer:
+                name: Acme Logistics
+                phone: "+1-555-111-2222"
+              startDate: '2020-03-15'
+        militaryInfo:
+          veteranStatus: false
+        consentToShareInformation: true
+        createdAt: '2024-01-05T09:15:00Z'
+        updatedAt: '2024-06-12T14:23:11Z'
+
   responses:
     Conflict:
       description: A conflict occurred with the current state of the resource.

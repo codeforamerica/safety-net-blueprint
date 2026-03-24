@@ -371,27 +371,47 @@ schema_patterns:
   # Foreign key references to other schemas
   foreign_keys:
     description: |
-      Foreign key references use the naming convention {entityName}Id with format: uuid.
-      This enables automatic relationship detection in tooling like the design reference.
+      Foreign key references use the naming convention {entityName}Id with format: uuid
+      and MUST declare an x-relationship annotation identifying the related resource.
+      This enables relationship resolution, seed data generation, and design reference tooling.
     naming_convention:
       pattern: "{SchemaName}Id"
       format: uuid
       example: "personId references Person, householdId references Household"
+    required_annotation:
+      extension: x-relationship
+      required_fields: [resource]
+      description: |
+        Every FK field must declare which resource it references. Style defaults to
+        links-only and can be overridden via state overlay.
+        Use resource: External for fields that identify records in systems outside
+        the blueprint (e.g., vendor case IDs). The seed generator skips External fields.
     examples:
       - field: personId
         type: string
         format: uuid
         description: Reference to the Person record
-        references: Person
+        x-relationship:
+          resource: Person
       - field: applicationId
         type: string
         format: uuid
         description: Reference to the Application record
-        references: Application
-    detection:
-      - Tooling detects relationships when field ends in 'Id' and has format: uuid
+        x-relationship:
+          resource: Application
+      - field: externalVendorId
+        type: string
+        format: uuid
+        description: References a record in the state's vendor case management system
+        x-relationship:
+          resource: External
+    validation:
+      - error: FK field missing x-relationship annotation
+        condition: field ends in 'Id', has format uuid, and lacks x-relationship
+      - Tooling detects FK fields when field ends in 'Id' and has format: uuid
       - The schema name is derived by removing 'Id' suffix and capitalizing
       - Works for both top-level properties and nested array items
+      - resource: External is a reserved value — seed generator skips these fields
 
 # =============================================================================
 # File Structure# =============================================================================

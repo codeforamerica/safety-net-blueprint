@@ -107,7 +107,7 @@ paths:
                 $ref: "#/components/schemas/Queue"
               examples:
                 QueueExample1:
-                  $ref: "./workflow-openapi-examples.yaml#/QueueExample1"
+                  $ref: "#/components/examples/QueueExample1"
         "404":
           $ref: "./components/responses.yaml#/NotFound"
         "500":
@@ -229,7 +229,7 @@ paths:
                 $ref: "#/components/schemas/Task"
               examples:
                 TaskExample1:
-                  $ref: "./workflow-openapi-examples.yaml#/TaskExample1"
+                  $ref: "#/components/examples/TaskExample1"
         "404":
           $ref: "./components/responses.yaml#/NotFound"
         "500":
@@ -342,7 +342,7 @@ paths:
                 $ref: "#/components/schemas/DomainEvent"
               examples:
                 DomainEventExample1:
-                  $ref: "./workflow-openapi-examples.yaml#/DomainEventExample1"
+                  $ref: "#/components/examples/DomainEventExample1"
         "404":
           $ref: "./components/responses.yaml#/NotFound"
         "500":
@@ -609,3 +609,44 @@ components:
 
             Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
           minProperties: 1
+
+  examples:
+    QueueExample1:
+      summary: SNAP intake queue
+      value:
+        id: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+        name: snap-intake
+        description: Queue for SNAP program intake tasks.
+        createdAt: '2024-08-01T08:00:00Z'
+        updatedAt: '2024-08-01T08:00:00Z'
+
+    TaskExample1:
+      summary: In-progress SNAP application review task
+      value:
+        id: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90
+        name: Review SNAP application - Rivera household
+        description: Review the submitted SNAP application for the Rivera household and verify income documentation.
+        status: in_progress
+        programType: snap
+        isExpedited: true
+        queueId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+        priority: expedited
+        startedAt: '2024-09-02T09:15:00Z'
+        assignedToId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        caseId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
+        createdAt: '2024-09-01T14:00:00Z'
+        updatedAt: '2024-09-02T09:15:00Z'
+
+    DomainEventExample1:
+      summary: Task claimed domain event
+      value:
+        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        domain: workflow
+        resource: task
+        action: claimed
+        resourceId: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90
+        performedById: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        occurredAt: '2024-09-02T09:15:00Z'
+        data: {}
+        createdAt: '2024-09-02T09:15:00Z'
+        updatedAt: '2024-09-02T09:15:00Z'

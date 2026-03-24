@@ -55,6 +55,13 @@ else
   fail "Overlay resolution failed"
 fi
 
+step "Validating seed data"
+if npm run validate:seed 2>&1; then
+  pass "Seed data valid"
+else
+  fail "Seed data validation failed"
+fi
+
 step "Generating Postman collection"
 if npm run postman:generate 2>&1; then
   pass "Postman collection generated"

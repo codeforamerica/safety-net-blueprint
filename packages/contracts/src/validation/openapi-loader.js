@@ -178,20 +178,6 @@ export function extractMetadata(spec, resourceName) {
 }
 
 /**
- * Get the path to examples file for an API
- * @param {string} apiName - Name of the API (e.g., 'persons')
- * @param {string} specsDir - Path to the specs directory
- * @returns {string} Path to the examples file
- */
-export function getExamplesPath(apiName, specsDir) {
-  if (!specsDir) {
-    throw new Error('specsDir is required');
-  }
-  // Examples are colocated with specs as {name}-openapi-examples.yaml
-  return join(specsDir, `${apiName}-openapi-examples.yaml`);
-}
-
-/**
  * Convert a kebab-case collection name to its PascalCase singular schema prefix.
  * Used to match example keys to collections (e.g., "queues" → "Queue",
  * "task-audit-events" → "TaskAuditEvent").

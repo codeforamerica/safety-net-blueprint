@@ -6,7 +6,81 @@
  * - Pagination: List endpoints must have LimitParam and OffsetParam
  * - List Response: Must have items, total, limit, offset, hasNext
  * - Consistent HTTP methods and response codes
+ * - FK fields (ending in Id, format: uuid) must declare x-relationship
  */
+
+// =============================================================================
+// Foreign Key Validation Helpers
+// =============================================================================
+
+/**
+ * Walk all properties of a schema, recursing into allOf branches and inline
+ * nested objects/arrays. Yields { propName, propSchema, propPath } for each
+ * discovered property. Does NOT recurse into $ref branches (unresolved).
+ */
+function* walkProperties(schema, pathPrefix = '') {
+  if (!schema || typeof schema !== 'object') return;
+
+  const branches = [schema];
+  if (Array.isArray(schema.allOf)) {
+    for (const branch of schema.allOf) {
+      if (!branch.$ref) branches.push(branch);
+    }
+  }
+
+  for (const branch of branches) {
+    if (!branch.properties) continue;
+    for (const [propName, propSchema] of Object.entries(branch.properties)) {
+      if (!propSchema || propSchema.$ref) continue;
+      const propPath = pathPrefix ? `${pathPrefix}.${propName}` : propName;
+      yield { propName, propSchema, propPath };
+
+      if (propSchema.type === 'object' || propSchema.properties) {
+        yield* walkProperties(propSchema, propPath);
+      }
+      if (propSchema.type === 'array' && propSchema.items && !propSchema.items.$ref) {
+        yield* walkProperties(propSchema.items, `${propPath}[]`);
+      }
+    }
+  }
+}
+
+/**
+ * Returns true if the property is a UUID FK field that requires x-relationship:
+ * name ends in 'Id' (not exactly 'id'), type: string, format: uuid.
+ */
+function isFkField(propName, propSchema) {
+  if (propName === 'id') return false;
+  if (!propName.endsWith('Id')) return false;
+  return propSchema.type === 'string' && propSchema.format === 'uuid';
+}
+
+/**
+ * Validates that FK fields (properties ending in 'Id' with format: uuid)
+ * have x-relationship declared. Use resource: External for fields referencing
+ * records outside the blueprint.
+ * @param {Object} spec - The OpenAPI spec object
+ * @param {Array} errors - Array to push errors to
+ */
+export function validateForeignKeys(spec, errors) {
+  const schemas = spec.components?.schemas;
+  if (!schemas) return;
+
+  for (const [schemaName, schema] of Object.entries(schemas)) {
+    for (const { propName, propSchema, propPath } of walkProperties(schema)) {
+      if (!isFkField(propName, propSchema)) continue;
+
+      if (!propSchema['x-relationship']?.resource) {
+        errors.push({
+          path: `components/schemas/${schemaName}/${propPath}`,
+          rule: 'fk-x-relationship-required',
+          message: `Schema "${schemaName}": "${propName}" is a UUID FK field and must declare x-relationship: { resource: ResourceName }. Use resource: External for external system references.`,
+          severity: 'error'
+        });
+      }
+    }
+  }
+}
 
 /**
  * Validates that list endpoints (collection GET) have required parameters
@@ -316,8 +390,11 @@ export function isActionPath(path) {
 export function validateSpec(spec, specName) {
   const errors = [];
 
+  // Validate FK x-relationship annotations
+  validateForeignKeys(spec, errors);
+
   if (!spec.paths) {
-    return errors;
+    return errors.map(e => ({ ...e, spec: specName }));
   }
 
   for (const [path, methods] of Object.entries(spec.paths)) {

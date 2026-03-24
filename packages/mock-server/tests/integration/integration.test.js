@@ -26,7 +26,7 @@ import yaml from 'js-yaml';
 import newman from 'newman';
 import { setupFixtureDir, teardownFixtureDir } from '../fixtures/setup.js';
 import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
-import { loadAllSpecs, getExamplesPath } from '@codeforamerica/safety-net-blueprint-contracts/loader';
+import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -86,7 +86,7 @@ async function fetch(url, options = {}) {
  */
 function loadExamples(apiName) {
   try {
-    const examplesPath = getExamplesPath(apiName, fixtureDir);
+    const examplesPath = join(fixtureDir, `${apiName}.yaml`);
     const content = readFileSync(examplesPath, 'utf8');
     const examples = yaml.load(content) || {};
 

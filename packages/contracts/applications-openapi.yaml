@@ -92,7 +92,7 @@ paths:
                 "$ref": "#/components/schemas/Application"
               examples:
                 ApplicationExample1:
-                  "$ref": "./applications-openapi-examples.yaml#/ApplicationExample1"
+                  $ref: "#/components/examples/ApplicationExample1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':
@@ -2042,4 +2042,122 @@ components:
             type: array
             items:
               "$ref": "#/components/schemas/Application"
+
+  examples:
+    ApplicationExample1:
+      summary: Bianca Rivera — SNAP application from Florida
+      value:
+        id: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
+        status: submitted
+        state: FL
+        programs:
+          snap: true
+        screeningFlags:
+          programs:
+            applyingFor:
+              - snap
+            needsEbtCard: true
+          jobs:
+            - has_self_employment
+        preferences:
+          wantsToRegisterToVote: true
+          ebtCardDeliveryMethod: postal_mail
+        household:
+          members:
+            - name:
+                firstName: Bianca
+                lastName: Rivera
+                middleName: Elena
+              relationship: self
+              dateOfBirth: '1992-11-08'
+              socialSecurityNumber: 234-56-7890
+              address:
+                addressLine1: 789 Palm Ave
+                city: Miami
+                stateProvince: FL
+                postalCode: '33101'
+                county: Miami-Dade
+              phoneNumber: "+1-555-987-6543"
+              email: bianca.rivera@example.com
+              demographicInfo:
+                sex: female
+                maritalStatus: single
+                isHispanicOrLatino: true
+                race:
+                  - white
+              citizenshipInfo:
+                status: permanent_resident
+              contactInfo:
+                otherPhoneNumber: "+1-555-987-6544"
+                languagePreference:
+                  written: es-US
+                  spoken: es-US
+                isHomeless: false
+                preferredNoticeMethod: email
+                isStateResident: true
+              programsApplyingFor:
+                - snap
+              selfEmployment:
+                - businessName: Rivera Consulting
+                  oneMonthsGrossIncome: 4200
+                  monthOfIncome: '2024-08-01'
+                  selfEmploymentType: sole_proprietor
+                  utilitiesPaidForBusiness: 80
+                  businessTaxesPaid: 300
+                  interestPaidForBusiness: 0
+                  grossBusinessLaborCosts: 0
+                  costOfMerchandise: 500
+                  totalNetIncome: 3320
+              expenses:
+                rent:
+                  - expenseType: rent
+                    expenseMonth: '2024-08-01'
+                    amountPaid: 1200
+              resourceInfo:
+                financialResources:
+                  - resourceType: checking_account
+                    financialInstitutionName: First National Bank
+                    accountNumber: "****5678"
+                    currentValue: 850
+              priorConvictions:
+                convictedOfDuplicateSNAPBenefits: false
+                hidingFromLaw: false
+                convictedOfDrugFelony: false
+                convictedOfSNAPTrafficking: false
+                convictedOfTradingSNAPForWeapons: false
+                disqualifiedForIPVOrWelfareFraud: false
+                convictedOfViolentCrime: false
+          expenses:
+            rent:
+              utilitiesIncludedInRent: false
+              receivesSection8OrPublicHousing: false
+              items:
+                - expenseType: rent
+                  whoPays: Bianca Rivera
+                  isPayerInHome: true
+                  expenseMonth: '2024-08-01'
+                  amountPaid: 1200
+            utilities:
+              heatingCoolingMethod:
+                - electric
+                - swamp_cooler
+              receivedLEAP: false
+        expeditedSNAPInfo:
+          householdSize: 1
+          isMigrantOrSeasonalFarmWorker: false
+          totalExpectedIncomeThisMonth: 4200
+          totalCashOnHand: 850
+          monthlyRent: 1200
+          utilityCosts:
+            electricity: 120
+            water: 45
+            phone: 60
+            trash: 25
+            sewer: 30
+        signatures:
+          applicantSignature:
+            signature: Bianca Elena Rivera
+            signatureDate: '2024-08-15'
+        createdAt: '2024-08-15T10:30:00Z'
+        updatedAt: '2024-08-15T10:30:00Z'
 

@@ -9,8 +9,7 @@
  *   npm run api:new -- --name "case-workers" --resource "CaseWorker"
  *
  * Generates:
- *   - {name}-openapi.yaml - Main API spec (with schemas inline)
- *   - {name}-openapi-examples.yaml - Example data
+ *   - {name}-openapi.yaml - Main API spec with schemas and one inline example
  */
 
 import { writeFile } from 'fs/promises';
@@ -101,8 +100,7 @@ Examples:
   npm run api:new -- benefits Benefit --out /tmp
 
 Generated files:
-  - {name}-openapi.yaml              Main API specification (schemas inline)
-  - {name}-openapi-examples.yaml     Example data for testing
+  - {name}-openapi.yaml              Main API specification (schemas + inline example)
 `);
 }
 
@@ -240,7 +238,7 @@ paths:
                 "$ref": "#/components/schemas/${resource}"
               examples:
                 ${resource}Example1:
-                  "$ref": "./${kebabName}-openapi-examples.yaml#/${resource}Example1"
+                  $ref: "#/components/examples/${resource}Example1"
         '404':
           "$ref": "${componentsPrefix}/responses.yaml#/NotFound"
         '500':
@@ -383,33 +381,17 @@ components:
         hasNext:
           type: boolean
           description: Indicates whether more ${resourcePluralLower} are available beyond the current page.
-`;
-}
 
-function generateExamples(name, resource) {
-  const uuid1 = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-  const uuid2 = 'b2c3d4e5-f6a7-8901-bcde-f12345678901';
-  const now = new Date().toISOString();
-
-  return `# ${resource} Examples
-# Example data for testing and documentation.
-# These examples are validated against the schema by npm run validate:syntax
-
-${resource}Example1:
-  id: "${uuid1}"
-  name: "Example ${resource} 1"
-  description: "This is the first example ${resource.toLowerCase()}."
-  status: "active"
-  createdAt: "${now}"
-  updatedAt: "${now}"
-
-${resource}Example2:
-  id: "${uuid2}"
-  name: "Example ${resource} 2"
-  description: "This is the second example ${resource.toLowerCase()}."
-  status: "pending"
-  createdAt: "${now}"
-  updatedAt: "${now}"
+  examples:
+    ${resource}Example1:
+      summary: Example ${resource} record
+      value:
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        name: "Example ${resource} 1"
+        description: "This is an example ${resource.toLowerCase()}."
+        status: "active"
+        createdAt: "2024-01-15T10:30:00Z"
+        updatedAt: "2024-01-15T10:30:00Z"
 `;
 }
 
@@ -442,9 +424,7 @@ async function main() {
   const contractsDir = resolve(import.meta.dirname, '..');
   const outDir = options.out || contractsDir;
   const specFile = `${name}-openapi.yaml`;
-  const examplesFile = `${name}-openapi-examples.yaml`;
   const specPath = join(outDir, specFile);
-  const examplesPath = join(outDir, examplesFile);
 
   if (existsSync(specPath)) {
     console.error(`Error: ${specPath} already exists.`);
@@ -466,10 +446,6 @@ async function main() {
   // Generate files
   console.log('📝 Generating files...\n');
 
-  // Always write examples to outDir (no external $refs to resolve)
-  await writeFile(examplesPath, generateExamples(name, resource));
-  console.log(`   ✅ ${examplesPath}`);
-
   await writeFile(specPath, generateApiSpec(name, resource, componentsPrefix));
   console.log(`   ✅ ${specPath}`);
 
@@ -477,16 +453,16 @@ async function main() {
 ✨ API generated successfully!
 
 Next steps:
-  1. Edit ${specFile} to customize your resource schema
-  2. Update ${examplesFile} with realistic example data
-  3. Run validation: npm run validate
-  4. Generate clients: npm run clients:generate
+  1. Edit ${specFile} to customize your resource schema and inline example
+  2. Run validation: npm run validate
+  3. Generate clients: npm run clients:generate
+  4. Run mock:seed to generate seed data: npm run mock:seed
   5. Start mock server: npm run mock:start
 `);
 }
 
 // Export for testing
-export { parseArgs, toKebabCase, toCamelCase, toPascalCase, pluralize, generateApiSpec, generateExamples };
+export { parseArgs, toKebabCase, toCamelCase, toPascalCase, pluralize, generateApiSpec };
 
 // Run main when executed directly
 const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));

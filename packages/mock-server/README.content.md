@@ -4,7 +4,7 @@ An Express-based mock API server that auto-discovers OpenAPI specs, creates SQLi
 
 - Auto-discovers all `*-openapi.yaml` specs
 - Creates per-spec SQLite databases with full CRUD support
-- Seeds databases from `*-openapi-examples.yaml` files
+- Seeds databases from `*.yaml` seed files in `packages/mock-server/seed/`
 - Supports search, pagination, and filtering
 - Includes Swagger UI for interactive API exploration
 

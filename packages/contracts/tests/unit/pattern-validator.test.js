@@ -15,6 +15,7 @@ import {
   isCollectionPath,
   isSingleResourcePath,
   isActionPath,
+  validateForeignKeys,
   validateSpec
 } from '../../src/validation/pattern-validator.js';
 
@@ -740,6 +741,147 @@ test('Pattern Validator Tests', async (t) => {
     assert.ok(errors.length > 0);
     assert.ok(errors.every(e => e.spec === 'my-spec.yaml'));
     console.log('  ✓ Adds spec name to all errors');
+  });
+
+  // ===========================================================================
+  // validateForeignKeys
+  // ===========================================================================
+
+  await t.test('validateForeignKeys - no error when x-relationship is present', () => {
+    const errors = [];
+    validateForeignKeys({
+      components: {
+        schemas: {
+          Task: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              caseId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Case' }
+              }
+            }
+          }
+        }
+      }
+    }, errors);
+    assert.strictEqual(errors.length, 0, 'No errors when x-relationship declared');
+    console.log('  ✓ Accepts FK field with x-relationship');
+  });
+
+  await t.test('validateForeignKeys - error when FK field is missing x-relationship', () => {
+    const errors = [];
+    validateForeignKeys({
+      components: {
+        schemas: {
+          Task: {
+            type: 'object',
+            properties: {
+              caseId: { type: 'string', format: 'uuid' }
+            }
+          }
+        }
+      }
+    }, errors);
+    assert.strictEqual(errors.length, 1, 'One error for missing x-relationship');
+    assert.strictEqual(errors[0].rule, 'fk-x-relationship-required');
+    assert.ok(errors[0].message.includes('"caseId"'));
+    console.log('  ✓ Errors on FK field missing x-relationship');
+  });
+
+  await t.test('validateForeignKeys - accepts resource: External sentinel', () => {
+    const errors = [];
+    validateForeignKeys({
+      components: {
+        schemas: {
+          Income: {
+            type: 'object',
+            properties: {
+              employerId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'External' }
+              }
+            }
+          }
+        }
+      }
+    }, errors);
+    assert.strictEqual(errors.length, 0, 'No error for resource: External');
+    console.log('  ✓ Accepts resource: External sentinel');
+  });
+
+  await t.test('validateForeignKeys - skips primary key id field', () => {
+    const errors = [];
+    validateForeignKeys({
+      components: {
+        schemas: {
+          Thing: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' }
+            }
+          }
+        }
+      }
+    }, errors);
+    assert.strictEqual(errors.length, 0, 'No error for primary key id');
+    console.log('  ✓ Skips primary key id field');
+  });
+
+  await t.test('validateForeignKeys - skips non-uuid Id fields', () => {
+    const errors = [];
+    validateForeignKeys({
+      components: {
+        schemas: {
+          Thing: {
+            type: 'object',
+            properties: {
+              externalId: { type: 'string' } // no format: uuid
+            }
+          }
+        }
+      }
+    }, errors);
+    assert.strictEqual(errors.length, 0, 'No error for Id field without uuid format');
+    console.log('  ✓ Skips Id fields without uuid format');
+  });
+
+  await t.test('validateForeignKeys - detects FK in nested array items', () => {
+    const errors = [];
+    validateForeignKeys({
+      components: {
+        schemas: {
+          Household: {
+            type: 'object',
+            properties: {
+              members: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    personId: { type: 'string', format: 'uuid' } // missing x-relationship
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }, errors);
+    assert.strictEqual(errors.length, 1, 'One error for nested FK field');
+    assert.ok(errors[0].message.includes('"personId"'));
+    console.log('  ✓ Detects FK in nested array items');
+  });
+
+  await t.test('validateForeignKeys - no error when no schemas', () => {
+    const errors = [];
+    validateForeignKeys({ paths: {} }, errors);
+    assert.strictEqual(errors.length, 0);
+    validateForeignKeys({}, errors);
+    assert.strictEqual(errors.length, 0);
+    console.log('  ✓ Handles specs without schemas');
   });
 
 });

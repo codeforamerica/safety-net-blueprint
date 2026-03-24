@@ -125,6 +125,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
+              examples:
+                UserExample1:
+                  $ref: "#/components/examples/UserExample1"
         "401":
           $ref: "./components/responses.yaml#/Unauthorized"
         "403":
@@ -396,6 +399,8 @@ components:
         organizationId:
           type: string
           format: uuid
+          x-relationship:
+            resource: External
 
     UserUpdate:
       type: object
@@ -415,10 +420,14 @@ components:
           type: string
           format: uuid
           description: Link to Person record (for applicants).
+          x-relationship:
+            resource: Person
         caseWorkerId:
           type: string
           format: uuid
           description: Link to CaseWorker record (for staff).
+          x-relationship:
+            resource: External
         preferences:
           $ref: "#/components/schemas/UserPreferences"
 
@@ -435,3 +444,22 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/User"
+
+  examples:
+    UserExample1:
+      summary: Jane Smith — active case worker
+      value:
+        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        userId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        idpSubject: auth0|507f1f77bcf86cd799439011
+        email: jane.smith@example.gov
+        role: case_worker
+        roles:
+          name: case_worker
+          permissions:
+            - applications:read
+            - applications:create
+            - persons:read
+        status: active
+        createdAt: '2024-01-15T10:30:00Z'
+        updatedAt: '2024-01-15T10:30:00Z'

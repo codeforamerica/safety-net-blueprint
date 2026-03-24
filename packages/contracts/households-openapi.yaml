@@ -92,7 +92,7 @@ paths:
                 "$ref": "#/components/schemas/Household"
               examples:
                 HouseholdExample1:
-                  "$ref": "./households-openapi-examples.yaml#/HouseholdExample1"
+                  $ref: "#/components/examples/HouseholdExample1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':
@@ -189,6 +189,8 @@ components:
                 type: string
                 format: uuid
                 description: Reference to the person's unique identifier.
+                x-relationship:
+                  resource: Person
               relationship:
                 type: string
                 description: Relationship to the head of household.
@@ -244,3 +246,32 @@ components:
             type: array
             items:
               "$ref": "#/components/schemas/Household"
+
+  examples:
+    HouseholdExample1:
+      summary: Springfield household with three members
+      value:
+        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        homeAddress:
+          addressLine1: 123 Main St
+          addressLine2: Apt 4B
+          city: Springfield
+          stateProvince: IL
+          postalCode: '62704'
+          county: Sangamon
+        mailingAddress:
+          addressLine1: PO Box 5678
+          city: Springfield
+          stateProvince: IL
+          postalCode: '62705'
+          county: Sangamon
+        phoneNumber: "+1-555-123-4567"
+        members:
+          - personId: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+            relationship: head_of_household
+          - personId: 7e8f9a0b-1c2d-3e4f-5a6b-7c8d9e0f1a2b
+            relationship: spouse
+          - personId: 2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e
+            relationship: child
+        createdAt: '2024-01-05T09:00:00Z'
+        updatedAt: '2024-06-12T14:20:00Z'

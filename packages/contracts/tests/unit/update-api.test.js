@@ -8,8 +8,7 @@ import assert from 'node:assert';
 import yaml from 'js-yaml';
 import {
   detectUrlPrefix,
-  mergeResource,
-  appendExamples
+  mergeResource
 } from '../../scripts/update-api.js';
 
 // Helper: minimal existing spec with a /workflow prefix
@@ -231,7 +230,7 @@ test('update-api tests', async (t) => {
   // mergeResource - examples reference
   // ===========================================================================
 
-  await t.test('mergeResource - get endpoint references examples file', () => {
+  await t.test('mergeResource - get endpoint references inline example', () => {
     const spec = makeWorkflowSpec();
     mergeResource(spec, 'workflow', 'Queue');
 
@@ -240,8 +239,9 @@ test('update-api tests', async (t) => {
     assert.ok(examples.QueueExample1);
     assert.strictEqual(
       examples.QueueExample1['$ref'],
-      './workflow-openapi-examples.yaml#/QueueExample1'
+      '#/components/examples/QueueExample1'
     );
+    assert.ok(spec.components.examples?.QueueExample1, 'Inline example merged into components/examples');
   });
 
   // ===========================================================================
@@ -257,44 +257,4 @@ test('update-api tests', async (t) => {
     );
   });
 
-  // ===========================================================================
-  // appendExamples
-  // ===========================================================================
-
-  await t.test('appendExamples - appends data without header comments', () => {
-    const existing = `# Task Examples
-TaskExample1:
-  id: "abc"
-  name: "Task 1"
-`;
-    const newExamples = `# Queue Examples
-# Example data for testing and documentation.
-
-QueueExample1:
-  id: "def"
-  name: "Queue 1"
-
-QueueExample2:
-  id: "ghi"
-  name: "Queue 2"
-`;
-    const result = appendExamples(existing, newExamples);
-
-    // Existing content preserved
-    assert.ok(result.includes('TaskExample1:'));
-    // New content appended without comment headers
-    assert.ok(result.includes('QueueExample1:'));
-    assert.ok(result.includes('QueueExample2:'));
-    // Comment headers stripped
-    assert.ok(!result.includes('# Queue Examples'));
-    assert.ok(!result.includes('# Example data'));
-  });
-
-  await t.test('appendExamples - result ends with newline', () => {
-    const existing = 'TaskExample1:\n  id: "abc"';
-    const newExamples = '# Header\n\nQueueExample1:\n  id: "def"\n';
-    const result = appendExamples(existing, newExamples);
-
-    assert.ok(result.endsWith('\n'));
-  });
 });

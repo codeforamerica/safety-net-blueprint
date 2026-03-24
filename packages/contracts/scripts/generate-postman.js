@@ -13,7 +13,7 @@
  *   -h, --help     Show this help message
  */
 
-import { loadAllSpecs, getExamplesPath, collectionToSchemaPrefix, extractIndividualResources } from '../src/validation/openapi-loader.js';
+import { loadAllSpecs, collectionToSchemaPrefix, extractIndividualResources } from '../src/validation/openapi-loader.js';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, realpathSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
@@ -59,17 +59,29 @@ function parseArgs() {
 // =============================================================================
 
 /**
- * Load examples from YAML file (uses state-specific if STATE env var set)
+ * Load examples for a resource. Checks for a seed file first, then falls
+ * back to inline examples embedded in the OpenAPI spec.
  */
 function loadExamples(resourceName) {
-  const examplesPath = getExamplesPath(resourceName, specsDir);
-
-  if (!existsSync(examplesPath)) {
-    return {};
+  // Check for a dedicated seed file (e.g., persons.yaml)
+  const seedPath = join(specsDir, `${resourceName}.yaml`);
+  if (existsSync(seedPath)) {
+    const content = readFileSync(seedPath, 'utf8');
+    return yaml.load(content) || {};
   }
 
-  const content = readFileSync(examplesPath, 'utf8');
-  return yaml.load(content) || {};
+  // Fall back to inline examples from the spec file
+  const specPath = join(specsDir, `${resourceName}-openapi.yaml`);
+  if (!existsSync(specPath)) {
+    return {};
+  }
+  const spec = yaml.load(readFileSync(specPath, 'utf8'));
+  const componentExamples = spec?.components?.examples || {};
+  const flat = {};
+  for (const [key, ex] of Object.entries(componentExamples)) {
+    if (ex?.value) flat[key] = ex.value;
+  }
+  return flat;
 }
 
 

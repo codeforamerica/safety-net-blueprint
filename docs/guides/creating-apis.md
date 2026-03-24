@@ -13,9 +13,7 @@ npm run api:new -- --name "benefits" --resource "Benefit"
 ```
 
 This generates:
-- `openapi/benefits.yaml` - Main API spec
-- `openapi/components/benefits.yaml` - Resource schema
-- `openapi/examples/benefits.yaml` - Example data
+- `{name}-openapi.yaml` - Main API spec with one inline example in `components/examples`
 
 Then customize the generated files to match your domain requirements.
 
@@ -28,15 +26,13 @@ If you need more control or are building a complex API, follow these steps.
 ### Step 1: Understand the File Structure
 
 ```
-openapi/
-├── {resource-plural}.yaml          # Main API specification
-├── components/
-│   ├── common.yaml                 # Shared schemas (Address, Name, etc.)
-│   ├── common-parameters.yaml      # Shared query parameters
-│   ├── common-responses.yaml       # Shared error responses
-│   └── {resource-plural}.yaml      # Resource-specific schemas
-└── examples/
-    └── {resource-plural}.yaml      # Example data for testing
+packages/contracts/
+├── {domain}-openapi.yaml           # Main API specification (schemas + inline example)
+└── components/
+    ├── common.yaml                 # Shared schemas (Address, Name, etc.)
+    ├── parameters.yaml             # Shared query parameters
+    ├── responses.yaml              # Shared error responses
+    └── {resource}.yaml             # Resource-specific shared schemas
 ```
 
 ### Step 2: Define the Resource Schema
@@ -288,23 +284,25 @@ components:
           description: Whether more results exist.
 ```
 
-### Step 4: Create Example Data
+### Step 4: Add an Inline Example
 
-Create `openapi/examples/{resource-plural}.yaml`:
+In the spec's `components` section, add a `components/examples` entry with one representative record. Reference it from the GET `/{id}` response:
 
 ```yaml
-# {Resource} Examples
-{Resource}Example1:
-  id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-  {fieldName}: "Example value 1"
-  createdAt: "2024-01-15T10:30:00Z"
-  updatedAt: "2024-01-15T10:30:00Z"
+# In paths/{resourceId}/get/responses/200:
+              examples:
+                {Resource}Example1:
+                  $ref: "#/components/examples/{Resource}Example1"
 
-{Resource}Example2:
-  id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
-  {fieldName}: "Example value 2"
-  createdAt: "2024-01-16T14:45:00Z"
-  updatedAt: "2024-01-16T14:45:00Z"
+# In components:
+  examples:
+    {Resource}Example1:
+      summary: Brief description of this record
+      value:
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        {fieldName}: "Example value"
+        createdAt: "2024-01-15T10:30:00Z"
+        updatedAt: "2024-01-15T10:30:00Z"
 ```
 
 ### Step 5: Validate
@@ -496,7 +494,7 @@ Before submitting a new API:
 
 - [ ] Resource schema in `openapi/components/{name}.yaml`
 - [ ] Main spec in `openapi/{name}.yaml`
-- [ ] Examples in `openapi/examples/{name}.yaml`
+- [ ] One inline example in `components/examples/{Resource}Example1`, referenced from GET `/{id}` response
 - [ ] All required fields have `id`, `createdAt`, `updatedAt`
 - [ ] List endpoint has search and pagination parameters
 - [ ] List response has `items`, `total`, `limit`, `offset`, `hasNext`

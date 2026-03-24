@@ -16,6 +16,8 @@
     "start": "node scripts/server.js --spec=../contracts",
     "start:all": "node scripts/start-all.js --spec=../contracts",
     "swagger": "node scripts/swagger/server.js --spec=../contracts",
+    "seed": "node scripts/generate-seed.js --spec=../contracts --out=./seed",
+    "validate:seed": "node scripts/validate-seed.js --spec=../contracts --seed=./seed",
     "setup": "node scripts/setup.js --spec=../contracts",
     "reset": "node scripts/reset.js --spec=../contracts",
     "test": "node tests/run-all-tests.js --unit",
@@ -26,6 +28,9 @@
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "@codeforamerica/safety-net-blueprint-contracts": "^1.0.0",
+    "@faker-js/faker": "^10.4.0",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^3.0.1",
     "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",

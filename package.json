@@ -27,6 +27,8 @@
     "mock:stop": "node packages/mock-server/scripts/server.js --stop",
     "mock:start:all": "node packages/mock-server/scripts/start-all.js --spec=packages/contracts",
     "mock:swagger": "node packages/mock-server/scripts/swagger/server.js --spec=packages/contracts",
+    "mock:seed": "node packages/mock-server/scripts/generate-seed.js --spec=packages/contracts --out=packages/mock-server/seed",
+    "validate:seed": "node packages/mock-server/scripts/validate-seed.js --spec=packages/contracts --seed=packages/mock-server/seed",
     "mock:setup": "node packages/mock-server/scripts/setup.js --spec=packages/contracts",
     "mock:reset": "node packages/mock-server/scripts/reset.js --spec=packages/contracts",
     "test": "npm test --workspaces --if-present",
@@ -36,7 +38,6 @@
     "preflight": "bash scripts/preflight.sh",
     "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html",
     "design:reference": "node packages/contracts/scripts/export-design-reference.js --spec=packages/contracts --out=docs",
-    "reconcile-examples": "node packages/contracts/scripts/reconcile-examples.js",
     "contract-tables:export": "node packages/contracts/scripts/export-contract-tables.js",
     "contract-tables:import": "node packages/contracts/scripts/import-contract-tables.js"
   },

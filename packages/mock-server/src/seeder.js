@@ -4,8 +4,9 @@
 
 import { readFileSync, existsSync } from 'fs';
 import yaml from 'js-yaml';
-import { insertResource, count, clearAll } from './database-manager.js';
-import { getExamplesPath, collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/safety-net-blueprint-contracts/loader';
+import { insertResource, clearAll } from './database-manager.js';
+import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/safety-net-blueprint-contracts/loader';
+import { join } from 'path';
 
 /**
  * Load examples from YAML file
@@ -16,60 +17,45 @@ function loadExamples(examplesPath) {
   if (!existsSync(examplesPath)) {
     return {};
   }
-  
   const content = readFileSync(examplesPath, 'utf8');
   return yaml.load(content) || {};
 }
 
 /**
- * Seed database with examples from YAML file
+ * Seed database with examples from a seed YAML file.
  * @param {string} collectionName - Database collection name (e.g., 'tasks')
- * @param {string} specsDir - Path to specs directory
- * @param {string} [apiName] - API name for finding the examples file (defaults to collectionName)
+ * @param {string} seedDir - Path to seed directory
+ * @param {string} [apiName] - API name for finding the seed file (defaults to collectionName)
  * @returns {number} Number of resources seeded
  */
-export function seedDatabase(collectionName, specsDir, apiName) {
+export function seedDatabase(collectionName, seedDir, apiName) {
   const resourceName = apiName || collectionName;
   try {
-    const examplesPath = getExamplesPath(resourceName, specsDir);
-    
-    if (!existsSync(examplesPath)) {
-      console.log(`  No examples file found for ${resourceName}, database will be empty`);
-      return 0;
-    }
+    const examples = loadExamples(join(seedDir, `${resourceName}.yaml`));
 
-    const examples = loadExamples(examplesPath);
-
-    if (!examples || Object.keys(examples).length === 0) {
-      console.log(`  No examples found in ${resourceName}.yaml, database will be empty`);
+    if (Object.keys(examples).length === 0) {
+      console.log(`  No seed file found for ${resourceName}, database will be empty`);
       return 0;
     }
 
     const resources = extractIndividualResources(examples);
 
     if (resources.length === 0) {
-      console.log(`  No valid resources found in ${resourceName}.yaml examples`);
+      console.log(`  No valid resources found in ${resourceName}.yaml`);
       return 0;
     }
 
-    // Insert each resource with timestamps ensuring proper list order
-    // Query orders by createdAt DESC, so Example1 needs the NEWEST timestamp to appear first
     let seededCount = 0;
     const baseTimestamp = new Date('2024-01-01T00:00:00Z').getTime();
 
     for (let i = 0; i < resources.length; i++) {
       try {
-        // Create a copy to avoid mutating the original
         const resource = { ...resources[i].data };
-
-        // Override createdAt/updatedAt to ensure proper ordering
-        // Example1 (i=0) gets newest timestamp, Example2 (i=1) gets older, etc.
-        // This way when sorted DESC, Example1 appears first
-        const minutesOffset = (resources.length - 1 - i) * 60000; // Reverse order: Example1=newest
+        // Example1 (i=0) gets newest timestamp so it appears first when sorted DESC
+        const minutesOffset = (resources.length - 1 - i) * 60000;
         const timestamp = new Date(baseTimestamp + minutesOffset).toISOString();
         resource.createdAt = timestamp;
         resource.updatedAt = timestamp;
-
         insertResource(collectionName, resource);
         seededCount++;
       } catch (error) {
@@ -77,7 +63,7 @@ export function seedDatabase(collectionName, specsDir, apiName) {
       }
     }
 
-    console.log(`  Seeded ${seededCount} ${collectionName} from examples`);
+    console.log(`  Seeded ${seededCount} ${collectionName}`);
     return seededCount;
   } catch (error) {
     console.error(`  Error seeding ${collectionName}:`, error.message);
@@ -85,12 +71,6 @@ export function seedDatabase(collectionName, specsDir, apiName) {
   }
 }
 
-/**
- * Seed all databases for all discovered APIs
- * @param {Array} apiSpecs - Array of API specification objects
- * @param {string} specsDir - Path to specs directory
- * @returns {Object} Summary of seeded data
- */
 /**
  * Derive the collection name from an API's baseResource path.
  * Example: "/tasks" → "tasks", "/persons" → "persons"
@@ -139,8 +119,15 @@ function extractResourcesForCollection(examples, collectionName) {
   return extractIndividualResources(filtered);
 }
 
-export function seedAllDatabases(apiSpecs, specsDir, seedDir = specsDir) {
-  console.log('\nSeeding databases from example files...');
+/**
+ * Seed all databases for all discovered APIs
+ * @param {Array} apiSpecs - Array of API specification objects
+ * @param {string} specsDir - Path to specs directory (unused, kept for backward compat)
+ * @param {string} seedDir - Path to seed directory
+ * @returns {Object} Summary of seeded data
+ */
+export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
+  console.log('\nSeeding databases from seed files...');
 
   const summary = {};
 
@@ -148,31 +135,20 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir = specsDir) {
     try {
       const allCollections = deriveAllCollectionNames(api);
 
-      // Clear all collections for this API (primary + secondary)
       for (const name of allCollections) {
         clearAll(name);
       }
 
-      // Load examples once for the API
-      const examplesPath = getExamplesPath(api.name, seedDir);
-      if (!existsSync(examplesPath)) {
-        console.log(`  No examples file found for ${api.name}, databases will be empty`);
+      const examples = loadExamples(join(seedDir, `${api.name}.yaml`));
+
+      if (Object.keys(examples).length === 0) {
+        console.log(`  No seed file found for ${api.name}, databases will be empty`);
         for (const name of allCollections) {
           summary[name] = 0;
         }
         continue;
       }
 
-      const examples = loadExamples(examplesPath);
-      if (!examples || Object.keys(examples).length === 0) {
-        console.log(`  No examples found in ${api.name}.yaml, databases will be empty`);
-        for (const name of allCollections) {
-          summary[name] = 0;
-        }
-        continue;
-      }
-
-      // Seed each collection with its matching examples
       for (const collectionName of allCollections) {
         const resources = extractResourcesForCollection(examples, collectionName);
 
@@ -198,7 +174,7 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir = specsDir) {
           }
         }
 
-        console.log(`  Seeded ${seededCount} ${collectionName} from examples`);
+        console.log(`  Seeded ${seededCount} ${collectionName}`);
         summary[collectionName] = seededCount;
       }
     } catch (error) {

@@ -11,8 +11,7 @@ import {
   toCamelCase,
   toPascalCase,
   pluralize,
-  generateApiSpec,
-  generateExamples
+  generateApiSpec
 } from '../../scripts/generate-api.js';
 
 test('generate-api tests', async (t) => {
@@ -224,9 +223,9 @@ test('generate-api tests', async (t) => {
     assert.ok(spec.includes('"$ref": "#/components/schemas/CaseWorker"'));
   });
 
-  await t.test('generateApiSpec - examples $ref points to examples file', () => {
+  await t.test('generateApiSpec - examples $ref points to inline example', () => {
     const spec = generateApiSpec('benefits', 'Benefit');
-    assert.ok(spec.includes('"$ref": "./benefits-openapi-examples.yaml#/BenefitExample1"'));
+    assert.ok(spec.includes('$ref: "#/components/examples/BenefitExample1"'));
   });
 
   await t.test('generateApiSpec - uses default ./components prefix', () => {
@@ -249,26 +248,11 @@ test('generate-api tests', async (t) => {
     assert.ok(spec.includes('"$ref": "#/components/schemas/Benefit"'));
   });
 
-  // ===========================================================================
-  // generateExamples
-  // ===========================================================================
-
-  await t.test('generateExamples - contains expected example keys', () => {
-    const examples = generateExamples('benefits', 'Benefit');
-    assert.ok(examples.includes('BenefitExample1:'));
-    assert.ok(examples.includes('BenefitExample2:'));
-  });
-
-  await t.test('generateExamples - contains resource header', () => {
-    const examples = generateExamples('benefits', 'Benefit');
-    assert.ok(examples.includes('# Benefit Examples'));
-  });
-
-  await t.test('generateExamples - contains expected fields', () => {
-    const examples = generateExamples('benefits', 'Benefit');
-    assert.ok(examples.includes('name: "Example Benefit 1"'));
-    assert.ok(examples.includes('status: "active"'));
-    assert.ok(examples.includes('status: "pending"'));
+  await t.test('generateApiSpec - inline example in components/examples', () => {
+    const spec = generateApiSpec('benefits', 'Benefit');
+    assert.ok(spec.includes('  examples:'));
+    assert.ok(spec.includes('    BenefitExample1:'));
+    assert.ok(spec.includes('      value:'));
   });
 
 });

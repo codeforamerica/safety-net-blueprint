@@ -95,7 +95,7 @@ paths:
                 "$ref": "#/components/schemas/Appointment"
               examples:
                 AppointmentExample1:
-                  "$ref": "./scheduling-openapi-examples.yaml#/AppointmentExample1"
+                  $ref: "#/components/examples/AppointmentExample1"
         '404':
           "$ref": "./components/responses.yaml#/NotFound"
         '500':
@@ -262,3 +262,18 @@ components:
             type: array
             items:
               "$ref": "#/components/schemas/Appointment"
+
+  examples:
+    AppointmentExample1:
+      summary: SNAP eligibility interview with interpreter requested
+      value:
+        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        startAt: '2026-03-15T10:00:00Z'
+        endAt: '2026-03-15T10:30:00Z'
+        appointmentType: interview
+        status: scheduled
+        personId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
+        assignedToId: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a
+        notes: Initial SNAP eligibility interview. Interpreter requested for Spanish.
+        createdAt: '2026-03-01T09:00:00Z'
+        updatedAt: '2026-03-01T09:00:00Z'
