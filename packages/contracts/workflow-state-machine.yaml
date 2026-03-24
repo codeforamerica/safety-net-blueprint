@@ -3,11 +3,27 @@ version: "1.0"
 object: Task
 domain: workflow
 apiSpec: workflow-openapi.yaml
+
 states:
-  pending: {}
-  in_progress: {}
-  completed: {}
+  pending:
+    slaClock: running
+  in_progress:
+    slaClock: running
+  completed:
+    slaClock: stopped
+  escalated:
+    slaClock: running
+  cancelled:
+    slaClock: stopped
+  awaiting_client:
+    slaClock: paused
+  awaiting_verification:
+    slaClock: paused
+  pending_review:
+    slaClock: running
+
 initialState: pending
+
 guards:
   taskIsUnassigned:
     field: assignedToId
@@ -16,6 +32,15 @@ guards:
     field: assignedToId
     operator: equals
     value: $caller.id
+  callerIsSupervisor:
+    field: $caller.role
+    operator: equals
+    value: supervisor
+  callerIsSystem:
+    field: $caller.type
+    operator: equals
+    value: system
+
 transitions:
   - trigger: claim
     from: pending
@@ -31,6 +56,7 @@ transitions:
       - type: event
         action: claimed
         description: Emit a domain event recording the claim
+
   - trigger: complete
     from: in_progress
     to: completed
@@ -69,6 +95,7 @@ transitions:
           isExpedited: $object.isExpedited
           caseId: $object.caseId
           status: pending
+
   - trigger: release
     from: in_progress
     to: pending
@@ -91,6 +118,285 @@ transitions:
       - type: evaluate-rules
         ruleType: priority
         description: Re-evaluate priority rules after release
+
+  - trigger: escalate
+    from: in_progress
+    to: escalated
+    guards:
+      - any:
+          - callerIsAssignedWorker
+          - callerIsSupervisor
+    effects:
+      - type: set
+        field: escalatedAt
+        value: $now
+        description: Record when the task was escalated
+      - type: evaluate-rules
+        ruleType: priority
+        description: Re-evaluate priority after escalation
+      - type: event
+        action: escalated
+        data:
+          reason: $request.reason
+        description: Emit a domain event recording the escalation
+
+  - trigger: escalate
+    from: pending
+    to: escalated
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: set
+        field: escalatedAt
+        value: $now
+        description: Record when the task was escalated
+      - type: evaluate-rules
+        ruleType: priority
+        description: Re-evaluate priority after escalation
+      - type: event
+        action: escalated
+        data:
+          reason: $request.reason
+        description: Emit a domain event recording the escalation
+
+  - trigger: de-escalate
+    from: escalated
+    to: pending
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: evaluate-rules
+        ruleType: assignment
+        description: Re-evaluate assignment rules after de-escalation
+      - type: evaluate-rules
+        ruleType: priority
+        description: Re-evaluate priority rules after de-escalation
+      - type: event
+        action: de-escalated
+        description: Emit a domain event recording the de-escalation
+
+  - trigger: cancel
+    from:
+      - pending
+      - in_progress
+      - escalated
+    to: cancelled
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: set
+        field: cancelledAt
+        value: $now
+        description: Record when the task was cancelled
+      - type: event
+        action: cancelled
+        data:
+          reason: $request.reason
+        description: Emit a domain event recording the cancellation
+
+  - trigger: reopen
+    from: cancelled
+    to: pending
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: set
+        field: cancelledAt
+        value: null
+        description: Clear the cancellation timestamp on reopen
+      - type: evaluate-rules
+        ruleType: assignment
+        description: Re-evaluate assignment rules after reopen
+      - type: evaluate-rules
+        ruleType: priority
+        description: Re-evaluate priority rules after reopen
+      - type: event
+        action: reopened
+        data:
+          reason: $request.reason
+        description: Emit a domain event recording the reopen
+
+  - trigger: await-client
+    from: in_progress
+    to: awaiting_client
+    guards:
+      - callerIsAssignedWorker
+    effects:
+      - type: set
+        field: blockedAt
+        value: $now
+        description: Record when the task entered a waiting state
+      - type: event
+        action: awaiting_client
+        description: Emit a domain event recording the block
+
+  - trigger: await-verification
+    from: in_progress
+    to: awaiting_verification
+    guards:
+      - callerIsAssignedWorker
+    effects:
+      - type: set
+        field: blockedAt
+        value: $now
+        description: Record when the task entered a waiting state
+      - type: event
+        action: awaiting_verification
+        description: Emit a domain event recording the block
+
+  - trigger: resume
+    from:
+      - awaiting_client
+      - awaiting_verification
+    to: in_progress
+    guards:
+      - any:
+          - callerIsAssignedWorker
+          - callerIsSupervisor
+    effects:
+      - type: set
+        field: blockedAt
+        value: null
+        description: Clear the block timestamp on resume
+      - type: event
+        action: resumed
+        description: Emit a domain event recording the resumption
+
+  - trigger: system-resume
+    from: awaiting_verification
+    to: in_progress
+    guards:
+      - callerIsSystem
+    effects:
+      - type: set
+        field: blockedAt
+        value: null
+        description: Clear the block timestamp on system resume
+      - type: event
+        action: system_resumed
+        data:
+          source: $request.source
+          result: $request.result
+        description: Emit a domain event recording the automated resumption and its result
+
+  - trigger: submit-for-review
+    from:
+      - in_progress
+      - escalated
+    to: pending_review
+    guards:
+      - callerIsAssignedWorker
+    effects:
+      - type: event
+        action: submitted_for_review
+        description: Emit a domain event recording the submission for review
+
+  - trigger: approve
+    from: pending_review
+    to: completed
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: set
+        field: completedAt
+        value: $now
+        description: Record when work was approved and completed
+      - type: set
+        field: outcome
+        value: $request.outcome
+        description: Store the outcome from the supervisor's approval
+      - type: set
+        field: completionNotes
+        value: $request.notes
+        description: Store optional notes from the supervisor
+      - type: event
+        action: approved
+        data:
+          outcome: $request.outcome
+        description: Emit a domain event recording the approval
+
+  - trigger: return-to-worker
+    from: pending_review
+    to: in_progress
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: event
+        action: returned_to_worker
+        data:
+          reason: $request.reason
+        description: Emit a domain event recording the return for revision
+
+  - trigger: auto-escalate
+    on: timer
+    after: 72h
+    relativeTo: createdAt
+    calendarType: business
+    from: pending
+    to: escalated
+    effects:
+      - type: evaluate-rules
+        ruleType: priority
+        description: Re-evaluate priority on auto-escalation
+      - type: event
+        action: auto_escalated
+        data:
+          reason: deadline_exceeded
+        description: Emit a domain event recording the automatic escalation
+
+  - trigger: auto-escalate-sla-warning
+    on: timer
+    after: -48h
+    relativeTo: slaDeadline
+    calendarType: calendar
+    from: in_progress
+    to: escalated
+    effects:
+      - type: evaluate-rules
+        ruleType: priority
+        description: Re-evaluate priority on SLA warning escalation
+      - type: event
+        action: auto_escalated
+        data:
+          reason: sla_deadline_approaching
+        description: Emit a domain event recording the SLA-triggered escalation
+
+  - trigger: auto-cancel-awaiting-client
+    on: timer
+    after: 30d
+    relativeTo: blockedAt
+    calendarType: calendar
+    from: awaiting_client
+    to: cancelled
+    effects:
+      - type: set
+        field: cancelledAt
+        value: $now
+        description: Record when the task was automatically cancelled
+      - type: event
+        action: auto_cancelled
+        data:
+          reason: client_unresponsive
+        description: Emit a domain event recording the automatic cancellation
+
+  - trigger: auto-resume-awaiting-verification
+    on: timer
+    after: 7d
+    relativeTo: blockedAt
+    calendarType: calendar
+    from: awaiting_verification
+    to: in_progress
+    effects:
+      - type: set
+        field: blockedAt
+        value: null
+        description: Clear the block timestamp on auto-resume
+      - type: event
+        action: auto_resumed
+        data:
+          reason: verification_timeout
+        description: Emit a domain event recording the automatic resumption
+
 onCreate:
   actors: []
   effects:
@@ -103,6 +409,20 @@ onCreate:
     - type: evaluate-rules
       ruleType: priority
       description: Evaluate priority rules to set task priority
+
+onUpdate:
+  fields:
+    - isExpedited
+    - programType
+    - queueId
+  effects:
+    - type: evaluate-rules
+      ruleType: priority
+      description: Re-evaluate priority when expedited status or program type changes
+    - type: evaluate-rules
+      ruleType: assignment
+      description: Re-evaluate assignment when queue or program type changes
+
 requestBodies:
   claim: {}
   complete:
@@ -125,5 +445,79 @@ requestBodies:
       reason:
         type: string
         description: Why the task is being released
+    required:
+      - reason
+  escalate:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: Why the task is being escalated
+    required:
+      - reason
+  de-escalate:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional notes about the de-escalation
+  cancel:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: Why the task is being cancelled
+    required:
+      - reason
+  reopen:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: Why the cancelled task is being reopened
+    required:
+      - reason
+  await-client:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional context about what action is being awaited from the client
+  await-verification:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional context about what external verification is pending
+  resume: {}
+  system-resume:
+    type: object
+    properties:
+      source:
+        type: string
+        description: The verification service that returned results (e.g., IEVS, FDSH)
+      result:
+        type: string
+        description: Summary of the verification result
+    required:
+      - source
+  submit-for-review: {}
+  approve:
+    type: object
+    properties:
+      outcome:
+        type: string
+        description: Completion outcome (e.g., approved, denied)
+      notes:
+        type: string
+        description: Optional notes from the supervisor
+    required:
+      - outcome
+  return-to-worker:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: Why the work is being returned for revision
     required:
       - reason
