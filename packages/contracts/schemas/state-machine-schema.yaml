@@ -53,6 +53,9 @@ properties:
   onCreate:
     $ref: "#/$defs/OnCreate"
 
+  onUpdate:
+    $ref: "#/$defs/OnUpdate"
+
   transitions:
     type: array
     description: Ordered list of valid state transitions.
@@ -73,6 +76,8 @@ $defs:
   State:
     type: object
     description: Configuration for a single state.
+    required:
+      - slaClock
     properties:
       slaClock:
         type: string
@@ -125,6 +130,24 @@ $defs:
         minItems: 1
     additionalProperties: false
 
+  OnUpdate:
+    type: object
+    description: Effects that run when the object's fields are updated outside of a transition.
+    required:
+      - effects
+    properties:
+      fields:
+        type: array
+        items:
+          type: string
+        description: Only fire when one of these fields changes. Omit to fire on any update.
+      effects:
+        type: array
+        items:
+          $ref: "#/$defs/Effect"
+        minItems: 1
+    additionalProperties: false
+
   Transition:
     type: object
     description: A valid state change with guards and effects.
@@ -137,11 +160,40 @@ $defs:
         type: string
         description: Action name — becomes the RPC endpoint.
       from:
-        type: string
-        description: Source state.
+        oneOf:
+          - type: string
+            description: Single source state.
+          - type: array
+            items:
+              type: string
+            minItems: 2
+            description: Multiple source states (transition fires from any of them).
+        description: Source state(s).
       to:
         type: string
         description: Target state.
+      on:
+        type: string
+        enum:
+          - timer
+        description: When present, transition fires automatically rather than via actor request.
+      after:
+        type: string
+        description: Duration string (e.g., 72h, 7d, -48h). Required when on=timer.
+      relativeTo:
+        type: string
+        description: >
+          Reference point for the duration. Task timestamp fields (createdAt, blockedAt,
+          escalatedAt, startedAt) measure elapsed time since that moment. The special value
+          slaDeadline measures time remaining before the SLA deadline — use a negative
+          duration (e.g., -48h) to fire N hours before expiry. Required when on=timer.
+      calendarType:
+        type: string
+        enum:
+          - calendar
+          - business
+        default: calendar
+        description: Whether the duration is measured in calendar time or business hours/days. Defaults to calendar.
       actors:
         type: array
         items:
@@ -150,8 +202,26 @@ $defs:
       guards:
         type: array
         items:
-          type: string
-        description: Guard names that must all pass.
+          oneOf:
+            - type: string
+              description: Named guard reference — must pass.
+            - type: object
+              description: Composition — any or all of the listed guards must pass.
+              properties:
+                any:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 2
+                  description: At least one of these named guards must pass (OR).
+                all:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 2
+                  description: All of these named guards must pass (AND).
+              additionalProperties: false
+        description: Guards that must pass for the transition to fire.
       effects:
         type: array
         items:
