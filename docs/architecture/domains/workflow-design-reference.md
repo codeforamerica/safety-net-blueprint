@@ -185,9 +185,6 @@ Timer triggers are especially important in benefits processing because regulator
 - `calendarType` can be overridden per transition.
 - Timer transitions support an optional `guards` field for conditional suppression — e.g., skip `auto-escalate` for tasks already flagged by a supervisor.
 
-**Known limitations:**
-- **No SLA breach transition.** `auto-escalate-sla-warning` fires 48 hours before the deadline and moves the task to `escalated`, but nothing fires at the actual breach moment (0h). ServiceNow fires a distinct breach escalation. A future `auto-escalate-sla-breach` timer (from `escalated`, `after: 0h relativeTo: slaDeadline`) would close this gap and provide a distinct domain event for federal breach reporting.
-
 ---
 
 ## Guards and access control
@@ -338,6 +335,7 @@ Domain events serve two roles in benefits programs: audit trail and cross-domain
 | Skill-based assignment | Round-robin, least-loaded, skill-match routing | Rules engine supports it; no built-in actions yet |
 | Notification effects | Notify client on `await-client`; notify supervisor on escalation | Out of scope; cross-cutting concern (communication domain) |
 | `$caller.role` enforcement | Role checks are named stubs; see [Role-based access control](#role-based-access-control) | Planned |
+| SLA breach transition | ServiceNow fires a distinct breach escalation at 0h | `slaInfo.*.status` becomes `breached` via the SLA engine; no timer-triggered state machine transition fires at the breach moment. A future `auto-escalate-sla-breach` timer would add a domain event for federal breach reporting. |
 | Cross-domain task creation | Application submitted → review task auto-created; see [Cross-domain event wiring](#cross-domain-event-wiring) | Planned |
 
 ---
