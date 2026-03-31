@@ -1,6 +1,6 @@
 # Workflow Domain
 
-> **Status:** Task, Queue, and Events APIs implemented (alpha). State machine engine supports transitions, guards, `set`, `create`, `evaluate-rules`, and `event` effects with conditional execution via `when` clauses. Rule evaluation engine handles assignment and priority rules. SLA tracking is live — tasks carry `slaInfo` entries computed from `workflow-sla-types.yaml` on every transition. Metrics contract and `GET /metrics` endpoint are implemented. The [workflow prototype](../../prototypes/workflow-prototype.md) designs the full set of patterns.
+> **Status:** Task, Queue, and Events APIs implemented (alpha). State machine engine supports transitions, guards, `set`, `create`, `evaluate-rules`, and `event` effects with conditional execution via `when` clauses. Rule evaluation engine handles assignment and priority rules. SLA tracking is live — tasks carry `slaInfo` entries computed from `workflow-sla-types.yaml` on every transition. Metrics contract and `GET /workflow/metrics` endpoint are implemented. The [workflow prototype](../../prototypes/workflow-prototype.md) designs the full set of patterns.
 
 See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
@@ -82,6 +82,31 @@ Key behavioral patterns:
 - Effects include: `set` (update fields), `create` (create related records), `evaluate-rules` (routing/priority), `event` (domain events)
 - Conditional effects: `when` clause (JSON Logic) on any effect — fires only when the condition matches the request or resource context
 - SLA clock pauses on `awaiting_client` and `awaiting_verification` states via `pauseWhen` JSON Logic in `workflow-sla-types.yaml`
+
+### SLA Types
+
+Program-specific processing deadlines and the conditions under which the clock pauses or resumes. Defined in [`workflow-sla-types.yaml`](../../../packages/contracts/workflow-sla-types.yaml). Each task carries a `slaInfo` array — one entry per assigned SLA type — with `status`, `clockStartedAt`, and `deadline` updated automatically on every transition.
+
+| Concept | Industry Source |
+|---------|----------------|
+| SLA definition | ServiceNow: [SLA Definition](https://www.servicenow.com/products/itsm/what-is-sla.html) |
+| Multiple SLAs per record | JSM: SLA agreements; ServiceNow: multiple SLA records per task |
+| Auto-attach conditions | ServiceNow: SLA Definition conditions; JSM: automation rules |
+| Pause/resume | JSM: "Pending" sub-status; ServiceNow: on-hold condition scripts |
+
+Baseline SLA types: `snap_expedited` (7 days), `snap_standard` (30 days), `medicaid_standard` (45 days), `medicaid_disability` (90 days). All pause when `status` is `awaiting_client` or `awaiting_verification`. See [SLA Types and Clock Management](workflow-design-reference.md#sla-types-and-clock-management) for design rationale.
+
+### Metrics
+
+Computed operational metrics derived from live task and event data. Defined in [`workflow-metrics.yaml`](../../../packages/contracts/workflow-metrics.yaml). Served read-only at `GET /workflow/metrics` and `GET /workflow/metrics/{metricId}`. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
+
+| Concept | Industry Source |
+|---------|----------------|
+| Metric definitions | ServiceNow: Performance Analytics indicators; JSM: custom gadgets |
+| Performance targets | ServiceNow: PA thresholds; JSM: SLA goals |
+| Dimensional breakdown | ServiceNow: PA breakdown by group; Grafana: query-time groupBy |
+
+Baseline metrics: task time to claim (duration), tasks in queue (count), release rate (ratio), SLA breach rate (ratio), SLA warning rate (ratio). See [Metrics](workflow-design-reference.md#metrics) for design rationale.
 
 ## Customization
 
