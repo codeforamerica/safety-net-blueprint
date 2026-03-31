@@ -4,36 +4,36 @@ object: Task
 domain: workflow
 apiSpec: workflow-openapi.yaml
 states:
-  pending:
+  - id: pending
     slaClock: running
-  in_progress:
+  - id: in_progress
     slaClock: running
-  completed:
+  - id: completed
     slaClock: stopped
-  escalated:
+  - id: escalated
     slaClock: running
-  cancelled:
+  - id: cancelled
     slaClock: stopped
-  awaiting_client:
+  - id: awaiting_client
     slaClock: paused
-  awaiting_verification:
+  - id: awaiting_verification
     slaClock: paused
-  pending_review:
+  - id: pending_review
     slaClock: running
 initialState: pending
 guards:
-  taskIsUnassigned:
+  - id: taskIsUnassigned
     field: assignedToId
     operator: is_null
-  callerIsAssignedWorker:
+  - id: callerIsAssignedWorker
     field: assignedToId
     operator: equals
     value: $caller.id
-  callerIsSupervisor:
+  - id: callerIsSupervisor
     field: $caller.role
     operator: equals
     value: supervisor
-  callerIsSystem:
+  - id: callerIsSystem
     field: $caller.role
     operator: equals
     value: system
@@ -415,8 +415,8 @@ onUpdate:
       ruleType: assignment
       description: Re-evaluate assignment when queue or program type changes
 requestBodies:
-  claim: {}
-  complete:
+  - trigger: claim
+  - trigger: complete
     type: object
     properties:
       outcome:
@@ -430,7 +430,7 @@ requestBodies:
         description: When true, a follow-up task is automatically created
     required:
       - outcome
-  release:
+  - trigger: release
     type: object
     properties:
       reason:
@@ -438,7 +438,7 @@ requestBodies:
         description: Why the task is being released
     required:
       - reason
-  escalate:
+  - trigger: escalate
     type: object
     properties:
       reason:
@@ -446,13 +446,13 @@ requestBodies:
         description: Why the task is being escalated
     required:
       - reason
-  de-escalate:
+  - trigger: de-escalate
     type: object
     properties:
       notes:
         type: string
         description: Optional notes about the de-escalation
-  cancel:
+  - trigger: cancel
     type: object
     properties:
       reason:
@@ -460,7 +460,7 @@ requestBodies:
         description: Why the task is being cancelled
     required:
       - reason
-  reopen:
+  - trigger: reopen
     type: object
     properties:
       reason:
@@ -468,20 +468,20 @@ requestBodies:
         description: Why the cancelled task is being reopened
     required:
       - reason
-  await-client:
+  - trigger: await-client
     type: object
     properties:
       notes:
         type: string
         description: Optional context about what action is being awaited from the client
-  await-verification:
+  - trigger: await-verification
     type: object
     properties:
       notes:
         type: string
         description: Optional context about what external verification is pending
-  resume: {}
-  system-resume:
+  - trigger: resume
+  - trigger: system-resume
     type: object
     properties:
       source:
@@ -492,8 +492,8 @@ requestBodies:
         description: Summary of the verification result
     required:
       - source
-  submit-for-review: {}
-  approve:
+  - trigger: submit-for-review
+  - trigger: approve
     type: object
     properties:
       outcome:
@@ -504,7 +504,7 @@ requestBodies:
         description: Optional notes from the supervisor
     required:
       - outcome
-  return-to-worker:
+  - trigger: return-to-worker
     type: object
     properties:
       reason:

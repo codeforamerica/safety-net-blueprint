@@ -163,7 +163,7 @@ function computeTransitionOrder(stateMachine) {
  * example's assignedToId or a generic test user ID.
  */
 function deriveCallerId(stateMachine, transitionOrder, fallback) {
-  const guardDefs = stateMachine.guards || {};
+  const guardDefs = Object.fromEntries((stateMachine.guards || []).map(g => [g.id, g]));
   const transitions = stateMachine.transitions || [];
 
   // Collect guard names referenced by the ordered transitions

@@ -34,10 +34,10 @@ properties:
     description: Filename of the associated OpenAPI spec.
 
   states:
-    type: object
-    description: Map of state names to state configuration.
-    minProperties: 1
-    additionalProperties:
+    type: array
+    description: List of states with their configuration.
+    minItems: 1
+    items:
       $ref: "#/$defs/State"
 
   initialState:
@@ -45,9 +45,9 @@ properties:
     description: The state an object starts in after creation.
 
   guards:
-    type: object
-    description: Named guard definitions, referenced by string in transitions.
-    additionalProperties:
+    type: array
+    description: Guard definitions, referenced by id in transitions.
+    items:
       $ref: "#/$defs/Guard"
 
   onCreate:
@@ -64,9 +64,9 @@ properties:
       $ref: "#/$defs/Transition"
 
   requestBodies:
-    type: object
-    description: Request body schemas keyed by trigger name.
-    additionalProperties:
+    type: array
+    description: Request body schemas, one per trigger.
+    items:
       $ref: "#/$defs/RequestBody"
 
   audit:
@@ -77,8 +77,12 @@ $defs:
     type: object
     description: Configuration for a single state.
     required:
+      - id
       - slaClock
     properties:
+      id:
+        type: string
+        description: State identifier, used as the status value on the resource.
       slaClock:
         type: string
         enum:
@@ -92,9 +96,13 @@ $defs:
     type: object
     description: A named condition that must be true for a transition to fire.
     required:
+      - id
       - field
       - operator
     properties:
+      id:
+        type: string
+        description: Guard identifier, referenced by name in transitions.
       field:
         type: string
         description: Field or variable reference to evaluate.
@@ -290,7 +298,12 @@ $defs:
   RequestBody:
     description: OpenAPI-style schema for a trigger's request body.
     type: object
+    required:
+      - trigger
     properties:
+      trigger:
+        type: string
+        description: Transition trigger name this body applies to.
       type:
         type: string
       properties:

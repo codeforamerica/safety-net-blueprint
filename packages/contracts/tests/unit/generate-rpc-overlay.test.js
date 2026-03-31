@@ -39,34 +39,40 @@ const sampleStateMachine = {
   domain: 'workflow',
   object: 'Task',
   apiSpec: 'workflow-openapi.yaml',
-  states: { pending: {}, in_progress: {}, completed: {} },
+  states: [
+    { id: 'pending' },
+    { id: 'in_progress' },
+    { id: 'completed' }
+  ],
   initialState: 'pending',
-  guards: {
-    taskIsUnassigned: { field: 'assignedToId', operator: 'is_null' },
-    callerIsAssignedWorker: { field: 'assignedToId', operator: 'equals', value: '$caller.id' }
-  },
+  guards: [
+    { id: 'taskIsUnassigned', field: 'assignedToId', operator: 'is_null' },
+    { id: 'callerIsAssignedWorker', field: 'assignedToId', operator: 'equals', value: '$caller.id' }
+  ],
   transitions: [
     { trigger: 'claim', from: 'pending', to: 'in_progress', guards: ['taskIsUnassigned'], effects: [{ type: 'set', field: 'assignedToId', value: '$caller.id' }] },
     { trigger: 'complete', from: 'in_progress', to: 'completed', guards: ['callerIsAssignedWorker'], effects: [] },
     { trigger: 'release', from: 'in_progress', to: 'pending', guards: ['callerIsAssignedWorker'], effects: [{ type: 'set', field: 'assignedToId', value: null }] }
   ],
-  requestBodies: {
-    claim: {},
-    complete: {
+  requestBodies: [
+    { trigger: 'claim' },
+    {
+      trigger: 'complete',
       type: 'object',
       properties: {
         outcome: { type: 'string', description: 'Completion outcome' }
       },
       required: ['outcome']
     },
-    release: {
+    {
+      trigger: 'release',
       type: 'object',
       properties: {
         reason: { type: 'string', description: 'Why the task is being released' }
       },
       required: ['reason']
     }
-  }
+  ]
 };
 
 const sampleEndpointInfo = {
