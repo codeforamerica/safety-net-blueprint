@@ -1,4 +1,4 @@
-# Workflow Domain: Feature Design Reference
+# Workflow Domain: Feature Design Rationale
 
 A feature-by-feature reference for the workflow contract architecture. For each capability, this document describes what the blueprint provides, how comparable systems handle the same problem, the trade-offs behind our design choices, and where states are expected to customize via overlays.
 
