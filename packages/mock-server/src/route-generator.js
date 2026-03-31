@@ -135,15 +135,14 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], ru
 
   const allEndpoints = [];
 
-  // Register custom metrics routes FIRST so they take priority over standard CRUD handlers.
-  // The metrics-openapi.yaml is still registered below for endpoint discovery purposes,
-  // but the actual requests are handled here.
+  // Register custom metrics routes FIRST so they take priority over standard CRUD handlers
+  // for the /workflow/metrics paths declared in workflow-openapi.yaml.
   if (metrics.length > 0) {
     console.log('  Registering metrics routes...');
-    app.get('/metrics', createMetricsListHandler(metrics));
-    app.get('/metrics/:metricId', createMetricsGetHandler(metrics));
-    console.log('    GET    /metrics - List computed metrics');
-    console.log('    GET    /metrics/:metricId - Get computed metric');
+    app.get('/workflow/metrics', createMetricsListHandler(metrics));
+    app.get('/workflow/metrics/:metricId', createMetricsGetHandler(metrics));
+    console.log('    GET    /workflow/metrics - List computed metrics');
+    console.log('    GET    /workflow/metrics/:metricId - Get computed metric');
   }
 
   for (const apiSpec of apiSpecs) {

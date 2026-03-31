@@ -659,7 +659,7 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
     lines.push('');
     lines.push('## Metrics');
     lines.push('');
-    lines.push('Metrics are computed on demand from the tasks and events collections. Values are available at `GET /metrics`.');
+    lines.push('Metrics are computed on demand from the tasks and events collections. Values are available at `GET /workflow/metrics`.');
     lines.push('');
     lines.push('| ID | Name | Aggregate | Target |');
     lines.push('|----|------|-----------|--------|');

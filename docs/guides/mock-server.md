@@ -78,13 +78,13 @@ The mock server computes metrics on-the-fly from live data. Metrics are defined 
 
 ```bash
 # List all metrics
-curl "http://localhost:1080/metrics"
+curl "http://localhost:1080/workflow/metrics"
 
 # Get a specific metric
-curl "http://localhost:1080/metrics/task_time_to_claim"
+curl "http://localhost:1080/workflow/metrics/task_time_to_claim"
 
 # Filter and group
-curl "http://localhost:1080/metrics?domain=workflow&groupBy=queueId"
+curl "http://localhost:1080/workflow/metrics?groupBy=queueId"
 ```
 
 ### Query Parameters
@@ -92,7 +92,6 @@ curl "http://localhost:1080/metrics?domain=workflow&groupBy=queueId"
 | Parameter | Description |
 |-----------|-------------|
 | `q` | Filter by metric name |
-| `domain` | Filter by domain (e.g., `workflow`) |
 | `groupBy` | Break down metric values by a field (e.g., `queueId`, `program`) |
 | `from` | Start of time window (ISO datetime) |
 | `to` | End of time window (ISO datetime) |

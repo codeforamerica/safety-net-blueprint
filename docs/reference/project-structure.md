@@ -16,7 +16,6 @@ safety-net-blueprint/
 │   ├── contracts/                  # Behavioral contracts, OpenAPI specs, validation, overlays
 │   │   ├── package.json
 │   │   ├── *-openapi.yaml          # Main API specs (persons-openapi.yaml, workflow-openapi.yaml, etc.)
-│   │   ├── metrics-openapi.yaml    # Cross-cutting metrics API (GET /metrics)
 │   │   ├── *-state-machine.yaml    # State machine definitions (transitions, guards, effects)
 │   │   ├── *-rules.yaml            # Assignment and priority rule sets (JSON Logic)
 │   │   ├── *-sla-types.yaml        # SLA type definitions (deadlines, pauseWhen, autoAssignWhen)
@@ -104,7 +103,6 @@ npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica
 | Type | Convention | Example |
 |------|------------|---------|
 | API specs | `{domain}-openapi.yaml` | `case-workers-openapi.yaml` |
-| Cross-cutting API specs | `{capability}-openapi.yaml` | `metrics-openapi.yaml` |
 | State machine | `{domain}-state-machine.yaml` | `workflow-state-machine.yaml` |
 | Rules | `{domain}-rules.yaml` | `workflow-rules.yaml` |
 | SLA types | `{domain}-sla-types.yaml` | `workflow-sla-types.yaml` |

@@ -105,11 +105,11 @@ Future fields include subtasks and dependencies. These are designed in the [work
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| OpenAPI spec | Alpha | `workflow-openapi.yaml` — Task CRUD, Queue CRUD, Events (read-only). Additional entities in future issues |
+| OpenAPI spec | Alpha | `workflow-openapi.yaml` — Task CRUD, Queue CRUD, Events (read-only), Metrics (read-only). Additional entities in future issues |
 | State machine YAML | Alpha | `workflow-state-machine.yaml` — All 9 states and 12 transitions with guards, `set`/`create`/`evaluate-rules`/`event` effects, `when` conditional execution. See [workflow prototype](../../prototypes/workflow-prototype.md) |
 | Rules YAML | Alpha | `workflow-rules.yaml` — Assignment and priority rule sets with JSON Logic conditions |
 | SLA types YAML | Alpha | `workflow-sla-types.yaml` — 4 baseline SLA types (SNAP expedited/standard, Medicaid standard/disability) with `pauseWhen` conditions |
-| Metrics YAML | Alpha | `workflow-metrics.yaml` — 5 baseline metrics: task time to claim, tasks in queue, release rate, SLA breach rate, SLA warning rate. See [Metrics](../cross-cutting/metrics.md) |
+| Metrics YAML | Alpha | `workflow-metrics.yaml` — 5 baseline metrics: task time to claim, tasks in queue, release rate, SLA breach rate, SLA warning rate. See [Metrics](workflow-design-reference.md#metrics) |
 
 ## Key Design Questions
 

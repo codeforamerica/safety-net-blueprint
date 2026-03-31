@@ -31,6 +31,8 @@ tags:
     description: Read-only domain event log for task lifecycle transitions.
   - name: Queues
     description: Manage task routing queues.
+  - name: Metrics
+    description: Computed operational metrics derived from task and event data.
 
 paths:
   "/queues":
@@ -348,6 +350,128 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
+  "/workflow/metrics":
+    get:
+      summary: List metrics
+      description: Retrieve computed values for all workflow metrics.
+      operationId: listMetrics
+      tags:
+        - Metrics
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: groupBy
+          in: query
+          required: false
+          description: >
+            Field to group results by (e.g., `queueId`, `programType`). When specified,
+            `value` in each metric is null and `breakdown` contains a map of group value
+            to computed metric value.
+          schema:
+            type: string
+          example: queueId
+        - name: from
+          in: query
+          required: false
+          description: Start of time window for filtering events and tasks by timestamp.
+          schema:
+            type: string
+            format: date-time
+          example: "2024-09-01T00:00:00Z"
+        - name: to
+          in: query
+          required: false
+          description: End of time window for filtering events and tasks by timestamp.
+          schema:
+            type: string
+            format: date-time
+          example: "2024-09-30T23:59:59Z"
+        - name: queueId
+          in: query
+          required: false
+          description: Filter to tasks and events associated with a specific queue.
+          schema:
+            type: string
+            format: uuid
+        - name: program
+          in: query
+          required: false
+          description: Filter to tasks and events associated with a specific program.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A paginated collection of computed metrics.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  "/workflow/metrics/{metricId}":
+    parameters:
+      - $ref: "#/components/parameters/MetricIdParam"
+    get:
+      summary: Get a metric
+      description: Retrieve the computed value for a single workflow metric by identifier.
+      operationId: getMetric
+      tags:
+        - Metrics
+      parameters:
+        - name: groupBy
+          in: query
+          required: false
+          description: >
+            Field to group results by. When specified, `value` is null and `breakdown`
+            contains a map of group value to computed metric value.
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          description: Start of time window for filtering events and tasks by timestamp.
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: End of time window for filtering events and tasks by timestamp.
+          schema:
+            type: string
+            format: date-time
+        - name: queueId
+          in: query
+          required: false
+          description: Filter to tasks and events associated with a specific queue.
+          schema:
+            type: string
+            format: uuid
+        - name: program
+          in: query
+          required: false
+          description: Filter to tasks and events associated with a specific program.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Metric retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Metric"
+              examples:
+                MetricExample1:
+                  $ref: "#/components/examples/MetricExample1"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
 components:
   parameters:
     QueueIdParam:
@@ -379,6 +503,15 @@ components:
         type: string
         format: uuid
       example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+    MetricIdParam:
+      name: metricId
+      in: path
+      required: true
+      description: Unique identifier of the metric (e.g., task_time_to_claim).
+      schema:
+        type: string
+      example: task_time_to_claim
 
   schemas:
     Queue:
@@ -645,6 +778,114 @@ components:
             Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
           minProperties: 1
 
+    Metric:
+      type: object
+      description: A computed metric value with definition metadata.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - aggregate
+        - value
+        - computedAt
+      properties:
+        id:
+          type: string
+          description: Unique metric identifier, from the domain's *-metrics.yaml.
+          readOnly: true
+        name:
+          type: string
+          description: Human-readable metric name.
+          readOnly: true
+        aggregate:
+          type: string
+          enum:
+            - count
+            - ratio
+            - duration
+          description: Aggregation function used to compute the value.
+          readOnly: true
+        value:
+          type: number
+          nullable: true
+          description: >
+            Computed scalar value. count: total matching records. ratio: 0–1.
+            duration: median seconds between paired events. null when groupBy is specified.
+          readOnly: true
+        breakdown:
+          type: object
+          nullable: true
+          description: >
+            Map of group value to computed metric value. Present when groupBy is
+            specified; null otherwise.
+          additionalProperties:
+            type: number
+          readOnly: true
+        targets:
+          type: array
+          description: Thresholds and goals from the metric definition.
+          items:
+            $ref: "#/components/schemas/MetricTarget"
+          readOnly: true
+        computedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the value was computed.
+          readOnly: true
+
+    MetricList:
+      description: Paginated list of computed metrics.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Metric"
+
+    MetricTarget:
+      type: object
+      description: A threshold or goal for the metric.
+      additionalProperties: false
+      properties:
+        stat:
+          type: string
+          description: Statistic type (e.g., p50, ratio, trend).
+        operator:
+          type: string
+          enum:
+            - "<"
+            - "<="
+            - ">"
+            - ">="
+            - "=="
+          description: Comparison operator for evaluating the target.
+        amount:
+          type: number
+          description: Machine-readable threshold value.
+        unit:
+          type: string
+          enum:
+            - hours
+            - minutes
+            - days
+            - percent
+            - count
+          description: Unit for the amount field.
+        label:
+          type: string
+          description: Human-readable target label (e.g., "4h", "10%").
+        direction:
+          type: string
+          enum:
+            - up
+            - down
+          description: Desired trend direction (for trend-type targets).
+
   examples:
     QueueExample1:
       summary: SNAP intake queue
@@ -685,3 +926,19 @@ components:
         data: {}
         createdAt: '2024-09-02T09:15:00Z'
         updatedAt: '2024-09-02T09:15:00Z'
+
+    MetricExample1:
+      summary: Task time to claim metric
+      value:
+        id: task_time_to_claim
+        name: Task Time to Claim
+        aggregate: duration
+        value: 7320
+        breakdown: null
+        targets:
+          - stat: p50
+            operator: "<"
+            amount: 4
+            unit: hours
+            label: "4h"
+        computedAt: "2024-09-15T12:00:00Z"

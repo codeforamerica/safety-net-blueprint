@@ -167,7 +167,7 @@ JSON Logic conditions are serialized as JSON. See [#108](https://github.com/code
 
 ## Metrics
 
-Metrics are computed on demand from the tasks and events collections. Values are available at `GET /metrics`.
+Metrics are computed on demand from the tasks and events collections. Values are available at `GET /workflow/metrics`.
 
 | ID | Name | Aggregate | Target |
 |----|------|-----------|--------|

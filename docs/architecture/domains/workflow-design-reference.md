@@ -391,6 +391,52 @@ Federal regulations require accurate accounting of processing time. The SNAP reg
 
 ---
 
+## Metrics
+
+Operational metrics are defined as behavioral contract artifacts (`workflow-metrics.yaml`) and served as part of the workflow API (`GET /workflow/metrics`, `GET /workflow/metrics/{metricId}`). They are computed on demand from live task and event data — not pre-aggregated or stored separately.
+
+**We support:** `count`, `ratio`, and `duration` aggregate types; JSON Logic `filter` conditions on source data; `pairBy` for correlating event pairs in duration metrics; `targets` for declaring performance expectations; `groupBy` query parameter for dimensional breakdown; time-window and field filters
+
+| Concept | JSM | ServiceNow | IBM Curam | Salesforce Gov Cloud |
+|---|---|---|---|---|
+| Metric definitions | Custom gadgets + SLA reports | Performance Analytics indicators | MIS caseload reports | Reports + formula fields |
+| Stored vs. computed | Pre-aggregated dashboards | Pre-aggregated by PA data collector | Pre-computed batch reports | Pre-aggregated by reports engine |
+| Filter conditions | JQL (Jira Query Language) | Conditions (scripted or condition builder) | Fixed filter criteria on report type | SOQL filter criteria |
+| Event-pair duration | Pre-computed `resolutionDate - createdDate` field | Pre-computed duration field on task record | Pre-computed case duration field | Pre-computed formula field |
+| Performance targets | SLA goals on SLA agreements | PA thresholds with color-coding | Fixed targets in MIS | Report filter thresholds |
+| Dimensional breakdown | Filter by project/team | Breakdown by group or category | Fixed groupings in report | Report group-by |
+
+**Baseline metrics in `workflow-metrics.yaml`:**
+
+| Metric | Aggregate | Measures |
+|---|---|---|
+| `task_time_to_claim` | duration | Median time from task creation to first claim event |
+| `tasks_in_queue` | count | Tasks currently in `pending` status |
+| `release_rate` | ratio | Release events as a fraction of total task transitions |
+| `sla_breach_rate` | ratio | Tasks with at least one breached SLA entry |
+| `sla_warning_rate` | ratio | Auto-escalate-sla-warning events as a fraction of total transitions |
+
+**In safety net benefits processing:**
+
+Federal and state programs use operational metrics to monitor regulatory compliance (SLA breach rates, processing time distribution) and manage staff workload (queue depth trends, release rates). States typically report aggregate metrics to federal partners annually. Defining metrics as contract artifacts alongside the state machine and rules makes measurement definitions explicit, portable, and auditable — rather than buried in dashboard configuration.
+
+**Design decisions:**
+
+- **Metrics as YAML artifacts, not dashboard configuration.** All major systems (JSM, ServiceNow, Salesforce) define metrics through a GUI that stores definitions in a proprietary database — non-portable and hard to version-control. We define metrics as contract artifacts alongside the state machine and rules. This is a deliberate departure from industry norms, motivated by the blueprint's goal of making behavioral contracts explicit and portable across state implementations.
+- **Decomposed source + aggregate model.** Rather than naming specific metrics with hardcoded computation logic, each metric is a combination of a `collection`, a JSON Logic `filter`, and an `aggregate` type. Adding a new metric is always a data-definition problem, not a code problem. IBM Curam ties each metric to a fixed report type — adding a new metric often requires custom development. Our model lets states define metrics declaratively without writing server-side code.
+- **JSON Logic for filter conditions.** JSM uses JQL; ServiceNow uses condition scripts; Salesforce uses SOQL. We use JSON Logic — the same evaluator used for state machine guards and rules — so there is no second filter language to learn and metric filters can be validated by the same tooling. The trade-off is expressiveness: JSON Logic is less powerful than SQL. For the patterns needed here (filter by field value, check array membership), it is sufficient.
+- **Declarative `from`/`to` event pairing for duration metrics.** Most systems pre-compute duration as a field on the task record (e.g., `resolutionDate - createdDate`), which requires deciding in advance which event pairs define "duration." Our declarative `from`/`to` + `pairBy` model lets metric authors define new duration measurements without schema changes — any pair of events correlated by a shared field qualifies. This preserves flexibility as states add new transition types.
+- **`targets` declared in the metric definition.** Performance targets (e.g., median time to claim < 4 hours) are declared alongside the metric, not in a separate configuration UI. JSM puts goals on SLA agreements; ServiceNow puts thresholds on PA indicators. Embedding targets in the contract makes the definition of "healthy" explicit, version-controlled, and visible to implementers.
+- **`groupBy` is a query parameter, not part of the metric definition.** ServiceNow's PA breakdowns are baked into the indicator definition — adding a new breakdown dimension requires modifying the indicator. Our `groupBy` query parameter allows any caller to slice any metric by any field without modifying the definition. Consistent with how Grafana and Prometheus handle dimensions.
+- **Computed on demand, not pre-aggregated.** ServiceNow and JSM pre-aggregate metrics on a schedule for performance. For the blueprint's use case (development mock, contract definition), on-demand computation from live data is simpler, always current, and avoids a separate aggregation pipeline. States building production implementations will add pre-aggregation in their adapters — the metric definitions remain the same; only the computation strategy changes.
+
+**Customization points:**
+- States will replace or extend `workflow-metrics.yaml` via overlay once issue #174 lands.
+- `targets` can be overridden to reflect state-specific performance goals.
+- New metrics can be added for state-specific programs or reporting requirements.
+
+---
+
 ## Role-based access control
 
 > **Status: Planned.** Guards referencing `$caller.role` and `$caller.type` are named and wired. Enforcement is at the service layer until this capability is implemented.
