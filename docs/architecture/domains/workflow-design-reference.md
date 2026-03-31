@@ -8,16 +8,18 @@ See [Workflow Domain](workflow.md) for the architecture overview and [Contract-D
 
 ## Task lifecycle states
 
-The task status enum defines the complete set of states a task can occupy. States are explicit fields on the Task resource — not derived from timestamps or other computed values.
+The task status enum defines the complete set of states a task can occupy. States are explicit fields on the Task resource — not derived from timestamps or other computed values. The state set was designed around the actual stages of benefits casework: a task starts in a queue, gets picked up by a worker, may block on external dependencies (client or verification), may require supervisor review before completion, and can be escalated or cancelled at various points. Each of these stages has distinct SLA accountability, routing behavior, and access control requirements — which is why they are modeled as first-class states rather than sub-statuses or flags.
 
-**We support:** `pending`, `in_progress`, `completed`, `escalated`, `cancelled`, `awaiting_client`, `awaiting_verification`, `pending_review`
+**States:** `pending`, `in_progress`, `awaiting_client`, `awaiting_verification`, `escalated`, `pending_review`, `completed`, `cancelled`
 
-| Concept | JSM | ServiceNow | Curam | Salesforce Gov Cloud | WS-HumanTask |
-|---|---|---|---|---|---|
-| Waiting for client action | Waiting for Customer | On Hold / Awaiting Caller | Manual activity pending in inbox | Waiting on Someone Else | Suspended |
-| Waiting for third-party verification | Pending | On Hold / Awaiting Evidence | Suspended process | Deferred | Suspended |
-| Escalated | Escalated (built-in) | Custom via priority + routing | Supervisor queue routing | Custom escalation rule | — |
-| Cancelled | Cancelled (terminal) | Canceled (terminal) | Aborted process | Cancelled | Obsolete / Exited |
+The four non-obvious states — those with different behavior across vendors — map to the following industry concepts:
+
+| Concept | Blueprint state | JSM | ServiceNow | Curam | Salesforce Gov Cloud | WS-HumanTask |
+|---|---|---|---|---|---|---|
+| Waiting for client action | `awaiting_client` | Waiting for Customer | On Hold / Awaiting Caller | Manual activity pending in inbox | Waiting on Someone Else | Suspended |
+| Waiting for third-party verification | `awaiting_verification` | Pending | On Hold / Awaiting Evidence | Suspended process | Deferred | Suspended |
+| Escalated | `escalated` | Escalated (built-in) | Custom via priority + routing | Supervisor queue routing | Custom escalation rule | — |
+| Cancelled | `cancelled` | Cancelled (terminal) | Canceled (terminal) | Aborted process | Cancelled | Obsolete / Exited |
 
 **In safety net benefits processing:**
 
@@ -50,26 +52,28 @@ The task status enum defines the complete set of states a task can occupy. State
 
 ## SLA clock management
 
-Each state declares its effect on the SLA clock. This value is consumed by the [SLA clock enforcement](#sla-clock-enforcement) service to pause or stop the clock when tasks enter certain states.
+Each state in the state machine declares its effect on the SLA clock via a `slaClock` field. This declaration is consumed by the SLA engine (see [SLA types and clock management](#sla-types-and-clock-management)) when evaluating `pauseWhen`/`resumeWhen` conditions on every transition. The three values are: `running` (clock ticks normally), `paused` (clock is suspended; resumes from the same point when conditions clear), and `stopped` (clock halts permanently — used only for terminal states).
 
-**We support:** `slaClock: running | paused | stopped` on every state (required)
+**`slaClock` is required on every state** — omitting it creates ambiguity that leads to silent SLA miscalculations.
 
 | State | Clock behavior | Rationale |
 |---|---|---|
-| `pending` | running | Deadline starts at creation |
+| `pending` | running | Deadline starts at creation; time in queue counts against the agency |
 | `in_progress` | running | Work is actively in progress |
-| `escalated` | running | Still agency's responsibility |
-| `awaiting_client` | paused | External dependency; clock resumes when client responds |
-| `awaiting_verification` | paused | External dependency; clock resumes when verification returns |
-| `pending_review` | running | Supervisor review; deadline continues |
-| `completed` | stopped | Work is done |
-| `cancelled` | stopped | Work is abandoned; `reopen` transition returns to `pending` |
+| `escalated` | running | Still the agency's responsibility; urgency doesn't pause the deadline |
+| `awaiting_client` | paused | External dependency; federal regulations exclude client-caused delays from the agency's deadline |
+| `awaiting_verification` | paused | External dependency; clock resumes when verification service returns |
+| `pending_review` | running | Supervisor review counts against the agency's deadline |
+| `completed` | stopped | Work is done; deadline is no longer relevant |
+| `cancelled` | stopped | Work is abandoned; `reopen` transition restarts the clock from `pending` |
 
-| Concept | JSM | ServiceNow | Curam |
-|---|---|---|---|
-| Pause SLA | "Pending" status excludes from SLA timers | On Hold sub-reasons pause SLA | SLA tracked at process level, not task state |
-| Stop SLA | Resolved / Closed | Resolved / Closed / Canceled | Process completed / aborted |
-| Business hours | Configurable per SLA | Configurable per schedule | Configurable per deadline |
+How comparable systems handle SLA clock state:
+
+| Concept | Blueprint | JSM | ServiceNow | Curam |
+|---|---|---|---|---|
+| Pause SLA | `slaClock: paused` on states with external dependencies | "Pending" status excludes from SLA timers | On Hold sub-reasons pause SLA | SLA tracked at process level, not task state |
+| Stop SLA | `slaClock: stopped` on terminal states | Resolved / Closed | Resolved / Closed / Canceled | Process completed / aborted |
+| Business hours | `calendarType` per timer transition | Configurable per SLA | Configurable per schedule | Configurable per deadline |
 
 **In safety net benefits processing:**
 
@@ -89,22 +93,29 @@ The distinction between `paused` (clock resumes from same point) and `stopped` (
 
 **Customization points:**
 - States can override `slaClock` per state via overlay. A state that treats client non-response differently (e.g., stops rather than pauses) can do so without touching the baseline.
-- The actual clock-pause/resume/stop logic lives in the [SLA clock enforcement](#sla-clock-enforcement) service. The `slaClock` value is the declaration of intent; the service is the enforcer.
+- The actual clock-pause/resume/stop logic is evaluated by the SLA engine on every transition using the `pauseWhen`/`resumeWhen` conditions in `*-sla-types.yaml` (see [SLA types and clock management](#sla-types-and-clock-management)). The `slaClock` value on each state declares the intent; the SLA engine reads the task's current state when evaluating those conditions.
 
 ---
 
 ## Transitions and effects
 
-Transitions define valid state changes. Each transition has a trigger (which becomes an RPC endpoint), optional guards (preconditions), and effects (side effects that fire when the transition executes).
+Transitions define valid state changes. Each transition has a trigger (the action that initiates the change, which becomes an RPC endpoint), optional guards (preconditions that must pass), and effects (side effects that execute when the transition fires). Effects are declarative — the state machine YAML specifies what should happen; the engine executes it.
 
-**We support:** `set`, `create`, `evaluate-rules`, `event` effect types; `when` (JSON Logic) for conditional effects; actor-triggered and timer-triggered transitions.
+**Effect types:**
+- `set` — update fields on the resource (e.g., set `assignedToId` when claiming a task)
+- `create` — write a record to another collection (e.g., create a domain event on every transition)
+- `evaluate-rules` — invoke the rules engine to re-evaluate assignment or priority
+- `event` — emit a named domain event with an optional data payload
+- `when` — conditional wrapper on any effect; uses JSON Logic to decide whether the effect fires
 
-| Concept | JSM | ServiceNow | Camunda | WS-HumanTask |
-|---|---|---|---|---|
-| Transition trigger | Status transition button | State flow trigger | Sequence flow / signal | Claim, start, complete, skip operations |
-| Precondition | Validator condition | Condition script | Gateway condition | Constraints (potential owners, etc.) |
-| Side effect on transition | Post-function | Business Rule | Execution Listener | Task handler |
-| Conditional effect | — | Condition on Business Rule | Expression on Listener | — |
+Transitions can be actor-triggered (a human or system makes an API call) or timer-triggered (fire automatically when a duration elapses — see [Timer-triggered transitions](#timer-triggered-transitions)).
+
+| Concept | Blueprint | JSM | ServiceNow | Camunda | WS-HumanTask |
+|---|---|---|---|---|---|
+| Transition trigger | Named trigger → RPC endpoint | Status transition button | State flow trigger | Sequence flow / signal | Claim, start, complete, skip operations |
+| Precondition | Guards (field/operator/value) | Validator condition | Condition script | Gateway condition | Constraints (potential owners, etc.) |
+| Side effect on transition | `set`, `create`, `evaluate-rules`, `event` effects | Post-function | Business Rule | Execution Listener | Task handler |
+| Conditional effect | `when` (JSON Logic) | — | Condition on Business Rule | Expression on Listener | — |
 
 **In safety net benefits processing:**
 
@@ -269,14 +280,16 @@ Assignment and priority rules encode program-specific routing logic that varies 
 
 ## Lifecycle hooks (`onCreate`, `onUpdate`)
 
-Lifecycle hooks fire effects at key moments in the object's life independent of specific transitions.
+Lifecycle hooks fire effects at key moments in the object's life independent of any specific transition. They handle setup and maintenance concerns that aren't naturally attached to a single transition trigger — for example, initializing SLA tracking when a task is created, or re-routing a task when a supervisor changes its program type outside of a transition.
 
-**We support:** `onCreate` (fires on creation), `onUpdate` (fires on field changes, scoped by `fields` filter)
+**Hook types:**
+- `onCreate` — fires when a new resource is created; used to initialize state (SLA entries, queue assignment, priority)
+- `onUpdate` — fires when specific fields change on an existing resource; scoped by a `fields` filter to avoid firing on every PATCH
 
-| Concept | JSM | ServiceNow | Camunda | BPMN |
-|---|---|---|---|---|
-| On creation | — | Business Rule on insert | Start event listener | Start event |
-| On field change | — | Business Rule on update | Execution listener on variable change | Data Object change event |
+| Concept | Blueprint | JSM | ServiceNow | Camunda | BPMN |
+|---|---|---|---|---|---|
+| On creation | `onCreate` | — | Business Rule on insert | Start event listener | Start event |
+| On field change | `onUpdate` (scoped by `fields`) | — | Business Rule on update | Execution listener on variable change | Data Object change event |
 
 **In safety net benefits processing:**
 
