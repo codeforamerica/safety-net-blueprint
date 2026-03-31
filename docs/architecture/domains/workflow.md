@@ -8,25 +8,25 @@ See [Domain Design Overview](../domain-design.md) for context and [Contract-Driv
 
 ### Task
 
-A discrete unit of work assigned to a caseworker, supervisor, or automated process. Tasks have an explicit lifecycle governed by the [state machine](#state-machine) and carry `slaInfo` tracking entries (one per assigned SLA type) updated automatically on every transition. Tasks link to a `Queue` that determines routing and visibility. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
+A task is the atomic unit of caseworker activity — reviewing an application, verifying a document, completing a redetermination. It represents a single, ownable piece of work with a clear beginning and end. Tasks are assigned to a single owner (caseworker, supervisor, or automated process) at a time and have an explicit lifecycle governed by the [state machine](#state-machine). They carry `slaInfo` entries that track deadline status against regulatory requirements, and link to a `Queue` that controls routing and visibility. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
 
 ### Queue
 
-Work queues organize tasks by program type, team, or skill. Tasks are routed into queues automatically by assignment rules and re-routed when released back to `pending`. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
+Queues are the organizing structure for caseworker workloads. A queue represents a logical grouping of tasks — typically by program (SNAP, Medicaid), team, or skill — and determines which workers can see and claim which tasks. Tasks enter a queue automatically when created or released, based on assignment rules. Supervisors manage queues to balance workload across their teams. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
 
 ### Domain Events
 
-Immutable records emitted on every state machine transition and lifecycle hook. Events are the audit trail and the integration surface for cross-domain communication — other domains subscribe to workflow events rather than polling task state. All domains share the same events collection; `domain`, `resource`, and `action` identify the event type. Read-only API. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
+Every state machine transition and lifecycle hook emits an immutable domain event. Events serve two purposes: they are the audit trail (a complete history of what happened to every task and when) and the integration surface for cross-domain communication (other domains subscribe to workflow events rather than polling task state). For example, when a task transitions to `completed`, an event is emitted that could trigger downstream processes like application status updates or case record creation. All domains share the same events collection; `domain`, `resource`, and `action` identify the event type. Read-only API. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
 
 ### State Machine
 
-The task lifecycle is governed by a declarative state machine (`workflow-state-machine.yaml`) with 9 states and 12 transitions. Each transition trigger becomes an RPC endpoint (e.g., `POST /workflow/tasks/{id}/claim`). Transitions declare guards (preconditions) and effects (side effects) — no ad-hoc endpoint code. [Spec: `workflow-state-machine.yaml`](../../../packages/contracts/workflow-state-machine.yaml)
+The task lifecycle is governed by a declarative state machine (`workflow-state-machine.yaml`) rather than ad-hoc endpoint logic. Tasks move through states like `pending` → `in_progress` → `awaiting_client` → `in_progress` → `completed`, with each transition triggered by an explicit action (claim, release, complete, await-client, etc.). Each transition trigger becomes an RPC endpoint (e.g., `POST /workflow/tasks/{id}/claim`). Transitions declare guards (preconditions that must be true for the transition to be allowed) and effects (side effects that execute when the transition fires, such as updating fields or emitting events) — adding a new transition is a YAML table row, not new endpoint code. [Spec: `workflow-state-machine.yaml`](../../../packages/contracts/workflow-state-machine.yaml)
 
 For the full state transition table, guard definitions, and effect specifications see [workflow-state-machine.yaml](../../../packages/contracts/workflow-state-machine.yaml) and [Task Lifecycle States](workflow-design-reference.md#task-lifecycle-states) in the design reference.
 
 ### Rules
 
-Assignment and priority rules route tasks to the correct queue and set their priority without hardcoding logic in the state machine. Rules are evaluated automatically at task creation and on re-entry to the queue (e.g., after release or escalation). [Spec: `workflow-rules.yaml`](../../../packages/contracts/workflow-rules.yaml)
+Assignment and priority rules express routing logic that doesn't belong in the state machine. When a task is created or returns to `pending` (e.g., after a release or escalation), rules determine which queue it should go to and what priority it should have. Keeping this logic in a separate rules file means states can replace their routing and priority logic entirely without touching the state machine.
 
 | Rule Set | Purpose |
 |----------|---------|
@@ -37,13 +37,13 @@ Rules use JSON Logic conditions and `first-match-wins` evaluation. The baseline 
 
 ### SLA Types
 
-Program-specific processing deadlines and the conditions under which the SLA clock pauses or resumes. Defined in [`workflow-sla-types.yaml`](../../../packages/contracts/workflow-sla-types.yaml). SLA types are auto-assigned at task creation via `autoAssignWhen` conditions and tracked per-task in the `slaInfo` array. The clock pauses when `pauseWhen` conditions match (e.g., `awaiting_client`) and resumes automatically on state change.
+Federal regulations impose strict processing deadlines on benefits applications — 7 days for expedited SNAP, 30 days for standard SNAP, 45 days for most Medicaid, 90 days for disability-related Medicaid. SLA types define these deadlines and the conditions under which the clock pauses (e.g., while waiting on the client) and resumes. Each task carries a `slaInfo` array with one entry per applicable SLA type, tracking deadline status in real time. SLA types are auto-assigned at task creation based on the task's fields and updated automatically on every state transition.
 
-Baseline SLA types: `snap_expedited` (7 days), `snap_standard` (30 days), `medicaid_standard` (45 days), `medicaid_disability` (90 days). See [SLA Types and Clock Management](workflow-design-reference.md#sla-types-and-clock-management) for design rationale.
+Baseline SLA types: `snap_expedited` (7 days), `snap_standard` (30 days), `medicaid_standard` (45 days), `medicaid_disability` (90 days). Defined in [`workflow-sla-types.yaml`](../../../packages/contracts/workflow-sla-types.yaml). See [SLA Types and Clock Management](workflow-design-reference.md#sla-types-and-clock-management) for design rationale.
 
 ### Metrics
 
-Computed operational metrics derived from live task and event data. Defined in [`workflow-metrics.yaml`](../../../packages/contracts/workflow-metrics.yaml) using a decomposed `source + aggregate + JSON Logic filter` model. Served read-only at `GET /workflow/metrics` and `GET /workflow/metrics/{metricId}`. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
+Operational metrics give supervisors visibility into queue health, team performance, and compliance risk. Metrics are computed on demand from live task and event data — no separate reporting store. Each metric is defined declaratively in [`workflow-metrics.yaml`](../../../packages/contracts/workflow-metrics.yaml) using a `source + aggregate + JSON Logic filter` model: specify what data to query, how to aggregate it, and optionally what performance target to evaluate against. Results are available at `GET /workflow/metrics` with support for time windowing and dimensional breakdown by queue or program. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
 
 Baseline metrics: task time to claim (duration), tasks in queue (count), release rate (ratio), SLA breach rate (ratio), SLA warning rate (ratio). See [Metrics](workflow-design-reference.md#metrics) for design rationale.
 
