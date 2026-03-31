@@ -370,46 +370,131 @@ function importRuleSet(csvData, existingDoc, ruleType) {
 
 function importMetrics(csvData, existingDoc) {
   const doc = { ...existingDoc };
+
+  // Support both old format (5 columns: name, description, sourceType, sourceDetails, targets)
+  // and new format (14 columns: id, name, description, aggregate, source.*, total.*, from.*, to.*, pairBy, targets)
+  const isNewFormat = csvData.data.length > 0 && csvData.data[0].length >= 6;
+
   const metrics = csvData.data.map(row => {
-    const [name, description, sourceType, sourceDetails, targetStr] = row;
+    if (isNewFormat) {
+      const [
+        id, name, description, aggregate,
+        sourceCollection, sourceFilter,
+        totalCollection, totalFilter,
+        fromCollection, fromFilter,
+        toCollection, toFilter,
+        pairBy, targetStr
+      ] = row;
 
-    // Find existing metric to preserve id and full structure
-    const existing = (existingDoc.metrics || []).find(m => (m.name || m.id) === name);
+      const parseSource = (collection, filter) => {
+        if (!collection) return undefined;
+        const s = { collection };
+        if (filter) {
+          try { s.filter = JSON.parse(filter); } catch { /* leave as string */ }
+        }
+        return s;
+      };
 
-    // Parse source details (key=value pairs separated by '; ')
-    const source = { type: sourceType };
-    if (sourceDetails) {
-      for (const pair of sourceDetails.split('; ')) {
-        const eqIdx = pair.indexOf('=');
-        if (eqIdx > 0) {
-          source[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
+      const targets = targetStr ? targetStr.split('; ').map(t => {
+        const parts = t.trim().split(' ');
+        const target = { stat: parts[0] };
+        if (parts.length >= 3) {
+          target.operator = parts[1];
+          const num = parseFloat(parts[2]);
+          target.amount = isNaN(num) ? parts[2] : num;
+          if (parts[3]) target.unit = parts[3];
+        } else if (parts.length === 2) {
+          target.direction = parts[1];
+        }
+        return target;
+      }) : [];
+
+      const metric = {
+        id: id || name.toLowerCase().replace(/\s+/g, '_'),
+        name,
+        description: description || undefined,
+        aggregate
+      };
+      const source = parseSource(sourceCollection, sourceFilter);
+      if (source) metric.source = source;
+      const total = parseSource(totalCollection, totalFilter);
+      if (total) metric.total = total;
+      const from = parseSource(fromCollection, fromFilter);
+      if (from) metric.from = from;
+      const to = parseSource(toCollection, toFilter);
+      if (to) metric.to = to;
+      if (pairBy) metric.pairBy = pairBy;
+      if (targets.length > 0) metric.targets = targets;
+
+      return metric;
+    } else {
+      // Legacy format
+      const [name, description, sourceType, sourceDetails, targetStr] = row;
+      const existing = (existingDoc.metrics || []).find(m => (m.name || m.id) === name);
+      const source = { type: sourceType };
+      if (sourceDetails) {
+        for (const pair of sourceDetails.split('; ')) {
+          const eqIdx = pair.indexOf('=');
+          if (eqIdx > 0) {
+            source[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
+          }
         }
       }
+      const targets = targetStr ? targetStr.split('; ').map(t => {
+        const parts = t.split(' ');
+        const target = { stat: parts[0] };
+        if (parts.length >= 3) { target.operator = parts[1]; target.value = parts[2]; }
+        else if (parts.length === 2) { target.direction = parts[1]; }
+        return target;
+      }) : [];
+      return {
+        id: existing?.id || name.toLowerCase().replace(/\s+/g, '_'),
+        name, description: description || undefined, source, targets
+      };
     }
-
-    // Parse targets (e.g., "p95 < 4h; trend down")
-    const targets = targetStr ? targetStr.split('; ').map(t => {
-      const parts = t.split(' ');
-      const target = { stat: parts[0] };
-      if (parts.length >= 3) {
-        target.operator = parts[1];
-        target.value = parts[2];
-      } else if (parts.length === 2) {
-        target.direction = parts[1];
-      }
-      return target;
-    }) : [];
-
-    return {
-      id: existing?.id || name.toLowerCase().replace(/\s+/g, '_'),
-      name,
-      description: description || undefined,
-      source,
-      targets,
-    };
   });
 
   doc.metrics = metrics;
+  return doc;
+}
+
+function importSlaTypes(csvData, existingDoc) {
+  const doc = { ...existingDoc };
+
+  const slaTypes = csvData.data.map(row => {
+    const [
+      id, name, durationAmount, durationUnit,
+      warningThresholdPercent,
+      autoAssignWhen, startWhen, pauseWhen, resumeWhen, completedWhen, resetWhen
+    ] = row;
+
+    const parseCondition = (val) => {
+      if (!val) return undefined;
+      try { return JSON.parse(val); } catch { return val; }
+    };
+
+    const slaType = { id, name };
+    if (durationAmount && durationUnit) {
+      slaType.duration = { amount: parseFloat(durationAmount), unit: durationUnit };
+    }
+    if (warningThresholdPercent) slaType.warningThresholdPercent = parseInt(warningThresholdPercent, 10);
+    const auto = parseCondition(autoAssignWhen);
+    if (auto !== undefined) slaType.autoAssignWhen = auto;
+    const start = parseCondition(startWhen);
+    if (start !== undefined) slaType.startWhen = start;
+    const pause = parseCondition(pauseWhen);
+    if (pause !== undefined) slaType.pauseWhen = pause;
+    const resume = parseCondition(resumeWhen);
+    if (resume !== undefined) slaType.resumeWhen = resume;
+    const completed = parseCondition(completedWhen);
+    if (completed !== undefined) slaType.completedWhen = completed;
+    const reset = parseCondition(resetWhen);
+    if (reset !== undefined) slaType.resetWhen = reset;
+
+    return slaType;
+  });
+
+  doc.slaTypes = slaTypes;
   return doc;
 }
 
@@ -424,6 +509,7 @@ function classifyCsvFile(csvFilename) {
   if (csvFilename === 'request-bodies.csv') return { schemaKey: 'state-machine-schema', section: 'request-bodies' };
   if (csvFilename.startsWith('rules-') && csvFilename.endsWith('.csv')) return { schemaKey: 'rules-schema', section: 'rules', ruleType: csvFilename.slice(6, -4) };
   if (csvFilename === 'metrics.csv') return { schemaKey: 'metrics-schema', section: 'metrics' };
+  if (csvFilename === 'sla-types.csv') return { schemaKey: 'sla-types-schema', section: 'sla-types' };
   return null;
 }
 
@@ -646,6 +732,9 @@ function main() {
           break;
         case 'metrics':
           doc = importMetrics(parsed, doc);
+          break;
+        case 'sla-types':
+          doc = importSlaTypes(parsed, doc);
           break;
       }
 

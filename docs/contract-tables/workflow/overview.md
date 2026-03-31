@@ -147,3 +147,32 @@ Evaluation strategy: **first-match-wins**
 |---|-----------|--------|----------|
 | 1 | task.isExpedited = true | Set priority to **expedited** | — |
 | 2 | true | Set priority to **normal** | — |
+
+---
+
+## SLA Types
+
+SLA types define the deadlines and clock behavior for each class of work. The SLA clock tracks progress toward resolution; `pauseWhen` conditions temporarily stop the clock while the task is blocked on external input.
+
+JSON Logic conditions are serialized as JSON. See [#108](https://github.com/codeforamerica/safety-net-blueprint/issues/108) for planned improvements to the editing experience.
+
+| ID | Name | Duration | Warning at | Pause when |
+|----|------|----------|------------|------------|
+| `snap_expedited` | SNAP Expedited | 7 days | 75% | `{"in":[{"var":"status"},["awaiting_client","awaiting_verification"]]}` |
+| `snap_standard` | SNAP Standard | 30 days | 75% | `{"in":[{"var":"status"},["awaiting_client","awaiting_verification"]]}` |
+| `medicaid_standard` | Medicaid Standard | 45 days | 75% | `{"in":[{"var":"status"},["awaiting_client","awaiting_verification"]]}` |
+| `medicaid_disability` | Medicaid Disability | 90 days | 75% | `{"in":[{"var":"status"},["awaiting_client","awaiting_verification"]]}` |
+
+---
+
+## Metrics
+
+Metrics are computed on demand from the tasks and events collections. Values are available at `GET /metrics`.
+
+| ID | Name | Aggregate | Target |
+|----|------|-----------|--------|
+| `task_time_to_claim` | Task Time to Claim | duration | p50 < 4 hours |
+| `tasks_in_queue` | Tasks in Queue | count | trend down |
+| `release_rate` | Release Rate | ratio | ratio < 10 percent |
+| `sla_breach_rate` | SLA Breach Rate | ratio | ratio < 5 percent |
+| `sla_warning_rate` | SLA Warning Rate | ratio | ratio < 15 percent |

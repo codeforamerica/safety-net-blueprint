@@ -1,0 +1,5 @@
+id,name,duration.amount,duration.unit,warningThresholdPercent,autoAssignWhen,startWhen,pauseWhen,resumeWhen,completedWhen,resetWhen
+snap_expedited,SNAP Expedited,7,days,75,,,"{""in"":[{""var"":""status""},[""awaiting_client"",""awaiting_verification""]]}",,,
+snap_standard,SNAP Standard,30,days,75,,,"{""in"":[{""var"":""status""},[""awaiting_client"",""awaiting_verification""]]}",,,
+medicaid_standard,Medicaid Standard,45,days,75,,,"{""in"":[{""var"":""status""},[""awaiting_client"",""awaiting_verification""]]}",,,
+medicaid_disability,Medicaid Disability,90,days,75,,,"{""in"":[{""var"":""status""},[""awaiting_client"",""awaiting_verification""]]}",,,

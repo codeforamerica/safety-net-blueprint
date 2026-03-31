@@ -1,6 +1,7 @@
 # JSON Schema for Metrics YAML
 # Validates structural correctness. Cross-artifact references
-# (e.g., states/triggers matching state machine) are validated by the validation script.
+# (e.g., action values in filters matching state machine transition IDs)
+# are validated by the validation script.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 title: Metrics
@@ -9,7 +10,6 @@ type: object
 required:
   - version
   - domain
-  - stateMachine
   - metrics
 additionalProperties: false
 
@@ -22,13 +22,9 @@ properties:
     type: string
     description: Domain namespace (e.g., workflow).
 
-  stateMachine:
-    type: string
-    description: Filename of the associated state machine YAML.
-
   metrics:
     type: array
-    description: Metrics definitions.
+    description: Metric definitions.
     items:
       $ref: "#/$defs/Metric"
     minItems: 1
@@ -36,25 +32,55 @@ properties:
 $defs:
   Metric:
     type: object
-    description: A single metric definition with source and targets.
+    description: A single metric definition with source, aggregate, and optional targets.
     required:
       - id
       - name
       - description
-      - source
-      - targets
+      - aggregate
     properties:
       id:
         type: string
-        description: Unique identifier (e.g., task_time_to_claim).
+        description: Unique identifier for overlay targeting (e.g., task_time_to_claim).
       name:
         type: string
         description: Human-readable metric name.
       description:
         type: string
         description: What this metric measures.
+      aggregate:
+        type: string
+        enum:
+          - count
+          - ratio
+          - duration
+        description: >
+          Aggregation function: count (total matching records), ratio (count / total),
+          duration (median seconds between paired from/to events).
       source:
         $ref: "#/$defs/MetricSource"
+        description: >
+          Data source for count and ratio metrics. Required when aggregate is
+          count or ratio.
+      total:
+        $ref: "#/$defs/MetricSource"
+        description: >
+          Denominator source for ratio metrics. When absent, defaults to all records
+          in the same collection as source. Explicit total allows cross-collection
+          ratios (e.g., release events / total tasks created).
+      from:
+        $ref: "#/$defs/MetricSource"
+        description: >
+          Start event source for duration metrics. Required when aggregate is duration.
+      to:
+        $ref: "#/$defs/MetricSource"
+        description: >
+          End event source for duration metrics. Required when aggregate is duration.
+      pairBy:
+        type: string
+        description: >
+          Field to correlate from/to events for duration metrics (e.g., objectId).
+          Distinct from the groupBy query parameter, which controls result breakdown.
       targets:
         type: array
         items:
@@ -64,34 +90,20 @@ $defs:
 
   MetricSource:
     type: object
-    description: Where the metric data comes from — linked to state machine states/transitions.
+    description: A filtered collection query.
     required:
-      - type
+      - collection
     properties:
-      type:
+      collection:
         type: string
         enum:
-          - duration
-          - state_count
-          - transition_count
+          - tasks    # task records — queries current state (status, slaInfo, etc.)
+          - events   # audit log — queries transition history (action, timestamp, etc.)
+        description: Which collection to query.
+      filter:
         description: >
-          Source type: duration (time between states), state_count (objects in a state),
-          transition_count (how often a trigger fires).
-      from:
-        type: string
-        description: Source state (for duration metrics).
-      to:
-        type: string
-        description: Target state (for duration metrics).
-      trigger:
-        type: string
-        description: Transition trigger name (for duration or transition_count metrics).
-      state:
-        type: string
-        description: State to count objects in (for state_count metrics).
-      relativeTo:
-        type: string
-        description: Denominator for ratio metrics (e.g., "total" for rate calculations).
+          Optional JSON Logic condition. When provided, only records where the
+          condition evaluates to true are included.
     additionalProperties: false
 
   MetricTarget:
@@ -112,10 +124,22 @@ $defs:
           - ">"
           - ">="
           - "=="
-        description: Comparison operator for the target value.
-      value:
+        description: Comparison operator for evaluating the target.
+      amount:
+        type: number
+        description: Machine-readable threshold value. Used by the engine to evaluate pass/fail.
+      unit:
         type: string
-        description: Human-readable target value (e.g., "4h", "10%").
+        enum:
+          - hours
+          - minutes
+          - days
+          - percent
+          - count
+        description: Unit for the amount field.
+      label:
+        type: string
+        description: Human-readable target label (e.g., "4h", "10%", "trend down").
       direction:
         type: string
         enum:

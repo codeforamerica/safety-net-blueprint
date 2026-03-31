@@ -1,0 +1,48 @@
+$schema: ./schemas/sla-types-schema.yaml
+version: "1.0"
+domain: workflow
+slaTypes:
+  - id: snap_expedited
+    name: SNAP Expedited
+    duration:
+      amount: 7
+      unit: days
+    warningThresholdPercent: 75
+    pauseWhen:
+      in:
+        - var: status
+        - - awaiting_client
+          - awaiting_verification
+  - id: snap_standard
+    name: SNAP Standard
+    duration:
+      amount: 30
+      unit: days
+    warningThresholdPercent: 75
+    pauseWhen:
+      in:
+        - var: status
+        - - awaiting_client
+          - awaiting_verification
+  - id: medicaid_standard
+    name: Medicaid Standard
+    duration:
+      amount: 45
+      unit: days
+    warningThresholdPercent: 75
+    pauseWhen:
+      in:
+        - var: status
+        - - awaiting_client
+          - awaiting_verification
+  - id: medicaid_disability
+    name: Medicaid Disability
+    duration:
+      amount: 90
+      unit: days
+    warningThresholdPercent: 75
+    pauseWhen:
+      in:
+        - var: status
+        - - awaiting_client
+          - awaiting_verification

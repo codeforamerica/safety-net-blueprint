@@ -94,9 +94,10 @@ tmpYamlBefore=$(mktemp -d)
 cp packages/contracts/*-state-machine.yaml "$tmpYamlBefore/" 2>/dev/null || true
 cp packages/contracts/*-rules.yaml "$tmpYamlBefore/" 2>/dev/null || true
 cp packages/contracts/*-metrics.yaml "$tmpYamlBefore/" 2>/dev/null || true
+cp packages/contracts/*-sla-types.yaml "$tmpYamlBefore/" 2>/dev/null || true
 if npm run contract-tables:import 2>&1; then
   yamlChanged=0
-  for f in packages/contracts/*-state-machine.yaml packages/contracts/*-rules.yaml packages/contracts/*-metrics.yaml; do
+  for f in packages/contracts/*-state-machine.yaml packages/contracts/*-rules.yaml packages/contracts/*-metrics.yaml packages/contracts/*-sla-types.yaml; do
     [ -f "$f" ] || continue
     base=$(basename "$f")
     if [ -f "$tmpYamlBefore/$base" ] && ! diff -q "$f" "$tmpYamlBefore/$base" >/dev/null 2>&1; then

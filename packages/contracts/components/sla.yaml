@@ -1,0 +1,62 @@
+# Shared SLA schemas used by any domain with SLA tracking.
+#
+# Schemas: SlaInfo, SlaInfoCreate
+
+SlaInfo:
+  type: object
+  description: >
+    Engine-managed SLA tracking entry. Returned in resource responses.
+    All fields except slaTypeCode are populated and managed by the engine.
+  additionalProperties: false
+  required:
+    - slaTypeCode
+    - status
+    - clockStartedAt
+    - deadline
+  properties:
+    slaTypeCode:
+      type: string
+      description: >
+        Identifies which SLA type applies. Valid values come from the domain's
+        *-sla-types.yaml; the enum is injected at resolve time (see #175).
+    status:
+      type: string
+      enum:
+        - active
+        - warning
+        - paused
+        - breached
+        - completed
+      description: >
+        Engine-managed SLA clock status.
+        active — clock is running.
+        warning — clock is running but warningThresholdPercent has elapsed.
+        paused — clock is paused (e.g., awaiting client response).
+        breached — deadline has passed without completion.
+        completed — SLA was satisfied before the deadline.
+      readOnly: true
+    clockStartedAt:
+      type: string
+      format: date-time
+      description: When the SLA clock started. Engine-managed.
+      readOnly: true
+    deadline:
+      type: string
+      format: date-time
+      description: >
+        Computed deadline. Recalculated after a resume to exclude accumulated
+        paused duration. Engine-managed.
+      readOnly: true
+
+SlaInfoCreate:
+  type: object
+  description: Client input for SLA tracking at resource creation.
+  additionalProperties: false
+  required:
+    - slaTypeCode
+  properties:
+    slaTypeCode:
+      type: string
+      description: >
+        Identifies which SLA type to track. Valid values come from the domain's
+        *-sla-types.yaml; the enum is injected at resolve time (see #175).

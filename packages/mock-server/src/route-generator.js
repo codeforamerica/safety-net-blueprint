@@ -10,6 +10,8 @@ import { createUpdateHandler } from './handlers/update-handler.js';
 import { createDeleteHandler } from './handlers/delete-handler.js';
 import { createTransitionHandler } from './handlers/transition-handler.js';
 import { createSearchHandler } from './handlers/search-handler.js';
+import { createMetricsListHandler, createMetricsGetHandler } from './handlers/metrics-handler.js';
+import { findSlaTypes } from './sla-loader.js';
 
 /**
  * Determine if a path is a collection endpoint (no {id} parameter)
@@ -52,7 +54,7 @@ function deriveCollectionName(path) {
  * @param {Array|null} rules - Rules for this API's domain (null if none)
  * @returns {Array} Array of registered endpoint info
  */
-export function registerRoutes(app, apiMetadata, baseUrl, stateMachine, rules) {
+export function registerRoutes(app, apiMetadata, baseUrl, stateMachine, rules, slaTypes = []) {
   const registeredEndpoints = [];
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
@@ -84,7 +86,8 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachine, rules) {
       // Only pass state machine to the collection that matches the governed object
       const smForEndpoint = stateMachine?.object?.toLowerCase() + 's' === collectionName
         ? stateMachine : null;
-      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, rules);
+      const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
+      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, rules, domainSlaTypes);
       description = 'Create resource';
     } else if (method === 'patch' && isItemEndpoint(endpoint.path)) {
       // PATCH /resources/{id} - Update
@@ -127,16 +130,27 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachine, rules) {
  * @param {Array} rules - Array from discoverRules()
  * @returns {Array} Array of all registered endpoints grouped by API
  */
-export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], rules = []) {
+export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], rules = [], slaTypes = [], metrics = []) {
   console.log('\nRegistering API routes...');
 
   const allEndpoints = [];
+
+  // Register custom metrics routes FIRST so they take priority over standard CRUD handlers.
+  // The metrics-openapi.yaml is still registered below for endpoint discovery purposes,
+  // but the actual requests are handled here.
+  if (metrics.length > 0) {
+    console.log('  Registering metrics routes...');
+    app.get('/metrics', createMetricsListHandler(metrics));
+    app.get('/metrics/:metricId', createMetricsGetHandler(metrics));
+    console.log('    GET    /metrics - List computed metrics');
+    console.log('    GET    /metrics/:metricId - Get computed metric');
+  }
 
   for (const apiSpec of apiSpecs) {
     // Match state machine and rules by domain name
     const sm = stateMachines.find(s => s.domain === apiSpec.name);
     const matchedStateMachine = sm ? sm.stateMachine : null;
-    const endpoints = registerRoutes(app, apiSpec, baseUrl, matchedStateMachine, rules);
+    const endpoints = registerRoutes(app, apiSpec, baseUrl, matchedStateMachine, rules, slaTypes);
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,
@@ -156,7 +170,7 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], ru
  * @param {Array} rules - Array from discoverRules()
  * @returns {Array} Array of registered RPC endpoint info
  */
-export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules = []) {
+export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules = [], slaTypes = []) {
   const registeredEndpoints = [];
 
   for (const sm of stateMachines) {
@@ -192,12 +206,14 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules =
       const rpcPath = `${basePath}/${transition.trigger}`;
       const expressPath = convertPathFormat(rpcPath);
 
+      const domainSlaTypes = findSlaTypes(slaTypes, sm.domain);
       const handler = createTransitionHandler(
         collectionName,
         sm.stateMachine,
         transition.trigger,
         paramName,
-        rules
+        rules,
+        domainSlaTypes
       );
 
       app.post(expressPath, handler);

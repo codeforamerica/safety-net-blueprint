@@ -103,11 +103,15 @@ async function startMockServer(specDirs = null, seedDir = null) {
     let apiSpecs = [];
     let allStateMachines = [];
     let allRules = [];
+    let allSlaTypes = [];
+    let allMetrics = [];
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
       allRules = allRules.concat(result.rules);
+      allSlaTypes = allSlaTypes.concat(result.slaTypes);
+      allMetrics = allMetrics.concat(result.metrics);
     }
 
 
@@ -118,7 +122,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
     app.use(cors({
       origin: '*',
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Caller-Id'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Caller-Id', 'X-Caller-Role', 'X-Mock-Now'],
       credentials: true
     }));
 
@@ -138,10 +142,10 @@ async function startMockServer(specDirs = null, seedDir = null) {
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
-    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allRules);
+    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allRules, allSlaTypes, allMetrics);
 
     // Register state machine RPC routes
-    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allRules);
+    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allRules, allSlaTypes);
 
 
     // 404 handler for undefined routes

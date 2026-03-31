@@ -557,6 +557,15 @@ components:
           description: Reference to the Case this task belongs to.
           x-relationship:
             resource: Case
+        slaInfo:
+          type: array
+          description: >
+            Engine-managed SLA tracking entries. Populated on create and updated
+            on every transition. Read-only — use slaInfo on TaskCreate to specify
+            which SLA types to track.
+          items:
+            $ref: "./components/sla.yaml#/SlaInfo"
+          readOnly: true
         outcome:
           type: string
           description: Completion outcome recorded when the task was completed (e.g., approved, denied).
@@ -602,6 +611,15 @@ components:
           required:
             - name
             - status
+          properties:
+            slaInfo:
+              type: array
+              description: >
+                Optional SLA types to track for this task. Client-provided types are
+                merged with any types auto-assigned by autoAssignWhen evaluation —
+                both apply. Engine populates status, clockStartedAt, and deadline.
+              items:
+                $ref: "./components/sla.yaml#/SlaInfoCreate"
 
     TaskList:
       description: Paginated list of tasks.

@@ -9,6 +9,8 @@ import { validateSeedData } from './seed-validator.js';
 import { validateAll, getValidationStatus } from '@codeforamerica/safety-net-blueprint-contracts/validation';
 import { discoverStateMachines } from './state-machine-loader.js';
 import { discoverRules } from './rules-loader.js';
+import { discoverSlaTypes } from './sla-loader.js';
+import { discoverMetrics } from './metrics-loader.js';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -92,6 +94,20 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     rules.forEach(r => console.log(`  - ${r.domain} (${r.ruleSets.length} ruleSet(s))`));
   }
 
+  // Discover SLA type contracts
+  const slaTypes = discoverSlaTypes(specsDir);
+  if (verbose && slaTypes.length > 0) {
+    console.log(`\n✓ Discovered ${slaTypes.length} SLA type config(s):`);
+    slaTypes.forEach(s => console.log(`  - ${s.domain} (${s.slaTypes.length} type(s))`));
+  }
+
+  // Discover metric definition contracts
+  const metrics = discoverMetrics(specsDir);
+  if (verbose && metrics.length > 0) {
+    console.log(`\n✓ Discovered ${metrics.length} metric definition(s):`);
+    metrics.forEach(m => console.log(`  - ${m.domain} (${m.metrics.length} metric(s))`));
+  }
+
   // Seed databases from example files
   const summary = seedAllDatabases(apiSpecs, specsDir, seedDir);
 
@@ -109,7 +125,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, rules, summary };
+  return { apiSpecs, stateMachines, rules, slaTypes, metrics, summary };
 }
 
 /**

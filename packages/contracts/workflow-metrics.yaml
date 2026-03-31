@@ -1,0 +1,90 @@
+$schema: ./schemas/metrics-schema.yaml
+version: "1.0"
+domain: workflow
+metrics:
+  - id: task_time_to_claim
+    name: Task Time to Claim
+    description: Median time from task creation to first claim event.
+    aggregate: duration
+    from:
+      collection: events
+      filter:
+        "==":
+          - var: action
+          - created
+    to:
+      collection: events
+      filter:
+        "==":
+          - var: action
+          - claimed
+    pairBy: objectId
+    targets:
+      - stat: p50
+        operator: <
+        amount: 4
+        unit: hours
+  - id: tasks_in_queue
+    name: Tasks in Queue
+    description: Number of tasks currently in pending status.
+    aggregate: count
+    source:
+      collection: tasks
+      filter:
+        "==":
+          - var: status
+          - pending
+    targets:
+      - stat: trend
+        direction: down
+  - id: release_rate
+    name: Release Rate
+    description: Ratio of release events to total task transitions.
+    aggregate: ratio
+    source:
+      collection: events
+      filter:
+        "==":
+          - var: action
+          - released
+    total:
+      collection: events
+    targets:
+      - stat: ratio
+        operator: <
+        amount: 10
+        unit: percent
+  - id: sla_breach_rate
+    name: SLA Breach Rate
+    description: Ratio of tasks with a breached SLA to total tasks.
+    aggregate: ratio
+    source:
+      collection: tasks
+      filter:
+        in:
+          - breached
+          - var: slaInfo.*.status
+    total:
+      collection: tasks
+    targets:
+      - stat: ratio
+        operator: <
+        amount: 5
+        unit: percent
+  - id: sla_warning_rate
+    name: SLA Warning Rate
+    description: Ratio of SLA warning escalation events to total task transitions.
+    aggregate: ratio
+    source:
+      collection: events
+      filter:
+        "==":
+          - var: action
+          - auto-escalate-sla-warning
+    total:
+      collection: events
+    targets:
+      - stat: ratio
+        operator: <
+        amount: 15
+        unit: percent

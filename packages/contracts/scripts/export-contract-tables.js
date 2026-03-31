@@ -242,21 +242,65 @@ function renderRuleSet(ruleSet) {
 // ---------------------------------------------------------------------------
 
 function renderMetrics(doc) {
-  const headers = ['Metric', 'Description', 'Source Type', 'Source', 'Target'];
+  const headers = [
+    'id', 'name', 'description', 'aggregate',
+    'source.collection', 'source.filter',
+    'total.collection', 'total.filter',
+    'from.collection', 'from.filter',
+    'to.collection', 'to.filter',
+    'pairBy', 'targets'
+  ];
   const rows = [];
   for (const m of doc.metrics || []) {
-    const { type, ...sourceRest } = m.source;
-    const sourceDetails = Object.entries(sourceRest)
-      .map(([k, v]) => `${k}=${v}`)
-      .join('; ');
     const targets = (m.targets || []).map(t => {
       const parts = [t.stat];
       if (t.operator) parts.push(t.operator);
-      if (t.value != null) parts.push(String(t.value));
+      if (t.amount != null) parts.push(String(t.amount));
+      if (t.unit) parts.push(t.unit);
       if (t.direction) parts.push(t.direction);
       return parts.join(' ');
     }).join('; ');
-    rows.push([m.name || m.id, m.description || '', type, sourceDetails, targets]);
+    rows.push([
+      m.id || '',
+      m.name || '',
+      m.description || '',
+      m.aggregate || '',
+      m.source?.collection || '',
+      m.source?.filter ? JSON.stringify(m.source.filter) : '',
+      m.total?.collection || '',
+      m.total?.filter ? JSON.stringify(m.total.filter) : '',
+      m.from?.collection || '',
+      m.from?.filter ? JSON.stringify(m.from.filter) : '',
+      m.to?.collection || '',
+      m.to?.filter ? JSON.stringify(m.to.filter) : '',
+      m.pairBy || '',
+      targets
+    ]);
+  }
+  return csvTable(headers, rows);
+}
+
+function renderSlaTypes(doc) {
+  const headers = [
+    'id', 'name', 'duration.amount', 'duration.unit',
+    'warningThresholdPercent',
+    'autoAssignWhen', 'startWhen', 'pauseWhen', 'resumeWhen', 'completedWhen', 'resetWhen'
+  ];
+  const rows = [];
+  for (const t of doc.slaTypes || []) {
+    rows.push([
+      t.id || '',
+      t.name || '',
+      t.duration?.amount != null ? String(t.duration.amount) : '',
+      t.duration?.unit || '',
+      t.warningThresholdPercent != null ? String(t.warningThresholdPercent) : '',
+      t.autoAssignWhen ? JSON.stringify(t.autoAssignWhen) : '',
+      t.startWhen ? JSON.stringify(t.startWhen) : '',
+      t.pauseWhen ? JSON.stringify(t.pauseWhen) : '',
+      t.resumeWhen ? JSON.stringify(t.resumeWhen) : '',
+      t.completedWhen ? JSON.stringify(t.completedWhen) : '',
+      t.resetWhen ? JSON.stringify(t.resetWhen) : ''
+    ]);
   }
   return csvTable(headers, rows);
 }
@@ -270,6 +314,7 @@ function getContractType(doc) {
   if (schema.includes('state-machine-schema')) return 'state-machine';
   if (schema.includes('rules-schema')) return 'rules';
   if (schema.includes('metrics-schema')) return 'metrics';
+  if (schema.includes('sla-types-schema')) return 'sla-types';
   return null;
 }
 
@@ -296,6 +341,12 @@ function exportRules(doc, outDir) {
 
 function exportMetrics(doc, outDir) {
   const files = { 'metrics.csv': renderMetrics(doc) };
+  writeFiles(outDir, files);
+  return Object.keys(files);
+}
+
+function exportSlaTypes(doc, outDir) {
+  const files = { 'sla-types.csv': renderSlaTypes(doc) };
   writeFiles(outDir, files);
   return Object.keys(files);
 }
@@ -400,7 +451,7 @@ function describeRuleAction(action) {
   }
 }
 
-function renderOverview(smDoc, rulesDoc) {
+function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) {
   const lines = [];
   const obj = smDoc.object || 'Object';
 
@@ -581,11 +632,56 @@ function renderOverview(smDoc, rulesDoc) {
     }
   }
 
+  // ── SLA Types ────────────────────────────────────────────────────────────
+  if (slaTypesDoc && (slaTypesDoc.slaTypes || []).length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push('## SLA Types');
+    lines.push('');
+    lines.push('SLA types define the deadlines and clock behavior for each class of work. The SLA clock tracks progress toward resolution; `pauseWhen` conditions temporarily stop the clock while the task is blocked on external input.');
+    lines.push('');
+    lines.push('JSON Logic conditions are serialized as JSON. See [#108](https://github.com/codeforamerica/safety-net-blueprint/issues/108) for planned improvements to the editing experience.');
+    lines.push('');
+    lines.push('| ID | Name | Duration | Warning at | Pause when |');
+    lines.push('|----|------|----------|------------|------------|');
+    for (const t of slaTypesDoc.slaTypes) {
+      const duration = t.duration ? `${t.duration.amount} ${t.duration.unit}` : '';
+      const warning = t.warningThresholdPercent != null ? `${t.warningThresholdPercent}%` : '—';
+      const pause = t.pauseWhen ? `\`${JSON.stringify(t.pauseWhen)}\`` : '—';
+      lines.push(`| \`${mdCell(t.id)}\` | ${mdCell(t.name)} | ${mdCell(duration)} | ${mdCell(warning)} | ${pause} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Metrics ──────────────────────────────────────────────────────────────
+  if (metricsDoc && (metricsDoc.metrics || []).length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push('## Metrics');
+    lines.push('');
+    lines.push('Metrics are computed on demand from the tasks and events collections. Values are available at `GET /metrics`.');
+    lines.push('');
+    lines.push('| ID | Name | Aggregate | Target |');
+    lines.push('|----|------|-----------|--------|');
+    for (const m of metricsDoc.metrics) {
+      const target = (m.targets || []).map(t => {
+        const parts = [t.stat];
+        if (t.operator) parts.push(t.operator);
+        if (t.amount != null) parts.push(String(t.amount));
+        if (t.unit) parts.push(t.unit);
+        if (t.direction) parts.push(t.direction);
+        return parts.join(' ');
+      }).join('; ');
+      lines.push(`| \`${mdCell(m.id)}\` | ${mdCell(m.name)} | ${mdCell(m.aggregate)} | ${mdCell(target || '—')} |`);
+    }
+    lines.push('');
+  }
+
   return lines.join('\n');
 }
 
-function exportOverview(smDoc, rulesDoc, outDir) {
-  const files = { 'overview.md': renderOverview(smDoc, rulesDoc) };
+function exportOverview(smDoc, rulesDoc, slaTypesDoc, metricsDoc, outDir) {
+  const files = { 'overview.md': renderOverview(smDoc, rulesDoc, slaTypesDoc, metricsDoc) };
   writeFiles(outDir, files);
   return Object.keys(files);
 }
@@ -613,24 +709,26 @@ function main() {
       console.warn(`  Skipping ${basename(filePath)}: no domain field`);
       continue;
     }
-    if (!byDomain.has(domain)) byDomain.set(domain, { domain, stateMachine: null, rules: null, metrics: null });
+    if (!byDomain.has(domain)) byDomain.set(domain, { domain, stateMachine: null, rules: null, metrics: null, slaTypes: null });
     const group = byDomain.get(domain);
     if (contractType === 'state-machine') group.stateMachine = doc;
     else if (contractType === 'rules') group.rules = doc;
     else if (contractType === 'metrics') group.metrics = doc;
+    else if (contractType === 'sla-types') group.slaTypes = doc;
   }
 
   let totalFiles = 0;
 
   for (const [, group] of byDomain) {
-    const { domain, stateMachine, rules, metrics } = group;
+    const { domain, stateMachine, rules, metrics, slaTypes } = group;
     const domainDir = resolve(outDir, domain);
     const exported = [];
 
     if (stateMachine) exported.push(...exportStateMachine(stateMachine, domainDir));
     if (rules) exported.push(...exportRules(rules, domainDir));
     if (metrics) exported.push(...exportMetrics(metrics, domainDir));
-    if (stateMachine) exported.push(...exportOverview(stateMachine, rules, domainDir));
+    if (slaTypes) exported.push(...exportSlaTypes(slaTypes, domainDir));
+    if (stateMachine) exported.push(...exportOverview(stateMachine, rules, slaTypes, metrics, domainDir));
 
     for (const f of exported) {
       console.log(`  ${relative(outDir, resolve(domainDir, f))}`);

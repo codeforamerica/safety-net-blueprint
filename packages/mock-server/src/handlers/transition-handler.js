@@ -4,6 +4,7 @@
 
 import { findById, findAll, update, create } from '../database-manager.js';
 import { findTransition, evaluateGuards, applyEffects } from '../state-machine-engine.js';
+import { updateSlaInfo } from '../sla-engine.js';
 import { processRuleEvaluations } from './rule-evaluation.js';
 import { eventBus } from '../event-bus.js';
 
@@ -16,7 +17,7 @@ import { eventBus } from '../event-bus.js';
  * @param {Array} rules - Array from discoverRules()
  * @returns {Function} Express handler
  */
-export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, rules) {
+export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, rules, slaTypes = []) {
   return (req, res) => {
     try {
       const resourceId = req.params[paramName];
@@ -48,8 +49,8 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
         });
       }
 
-      // Evaluate guards
-      const now = new Date().toISOString();
+      // Support X-Mock-Now header for clock simulation in testing
+      const now = req.headers['x-mock-now'] || new Date().toISOString();
       const context = {
         caller: {
           id: callerId,
@@ -76,8 +77,14 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
 
       // Clone resource, apply effects, update status
       const updated = { ...resource };
+      if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
       const { pendingCreates, pendingRuleEvaluations, pendingEvents } = applyEffects(transition.effects, updated, context);
       updated.status = transition.to;
+
+      // Update SLA clock state based on new status
+      if (slaTypes.length > 0 && updated.slaInfo?.length > 0) {
+        updateSlaInfo(updated, slaTypes, now);
+      }
 
       // Process pending rule evaluations
       processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine.domain);

@@ -5,6 +5,7 @@
 import { create, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { applyEffects } from '../state-machine-engine.js';
+import { initializeSlaInfo } from '../sla-engine.js';
 import { processRuleEvaluations } from './rule-evaluation.js';
 import { eventBus } from '../event-bus.js';
 
@@ -17,7 +18,7 @@ import { eventBus } from '../event-bus.js';
  * @param {Array|null} rules - Rules from discoverRules() (null for APIs without rules)
  * @returns {Function} Express handler
  */
-export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, rules) {
+export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, rules, slaTypes = []) {
   return (req, res) => {
     try {
       // Check if request body is an object (400 for malformed request)
@@ -68,7 +69,12 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         // Process rule evaluations (sets queueId, priority, etc.)
         processRuleEvaluations(pendingRuleEvaluations, resource, rules, stateMachine.domain);
 
-        // Persist rule-driven mutations back to DB
+        // Initialize SLA info if SLA types are configured
+      if (slaTypes.length > 0) {
+        initializeSlaInfo(resource, slaTypes, now);
+      }
+
+      // Persist rule-driven mutations back to DB
         const diff = {};
         const original = { ...resource };
         for (const [key, value] of Object.entries(resource)) {
