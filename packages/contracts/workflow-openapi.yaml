@@ -619,16 +619,8 @@ components:
           description: Detailed information about the task.
         status:
           type: string
-          enum:
-            - pending
-            - in_progress
-            - completed
-            - escalated
-            - cancelled
-            - awaiting_client
-            - awaiting_verification
-            - pending_review
-          description: Current lifecycle state.
+          x-enum-source: states[].id
+          description: Current lifecycle state. Valid values are injected at resolve time from workflow-state-machine.yaml.
         programType:
           $ref: "./components/common.yaml#/Program"
           description: The benefits program this task is associated with.

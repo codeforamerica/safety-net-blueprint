@@ -22,7 +22,11 @@ import {
   substitutePlaceholders,
   detectComponentPrefix,
   rewriteOverlayRefs,
-  generateRpcOverlays
+  generateRpcOverlays,
+  buildEnumSourceIndex,
+  findEnumSources,
+  parseEnumSource,
+  applyEnumSourceInjections
 } from '../../scripts/resolve.js';
 
 // Use checkPathExists from the overlay module (same as the script does)
@@ -865,6 +869,186 @@ test('resolve-overlay tests', async (t) => {
     } finally {
       rmSync(dir, { recursive: true });
     }
+  });
+
+});
+
+// =============================================================================
+// x-enum-source injection
+// =============================================================================
+
+test('x-enum-source injection', async (t) => {
+
+  await t.test('parseEnumSource - parses valid syntax', () => {
+    assert.deepStrictEqual(parseEnumSource('slaTypes[].id'), { collection: 'slaTypes', field: 'id' });
+    assert.deepStrictEqual(parseEnumSource('states[].id'), { collection: 'states', field: 'id' });
+  });
+
+  await t.test('parseEnumSource - returns null for invalid syntax', () => {
+    assert.strictEqual(parseEnumSource('slaTypes.id'), null);
+    assert.strictEqual(parseEnumSource('slaTypes[]'), null);
+    assert.strictEqual(parseEnumSource(''), null);
+  });
+
+  await t.test('findEnumSources - finds annotations at any depth', () => {
+    const spec = {
+      SlaInfo: {
+        properties: {
+          slaTypeCode: { type: 'string', 'x-enum-source': 'slaTypes[].id' },
+          status: { type: 'string' }
+        }
+      }
+    };
+    const findings = findEnumSources(spec);
+    assert.strictEqual(findings.length, 1);
+    assert.strictEqual(findings[0].path, 'SlaInfo.properties.slaTypeCode');
+    assert.strictEqual(findings[0].source, 'slaTypes[].id');
+  });
+
+  await t.test('findEnumSources - finds multiple annotations', () => {
+    const spec = {
+      SchemaA: {
+        properties: { code: { type: 'string', 'x-enum-source': 'slaTypes[].id' } }
+      },
+      SchemaB: {
+        properties: { status: { type: 'string', 'x-enum-source': 'states[].id' } }
+      }
+    };
+    const findings = findEnumSources(spec);
+    assert.strictEqual(findings.length, 2);
+  });
+
+  await t.test('findEnumSources - returns empty when no annotations', () => {
+    const spec = { Task: { properties: { status: { type: 'string' } } } };
+    assert.deepStrictEqual(findEnumSources(spec), []);
+  });
+
+  await t.test('buildEnumSourceIndex - indexes slaTypes from sla-types yaml', () => {
+    const currentResults = new Map([
+      ['workflow-sla-types.yaml', {
+        slaTypes: [
+          { id: 'snap_expedited', name: 'SNAP Expedited' },
+          { id: 'snap_standard', name: 'SNAP Standard' }
+        ]
+      }]
+    ]);
+    const index = buildEnumSourceIndex(currentResults);
+    assert.deepStrictEqual(index['slaTypes'], ['snap_expedited', 'snap_standard']);
+  });
+
+  await t.test('buildEnumSourceIndex - indexes states from state-machine yaml', () => {
+    const currentResults = new Map([
+      ['workflow-state-machine.yaml', {
+        states: [
+          { id: 'pending', slaClock: 'running' },
+          { id: 'completed', slaClock: 'stopped' }
+        ]
+      }]
+    ]);
+    const index = buildEnumSourceIndex(currentResults);
+    assert.deepStrictEqual(index['states'], ['pending', 'completed']);
+  });
+
+  await t.test('buildEnumSourceIndex - returns empty when no behavioral yamls', () => {
+    const currentResults = new Map([
+      ['workflow-openapi.yaml', { openapi: '3.1.0' }]
+    ]);
+    assert.deepStrictEqual(buildEnumSourceIndex(currentResults), {});
+  });
+
+  await t.test('applyEnumSourceInjections - injects enum and strips annotation', () => {
+    const currentResults = new Map([
+      ['workflow-sla-types.yaml', {
+        slaTypes: [{ id: 'snap_expedited' }, { id: 'snap_standard' }]
+      }],
+      ['components/sla.yaml', {
+        SlaInfo: {
+          properties: {
+            slaTypeCode: { type: 'string', 'x-enum-source': 'slaTypes[].id', description: 'SLA type' }
+          }
+        }
+      }]
+    ]);
+
+    const warnings = applyEnumSourceInjections(currentResults);
+    assert.strictEqual(warnings.length, 0);
+
+    const resolved = currentResults.get('components/sla.yaml');
+    const field = resolved.SlaInfo.properties.slaTypeCode;
+    assert.deepStrictEqual(field.enum, ['snap_expedited', 'snap_standard']);
+    assert.strictEqual(field.type, 'string');
+    assert.strictEqual(field.description, 'SLA type');
+    assert.strictEqual(field['x-enum-source'], undefined);
+  });
+
+  await t.test('applyEnumSourceInjections - injects states enum', () => {
+    const currentResults = new Map([
+      ['workflow-state-machine.yaml', {
+        states: [{ id: 'pending' }, { id: 'in_progress' }, { id: 'completed' }]
+      }],
+      ['workflow-openapi.yaml', {
+        Task: {
+          properties: {
+            status: { type: 'string', 'x-enum-source': 'states[].id', description: 'Lifecycle state' }
+          }
+        }
+      }]
+    ]);
+
+    applyEnumSourceInjections(currentResults);
+    const field = currentResults.get('workflow-openapi.yaml').Task.properties.status;
+    assert.deepStrictEqual(field.enum, ['pending', 'in_progress', 'completed']);
+    assert.strictEqual(field['x-enum-source'], undefined);
+  });
+
+  await t.test('applyEnumSourceInjections - warns on missing collection', () => {
+    const currentResults = new Map([
+      ['workflow-state-machine.yaml', {
+        states: [{ id: 'pending' }]
+      }],
+      ['some-openapi.yaml', {
+        Schema: {
+          properties: {
+            code: { type: 'string', 'x-enum-source': 'unknownCollection[].id' }
+          }
+        }
+      }]
+    ]);
+
+    const warnings = applyEnumSourceInjections(currentResults);
+    assert.strictEqual(warnings.length, 1);
+    assert.ok(warnings[0].includes('unknownCollection'));
+  });
+
+  await t.test('applyEnumSourceInjections - warns on invalid syntax', () => {
+    const currentResults = new Map([
+      ['workflow-sla-types.yaml', { slaTypes: [{ id: 'snap' }] }],
+      ['some-openapi.yaml', {
+        Schema: {
+          properties: {
+            code: { type: 'string', 'x-enum-source': 'bad-syntax' }
+          }
+        }
+      }]
+    ]);
+
+    const warnings = applyEnumSourceInjections(currentResults);
+    assert.strictEqual(warnings.length, 1);
+    assert.ok(warnings[0].includes('invalid syntax'));
+  });
+
+  await t.test('applyEnumSourceInjections - no-ops when no behavioral yamls present', () => {
+    const currentResults = new Map([
+      ['some-openapi.yaml', {
+        Schema: { properties: { code: { type: 'string', 'x-enum-source': 'slaTypes[].id' } } }
+      }]
+    ]);
+
+    const warnings = applyEnumSourceInjections(currentResults);
+    assert.strictEqual(warnings.length, 0);
+    // Annotation should remain untouched since there's nothing to inject
+    const field = currentResults.get('some-openapi.yaml').Schema.properties.code;
+    assert.strictEqual(field['x-enum-source'], 'slaTypes[].id');
   });
 
 });

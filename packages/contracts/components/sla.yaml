@@ -16,9 +16,10 @@ SlaInfo:
   properties:
     slaTypeCode:
       type: string
+      x-enum-source: slaTypes[].id
       description: >
-        Identifies which SLA type applies. Valid values come from the domain's
-        *-sla-types.yaml; the enum is injected at resolve time (see #175).
+        Identifies which SLA type applies. Valid values are injected at resolve
+        time from the domain's *-sla-types.yaml.
     status:
       type: string
       enum:
@@ -57,6 +58,7 @@ SlaInfoCreate:
   properties:
     slaTypeCode:
       type: string
+      x-enum-source: slaTypes[].id
       description: >
-        Identifies which SLA type to track. Valid values come from the domain's
-        *-sla-types.yaml; the enum is injected at resolve time (see #175).
+        Identifies which SLA type to track. Valid values are injected at resolve
+        time from the domain's *-sla-types.yaml.
