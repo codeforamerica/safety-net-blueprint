@@ -696,12 +696,12 @@ test('resolve-overlay tests', async (t) => {
         domain: 'test',
         object: 'Item',
         apiSpec: 'test-openapi.yaml',
-        states: { draft: {}, published: {} },
+        states: [{ id: 'draft' }, { id: 'published' }],
         initialState: 'draft',
         transitions: [
           { trigger: 'publish', from: 'draft', to: 'published' }
         ],
-        requestBodies: { publish: {} }
+        requestBodies: [{ trigger: 'publish' }]
       });
 
       // Collect yaml files the same way resolve.js does
@@ -763,13 +763,13 @@ test('resolve-overlay tests', async (t) => {
         domain: 'test',
         object: 'Item',
         apiSpec: 'test-openapi.yaml',
-        states: { draft: {}, published: {} },
+        states: [{ id: 'draft' }, { id: 'published' }],
         initialState: 'draft',
         transitions: [
           { trigger: 'publish', from: 'draft', to: 'published' },
           { trigger: 'archive', from: 'published', to: 'draft' }
         ],
-        requestBodies: { publish: {}, archive: {} }
+        requestBodies: [{ trigger: 'publish' }, { trigger: 'archive' }]
       });
 
       const yamlFiles = [
@@ -842,10 +842,10 @@ test('resolve-overlay tests', async (t) => {
         domain: 'test',
         object: 'Item',
         apiSpec: 'test-openapi.yaml',
-        states: { draft: {}, published: {} },
+        states: [{ id: 'draft' }, { id: 'published' }],
         initialState: 'draft',
         transitions: [{ trigger: 'publish', from: 'draft', to: 'published' }],
-        requestBodies: { publish: {} }
+        requestBodies: [{ trigger: 'publish' }]
       });
 
       const yamlFiles = [{

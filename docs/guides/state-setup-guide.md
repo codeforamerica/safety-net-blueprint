@@ -210,7 +210,10 @@ When multiple API versions exist (e.g., `applications.yaml` and `applications-v2
 
 ## Customizing behavioral artifacts
 
-Overlays customize OpenAPI specs (schemas, enums, endpoints). Behavioral artifacts — state machines, rules, metrics — use a different customization model: states provide their own YAML files that replace the baseline entirely.
+Overlays customize OpenAPI specs (schemas, enums, endpoints). Behavioral artifacts — state machines, rules, metrics — can be customized in two ways:
+
+1. **Targeted overlay actions**: Use overlay filter expressions to modify specific items without touching the rest. This is the preferred approach for small changes.
+2. **Replace entirely**: Place your own file with the same name in your state's resolved specs directory. It replaces the base file — useful when the state lifecycle diverges significantly.
 
 The mock server discovers behavioral artifacts by file naming convention in the specs directory:
 
@@ -220,17 +223,52 @@ The mock server discovers behavioral artifacts by file naming convention in the 
 | Rules | `{domain}-rules.yaml` | `workflow-rules.yaml` |
 | Metrics | `{domain}-metrics.yaml` | `workflow-metrics.yaml` (planned) |
 
-To customize, place your own file with the same name in your state's resolved specs directory. It replaces the base file entirely — there is no merge.
-
 ### State machine
 
-The base `workflow-state-machine.yaml` defines 3 states and 4 transitions. States can replace this with their own lifecycle — adding states, transitions, guards, and effects.
+The base `workflow-state-machine.yaml` defines states, guards, transitions, and request bodies. States can extend or replace this with their own lifecycle.
 
 **Common customizations:**
 - Add states (e.g., `awaiting_client`, `escalated`, `supervisor_review`)
 - Add transitions between states (each trigger becomes an RPC endpoint automatically)
 - Add or modify guards (preconditions for transitions)
 - Add effects to transitions (`set` fields, `create` audit events, `evaluate-rules`)
+
+**Behavioral YAML format:** `states`, `guards`, and `requestBodies` are arrays. Each item has an `id` field (or `trigger` for request bodies) that identifies it. This allows overlay filter expressions to target individual items.
+
+**Targeted overlay example** — add a state and guard without replacing the whole file:
+
+```yaml
+# openapi/overlays/<your-state>/modifications.yaml
+overlay: 1.0.0
+info:
+  title: My State Overlay
+  version: 1.0.0
+
+actions:
+  # Add a new state
+  - target: $.states
+    file: workflow-state-machine.yaml
+    description: Add supervisor_review state
+    append:
+      - id: supervisor_review
+        slaClock: running
+
+  # Add a new guard
+  - target: $.guards
+    file: workflow-state-machine.yaml
+    description: Add callerIsReviewer guard
+    append:
+      - id: callerIsReviewer
+        field: $caller.role
+        operator: equals
+        value: reviewer
+
+  # Modify an existing state's SLA clock behavior
+  - target: $.states[?(@.id == 'escalated')].slaClock
+    file: workflow-state-machine.yaml
+    description: Keep escalated clock paused in this state
+    update: paused
+```
 
 See the [Workflow domain](../architecture/domains/workflow.md#state-machine) for the full state machine architecture and effect types.
 

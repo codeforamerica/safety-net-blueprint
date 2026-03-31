@@ -155,15 +155,17 @@ export function buildOperationId(trigger, objectName) {
  * @returns {Object|null} OpenAPI requestBody object, or null if no body needed
  */
 function buildRequestBody(bodyDef) {
-  if (!bodyDef || Object.keys(bodyDef).length === 0) {
-    return null;
-  }
+  if (!bodyDef) return null;
+
+  // Strip the trigger field; if nothing remains, no request body is needed
+  const { trigger: _trigger, ...schema } = bodyDef;
+  if (Object.keys(schema).length === 0) return null;
 
   return {
     required: true,
     content: {
       'application/json': {
-        schema: bodyDef
+        schema
       }
     }
   };
@@ -177,7 +179,7 @@ function buildRequestBody(bodyDef) {
  */
 export function generateOverlay(stateMachine, endpointInfo) {
   const { itemPath, paramRefs, tag, schemaRef } = endpointInfo;
-  const requestBodies = stateMachine.requestBodies || {};
+  const requestBodies = stateMachine.requestBodies || [];
 
   const pathsUpdate = {};
 
@@ -204,7 +206,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
     }
 
     // Add request body if defined
-    const bodyDef = requestBodies[transition.trigger];
+    const bodyDef = requestBodies.find(rb => rb.trigger === transition.trigger);
     const requestBody = buildRequestBody(bodyDef);
     if (requestBody) {
       operation.requestBody = requestBody;

@@ -285,14 +285,14 @@ function importTransitions(csvData, existingDoc) {
 
 function importGuards(csvData, existingDoc) {
   const doc = { ...existingDoc };
-  const guards = {};
+  const guards = [];
   for (const row of csvData.data) {
     const [name, field, operator, value] = row;
-    const guard = { field };
+    const guard = { id: name, field };
     if (operator) guard.operator = operator;
     const parsed = parseJsonField(value);
     if (parsed !== undefined && parsed !== '') guard.value = parsed;
-    guards[name] = guard;
+    guards.push(guard);
   }
   doc.guards = guards;
   return doc;
@@ -300,13 +300,14 @@ function importGuards(csvData, existingDoc) {
 
 function importSla(csvData, existingDoc) {
   const doc = { ...existingDoc };
-  const states = { ...(existingDoc.states || {}) };
+  const existingStates = existingDoc.states || [];
+  const states = [];
   for (const row of csvData.data) {
     const [name, slaClock] = row;
-    if (!states[name]) states[name] = {};
-    if (slaClock) {
-      states[name] = { ...states[name], slaClock };
-    }
+    const existing = existingStates.find(s => s.id === name) || {};
+    const state = { ...existing, id: name };
+    if (slaClock) state.slaClock = slaClock;
+    states.push(state);
   }
   doc.states = states;
   return doc;
@@ -314,14 +315,17 @@ function importSla(csvData, existingDoc) {
 
 function importRequestBodies(csvData, existingDoc) {
   const doc = { ...existingDoc };
-  const requestBodies = {};
+  const existingBodies = existingDoc.requestBodies || [];
+  const requestBodies = [];
   for (const row of csvData.data) {
     const [trigger, fields] = row;
     if (fields === '(none)' || !fields) {
-      requestBodies[trigger] = {};
+      requestBodies.push({ trigger });
     } else {
       // Preserve existing request body structure — the CSV is lossy for full schemas
-      requestBodies[trigger] = existingDoc.requestBodies?.[trigger] || {};
+      const existing = existingBodies.find(rb => rb.trigger === trigger) || {};
+      const { trigger: _t, ...rest } = existing;
+      requestBodies.push({ trigger, ...rest });
     }
   }
   doc.requestBodies = requestBodies;
@@ -621,10 +625,7 @@ function createStateMachineSkeleton(domain, resource, csvs, schemaRef) {
     }
   }
 
-  const statesObj = {};
-  for (const s of states) {
-    statesObj[s] = {};
-  }
+  const statesArr = [...states].map(s => ({ id: s }));
 
   return {
     $schema: schemaRef,
@@ -632,11 +633,11 @@ function createStateMachineSkeleton(domain, resource, csvs, schemaRef) {
     object: resource,
     domain,
     apiSpec: `${domain}-openapi.yaml`,
-    states: statesObj,
+    states: statesArr,
     initialState: initialState || 'pending',
-    guards: {},
+    guards: [],
     transitions: [],
-    requestBodies: {},
+    requestBodies: [],
   };
 }
 

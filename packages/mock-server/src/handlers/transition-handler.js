@@ -61,9 +61,10 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
         now
       };
 
+      const guardsMap = Object.fromEntries((stateMachine.guards || []).map(g => [g.id, g]));
       const guardResult = evaluateGuards(
         transition.guards,
-        stateMachine.guards || {},
+        guardsMap,
         resource,
         context
       );

@@ -181,13 +181,13 @@ function renderTransitions(doc) {
 function renderGuards(doc) {
   const headers = ['Guard Name', 'Field', 'Operator', 'Value'];
   const rows = [];
-  for (const [name, g] of Object.entries(doc.guards || {})) {
+  for (const g of doc.guards || []) {
     // Only JSON.stringify objects/arrays; leave strings and numbers as-is
     let value = '';
     if (g.value != null) {
       value = typeof g.value === 'object' ? JSON.stringify(g.value) : String(g.value);
     }
-    rows.push([name, g.field || '', g.operator || '', value]);
+    rows.push([g.id, g.field || '', g.operator || '', value]);
   }
   return csvTable(headers, rows);
 }
@@ -195,8 +195,8 @@ function renderGuards(doc) {
 function renderSla(doc) {
   const headers = ['State', 'SLA Clock'];
   const rows = [];
-  for (const [name, state] of Object.entries(doc.states || {})) {
-    rows.push([name, state.slaClock || '']);
+  for (const state of doc.states || []) {
+    rows.push([state.id, state.slaClock || '']);
   }
   return csvTable(headers, rows);
 }
@@ -204,16 +204,16 @@ function renderSla(doc) {
 function renderRequestBodies(doc) {
   const headers = ['Trigger', 'Fields'];
   const rows = [];
-  for (const [trigger, body] of Object.entries(doc.requestBodies || {})) {
+  for (const body of doc.requestBodies || []) {
     if (!body || !body.properties) {
-      rows.push([trigger, '(none)']);
+      rows.push([body.trigger, '(none)']);
     } else {
       const required = new Set(body.required || []);
       const fields = Object.entries(body.properties).map(([name, prop]) => {
         const req = required.has(name) ? ' (required)' : '';
         return `${name}: ${prop.type || 'any'}${req}`;
       });
-      rows.push([trigger, fields.join('; ')]);
+      rows.push([body.trigger, fields.join('; ')]);
     }
   }
   return csvTable(headers, rows);
@@ -486,11 +486,11 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
   lines.push('');
   lines.push('| State | SLA Clock |');
   lines.push('|-------|-----------|');
-  for (const [name, state] of Object.entries(smDoc.states || {})) {
+  for (const state of smDoc.states || []) {
     const clock = state.slaClock
       ? state.slaClock.charAt(0).toUpperCase() + state.slaClock.slice(1)
       : '';
-    lines.push(`| ${mdCell(name)} | ${mdCell(clock)} |`);
+    lines.push(`| ${mdCell(state.id)} | ${mdCell(clock)} |`);
   }
   lines.push('');
 
@@ -565,8 +565,8 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
   lines.push('');
   lines.push('| Guard | Condition |');
   lines.push('|-------|-----------|');
-  for (const [name, g] of Object.entries(smDoc.guards || {})) {
-    lines.push(`| \`${mdCell(name)}\` | ${mdCell(describeNamedGuard(g))} |`);
+  for (const g of smDoc.guards || []) {
+    lines.push(`| \`${mdCell(g.id)}\` | ${mdCell(describeNamedGuard(g))} |`);
   }
   lines.push('');
 
@@ -579,9 +579,9 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
   lines.push('');
   lines.push('| Trigger | Required | Optional |');
   lines.push('|---------|----------|----------|');
-  for (const [trigger, body] of Object.entries(smDoc.requestBodies || {})) {
+  for (const body of smDoc.requestBodies || []) {
     if (!body || !body.properties) {
-      lines.push(`| \`${trigger}\` | — | — |`);
+      lines.push(`| \`${body.trigger}\` | — | — |`);
     } else {
       const required = new Set(body.required || []);
       const reqFields = Object.entries(body.properties)
@@ -592,7 +592,7 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
         .filter(([n]) => !required.has(n))
         .map(([n, p]) => `\`${n}\` *(${p.type || 'any'})*`)
         .join(', ');
-      lines.push(`| \`${trigger}\` | ${reqFields || '—'} | ${optFields || '—'} |`);
+      lines.push(`| \`${body.trigger}\` | ${reqFields || '—'} | ${optFields || '—'} |`);
     }
   }
   lines.push('');
