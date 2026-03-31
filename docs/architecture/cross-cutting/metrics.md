@@ -45,7 +45,7 @@ Federal and state programs use operational metrics to monitor regulatory complia
 
 ## Extensibility
 
-States will be able to override or extend `*-metrics.yaml` via overlay once issue #174 lands. Until then, the metrics file can be replaced in a state fork:
+States will be able to override or extend `*-metrics.yaml` via overlay once issue #174 lands:
 
 - Add state-specific metrics (e.g., metrics scoped to a program not in the baseline)
 - Override `targets` to reflect state-specific performance goals

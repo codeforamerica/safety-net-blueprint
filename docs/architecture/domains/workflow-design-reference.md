@@ -385,7 +385,7 @@ Federal regulations require accurate accounting of processing time. The SNAP reg
 - **`slaTypeCode` is an untyped string in the base OpenAPI contract.** The valid enum of codes comes from `*-sla-types.yaml`, which varies by state. Hardcoding the enum in the base spec would conflict with state overlays that add or replace SLA types. The resolve pipeline will inject the correct enum from the types file at build time (issue #175) — same pattern used elsewhere for overlay-driven enum injection.
 
 **Customization points:**
-- States will replace or extend SLA types via overlay once issue #174 lands. Until then, `workflow-sla-types.yaml` can be replaced directly in a state fork of the contracts.
+- States will replace or extend SLA types via overlay once issue #174 lands.
 - `pauseWhen` conditions can be tightened or loosened per regulatory interpretation — some states treat `awaiting_client` as the client's time to spend (stopping rather than pausing the clock) and can express that without touching the state machine.
 - `autoAssignWhen` logic can be adjusted to match state-specific program routing criteria (e.g., attach `snap_expedited` when household income is below the expedited threshold, not just when `isExpedited` is set).
 
