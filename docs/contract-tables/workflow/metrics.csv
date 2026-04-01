@@ -1,5 +1,5 @@
 id,name,description,aggregate,source.collection,source.filter,total.collection,total.filter,from.collection,from.filter,to.collection,to.filter,pairBy,targets
-task_time_to_claim,Task Time to Claim,Median time from task creation to first claim event.,duration,,,,,events,"{""=="":[{""var"":""action""},""created""]}",events,"{""=="":[{""var"":""action""},""claimed""]}",objectId,p50 < 4 hours
+task_time_to_claim,Task Time to Claim,Median time from task creation to first claim event.,duration,,,,,events,"{""=="":[{""var"":""action""},""created""]}",events,"{""=="":[{""var"":""action""},""claimed""]}",resourceId,p50 < 4 hours
 tasks_in_queue,Tasks in Queue,Number of tasks currently in pending status.,count,tasks,"{""=="":[{""var"":""status""},""pending""]}",,,,,,,,trend down
 release_rate,Release Rate,Ratio of release events to total task transitions.,ratio,events,"{""=="":[{""var"":""action""},""released""]}",events,,,,,,,ratio < 10 percent
 sla_breach_rate,SLA Breach Rate,Ratio of tasks with a breached SLA to total tasks.,ratio,tasks,"{""in"":[""breached"",{""var"":""slaInfo.*.status""}]}",tasks,,,,,,,ratio < 5 percent
