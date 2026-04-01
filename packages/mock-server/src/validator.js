@@ -71,7 +71,12 @@ function prepareSchemaForValidation(schema) {
       }
     }
   }
-  
+
+  // Handle array items
+  if (prepared.items && typeof prepared.items === 'object') {
+    prepared.items = prepareSchemaForValidation(prepared.items);
+  }
+
   // Handle allOf (common in Create/Update schemas)
   if (prepared.allOf && Array.isArray(prepared.allOf)) {
     prepared.allOf = prepared.allOf.map(s => prepareSchemaForValidation(s));

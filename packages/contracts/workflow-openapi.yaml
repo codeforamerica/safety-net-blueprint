@@ -192,6 +192,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TaskCreate"
+            examples:
+              TaskCreateExample1:
+                $ref: "#/components/examples/TaskCreateExample1"
       responses:
         "201":
           description: Task created successfully.
@@ -601,22 +604,10 @@ components:
             Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
           minProperties: 1
 
-    Task:
+    TaskWritable:
       type: object
-      description: A workflow task representing a unit of work in a safety net benefits program.
-      additionalProperties: false
-      required:
-        - id
-        - name
-        - status
-        - createdAt
-        - updatedAt
+      description: Client-writable task fields. Base schema for TaskCreate and TaskUpdate.
       properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier for the task.
-          readOnly: true
         name:
           type: string
           minLength: 1
@@ -690,31 +681,50 @@ components:
           description: Reference to the Case this task belongs to.
           x-relationship:
             resource: Case
-        slaInfo:
-          type: array
-          description: >
-            Engine-managed SLA tracking entries. Populated on create and updated
-            on every transition. Read-only — use slaInfo on TaskCreate to specify
-            which SLA types to track.
-          items:
-            $ref: "./components/sla.yaml#/SlaInfo"
-          readOnly: true
         outcome:
           type: string
           description: Completion outcome recorded when the task was completed (e.g., approved, denied).
         completionNotes:
           type: string
           description: Optional notes recorded when the task was completed.
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp when the task was created.
-          readOnly: true
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp when the task was last updated.
-          readOnly: true
+
+    Task:
+      description: A workflow task representing a unit of work in a safety net benefits program.
+      unevaluatedProperties: false
+      required:
+        - id
+        - name
+        - status
+        - createdAt
+        - updatedAt
+      allOf:
+        - $ref: "#/components/schemas/TaskWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Unique identifier for the task.
+              readOnly: true
+            slaInfo:
+              type: array
+              description: >
+                Engine-managed SLA tracking entries. Populated on create and updated
+                on every transition. Read-only — use slaInfo on TaskCreate to specify
+                which SLA types to track.
+              items:
+                $ref: "./components/sla.yaml#/SlaInfo"
+              readOnly: true
+            createdAt:
+              type: string
+              format: date-time
+              description: Timestamp when the task was created.
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              description: Timestamp when the task was last updated.
+              readOnly: true
 
     DomainEvent:
       $ref: "./components/events.yaml#/DomainEvent"
@@ -735,12 +745,12 @@ components:
 
     TaskCreate:
       allOf:
-        - $ref: "#/components/schemas/Task"
+        - $ref: "#/components/schemas/TaskWritable"
         - type: object
           description: |
             Payload to create a new task. At minimum, name and status are required.
 
-            Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+            Note: id, createdAt, and updatedAt are server-generated and will be returned in the response.
           required:
             - name
             - status
@@ -770,12 +780,12 @@ components:
 
     TaskUpdate:
       allOf:
-        - $ref: "#/components/schemas/Task"
+        - $ref: "#/components/schemas/TaskWritable"
         - type: object
           description: |
             Payload to update one or more fields of an existing task. Partial updates are supported.
 
-            Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+            Note: id, createdAt, and updatedAt are server-generated and cannot be updated.
           minProperties: 1
 
     Metric:
@@ -895,6 +905,20 @@ components:
         description: Queue for SNAP program intake tasks.
         createdAt: '2024-08-01T08:00:00Z'
         updatedAt: '2024-08-01T08:00:00Z'
+
+    TaskCreateExample1:
+      summary: Create SNAP expedited task with SLA tracking
+      value:
+        name: Review SNAP application - Rivera household
+        description: Review the submitted SNAP application for the Rivera household and verify income documentation.
+        status: pending
+        programType: snap
+        isExpedited: true
+        queueId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+        priority: expedited
+        caseId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
+        slaInfo:
+          - slaTypeCode: snap_expedited
 
     TaskExample1:
       summary: In-progress SNAP application review task

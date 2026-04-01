@@ -356,13 +356,58 @@ schema_patterns:
   # Schema variants for CRUD
   schema_variants:
     base:
-      description: Full resource schema with all fields
+      description: Full resource schema with all fields including server-managed readOnly fields
       suffix: ""
+    writable:
+      description: |
+        Intermediate base schema containing only client-writable fields (no readOnly fields,
+        no server-managed fields like id, createdAt, updatedAt). Create and Update schemas
+        extend this base. Use this pattern whenever any writable field needs a different
+        sub-schema on write vs read (e.g., SlaInfoCreate vs SlaInfo). Always extract this
+        base even when there is no immediate substitution need — it prevents the allOf
+        contradiction bug and keeps Create/Update schemas consistent.
+      suffix: Writable
+      composition:
+        base: extends ResourceWritable via allOf
+        full_resource: allOf [ResourceWritable, server-managed fields]
+        create: allOf [ResourceWritable, required fields, write-only overrides]
+        update: allOf [ResourceWritable, minProperties: 1]
+      example: |
+        TaskWritable:        # client-writable fields only
+          type: object
+          properties:
+            name: ...
+            status: ...
+            slaInfo:
+              items: $ref SlaInfoCreate   # write schema here
+
+        Task:                # full read schema
+          allOf:
+            - $ref: TaskWritable
+            - type: object
+              properties:
+                id: { readOnly: true }
+                slaInfo:
+                  items: $ref SlaInfo    # read schema overrides write schema
+                createdAt: { readOnly: true }
+                updatedAt: { readOnly: true }
+
+        TaskCreate:
+          allOf:
+            - $ref: TaskWritable
+            - type: object
+              required: [name, status]
+
+        TaskUpdate:
+          allOf:
+            - $ref: TaskWritable
+            - type: object
+              minProperties: 1
     create:
-      description: Schema for POST requests (excludes readOnly fields)
+      description: Schema for POST requests (extends ResourceWritable, declares required fields)
       suffix: Create
     update:
-      description: Schema for PATCH requests (all fields optional except id)
+      description: Schema for PATCH requests (extends ResourceWritable, all fields optional)
       suffix: Update
     list:
       description: Response schema for GET collection endpoints

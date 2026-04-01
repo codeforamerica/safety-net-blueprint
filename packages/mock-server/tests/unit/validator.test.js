@@ -120,6 +120,79 @@ test('Validator Tests', async (t) => {
     console.log('  ✓ Handles nested readOnly fields in required arrays');
   });
 
+  await t.test('validate - excludes readOnly fields from required validation inside array items', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        slaInfo: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['slaTypeCode', 'status', 'clockStartedAt', 'deadline'],
+            properties: {
+              slaTypeCode: { type: 'string' },
+              status: { type: 'string', readOnly: true },
+              clockStartedAt: { type: 'string', readOnly: true },
+              deadline: { type: 'string', readOnly: true }
+            }
+          }
+        }
+      }
+    };
+
+    // Client submits only slaTypeCode — server-managed readOnly fields should not be required
+    const data = { slaInfo: [{ slaTypeCode: 'snap_expedited' }] };
+    const result = validate(data, schema, 'array-items-readonly');
+
+    assert.strictEqual(result.valid, true, 'Should be valid when array items omit readOnly fields');
+    console.log('  ✓ Excludes readOnly fields from required validation inside array items');
+  });
+
+  await t.test('validate - TaskCreate with slaInfo: allOf base plus SlaInfoCreate items', () => {
+    // Mirrors the TaskWritable + TaskCreate allOf structure:
+    // TaskCreate extends TaskWritable (no slaInfo) and adds slaInfo with SlaInfoCreate items.
+    // SlaInfoCreate has only slaTypeCode; SlaInfo has slaTypeCode + readOnly server fields.
+    const schema = {
+      allOf: [
+        {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            status: { type: 'string' }
+          }
+        },
+        {
+          type: 'object',
+          required: ['name', 'status'],
+          properties: {
+            slaInfo: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['slaTypeCode'],
+                properties: {
+                  slaTypeCode: { type: 'string' }
+                }
+              }
+            }
+          }
+        }
+      ]
+    };
+
+    const data = {
+      name: 'Review SNAP application',
+      status: 'pending',
+      slaInfo: [{ slaTypeCode: 'snap_expedited' }]
+    };
+    const result = validate(data, schema, 'taskcreate-slainfo');
+
+    assert.strictEqual(result.valid, true, 'TaskCreate with slaInfo should be valid');
+    console.log('  ✓ TaskCreate with slaInfo (allOf + SlaInfoCreate items) validates correctly');
+  });
+
   // ==========================================================================
   // Format Validation
   // ==========================================================================
