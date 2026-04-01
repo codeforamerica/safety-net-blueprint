@@ -366,10 +366,14 @@ export function replaceAtPath(obj, path, value) {
  * @param {*} items - Item or array of items to append
  */
 export function appendAtPath(obj, path, items) {
-  const arr = navigatePath(obj, parsePath(path));
-  if (!Array.isArray(arr)) return;
-  const toAppend = Array.isArray(items) ? items : [items];
-  arr.push(...toAppend);
+  const target = navigatePath(obj, parsePath(path));
+  if (Array.isArray(target)) {
+    const toAppend = Array.isArray(items) ? items : [items];
+    target.push(...toAppend);
+  } else if (target !== null && typeof target === 'object') {
+    const toMerge = Array.isArray(items) ? Object.assign({}, ...items) : items;
+    Object.assign(target, toMerge);
+  }
 }
 
 /**

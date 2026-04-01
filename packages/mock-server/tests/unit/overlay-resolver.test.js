@@ -1012,10 +1012,19 @@ test('Overlay Resolver Tests', async (t) => {
     assert.strictEqual(obj.slaTypes[2].id, 'tanf_standard');
   });
 
-  await t.test('appendAtPath - does nothing when target is not an array', () => {
+  await t.test('appendAtPath - merges fields when target is an object', () => {
     const obj = { config: { key: 'value' } };
     appendAtPath(obj, '$.config', { extra: 'item' });
-    assert.deepStrictEqual(obj.config, { key: 'value' }); // unchanged
+    assert.deepStrictEqual(obj.config, { key: 'value', extra: 'item' });
+  });
+
+  await t.test('appendAtPath - preserves existing fields when merging into object', () => {
+    const obj = { properties: { name: { type: 'string' } } };
+    appendAtPath(obj, '$.properties', { income: { type: 'number' } });
+    assert.deepStrictEqual(obj.properties, {
+      name: { type: 'string' },
+      income: { type: 'number' }
+    });
   });
 
   // ==========================================================================
