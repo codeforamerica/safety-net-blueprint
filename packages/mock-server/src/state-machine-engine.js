@@ -69,6 +69,24 @@ export function evaluateGuard(guard, resource, context) {
       return { pass: false, reason: `${guard.field} does not match expected value` };
     }
 
+    case 'contains_any': {
+      const field = Array.isArray(fieldValue) ? fieldValue : [fieldValue];
+      const values = Array.isArray(guard.value) ? guard.value : [guard.value];
+      if (field.some(v => values.includes(v))) {
+        return { pass: true, reason: null };
+      }
+      return { pass: false, reason: `${guard.field} does not contain any of the required values` };
+    }
+
+    case 'contains_all': {
+      const field = Array.isArray(fieldValue) ? fieldValue : [fieldValue];
+      const values = Array.isArray(guard.value) ? guard.value : [guard.value];
+      if (values.every(v => field.includes(v))) {
+        return { pass: true, reason: null };
+      }
+      return { pass: false, reason: `${guard.field} does not contain all required values` };
+    }
+
     default:
       // Forward-compatible: unknown operators pass with a warning
       console.warn(`Unknown guard operator: ${guard.operator} — skipping`);

@@ -1,20 +1,20 @@
 From,To,Trigger,On,After,RelativeTo,CalendarType,Actors,Guards,Effects
 (create),pending,create,,,,,,,event; evaluate-rules; evaluate-rules
-pending,in_progress,claim,,,,,,taskIsUnassigned,set assignedToId = $caller.id; event
-in_progress,completed,complete,,,,,,callerIsAssignedWorker,set completedAt = $now; set outcome = $request.outcome; set completionNotes = $request.notes; event; create
-in_progress,pending,release,,,,,,callerIsAssignedWorker,set assignedToId = null; event; evaluate-rules; evaluate-rules
-in_progress,escalated,escalate,,,,,,"any: callerIsAssignedWorker, callerIsSupervisor",set escalatedAt = $now; evaluate-rules; event
-pending,escalated,escalate,,,,,,callerIsSupervisor,set escalatedAt = $now; evaluate-rules; event
-escalated,pending,de-escalate,,,,,,callerIsSupervisor,evaluate-rules; evaluate-rules; event
-pending | in_progress | escalated,cancelled,cancel,,,,,,callerIsSupervisor,set cancelledAt = $now; event
-cancelled,pending,reopen,,,,,,callerIsSupervisor,set cancelledAt = null; evaluate-rules; evaluate-rules; event
-in_progress,awaiting_client,await-client,,,,,,callerIsAssignedWorker,set blockedAt = $now; event
-in_progress,awaiting_verification,await-verification,,,,,,callerIsAssignedWorker,set blockedAt = $now; event
-awaiting_client | awaiting_verification,in_progress,resume,,,,,,"any: callerIsAssignedWorker, callerIsSupervisor",set blockedAt = null; event
+pending,in_progress,claim,,,,,caseworker; supervisor,taskIsUnassigned,set assignedToId = $caller.id; event
+in_progress,completed,complete,,,,,caseworker; supervisor,callerIsAssignedWorker,set completedAt = $now; set outcome = $request.outcome; set completionNotes = $request.notes; event; create
+in_progress,pending,release,,,,,caseworker; supervisor,callerIsAssignedWorker,set assignedToId = null; event; evaluate-rules; evaluate-rules
+in_progress,escalated,escalate,,,,,caseworker; supervisor,"any: callerIsAssignedWorker, callerIsSupervisor",set escalatedAt = $now; evaluate-rules; event
+pending,escalated,escalate,,,,,supervisor,callerIsSupervisor,set escalatedAt = $now; evaluate-rules; event
+escalated,pending,de-escalate,,,,,supervisor,callerIsSupervisor,evaluate-rules; evaluate-rules; event
+pending | in_progress | escalated,cancelled,cancel,,,,,supervisor,callerIsSupervisor,set cancelledAt = $now; event
+cancelled,pending,reopen,,,,,supervisor,callerIsSupervisor,set cancelledAt = null; evaluate-rules; evaluate-rules; event
+in_progress,awaiting_client,await-client,,,,,caseworker; supervisor,callerIsAssignedWorker,set blockedAt = $now; event
+in_progress,awaiting_verification,await-verification,,,,,caseworker; supervisor,callerIsAssignedWorker,set blockedAt = $now; event
+awaiting_client | awaiting_verification,in_progress,resume,,,,,caseworker; supervisor,"any: callerIsAssignedWorker, callerIsSupervisor",set blockedAt = null; event
 awaiting_verification,in_progress,system-resume,,,,,,callerIsSystem,set blockedAt = null; event
-in_progress | escalated,pending_review,submit-for-review,,,,,,callerIsAssignedWorker,event
-pending_review,completed,approve,,,,,,callerIsSupervisor,set completedAt = $now; set outcome = $request.outcome; set completionNotes = $request.notes; event
-pending_review,in_progress,return-to-worker,,,,,,callerIsSupervisor,event
+in_progress | escalated,pending_review,submit-for-review,,,,,caseworker; supervisor,callerIsAssignedWorker,event
+pending_review,completed,approve,,,,,supervisor,callerIsSupervisor,set completedAt = $now; set outcome = $request.outcome; set completionNotes = $request.notes; event
+pending_review,in_progress,return-to-worker,,,,,supervisor,callerIsSupervisor,event
 pending,escalated,auto-escalate,timer,72h,createdAt,business,,,evaluate-rules; event
 in_progress,escalated,auto-escalate-sla-warning,timer,-48h,slaDeadline,calendar,,,evaluate-rules; event
 awaiting_client,cancelled,auto-cancel-awaiting-client,timer,30d,blockedAt,calendar,,,set cancelledAt = $now; event

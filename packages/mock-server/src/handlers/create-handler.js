@@ -50,10 +50,26 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       if (stateMachine?.onCreate?.effects) {
         const callerId = req.headers['x-caller-id'] || 'system';
         const now = new Date().toISOString();
+
+        // Parse caller roles from header (comma-separated)
+        const callerRoles = req.headers['x-caller-roles']
+          ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
+          : [];
+
+        // Enforce onCreate actors if defined
+        if (stateMachine.onCreate.actors && stateMachine.onCreate.actors.length > 0) {
+          if (!callerRoles.some(r => stateMachine.onCreate.actors.includes(r))) {
+            return res.status(403).json({
+              code: 'FORBIDDEN',
+              message: `Creating this resource requires one of the following roles: ${stateMachine.onCreate.actors.join(', ')}`
+            });
+          }
+        }
+
         const context = {
           caller: {
             id: callerId,
-            role: req.headers['x-caller-role'] || null
+            roles: callerRoles
           },
           object: { ...resource },
           request: req.body || {},

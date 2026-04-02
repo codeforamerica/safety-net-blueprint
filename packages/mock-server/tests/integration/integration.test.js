@@ -612,7 +612,7 @@ async function runTests() {
         console.log(`\n  RPC-2. POST ${taskPath}/{id}/claim (pending → in_progress)`);
         const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' }
         });
 
         if (response.status === 200) {
@@ -642,7 +642,7 @@ async function runTests() {
         console.log(`\n  RPC-3. POST ${taskPath}/{id}/claim again → 409`);
         const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb', 'X-Caller-Roles': 'caseworker' }
         });
 
         if (response.status === 409) {
@@ -672,7 +672,7 @@ async function runTests() {
         console.log(`\n  RPC-4. POST ${taskPath}/{id}/complete with wrong worker → 409`);
         const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb', 'X-Caller-Roles': 'caseworker' },
           body: JSON.stringify({ outcome: 'approved' })
         });
 
@@ -703,7 +703,7 @@ async function runTests() {
         console.log(`\n  RPC-5. POST ${taskPath}/{id}/release (in_progress → pending)`);
         const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/release`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' },
           body: JSON.stringify({ reason: 'Integration test release' })
         });
 
@@ -797,7 +797,7 @@ async function runTests() {
         console.log(`\n  EVENT-2. Claim task → verify "claimed" domain event`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' }
         });
 
         const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
@@ -830,7 +830,7 @@ async function runTests() {
         console.log(`\n  EVENT-3. Release task → verify 3 domain events`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/release`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' },
           body: JSON.stringify({ reason: 'Testing domain events' })
         });
 
@@ -864,11 +864,11 @@ async function runTests() {
         console.log(`\n  EVENT-4. Claim + complete → verify 5 total domain events`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' }
         });
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' },
           body: JSON.stringify({ outcome: 'approved' })
         });
 
@@ -1037,11 +1037,11 @@ async function runTests() {
         console.log('\n  RULE-3. Claim + release SNAP task → rules re-evaluated');
         await fetch(`${BASE_URL}${taskPath}/${snapTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1', 'X-Caller-Roles': 'caseworker' }
         });
         const releaseRes = await fetch(`${BASE_URL}${taskPath}/${snapTaskId}/release`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1', 'X-Caller-Roles': 'caseworker' },
           body: JSON.stringify({ reason: 'Testing rule re-evaluation' })
         });
 
