@@ -4,6 +4,7 @@
 
 import { getDatabase } from '../database-manager.js';
 import { executeSearch } from '../search-engine.js';
+import { extractAuthContext } from '../auth-context.js';
 
 /**
  * Extract all string-typed field paths from an OpenAPI schema.
@@ -44,8 +45,15 @@ export function createListHandler(apiMetadata, endpoint) {
       // Get database (this will create it if it doesn't exist)
       const db = getDatabase(endpoint.collectionName);
 
-      // Ensure req.query exists
-      const queryParams = req.query || {};
+      // Resolve "me" in the q param to the authenticated user's ID.
+      // e.g. q=assignedTo:me → q=assignedTo:<callerId>
+      const queryParams = { ...(req.query || {}) };
+      if (queryParams.q && queryParams.q.includes(':me')) {
+        const auth = extractAuthContext(req);
+        if (auth) {
+          queryParams.q = queryParams.q.replace(/:me(?=[ ,]|$)/g, `:${auth.userId}`);
+        }
+      }
 
       // Enable full-text search when the endpoint has a `q` or `search` parameter
       let searchableFields = [];

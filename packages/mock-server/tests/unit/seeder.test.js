@@ -19,7 +19,10 @@ const seedDir = join(__dirname, '../../seed');
 // Cleanup function — uses SQL DELETE rather than file deletion to
 // avoid SQLite WAL replay issues (deleting .db but not .db-wal/.db-shm
 // causes WAL to be replayed into the new file, restoring deleted rows).
-const cleanup = () => { clearAll('persons'); };
+// Also works when SQLite files are locked (common on Windows).
+const cleanup = () => {
+  clearAll('persons');
+};
 
 test('Database Seeder Tests', async (t) => {
   
