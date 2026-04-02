@@ -1102,6 +1102,259 @@ async function runTests() {
   }
 
   // =========================================================================
+  // Supervisor Operations Tests (assign, set-priority)
+  // =========================================================================
+  if (workflowApi) {
+    const taskPath = '/tasks';
+    console.log(`\n${'='.repeat(70)}`);
+    console.log('Supervisor Operations Tests');
+    console.log('='.repeat(70));
+
+    let supTaskId = null;
+
+    // SUP-1: Create a task for supervisor tests
+    try {
+      console.log('\n  SUP-1. Create a task for supervisor operation tests');
+      const response = await fetch(`${BASE_URL}${taskPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Supervisor test task', status: 'pending' })
+      });
+      if (response.status === 201) {
+        const data = await response.json();
+        supTaskId = data.id;
+        console.log(`     ✓ PASS: Created task ${supTaskId}`);
+        totalPassed++;
+      } else {
+        console.log(`     ✗ FAIL: Expected 201, got ${response.status}`);
+        totalFailed++;
+      }
+      totalTests++;
+    } catch (error) {
+      console.log(`     ✗ FAIL: ${error.message}`);
+      totalFailed++;
+      totalTests++;
+    }
+
+    // SUP-2: Assign task to a caseworker (supervisor) — status must not change
+    if (supTaskId) {
+      try {
+        console.log(`\n  SUP-2. Supervisor assigns task to worker-aaa — status stays pending`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+          body: JSON.stringify({ assignedToId: 'worker-aaa' })
+        });
+        const data = await response.json();
+        if (response.status === 200 && data.status === 'pending' && data.assignedToId === 'worker-aaa') {
+          console.log('     ✓ PASS: Task assigned, status=pending, assignedToId=worker-aaa');
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: status=${data.status}, assignedToId=${data.assignedToId}, http=${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // SUP-3: Reassign to a different worker — same endpoint, same behavior
+    if (supTaskId) {
+      try {
+        console.log(`\n  SUP-3. Supervisor reassigns to worker-bbb — status stays pending`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+          body: JSON.stringify({ assignedToId: 'worker-bbb' })
+        });
+        const data = await response.json();
+        if (response.status === 200 && data.status === 'pending' && data.assignedToId === 'worker-bbb') {
+          console.log('     ✓ PASS: Task reassigned to worker-bbb, status still pending');
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: status=${data.status}, assignedToId=${data.assignedToId}, http=${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // SUP-4: Set priority (supervisor) — status must not change
+    if (supTaskId) {
+      try {
+        console.log(`\n  SUP-4. Supervisor sets priority to high — status stays pending`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/set-priority`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+          body: JSON.stringify({ priority: 'high', reason: 'Urgent case' })
+        });
+        const data = await response.json();
+        if (response.status === 200 && data.priority === 'high' && data.status === 'pending') {
+          console.log('     ✓ PASS: Priority updated to high, status still pending');
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: priority=${data.priority}, status=${data.status}, http=${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // SUP-5: Verify assigned and priority_changed events were emitted
+    if (supTaskId) {
+      try {
+        console.log(`\n  SUP-5. Verify assigned and priority_changed events emitted`);
+        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${supTaskId}`);
+        const listData = await listResponse.json();
+        const actions = (listData.items || []).map(e => e.action);
+        const hasAssigned = actions.includes('assigned');
+        const hasPriorityChanged = actions.includes('priority_changed');
+        if (hasAssigned && hasPriorityChanged) {
+          console.log(`     ✓ PASS: Events found — ${actions.join(', ')}`);
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: Missing events. Found: ${actions.join(', ')}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // SUP-6 & SUP-9 use a second task to avoid assignee conflicts from earlier tests
+    let supTask2Id = null;
+
+    // SUP-6: Assign from in_progress state
+    try {
+      console.log(`\n  SUP-6. Supervisor assigns task already in_progress — status stays in_progress`);
+      // Create a fresh unassigned task and claim it to reach in_progress
+      const createResponse = await fetch(`${BASE_URL}${taskPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Supervisor in_progress test task', status: 'pending' })
+      });
+      const created = await createResponse.json();
+      supTask2Id = created.id;
+
+      await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' }
+      });
+
+      const response = await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+        body: JSON.stringify({ assignedToId: 'worker-bbb' })
+      });
+      const data = await response.json();
+      if (response.status === 200 && data.status === 'in_progress' && data.assignedToId === 'worker-bbb') {
+        console.log('     ✓ PASS: Assigned in_progress task, status stays in_progress');
+        totalPassed++;
+      } else {
+        console.log(`     ✗ FAIL: status=${data.status}, assignedToId=${data.assignedToId}, http=${response.status}`);
+        totalFailed++;
+      }
+      totalTests++;
+    } catch (error) {
+      console.log(`     ✗ FAIL: ${error.message}`);
+      totalFailed++;
+      totalTests++;
+    }
+
+    // SUP-7: Caseworker cannot assign → 403
+    if (supTaskId) {
+      try {
+        console.log(`\n  SUP-7. Caseworker tries to assign → 403 FORBIDDEN`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' },
+          body: JSON.stringify({ assignedToId: 'worker-bbb' })
+        });
+        if (response.status === 403) {
+          console.log('     ✓ PASS: Returns 403 FORBIDDEN for caseworker');
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: Expected 403, got ${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // SUP-8: Caseworker cannot set-priority → 403
+    if (supTaskId) {
+      try {
+        console.log(`\n  SUP-8. Caseworker tries to set-priority → 403 FORBIDDEN`);
+        const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/set-priority`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' },
+          body: JSON.stringify({ priority: 'high' })
+        });
+        if (response.status === 403) {
+          console.log('     ✓ PASS: Returns 403 FORBIDDEN for caseworker');
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: Expected 403, got ${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+
+    // SUP-9: Assign on completed task → 409
+    // supTask2Id is in_progress, assigned to worker-bbb — complete it then try assign
+    if (supTask2Id) {
+      try {
+        console.log(`\n  SUP-9. Assign on completed task → 409`);
+        await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb', 'X-Caller-Roles': 'caseworker' },
+          body: JSON.stringify({ outcome: 'approved' })
+        });
+        const response = await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+          body: JSON.stringify({ assignedToId: 'worker-aaa' })
+        });
+        if (response.status === 409) {
+          console.log('     ✓ PASS: Returns 409 — assign not available in completed state');
+          totalPassed++;
+        } else {
+          console.log(`     ✗ FAIL: Expected 409, got ${response.status}`);
+          totalFailed++;
+        }
+        totalTests++;
+      } catch (error) {
+        console.log(`     ✗ FAIL: ${error.message}`);
+        totalFailed++;
+        totalTests++;
+      }
+    }
+  }
+
+  // =========================================================================
   // Cross-API accessibility test
   // =========================================================================
   console.log(`\n${'='.repeat(70)}`);

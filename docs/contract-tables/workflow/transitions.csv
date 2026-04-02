@@ -19,3 +19,5 @@ pending,escalated,auto-escalate,timer,72h,createdAt,business,,,evaluate-rules; e
 in_progress,escalated,auto-escalate-sla-warning,timer,-48h,slaDeadline,calendar,,,evaluate-rules; event
 awaiting_client,cancelled,auto-cancel-awaiting-client,timer,30d,blockedAt,calendar,,,set cancelledAt = $now; event
 awaiting_verification,in_progress,auto-resume-awaiting-verification,timer,7d,blockedAt,calendar,,,set blockedAt = null; event
+pending | in_progress | escalated | awaiting_client | awaiting_verification | pending_review,,assign,,,,,supervisor,callerIsSupervisor,set assignedToId = $request.assignedToId; set queueId = $request.queueId; event
+pending | in_progress | escalated | awaiting_client | awaiting_verification | pending_review,,set-priority,,,,,supervisor,callerIsSupervisor,set priority = $request.priority; event

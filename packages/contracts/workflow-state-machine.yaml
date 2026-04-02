@@ -414,6 +414,56 @@ transitions:
         data:
           reason: verification_timeout
         description: Emit a domain event recording the automatic resumption
+  - trigger: assign
+    from:
+      - pending
+      - in_progress
+      - escalated
+      - awaiting_client
+      - awaiting_verification
+      - pending_review
+    actors:
+      - supervisor
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: set
+        field: assignedToId
+        value: $request.assignedToId
+        description: Assign the task to the specified caseworker
+      - type: set
+        field: queueId
+        value: $request.queueId
+        description: Optionally move the task to a different queue
+      - type: event
+        action: assigned
+        data:
+          assignedToId: $request.assignedToId
+          queueId: $request.queueId
+        description: Emit a domain event recording the assignment
+  - trigger: set-priority
+    from:
+      - pending
+      - in_progress
+      - escalated
+      - awaiting_client
+      - awaiting_verification
+      - pending_review
+    actors:
+      - supervisor
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: set
+        field: priority
+        value: $request.priority
+        description: Override the task priority
+      - type: event
+        action: priority_changed
+        data:
+          priority: $request.priority
+          reason: $request.reason
+        description: Emit a domain event recording the priority change
 onCreate:
   actors: []
   effects:
@@ -536,3 +586,31 @@ requestBodies:
         description: Why the work is being returned for revision
     required:
       - reason
+  assign:
+    type: object
+    properties:
+      assignedToId:
+        type: string
+        format: uuid
+        description: ID of the caseworker to assign the task to
+      queueId:
+        type: string
+        format: uuid
+        description: Optional queue to move the task to
+    required:
+      - assignedToId
+  set-priority:
+    type: object
+    properties:
+      priority:
+        type: string
+        enum:
+          - expedited
+          - high
+          - normal
+        description: New priority for the task
+      reason:
+        type: string
+        description: Optional reason for the priority change
+    required:
+      - priority

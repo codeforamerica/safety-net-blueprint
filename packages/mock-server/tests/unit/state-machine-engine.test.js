@@ -344,6 +344,31 @@ test('findTransition — returns error when from is an array and status is not i
   assert.ok(error);
 });
 
+test('findTransition — finds transition with no to field (in-place action)', () => {
+  const sm = {
+    transitions: [
+      { trigger: 'assign', from: ['pending', 'in_progress'], guards: [], effects: [] }
+    ]
+  };
+  const { transition, error } = findTransition(sm, 'assign', { status: 'pending' });
+  assert.ok(transition);
+  assert.strictEqual(transition.to, undefined);
+  assert.strictEqual(error, null);
+});
+
+test('findTransition — in-place action works from any listed state', () => {
+  const sm = {
+    transitions: [
+      { trigger: 'assign', from: ['pending', 'in_progress', 'escalated'], guards: [], effects: [] }
+    ]
+  };
+  for (const status of ['pending', 'in_progress', 'escalated']) {
+    const { transition, error } = findTransition(sm, 'assign', { status });
+    assert.ok(transition, `expected transition for status=${status}`);
+    assert.strictEqual(error, null);
+  }
+});
+
 // =============================================================================
 // applySetEffect
 // =============================================================================

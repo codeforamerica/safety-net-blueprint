@@ -162,7 +162,6 @@ $defs:
     required:
       - trigger
       - from
-      - to
     properties:
       trigger:
         type: string
@@ -179,7 +178,9 @@ $defs:
         description: Source state(s).
       to:
         type: string
-        description: Target state.
+        description: >
+          Target state. Omit for in-place transitions (e.g., assign, set-priority)
+          where the operation updates fields and emits events without changing state.
       on:
         type: string
         enum:

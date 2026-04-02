@@ -95,7 +95,11 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       const updated = { ...resource };
       if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
       const { pendingCreates, pendingRuleEvaluations, pendingEvents } = applyEffects(transition.effects, updated, context);
-      updated.status = transition.to;
+      // Only update status if the transition declares a target state.
+      // In-place transitions (assign, set-priority) omit `to` and leave status unchanged.
+      if (transition.to != null) {
+        updated.status = transition.to;
+      }
 
       // Update SLA clock state based on new status
       if (slaTypes.length > 0 && updated.slaInfo?.length > 0) {
