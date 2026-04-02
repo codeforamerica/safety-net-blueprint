@@ -17,5 +17,6 @@ pending_review,completed,approve,,,,,,callerIsSupervisor,set completedAt = $now;
 pending_review,in_progress,return-to-worker,,,,,,callerIsSupervisor,event
 pending,escalated,auto-escalate,timer,72h,createdAt,business,,,evaluate-rules; event
 in_progress,escalated,auto-escalate-sla-warning,timer,-48h,slaDeadline,calendar,,,evaluate-rules; event
+pending | in_progress | escalated,escalated,auto-escalate-sla-breach,timer,0h,slaDeadline,calendar,,,evaluate-rules; event
 awaiting_client,cancelled,auto-cancel-awaiting-client,timer,30d,blockedAt,calendar,,,set cancelledAt = $now; event
 awaiting_verification,in_progress,auto-resume-awaiting-verification,timer,7d,blockedAt,calendar,,,set blockedAt = null; event
