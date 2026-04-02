@@ -586,7 +586,7 @@ requestBodies:
         description: Why the work is being returned for revision
     required:
       - reason
-  assign:
+  - trigger: assign
     type: object
     properties:
       assignedToId:
@@ -599,7 +599,7 @@ requestBodies:
         description: Optional queue to move the task to
     required:
       - assignedToId
-  set-priority:
+  - trigger: set-priority
     type: object
     properties:
       priority:
@@ -608,7 +608,7 @@ requestBodies:
           - expedited
           - high
           - normal
-        description: New priority for the task
+        description: New priority level for the task
       reason:
         type: string
         description: Optional reason for the priority change

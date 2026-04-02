@@ -240,18 +240,21 @@ function importTransitions(csvData, existingDoc) {
 
     const parsedFrom = parseFrom(from);
 
-    // Find matching existing transition to preserve full effects
+    // Find matching existing transition to preserve full effects.
+    // Treat absent/empty to as equivalent (in-place transitions have no target state).
+    const normalizedTo = to || null;
     const existingTransition = (existingDoc.transitions || []).find(t =>
       t.trigger === trigger &&
       normalizeFrom(t.from) === normalizeFrom(parsedFrom) &&
-      t.to === to
+      (t.to || null) === normalizedTo
     );
 
     const transition = {
       trigger,
       from: parsedFrom,
-      to,
     };
+    // Only include to when the transition has a target state
+    if (to) transition.to = to;
 
     // Preserve timer fields from CSV (new format) or existing YAML (legacy format)
     const timerOn = on || existingTransition?.on;
