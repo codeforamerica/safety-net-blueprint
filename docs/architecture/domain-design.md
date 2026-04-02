@@ -25,7 +25,7 @@ The Safety Net Benefits API is organized into 7 domains, with 5 cross-cutting co
 | **Document Management** | Not started | Files and uploads |
 
 **Cross-cutting concerns:**
-- **Communication** - Notices and correspondence can originate from any domain (application received, documents needed, eligibility determined, appointment scheduled, etc.)
+- **Communications** - Notices and correspondence can originate from any domain (application received, documents needed, eligibility determined, appointment scheduled, etc.)
 - **Reporting** - Each domain exposes data that reporting systems consume; audit events live where actions happen
 - **Configuration Management** - Business-configurable rules, thresholds, and settings that can be changed without code deployments
 - **Observability** - Health checks, metrics, logging, and tracing for operations staff
@@ -132,7 +132,7 @@ Work items, tasks, and SLA tracking. **[Details →](domains/workflow.md)**
 - VerificationTask connects Intake data → External Sources → Eligibility requirements
 - Tasks are assigned to CaseWorkers (connects to Case Management)
 
-#### Communication (Cross-Cutting)
+#### Communications (Cross-Cutting)
 
 Official notices and correspondence that can originate from any domain. **[Details →](cross-cutting/communication.md)**
 
@@ -143,12 +143,12 @@ Official notices and correspondence that can originate from any domain. **[Detai
 | **DeliveryRecord** | Tracking of delivery status |
 
 **Key decisions:**
-- Communication is cross-cutting because notices can be triggered by events in any domain:
+- Communications is cross-cutting because notices can be triggered by events in any domain:
   - Intake: "Application received"
   - Eligibility: "Approved", "Denied", "Request for information"
   - Workflow: "Documents needed", "Interview scheduled"
   - Case Management: "Case worker assigned"
-- Entities live in a Communication domain but are consumed/triggered by all domains
+- Entities live in a Communications domain but are consumed/triggered by all domains
 
 #### Search (Cross-Cutting)
 
@@ -176,7 +176,7 @@ Time-based coordination. **[Details →](domains/scheduling.md)**
 
 **Key decisions:**
 - **Interview** is modeled as an `appointmentType` value, not a standalone entity — FHIR has no separate Interview resource
-- **Reminder** belongs in the Communication cross-cutting domain — FHIR handles notifications via Communication resources
+- **Reminder** belongs in the Communications cross-cutting domain — FHIR handles notifications via Communication resources
 
 #### Document Management
 
@@ -193,7 +193,7 @@ Files and uploads.
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════════════╗
-║  CROSS-CUTTING: Communication, Search, Reporting, Configuration Mgmt, Observability  ║
+║  CROSS-CUTTING: Communications, Search, Reporting, Configuration Mgmt, Observability  ║
 ╚══════════════════════════════════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -297,7 +297,7 @@ Domain-specific design has been moved to separate files:
 | Workflow | [domains/workflow.md](domains/workflow.md) |
 | Case Management | [domains/case-management.md](domains/case-management.md) |
 | Scheduling | [domains/scheduling.md](domains/scheduling.md) |
-| Communication | [cross-cutting/communication.md](cross-cutting/communication.md) |
+| Communications | [cross-cutting/communication.md](cross-cutting/communication.md) |
 | Search | [cross-cutting/search.md](cross-cutting/search.md) |
 
 *Note: Client Management, Intake, Eligibility, and Document Management will be added as those domains are designed. Reporting aggregates data from other domains and doesn't have its own design doc.*
