@@ -130,6 +130,7 @@ Timer transitions fire automatically when a duration elapses, without requiring 
   |---|---|---|---|---|---|
   | `auto-escalate` | `pending` | `escalated` | 72h | `createdAt` | business |
   | `auto-escalate-sla-warning` | `in_progress` | `escalated` | -48h | `slaDeadline` | calendar |
+  | `auto-escalate-sla-breach` | `pending`, `in_progress`, `escalated` | `escalated` | 0h | `slaDeadline` | calendar |
   | `auto-cancel-awaiting-client` | `awaiting_client` | `cancelled` | 30d | `blockedAt` | calendar |
   | `auto-resume-awaiting-verification` | `awaiting_verification` | `in_progress` | 7d | `blockedAt` | calendar |
 
@@ -258,7 +259,7 @@ Domain events serve two purposes: they are the audit trail required by federal a
 | Skill-based assignment | Round-robin, least-loaded, skill-match routing | Rules engine supports it; no built-in actions yet |
 | Notification effects | Notify client on `await-client`; notify supervisor on escalation | Out of scope; cross-cutting concern (communication domain) |
 | `$caller.role` enforcement | Role checks are named stubs; see [Role-based access control](#role-based-access-control) | Planned |
-| SLA breach transition | ServiceNow fires a distinct breach escalation at 0h | `slaInfo.*.status` becomes `breached` via the SLA engine; no timer-triggered state machine transition fires at the breach moment. A future `auto-escalate-sla-breach` timer would add a domain event for federal breach reporting. |
+| SLA breach transition | ServiceNow fires a distinct breach escalation at 0h | Implemented: `auto-escalate-sla-breach` fires at `0h` relative to `slaDeadline`, emitting an `sla_breached` domain event for federal compliance reporting. |
 | Cross-domain task creation | Application submitted → review task auto-created; see [Cross-domain event wiring](#cross-domain-event-wiring) | Planned |
 
 ---
