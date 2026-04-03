@@ -4,13 +4,45 @@ A feature-by-feature reference for the workflow contract architecture. For each 
 
 See [Workflow Domain](workflow.md) for the architecture overview and [Contract-Driven Architecture](../contract-driven-architecture.md) for the adapter pattern.
 
+## Features
+
+**Workflow engine core**
+- [State machine](#state-machine)
+  - [States](#states)
+  - [Transitions and effects](#transitions-and-effects)
+  - [Timer-triggered transitions](#timer-triggered-transitions)
+  - [Lifecycle hooks](#lifecycle-hooks-oncreate-onupdate)
+- [Guards and access control](#guards-and-access-control)
+- [Rules engine](#rules-engine)
+
+**SLA and deadline tracking**
+- [SLA and deadline management](#sla-and-deadline-management)
+  - [SLA clock behavior by state](#sla-clock-behavior-by-state)
+  - [SLA type definitions](#sla-type-definitions)
+
+**Observability**
+- [Domain events](#domain-events)
+- [Metrics](#metrics)
+
+**Planned capabilities**
+- [Role-based access control](#role-based-access-control)
+- [Cross-domain event wiring](#cross-domain-event-wiring)
+
+---
+- [Known gaps and future considerations](#known-gaps-and-future-considerations)
+- [References](#references)
+
 ---
 
-## Task lifecycle states
+## State machine
 
-The task status enum defines the complete set of states a task can occupy. States are explicit fields on the Task resource — not derived from timestamps or other computed values. The state set was designed around the actual stages of benefits casework: a task starts in a queue, gets picked up by a worker, may block on external dependencies (client or verification), may require supervisor review before completion, and can be escalated or cancelled at various points. Each of these stages has distinct SLA accountability, routing behavior, and access control requirements — which is why they are modeled as first-class states rather than sub-statuses or flags.
+### States
+
+Every workflow system tracks which stage a work item is in — typically something like pending, active, blocked, or complete — because state drives routing, SLA accountability, and access control. Systems vary in granularity: JSM and ServiceNow use a small set of broad states with sub-statuses for nuance; WS-HumanTask defines a fixed set of abstract states; IBM Curam ties state to the underlying case process. The blueprint uses a flat, explicit state enum sized for benefits casework — with first-class states for waiting conditions that federal regulations treat differently for SLA purposes. Each state has distinct SLA clock behavior, routing implications, and access control requirements; they are modeled as first-class states rather than sub-statuses or flags.
 
 **States:** `pending`, `in_progress`, `awaiting_client`, `awaiting_verification`, `escalated`, `pending_review`, `completed`, `cancelled`
+
+The state set covers all task types in the domain. Task-type-specific states (e.g., fair hearing states like `hearing_scheduled`) are added alongside the baseline states and are only reachable via transitions guarded on `$object.taskType` — making them invisible to incompatible task types at runtime without requiring a separate state machine or separate API resource. See [Guards and access control](#guards-and-access-control) for how this works.
 
 **Design decisions:**
 
@@ -22,6 +54,8 @@ The task status enum defines the complete set of states a task can occupy. State
   | Waiting for client action | `awaiting_client` | Waiting for Customer | On Hold / Awaiting Caller | Manual activity pending in inbox | Waiting on Someone Else | Suspended |
   | Waiting for third-party verification | `awaiting_verification` | Pending | On Hold / Awaiting Evidence | Suspended process | Deferred | Suspended |
 
+  Pega handles waiting via an **Assignment Ready** field that delays SLA clock start rather than pausing a running clock — an alternative approach with different federal reporting implications (delayed start vs. excluded interval). Appian has no built-in waiting states; pause behavior must be modeled via intermediate process nodes or custom status fields.
+
 - **Status values use snake_case.** Consistent with the blueprint's JSON API conventions and widely used in government API contexts (GitHub, Stack Exchange, Twitter). OpenAPI places no constraint on enum value casing; code generators map to language-appropriate forms (e.g., `InProgress` in TypeScript).
 - **`cancelled` has a `reopen` transition that returns the task to `pending` with fresh routing.** Cancellation is sometimes an error, and supervisors need a way to reinstate a task without recreating it from scratch. Matches ServiceNow and Curam behavior.
 - **`pending_review` is a dedicated state for structured supervisor sign-off before completion.** Quality control regulations in SNAP and Medicaid require supervisor approval before a determination is finalized. This is distinct from escalation — escalation is upward for help; review is a structured approval gate. A caseworker submits via `submit-for-review`; the supervisor either `approve`s (→ `completed`) or `return-to-worker`s (→ `in_progress`).
@@ -32,52 +66,17 @@ The task status enum defines the complete set of states a task can occupy. State
 - `slaClock` behavior per state can be overridden (e.g., a state may prefer to stop rather than pause the clock for `awaiting_client`, treating client delay as the client's time to spend).
 - States needing tiered escalation (L1 → L2 → L3, as in JSM and ServiceNow) can add intermediate escalation states via overlay (e.g., `escalated_l2`, `escalated_supervisor`, `escalated_director`) with their own transitions and guards.
 
----
+### Transitions and effects
 
-## SLA clock management
+> *Industry equivalents — transitions: "flow actions" (Pega), "state transitions" (ServiceNow), "sequence flows" (BPMN/Camunda). Effects: "post-functions" (JSM), "business rules" (ServiceNow), "activities" (Pega), "Smart Services" (Appian).*
 
-Each state in the state machine declares its effect on the SLA clock via a `slaClock` field. This declaration is consumed by the SLA engine (see [SLA types and clock management](#sla-types-and-clock-management)) when evaluating `pauseWhen`/`resumeWhen` conditions on every transition. The three values are: `running` (clock ticks normally), `paused` (clock is suspended; resumes from the same point when conditions clear), and `stopped` (clock halts permanently — used only for terminal states).
+Workflow systems vary in how they model state changes and the side effects that accompany them. Some expose a generic PATCH or update endpoint and infer intent from the diff; others use named transition operations with structured request bodies and explicit side effects. Named operations produce unambiguous audit events, can carry action-specific data (e.g., a cancellation reason), and can be independently guarded — at the cost of more API surface area. The blueprint uses named triggers that become RPC endpoints, with declarative effects specified in the state machine contract that the engine executes.
 
-**Design decisions:**
-
-- **`slaClock` is required on every state with no default.** If a state has no `slaClock` value, it's ambiguous whether the clock is running or stopped. Requiring explicit declaration forces intentional choices and prevents silent regressions when new states are added. The baseline assignment:
-
-  | State | Clock behavior | Rationale |
-  |---|---|---|
-  | `pending` | running | Deadline starts at creation; time in queue counts against the agency |
-  | `in_progress` | running | Work is actively in progress |
-  | `escalated` | running | Still the agency's responsibility; urgency doesn't pause the deadline |
-  | `awaiting_client` | paused | External dependency; federal regulations exclude client-caused delays from the agency's deadline |
-  | `awaiting_verification` | paused | External dependency; clock resumes when verification service returns |
-  | `pending_review` | running | Supervisor review counts against the agency's deadline |
-  | `completed` | stopped | Work is done; deadline is no longer relevant |
-  | `cancelled` | stopped | Work is abandoned; `reopen` transition restarts the clock from `pending` |
-
-- **Waiting states use `slaClock: paused`, not `stopped`.** `paused` means the clock resumes from where it left off, preserving the original deadline. `stopped` would reset the clock, granting a fresh deadline on each block/resume cycle — federal SNAP regulations treat client-caused delays as excluded time, not as time that resets the agency's clock. Comparable systems:
-
-  | Concept | Blueprint | JSM | ServiceNow | Curam |
-  |---|---|---|---|---|
-  | Pause SLA | `slaClock: paused` on states with external dependencies | "Pending" status excludes from SLA timers | On Hold sub-reasons pause SLA | SLA tracked at process level, not task state |
-  | Stop SLA | `slaClock: stopped` on terminal states | Resolved / Closed | Resolved / Closed / Canceled | Process completed / aborted |
-  | Business hours | `calendarType` per timer transition | Configurable per SLA | Configurable per schedule | Configurable per deadline |
-
-- **`pending_review` uses `slaClock: running` — supervisor review counts against the agency's deadline.** JSM and ServiceNow do not pause external SLA timers during approval states. States where regulation explicitly excludes review time from the deadline can override `slaClock` via overlay.
-
-**Customization points:**
-- States can override `slaClock` per state via overlay. A state that treats client non-response differently (e.g., stops rather than pauses) can do so without touching the baseline.
-- The actual clock-pause/resume/stop logic is evaluated by the SLA engine on every transition using the `pauseWhen`/`resumeWhen` conditions in `*-sla-types.yaml` (see [SLA types and clock management](#sla-types-and-clock-management)). The `slaClock` value on each state declares the intent; the SLA engine reads the task's current state when evaluating those conditions.
-
----
-
-## Transitions and effects
-
-Transitions define valid state changes. Each transition has a trigger (the action that initiates the change, which becomes an RPC endpoint), optional guards (preconditions that must pass), and effects (side effects that execute when the transition fires). Effects are declarative — the state machine YAML specifies what should happen; the engine executes it.
-
-**Effect types:**
+**Effect types in the blueprint:**
 - `set` — update fields on the resource (e.g., set `assignedToId` when claiming a task)
-- `create` — write a record to another collection (e.g., create a domain event on every transition)
 - `evaluate-rules` — invoke the rules engine to re-evaluate assignment or priority
 - `event` — emit a named domain event with an optional data payload
+- `create` — write a new record to another collection (e.g., a follow-up task)
 - `when` — conditional wrapper on any effect; uses JSON Logic to decide whether the effect fires
 
 Transitions can be actor-triggered (a human or system makes an API call) or timer-triggered (fire automatically when a duration elapses — see [Timer-triggered transitions](#timer-triggered-transitions)).
@@ -86,12 +85,12 @@ Transitions can be actor-triggered (a human or system makes an API call) or time
 
 - **Transitions use named RPC endpoints, not PATCH requests.** `claim` → `POST /tasks/:id/claim`. Each trigger maps cleanly to an audit event, can carry a request body (e.g., a cancellation reason), and can be independently guarded. PATCH endpoints require parsing the diff to determine what changed and whether it was allowed. Comparable systems:
 
-  | Concept | Blueprint | JSM | ServiceNow | Camunda | WS-HumanTask |
-  |---|---|---|---|---|---|
-  | Transition trigger | Named trigger → RPC endpoint | Status transition button | State flow trigger | Sequence flow / signal | Claim, start, complete, skip operations |
-  | Precondition | Guards (field/operator/value) | Validator condition | Condition script | Gateway condition | Constraints (potential owners, etc.) |
-  | Side effect on transition | `set`, `create`, `evaluate-rules`, `event` effects | Post-function | Business Rule | Execution Listener | Task handler |
-  | Conditional effect | `when` (JSON Logic) | — | Condition on Business Rule | Expression on Listener | — |
+  | Concept | Blueprint | JSM | ServiceNow | Camunda | WS-HumanTask | Pega | Appian |
+  |---|---|---|---|---|---|---|---|
+  | Transition trigger | Named trigger → RPC endpoint | Status transition button | State flow trigger | Sequence flow / signal | Claim, start, complete, skip operations | Named flow action → RPC endpoint | Generic BPMN gateway with conditional flow |
+  | Precondition | Guards (field/operator/value) | Validator condition | Condition script | Gateway condition | Constraints (potential owners, etc.) | Decision rule or router activity (scripted) | Conditional gateway expression (scripted) |
+  | Side effect on transition | `set`, `create`, `evaluate-rules`, `event` effects | Post-function | Business Rule | Execution Listener | Task handler | Declare Expressions + activity steps | Smart Services (automation activities) |
+  | Conditional effect | `when` (JSON Logic) | — | Condition on Business Rule | Expression on Listener | — | Condition on activity step | Conditional gateway branch |
 
 - **Effects are declared in the state machine YAML, not implemented per-endpoint.** The state machine contract declares what should happen; the engine executes it. Implementations don't need to read source code to understand what a transition does — the contract is the specification.
 - **`when` conditions use JSON Logic, not a separate condition language.** JSON Logic is already used for rules and metric filters. Using it for `when` conditions too means one evaluator, one set of tooling, and no learning curve for state implementers.
@@ -106,11 +105,9 @@ Transitions can be actor-triggered (a human or system makes an API call) or time
 - States can add effects to existing transitions via overlay (e.g., send a notice to the client when `await-client` fires).
 - States can add new transitions (e.g., a `pend` transition for applications requiring additional review before determination).
 
----
+### Timer-triggered transitions
 
-## Timer-triggered transitions
-
-Timer transitions fire automatically when a duration elapses, without requiring an actor to make an API call. They cover regulatory deadline enforcement and client-response timeouts.
+Most workflow systems support time-based automation — escalating tasks that sit too long, canceling requests after extended inactivity, or warning before a deadline is missed. Timer triggers typically fire relative to task creation, a deadline timestamp, or a timestamp marking when a waiting condition began. Whether the duration uses calendar days or business hours matters significantly for regulatory deadline calculations, since SNAP and Medicaid deadlines are calendar days while staffing SLAs are often business hours. The blueprint supports timer transitions on the state machine with explicit `after`, `relativeTo`, and `calendarType` fields.
 
 **Design decisions:**
 
@@ -130,6 +127,7 @@ Timer transitions fire automatically when a duration elapses, without requiring 
   |---|---|---|---|---|---|
   | `auto-escalate` | `pending` | `escalated` | 72h | `createdAt` | business |
   | `auto-escalate-sla-warning` | `in_progress` | `escalated` | -48h | `slaDeadline` | calendar |
+  | `auto-escalate-sla-breach` | `pending`, `in_progress`, `escalated` | `escalated` | 0h | `slaDeadline` | calendar |
   | `auto-cancel-awaiting-client` | `awaiting_client` | `cancelled` | 30d | `blockedAt` | calendar |
   | `auto-resume-awaiting-verification` | `awaiting_verification` | `in_progress` | 7d | `blockedAt` | calendar |
 
@@ -141,11 +139,34 @@ Timer transitions fire automatically when a duration elapses, without requiring 
 - `calendarType` can be overridden per transition.
 - Timer transitions support an optional `guards` field for conditional suppression — e.g., skip `auto-escalate` for tasks already flagged by a supervisor.
 
+### Lifecycle hooks (`onCreate`, `onUpdate`)
+
+> *Industry equivalents: "business rules (before/after insert/update)" (ServiceNow), "When rules" / "Declare Expressions" (Pega), "record-triggered flows" (Salesforce), "start/boundary events" (BPMN).*
+
+Workflow systems need to run automation not just on explicit state transitions, but when objects are created or when specific fields change outside a transition. Creation hooks initialize derived state — routing a new task to a queue, setting its priority, emitting a creation event. Field-change hooks re-run routing logic when key attributes are updated after the fact (e.g., a supervisor marks a task as expedited after it was created as standard). The blueprint models these as `onCreate` and `onUpdate` lifecycle hooks in the state machine contract, keeping creation and update behavior co-located with transition behavior in the same declarative artifact.
+
+**Design decisions:**
+
+- **`onUpdate` includes an explicit `fields` filter — it fires only when listed fields change, not on every PATCH.** Without scoping, `onUpdate` would fire on every PATCH including updates made by transitions themselves, creating re-evaluation loops. The `fields` filter explicitly declares which field changes have downstream effects — e.g., `isExpedited` and `programType`, but not `assignedToId` (set by transitions). If a field isn't in the list, it's intentional. ServiceNow's Business Rules have the same scoping problem and solve it similarly with condition scripts. Comparable systems:
+
+  | Concept | Blueprint | JSM | ServiceNow | Camunda | BPMN |
+  |---|---|---|---|---|---|
+  | On creation | `onCreate` | — | Business Rule on insert | Start event listener | Start event |
+  | On field change | `onUpdate` (scoped by `fields`) | — | Business Rule on update | Execution listener on variable change | Data Object change event |
+
+- **Transition-internal field changes (e.g., `set assignedToId`) do not trigger `onUpdate`.** `onUpdate` fires only on external PATCH requests. In benefits processing, this matters: a supervisor correcting a task's `programType` should re-trigger routing; a caseworker claiming a task should not.
+
+**Customization points:**
+- States can add `onUpdate` effects via overlay (e.g., send a supervisor alert when `priority` changes to `expedited`).
+- States can extend the `fields` list to react to additional field changes.
+
 ---
 
 ## Guards and access control
 
-Guards are named preconditions on transitions. A transition only fires if all its guards pass.
+> *Industry equivalents: "condition scripts" (ServiceNow), "validators" (JSM), "routing constraints" / "decision rules" (Pega), "gateway conditions" (Camunda/BPMN), "potential owner constraints" (WS-HumanTask).*
+
+Workflow systems enforce preconditions on state transitions to prevent unauthorized or invalid operations — ensuring a task can't be claimed twice, that only supervisors can cancel, or that a caseworker can only act on their own assigned work. Most systems implement this via scripted conditions (ServiceNow, JSM) or expression languages (Camunda). The blueprint uses declarative field/operator/value guards defined at the top of the state machine and referenced by name from transitions, with `any`/`all` composition operators for OR/AND logic at the transition level. A transition only fires if all its guards pass.
 
 **Design decisions:**
 
@@ -172,6 +193,7 @@ Guards are named preconditions on transitions. A transition only fires if all it
 
 - **`await-client` and `await-verification` require `callerIsAssignedWorker` — supervisors cannot block tasks unilaterally.** Blocking a task on external input reflects the caseworker's knowledge of the case. If a supervisor needs to block a task, they can reassign it to themselves. States that want supervisors to be able to await can add `callerIsSupervisor` to these guards via overlay.
 - **There is no `entryGuards` concept per state — every transition must carry its own guards explicitly.** This is standard for declarative state machines but requires discipline when adding new transitions — a missing guard is a silent gap in access control. A future schema enhancement could enforce this at the contract level.
+- **Guards on `$object.taskType` enable multiple lifecycles within a single state machine.** Task-type-specific transitions carry a named guard that checks `$object.taskType` (e.g., `taskTypeIsFairHearing: taskType equals fair_hearing`). This scopes those transitions to the applicable task type without requiring a separate state machine file, a separate API resource, or separate endpoints. The result is one API surface and shared infrastructure (queues, SLA tracking, domain events, assignment rules) serving multiple task lifecycles — consistent with how Pega (`caseTypeID`), Salesforce (`RecordTypeId`), and JSM (issue type) scope available operations within a single object type's API. Shared transitions like `cancel`, `assign`, and `set-priority` carry no task type guard and apply to all types. The trade-off: the OpenAPI status enum includes states from all task types, so `taskType` is the authoritative constraint on which states are reachable for a given task — not the schema.
 
 **We support:** simple `field/operator/value` guards; composition operators (`any`, `all`) at the transition level for OR/AND conditions across named guards.
 
@@ -190,12 +212,13 @@ Routing logic — which queue a task goes to, what priority it gets — varies e
 
 - **`workflow-rules.yaml` is entirely replaceable per state, separate from the state machine.** Routing logic varies significantly across states — entangling it with the state machine would make customization harder. A state drops in their own rules file without touching the state machine. JSM and ServiceNow similarly decouple automation rules from workflow status transitions:
 
-  | Concept | JSM | ServiceNow | Camunda | WfMC |
-  |---|---|---|---|---|
-  | Routing rules | Automation rules | Assignment rules | Task listener / routing | Participant resolution |
-  | Priority rules | Priority field automation | SLA-based priority | — | — |
-  | Rule order | First matching automation | Rule processing order | — | — |
+  | Concept | JSM | ServiceNow | Camunda | WfMC | Pega | Appian |
+  |---|---|---|---|---|---|---|
+  | Routing rules | Automation rules | Assignment rules | Task listener / routing | Participant resolution | Push (system assigns to operator/queue) + Pull (Get Next Work algorithm) | Automated Case Routing module (round-robin, workload balance, shared queue) |
+  | Priority rules | Priority field automation | SLA-based priority | — | — | Urgency (1–100); SLA milestone-driven escalation | Process HQ KPI-based; no dedicated priority rule |
+  | Rule order | First matching automation | Rule processing order | — | — | Router activity scripts; decision tree precedence | Rule number precedence (lower = higher priority) |
 
+- **Pega supports both push routing (system assigns) and pull routing (Get Next Work algorithm).** Pull routing presents the next best assignment to a worker based on urgency, availability, and skills — the worker requests work rather than having it assigned. The blueprint uses push routing only; pull routing is a future consideration for caseworker queue management. Appian's Automated Case Routing module explicitly names its strategies (round-robin, workload balance, shared queue), which is the same model as the `routingStrategy` field planned for the Queue entity (issue #162) — confirming that named strategies are the industry-standard approach.
 - **Rules use `first-match-wins` evaluation — simple, predictable, and easy to debug.** Rules are evaluated in order and the first match wins. States that need more complex routing (e.g., weighted load balancing) can implement that as a rule action.
 - **Rules are invoked via `evaluate-rules` effects in the state machine — not embedded in rule definitions.** The state machine declares when rules run; the rules engine decides what happens. Neither system needs to understand the other's internals.
 - **`escalate` uses `evaluate-rules: priority`, not `set priority: high`.** Hardcoding a priority value would break states with different escalation behavior per program. `evaluate-rules: priority` delegates the decision to the rules engine, which can apply different priority logic for expedited vs. standard cases. This is especially important in benefits processing, where SNAP expedited and standard cases have different deadline profiles.
@@ -206,64 +229,43 @@ Routing logic — which queue a task goes to, what priority it gets — varies e
 
 ---
 
-## Lifecycle hooks (`onCreate`, `onUpdate`)
+## SLA and deadline management
 
-Some effects need to fire in response to resource creation or field changes, not in response to a specific transition trigger. Lifecycle hooks handle these cases.
+### SLA clock behavior by state
 
-**Design decisions:**
-
-- **`onUpdate` includes an explicit `fields` filter — it fires only when listed fields change, not on every PATCH.** Without scoping, `onUpdate` would fire on every PATCH including updates made by transitions themselves, creating re-evaluation loops. The `fields` filter explicitly declares which field changes have downstream effects — e.g., `isExpedited` and `programType`, but not `assignedToId` (set by transitions). If a field isn't in the list, it's intentional. ServiceNow's Business Rules have the same scoping problem and solve it similarly with condition scripts. Comparable systems:
-
-  | Concept | Blueprint | JSM | ServiceNow | Camunda | BPMN |
-  |---|---|---|---|---|---|
-  | On creation | `onCreate` | — | Business Rule on insert | Start event listener | Start event |
-  | On field change | `onUpdate` (scoped by `fields`) | — | Business Rule on update | Execution listener on variable change | Data Object change event |
-
-- **Transition-internal field changes (e.g., `set assignedToId`) do not trigger `onUpdate`.** `onUpdate` fires only on external PATCH requests. In benefits processing, this matters: a supervisor correcting a task's `programType` should re-trigger routing; a caseworker claiming a task should not.
-
-**Customization points:**
-- States can add `onUpdate` effects via overlay (e.g., send a supervisor alert when `priority` changes to `expedited`).
-- States can extend the `fields` list to react to additional field changes.
-
----
-
-## Domain events
-
-Domain events serve two purposes: they are the audit trail required by federal and state program regulations, and they are the integration surface for cross-domain communication (other domains subscribe to events rather than polling task state).
+Workflow systems that track SLA deadlines need to handle delays attributable to external parties — when the agency is waiting on the client or a third-party verifier, that time should not count against the agency's processing deadline. All major systems support some form of clock pause, typically via hold states or sub-statuses that exclude certain intervals from SLA calculation. The blueprint declares clock behavior directly on each state via a `slaClock` field (`running`, `paused`, or `stopped`), consumed by the SLA engine when evaluating pause/resume conditions on every transition.
 
 **Design decisions:**
 
-- **Events are stored in a shared collection across all domains, identified by `domain`, `resource`, and `action`.** Siloed event stores per domain would require joining them for cross-domain queries. A shared collection enables queries like "show all events for this person across case management and workflow" without joining separate stores. JSM, ServiceNow, and Camunda each maintain separate audit logs per system — cross-system queries require custom reporting.
-- **The audit trail must be immutable.** Events are never POST'd, PATCH'd, or DELETE'd via the API. Allowing mutations would undermine the regulatory function of the record. Federal quality control reviews and fair hearings depend on an unaltered history of who acted, when, and why. Comparable systems:
+- **`slaClock` is required on every state with no default.** If a state has no `slaClock` value, it's ambiguous whether the clock is running or stopped. Requiring explicit declaration forces intentional choices and prevents silent regressions when new states are added. The baseline assignment:
 
-  | Concept | JSM | ServiceNow | Camunda | WfMC |
-  |---|---|---|---|---|
-  | Transition audit | Issue history | Audit log | User Operation Log | Task Event History |
-  | Real-time stream | Webhooks | Event Management | Process event stream | — |
-  | Immutable log | Read-only history | Read-only audit | History service | — |
+  | State | Clock behavior | Rationale |
+  |---|---|---|
+  | `pending` | running | Deadline starts at creation; time in queue counts against the agency |
+  | `in_progress` | running | Work is actively in progress |
+  | `escalated` | running | Still the agency's responsibility; urgency doesn't pause the deadline |
+  | `awaiting_client` | paused | External dependency; federal regulations exclude client-caused delays from the agency's deadline |
+  | `awaiting_verification` | paused | External dependency; clock resumes when verification service returns |
+  | `pending_review` | running | Supervisor review counts against the agency's deadline |
+  | `completed` | stopped | Work is done; deadline is no longer relevant |
+  | `cancelled` | stopped | Work is abandoned; `reopen` transition restarts the clock from `pending` |
 
-- **The state machine YAML is the authoritative source for what events exist and what they carry.** `event` effects declare the action name and data payload. Implementations derive event schema from the contract — not from source code. In contrast, JSM and ServiceNow build audit records as a side effect of internal processing — the schema is implicit and not independently inspectable.
+- **Waiting states use `slaClock: paused`, not `stopped`.** `paused` means the clock resumes from where it left off, preserving the original deadline. `stopped` would reset the clock, granting a fresh deadline on each block/resume cycle — federal SNAP regulations treat client-caused delays as excluded time, not as time that resets the agency's clock. Comparable systems:
+
+  | Concept | Blueprint | JSM | ServiceNow | Curam | Pega | Appian |
+  |---|---|---|---|---|---|---|
+  | Pause SLA | `slaClock: paused` on states with external dependencies | "Pending" status excludes from SLA timers | On Hold sub-reasons pause SLA | SLA tracked at process level, not task state | Assignment Ready field delays clock start (clock doesn't begin until assignment is ready) | No built-in pause; requires custom process logic |
+  | Stop SLA | `slaClock: stopped` on terminal states | Resolved / Closed | Resolved / Closed / Canceled | Process completed / aborted | Case resolution / Resolved stage | Process completion / case closure |
+  | Business hours | `calendarType` per timer transition | Configurable per SLA | Configurable per schedule | Configurable per deadline | System-wide calendar configuration | Per-day-of-week configurable process calendar |
+
+- **Pega uses a three-tier SLA model (Goal → Deadline → Passed Deadline) rather than a single deadline with a warning threshold.** Goal is a soft performance target; Deadline is the hard deadline; Passed Deadline is a repeating escalation interval after the deadline is missed. The blueprint uses a single deadline with a percentage-based warning threshold — simpler, but it lacks a separate performance-target tier. States that want Pega-style tiered escalation can model it with multiple timer transitions (warning → deadline → breach).
+- **`pending_review` uses `slaClock: running` — supervisor review counts against the agency's deadline.** JSM and ServiceNow do not pause external SLA timers during approval states. States where regulation explicitly excludes review time from the deadline can override `slaClock` via overlay.
 
 **Customization points:**
-- States can add additional `event` effects to transitions via overlay (e.g., include the client's case number in the `completed` event payload for easier cross-referencing).
-- Cross-domain event consumers subscribe to specific `action` values — adding new actions is non-breaking.
+- States can override `slaClock` per state via overlay. A state that treats client non-response differently (e.g., stops rather than pauses) can do so without touching the baseline.
+- The actual clock-pause/resume/stop logic is evaluated by the SLA engine on every transition using the `pauseWhen`/`resumeWhen` conditions in `*-sla-types.yaml` (see [SLA types and clock management](#sla-types-and-clock-management)). The `slaClock` value on each state declares the intent; the SLA engine reads the task's current state when evaluating those conditions.
 
----
-
-## Known gaps and future considerations
-
-| Gap | Industry norm | Status |
-|---|---|---|
-| Batch/bulk transitions | Bulk reassignment common in queue management | Not in scope; likely a separate batch endpoint |
-| Skill-based assignment | Round-robin, least-loaded, skill-match routing | Rules engine supports it; no built-in actions yet |
-| Notification effects | Notify client on `await-client`; notify supervisor on escalation | Out of scope; cross-cutting concern (communication domain) |
-| `$caller.role` enforcement | Role checks are named stubs; see [Role-based access control](#role-based-access-control) | Planned |
-| SLA breach transition | ServiceNow fires a distinct breach escalation at 0h | `slaInfo.*.status` becomes `breached` via the SLA engine; no timer-triggered state machine transition fires at the breach moment. A future `auto-escalate-sla-breach` timer would add a domain event for federal breach reporting. |
-| Cross-domain task creation | Application submitted → review task auto-created; see [Cross-domain event wiring](#cross-domain-event-wiring) | Planned |
-
----
-
-## SLA types and clock management
+### SLA type definitions
 
 Federal regulations impose strict processing deadlines on benefits applications. The SLA types system tracks these deadlines per task, auto-assigns them based on task attributes, pauses the clock when delays are attributable to external parties, and warns before breach. SLA type definitions live in `*-sla-types.yaml`, separate from the state machine.
 
@@ -301,6 +303,31 @@ Federal regulations impose strict processing deadlines on benefits applications.
 
 ---
 
+## Domain events
+
+> *Industry equivalents: "audit log" / "issue history" (JSM), "audit log" / "event management" (ServiceNow), "case history" (Pega), "record events" (Appian). The blueprint's domain events go further — they are also the integration surface for cross-domain communication, not just an internal audit record.*
+
+Domain events serve two purposes: they are the audit trail required by federal and state program regulations, and they are the integration surface for cross-domain communication (other domains subscribe to events rather than polling task state).
+
+**Design decisions:**
+
+- **Events are stored in a shared collection across all domains, identified by `domain`, `resource`, and `action`.** Siloed event stores per domain would require joining them for cross-domain queries. A shared collection enables queries like "show all events for this person across case management and workflow" without joining separate stores. JSM, ServiceNow, and Camunda each maintain separate audit logs per system — cross-system queries require custom reporting.
+- **The audit trail must be immutable.** Events are never POST'd, PATCH'd, or DELETE'd via the API. Allowing mutations would undermine the regulatory function of the record. Federal quality control reviews and fair hearings depend on an unaltered history of who acted, when, and why. Comparable systems:
+
+  | Concept | JSM | ServiceNow | Camunda | WfMC |
+  |---|---|---|---|---|
+  | Transition audit | Issue history | Audit log | User Operation Log | Task Event History |
+  | Real-time stream | Webhooks | Event Management | Process event stream | — |
+  | Immutable log | Read-only history | Read-only audit | History service | — |
+
+- **The state machine YAML is the authoritative source for what events exist and what they carry.** `event` effects declare the action name and data payload. Implementations derive event schema from the contract — not from source code. In contrast, JSM and ServiceNow build audit records as a side effect of internal processing — the schema is implicit and not independently inspectable.
+
+**Customization points:**
+- States can add additional `event` effects to transitions via overlay (e.g., include the client's case number in the `completed` event payload for easier cross-referencing).
+- Cross-domain event consumers subscribe to specific `action` values — adding new actions is non-breaking.
+
+---
+
 ## Metrics
 
 States and federal partners need operational visibility into queue health, processing time, and SLA compliance. All major systems bury metric definitions in proprietary GUI dashboards — non-portable and invisible to implementers. Metrics in the blueprint are contract artifacts defined in `workflow-metrics.yaml`, computed on demand from live task and event data.
@@ -320,14 +347,14 @@ States and federal partners need operational visibility into queue health, proce
 
 - **Metric filters use JSON Logic — the same evaluator used for guards and rules.** JSM uses JQL; ServiceNow uses condition scripts; Salesforce uses SOQL. A second filter language would mean two evaluators, two toolchains, and two learning curves. The trade-off is expressiveness: JSON Logic is less powerful than SQL. For the patterns needed here (filter by field value, check array membership), it is sufficient. Comparable systems:
 
-  | Concept | JSM | ServiceNow | IBM Curam | Salesforce Gov Cloud |
-  |---|---|---|---|---|
-  | Metric definitions | Custom gadgets + SLA reports | Performance Analytics indicators | MIS caseload reports | Reports + formula fields |
-  | Stored vs. computed | Pre-aggregated dashboards | Pre-aggregated by PA data collector | Pre-computed batch reports | Pre-aggregated by reports engine |
-  | Filter conditions | JQL (Jira Query Language) | Conditions (scripted or condition builder) | Fixed filter criteria on report type | SOQL filter criteria |
-  | Event-pair duration | Pre-computed `resolutionDate - createdDate` field | Pre-computed duration field on task record | Pre-computed case duration field | Pre-computed formula field |
-  | Performance targets | SLA goals on SLA agreements | PA thresholds with color-coding | Fixed targets in MIS | Report filter thresholds |
-  | Dimensional breakdown | Filter by project/team | Breakdown by group or category | Fixed groupings in report | Report group-by |
+  | Concept | JSM | ServiceNow | IBM Curam | Salesforce Gov Cloud | Pega | Appian |
+  |---|---|---|---|---|---|---|
+  | Metric definitions | Custom gadgets + SLA reports | Performance Analytics indicators | MIS caseload reports | Reports + formula fields | Application Quality + manager dashboards; role-configurable | Process HQ KPIs (count, duration, custom expression) |
+  | Stored vs. computed | Pre-aggregated dashboards | Pre-aggregated by PA data collector | Pre-computed batch reports | Pre-aggregated by reports engine | Pre-aggregated dashboard views | Pre-computed from process execution data |
+  | Filter conditions | JQL (Jira Query Language) | Conditions (scripted or condition builder) | Fixed filter criteria on report type | SOQL filter criteria | Case type, operator, date range (GUI) | Activity, sequence, custom field conditions (GUI) |
+  | Event-pair duration | Pre-computed `resolutionDate - createdDate` field | Pre-computed duration field on task record | Pre-computed case duration field | Pre-computed formula field | Pre-computed start/end timestamps on case | Duration from process timeline |
+  | Performance targets | SLA goals on SLA agreements | PA thresholds with color-coding | Fixed targets in MIS | Report filter thresholds | Goal/Deadline tiers on SLA definition | SLA fulfillment/violation thresholds |
+  | Dimensional breakdown | Filter by project/team | Breakdown by group or category | Fixed groupings in report | Report group-by | Manager views by team/case type | Executive dashboard by process/activity |
 
 - **Duration metrics are defined via `from`/`to` event pairs correlated by a `pairBy` field — not as pre-computed task fields.** Pre-computing duration as a task field requires deciding in advance which event pairs define "duration," locking in that decision at schema design time. The declarative model lets metric authors define new duration measurements without schema changes — any pair of events correlated by a shared field qualifies.
 - **Performance `targets` are declared in the metric definition itself — not configured separately in a UI.** JSM puts goals on SLA agreements; ServiceNow puts thresholds on PA indicators — both in separate configuration surfaces. Declaring `targets` in the metric definition makes performance expectations visible to implementers at contract review time.
@@ -398,3 +425,126 @@ Common cross-domain triggers that should automatically create workflow tasks:
 | `appointment.no_show` | Scheduling | Follow-up outreach task |
 | `document.received` | Document Management | Document review task (may resume `awaiting_client` task) |
 | `verification.result_received` | External (IEVS/FDSH) | Triggers `system-resume` on existing `awaiting_verification` task |
+
+---
+
+## Known gaps and future considerations
+
+Standard capabilities found in major workflow systems (JSM, ServiceNow, IBM Curam, Salesforce Government Cloud, Pega, Appian), and the blueprint's current coverage. See [References](#references) for system descriptions.
+
+Status values: **Planned** = on the roadmap with a tracking issue; **Partial** = some coverage exists; **Not in scope** = intentional design boundary (handled by another domain); **Adapter layer** = intentionally delegated to the state adapter; not a blueprint contract concern; **Gap** = not yet assessed.
+
+### Workflow engine
+
+| Capability | Industry standard | Blueprint status |
+|---|---|---|
+| State machine versioning | All major platforms handle in-flight task migration when workflow definitions change — Pega via case type versioning, ServiceNow via flow version management | **Adapter layer** — in-flight task migration depends on the adapter's persistence model. The contract can define versioning fields; migration strategy is an implementation concern. |
+| Multi-tier approval chains | Most platforms support L1 → L2 → director approval chains (Pega, ServiceNow, Appian) | **Partial** — one approval tier only (`submit-for-review` → supervisor `approve`). States needing multi-tier review can add intermediate states via overlay, but no baseline pattern exists. |
+| Parallel task processing | Fork/join patterns allowing multiple tasks to run concurrently for the same case (ServiceNow, Pega, Appian, Curam) | **Not in scope** — blueprint models tasks as independent units; parallel sub-tasks within a case are a case management domain concern. Tasks for the same case are linked by `caseId`. |
+| Task dependencies | Blocking one task on completion of another (ServiceNow, JSM, Pega) | **Planned** — a `dependsOnTaskId` field on Task, an `awaiting_prerequisite` state (`slaClock: paused`), and a system-triggered unblocking transition when the dependency completes (following the `system-resume` pattern, fired by cross-domain event wiring on `task.completed`). No cross-object guard evaluation needed. See issue #195. |
+| Compensating transactions / rollback | If a transition's side effects fail partially, roll back to the prior state (Pega, Appian, ServiceNow) | **Adapter layer** — the state machine YAML declares effects declaratively; partial failure recovery is an implementation concern. |
+| Retry logic for automated steps | Automatic retry with backoff when automated effects (e.g., rules evaluation, event emission) fail (all enterprise platforms) | **Adapter layer** — retry behavior for effects is an adapter-layer infrastructure concern, not a contract concern. |
+
+### Routing and assignment
+
+| Capability | Industry standard | Blueprint status |
+|---|---|---|
+| Skill-based routing | Route to agents matching required skills (JSM, ServiceNow, Pega, Appian) | **Partial** — rules engine supports skill conditions; no built-in named routing action. See issue #162. |
+| Workload-based routing | Route to least-loaded or most-available agent (ServiceNow, Appian Workload Balance, Pega Get Next Work) | **Partial** — intended as `routingStrategy` on Queue entities. See issue #162. |
+| Named routing strategies | Explicit strategies: round-robin, least-loaded, shared queue (Appian Automated Case Routing, ServiceNow) | **Planned** — Queue `routingStrategy` field. See issue #162. |
+| Pull routing / Get Next Work | Worker requests their next best assignment; system selects based on urgency, skills, and availability (Pega Get Next Work) | **Planned** — `POST /workflow/queues/{id}/claim-next` atomically selects and claims the highest-priority eligible task for the caller. Selection criteria driven by existing priority rules (overlay point). Fires the existing `claim` transition — same guards, effects, and domain event. Atomic operation avoids the race condition of separate query + claim. See issue #196. |
+| Delegation / out-of-office routing | When a caseworker is unavailable, tasks automatically redirect to a substitute or back to the queue (JSM, ServiceNow, Pega, Appian, Salesforce) | **Planned** — needs a contract point (e.g., a `delegateToId` field on the worker entity, or an `auto-reassign` rule trigger on queue entry). Without it, every state invents its own absence-coverage mechanism. See issue #188. |
+| Overflow routing | When a queue exceeds capacity, tasks overflow to a backup queue (JSM, ServiceNow, Pega) | **Adapter layer** — a Queue `overflowQueueId` attribute is reasonable but high-volume routing logic is an adapter concern. |
+| Bulk reassignment | Supervisor reassigns multiple tasks at once (JSM, ServiceNow, Curam) | **Not in scope** — likely a separate supervisor batch API outside the state machine. |
+
+### SLA and deadline management
+
+| Capability | Industry standard | Blueprint status |
+|---|---|---|
+| SLA goal tier | Soft performance target separate from the hard deadline — Goal / Deadline / Passed Deadline (Pega three-tier) | **Planned** — adding a soft `goal` threshold alongside the warning threshold (two percentages rather than one) is a minor schema change that closes the gap with Pega-style tiered SLA without requiring multiple timer transitions. See issue #189. |
+| Holiday calendar management | Agency-specific holiday calendars that exclude non-working days from SLA calculations (JSM, ServiceNow, Pega, Appian, Salesforce) | **Planned** — `calendarType: business` excludes weekends but has no holiday calendar definition. Federal holiday exclusion is required for correct regulatory deadline calculation; this is a contract gap, not just an implementation detail. See issue #190. |
+| SLA retroactive recalculation | When task attributes change after creation (e.g., `isExpedited` is set), SLA deadlines are recalculated accordingly (ServiceNow, Pega, Curam) | **Planned** — `onUpdate` already fires when `isExpedited` changes, but SLA deadline recalculation on that trigger is unspecified. The hook exists; the behavior it should produce is not yet declared. See issue #191. |
+| Deadline extensions | Formal process for extending a deadline with documented justification (ServiceNow, Curam, Pega) | **Planned** — an `extend-deadline` transition with a required justification field and an audit event is a natural contract artifact; without it, states change `slaDeadline` directly with no audit trail. See issue #192. |
+| Grace period handling | A defined window after the deadline before adverse action is taken — common in SNAP and Medicaid processing | **Planned** — a baseline `auto-adverse-action` timer transition with `after: 0d` (no grace period) makes the capability discoverable and creates an explicit overlay point. States override the duration to their required window. Distinct from `auto-escalate-sla-breach` (escalates at deadline) — adverse action fires after the grace period and takes the consequential action. See issue #197. |
+| SLA breach event | Distinct escalation or event at the deadline moment | **Pending** — PR #185 adds `auto-escalate-sla-breach` timer. |
+
+### Task structure and types
+
+| Capability | Industry standard | Blueprint status |
+|---|---|---|
+| Task type differentiation by program | Different programs (SNAP, Medicaid, TANF) have different task schemas, required fields, and workflows (Curam, Pega, Appian, ServiceNow) | **Planned** — a `taskType` field with overlay-definable values lets states add program-specific metadata without fighting the shared schema. Not a full discriminator, but closes the gap for most cases. See issue #193. |
+| Task checklists / sub-items | Required steps or document checklists within a task (ServiceNow, Appian, JSM) | **Not in scope** for the baseline — could be modeled as sub-tasks or a `checklist` field in an overlay. |
+| Task templates | Pre-defined task configurations for recurring work types (ServiceNow, JSM, Pega, Appian) | **Not in scope** for the baseline — standard task creation via the API is the only creation path. |
+
+### Access control
+
+| Capability | Industry standard | Blueprint status |
+|---|---|---|
+| Role enforcement | Roles enforced by platform middleware on every operation | **Planned** — guard stubs reference `$caller.roles`; enforcement is at the service layer until RBAC is implemented. See [Role-based access control](#role-based-access-control). |
+| Field-level access control | Caseworkers can view but not edit certain fields; supervisors see additional fields; sensitive data masked by role (all major platforms) | **Not in scope** — field-level access control is an RBAC platform concern that applies uniformly across all domains. The workflow domain declares which fields exist on Task; the RBAC system governs who can see and edit them. FLAC should be in scope for the RBAC design (see [Role-based access control](#role-based-access-control)), not added separately per domain. |
+| Confidential / sensitive case handling | Domestic violence address confidentiality, restricted-access cases, need-to-know enforcement (Curam, ServiceNow, Salesforce) | **Not in scope** — confidentiality is a property of the case, not the task. The [Case Management](case-management.md) domain owns the confidentiality model (restricted-access flags, need-to-know enforcement, DV address confidentiality). Workflow enforces access based on what case management and RBAC expose; it does not own the concept. |
+| Read access logging | Logging who viewed sensitive task data (PII/PHI), not just who changed state — required for HIPAA and federal QC (Curam, ServiceNow, Salesforce) | **Not in scope** — PHI/HIPAA read logging is a cross-cutting compliance infrastructure concern handled at the platform level (API gateway, database audit trail, security tooling), applied uniformly across all domains. The workflow domain captures state changes via domain events; read access logging is outside the contract boundary and is not a per-domain implementation concern. |
+
+### Integration and events
+
+| Capability | Industry standard | Blueprint status |
+|---|---|---|
+| Event-triggered task creation | Tasks auto-created when domain events fire (e.g., `application.submitted` → review task) | **Planned** — event infrastructure in place; wiring not yet implemented. See [Cross-domain event wiring](#cross-domain-event-wiring). |
+| Real-time event streaming / webhooks | Push notifications to external subscribers when events fire (JSM webhooks, ServiceNow Event Management, Pega, Appian) | **Not in scope** — every domain produces events; a per-domain webhook API creates fragmentation. Real-time delivery belongs at the platform level as a cross-cutting subscription mechanism (analogous to ServiceNow Event Management or JSM's platform-wide webhook registration), not duplicated per domain. The workflow domain's contribution is the well-defined event schema and payload, which is already a contract artifact. |
+| Event replay | Ability to replay past events for debugging or migrating to a new system (ServiceNow, Pega, Appian) | **Not in scope** — replay is a cross-cutting platform operations concern (debugging, migration, reprocessing) that applies across all domains equally. The workflow domain's contribution is immutable, queryable events; replay infrastructure belongs at the platform level alongside event streaming. |
+| Notification on state change | Configurable push notifications on escalation, block, completion, etc. | **Not in scope** — handled by the [communications domain](../cross-cutting/communication.md), which subscribes to domain events. |
+
+### Compliance and government-specific
+
+| Capability | Industry standard | Blueprint status |
+|---|---|---|
+| Federal reporting exports | Structured exports for SNAP (FNS-388), Medicaid (T-MSIS), and other federal reporting requirements (Curam, Pega, ServiceNow) | **Not in scope** — the metrics contract covers operational KPIs; federal reporting formats are a reporting-domain concern. |
+| Fair hearing / appeals tracking | Dedicated workflow for applicant appeals with hearing date scheduling, statutory deadlines (90-day rule), and outcome tracking (Curam, Pega, ServiceNow) | **Planned** — the design path is clear: fair hearing states and transitions added to the existing state machine, scoped via a `taskTypeIsFairHearing` guard; a `fair_hearing` SLA type with the 90-day deadline in `workflow-sla-types.yaml`; and assignment rules routing to the appropriate queue. No new object type or separate state machine needed. Depends on issue #193 (task type as lifecycle discriminator). |
+| Change of circumstance handling | When household composition, income, or program status changes mid-case, associated tasks are automatically created or updated (Curam, Pega) | **Not in scope** — cross-domain event wiring (planned, see [Cross-domain event wiring](#cross-domain-event-wiring)) is the blueprint's mechanism for this. States configure which domain events trigger which task types via event wiring rules — the program-specific mapping is configuration, not a workflow contract gap. |
+| Overpayment / recoupment tracking | Tracking and recovering benefits paid in error, including repayment schedules and federal reporting (Curam, Pega) | **Not in scope** — financial recoupment is a case management or financial domain concern, not workflow. |
+
+### Customization
+
+| Capability | Industry standard | Blueprint status |
+|---|---|---|
+| Overlay support for behavioral YAMLs | N/A (no analogous open standard; customization in commercial platforms is GUI-based) | **Planned** — states cannot yet overlay `*-sla-types.yaml`, `*-metrics.yaml`, or `*-state-machine.yaml`. See issue #174. |
+
+---
+
+## References
+
+### Systems and platforms compared
+
+| System | Description |
+|---|---|
+| [Atlassian Jira Service Management (JSM)](https://www.atlassian.com/software/jira/service-management) | IT service management platform with configurable workflows, automation rules, and SLA tracking. Widely used in government IT operations. |
+| [ServiceNow](https://www.servicenow.com/) | Enterprise workflow and service management platform. Leading government adopter; strong SLA, timer, escalation, and notification features. |
+| [IBM Curam](https://www.ibm.com/products/curam-social-program-management) | Social program management platform purpose-built for benefits administration (SNAP, Medicaid, TANF). Used by several U.S. states and international governments. |
+| [Salesforce Government Cloud](https://www.salesforce.com/solutions/government/) | CRM and case management platform for public sector. FedRAMP authorized; used by several states for benefits case management and constituent services. |
+| [Pegasystems (Pega)](https://www.pega.com/) | BPM and case management platform. Named a Leader in the Gartner Magic Quadrant for BPM-Platform-Based Case Management Frameworks; significant government and healthcare presence. Key docs: [Case Life Cycle Design](https://academy.pega.com/topic/case-life-cycle-design/v2), [SLAs](https://academy.pega.com/topic/service-level-agreements/v6), [Assignment Routing](https://academy.pega.com/topic/assignment-routing/v1), [Get Next Work](https://academy.pega.com/topic/get-next-work-feature/v1). |
+| [Appian](https://appian.com/) | Low-code BPM and case management platform. Named a Leader in Gartner's LCAP and BPM Magic Quadrants; FedRAMP authorized with documented government credentials. Key docs: [Case Management Studio](https://docs.appian.com/suite/help/26.2/case-management-studio-overview.html), [Automated Case Routing](https://docs.appian.com/suite/help/24.4/cms-automated-case-routing-overview.html), [KPIs](https://docs.appian.com/suite/help/25.4/process-custom-kpis.html), [Record Events](https://docs.appian.com/suite/help/25.4/record-events.html). |
+| [Camunda](https://camunda.com/) | Open-source BPMN-native workflow and process orchestration engine. Useful reference for BPMN-aligned state machine and human task patterns. |
+| [WfMC / WS-HumanTask](https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=bpel4people) | OASIS standard for human task management in service-oriented architectures. Predecessor to modern task API patterns; referenced for WS-HumanTask state model. |
+
+### Standards and specifications
+
+| Standard | Description |
+|---|---|
+| [BPMN 2.0](https://www.omg.org/spec/BPMN/2.0/) | Business Process Model and Notation — OMG industry standard for process modeling. |
+| [JSON Logic](https://jsonlogic.com/) | Portable rule/expression format used in the blueprint for guards, rule conditions, and metric filters. |
+| [OpenAPI 3.x](https://spec.openapis.org/oas/v3.1.0) | API specification standard used for all blueprint contract artifacts. |
+
+### Federal regulatory references
+
+| Regulation | Description |
+|---|---|
+| [7 CFR Part 273](https://www.ecfr.gov/current/title-7/subtitle-B/chapter-II/subchapter-C/part-273) | SNAP program regulations — processing timelines, quality control requirements, and the basis for blueprint SLA deadlines (7-day expedited, 30-day standard). |
+| [42 CFR Part 435](https://www.ecfr.gov/current/title-42/chapter-IV/subchapter-C/part-435) | Medicaid eligibility regulations — 45-day processing requirement for most Medicaid; 90-day for disability-related determinations. |
+
+### Industry research
+
+| Source | Description |
+|---|---|
+| [Gartner Magic Quadrant for BPM-Platform-Based Case Management Frameworks](https://www.gartner.com/en/documents/3488121) | Vendor landscape for case management platforms. Leaders include Pega, Appian, IBM, and Microsoft. |
+| [Gartner Top Trends in Government: Case Management as a Service (2022)](https://www.gartner.com/en/doc/785084-top-trend-in-government-case-management-as-a-service) | Government-specific case management trends; introduces the CMaaS composable architecture model. |
+| [Gartner Magic Quadrant for Business Orchestration and Automation Technologies](https://www.flowable.com/gartner-market-guide) | Successor to the BPM MQ; covers workflow orchestration vendors including Appian, Pega, ServiceNow, and Flowable. |
