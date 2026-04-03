@@ -42,6 +42,8 @@ Every workflow system tracks which stage a work item is in — typically somethi
 
 **States:** `pending`, `in_progress`, `awaiting_client`, `awaiting_verification`, `escalated`, `pending_review`, `completed`, `cancelled`
 
+The state set covers all task types in the domain. Task-type-specific states (e.g., fair hearing states like `hearing_scheduled`) are added alongside the baseline states and are only reachable via transitions guarded on `$object.taskType` — making them invisible to incompatible task types at runtime without requiring a separate state machine or separate API resource. See [Guards and access control](#guards-and-access-control) for how this works.
+
 **Design decisions:**
 
 - **Task state is an explicit field, not derived from timestamps or computed values.** Deriving state from timestamps is fragile — if `completedAt` is set but then cleared, what is the state? All major systems model task state explicitly. Explicit state is unambiguous and directly queryable.
@@ -191,6 +193,7 @@ Workflow systems enforce preconditions on state transitions to prevent unauthori
 
 - **`await-client` and `await-verification` require `callerIsAssignedWorker` — supervisors cannot block tasks unilaterally.** Blocking a task on external input reflects the caseworker's knowledge of the case. If a supervisor needs to block a task, they can reassign it to themselves. States that want supervisors to be able to await can add `callerIsSupervisor` to these guards via overlay.
 - **There is no `entryGuards` concept per state — every transition must carry its own guards explicitly.** This is standard for declarative state machines but requires discipline when adding new transitions — a missing guard is a silent gap in access control. A future schema enhancement could enforce this at the contract level.
+- **Guards on `$object.taskType` enable multiple lifecycles within a single state machine.** Task-type-specific transitions carry a named guard that checks `$object.taskType` (e.g., `taskTypeIsFairHearing: taskType equals fair_hearing`). This scopes those transitions to the applicable task type without requiring a separate state machine file, a separate API resource, or separate endpoints. The result is one API surface and shared infrastructure (queues, SLA tracking, domain events, assignment rules) serving multiple task lifecycles — consistent with how Pega (`caseTypeID`), Salesforce (`RecordTypeId`), and JSM (issue type) scope available operations within a single object type's API. Shared transitions like `cancel`, `assign`, and `set-priority` carry no task type guard and apply to all types. The trade-off: the OpenAPI status enum includes states from all task types, so `taskType` is the authoritative constraint on which states are reachable for a given task — not the schema.
 
 **We support:** simple `field/operator/value` guards; composition operators (`any`, `all`) at the transition level for OR/AND conditions across named guards.
 
@@ -496,7 +499,7 @@ Status values: **Planned** = on the roadmap with a tracking issue; **Partial** =
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
 | Federal reporting exports | Structured exports for SNAP (FNS-388), Medicaid (T-MSIS), and other federal reporting requirements (Curam, Pega, ServiceNow) | **Not in scope** — the metrics contract covers operational KPIs; federal reporting formats are an adapter-layer or reporting-domain concern. |
-| Fair hearing / appeals tracking | Dedicated workflow for applicant appeals with hearing date scheduling, statutory deadlines (90-day rule), and outcome tracking (Curam, Pega, ServiceNow) | **Adapter layer** — fair hearings are a distinct enough process to warrant their own domain or a separate state machine. Bolting it onto workflow would overconstrain the task model. |
+| Fair hearing / appeals tracking | Dedicated workflow for applicant appeals with hearing date scheduling, statutory deadlines (90-day rule), and outcome tracking (Curam, Pega, ServiceNow) | **Planned** — the design path is clear: fair hearing states and transitions added to the existing state machine, scoped via a `taskTypeIsFairHearing` guard; a `fair_hearing` SLA type with the 90-day deadline in `workflow-sla-types.yaml`; and assignment rules routing to the appropriate queue. No new object type or separate state machine needed. Depends on issue #193 (task type as lifecycle discriminator). |
 | Change of circumstance handling | When household composition, income, or program status changes mid-case, associated tasks are automatically created or updated (Curam, Pega) | **Adapter layer** — cross-domain event wiring (planned) provides the mechanism; the specific task creation logic for change-of-circumstance events is program- and jurisdiction-specific. |
 | Overpayment / recoupment tracking | Tracking and recovering benefits paid in error, including repayment schedules and federal reporting (Curam, Pega) | **Not in scope** — financial recoupment is a case management or financial domain concern, not workflow. |
 
