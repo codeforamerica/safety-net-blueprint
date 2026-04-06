@@ -24,10 +24,6 @@ See [Workflow Domain](workflow.md) for the architecture overview and [Contract-D
 - [Domain events](#domain-events)
 - [Metrics](#metrics)
 
-**Planned capabilities**
-- [Role-based access control](#role-based-access-control)
-- [Cross-domain event wiring](#cross-domain-event-wiring)
-
 ---
 - [Known gaps and future considerations](#known-gaps-and-future-considerations)
 - [References](#references)
@@ -368,66 +364,6 @@ States and federal partners need operational visibility into queue health, proce
 
 ---
 
-## Role-based access control
-
-> **Status: Planned.** Guards referencing `$caller.role` and `$caller.type` are named and wired. Enforcement is at the service layer until this capability is implemented.
-
-The RBAC system provides the execution context values (`$caller.role`, `$caller.type`, `$caller.id`) that guards evaluate against. It is responsible for:
-
-- Authenticating callers and resolving their role (caseworker, supervisor, system)
-- Injecting caller context into the state machine execution environment
-- Enforcing role checks declared in guard expressions
-
-**Interface with the state machine:**
-
-Guards reference caller context via `$caller.*` variables. The conventions used in the baseline:
-
-| Variable | Expected values | Used in |
-|---|---|---|
-| `$caller.id` | UUID of the authenticated user or service account | `callerIsAssignedWorker` |
-| `$caller.role` | `caseworker`, `supervisor`, `system` | `callerIsSupervisor`, `callerIsSystem` |
-
-`system` is a valid role value rather than a separate `type` dimension. JSM and ServiceNow use roles or service accounts to distinguish automated callers — a separate type field adds a dimension without additional expressiveness.
-
-**In the mock server**, caller context is supplied via request headers:
-- `X-Caller-Id` — required for all state transitions; the caller's identifier
-- `X-Caller-Role` — optional; values: `caseworker`, `supervisor`, `system`. Guards that check `$caller.role` (e.g., `callerIsSupervisor`) will fail if this header is omitted.
-
-**In safety net benefits processing:**
-
-Role separation is required by federal quality control regulations in SNAP and Medicaid. A caseworker cannot approve their own determination — that requires a supervisor. States are expected to define their own role hierarchy and map it to the `supervisor` value used in the guard, which may include roles like eligibility supervisor, unit manager, or quality control reviewer.
-
----
-
-## Cross-domain event wiring
-
-> **Status: Planned.** The domain events infrastructure is in place. The wiring that allows events from other domains to trigger workflow task creation is not yet implemented.
-
-Cross-domain event wiring allows the workflow domain to react to events emitted by other domains — creating tasks automatically rather than requiring manual task creation via the API. It is responsible for:
-
-- Subscribing to domain events from other domains (e.g., intake, case management, scheduling)
-- Mapping incoming events to task creation payloads
-- Triggering `onCreate` effects (assignment rules, priority rules, domain event emission) for each created task
-
-**Interface with the state machine:**
-
-Tasks created via cross-domain wiring go through the same `onCreate` lifecycle as manually created tasks — assignment and priority rules evaluate immediately, and a `task.created` domain event is emitted.
-
-**In safety net benefits processing:**
-
-Common cross-domain triggers that should automatically create workflow tasks:
-
-| Triggering event | Domain | Task created |
-|---|---|---|
-| `application.submitted` | Intake | SNAP/Medicaid/TANF application review task |
-| `application.submitted` (expedited) | Intake | Expedited SNAP review task (routed to expedited queue) |
-| `case.recertification_due` | Case Management | Recertification review task |
-| `appointment.no_show` | Scheduling | Follow-up outreach task |
-| `document.received` | Document Management | Document review task (may resume `awaiting_client` task) |
-| `verification.result_received` | External (IEVS/FDSH) | Triggers `system-resume` on existing `awaiting_verification` task |
-
----
-
 ## Known gaps and future considerations
 
 Standard capabilities found in major workflow systems (JSM, ServiceNow, IBM Curam, Salesforce Government Cloud, Pega, Appian), and the blueprint's current coverage. See [References](#references) for system descriptions.
@@ -482,7 +418,7 @@ Status values: **Planned** = on the roadmap with a tracking issue; **Partial** =
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Role enforcement | Roles enforced by platform middleware on every operation | **Planned** — guard stubs reference `$caller.roles`; enforcement is at the service layer until RBAC is implemented. See [Role-based access control](#role-based-access-control). |
+| Role enforcement | Roles enforced by platform middleware on every operation | **Adapter layer** — the workflow contract is complete: guards declare role requirements via `$caller.role` and `$caller.id`; the `callerIsSupervisor` and `callerIsSystem` guard stubs are the integration points. Authenticating callers and injecting `$caller.*` context into the execution environment is the adapter's responsibility. Federal QC regulations require the `supervisor` role to be mapped from the state's role hierarchy (eligibility supervisor, unit manager, QC reviewer, etc.). |
 | Field-level access control | Caseworkers can view but not edit certain fields; supervisors see additional fields; sensitive data masked by role (all major platforms) | **Not in scope** — field-level access control is an RBAC platform concern that applies uniformly across all domains. The workflow domain declares which fields exist on Task; the RBAC system governs who can see and edit them. FLAC should be in scope for the RBAC design (see [Role-based access control](#role-based-access-control)), not added separately per domain. |
 | Confidential / sensitive case handling | Domestic violence address confidentiality, restricted-access cases, need-to-know enforcement (Curam, ServiceNow, Salesforce) | **Not in scope** — confidentiality is a property of the case, not the task. The [Case Management](case-management.md) domain owns the confidentiality model (restricted-access flags, need-to-know enforcement, DV address confidentiality). Workflow enforces access based on what case management and RBAC expose; it does not own the concept. |
 | Read access logging | Logging who viewed sensitive task data (PII/PHI), not just who changed state — required for HIPAA and federal QC (Curam, ServiceNow, Salesforce) | **Not in scope** — PHI/HIPAA read logging is a cross-cutting compliance infrastructure concern handled at the platform level (API gateway, database audit trail, security tooling), applied uniformly across all domains. The workflow domain captures state changes via domain events; read access logging is outside the contract boundary and is not a per-domain implementation concern. |
@@ -491,7 +427,7 @@ Status values: **Planned** = on the roadmap with a tracking issue; **Partial** =
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Event-triggered task creation | Tasks auto-created when domain events fire (e.g., `application.submitted` → review task) | **Planned** — event infrastructure in place; wiring not yet implemented. See [Cross-domain event wiring](#cross-domain-event-wiring). See issue #163. |
+| Event-triggered task creation | Tasks auto-created when domain events fire (e.g., `application.submitted` → review task) | **Planned** — domain events infrastructure is in place; the wiring that maps incoming events to task creation is not yet implemented. Tasks created via event wiring go through the same `onCreate` lifecycle as manually created tasks. Example triggers: `application.submitted` → application review task; `case.recertification_due` → recertification task; `appointment.no_show` → outreach task; `verification.result_received` → `system-resume` on an `awaiting_verification` task. See issue #163. |
 | Real-time event streaming / webhooks | Push notifications to external subscribers when events fire (JSM webhooks, ServiceNow Event Management, Pega, Appian) | **Not in scope** — every domain produces events; a per-domain webhook API creates fragmentation. Real-time delivery belongs at the platform level as a cross-cutting subscription mechanism (analogous to ServiceNow Event Management or JSM's platform-wide webhook registration), not duplicated per domain. The workflow domain's contribution is the well-defined event schema and payload, which is already a contract artifact. |
 | Event replay | Ability to replay past events for debugging or migrating to a new system (ServiceNow, Pega, Appian) | **Not in scope** — replay is a cross-cutting platform operations concern (debugging, migration, reprocessing) that applies across all domains equally. The workflow domain's contribution is immutable, queryable events; replay infrastructure belongs at the platform level alongside event streaming. |
 | Notification on state change | Configurable push notifications on escalation, block, completion, etc. | **Not in scope** — handled by the [communications domain](../cross-cutting/communication.md), which subscribes to domain events. |
