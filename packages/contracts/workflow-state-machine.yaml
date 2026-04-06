@@ -378,6 +378,26 @@ transitions:
         data:
           reason: sla_deadline_approaching
         description: Emit a domain event recording the SLA-triggered escalation
+  - trigger: auto-escalate-sla-breach
+    from:
+      - pending
+      - in_progress
+      - escalated
+    to: escalated
+    "on": timer
+    after: 0h
+    relativeTo: slaDeadline
+    calendarType: calendar
+    actors: []
+    effects:
+      - type: evaluate-rules
+        ruleType: priority
+        description: Re-evaluate priority on SLA breach
+      - type: event
+        action: sla_breached
+        data:
+          reason: sla_deadline_exceeded
+        description: Emit a domain event recording the SLA deadline breach for federal compliance reporting
   - trigger: auto-cancel-awaiting-client
     from: awaiting_client
     to: cancelled

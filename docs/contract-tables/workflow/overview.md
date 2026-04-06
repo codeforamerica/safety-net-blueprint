@@ -87,6 +87,7 @@ These transitions fire automatically based on elapsed time — no actor action i
 |---------|------|----|-------|-------------|----------|---------|
 | `auto-escalate` | pending | escalated | 72h | createdAt | business | Re-evaluate priority rules<br>Emit `auto_escalated` event |
 | `auto-escalate-sla-warning` | in_progress | escalated | -48h | slaDeadline | calendar | Re-evaluate priority rules<br>Emit `auto_escalated` event |
+| `auto-escalate-sla-breach` | pending,in_progress,escalated | escalated | 0h | slaDeadline | calendar | Re-evaluate priority rules<br>Emit `sla_breached` event |
 | `auto-cancel-awaiting-client` | awaiting_client | cancelled | 30d | blockedAt | calendar | Set `cancelledAt` → current time<br>Emit `auto_cancelled` event |
 | `auto-resume-awaiting-verification` | awaiting_verification | in_progress | 7d | blockedAt | calendar | Set `blockedAt` → nothing *(clears field)*<br>Emit `auto_resumed` event |
 

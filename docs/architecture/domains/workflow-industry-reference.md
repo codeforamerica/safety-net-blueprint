@@ -117,6 +117,7 @@ Most workflow systems support time-based automation — escalating tasks that si
 
 - **Timer transitions support `relativeTo: slaDeadline` with a negative duration, firing before the breach point.** Reacting only after a deadline is missed is too late. A `-48h` offset gives supervisors time to intervene. This is how JSM and ServiceNow are typically configured to prevent breaches rather than just record them.
 - **On SLA warning, the timer transition fires a state change to `escalated`, not just a notification.** JSM issues an SLA warning notification without changing task status. ServiceNow auto-escalates on breach. We follow the ServiceNow model: the state change + domain event creates a clear audit trail, triggers assignment and priority re-evaluation, and makes the escalation visible in queue views — all without requiring a separate notification integration. States that prefer notification-only can remove this timer via overlay.
+- **`auto-escalate-sla-breach` fires at `0h` relative to `slaDeadline`, emitting a distinct `sla_breached` event at the deadline moment.** ServiceNow fires a distinct breach escalation separate from the warning. The blueprint follows the same model: the breach transition ensures a clear, queryable state change and a domain event carrying breach data for federal compliance reporting — distinct from the `-48h` warning transition.
 - **All `after` durations in the baseline state machine are illustrative placeholders, expected to be overridden per state.** The correct timer thresholds vary by program type, jurisdiction, and policy — SNAP expedited (7-day deadline) needs a much shorter `auto-escalate` threshold than SNAP standard (30-day deadline), and neither baseline value should be used in production without review. Baseline values in the state machine:
 
   | Trigger | From | To | After | Relative to | Calendar type |
@@ -404,7 +405,6 @@ Status values: **Planned** = on the roadmap with a tracking issue; **Partial** =
 | SLA retroactive recalculation | When task attributes change after creation (e.g., `isExpedited` is set), SLA deadlines are recalculated accordingly (ServiceNow, Pega, Curam) | **Planned** — see issue #191. |
 | Deadline extensions | Formal process for extending a deadline with documented justification (ServiceNow, Curam, Pega) | **Planned** — see issue #192. |
 | Grace period handling | A defined window after the deadline before adverse action is taken — common in SNAP and Medicaid processing | **Planned** — see issue #197. |
-| SLA breach event | Distinct escalation or event at the deadline moment | **Planned** — see issue #170. |
 
 ### Task structure and types
 
