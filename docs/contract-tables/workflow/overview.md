@@ -76,6 +76,8 @@ These transitions fire when a caseworker, supervisor, or the system calls the co
 | `submit-for-review` | in_progress, escalated | pending_review | callerIsAssignedWorker | Emit `submitted_for_review` event |
 | `approve` | pending_review | completed | callerIsSupervisor | Set `completedAt` → current time<br>Set `outcome` → `$request.outcome`<br>Set `completionNotes` → `$request.notes`<br>Emit `approved` event |
 | `return-to-worker` | pending_review | in_progress | callerIsSupervisor | Emit `returned_to_worker` event |
+| `assign` | pending, in_progress, escalated, awaiting_client, awaiting_verification, pending_review |  | callerIsSupervisor | Set `assignedToId` → `$request.assignedToId`<br>Set `queueId` → `$request.queueId`<br>Emit `assigned` event |
+| `set-priority` | pending, in_progress, escalated, awaiting_client, awaiting_verification, pending_review |  | callerIsSupervisor | Set `priority` → `$request.priority`<br>Emit `priority_changed` event |
 
 ### Timer-triggered
 
@@ -99,8 +101,8 @@ Guards are conditions checked before a transition fires. A transition will not e
 |-------|-----------|
 | `taskIsUnassigned` | `assignedToId` is not set |
 | `callerIsAssignedWorker` | `assignedToId` = `$caller.id` |
-| `callerIsSupervisor` | `$caller.role` = `supervisor` |
-| `callerIsSystem` | `$caller.role` = `system` |
+| `callerIsSupervisor` | `$caller.roles` contains any of `supervisor` |
+| `callerIsSystem` | `$caller.roles` contains any of `system` |
 
 ---
 
@@ -124,6 +126,8 @@ Data sent when calling a trigger endpoint. Required fields must always be includ
 | `submit-for-review` | — | — |
 | `approve` | `outcome` *(string)* | `notes` *(string)* |
 | `return-to-worker` | `reason` *(string)* | — |
+| `assign` | `assignedToId` *(string)* | `queueId` *(string)* |
+| `set-priority` | `priority` *(string)* | `reason` *(string)* |
 
 ---
 

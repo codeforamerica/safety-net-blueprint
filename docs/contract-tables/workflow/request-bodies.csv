@@ -13,3 +13,5 @@ system-resume,source: string (required); result: string
 submit-for-review,(none)
 approve,outcome: string (required); notes: string
 return-to-worker,reason: string (required)
+assign,assignedToId: string (required); queueId: string
+set-priority,priority: string (required); reason: string

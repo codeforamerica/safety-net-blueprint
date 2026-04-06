@@ -110,6 +110,63 @@ test('evaluateGuard — is_null fails when field has value', () => {
 });
 
 // =============================================================================
+// evaluateGuard — contains_any
+// =============================================================================
+
+test('evaluateGuard — contains_any passes when array contains one match', () => {
+  const guard = { field: '$caller.roles', operator: 'contains_any', value: ['supervisor', 'state_admin'] };
+  const context = { caller: { roles: ['supervisor'] } };
+  const result = evaluateGuard(guard, {}, context);
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuard — contains_any fails when array has no match', () => {
+  const guard = { field: '$caller.roles', operator: 'contains_any', value: ['supervisor', 'state_admin'] };
+  const context = { caller: { roles: ['caseworker'] } };
+  const result = evaluateGuard(guard, {}, context);
+  assert.strictEqual(result.pass, false);
+});
+
+test('evaluateGuard — contains_any passes when multiple roles and one matches', () => {
+  const guard = { field: '$caller.roles', operator: 'contains_any', value: ['supervisor'] };
+  const context = { caller: { roles: ['caseworker', 'supervisor'] } };
+  const result = evaluateGuard(guard, {}, context);
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuard — contains_any fails when caller has no roles', () => {
+  const guard = { field: '$caller.roles', operator: 'contains_any', value: ['supervisor'] };
+  const context = { caller: { roles: [] } };
+  const result = evaluateGuard(guard, {}, context);
+  assert.strictEqual(result.pass, false);
+});
+
+// =============================================================================
+// evaluateGuard — contains_all
+// =============================================================================
+
+test('evaluateGuard — contains_all passes when array contains all values', () => {
+  const guard = { field: '$caller.roles', operator: 'contains_all', value: ['caseworker', 'supervisor'] };
+  const context = { caller: { roles: ['caseworker', 'supervisor'] } };
+  const result = evaluateGuard(guard, {}, context);
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuard — contains_all fails when missing one value', () => {
+  const guard = { field: '$caller.roles', operator: 'contains_all', value: ['caseworker', 'supervisor'] };
+  const context = { caller: { roles: ['caseworker'] } };
+  const result = evaluateGuard(guard, {}, context);
+  assert.strictEqual(result.pass, false);
+});
+
+test('evaluateGuard — contains_all passes for single-value requirement', () => {
+  const guard = { field: '$caller.roles', operator: 'contains_all', value: ['supervisor'] };
+  const context = { caller: { roles: ['caseworker', 'supervisor'] } };
+  const result = evaluateGuard(guard, {}, context);
+  assert.strictEqual(result.pass, true);
+});
+
+// =============================================================================
 // evaluateGuard — equals
 // =============================================================================
 
@@ -285,6 +342,31 @@ test('findTransition — returns error when from is an array and status is not i
   const { transition, error } = findTransition(sm, 'cancel', { status: 'completed' });
   assert.strictEqual(transition, null);
   assert.ok(error);
+});
+
+test('findTransition — finds transition with no to field (in-place action)', () => {
+  const sm = {
+    transitions: [
+      { trigger: 'assign', from: ['pending', 'in_progress'], guards: [], effects: [] }
+    ]
+  };
+  const { transition, error } = findTransition(sm, 'assign', { status: 'pending' });
+  assert.ok(transition);
+  assert.strictEqual(transition.to, undefined);
+  assert.strictEqual(error, null);
+});
+
+test('findTransition — in-place action works from any listed state', () => {
+  const sm = {
+    transitions: [
+      { trigger: 'assign', from: ['pending', 'in_progress', 'escalated'], guards: [], effects: [] }
+    ]
+  };
+  for (const status of ['pending', 'in_progress', 'escalated']) {
+    const { transition, error } = findTransition(sm, 'assign', { status });
+    assert.ok(transition, `expected transition for status=${status}`);
+    assert.strictEqual(error, null);
+  }
 });
 
 // =============================================================================

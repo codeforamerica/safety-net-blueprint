@@ -49,12 +49,27 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
         });
       }
 
+      // Parse caller roles from header (comma-separated)
+      const callerRoles = req.headers['x-caller-roles']
+        ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
+        : [];
+
+      // Enforce actors — if transition defines actors, caller must have at least one matching role
+      if (transition.actors && transition.actors.length > 0) {
+        if (!callerRoles.some(r => transition.actors.includes(r))) {
+          return res.status(403).json({
+            code: 'FORBIDDEN',
+            message: `Transition "${trigger}" requires one of the following roles: ${transition.actors.join(', ')}`
+          });
+        }
+      }
+
       // Support X-Mock-Now header for clock simulation in testing
       const now = req.headers['x-mock-now'] || new Date().toISOString();
       const context = {
         caller: {
           id: callerId,
-          role: req.headers['x-caller-role'] || null
+          roles: callerRoles
         },
         object: { ...resource },  // Pre-transition snapshot
         request: req.body || {},
@@ -80,7 +95,11 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       const updated = { ...resource };
       if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
       const { pendingCreates, pendingRuleEvaluations, pendingEvents } = applyEffects(transition.effects, updated, context);
-      updated.status = transition.to;
+      // Only update status if the transition declares a non-empty target state.
+      // In-place transitions (assign, set-priority) omit `to` and leave status unchanged.
+      if (transition.to != null && transition.to !== '') {
+        updated.status = transition.to;
+      }
 
       // Update SLA clock state based on new status
       if (slaTypes.length > 0 && updated.slaInfo?.length > 0) {

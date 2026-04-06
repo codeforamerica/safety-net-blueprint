@@ -30,18 +30,22 @@ guards:
     operator: equals
     value: $caller.id
   - id: callerIsSupervisor
-    field: $caller.role
-    operator: equals
-    value: supervisor
+    field: $caller.roles
+    operator: contains_any
+    value:
+      - supervisor
   - id: callerIsSystem
-    field: $caller.role
-    operator: equals
-    value: system
+    field: $caller.roles
+    operator: contains_any
+    value:
+      - system
 transitions:
   - trigger: claim
     from: pending
     to: in_progress
-    actors: []
+    actors:
+      - caseworker
+      - supervisor
     guards:
       - taskIsUnassigned
     effects:
@@ -55,7 +59,9 @@ transitions:
   - trigger: complete
     from: in_progress
     to: completed
-    actors: []
+    actors:
+      - caseworker
+      - supervisor
     guards:
       - callerIsAssignedWorker
     effects:
@@ -93,7 +99,9 @@ transitions:
   - trigger: release
     from: in_progress
     to: pending
-    actors: []
+    actors:
+      - caseworker
+      - supervisor
     guards:
       - callerIsAssignedWorker
     effects:
@@ -115,7 +123,9 @@ transitions:
   - trigger: escalate
     from: in_progress
     to: escalated
-    actors: []
+    actors:
+      - caseworker
+      - supervisor
     guards:
       - any:
           - callerIsAssignedWorker
@@ -136,7 +146,8 @@ transitions:
   - trigger: escalate
     from: pending
     to: escalated
-    actors: []
+    actors:
+      - supervisor
     guards:
       - callerIsSupervisor
     effects:
@@ -155,7 +166,8 @@ transitions:
   - trigger: de-escalate
     from: escalated
     to: pending
-    actors: []
+    actors:
+      - supervisor
     guards:
       - callerIsSupervisor
     effects:
@@ -174,7 +186,8 @@ transitions:
       - in_progress
       - escalated
     to: cancelled
-    actors: []
+    actors:
+      - supervisor
     guards:
       - callerIsSupervisor
     effects:
@@ -190,7 +203,8 @@ transitions:
   - trigger: reopen
     from: cancelled
     to: pending
-    actors: []
+    actors:
+      - supervisor
     guards:
       - callerIsSupervisor
     effects:
@@ -212,7 +226,9 @@ transitions:
   - trigger: await-client
     from: in_progress
     to: awaiting_client
-    actors: []
+    actors:
+      - caseworker
+      - supervisor
     guards:
       - callerIsAssignedWorker
     effects:
@@ -226,7 +242,9 @@ transitions:
   - trigger: await-verification
     from: in_progress
     to: awaiting_verification
-    actors: []
+    actors:
+      - caseworker
+      - supervisor
     guards:
       - callerIsAssignedWorker
     effects:
@@ -242,7 +260,9 @@ transitions:
       - awaiting_client
       - awaiting_verification
     to: in_progress
-    actors: []
+    actors:
+      - caseworker
+      - supervisor
     guards:
       - any:
           - callerIsAssignedWorker
@@ -277,7 +297,9 @@ transitions:
       - in_progress
       - escalated
     to: pending_review
-    actors: []
+    actors:
+      - caseworker
+      - supervisor
     guards:
       - callerIsAssignedWorker
     effects:
@@ -287,7 +309,8 @@ transitions:
   - trigger: approve
     from: pending_review
     to: completed
-    actors: []
+    actors:
+      - supervisor
     guards:
       - callerIsSupervisor
     effects:
@@ -311,7 +334,8 @@ transitions:
   - trigger: return-to-worker
     from: pending_review
     to: in_progress
-    actors: []
+    actors:
+      - supervisor
     guards:
       - callerIsSupervisor
     effects:
@@ -410,6 +434,56 @@ transitions:
         data:
           reason: verification_timeout
         description: Emit a domain event recording the automatic resumption
+  - trigger: assign
+    from:
+      - pending
+      - in_progress
+      - escalated
+      - awaiting_client
+      - awaiting_verification
+      - pending_review
+    actors:
+      - supervisor
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: set
+        field: assignedToId
+        value: $request.assignedToId
+        description: Assign the task to the specified caseworker
+      - type: set
+        field: queueId
+        value: $request.queueId
+        description: Optionally move the task to a different queue
+      - type: event
+        action: assigned
+        data:
+          assignedToId: $request.assignedToId
+          queueId: $request.queueId
+        description: Emit a domain event recording the assignment
+  - trigger: set-priority
+    from:
+      - pending
+      - in_progress
+      - escalated
+      - awaiting_client
+      - awaiting_verification
+      - pending_review
+    actors:
+      - supervisor
+    guards:
+      - callerIsSupervisor
+    effects:
+      - type: set
+        field: priority
+        value: $request.priority
+        description: Override the task priority
+      - type: event
+        action: priority_changed
+        data:
+          priority: $request.priority
+          reason: $request.reason
+        description: Emit a domain event recording the priority change
 onCreate:
   actors: []
   effects:
@@ -532,3 +606,31 @@ requestBodies:
         description: Why the work is being returned for revision
     required:
       - reason
+  - trigger: assign
+    type: object
+    properties:
+      assignedToId:
+        type: string
+        format: uuid
+        description: ID of the caseworker to assign the task to
+      queueId:
+        type: string
+        format: uuid
+        description: Optional queue to move the task to
+    required:
+      - assignedToId
+  - trigger: set-priority
+    type: object
+    properties:
+      priority:
+        type: string
+        enum:
+          - expedited
+          - high
+          - normal
+        description: New priority level for the task
+      reason:
+        type: string
+        description: Optional reason for the priority change
+    required:
+      - priority

@@ -76,10 +76,13 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           || changedFields.some(f => watchedFields.includes(f));
 
         if (shouldFire) {
+          const callerRoles = req.headers['x-caller-roles']
+            ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
+            : [];
           const context = {
             caller: {
               id: req.headers['x-caller-id'],
-              role: req.headers['x-caller-role'] || null
+              roles: callerRoles
             },
             object: { ...existing },
             request: req.body,

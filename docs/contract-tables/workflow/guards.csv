@@ -1,5 +1,5 @@
 Guard Name,Field,Operator,Value
 taskIsUnassigned,assignedToId,is_null,
 callerIsAssignedWorker,assignedToId,equals,$caller.id
-callerIsSupervisor,$caller.role,equals,supervisor
-callerIsSystem,$caller.role,equals,system
+callerIsSupervisor,$caller.roles,contains_any,"[""supervisor""]"
+callerIsSystem,$caller.roles,contains_any,"[""system""]"
