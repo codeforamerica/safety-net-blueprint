@@ -22,7 +22,7 @@ Every state machine transition and lifecycle hook emits an immutable domain even
 
 The task lifecycle is governed by a declarative state machine rather than ad-hoc endpoint logic. Tasks move through states like `pending` → `in_progress` → `awaiting_client` → `in_progress` → `completed`, with each transition triggered by an explicit named action. Transitions declare guards (preconditions) and effects (side effects such as updating fields or emitting events). The state machine also supports multiple lifecycles within the same domain — task-type-specific states and transitions are scoped via `taskType` guards, keeping fair hearing tasks, recertification tasks, and standard casework tasks within a single contract. [Spec: `workflow-state-machine.yaml`](../../../packages/contracts/workflow-state-machine.yaml)
 
-See [State machine](workflow-design-rationale.md#state-machine) in the design reference for the full transition table, guard definitions, and design decisions.
+See [State machine](workflow-design-rationale.md#state-machine) in the industry reference for the full transition table, guard definitions, and design decisions.
 
 ### Rules
 
@@ -33,19 +33,19 @@ Assignment and priority rules express routing logic that doesn't belong in the s
 | `assignment` | Route tasks to the correct queue based on program type and other criteria |
 | `priority` | Set task priority based on expedited status, program type, or other criteria |
 
-Rules use a `first-match-wins` evaluation model. The baseline rules are illustrative — states replace them with their own program-specific routing logic. See [Rules engine](workflow-design-rationale.md#rules-engine) in the design reference.
+Rules use a `first-match-wins` evaluation model. The baseline rules are illustrative — states replace them with their own program-specific routing logic. See [Rules engine](workflow-design-rationale.md#rules-engine) in the industry reference.
 
 ### SLA Types
 
 Federal regulations impose strict processing deadlines on benefits applications. SLA types define these deadlines and the conditions under which the clock pauses (e.g., while waiting on the client) and resumes. Each task carries a `slaInfo` array with one entry per applicable SLA type, tracking deadline status in real time. SLA types are auto-assigned at task creation based on task attributes and updated on every state transition. [Spec: `workflow-sla-types.yaml`](../../../packages/contracts/workflow-sla-types.yaml)
 
-See [SLA and deadline management](workflow-design-rationale.md#sla-and-deadline-management) in the design reference for baseline types, clock behavior, and design decisions.
+See [SLA and deadline management](workflow-design-rationale.md#sla-and-deadline-management) in the industry reference for baseline types, clock behavior, and design decisions.
 
 ### Metrics
 
 Operational metrics give supervisors visibility into queue health, team performance, and compliance risk. Each metric is defined declaratively in a contract artifact — specifying what data to query, how to aggregate it, and optionally what performance target to evaluate against. [Spec: `workflow-metrics.yaml`](../../../packages/contracts/workflow-metrics.yaml)
 
-See [Metrics](workflow-design-rationale.md#metrics) in the design reference for baseline metrics and design decisions.
+See [Metrics](workflow-design-rationale.md#metrics) in the industry reference for baseline metrics and design decisions.
 
 ## Customization
 
@@ -73,7 +73,7 @@ See the [State Overlays Guide](../../guides/state-overlays.md) for overlay mecha
 
 | Document | Description |
 |----------|-------------|
-| [Workflow Design Reference](workflow-design-rationale.md) | Industry reference: vendor comparisons, design decisions, customization points, and comprehensive gap assessment |
+| [Workflow Industry Reference](workflow-design-rationale.md) | Vendor comparisons, design decisions, customization points, and comprehensive gap assessment |
 | [Workflow Prototype](../../prototypes/workflow-prototype.md) | Full design spec — states, transitions, rules, metrics |
 | [Domain Design](../domain-design.md) | Workflow section in the domain overview |
 | [Case Management](case-management.md) | Staff, teams, offices — closely related domain |

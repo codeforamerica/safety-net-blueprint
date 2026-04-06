@@ -1,6 +1,6 @@
-# Workflow Domain: Feature Design Rationale
+# Workflow Domain: Industry Reference
 
-A feature-by-feature reference for the workflow contract architecture. For each capability, this document describes what the blueprint provides, how comparable systems handle the same problem, the trade-offs behind our design choices, and where states are expected to customize via overlays.
+A capability-by-capability comparison of the workflow contract architecture against major workflow and case management platforms. For each capability, this document describes how comparable systems handle the problem, the blueprint's specific approach and the trade-offs behind it, and where states are expected to customize via overlays.
 
 See [Workflow Domain](workflow.md) for the architecture overview and [Contract-Driven Architecture](../contract-driven-architecture.md) for the adapter pattern.
 
