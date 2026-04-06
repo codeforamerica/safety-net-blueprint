@@ -292,7 +292,7 @@ Task:
 Use dot notation in `fields` to reach into related resources across FK chains. Each segment must correspond to an FK field annotated with `x-relationship` on the intermediate schema.
 
 ```yaml
-# Task.caseId → Case, Case.applicationId → Application
+# Task.queueId → Queue, Queue.officeId → Office
 x-relationship:
   resource: Case
   style: expand

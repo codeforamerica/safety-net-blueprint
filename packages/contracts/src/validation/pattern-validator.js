@@ -58,7 +58,9 @@ function isFkField(propName, propSchema) {
 /**
  * Validates that FK fields (properties ending in 'Id' with format: uuid)
  * have x-relationship declared. Use resource: External for fields referencing
- * records outside the blueprint.
+ * records outside the blueprint. Use resource: Polymorphic for fields that are
+ * part of a polymorphic association (paired with a matching *Type discriminator
+ * field) where the target schema varies by type and cannot be statically declared.
  * @param {Object} spec - The OpenAPI spec object
  * @param {Array} errors - Array to push errors to
  */
@@ -74,7 +76,7 @@ export function validateForeignKeys(spec, errors) {
         errors.push({
           path: `components/schemas/${schemaName}/${propPath}`,
           rule: 'fk-x-relationship-required',
-          message: `Schema "${schemaName}": "${propName}" is a UUID FK field and must declare x-relationship: { resource: ResourceName }. Use resource: External for external system references.`,
+          message: `Schema "${schemaName}": "${propName}" is a UUID FK field and must declare x-relationship: { resource: ResourceName }. Use resource: External for external system references. Use resource: Polymorphic for polymorphic associations paired with a *Type discriminator field.`,
           severity: 'error'
         });
       }
