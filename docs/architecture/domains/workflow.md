@@ -10,6 +10,8 @@ See [Domain Design Overview](../domain-design.md) for context and [Contract-Driv
 
 A task is the atomic unit of caseworker activity — reviewing an application, verifying a document, completing a redetermination. It represents a single, ownable piece of work with a clear beginning and end. Tasks are assigned to a single owner (caseworker, supervisor, or automated process) at a time and have an explicit lifecycle governed by the [state machine](#state-machine). They carry `slaInfo` entries that track deadline status against regulatory requirements, and link to a `Queue` that controls routing and visibility. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
 
+Tasks associate with a subject entity via a polymorphic `subjectType` / `subjectId` pair. `subjectType` identifies the kind of record the task is about (e.g., `application`, `case`, `document`); `subjectId` holds the UUID of that record. This replaces a fixed `caseId` FK and allows tasks to be linked to any entity type without schema changes. States extend the `subjectType` enum via overlay to add program-specific entity types. Resolution of `subjectId` is always conditional on `subjectType` — no automatic expansion is performed (consistent with how Salesforce `WhatId`, ServiceNow `parent`, and GitHub `subject_id` handle polymorphic references).
+
 ### Queue
 
 Queues are the organizing structure for caseworker workloads. A queue represents a logical grouping of tasks — typically by program (SNAP, Medicaid), team, or skill — and determines which workers can see and claim which tasks. Tasks enter a queue automatically when created or released, based on assignment rules. Supervisors manage queues to balance workload across their teams. [Spec: `workflow-openapi.yaml`](../../../packages/contracts/workflow-openapi.yaml)
@@ -53,6 +55,7 @@ The baseline contracts are a starting point. States customize via overlays:
 
 - **State machine**: add transitions, extend guards, add effects to existing transitions
 - **Multiple lifecycles**: add task-type-specific states and transitions scoped via `taskType` guards to support multiple lifecycles within the same domain (e.g., fair hearing tasks alongside standard casework tasks)
+- **Subject types**: extend the `subjectType` enum on Task to add program-specific entity types beyond the baseline (`application`, `case`, `document`, `appointment`)
 - **Rules**: replace `workflow-rules.yaml` entirely with state-specific assignment and priority logic
 - **SLA types**: replace or extend `workflow-sla-types.yaml` with state-specific deadlines and pause conditions
 - **Metrics**: replace or extend `workflow-metrics.yaml` with state-specific metrics and targets

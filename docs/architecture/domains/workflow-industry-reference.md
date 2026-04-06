@@ -410,7 +410,7 @@ Status values: **Planned** = on the roadmap with a tracking issue; **Partial** =
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Task-to-record linkage | Tasks associated with the case, application, or entity they are about (JSM, ServiceNow, Curam, Pega) | **Planned** — see issue #177. |
+| Task-to-record linkage | Tasks associated with the case, application, or entity they are about (JSM, ServiceNow, Curam, Pega) | **Supported** — polymorphic `subjectType`/`subjectId` pair on Task. States extend the `subjectType` enum via overlay. |
 | Task type differentiation by program | Different programs (SNAP, Medicaid, TANF) have different task schemas, required fields, and workflows (Curam, Pega, Appian, ServiceNow) | **Planned** — see issue #193. |
 | Task notes / comments | User-authored notes on a task (Pega, Appian, ServiceNow, JSM) | **Not in scope** — notes belong on the case, not the task. Owned by the [Case Management](case-management.md) domain. |
 | Task checklists / sub-items | Required steps or document checklists within a task (ServiceNow, Appian, JSM) | **Not in scope** for the baseline. |

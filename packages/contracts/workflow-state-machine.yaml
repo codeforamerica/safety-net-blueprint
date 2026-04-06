@@ -92,9 +92,10 @@ transitions:
         fields:
           name: $object.name
           description: $object.description
+          subjectType: $object.subjectType
+          subjectId: $object.subjectId
           programType: $object.programType
           isExpedited: $object.isExpedited
-          caseId: $object.caseId
           status: pending
   - trigger: release
     from: in_progress

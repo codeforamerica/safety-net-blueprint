@@ -488,6 +488,9 @@ schema_patterns:
         links-only and can be overridden via state overlay.
         Use resource: External for fields that identify records in systems outside
         the blueprint (e.g., vendor case IDs). The seed generator skips External fields.
+        Use resource: Polymorphic for fields that are part of a polymorphic association
+        paired with a *Type discriminator field — where the target schema varies by type
+        and cannot be statically declared (e.g., subjectId + subjectType).
     examples:
       - field: personId
         type: string
@@ -507,6 +510,12 @@ schema_patterns:
         description: References a record in the state's vendor case management system
         x-relationship:
           resource: External
+      - field: subjectId
+        type: string
+        format: uuid
+        description: Polymorphic reference — target type determined by subjectType
+        x-relationship:
+          resource: Polymorphic
     validation:
       - error: FK field missing x-relationship annotation
         condition: field ends in 'Id', has format uuid, and lacks x-relationship
@@ -514,6 +523,7 @@ schema_patterns:
       - The schema name is derived by removing 'Id' suffix and capitalizing
       - Works for both top-level properties and nested array items
       - resource: External is a reserved value — seed generator skips these fields
+      - resource: Polymorphic is a reserved value — no automatic expansion; consumers resolve conditionally by the paired *Type field
 
 # =============================================================================
 # File Structure# =============================================================================

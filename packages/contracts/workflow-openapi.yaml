@@ -621,12 +621,39 @@ components:
           type: string
           x-enum-source: states[].id
           description: Current lifecycle state. Valid values are injected at resolve time from workflow-state-machine.yaml.
+        subjectType:
+          type: string
+          enum:
+            - application
+            - case
+            - document
+            - appointment
+          description: >
+            The type of entity this task is associated with. Used together with subjectId
+            to form a polymorphic association. States extend the enum via overlay.
+            Resolution of subjectId is conditional on subjectType — no automatic expansion
+            is performed.
+        subjectId:
+          type: string
+          format: uuid
+          description: >
+            Reference to the entity this task is associated with. The target entity type
+            is determined by subjectType. Resolution is conditional on subjectType —
+            consumers must resolve by type; no automatic expansion is performed.
+          x-relationship:
+            resource: Polymorphic
         programType:
           $ref: "./components/common.yaml#/Program"
-          description: The benefits program this task is associated with.
+          description: >
+            The benefits program this task is associated with. Program-specific field
+            used for routing and SLA assignment on application review tasks. Candidate
+            for removal once context enrichment (#203) provides a generic alternative.
         isExpedited:
           type: boolean
-          description: Whether this task requires expedited processing.
+          description: >
+            Whether this task requires expedited processing. SNAP-specific concept tied
+            to the 7-day regulatory deadline. Candidate for removal once context enrichment
+            (#203) provides a generic alternative.
         queueId:
           type: string
           format: uuid
@@ -667,12 +694,6 @@ components:
           description: Reference to the User assigned to this task.
           x-relationship:
             resource: User
-        caseId:
-          type: string
-          format: uuid
-          description: Reference to the Case this task belongs to.
-          x-relationship:
-            resource: Case
         outcome:
           type: string
           description: Completion outcome recorded when the task was completed (e.g., approved, denied).
@@ -904,11 +925,12 @@ components:
         name: Review SNAP application - Rivera household
         description: Review the submitted SNAP application for the Rivera household and verify income documentation.
         status: pending
+        subjectType: application
+        subjectId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
         programType: snap
         isExpedited: true
         queueId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
         priority: expedited
-        caseId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
         slaInfo:
           - slaTypeCode: snap_expedited
 
@@ -919,13 +941,14 @@ components:
         name: Review SNAP application - Rivera household
         description: Review the submitted SNAP application for the Rivera household and verify income documentation.
         status: in_progress
+        subjectType: application
+        subjectId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
         programType: snap
         isExpedited: true
         queueId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
         priority: expedited
         startedAt: '2024-09-02T09:15:00Z'
         assignedToId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-        caseId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
         createdAt: '2024-09-01T14:00:00Z'
         updatedAt: '2024-09-02T09:15:00Z'
 

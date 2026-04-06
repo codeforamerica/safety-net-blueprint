@@ -79,7 +79,7 @@ Fixture FK fields reference other fixture records that actually exist:
 - Cases reference UserExample1 via `assignedToId`
 - Tasks reference QueueExample1/2 via `queueId`
 - Tasks reference UserExample1/2 via `assignedToId`
-- Tasks reference CaseExample1/2 via `caseId`
+- Tasks reference subject entities via `subjectId` (type identified by `subjectType`)
 - Appointments reference PersonExample1/2/3 via `personId`
 - Appointments reference UserExample1/2 via `assignedToId`
 - Incomes reference PersonExample1/2/3 via `personId`
