@@ -444,16 +444,16 @@ Arguments for a caseworker-triggered event with no new state:
 **What's being decided:** How changes to application data made by caseworkers during `under_review` are tracked — and whether the intake domain owns the audit trail or delegates it.
 
 **Considerations:**
-- All major vendors track caseworker changes internally — Cúram versions each evidence update; Pega's case audit framework captures who changed what and when; Salesforce uses field history tracking. None delegate to a separate audit domain.
-- Application data at determination may differ materially from the applicant's original submission — caseworkers correct entries from the interview, reconcile documents, and add information the applicant couldn't provide
-- SNAP regulations require documentation of how eligibility was determined; an audit trail supports this
-- Field-level tracking (who changed what, from what value) is the most granular but most complex; version-level snapshots are simpler but coarser
-- A cross-cutting audit domain (subscribing to events) is architecturally clean but requires data mutation events (Decision 5B)
+- All major vendors implement audit internally — Cúram versions each evidence update; Pega's case audit framework captures who changed what and when; Salesforce uses field history tracking. None delegate to a separate audit domain, but all are monolithic systems where the concept doesn't exist. The blueprint's domain separation creates the opportunity to do this differently.
+- Application data at determination may differ materially from the applicant's original submission — caseworkers correct entries from the interview, reconcile documents, and add information the applicant couldn't provide; SNAP regulations require documentation of how eligibility was determined
+- Caseworkers need to see version history for an application — which option is chosen determines where that history lives and how it's queried
+- **Option A/B (audit in intake domain)**: Each domain with mutable data would independently implement audit logic — duplicated across intake, case management, eligibility, etc.
+- **Option C (cross-cutting audit domain)**: Audit logic lives once; all domains get the same treatment; cross-domain queries ("all changes by this caseworker this week") are possible from one place; intake stays focused on capturing application data. Requires mutation events to carry enough payload to reconstruct version history — either the full record at each point (fat events, easy to compare) or changed fields with before/after values (thin events, smaller payloads, audit domain reconstructs state by replaying). Either approach is established; Salesforce CDC uses the thin approach.
 
 **Options:**
-- **(A)** Field-level change tracking on Application and ApplicationMember — intake domain owns the audit trail; each update records who changed what and when, distinguishing applicant-submitted from caseworker-corrected values
-- **(B)** Version-level tracking — each caseworker save creates a new snapshot of the application record; simpler than field-level but coarser granularity
-- **(C)** No audit trail in intake domain — changes tracked by a separate audit/activity domain that subscribes to domain mutation events; intake stays simpler (mutation events are supported per Decision 5)
+- **(A)** Field-level change tracking in intake — each update records who changed what field, from what value; intake owns the audit trail; duplicated in every other domain that needs auditing
+- **(B)** Version snapshots in intake — each caseworker save creates a full record snapshot; simpler than field-level but coarser; still duplicated across domains
+- **(C)** Cross-cutting audit domain — intake emits mutation events; a dedicated audit domain subscribes and maintains version history across all domains; caseworker history views draw from the audit domain; intake stays simple
 
 ---
 
