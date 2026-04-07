@@ -1,0 +1,6 @@
+Trigger,Fields
+submit,(none)
+open,(none)
+withdraw,reason: string (required)
+close,(none)
+flag-expedited,(none)

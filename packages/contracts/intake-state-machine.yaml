@@ -1,0 +1,164 @@
+$schema: ./schemas/state-machine-schema.yaml
+version: "1.0"
+object: Application
+domain: intake
+apiSpec: intake-openapi.yaml
+states:
+  - id: draft
+    slaClock: stopped
+  - id: submitted
+    slaClock: running
+  - id: under_review
+    slaClock: running
+  - id: withdrawn
+    slaClock: stopped
+  - id: closed
+    slaClock: stopped
+initialState: draft
+guards:
+  - id: callerIsApplicant
+    field: $caller.roles
+    operator: contains_any
+    value:
+      - applicant
+  - id: callerIsCaseworker
+    field: $caller.roles
+    operator: contains_any
+    value:
+      - caseworker
+  - id: callerIsSupervisor
+    field: $caller.roles
+    operator: contains_any
+    value:
+      - supervisor
+  - id: callerIsSystem
+    field: $caller.roles
+    operator: contains_any
+    value:
+      - system
+transitions:
+  - trigger: submit
+    from: draft
+    to: submitted
+    actors:
+      - applicant
+      - caseworker
+    guards:
+      - any:
+          - callerIsApplicant
+          - callerIsCaseworker
+    effects:
+      - type: set
+        field: submittedAt
+        value: $now
+        description: Record when the application was formally submitted
+      - type: event
+        action: submitted
+        data:
+          submittedAt: $now
+          programs: $object.programs
+          channel: $object.channel
+          isExpedited: $object.isExpedited
+        description: Emit application.submitted — starts the regulatory clock; triggers caseworker task creation and confirmation notice
+  - trigger: open
+    from: submitted
+    to: under_review
+    actors:
+      - system
+    guards:
+      - callerIsSystem
+    effects:
+      - type: event
+        action: opened
+        data:
+          openedAt: $now
+        description: Emit application.opened — signals caseworker has begun active review
+  - trigger: withdraw
+    from:
+      - submitted
+      - under_review
+    to: withdrawn
+    actors:
+      - applicant
+      - caseworker
+      - supervisor
+    guards:
+      - any:
+          - callerIsApplicant
+          - callerIsCaseworker
+          - callerIsSupervisor
+    effects:
+      - type: set
+        field: withdrawnAt
+        value: $now
+        description: Record when the application was withdrawn
+      - type: event
+        action: withdrawn
+        data:
+          withdrawnAt: $now
+          reason: $request.reason
+        description: Emit application.withdrawn — triggers open task cancellation and withdrawal notice
+  - trigger: close
+    from: under_review
+    to: closed
+    actors:
+      - caseworker
+      - supervisor
+      - system
+    guards:
+      - any:
+          - callerIsCaseworker
+          - callerIsSupervisor
+          - callerIsSystem
+    effects:
+      - type: set
+        field: closedAt
+        value: $now
+        description: Record when the intake phase closed
+      - type: event
+        action: closed
+        data:
+          closedAt: $now
+        description: Emit application.closed — signals intake is complete; triggers case creation if approved
+  - trigger: flag-expedited
+    from:
+      - submitted
+      - under_review
+    actors:
+      - caseworker
+      - supervisor
+      - system
+    guards:
+      - any:
+          - callerIsCaseworker
+          - callerIsSupervisor
+          - callerIsSystem
+    effects:
+      - type: set
+        field: isExpedited
+        value: true
+        description: Mark the application as qualifying for expedited processing
+      - type: event
+        action: expedited_flagged
+        data:
+          flaggedAt: $now
+        description: Emit application.expedited_flagged — triggers workflow to escalate to expedited SLA track
+onCreate:
+  actors: []
+  effects:
+    - type: event
+      action: created
+      description: Emit a domain event when an application is first created
+requestBodies:
+  - trigger: submit
+  - trigger: open
+  - trigger: withdraw
+    type: object
+    properties:
+      reason:
+        type: string
+        description: Why the application is being withdrawn
+    required:
+      - reason
+  - trigger: close
+  - trigger: flag-expedited

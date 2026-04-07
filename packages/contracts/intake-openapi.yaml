@@ -1,0 +1,285 @@
+openapi: 3.1.0
+info:
+  title: Intake Service API
+  version: 0.1.0
+  x-domain: intake
+  x-status: alpha
+  x-visibility: public
+  description: |
+    REST API for managing public assistance applications. This is the minimal
+    baseline — ApplicationMember, Income, Expense, and Asset sub-resources
+    are added incrementally as the intake domain is built out.
+
+    > **Status: Alpha** — Breaking changes expected.
+
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com
+    description: Production server
+  - url: http://localhost:1080
+    description: Local development server
+
+tags:
+  - name: Applications
+    description: Manage public assistance applications.
+
+paths:
+  /applications:
+    get:
+      summary: List applications
+      description: Retrieve a paginated list of applications.
+      operationId: listApplications
+      tags:
+        - Applications
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A paginated collection of applications.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create an application
+      description: Create a new public assistance application in draft status.
+      operationId: createApplication
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+      responses:
+        "201":
+          description: Application created successfully.
+          headers:
+            Location:
+              description: URL of the newly created application resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: Get an application
+      description: Retrieve a single application by identifier.
+      operationId: getApplication
+      tags:
+        - Applications
+      responses:
+        "200":
+          description: Application retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+              examples:
+                ApplicationExample1:
+                  $ref: "#/components/examples/ApplicationExample1"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update an application
+      description: Apply partial updates to a draft or under-review application.
+      operationId: updateApplication
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationUpdate"
+      responses:
+        "200":
+          description: Application updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Delete an application
+      description: Permanently remove a draft application record.
+      operationId: deleteApplication
+      tags:
+        - Applications
+      responses:
+        "204":
+          description: Application deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+components:
+  parameters:
+    ApplicationIdParam:
+      name: applicationId
+      in: path
+      required: true
+      description: Unique identifier of the application.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ApplicationWritable:
+      type: object
+      description: Client-writable fields for an application.
+      properties:
+        programs:
+          type: array
+          description: Programs the household is applying for. At least one required at submission.
+          items:
+            type: string
+            enum:
+              - snap
+              - medicaid
+              - tanf
+        channel:
+          type: string
+          description: How the application was filed.
+          enum:
+            - online
+            - in_person
+            - phone
+            - mail
+
+    Application:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationWritable"
+        - type: object
+          required:
+            - id
+            - status
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Unique identifier for the application.
+              readOnly: true
+            status:
+              type: string
+              description: Current lifecycle status of the application.
+              readOnly: true
+              enum:
+                - draft
+                - submitted
+                - under_review
+                - withdrawn
+                - closed
+            isExpedited:
+              type:
+                - boolean
+                - "null"
+              description: Whether the application qualifies for expedited processing (e.g., SNAP 7-day track). Set during caseworker expedited screening after submission. Null until screening is complete.
+              readOnly: true
+            submittedAt:
+              type: string
+              format: date-time
+              description: When the application was formally submitted. Null until submitted.
+              readOnly: true
+              nullable: true
+            withdrawnAt:
+              type: string
+              format: date-time
+              description: When the application was withdrawn. Null unless withdrawn.
+              readOnly: true
+              nullable: true
+            closedAt:
+              type: string
+              format: date-time
+              description: When the intake phase closed. Null until closed.
+              readOnly: true
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+              description: When the application record was created.
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              description: When the application record was last modified.
+              readOnly: true
+
+    ApplicationCreate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationWritable"
+        - type: object
+          required:
+            - programs
+
+    ApplicationUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationWritable"
+        - type: object
+          minProperties: 1
+
+    ApplicationList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Application"
+
+  examples:
+    ApplicationExample1:
+      value:
+        id: 00000004-0000-4000-8000-000000000001
+        status: submitted
+        programs:
+          - snap
+          - medicaid
+        channel: online
+        isExpedited: false
+        submittedAt: "2026-04-01T09:15:00Z"
+        withdrawnAt: null
+        closedAt: null
+        createdAt: "2026-04-01T09:00:00Z"
+        updatedAt: "2026-04-01T09:15:00Z"
