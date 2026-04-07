@@ -377,10 +377,10 @@ Quick reference — each decision is detailed in the section below.
 
 **Considerations:**
 - No major vendor exposes data mutation events to external consumers by default — Cúram's evidence change notifications are internal; Salesforce CDC is externally available but is a data-layer concern; Pega uses explicit signal publishing for external events
-- Transitions-only is simpler — events are predictable and tied to known state changes
-- Data mutation events enable downstream domains to react without polling (e.g., eligibility re-evaluates when income is updated during caseworker review)
-- Data mutation events create more coupling — every interested domain must subscribe and filter
-- Some data changes during intake are operationally significant (member added, income corrected) and would otherwise require polling to detect
+- Transition events are simpler and have stable, minimal payloads — the event carries the new state and little else
+- Data mutation events enable downstream domains to react without polling (e.g., eligibility re-evaluates when income is updated during caseworker review); consumers subscribe only to what they care about
+- The main tradeoff with data mutation events is **semantic coupling**: consumers depend on the shape of the event payload; renaming or restructuring fields is a breaking change for subscribers. This is addressable through: additive-only payload evolution, event type versioning (`v1`/`v2`), a schema registry, consumer-driven contract testing, or defining event payloads using the same canonical schemas as the API specs (which in this blueprint are already versioned and overlayable)
+- Some data changes during intake are operationally significant (member added, income corrected) and would otherwise require consumers to poll the API to detect
 
 **Options:**
 - **(A)** Transition events only — events map 1:1 to lifecycle state changes (`submitted`, `opened`, `withdrawn`, `closed`)
