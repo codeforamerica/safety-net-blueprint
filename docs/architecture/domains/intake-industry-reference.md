@@ -280,7 +280,7 @@ Quick reference — each decision is detailed in the section below.
 | 2 | Programs applied for — placement | **Decided: C** | Application-level alone can't distinguish voluntary non-application from ineligibility — the eligibility engine can exclude ineligible members using rules, but has no record of a member who opted out. Both levels makes intent explicit at intake and gives eligibility a clean input. |
 | 3 | Program-specific eligibility attributes — structure | **Decided: A** | These are facts about the person, not the program — the same citizenship status is evaluated independently by each program's rules. No major vendor nests them per-program at intake. |
 | 4 | Authorized representative — modeling | **Decided: C** | A `roles` array on ApplicationMember (rather than a single role value) allows a member to hold both `household_member` and `authorized_representative` simultaneously, supporting Medicaid's less restrictive rules while accurately representing SNAP's non-household-member requirement — the authorized rep's roles array simply omits `household_member`. No separate entity needed. |
-| 5 | Domain events — scope | **Open** | |
+| 5 | Domain events — scope | **Decided: publish as needed** | Both transition and data mutation events are supported. Which specific events to emit is determined per-domain based on integration needs. Schema evolution practices (additive-only payloads, type versioning, canonical schemas in OpenAPI components) govern how events are added over time. |
 | 6 | Event type naming convention | **Open** | |
 | 7 | Application → Case handoff | **Open** | |
 | 8 | Intake phase end — lifecycle state | **Open** | |
@@ -371,20 +371,17 @@ Quick reference — each decision is detailed in the section below.
 
 ### Decision 5: Domain events — scope
 
-**Status:** Open
+**Status:** Decided: publish as needed
 
-**What's being decided:** Whether the intake domain emits events only on lifecycle state transitions or also on significant data changes within a stable state.
+**What's being decided:** Whether to limit events to lifecycle state transitions or also publish events for significant data changes within a stable state.
 
 **Considerations:**
-- No major vendor exposes data mutation events to external consumers by default — Cúram's evidence change notifications are internal; Salesforce CDC is externally available but is a data-layer concern; Pega uses explicit signal publishing for external events
-- Transition events are simpler and have stable, minimal payloads — the event carries the new state and little else
-- Data mutation events enable downstream domains to react without polling (e.g., eligibility re-evaluates when income is updated during caseworker review); consumers subscribe only to what they care about
-- The main tradeoff with data mutation events is **semantic coupling**: consumers depend on the shape of the event payload; renaming or restructuring fields is a breaking change for subscribers. This is addressable through: additive-only payload evolution, event type versioning (`v1`/`v2`), a schema registry, consumer-driven contract testing, or defining event payloads using the same canonical schemas as the API specs (which in this blueprint are already versioned and overlayable)
-- Some data changes during intake are operationally significant (member added, income corrected) and would otherwise require consumers to poll the API to detect
+- Salesforce CDC automatically publishes externally accessible change events for any enabled object via the Pub/Sub API — a genuine CDC subscription model. Cúram and Pega both require explicit developer instrumentation per event (outbound SOAP calls or Kafka publish steps wired into flows); they do not offer automatic data mutation event streams.
+- Transition events have stable, minimal payloads. Data mutation events carry more model detail and require more care to evolve.
+- The main governance concern with data mutation events is **semantic coupling**: consumers depend on the event payload shape; renaming or restructuring fields is a breaking change. Mitigations: additive-only payload evolution, event type versioning (`v1`/`v2`), a schema registry, consumer-driven contract testing, or defining event schemas using the same canonical types as the API specs (already overlayable in the blueprint).
+- Adding a new event type is additive and non-breaking — events can be introduced per-domain as integration needs emerge, without a blanket upfront decision.
 
-**Options:**
-- **(A)** Transition events only — events map 1:1 to lifecycle state changes (`submitted`, `opened`, `withdrawn`, `closed`)
-- **(B)** Data mutation events too — additional events emitted on significant data changes within a stable state (`member_added`, `income_updated`, `expedited_flagged`)
+**Decision:** Both transition and data mutation events are supported. Which specific events to emit is determined per-domain based on real integration needs, governed by the schema evolution practices above.
 
 ---
 
