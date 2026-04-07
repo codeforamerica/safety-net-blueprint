@@ -207,13 +207,27 @@ The intake phase spans from filing through caseworker review and data collection
 
 ## Domain events
 
+### How vendors approach events
+
+None of the major platforms are purely event-driven in the modern sense. Each has an internal event/notification mechanism but external event consumption varies significantly:
+
+**IBM Cúram:** Uses a JMS-based internal event infrastructure. The `CuramEvent` framework publishes lifecycle events to JMS topics that internal modules can subscribe to. External integrations are primarily done via batch file exchange, SOAP web services, or the newer REST APIs introduced in v8.x — not event streaming. Cúram's evidence framework notifies internal listeners when evidence changes, which is the closest analog to data mutation events. External systems consuming Cúram events directly is uncommon; the typical pattern is Cúram polling or pushing via scheduled batch.
+
+**Salesforce PSS:** The most event-ready of the major vendors. Salesforce Platform Events provide a pub/sub mechanism built into the platform; Change Data Capture (CDC) publishes events when records are created, updated, or deleted. External systems can subscribe via the Streaming API. For government benefits, Platform Events are used for cross-module communication within Salesforce. The event model is proprietary to the Salesforce platform — external consumers must use Salesforce's Streaming API or CometD protocol.
+
+**Pega Government Platform:** Has an internal signals and messaging framework for case-to-case communication. Supports integration with external message brokers (Kafka, JMS) via Data Integration Services. Events are published from cases using "Message Shape" workflow steps. Like Cúram, the primary integration pattern is REST API rather than event streaming for most state implementations.
+
+**General pattern:** These platforms were designed primarily as record-of-system platforms with REST/SOAP APIs as the primary integration surface. Event capabilities exist but are either proprietary (Salesforce Platform Events), infrastructure-dependent (Pega's Kafka integration), or oriented toward internal module communication (Cúram JMS). None natively emit events in a standard format like CloudEvents. States building modern integrations typically poll these systems' APIs or use the vendor's proprietary streaming mechanism.
+
+**Implication for the blueprint:** The blueprint can establish a cleaner event model than any of these vendors by designing for events from the start rather than retrofitting them. The open questions are what envelope format to use, how events are delivered, and whether to adopt a standard like CloudEvents. See Decision 11.
+
 ### Transition events vs. data mutation events
 
 An open design decision is whether the intake domain emits events only on lifecycle state transitions, or also on significant data changes that don't change the application's state.
 
 **Transitions-only approach:** Events map 1:1 to lifecycle state changes. Simpler event model; downstream systems poll or use the state transition payload for data changes.
 
-**Data mutations too:** Events are also emitted when significant data changes occur within a stable state — a member is added during `draft`, an income record is updated during `under_review`. More event-sourcing style; enables downstream systems to react without polling. This is analogous to how Cúram's evidence framework emits a notification on every evidence change, and how Salesforce creates `BenefitAssignmentAdjustment` records for post-approval changes.
+**Data mutations too:** Events are also emitted when significant data changes occur within a stable state — a member is added during `draft`, an income record is updated during `under_review`. More event-sourcing style; enables downstream systems to react without polling. Cúram's evidence framework emits internal notifications on every evidence change — the closest analog, though not exposed externally. Salesforce CDC publishes change events for any record update, which is the external equivalent.
 
 See [Key design decisions](#key-design-decisions) — Decision 5.
 
@@ -240,9 +254,7 @@ Events are listed with the operational or regulatory need that drives them — t
 
 ### Event envelope
 
-The blueprint uses the [CloudEvents 1.0](https://cloudevents.io/) envelope standard for all domain events. CloudEvents is a CNCF standard that is transport-agnostic — the same envelope works over HTTP webhooks, Kafka, SNS/SQS, or any other transport. State partners can adopt the envelope without introducing a message broker.
-
-Standard fields on every event:
+The event envelope format is an open design decision — see Decision 11. The leading candidate is [CloudEvents 1.0](https://cloudevents.io/), a CNCF standard that is transport-agnostic and compatible with AsyncAPI should that direction be pursued later. If adopted, the standard envelope fields would be:
 
 | Field | Description | Example |
 |---|---|---|
@@ -254,7 +266,7 @@ Standard fields on every event:
 | `datacontenttype` | Payload format | `"application/json"` |
 | `data` | Event-specific payload | see catalog above |
 
-**Event type naming convention** is an open design decision — once consumers depend on it, renaming is a breaking change. See [Key design decisions](#key-design-decisions) — Decision 6.
+**Event type naming convention** is a separate open design decision — once consumers depend on it, renaming is a breaking change. See Decision 6.
 
 ---
 
@@ -270,6 +282,7 @@ Standard fields on every event:
 | 6 | Event type naming convention | (A) `gov.safetynets.{domain}.{entity}.{verb}` (e.g., `gov.safetynets.intake.application.submitted`); (B) `{domain}.{entity}.{verb}` with `source` field providing the domain context | **Open** |
 | 7 | Application → Case handoff | When and how does an approved application create a Case in the case management domain? What event triggers it? What data is carried over? This is a cross-domain boundary decision affecting both intake and case management. | **Open** |
 | 8 | Intake phase end — lifecycle state | (A) No explicit end state — intake closes when the eligibility domain closes it (fluid boundary, similar to Cúram); (B) Explicit `pending_determination` state — intake emits an event and transitions to a terminal state when data collection is complete, signaling the eligibility domain to begin; the eligibility domain owns everything after | **Open** |
+| 11 | Event envelope format | (A) CloudEvents 1.0 — CNCF standard, transport-agnostic, compatible with AsyncAPI, has SDKs in most languages, no vendor lock-in; (B) Custom envelope — blueprint-defined structure, full control but no tooling ecosystem, migration cost if standards adoption grows; (C) No standard envelope — each domain defines its own payload shape, maximum flexibility but inconsistent consumer experience | **Open** |
 | 10 | submitted → under_review transition trigger | (A) Explicit intake action — caseworker directly transitions the application to `under_review` via an intake domain API call; intake owns the state change; (B) Workflow-driven — the workflow domain's task `claim` event triggers the application state change; the intake domain subscribes to that event; cross-domain dependency but avoids requiring a separate explicit caseworker action | **Open** |
 | 9 | Application data mutability and audit trail | Application data is mutable during `under_review` as caseworkers correct and complete what the applicant submitted. (A) Track changes at the field level — each update records who changed what and when, distinguishing applicant-submitted vs. caseworker-corrected values; (B) Track changes at the submission level — each caseworker save creates a new version of the application record; (C) No explicit audit trail in the intake domain — changes are tracked in a separate audit/activity log owned by another domain | **Open** |
 
@@ -304,6 +317,9 @@ Note: the end of the intake phase is determined by the caseworker completing the
 Caseworkers routinely update application data during `under_review` — correcting entries based on the interview, reconciling discrepancies between submitted information and received documents, and adding information the applicant could not provide at submission. This means the application record at the point of eligibility determination may differ materially from what the applicant originally submitted. Cúram handles this through its evidence management system — all evidence is "In Edit" during the application phase, and changes are versioned. Pega tracks changes through its case audit framework. Salesforce creates a `BenefitAssignmentAdjustment` for post-approval changes but relies on standard Salesforce field history for in-review changes.
 
 The blueprint needs to decide whether the audit trail is the intake domain's responsibility (field-level change tracking on the Application and ApplicationMember entities) or a cross-cutting concern handled by a separate audit/activity domain that subscribes to mutation events.
+
+**Decision 11 — Event envelope format:**
+None of the major vendors use CloudEvents — Salesforce uses its proprietary Platform Events format, Cúram uses JMS message structures, and Pega uses its own internal message format. However, CloudEvents is the emerging standard for event envelopes in government technology and cloud-native systems, with growing adoption in AWS EventBridge, Azure Event Grid, and Google Cloud Eventarc — all of which natively support CloudEvents. It is also explicitly compatible with AsyncAPI: AsyncAPI 2.x and 3.x support CloudEvents as a message format binding, meaning adopting CloudEvents now does not foreclose the AsyncAPI path later. The main argument against: it's an external dependency and adds a `specversion` field and envelope wrapper that states must handle. The argument for: consistent envelope across all domains, transport independence, and ecosystem tooling (SDKs, validation libraries) that states get for free.
 
 **Decision 10 — submitted → under_review trigger:**
 Most vendors handle this as an explicit caseworker action: in Cúram, the worker is assigned to the `ApplicationCase` and the case status updates; in Pega, the caseworker opens the Application Request case and begins the Intake stage. Neither system uses a cross-domain event from a workflow/task system to drive the application state change — the intake/case system owns both the task assignment and the case status. For the blueprint, where the workflow domain is separate from the intake domain, this creates a choice: requiring a separate explicit API call on the intake domain to open the application (clean domain ownership, extra step) vs. having the intake domain react to workflow events (fewer steps, cross-domain coupling). The workflow-driven approach is more event-driven but means the intake domain's state is partially controlled by another domain.
