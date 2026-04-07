@@ -183,13 +183,16 @@ No vendor tracks the final determination (approved/denied) on the Application it
 
 ### What happens during intake
 
-The intake phase spans from filing through data collection. The key activities and their sequence:
+The intake phase spans from filing through caseworker review and data collection. The key activities and their sequence:
 
 1. **Filing** — applicant submits a minimally complete application; regulatory clock starts; workflow task created for caseworker
 2. **Expedited screening** — for SNAP, the caseworker must determine within 1 business day whether the household qualifies for expedited processing (7-day track); this happens immediately after filing
-3. **Interview** — SNAP requires an interview at initial certification; some states waive this for renewals or specific populations; the interview is a workflow task generated from the intake event
-4. **Document collection and verification** — caseworker requests supporting documents; applicant has at least 10 days to provide them (SNAP); verification against electronic data sources (IEVS, FDSH) may run in parallel
-5. **Data completion** — once all required information is collected and verified, the application is ready for eligibility determination; this is when the intake phase ends
+3. **Caseworker review and data correction** — the caseworker reviews what the applicant submitted for accuracy and completeness; discrepancies identified during the interview or document review are corrected in the application record; the caseworker may update, add, or correct application data on behalf of the household; this is the primary mechanism by which application data is made accurate before eligibility determination
+4. **Interview** — SNAP requires an interview at initial certification; some states waive this for renewals or specific populations; information gathered in the interview may result in updates to the application data (step 3 and step 4 are often interleaved)
+5. **Document collection and verification** — caseworker requests supporting documents; applicant has at least 10 days to provide them (SNAP); documents may trigger further data corrections; verification against electronic data sources (IEVS, FDSH) may run in parallel
+6. **Data completion** — once the caseworker is satisfied that the application data is accurate and complete, the application is ready for eligibility determination; this is when the intake phase ends
+
+**Implication for the data model:** Application data is mutable during `under_review`. The intake domain must support caseworker-initiated updates to application records, not just the applicant's initial submission. This has audit trail implications — changes made by caseworkers after submission should be distinguishable from the original submitted data. See Design Decision 9.
 
 **What the intake domain does not do during this phase:** run eligibility rules, make approval/denial decisions, or create a service delivery case. Those are eligibility and case management domain concerns triggered by intake events.
 
@@ -263,6 +266,7 @@ Standard fields on every event:
 | 6 | Event type naming convention | (A) `gov.safetynets.{domain}.{entity}.{verb}` (e.g., `gov.safetynets.intake.application.submitted`); (B) `{domain}.{entity}.{verb}` with `source` field providing the domain context | **Open** |
 | 7 | Application → Case handoff | When and how does an approved application create a Case in the case management domain? What event triggers it? What data is carried over? This is a cross-domain boundary decision affecting both intake and case management. | **Open** |
 | 8 | Intake phase end — lifecycle state | (A) No explicit end state — intake closes when the eligibility domain closes it (fluid boundary, similar to Cúram); (B) Explicit `pending_determination` state — intake emits an event and transitions to a terminal state when data collection is complete, signaling the eligibility domain to begin; the eligibility domain owns everything after | **Open** |
+| 9 | Application data mutability and audit trail | Application data is mutable during `under_review` as caseworkers correct and complete what the applicant submitted. (A) Track changes at the field level — each update records who changed what and when, distinguishing applicant-submitted vs. caseworker-corrected values; (B) Track changes at the submission level — each caseworker save creates a new version of the application record; (C) No explicit audit trail in the intake domain — changes are tracked in a separate audit/activity log owned by another domain | **Open** |
 
 ### Decision context
 
@@ -288,6 +292,13 @@ A key regulatory distinction affects this decision: for SNAP, the authorized rep
 Cúram's model is fluid: the `ApplicationCase` stays open throughout eligibility review; eligibility rules can be run at any point against current evidence; the case closes when a final determination is made. There is no explicit "submitted for determination" state. Pega is more explicit: the Application Request case type has distinct stages (Intake → Eligibility → Review → Determination), and the stage transition from Intake to Eligibility is the clean handoff point.
 
 The tradeoff: a `pending_determination` state makes the domain boundary explicit and gives the intake domain a clean terminal event (`application.submitted_for_determination`) that the eligibility domain subscribes to. Without it, the intake and eligibility domains overlap during `under_review`, which makes it harder to reason about ownership and harder to independently scale or replace either domain. The cost is an additional state and transition to manage.
+
+Note: the end of the intake phase is determined by the caseworker completing their review (Decision 9), not by a timer. The caseworker signals readiness when they are satisfied the application data is accurate and complete.
+
+**Decision 9 — Application data mutability and audit trail:**
+Caseworkers routinely update application data during `under_review` — correcting entries based on the interview, reconciling discrepancies between submitted information and received documents, and adding information the applicant could not provide at submission. This means the application record at the point of eligibility determination may differ materially from what the applicant originally submitted. Cúram handles this through its evidence management system — all evidence is "In Edit" during the application phase, and changes are versioned. Pega tracks changes through its case audit framework. Salesforce creates a `BenefitAssignmentAdjustment` for post-approval changes but relies on standard Salesforce field history for in-review changes.
+
+The blueprint needs to decide whether the audit trail is the intake domain's responsibility (field-level change tracking on the Application and ApplicationMember entities) or a cross-cutting concern handled by a separate audit/activity domain that subscribes to mutation events.
 
 ---
 
