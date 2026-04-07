@@ -266,7 +266,7 @@ The event envelope format is an open design decision — see Decision 11. The le
 | `datacontenttype` | Payload format | `"application/json"` |
 | `data` | Event-specific payload | see catalog above |
 
-**Event type naming convention** is a separate open design decision — once consumers depend on it, renaming is a breaking change. See Decision 6.
+**Event type naming convention** is a separate open design decision — once consumers depend on it, renaming is a breaking change. See Decision 11.
 
 ---
 
@@ -281,12 +281,12 @@ Quick reference — each decision is detailed in the section below.
 | 3 | Program-specific eligibility attributes — structure | **Decided: A** | These are facts about the person, not the program — the same citizenship status is evaluated independently by each program's rules. No major vendor nests them per-program at intake. |
 | 4 | Authorized representative — modeling | **Decided: C** | A `roles` array on ApplicationMember (rather than a single role value) allows a member to hold both `household_member` and `authorized_representative` simultaneously, supporting Medicaid's less restrictive rules while accurately representing SNAP's non-household-member requirement — the authorized rep's roles array simply omits `household_member`. No separate entity needed. |
 | 5 | Domain events — scope | **Decided: publish as needed** | Both transition and data mutation events are supported. Which specific events to emit is determined per-domain based on integration needs. Schema evolution practices (additive-only payloads, type versioning, canonical schemas in OpenAPI components) govern how events are added over time. |
-| 6 | Event type naming convention | **Open** | |
+| 6 | Event envelope format | **Open** | |
 | 7 | Application → Case handoff | **Open** | |
 | 8 | Intake phase end — lifecycle state | **Open** | |
 | 9 | Application data mutability and audit trail | **Open** | |
 | 10 | submitted → under_review transition trigger | **Open** | |
-| 11 | Event envelope format | **Open** | |
+| 11 | Event type naming convention | **Open** | |
 | 12 | Member-to-member relationship matrix (MAGI) | **Open** | |
 | 13 | Person identity matching | **Open** | |
 | 14 | Income and expense detail at intake | **Open** | |
@@ -385,22 +385,23 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 6: Event type naming convention
+### Decision 6: Event envelope format
 
 **Status:** Open
 
-**What's being decided:** The naming format for the `type` field on domain events — a load-bearing decision since consumers filter and route on event type names, and renaming is a breaking change.
+**What's being decided:** The standard wrapper format for all domain events — the envelope that carries event metadata (id, source, type, timestamp) around the event-specific payload.
 
 **Considerations:**
-- No major vendor uses a standard naming convention — all use proprietary formats (Salesforce Platform Event names, Pega signal names, Cúram event codes)
-- Once consumers depend on a type name, renaming is a breaking change for all subscribers
-- The `source` field on CloudEvents already carries domain context — `type` can be kept simpler if `source` is relied upon for routing
-- A reverse-DNS prefix (`gov.safetynets.`) ties the names to the project and avoids collisions in shared broker environments
-- This decision applies blueprint-wide, not just intake
+- No major government benefits vendor uses CloudEvents — all use proprietary formats (Salesforce Platform Events, Cúram JMS, Pega internal messaging)
+- AWS EventBridge, Azure Event Grid, and Google Cloud Eventarc all natively support CloudEvents 1.0 — states on cloud infrastructure are already working with it
+- CloudEvents is transport-agnostic — the same envelope works over HTTP webhooks, Kafka, SNS/SQS; state partners can adopt without introducing a message broker
+- CloudEvents is explicitly compatible with AsyncAPI — adopting it now doesn't foreclose that path later
+- A custom envelope has no tooling ecosystem and creates migration cost if standards adoption grows
 
 **Options:**
-- **(A)** `gov.safetynets.{domain}.{entity}.{verb}` — e.g., `gov.safetynets.intake.application.submitted`; fully qualified, collision-safe, verbose
-- **(B)** `{entity}.{verb}` with `source` carrying domain context — e.g., type `application.submitted`, source `/domains/intake`; simpler type names, relies on `source` for domain routing
+- **(A)** CloudEvents 1.0 — CNCF standard, transport-agnostic, cloud-native ecosystem support, AsyncAPI-compatible, SDKs in most languages
+- **(B)** Custom blueprint envelope — full control, no external dependency, no tooling ecosystem
+- **(C)** No standard envelope — each domain defines its own payload shape
 
 ---
 
@@ -456,7 +457,7 @@ Quick reference — each decision is detailed in the section below.
 **Options:**
 - **(A)** Field-level change tracking on Application and ApplicationMember — intake domain owns the audit trail; each update records who changed what and when, distinguishing applicant-submitted from caseworker-corrected values
 - **(B)** Version-level tracking — each caseworker save creates a new snapshot of the application record; simpler than field-level but coarser granularity
-- **(C)** No audit trail in intake domain — changes tracked by a separate audit/activity domain that subscribes to domain mutation events; intake stays simpler but requires Decision 5B (data mutation events)
+- **(C)** No audit trail in intake domain — changes tracked by a separate audit/activity domain that subscribes to domain mutation events; intake stays simpler but requires mutation events to be defined (see Decision 5)
 
 ---
 
@@ -478,23 +479,22 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 11: Event envelope format
+### Decision 11: Event type naming convention
 
 **Status:** Open
 
-**What's being decided:** The standard wrapper format for all domain events — the envelope that carries event metadata (id, source, type, timestamp) around the event-specific payload.
+**What's being decided:** The naming format for the event type identifier — a load-bearing decision since consumers filter and route on type names, and renaming is a breaking change. The specific field name (`type`, `eventType`, etc.) depends on the envelope format chosen in Decision 6.
 
 **Considerations:**
-- No major government benefits vendor uses CloudEvents — all use proprietary formats (Salesforce Platform Events, Cúram JMS, Pega internal messaging)
-- AWS EventBridge, Azure Event Grid, and Google Cloud Eventarc all natively support CloudEvents 1.0 — states on cloud infrastructure are already working with it
-- CloudEvents is transport-agnostic — the same envelope works over HTTP webhooks, Kafka, SNS/SQS; state partners can adopt without introducing a message broker
-- CloudEvents is explicitly compatible with AsyncAPI — adopting it now doesn't foreclose that path later
-- A custom envelope has no tooling ecosystem and creates migration cost if standards adoption grows
+- No major vendor uses a standard naming convention — all use proprietary formats (Salesforce Platform Event names, Pega signal names, Cúram event codes)
+- Once consumers depend on a type name, renaming is a breaking change for all subscribers
+- If CloudEvents is adopted (Decision 6A), the envelope has a `source` field identifying the emitting domain — the type name can then be kept shorter since domain context is already in `source`; if a custom envelope is used, the type name may need to carry more context
+- A reverse-DNS prefix (`gov.safetynets.`) avoids collisions in shared broker environments and ties names to the project
+- This decision applies blueprint-wide, not just intake
 
 **Options:**
-- **(A)** CloudEvents 1.0 — CNCF standard, transport-agnostic, cloud-native ecosystem support, AsyncAPI-compatible, SDKs in most languages
-- **(B)** Custom blueprint envelope — full control, no external dependency, no tooling ecosystem
-- **(C)** No standard envelope — each domain defines its own payload shape
+- **(A)** `gov.safetynets.{domain}.{entity}.{verb}` — e.g., `gov.safetynets.intake.application.submitted`; fully qualified, collision-safe, verbose; works regardless of envelope format
+- **(B)** `{entity}.{verb}` — e.g., `application.submitted`; simpler; relies on a separate envelope field (e.g., CloudEvents `source`) to carry domain context
 
 ---
 
