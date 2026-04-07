@@ -94,7 +94,7 @@ Every system must represent members who are in the household but not requesting 
 - **Cúram**: `CASEPARTICIPANTROLE` with `participantRoleType = AuthorisedRepresentative` — no separate entity
 - **Pega**: `AuthorizedRepresentativeID` reference on the Application case, pointing to a separate `Person` entity
 
-All major vendors model the authorized representative as a *role* on the member junction record, not as a separate top-level entity.
+Salesforce and Cúram model the authorized representative as a *role* on the member junction record. Pega uses a separate reference from the Application entity to a Person record. See Decision 4 for the tradeoffs — the distinction matters because SNAP authorized representatives are by regulation non-household members, which makes the "role on a member" framing conceptually imprecise for that program.
 
 **Key fields present across vendors:**
 
@@ -279,6 +279,8 @@ Every major vendor surveyed — Cúram, Pega, Salesforce, CalSAWS, MAGI-in-the-C
 
 **Decision 4 — Authorized representative:**
 Salesforce and Cúram both model the authorized rep as a role on the participant junction record. Pega uses a separate reference from the application to a person entity. SNAP regulations (7 CFR § 273.2(n)) require the designation to be in writing and distinguish the authorized rep from household members — both approaches can satisfy this.
+
+A key regulatory distinction affects this decision: for SNAP, the authorized representative must be an "adult nonmember of the household" — they are explicitly outside the household and never apply for benefits on the same application. For Medicaid (42 CFR § 435.923), the restriction is less clear and a household member could act as authorized representative. This matters for modeling: if the authorized rep is typically an external party (CBO worker, social worker, attorney) with no other connection to the application, modeling them as a role on `ApplicationMember` is conceptually odd — they are not a household member. A separate reference from the Application entity (Pega's approach) more accurately reflects this. The role-on-member approach is more natural when the authorized rep is always a person already represented elsewhere in the application.
 
 **Decision 8 — Intake phase end:**
 Cúram's model is fluid: the `ApplicationCase` stays open throughout eligibility review; eligibility rules can be run at any point against current evidence; the case closes when a final determination is made. There is no explicit "submitted for determination" state. Pega is more explicit: the Application Request case type has distinct stages (Intake → Eligibility → Review → Determination), and the stage transition from Intake to Eligibility is the clean handoff point.
