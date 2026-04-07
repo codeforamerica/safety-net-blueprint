@@ -282,15 +282,14 @@ Quick reference — each decision is detailed in the section below.
 | 4 | [Authorized representative — modeling](#decision-4-authorized-representative--modeling) | **Decided: C** | A `roles` array on ApplicationMember (rather than a single role value) allows a member to hold both `household_member` and `authorized_representative` simultaneously, supporting Medicaid's less restrictive rules while accurately representing SNAP's non-household-member requirement — the authorized rep's roles array simply omits `household_member`. No separate entity needed. |
 | 5 | [Domain events — scope](#decision-5-domain-events--scope) | **Decided: publish as needed** | Both transition and data mutation events are supported. Which specific events to emit is determined per-domain based on integration needs. Schema evolution practices (additive-only payloads, type versioning, canonical schemas in OpenAPI components) govern how events are added over time. |
 | 6 | [Event envelope format](#decision-6-event-envelope-format) | **Decided: A** | CloudEvents 1.0 is transport-agnostic, natively supported by AWS/Azure/GCP, and AsyncAPI-compatible. The envelope schema will be defined in OpenAPI components so it is overlayable and reusable across all domains. |
-| 7 | [Application → Case handoff](#decision-7-application--case-handoff) | **Open** | |
-| 8 | [Intake phase end — lifecycle state](#decision-8-intake-phase-end--lifecycle-state) | **Open** | |
-| 9 | [Application data mutability and audit trail](#decision-9-application-data-mutability-and-audit-trail) | **Open** | |
-| 10 | [submitted → under_review transition trigger](#decision-10-submitted--under_review-transition-trigger) | **Open** | |
-| 11 | [Event type naming convention](#decision-11-event-type-naming-convention) | **Open** | |
-| 12 | [Member-to-member relationship matrix (MAGI)](#decision-12-member-to-member-relationship-matrix-magi) | **Open** | |
-| 13 | [Person identity matching](#decision-13-person-identity-matching) | **Open** | |
-| 14 | [Income and expense detail at intake](#decision-14-income-and-expense-detail-at-intake) | **Open** | |
-| 15 | [MAGI tax filing status fields](#decision-15-magi-tax-filing-status-fields) | **Open** | |
+| 7 | [Intake phase end — lifecycle state](#decision-7-intake-phase-end--lifecycle-state) | **Open** | |
+| 8 | [Application data mutability and audit trail](#decision-8-application-data-mutability-and-audit-trail) | **Open** | |
+| 9 | [submitted → under_review transition trigger](#decision-9-submitted--under_review-transition-trigger) | **Open** | |
+| 10 | [Event type naming convention](#decision-10-event-type-naming-convention) | **Open** | |
+| 11 | [Member-to-member relationship matrix (MAGI)](#decision-11-member-to-member-relationship-matrix-magi) | **Open** | |
+| 12 | [Person identity matching](#decision-12-person-identity-matching) | **Open** | |
+| 13 | [Income and expense detail at intake](#decision-13-income-and-expense-detail-at-intake) | **Open** | |
+| 14 | [MAGI tax filing status fields](#decision-14-magi-tax-filing-status-fields) | **Open** | |
 
 ---
 
@@ -405,26 +404,7 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 7: Application → Case handoff
-
-**Status:** Open
-
-**What's being decided:** When and how an approved application creates a Case in the case management domain — what triggers it, what data carries over, and which domain is responsible for creating the Case.
-
-**Considerations:**
-- All major vendors have a clear logical handoff from intake to case management (Cúram: `ApplicationCase` → `ProductDeliveryCase`; Salesforce: `IndividualApplication` → `BenefitAssignment`; Pega: Application Request case → program delivery sub-cases). Because these happen within a single system, the mechanism is implicit — an internal method call or trigger — rather than an explicit contract. The blueprint makes this handoff explicit and requires a deliberate design.
-- The triggering event matters: is it the intake domain signaling it's done, or the eligibility domain signaling a determination was made? These are different moments — an application could be closed without an approval (withdrawn, denied).
-- The full intake record (members, income, expenses, assets, programs approved) must be accessible to case management.
-- Timing: does a case get created on approval of any one program, or after all programs in a multi-program application are determined?
-
-**Options:**
-- **(A)** Intake domain emits `application.closed`; case management subscribes and creates a Case
-- **(B)** Eligibility domain emits `eligibility.determined` with outcome; case management subscribes and creates a Case only when outcome is approved
-- **(C)** Case management polls closed applications and creates Cases as a batch process
-
----
-
-### Decision 8: Intake phase end — lifecycle state
+### Decision 7: Intake phase end — lifecycle state
 
 **Status:** Open
 
@@ -442,7 +422,7 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 9: Application data mutability and audit trail
+### Decision 8: Application data mutability and audit trail
 
 **Status:** Open
 
@@ -458,11 +438,11 @@ Quick reference — each decision is detailed in the section below.
 **Options:**
 - **(A)** Field-level change tracking on Application and ApplicationMember — intake domain owns the audit trail; each update records who changed what and when, distinguishing applicant-submitted from caseworker-corrected values
 - **(B)** Version-level tracking — each caseworker save creates a new snapshot of the application record; simpler than field-level but coarser granularity
-- **(C)** No audit trail in intake domain — changes tracked by a separate audit/activity domain that subscribes to domain mutation events; intake stays simpler but requires mutation events to be defined (see Decision 5)
+- **(C)** No audit trail in intake domain — changes tracked by a separate audit/activity domain that subscribes to domain mutation events; intake stays simpler (mutation events are supported per Decision 5)
 
 ---
 
-### Decision 10: submitted → under_review transition trigger
+### Decision 9: submitted → under_review transition trigger
 
 **Status:** Open
 
@@ -480,7 +460,7 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 11: Event type naming convention
+### Decision 10: Event type naming convention
 
 **Status:** Open
 
@@ -489,7 +469,7 @@ Quick reference — each decision is detailed in the section below.
 **Considerations:**
 - No major vendor uses a standard naming convention — all use proprietary formats (Salesforce Platform Event names, Pega signal names, Cúram event codes)
 - Once consumers depend on a type name, renaming is a breaking change for all subscribers
-- If CloudEvents is adopted (Decision 6A), the envelope has a `source` field identifying the emitting domain — the type name can then be kept shorter since domain context is already in `source`; if a custom envelope is used, the type name may need to carry more context
+- CloudEvents was adopted (Decision 6), so the envelope has a `source` field identifying the emitting domain — the type name can be kept shorter since domain context is already in `source`
 - A reverse-DNS prefix (`gov.safetynets.`) avoids collisions in shared broker environments and ties names to the project
 - This decision applies blueprint-wide, not just intake
 
@@ -499,7 +479,7 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 12: Member-to-member relationship matrix (MAGI)
+### Decision 11: Member-to-member relationship matrix (MAGI)
 
 **Status:** Open
 
@@ -518,7 +498,7 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 13: Person identity matching
+### Decision 12: Person identity matching
 
 **Status:** Open
 
@@ -537,7 +517,7 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 14: Income and expense detail at intake
+### Decision 13: Income and expense detail at intake
 
 **Status:** Open
 
@@ -555,7 +535,7 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 15: MAGI tax filing status fields
+### Decision 14: MAGI tax filing status fields
 
 **Status:** Open
 
