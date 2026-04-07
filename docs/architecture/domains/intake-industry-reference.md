@@ -282,7 +282,7 @@ Quick reference — each decision is detailed in the section below.
 | 4 | [Authorized representative — modeling](#decision-4-authorized-representative--modeling) | **Decided: C** | A `roles` array on ApplicationMember (rather than a single role value) allows a member to hold both `household_member` and `authorized_representative` simultaneously, supporting Medicaid's less restrictive rules while accurately representing SNAP's non-household-member requirement — the authorized rep's roles array simply omits `household_member`. No separate entity needed. |
 | 5 | [Domain events — scope](#decision-5-domain-events--scope) | **Decided: publish as needed** | Both transition and data mutation events are supported. Which specific events to emit is determined per-domain based on integration needs. Schema evolution practices (additive-only payloads, type versioning, canonical schemas in OpenAPI components) govern how events are added over time. |
 | 6 | [Event envelope format](#decision-6-event-envelope-format) | **Decided: A** | CloudEvents 1.0 is transport-agnostic, natively supported by AWS/Azure/GCP, and AsyncAPI-compatible. The envelope schema will be defined in OpenAPI components so it is overlayable and reusable across all domains. |
-| 7 | [Intake phase end — lifecycle state](#decision-7-intake-phase-end--lifecycle-state) | **Open** | |
+| 7 | [Intake phase end — lifecycle state](#decision-7-intake-phase-end--lifecycle-state) | **Decided: C** | Domain autonomy: each domain owns its own state transitions. A `pending_determination` state would exist to serve a downstream domain's needs, not to represent meaningful business state in intake — an event handles that better. Intake signals what it knows (`review_completed`); eligibility publishes what it knows; intake closes the application based on its own logic. |
 | 8 | [Application data mutability and audit trail](#decision-8-application-data-mutability-and-audit-trail) | **Open** | |
 | 9 | [submitted → under_review transition trigger](#decision-9-submitted--under_review-transition-trigger) | **Open** | |
 | 10 | [Event type naming convention](#decision-10-event-type-naming-convention) | **Open** | |
@@ -406,7 +406,7 @@ Quick reference — each decision is detailed in the section below.
 
 ### Decision 7: Intake phase end — lifecycle state
 
-**Status:** Open
+**Status:** Decided: C
 
 **What's being decided:** Whether the caseworker's completion of intake review is signaled by a lifecycle state change, a domain event, or not at all — and how the application record reaches its terminal state without coupling intake to the eligibility domain.
 
@@ -433,7 +433,7 @@ Arguments for a caseworker-triggered event with no new state:
 **Options:**
 - **(A)** No explicit signal — application moves to `closed` when intake's logic determines all programs are resolved; fluid boundary similar to Cúram
 - **(B)** Explicit `pending_determination` state — caseworker transitions the application; intake emits `application.review_completed`; adds a state and a step
-- **(C)** Caseworker-triggered event, no new state — caseworker action emits `application.review_completed` while the application stays `under_review`; intake subscribes to eligibility events and closes the application when all programs are determined; each domain owns its own state transitions
+- **(C)** ✓ Caseworker-triggered event, no new state — caseworker action emits `application.review_completed` while the application stays `under_review`; intake subscribes to eligibility events and closes the application when all programs are determined; each domain owns its own state transitions
 
 ---
 
