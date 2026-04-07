@@ -219,21 +219,24 @@ See [Key design decisions](#key-design-decisions) — Decision 5.
 
 ### Event catalog
 
+Events are listed with the operational or regulatory need that drives them — the reason a downstream domain needs to react, not just what happens to trigger them.
+
 **Lifecycle transition events (certain):**
 
-| Event | Trigger | Key payload fields | Primary consumers |
-|---|---|---|---|
-| `application.submitted` | `draft` → `submitted` | `applicationId`, `submittedAt`, `programs`, `memberCount`, `isExpedited` | Workflow (create intake task), Communication (confirmation notice), Eligibility |
-| `application.withdrawn` | any → `withdrawn` | `applicationId`, `withdrawnAt`, `reason` | Workflow (cancel open tasks), Communication (withdrawal notice) |
-| `application.closed` | `under_review` → `closed` | `applicationId`, `closedAt` | Case Management (create case if approved) |
+| Event | Why it's needed | Trigger | Key payload fields | Primary consumers |
+|---|---|---|---|---|
+| `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. The workflow domain needs to create a caseworker task; communication needs to send a confirmation; eligibility needs to know the household scope. | `draft` → `submitted` | `applicationId`, `submittedAt`, `programs`, `memberCount`, `isExpedited` | Workflow (create intake task), Communication (confirmation notice), Eligibility |
+| `application.opened` | Signals that a caseworker has begun active review. Workflow needs to update the task state; supervisors tracking queue throughput need to know when review started vs. when it was filed. | `submitted` → `under_review` | `applicationId`, `openedAt`, `assignedToId` | Workflow (update task to in_progress) |
+| `application.withdrawn` | A withdrawn application must stop all in-flight processing immediately. Open workflow tasks must be cancelled; any scheduled interview or document request must be voided; communication must notify the household. Failing to act on this event risks processing an application the household has abandoned. | any → `withdrawn` | `applicationId`, `withdrawnAt`, `reason` | Workflow (cancel open tasks), Communication (withdrawal notice) |
+| `application.closed` | Signals that intake is complete and the application is ready for or has received an eligibility determination. Case Management needs this event to know when to create a service delivery case (if approved). Without it, case management has no trigger to act. | `under_review` → `closed` | `applicationId`, `closedAt` | Case Management (create case if approved), Eligibility |
 
 **Data mutation events (open decision):**
 
-| Event | Trigger | Key payload fields | Primary consumers |
-|---|---|---|---|
-| `application.member_added` | Member added to application | `applicationId`, `memberId`, `role` | Eligibility (re-evaluate household scope) |
-| `application.expedited_flagged` | Expedited screening passes | `applicationId`, `flaggedAt` | Workflow (escalate to expedited SLA) |
-| `application.income_updated` | Income record changed during review | `applicationId`, `memberId` | Eligibility (re-evaluate) |
+| Event | Why it's needed | Trigger | Key payload fields | Primary consumers |
+|---|---|---|---|---|
+| `application.member_added` | Household composition changes after submission affect eligibility scope — a new member may qualify for different programs or change the household size used in benefit calculations. Without this event, eligibility has no way to know it needs to re-evaluate. | Member added to application | `applicationId`, `memberId`, `role` | Eligibility (re-evaluate household scope) |
+| `application.expedited_flagged` | SNAP requires a determination within 7 days for expedited households. The workflow domain needs to immediately escalate to a higher-priority SLA track — the standard 30-day task SLA is wrong for these cases. | Expedited screening passes | `applicationId`, `flaggedAt` | Workflow (escalate to expedited SLA) |
+| `application.income_updated` | Income changes during caseworker review may affect whether a household qualifies for expedited processing or which benefit amounts apply. Eligibility may need to re-run screening logic. | Income record changed during review | `applicationId`, `memberId` | Eligibility (re-evaluate screening) |
 
 ### Event envelope
 
