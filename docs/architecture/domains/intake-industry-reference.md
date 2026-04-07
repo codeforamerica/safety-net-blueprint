@@ -287,7 +287,7 @@ Quick reference — each decision is detailed in the section below.
 | 9 | [submitted → under_review transition trigger](#decision-9-submitted--under_review-transition-trigger) | **Decided: B** | Consistent with Decision 7: intake owns its own state transitions but reacts to events from other domains. Intake subscribes to `task.claimed` from the workflow domain and transitions the application to `under_review`. One caseworker action; intake handles the rest automatically. |
 | 10 | [Event type naming convention](#decision-10-event-type-naming-convention) | **Decided: A** | Fully qualified type names are self-contained, collision-safe across organizations, and consistent with the CloudEvents community convention. Prefix is `org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}` — e.g., `org.codeforamerica.safety-net-blueprint.intake.application.submitted`. |
 | 11 | [Member-to-member relationship matrix (MAGI)](#decision-11-member-to-member-relationship-matrix-magi) | **Decided: A** | The `claimedAsDependentBy` and tax filing status fields cover the vast majority of MAGI household composition cases. The pairwise matrix only adds precision for the edge case where a non-primary adult is a parent of a child who isn't explicitly claimed as a dependent — that case is a known gap not covered by the baseline. |
-| 12 | [Person identity matching](#decision-12-person-identity-matching) | **Open** | |
+| 12 | [Person identity matching — when?](#decision-12-person-identity-matching) | **Open** | |
 | 13 | [Income and expense detail at intake](#decision-13-income-and-expense-detail-at-intake) | **Open** | |
 | 14 | [MAGI tax filing status fields](#decision-14-magi-tax-filing-status-fields) | **Open** | |
 
@@ -519,18 +519,22 @@ Arguments for a caseworker-triggered event with no new state:
 
 **Status:** Open
 
-**What's being decided:** Whether the intake domain resolves submitted member data (name, SSN, date of birth) to an existing person identity record, and if so, who is responsible for that matching.
+**What's being decided:** When person identity matching happens — resolving submitted member data (name, SSN, date of birth) to an existing person record — and as a consequence, which domain owns that responsibility.
 
 **Considerations:**
-- All major vendors handle matching within the same system — Cúram uses a two-stage prospect-then-match pattern; Salesforce applies duplicate rules at record creation; Pega uses built-in data matching rules. None delegate to a separate domain.
-- Without matching, the same person applying multiple times creates duplicate records, leading to data quality problems and eligibility errors
-- Matching at intake requires access to the person registry — a cross-domain dependency in the blueprint's domain model
-- Deferring matching keeps intake simpler but risks duplicates accumulating if a household applies multiple times before a match is performed
+- All major vendors match within the same system; the more important question is timing. Cúram creates unresolved `PROSPECTPERSON` records at submission and matches them to existing `PERSON` records later. Salesforce and Pega match at record creation (synchronously at submission).
+- **At submission (synchronous)**: no duplicates accumulate; caseworker sees prior history immediately during review; requires a synchronous call to the person registry at the moment the applicant submits — adds latency and a failure mode to the submission flow
+- **Asynchronously after submission**: submission stays fast and simple; matching runs in the background and results come back via event; a window exists where duplicates are unresolved, but caseworker review typically follows quickly enough to catch it
+- **During caseworker review**: matching becomes a manual caseworker step; flexible but adds work and relies on caseworker diligence
+- **At eligibility**: intake stays completely clean; duplicates may persist through the full intake phase; caseworker reviews an application without knowing if the person has applied before — a real operational loss
+- Without matching, the same person applying multiple times creates duplicate records leading to data quality problems and incorrect eligibility determinations
+- The "who" follows from the "when": synchronous at submission favors a person/identity domain callable during intake; async favors an identity domain that subscribes to submission events; deferred favors eligibility ownership
 
 **Options:**
-- **(A)** Intake domain handles matching — ApplicationMember resolves to an existing Person or creates a new one during submission
-- **(B)** Separate identity/person domain handles matching — intake submits raw member data and receives back a resolved person ID; matching logic is centralized
-- **(C)** No matching at intake — identity resolution deferred to eligibility or case management phase
+- **(A)** Synchronous at submission — intake calls an identity/person domain during submission; resolved person ID stored on ApplicationMember; no duplicate window; adds latency and dependency to submission
+- **(B)** Asynchronous after submission — intake emits a `application.submitted` event; identity domain subscribes, matches, and publishes a `person.resolved` event back; intake updates ApplicationMember when it receives the result; submission stays simple
+- **(C)** During caseworker review — caseworker manually links each ApplicationMember to a person record as part of their review work
+- **(D)** At eligibility — identity resolution deferred entirely; intake stays clean; caseworkers review without prior history context
 
 ---
 
