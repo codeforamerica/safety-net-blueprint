@@ -199,8 +199,9 @@ The intake phase spans from filing through caseworker review and data collection
 ### Key transitions
 
 - **submit**: `draft` → `submitted` — applicant files; regulatory clock starts; triggers caseworker task creation and confirmation notice
+- **assign / open**: `submitted` → `under_review` — triggered when a caseworker is assigned to or claims the application; caseworker review begins; whether this is an explicit intake domain action or driven by a workflow task claim event is an open question (see Decision 10)
 - **withdraw**: `submitted` | `under_review` → `withdrawn` — applicant-initiated; triggers open task cancellation
-- **close**: `under_review` → `closed` — triggered when the application is submitted for eligibility determination or when the eligibility domain returns a determination; see Design Decision 8
+- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination (or intake is abandoned); see Design Decision 8
 
 ---
 
@@ -266,6 +267,7 @@ Standard fields on every event:
 | 6 | Event type naming convention | (A) `gov.safetynets.{domain}.{entity}.{verb}` (e.g., `gov.safetynets.intake.application.submitted`); (B) `{domain}.{entity}.{verb}` with `source` field providing the domain context | **Open** |
 | 7 | Application → Case handoff | When and how does an approved application create a Case in the case management domain? What event triggers it? What data is carried over? This is a cross-domain boundary decision affecting both intake and case management. | **Open** |
 | 8 | Intake phase end — lifecycle state | (A) No explicit end state — intake closes when the eligibility domain closes it (fluid boundary, similar to Cúram); (B) Explicit `pending_determination` state — intake emits an event and transitions to a terminal state when data collection is complete, signaling the eligibility domain to begin; the eligibility domain owns everything after | **Open** |
+| 10 | submitted → under_review transition trigger | (A) Explicit intake action — caseworker directly transitions the application to `under_review` via an intake domain API call; intake owns the state change; (B) Workflow-driven — the workflow domain's task `claim` event triggers the application state change; the intake domain subscribes to that event; cross-domain dependency but avoids requiring a separate explicit caseworker action | **Open** |
 | 9 | Application data mutability and audit trail | Application data is mutable during `under_review` as caseworkers correct and complete what the applicant submitted. (A) Track changes at the field level — each update records who changed what and when, distinguishing applicant-submitted vs. caseworker-corrected values; (B) Track changes at the submission level — each caseworker save creates a new version of the application record; (C) No explicit audit trail in the intake domain — changes are tracked in a separate audit/activity log owned by another domain | **Open** |
 
 ### Decision context
@@ -299,6 +301,9 @@ Note: the end of the intake phase is determined by the caseworker completing the
 Caseworkers routinely update application data during `under_review` — correcting entries based on the interview, reconciling discrepancies between submitted information and received documents, and adding information the applicant could not provide at submission. This means the application record at the point of eligibility determination may differ materially from what the applicant originally submitted. Cúram handles this through its evidence management system — all evidence is "In Edit" during the application phase, and changes are versioned. Pega tracks changes through its case audit framework. Salesforce creates a `BenefitAssignmentAdjustment` for post-approval changes but relies on standard Salesforce field history for in-review changes.
 
 The blueprint needs to decide whether the audit trail is the intake domain's responsibility (field-level change tracking on the Application and ApplicationMember entities) or a cross-cutting concern handled by a separate audit/activity domain that subscribes to mutation events.
+
+**Decision 10 — submitted → under_review trigger:**
+Most vendors handle this as an explicit caseworker action: in Cúram, the worker is assigned to the `ApplicationCase` and the case status updates; in Pega, the caseworker opens the Application Request case and begins the Intake stage. Neither system uses a cross-domain event from a workflow/task system to drive the application state change — the intake/case system owns both the task assignment and the case status. For the blueprint, where the workflow domain is separate from the intake domain, this creates a choice: requiring a separate explicit API call on the intake domain to open the application (clean domain ownership, extra step) vs. having the intake domain react to workflow events (fewer steps, cross-domain coupling). The workflow-driven approach is more event-driven but means the intake domain's state is partially controlled by another domain.
 
 ---
 
