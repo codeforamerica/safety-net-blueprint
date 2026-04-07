@@ -199,7 +199,7 @@ The intake phase spans from filing through caseworker review and data collection
 ### Key transitions
 
 - **submit**: `draft` → `submitted` — applicant files; regulatory clock starts; triggers caseworker task creation and confirmation notice
-- **assign / open**: `submitted` → `under_review` — triggered when a caseworker is assigned to or claims the application; caseworker review begins; whether this is an explicit intake domain action or driven by a workflow task claim event is an open question (see Decision 10)
+- **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; caseworker review begins; assignment (routing the application to a worker's queue) may happen separately via the workflow domain and does not necessarily trigger this transition; see Decision 10
 - **withdraw**: `submitted` | `under_review` → `withdrawn` — applicant-initiated; triggers open task cancellation
 - **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination (or intake is abandoned); see Design Decision 8
 
