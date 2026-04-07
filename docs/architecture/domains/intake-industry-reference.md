@@ -274,29 +274,29 @@ The event envelope format is an open design decision — see Decision 11. The le
 
 Quick reference — each decision is detailed in the section below.
 
-| # | Decision | Status |
-|---|---|---|
-| 1 | Role vs. relationship on ApplicationMember | **Open** |
-| 2 | Programs applied for — placement | **Open** |
-| 3 | Program-specific eligibility attributes — structure | **Open** |
-| 4 | Authorized representative — modeling | **Open** |
-| 5 | Domain events — scope | **Open** |
-| 6 | Event type naming convention | **Open** |
-| 7 | Application → Case handoff | **Open** |
-| 8 | Intake phase end — lifecycle state | **Open** |
-| 9 | Application data mutability and audit trail | **Open** |
-| 10 | submitted → under_review transition trigger | **Open** |
-| 11 | Event envelope format | **Open** |
-| 12 | Member-to-member relationship matrix (MAGI) | **Open** |
-| 13 | Person identity matching | **Open** |
-| 14 | Income and expense detail at intake | **Open** |
-| 15 | MAGI tax filing status fields | **Open** |
+| # | Decision | Status | Rationale |
+|---|---|---|---|
+| 1 | Role vs. relationship on ApplicationMember | **Decided: B** | A single field can't represent a member who is both an authorized representative and a family member, or a non-applying member who has a family relationship but no application-process role. No major vendor conflates these. |
+| 2 | Programs applied for — placement | **Decided: C** | Application-level alone can't distinguish voluntary non-application from ineligibility — the eligibility engine can exclude ineligible members using rules, but has no record of a member who opted out. Both levels makes intent explicit at intake and gives eligibility a clean input. |
+| 3 | Program-specific eligibility attributes — structure | **Open** | |
+| 4 | Authorized representative — modeling | **Open** | |
+| 5 | Domain events — scope | **Open** | |
+| 6 | Event type naming convention | **Open** | |
+| 7 | Application → Case handoff | **Open** | |
+| 8 | Intake phase end — lifecycle state | **Open** | |
+| 9 | Application data mutability and audit trail | **Open** | |
+| 10 | submitted → under_review transition trigger | **Open** | |
+| 11 | Event envelope format | **Open** | |
+| 12 | Member-to-member relationship matrix (MAGI) | **Open** | |
+| 13 | Person identity matching | **Open** | |
+| 14 | Income and expense detail at intake | **Open** | |
+| 15 | MAGI tax filing status fields | **Open** | |
 
 ---
 
 ### Decision 1: Role vs. relationship on ApplicationMember
 
-**Status:** Open
+**Status:** Decided: B
 
 **What's being decided:** Whether the member's role in the application process (primary applicant, household member, authorized representative) and their family relationship to the primary applicant (spouse, child, parent) are one field or two.
 
@@ -307,26 +307,27 @@ Quick reference — each decision is detailed in the section below.
 
 **Options:**
 - **(A)** Single `relationship` field encoding both application role and family relationship
-- **(B)** Separate `role` field (application process role: primary_applicant, household_member, non_applying_member, authorized_representative, absent_parent) and `relationship` field (family relationship to primary applicant: spouse, child, parent, etc.)
+- **(B)** ✓ Separate `role` field (application process role: primary_applicant, household_member, non_applying_member, authorized_representative, absent_parent) and `relationship` field (family relationship to primary applicant: spouse, child, parent, etc.)
 
 ---
 
 ### Decision 2: Programs applied for — placement
 
-**Status:** Open
+**Status:** Decided: C
 
 **What's being decided:** Where in the data model to track which programs are being applied for — at the application level, the member level, or both.
 
 **Considerations:**
 - All major vendors track programs at the application level (a list of which programs the household is applying for) — this part is universal
 - Per-member, per-program tracking is less standardized: Cúram and CalSAWS use a simple `isApplyingForBenefit` boolean on the member; Pega pushes the distinction entirely to the eligibility rules engine
+- Vendors that rely on the eligibility engine to infer per-member intent can exclude ineligible members using rules, but have no way to distinguish an ineligible member from a member who voluntarily opted out of a program — that distinction is lost at intake
 - Regulation requires per-member clarity: Medicaid determines eligibility individually per member; SNAP allows individual member exclusions even within the same household; WIC is fully individual certification
-- Vendors that omit per-member tracking push the distinction downstream — simpler intake model but a less explicit handoff to eligibility
+- Tracking at both levels requires consistency validation — a member can't be applying for a program that isn't on the application's programs list; this is a UI/API concern, not a data model flaw
 
 **Options:**
 - **(A)** Application level only — one programs list on Application, member-level distinction inferred downstream
 - **(B)** Member level only — each ApplicationMember has a `programsApplyingFor` list; application-level programs list derived from member data
-- **(C)** Both — Application has a programs list (household intent), ApplicationMember has a `programsApplyingFor` list (individual intent); most explicit handoff to eligibility
+- **(C)** ✓ Both — Application has a programs list (household intent), ApplicationMember has a `programsApplyingFor` list (individual intent); makes voluntary non-application explicit; gives eligibility a clean input
 
 ---
 
