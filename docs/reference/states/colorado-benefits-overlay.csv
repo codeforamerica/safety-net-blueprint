@@ -1,0 +1,40 @@
+OverlayAction,Entity,Field,CO Label,CO DataType,CO EnumValues,CO Source,CO SNAP,Health First Colorado (MAGI),Health First Colorado (Non-MAGI),Colorado Works,SSI,Colorado WIC,CHP+,Section 8 Housing,LEAP,Colorado Summer EBT,OAP,AND,AB,CCCAP,CO Policy/Statute,CO Notes,Effective Date,Federal Reference
+update,Asset,type,,,,,Not Required,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,BBCE eliminates asset test for CO SNAP,ongoing,7 CFR 273.8
+update,Asset,value,,,,,Not Required,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,Asset values not required for CO SNAP under BBCE,ongoing,7 CFR 273.8
+update,Asset,verificationSource,,,,,Not Required,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,Asset verification not required for CO SNAP under BBCE,ongoing,7 CFR 273.8
+update,Eligibility Determination,countableResources,,,,,Not Required,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,Not applicable under BBCE; no asset test for CO SNAP,ongoing,7 CFR 273.8
+update,Eligibility Determination,resourceEligible,,,,,Not Required,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,Always true under BBCE; no resource test for CO SNAP,ongoing,7 CFR 273.8
+update,Eligibility Determination,federalPovertyLevelPercent,,,,,,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,CO SNAP uses 200% FPL gross income threshold under BBCE versus federal 130% gross / 100% net,ongoing,7 CFR 273.9
+update,Eligibility Determination,incomeEligible,,,,,,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,CO SNAP: 200% FPL gross income test only under BBCE; no net income test,ongoing,7 CFR 273.9
+remove,Person,substantialLotteryWinnings,,,,,Not Collected,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,BBCE removes categorical ineligibility for lottery/gambling winnings in CO SNAP,ongoing,7 CFR 273.11(r)
+remove,Person,lotteryWinningsAmount,,,,,Not Collected,,,,,,,,,,,,,,10 CCR 2506-1 § 4.603,Follows substantialLotteryWinnings removal under BBCE,ongoing,7 CFR 273.11(r)
+update,Person,isAbawdEligible,,,,,,,,,,,,,,,,,,,10 CCR 2506-1 § 4.414,County-specific ABAWD time-limit waivers available in qualifying areas,ongoing,7 CFR 273.24
+add,Person,medicaidBuyInEligible,Medicaid Buy-In Eligible,boolean,,derived,,,Required,,,,,,,,,,,,C.R.S. § 25.5-6-202,Health First Colorado Buy-In for Working Adults with Disabilities,ongoing,
+add,Person,medicaidBuyInEmploymentVerified,Buy-In Employment Verified,boolean,,verified,,,Required,,,,,,,,,,,,C.R.S. § 25.5-6-202,Must demonstrate current employment for Buy-In eligibility,ongoing,
+update,Person,citizenshipStatus,,,,,,,,,,,,,,,,,,,C.R.S. § 25.5-8-109,CHP+ Prenatal covers pregnant women up to 260% FPL regardless of immigration status,ongoing,8 USC 1611-1615
+update,Eligibility Determination,overallEligible,,,,,,,,,,,,,,,,,,,C.R.S. § 25.5-5-201,"Health First Colorado: ACA expansion at 138% FPL for adults; 260% FPL for pregnant women; 142% FPL for children under 19",ongoing,42 CFR 435.119
+update,Eligibility Determination,categoricallyEligible,,,,,,,,,,,,,,,,,,,C.R.S. § 25.5-5-201,CO is a 1634 state: SSI recipients receive automatic Health First Colorado enrollment,ongoing,42 USC 1396a(a)(10)(A)(i)(II)
+update,Person,tanfMonthsUsed,,,,,,,,,,,,,,,,,,,C.R.S. § 26-2-709,"60-month federal lifetime limit applies; counties may grant extensions based on hardship",ongoing,42 USC 608(a)(7)
+update,Person,tanfCooperatesWithChildSupport,,,,,,,,,,,,,,,,,,,C.R.S. § 26-2-709(3),CO good cause exemption includes domestic violence per Family Violence Option (C.R.S. § 26-2-708),ongoing,42 USC 608(a)(2)
+update,Eligibility Determination,grossIncomeMonthly,,,,,,,,,,,,,,Required,,,,,C.R.S. § 40-8.7-104,LEAP uses 60% state median income or 185% FPL (whichever is higher) as income threshold,ongoing,42 USC 8624
+add,Household,leapHeatingSeasonActive,LEAP Heating Season Active,boolean,,derived,,,,,,,,,Required,,,,,,10 CCR 2507-1 § 4.100,LEAP available November 1 through April 30 only; heating season restriction,ongoing,
+update,Household,utilityCostHeating,,,,,,,,,,,,,,,,,,,10 CCR 2507-1,Heat/eat: minimal LEAP benefit confers SNAP Standard Utility Allowance (SUA) eligibility,ongoing,42 USC 8624; 7 CFR 273.9(d)(6)(iii)
+add,Person,coStateSupplementAmount,CO State Supplement Amount,number,,system,,,,,Required,,,,,,,,,,C.R.S. § 26-2-201,Colorado mandatory state supplement to SSI; administered by SSA (1634 state); amount varies by living arrangement,ongoing,20 CFR 416.2001
+add_program,,,Old Age Pension (OAP),,,,,,,,,,,,,,Program,,,,C.R.S. § 26-2-111,Adults 60+ who don't qualify for SSI; state-funded,ongoing,
+add_program,,,Aid to the Needy Disabled (AND),,,,,,,,,,,,,,,Program,,,C.R.S. § 26-2-111,Disabled adults pending or ineligible for SSI; state-funded,ongoing,
+add_program,,,Aid to the Blind (AB),,,,,,,,,,,,,,,,Program,,C.R.S. § 26-2-111,Blind individuals who don't qualify for SSI; state-funded,ongoing,
+add_program,,,Colorado Child Care Assistance Program (CCCAP),,,,,,,,,,,,,,,,,Program,C.R.S. § 26-2-803,Subsidized child care for low-income working families,ongoing,
+update,Person,dateOfBirth,,,,,,,,,,,,,,,Required,Required,Required,Required,C.R.S. § 26-2-111; C.R.S. § 26-2-803,Required for all state-only programs; OAP requires age 60+,ongoing,
+update,Person,ssn,,,,,,,,,,,,,,,Required,Required,Required,Required,C.R.S. § 26-2-111; C.R.S. § 26-2-803,Required for all state-only programs,ongoing,
+update,Person,disabilityStatus,,,,,,,,,,,,,,,,Required,,,C.R.S. § 26-2-111,Must meet disability criteria for AND eligibility,ongoing,20 CFR 416.905
+update,Person,isBlind,,,,,,,,,,,,,,,,,Required,,C.R.S. § 26-2-111,Must meet SSA blindness definition for AB eligibility,ongoing,20 CFR 416.981
+update,Person,employmentStatus,,,,,,,,,,,,,,,,,,Required,C.R.S. § 26-2-803,Must be employed or in training/education for CCCAP,ongoing,
+update,Income,type,,,,,,,,,,,,,,,Required,Required,Required,Required,C.R.S. § 26-2-111; C.R.S. § 26-2-803,Income type required for all state-only programs,ongoing,
+update,Income,grossAmount,,,,,,,,,,,,,,,Required,Required,Required,Required,C.R.S. § 26-2-111; C.R.S. § 26-2-803,Income verification required for all state-only programs,ongoing,
+add,Person,childCareNeeded,Child Care Needed,boolean,,applicant,,,,,,,,,,,,,,Required,C.R.S. § 26-2-803,Child must need care due to parent employment/training/education,ongoing,
+add,Household,countyOfficeCode,County Office Code,string,,system,Required,Required,Required,Required,,Required,Required,,Required,Required,Required,Required,Required,Required,C.R.S. § 26-1-108,64 Colorado counties each administer benefits; CBMS county code identifies administering office,ongoing,
+add,Application,peakConfirmationNumber,PEAK Confirmation Number,string,,system,Required,Required,Required,Required,,,Required,,Required,,Required,Required,Required,,10 CCR 2506-1,PEAK online portal or CBMS application tracking number,ongoing,
+add,Household,coloradoResidencyVerified,Colorado Residency Verified,boolean,,verified,Required,Required,Required,Required,,Required,Required,,Required,Required,Required,Required,Required,Required,10 CCR 2506-1,Verification of Colorado residency required for all state-administered programs,ongoing,
+add,Person,cbmsClientId,CBMS Client ID,string,,system,Required,Required,Required,Required,,Required,Required,,Required,Required,Required,Required,Required,Required,10 CCR 2506-1,Colorado Benefits Management System client identifier,ongoing,
+update,Household,preferredLanguage,,,"english|spanish|chinese|vietnamese|korean|tagalog|arabic|french|haitian_creole|russian|portuguese|somali|burmese|nepali|amharic|other",,,,,,,,,,,,,,,,10 CCR 2506-1,Added somali|burmese|nepali|amharic for Colorado refugee communities,ongoing,
+update,Household,primaryHeatingFuelType,,,"natural_gas|electricity|propane|fuel_oil|kerosene|wood|pellet|coal|solar|other",,,,,,,,,,,,,,,,10 CCR 2507-1,Added pellet fuel type; common in Colorado mountain communities,ongoing,42 USC 8624(b)(5)
