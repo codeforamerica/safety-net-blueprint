@@ -126,6 +126,6 @@ rules:
 
 overrides:
   # SSE streaming endpoints use text/event-stream, not application/json
-  - files: ["packages/contracts/workflow-openapi.yaml#/paths/~1events~1stream"]
+  - files: ["packages/contracts/platform-openapi.yaml#/paths/~1events~1stream"]
     rules:
       response-body-json-only: off

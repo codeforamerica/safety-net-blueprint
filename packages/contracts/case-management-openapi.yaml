@@ -12,13 +12,15 @@ info:
     name: API Support
     email: support@example.com
 servers:
-- url: https://api.example.com
+- url: https://api.example.com/case-management
   description: Production server
-- url: http://localhost:8080
+- url: http://localhost:1080/case-management
   description: Local development server
 tags:
 - name: Cases
   description: Manage cases.
+x-events: {}
+
 paths:
   "/cases":
     get:

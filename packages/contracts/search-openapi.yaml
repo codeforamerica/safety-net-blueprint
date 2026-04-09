@@ -3,7 +3,7 @@ info:
   title: Search Service API
   version: 0.1.0
   x-domain: search
-  x-status: alpha
+  x-status: deprecated
   x-visibility: internal
   description: |
     REST API for cross-resource search across all domains.
