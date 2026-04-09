@@ -354,21 +354,21 @@ export function hasJsonResponse(operation) {
 }
 
 /**
- * Check if path is a collection endpoint (no {id} parameter)
+ * Check if path is a collection endpoint (no {id} parameter, not a named singleton like /me)
  * @param {string} path - The endpoint path
  * @returns {boolean}
  */
 export function isCollectionPath(path) {
-  return !path.includes('{');
+  return !path.includes('{') && !path.endsWith('/me');
 }
 
 /**
- * Check if path is a single resource endpoint (has {id} parameter)
+ * Check if path is a single resource endpoint (has {id} parameter or is a named singleton like /me)
  * @param {string} path - The endpoint path
  * @returns {boolean}
  */
 export function isSingleResourcePath(path) {
-  return path.includes('{');
+  return path.includes('{') || path.endsWith('/me');
 }
 
 /**
