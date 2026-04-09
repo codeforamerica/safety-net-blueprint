@@ -80,7 +80,11 @@ export function seedDatabase(collectionName, seedDir, apiName) {
  */
 function deriveCollectionName(api) {
   if (api.baseResource) {
-    return api.baseResource.split('/')[1];
+    const basePath = api.serverBasePath || '';
+    const resourcePath = basePath && api.baseResource.startsWith(basePath)
+      ? api.baseResource.slice(basePath.length)
+      : api.baseResource;
+    return resourcePath.split('/')[1];
   }
   return api.name;
 }
@@ -92,8 +96,12 @@ function deriveCollectionName(api) {
  */
 function deriveAllCollectionNames(api) {
   const names = new Set();
+  const basePath = api.serverBasePath || '';
   for (const endpoint of api.endpoints || []) {
-    const segment = endpoint.path.split('/')[1];
+    const path = basePath && endpoint.path.startsWith(basePath)
+      ? endpoint.path.slice(basePath.length)
+      : endpoint.path;
+    const segment = path.split('/')[1];
     if (segment) names.add(segment);
   }
   // Fallback for APIs with no endpoints

@@ -37,12 +37,17 @@ function convertPathFormat(path) {
 
 /**
  * Derive the database collection name from an endpoint path.
- * Uses the first path segment (e.g., "/tasks/{taskId}" → "tasks").
- * @param {string} path - OpenAPI path (e.g., "/tasks" or "/task-audit-events/{id}")
+ * Strips the server base path prefix before extracting the first resource segment.
+ * E.g., "/workflow/tasks/{taskId}" with basePath "/workflow" → "tasks".
+ * @param {string} path - OpenAPI path (possibly prefixed with serverBasePath)
+ * @param {string} [basePath] - Server base path to strip (e.g., "/workflow")
  * @returns {string} Collection name for database operations
  */
-function deriveCollectionName(path) {
-  return path.split('/')[1];
+function deriveCollectionName(path, basePath) {
+  const resourcePath = basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length)
+    : path;
+  return resourcePath.split('/')[1];
 }
 
 /**
@@ -62,14 +67,17 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachine, rules, s
   for (const endpoint of apiMetadata.endpoints) {
     const expressPath = convertPathFormat(endpoint.path);
     const method = endpoint.method.toLowerCase();
-    const collectionName = deriveCollectionName(endpoint.path);
+    const collectionName = deriveCollectionName(endpoint.path, apiMetadata.serverBasePath);
     const endpointWithCollection = { ...endpoint, collectionName };
 
     let handler = null;
     let description = '';
 
     // Determine handler based on method and path type
-    if (endpoint.operationId === 'search') {
+    if (endpoint.operationId === 'streamEvents') {
+      // Handled by manual registration in server.js before routes are registered
+      continue;
+    } else if (endpoint.operationId === 'search') {
       // Cross-resource search endpoint — custom handler
       handler = createSearchHandler(apiMetadata);
       description = 'Cross-resource search';
@@ -185,7 +193,7 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules =
     const objectCollection = sm.object.toLowerCase() + 's';
     const itemEndpoint = apiSpec.endpoints.find(
       e => e.method.toLowerCase() === 'get' && isItemEndpoint(e.path)
-        && deriveCollectionName(e.path) === objectCollection
+        && deriveCollectionName(e.path, apiSpec.serverBasePath) === objectCollection
     );
     if (!itemEndpoint) {
       console.warn(`  No item endpoint found for "${sm.domain}" — skipping state machine routes`);
@@ -197,7 +205,7 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules =
     const paramName = paramMatch ? paramMatch[1] : 'id';
 
     // Derive collection name from the resource path
-    const collectionName = deriveCollectionName(itemEndpoint.path);
+    const collectionName = deriveCollectionName(itemEndpoint.path, apiSpec.serverBasePath);
 
     console.log(`  Registering state machine routes for ${sm.domain}/${sm.object}...`);
 
