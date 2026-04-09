@@ -23,7 +23,7 @@
     "clients:typescript": "node packages/clients/scripts/generate-clients-typescript.js",
     "clients:json-schema": "node packages/clients/scripts/generate-clients-json-schema.js",
     "postman:generate": "node packages/contracts/scripts/resolve.js --spec=packages/contracts --overlay=packages/contracts/overlays --out=packages/resolved && node packages/contracts/scripts/generate-postman.js --spec=packages/resolved",
-    "mock:start": "node packages/mock-server/scripts/server.js",
+    "mock:start": "node packages/mock-server/scripts/server.js --seed=packages/mock-server/seed",
     "mock:stop": "node packages/mock-server/scripts/server.js --stop",
     "mock:start:all": "node packages/mock-server/scripts/start-all.js --spec=packages/contracts",
     "mock:swagger": "node packages/mock-server/scripts/swagger/server.js --spec=packages/contracts",
