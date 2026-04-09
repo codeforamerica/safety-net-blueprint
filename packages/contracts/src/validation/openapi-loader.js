@@ -38,7 +38,14 @@ export function discoverApiSpecs({ specsDir } = {}) {
     .filter(file => {
       const fullPath = join(openapiDir, file);
       const stat = statSync(fullPath);
-      return stat.isFile() && file.endsWith('-openapi.yaml');
+      if (!stat.isFile() || !file.endsWith('-openapi.yaml')) return false;
+      try {
+        const content = readFileSync(fullPath, 'utf8');
+        if (content.includes('x-status: deprecated')) return false;
+      } catch {
+        // If we can't read the file, include it and let validation handle it
+      }
+      return true;
     })
     .map(file => {
       const resourceName = basename(file, '-openapi.yaml');
@@ -77,11 +84,27 @@ export async function loadSpec(specPath) {
  */
 export function extractMetadata(spec, resourceName) {
   const paths = spec.paths || {};
+
+  // Extract base path from the localhost server URL (e.g., http://localhost:1080/intake -> /intake)
+  const localhostServer = spec.servers?.find(s => s.url?.includes('localhost'));
+  let serverBasePath = '';
+  if (localhostServer) {
+    try {
+      const url = new URL(localhostServer.url);
+      serverBasePath = url.pathname.replace(/\/$/, ''); // strip trailing slash
+    } catch {
+      // Ignore invalid URLs
+    }
+  }
+
   const metadata = {
     name: resourceName,
     title: spec.info?.title || resourceName,
     version: spec.info?.version || '1.0.0',
-    baseResource: Object.keys(paths).find(p => !p.includes('{')) || `/${resourceName}`,
+    serverBasePath,
+    baseResource: serverBasePath
+      ? `${serverBasePath}${Object.keys(paths).find(p => !p.includes('{') && !p.startsWith(serverBasePath)) || `/${resourceName}`}`
+      : (Object.keys(paths).find(p => !p.includes('{')) || `/${resourceName}`),
     endpoints: [],
     schemas: {},
     errorResponses: {},
@@ -142,7 +165,7 @@ export function extractMetadata(spec, resourceName) {
       const allParameters = [...pathParameters, ...operationParameters];
       
       const endpoint = {
-        path,
+        path: serverBasePath && !path.startsWith(serverBasePath) ? `${serverBasePath}${path}` : path,
         method: method.toUpperCase(),
         operationId: operation.operationId,
         summary: operation.summary,
