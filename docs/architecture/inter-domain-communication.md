@@ -66,6 +66,8 @@ Every domain API uses a domain-prefixed base path declared in the `servers` entr
 
 Domain identity is explicit in every URL — in logs, traces, gateway routing rules, and documentation. Path-based routing is the standard pattern for API gateways.
 
+Prefixes are declared in the `servers` entry of each OpenAPI spec and can be overlaid by state partners. A state that prefers `/shared` over `/platform`, or `/benefits/intake` over `/intake`, changes the `servers` entry and regenerates — no paths within the spec change.
+
 ---
 
 ## Event Versioning
