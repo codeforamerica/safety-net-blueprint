@@ -71,6 +71,9 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
         const effects = stateMachine.onCreate.effects || [];
 
+        // Snapshot before any effects mutate resource (for DB diff later)
+        const original = JSON.parse(JSON.stringify(resource));
+
         if (effects.length > 0) {
           const context = {
             caller: {
@@ -104,7 +107,6 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
         // Persist rule-driven and SLA mutations back to DB
         const diff = {};
-        const original = JSON.parse(JSON.stringify(resource));
         for (const [key, value] of Object.entries(resource)) {
           if (original[key] !== value && key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
             diff[key] = value;
