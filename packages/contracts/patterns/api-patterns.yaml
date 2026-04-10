@@ -441,9 +441,22 @@ x_events:
 
     traceparent:
       description: |
-        The triggering request's traceparent header is propagated to all emitted
-        events. Consumers can reconstruct the full causal chain by filtering the
-        event log by trace ID (extracted from traceparent).
+        W3C Trace Context propagation. Implementations must forward the
+        `traceparent` HTTP request header to all events emitted during that
+        request's lifecycle, including events from state machine transitions
+        and CRUD lifecycle effects triggered by the same call.
+
+        When no `traceparent` is present on the inbound request, the attribute
+        must be omitted from emitted events — implementations must not generate
+        a synthetic value.
+
+        Clients must include `traceparent` on all requests to enable end-to-end
+        tracing. The trace ID component is stable across the full causal chain,
+        so filtering events by trace ID reconstructs the complete set of
+        operations triggered by a single originating request.
+
+        The `traceparent` attribute in CloudEvents follows the CloudEvents
+        Distributed Tracing extension specification.
 
 # =============================================================================
 # Behavioral YAML Conventions

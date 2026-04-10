@@ -86,7 +86,13 @@ GET /events?subject=00000004-0000-4000-8000-000000000001
 
 Filtering by `type` or `source` narrows results to a specific domain or event kind.
 
-For causal chain tracing, the `traceparent` attribute propagates the W3C Trace Context from the triggering request or event. The trace ID it carries is stable across the entire chain — every downstream event shares the same trace ID, so the full causal chain is recoverable in a single query filtered by trace ID.
+#### Distributed tracing
+
+Conforming implementations must propagate the W3C Trace Context `traceparent` header from each inbound HTTP request to every event emitted during that request's lifecycle. The `traceparent` value is included as a CloudEvents extension attribute (per the [CloudEvents Distributed Tracing extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/distributed-tracing.md)) and must not be modified — it carries a trace ID (stable across the full causal chain) and a parent span ID (the immediate parent operation).
+
+Clients must forward the `traceparent` header on all requests to enable end-to-end tracing. When an inbound request carries no `traceparent`, the implementation omits the attribute from emitted events rather than generating a synthetic value.
+
+The trace ID is stable across the entire chain — every event emitted from a single HTTP request shares the same trace ID, so the complete causal trail for any operation is recoverable by filtering events on `traceparent` prefix or by querying an OTLP-compatible backend.
 
 ---
 
