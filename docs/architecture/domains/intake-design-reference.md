@@ -277,23 +277,23 @@ Events are listed with the operational or regulatory need that drives them — t
 
 Quick reference — each decision is detailed in the section below.
 
-| # | Decision | Status | Summary |
-|---|---|---|---|
-| 1 | [Role vs. relationship on ApplicationMember](#decision-1-role-vs-relationship-on-applicationmember) | **Decided** | Separate `role` and `relationship` fields — no vendor conflates them. |
-| 2 | [Programs applied for — placement](#decision-2-programs-applied-for--placement) | **Decided** | Both application-level and member-level programs lists. |
-| 3 | [Program-specific eligibility attributes — structure](#decision-3-program-specific-eligibility-attributes--structure) | **Decided** | Flat facts on ApplicationMember — person facts don't change per program. |
-| 4 | [Authorized representative — modeling](#decision-4-authorized-representative--modeling) | **Decided** | `roles` array on ApplicationMember — supports multiple simultaneous roles. |
-| 5 | [Domain events — scope](#decision-5-domain-events--scope) | **Decided** | Both lifecycle and resource events; specific events determined per-domain. |
-| 6 | [Event envelope format](#decision-6-event-envelope-format) | **Decided** | CloudEvents 1.0 — transport-agnostic, cloud-native, AsyncAPI-compatible. |
-| 7 | [Intake phase end — lifecycle state](#decision-7-intake-phase-end--lifecycle-state) | **Decided** | Caseworker-triggered event, no new state — each domain owns its own transitions. |
-| 8 | [Application data mutability and audit trail](#decision-8-application-data-mutability-and-audit-trail) | **Decided** | Cross-cutting audit domain — audit logic lives once, not duplicated per domain. |
-| 9 | [submitted → under_review transition trigger](#decision-9-submitted--under_review-transition-trigger) | **Decided** | Intake subscribes to `task.claimed` — one caseworker action triggers both domains. |
-| 10 | [Event type naming convention](#decision-10-event-type-naming-convention) | **Decided** | `org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}` — fully qualified, collision-safe. |
-| 11 | [Member-to-member relationship matrix (MAGI)](#decision-11-member-to-member-relationship-matrix-magi) | **Decided** | Relationship to primary applicant only — sufficient for SNAP and most MAGI cases; full pairwise matrix is a known gap. |
-| 12 | [Person identity matching](#decision-12-person-identity-matching) | **Decided** | Matching triggered at submission; synchronous vs. asynchronous is an implementation choice. |
-| 13 | [Income and expense detail at intake](#decision-13-income-and-expense-detail-at-intake) | **Decided** | Full schema, only gross income required — implementations decide how much detail to collect. |
-| 14 | [MAGI tax filing status fields](#decision-14-magi-tax-filing-status-fields) | **Decided** | Flat fields in the baseline — required by the MAGI household composition logic from [Decision 11](#decision-11-member-to-member-relationship-matrix-magi). |
-| 15 | [Post-submission program routing — task creation and automated eligibility](#decision-15-post-submission-program-routing--task-creation-and-automated-eligibility) | **Decided** | One intake task per application with per-program status — programs under automated processing marked at task creation. |
+| # | Decision | Summary |
+|---|---|---|
+| 1 | [Role vs. relationship on ApplicationMember](#decision-1-role-vs-relationship-on-applicationmember) | Separate `role` and `relationship` fields — no vendor conflates them. |
+| 2 | [Programs applied for — placement](#decision-2-programs-applied-for--placement) | Both application-level and member-level programs lists. |
+| 3 | [Program-specific eligibility attributes — structure](#decision-3-program-specific-eligibility-attributes--structure) | Flat facts on ApplicationMember — person facts don't change per program. |
+| 4 | [Authorized representative — modeling](#decision-4-authorized-representative--modeling) | `roles` array on ApplicationMember — supports multiple simultaneous roles. |
+| 5 | [Domain events — scope](#decision-5-domain-events--scope) | Both lifecycle and resource events; specific events determined per-domain. |
+| 6 | [Event envelope format](#decision-6-event-envelope-format) | CloudEvents 1.0 — transport-agnostic, cloud-native, AsyncAPI-compatible. |
+| 7 | [Intake phase end — lifecycle state](#decision-7-intake-phase-end--lifecycle-state) | Caseworker-triggered event, no new state — each domain owns its own transitions. |
+| 8 | [Application data mutability and audit trail](#decision-8-application-data-mutability-and-audit-trail) | Cross-cutting audit domain — audit logic lives once, not duplicated per domain. |
+| 9 | [submitted → under_review transition trigger](#decision-9-submitted--under_review-transition-trigger) | Intake subscribes to `task.claimed` — one caseworker action triggers both domains. |
+| 10 | [Event type naming convention](#decision-10-event-type-naming-convention) | `org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}` — fully qualified, collision-safe. |
+| 11 | [Member-to-member relationship matrix (MAGI)](#decision-11-member-to-member-relationship-matrix-magi) | Relationship to primary applicant only — sufficient for SNAP and most MAGI cases; full pairwise matrix is a known gap. |
+| 12 | [Person identity matching](#decision-12-person-identity-matching) | Matching triggered at submission; synchronous vs. asynchronous is an implementation choice. |
+| 13 | [Income and expense detail at intake](#decision-13-income-and-expense-detail-at-intake) | Full schema, only gross income required — implementations decide how much detail to collect. |
+| 14 | [MAGI tax filing status fields](#decision-14-magi-tax-filing-status-fields) | Flat fields in the baseline — required by the MAGI household composition logic from [Decision 11](#decision-11-member-to-member-relationship-matrix-magi). |
+| 15 | [Post-submission program routing — task creation and automated eligibility](#decision-15-post-submission-program-routing--task-creation-and-automated-eligibility) | One intake task per application with per-program status — programs under automated processing marked at task creation. |
 
 ---
 
