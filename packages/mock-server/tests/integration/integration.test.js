@@ -1071,25 +1071,25 @@ async function runTests() {
       }
     }
 
-    // RULE-4: Verify "created" domain event from onCreate effects
+    // RULE-4: Verify "created" domain event auto-emitted by create handler
     if (snapTaskId) {
       try {
-        console.log('\n  RULE-4. Verify "created" domain event from onCreate effects');
-        const listResponse = await fetch(`${BASE_URL}/platform/events?q=resourceId:${snapTaskId}`);
+        console.log('\n  RULE-4. Verify "created" domain event auto-emitted by create handler');
+        const listResponse = await fetch(`${BASE_URL}/platform/events?subject=${snapTaskId}`);
         const listData = await listResponse.json();
 
-        const createdEvents = listData.items?.filter(e => e.action === 'created') || [];
+        const createdEvents = listData.items?.filter(e => e.type?.endsWith('.created')) || [];
         if (createdEvents.length >= 1) {
           const event = createdEvents[0];
-          if (event.resourceId === snapTaskId && event.occurredAt) {
-            console.log('     ✓ PASS: "created" domain event exists with correct fields');
+          if (event.subject === snapTaskId && event.time && event.specversion === '1.0') {
+            console.log('     ✓ PASS: "created" CloudEvent exists with correct fields');
             totalPassed++;
           } else {
-            console.log(`     ✗ FAIL: Domain event fields incorrect: ${JSON.stringify(event)}`);
+            console.log(`     ✗ FAIL: CloudEvent fields incorrect: ${JSON.stringify(event)}`);
             totalFailed++;
           }
         } else {
-          console.log(`     ✗ FAIL: Expected "created" domain event, got ${createdEvents.length}`);
+          console.log(`     ✗ FAIL: Expected "created" CloudEvent, got ${createdEvents.length}`);
           totalFailed++;
         }
         totalTests++;
@@ -1215,16 +1215,16 @@ async function runTests() {
     if (supTaskId) {
       try {
         console.log(`\n  SUP-5. Verify assigned and priority_changed events emitted`);
-        const listResponse = await fetch(`${BASE_URL}/platform/events?q=resourceId:${supTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/platform/events?subject=${supTaskId}`);
         const listData = await listResponse.json();
-        const actions = (listData.items || []).map(e => e.action);
-        const hasAssigned = actions.includes('assigned');
-        const hasPriorityChanged = actions.includes('priority_changed');
+        const types = (listData.items || []).map(e => e.type?.split('.').pop());
+        const hasAssigned = types.includes('assigned');
+        const hasPriorityChanged = types.includes('priority_changed');
         if (hasAssigned && hasPriorityChanged) {
-          console.log(`     ✓ PASS: Events found — ${actions.join(', ')}`);
+          console.log(`     ✓ PASS: Events found — ${types.join(', ')}`);
           totalPassed++;
         } else {
-          console.log(`     ✗ FAIL: Missing events. Found: ${actions.join(', ')}`);
+          console.log(`     ✗ FAIL: Missing events. Found: ${types.join(', ')}`);
           totalFailed++;
         }
         totalTests++;
