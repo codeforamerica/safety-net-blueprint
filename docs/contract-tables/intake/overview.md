@@ -37,12 +37,6 @@ Tasks move through a defined set of states. The **SLA clock** tracks time toward
 
 ## Transitions
 
-### On Create
-
-The following effects run automatically when a task is first created:
-
-- Emit `created` event
-
 ### Actor-triggered
 
 These transitions fire when a caseworker, supervisor, or the system calls the corresponding endpoint (`POST /tasks/{id}/{trigger}`).

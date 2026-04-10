@@ -17,14 +17,56 @@ info:
     email: support@example.com
 
 servers:
-  - url: https://api.example.com
+  - url: https://api.example.com/intake
     description: Production server
-  - url: http://localhost:1080
+  - url: http://localhost:1080/intake
     description: Local development server
 
 tags:
   - name: Applications
     description: Manage public assistance applications.
+
+x-events:
+  application.created:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.created
+    summary: Emitted when an application record is first created (auto-emitted on POST)
+    payload:
+      $ref: "#/components/schemas/ApplicationCreatedEvent"
+  application.submitted:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
+    summary: Emitted when an applicant formally submits their application; starts the regulatory clock
+    payload:
+      $ref: "#/components/schemas/ApplicationSubmittedEvent"
+  application.opened:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.opened
+    summary: Emitted when a caseworker begins active review of the application
+    payload:
+      $ref: "#/components/schemas/ApplicationOpenedEvent"
+  application.withdrawn:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
+    summary: Emitted when an application is withdrawn; triggers open task cancellation
+    payload:
+      $ref: "#/components/schemas/ApplicationWithdrawnEvent"
+  application.closed:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.closed
+    summary: Emitted when intake is complete and the application is ready for eligibility determination
+    payload:
+      $ref: "#/components/schemas/ApplicationClosedEvent"
+  application.expedited_flagged:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.expedited_flagged
+    summary: Emitted when an application is flagged for expedited processing
+    payload:
+      $ref: "#/components/schemas/ApplicationExpeditedFlaggedEvent"
+  application.updated:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.updated
+    summary: Emitted when application fields are updated via PATCH (auto-emitted)
+    payload:
+      $ref: "#/components/schemas/ApplicationUpdatedEvent"
+  application.deleted:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.deleted
+    summary: Emitted when an application is deleted (auto-emitted on DELETE)
+    payload:
+      $ref: "#/components/schemas/ApplicationDeletedEvent"
 
 paths:
   /applications:
@@ -267,6 +309,119 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Application"
+
+    # Event payload schemas — referenced by x-events section above
+
+    ApplicationClosedEvent:
+      type: object
+      description: Payload for application.closed — signals intake is complete.
+      required:
+        - closedAt
+      properties:
+        closedAt:
+          type: string
+          format: date-time
+          description: When the intake phase closed.
+
+    ApplicationCreatedEvent:
+      description: Snapshot of the newly created application resource.
+      $ref: "#/components/schemas/Application"
+
+    ApplicationDeletedEvent:
+      type: object
+      description: Payload for application.deleted — auto-emitted when an application record is permanently removed.
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifier of the deleted application.
+
+    ApplicationExpeditedFlaggedEvent:
+      type: object
+      description: Payload for application.expedited_flagged — triggers escalation to expedited SLA track.
+      required:
+        - flaggedAt
+      properties:
+        flaggedAt:
+          type: string
+          format: date-time
+          description: When the expedited flag was set.
+
+    ApplicationOpenedEvent:
+      type: object
+      description: Payload for application.opened — signals caseworker has begun active review.
+      required:
+        - openedAt
+        - programs
+      properties:
+        openedAt:
+          type: string
+          format: date-time
+          description: When the application moved to under_review.
+        programs:
+          type: array
+          description: Programs the household is applying for. Included so downstream systems can fan out per-program work after intake screening (see Decision 15).
+          items:
+            type: string
+            enum:
+              - snap
+              - medicaid
+              - tanf
+
+    ApplicationSubmittedEvent:
+      type: object
+      description: Payload for application.submitted — starts the regulatory clock; triggers program-type-aware routing (see Decision 15).
+      required:
+        - submittedAt
+        - programs
+      properties:
+        submittedAt:
+          type: string
+          format: date-time
+          description: When the application was formally submitted.
+        programs:
+          type: array
+          description: Programs the household is applying for. Consumers route per program type — not all programs generate caseworker tasks at submission.
+          items:
+            type: string
+            enum:
+              - snap
+              - medicaid
+              - tanf
+        channel:
+          type: string
+          description: How the application was filed.
+          enum:
+            - online
+            - in_person
+            - phone
+            - mail
+        isExpedited:
+          type:
+            - boolean
+            - "null"
+          description: Whether expedited screening has already determined the application qualifies. Null if not yet screened.
+
+    ApplicationUpdatedEvent:
+      type: object
+      description: Payload for application.updated — auto-emitted on PATCH; contains only the fields that changed.
+      additionalProperties: true
+
+    ApplicationWithdrawnEvent:
+      type: object
+      description: Payload for application.withdrawn — triggers open task cancellation and withdrawal notice.
+      required:
+        - withdrawnAt
+      properties:
+        withdrawnAt:
+          type: string
+          format: date-time
+          description: When the application was withdrawn.
+        reason:
+          type: string
+          description: Why the application was withdrawn.
 
   examples:
     ApplicationExample1:

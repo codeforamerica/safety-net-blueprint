@@ -143,12 +143,6 @@ transitions:
         data:
           flaggedAt: $now
         description: Emit application.expedited_flagged — triggers workflow to escalate to expedited SLA track
-onCreate:
-  actors: []
-  effects:
-    - type: event
-      action: created
-      description: Emit a domain event when an application is first created
 requestBodies:
   - trigger: submit
   - trigger: open

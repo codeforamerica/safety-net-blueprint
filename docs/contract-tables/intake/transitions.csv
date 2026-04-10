@@ -1,5 +1,4 @@
 From,To,Trigger,On,After,RelativeTo,CalendarType,Actors,Guards,Effects
-(create),draft,create,,,,,,,event
 draft,submitted,submit,,,,,applicant; caseworker,"any: callerIsApplicant, callerIsCaseworker",set submittedAt = $now; event
 submitted,under_review,open,,,,,system,callerIsSystem,event
 submitted | under_review,withdrawn,withdraw,,,,,applicant; caseworker; supervisor,"any: callerIsApplicant, callerIsCaseworker, callerIsSupervisor",set withdrawnAt = $now; event
