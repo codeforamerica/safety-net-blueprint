@@ -1,6 +1,6 @@
 # Intake Domain: Industry Reference
 
-A data-model-focused comparison of how major government benefits platforms structure intake for SNAP, Medicaid, TANF, and WIC. For each entity this document describes: what it is, how major systems model it, and the evidence that informs open design decisions.
+Industry research and design decisions for the intake domain, covering process, regulations, data model, events, and lifecycle. Informed by how major government benefits platforms implement intake for SNAP, Medicaid, TANF, and WIC, and by the federal regulations that govern each program.
 
 See [Intake Domain](intake.md) for the architecture overview and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
@@ -38,7 +38,7 @@ The intake phase spans from filing through caseworker review and data collection
 
 1. **Filing** — applicant submits a minimally complete application; regulatory clock starts; the application enters the caseworker queue for review covering all programs applied for
 2. **Confirmation notice** — the agency sends an acknowledgment to the household confirming receipt of the application and the filing date; many states are required to provide this notice
-3. **Identity matching** — the agency attempts to match the applicant and household members to existing person records to prevent duplicate records and link to prior application history; see Decision 12
+3. **Identity matching** — the agency attempts to match the applicant and household members to existing person records to prevent duplicate records and link to prior application history; see [Decision 12](#decision-12-person-identity-matching)
 4. **Queue assignment and routing** — the application is routed to the appropriate caseworker based on program type, geography, workload, or other agency-configured rules
 5. **Automated eligibility determination (Medicaid)** — for MAGI Medicaid, the agency immediately attempts real-time eligibility (RTE) via the Federal Data Services Hub (FDSH) using SSA income data, IRS tax data, and citizenship/immigration status; if RTE succeeds, Medicaid is auto-approved or auto-denied with no caseworker involvement; if inconclusive, Medicaid proceeds to caseworker review; this runs before any caseworker action (45 CFR § 435.911–435.916)
 6. **Electronic data source checks** — in parallel with or shortly after filing, the agency queries electronic data sources to pre-populate or verify applicant-reported data: IEVS/The Work Number for income and employment, SAVE for immigration and citizenship status, SSA for disability and benefit receipt; results inform the caseworker's review but do not replace it
@@ -145,7 +145,7 @@ Every system must represent members who are in the household but not requesting 
 - **Cúram**: `CASEPARTICIPANTROLE` with `participantRoleType = AuthorisedRepresentative` — no separate entity
 - **Pega**: `AuthorizedRepresentativeID` reference on the Application case, pointing to a separate `Person` entity
 
-Salesforce and Cúram model the authorized representative as a *role* on the member junction record. Pega uses a separate reference from the Application entity to a Person record. See Decision 4 for the tradeoffs — the distinction matters because SNAP authorized representatives are by regulation non-household members, which makes the "role on a member" framing conceptually imprecise for that program.
+Salesforce and Cúram model the authorized representative as a *role* on the member junction record. Pega uses a separate reference from the Application entity to a Person record. See [Decision 4](#decision-4-authorized-representative--modeling) for the tradeoffs — the distinction matters because SNAP authorized representatives are by regulation non-household members, which makes the "role on a member" framing conceptually imprecise for that program.
 
 **Key fields present across vendors:**
 
@@ -224,14 +224,14 @@ Based on regulatory requirements and vendor consensus:
 
 No vendor tracks the final determination (approved/denied) on the Application itself. That determination lives on the program delivery case or benefit assignment created downstream.
 
-**Implication for the data model:** Application data is mutable during `under_review`. The intake domain must support caseworker-initiated updates to application records, not just the applicant's initial submission. This has audit trail implications — changes made by caseworkers after submission should be distinguishable from the original submitted data. See Decision 9.
+**Implication for the data model:** Application data is mutable during `under_review`. The intake domain must support caseworker-initiated updates to application records, not just the applicant's initial submission. This has audit trail implications — changes made by caseworkers after submission should be distinguishable from the original submitted data. See [Decision 9](#decision-9-submitted--under_review-transition-trigger).
 
 ### Key transitions
 
 - **submit**: `draft` → `submitted` — applicant files; regulatory clock starts; triggers caseworker task creation and confirmation notice
-- **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; assignment (routing the application to a worker's queue) may happen separately via the workflow domain and does not necessarily trigger this transition; see Decision 10
+- **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; assignment (routing the application to a worker's queue) may happen separately via the workflow domain and does not necessarily trigger this transition; see [Decision 10](#decision-10-event-type-naming-convention)
 - **withdraw**: `submitted` | `under_review` → `withdrawn` — applicant-initiated; triggers open task cancellation
-- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination; see Decision 8
+- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination; see [Decision 8](#decision-8-application-data-mutability-and-audit-trail)
 
 ---
 
@@ -249,54 +249,27 @@ None of the major platforms are purely event-driven in the modern sense. Each ha
 
 **General pattern:** These platforms were designed primarily as record-of-system platforms with REST/SOAP APIs as the primary integration surface. Event capabilities exist but are either proprietary (Salesforce Platform Events), infrastructure-dependent (Pega's Kafka integration), or oriented toward internal module communication (Cúram JMS). None natively emit events in a standard format like CloudEvents. States building modern integrations typically poll these systems' APIs or use the vendor's proprietary streaming mechanism.
 
-**Implication for the blueprint:** The blueprint can establish a cleaner event model than any of these vendors by designing for events from the start rather than retrofitting them. The open questions are what envelope format to use, how events are delivered, and whether to adopt a standard like CloudEvents. See Decision 11.
+**Implication for the blueprint:** The blueprint can establish a cleaner event model than any of these vendors by designing for events from the start rather than retrofitting them. The adopted envelope format is CloudEvents 1.0 — see [Decision 6](#decision-6-event-envelope-format).
 
-### Transition events vs. data mutation events
+### Event types
 
-An open design decision is whether the intake domain emits events only on lifecycle state transitions, or also on significant data changes that don't change the application's state.
+The intake domain emits two kinds of events:
 
-**Transitions-only approach:** Events map 1:1 to lifecycle state changes. Simpler event model; downstream systems poll or use the state transition payload for data changes.
+**Lifecycle transition events** — named, semantic events tied to application state changes or significant caseworker actions (e.g., submission, withdrawal, expedited flag). Each carries a specific payload relevant to the transition.
 
-**Data mutations too:** Events are also emitted when significant data changes occur within a stable state — a member is added during `draft`, an income record is updated during `under_review`. More event-sourcing style; enables downstream systems to react without polling. Cúram's evidence framework emits internal notifications on every evidence change — the closest analog, though not exposed externally. Salesforce CDC publishes change events for any record update, which is the external equivalent.
-
-See [Key design decisions](#key-design-decisions) — Decision 5.
+**Generic resource events** — emitted on any create, update, or delete of the application or its sub-resources. These support audit and change-tracking consumers without requiring a named event for every data change. Sub-resource-level events are addressed when those sub-resources are designed. See [Decision 5](#decision-5-domain-events--scope).
 
 ### Event catalog
 
 Events are listed with the operational or regulatory need that drives them — the reason a downstream domain needs to react, not just what happens to trigger them.
 
-**Lifecycle transition events (certain):**
-
 | Event | Why it's needed | Trigger | Primary consumers |
 |---|---|---|---|
-| `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. Workflow creates one intake task per application (not per program) — the task carries the full programs list and per-program status. Programs going through automated processing (Medicaid RTE) are marked accordingly at task creation. Communication sends a confirmation; eligibility begins automated determination for applicable programs. See Decision 15 for routing details. | `draft` → `submitted` | Workflow (one intake task, per-program status — see Decision 15), Communication (confirmation notice), Eligibility (RTE for Medicaid) |
+| `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. Workflow creates one intake task per application (not per program) — the task carries the full programs list and per-program status. Programs going through automated processing (Medicaid RTE) are marked accordingly at task creation. Communication sends a confirmation; eligibility begins automated determination for applicable programs. See [Decision 15](#decision-15-post-submission-program-routing--task-creation-and-automated-eligibility) for routing details. | `draft` → `submitted` | Workflow (one intake task, per-program status — see [Decision 15](#decision-15-post-submission-program-routing--task-creation-and-automated-eligibility)), Communication (confirmation notice), Eligibility (RTE for Medicaid) |
 | `application.opened` | Signals that a caseworker has begun active review. Workflow needs to update the task state; supervisors tracking queue throughput need to know when review started vs. when it was filed. | `submitted` → `under_review` | Workflow (update task to in_progress) |
+| `application.expedited_flagged` | SNAP requires a determination within 7 days for expedited households. The workflow domain needs to immediately escalate to a higher-priority SLA track — the standard 30-day task SLA is wrong for these cases. This is a named trigger effect, not a generic field update. | `flag-expedited` trigger | Workflow (escalate to expedited SLA) |
 | `application.withdrawn` | A withdrawn application must stop all in-flight processing immediately. Open workflow tasks must be cancelled; any scheduled interview or document request must be voided; communication must notify the household. Failing to act on this event risks processing an application the household has abandoned. | any → `withdrawn` | Workflow (cancel open tasks), Communication (withdrawal notice) |
 | `application.closed` | Signals that intake is complete and the application is ready for or has received an eligibility determination. Case Management needs this event to know when to create a service delivery case (if approved). Without it, case management has no trigger to act. | `under_review` → `closed` | Case Management (create case if approved), Eligibility |
-
-**Data mutation events (open decision):**
-
-| Event | Why it's needed | Trigger | Primary consumers |
-|---|---|---|---|
-| `application.member_added` | Household composition changes after submission affect eligibility scope — a new member may qualify for different programs or change the household size used in benefit calculations. Without this event, eligibility has no way to know it needs to re-evaluate. | Member added to application | Eligibility (re-evaluate household scope) |
-| `application.expedited_flagged` | SNAP requires a determination within 7 days for expedited households. The workflow domain needs to immediately escalate to a higher-priority SLA track — the standard 30-day task SLA is wrong for these cases. | Expedited screening passes | Workflow (escalate to expedited SLA) |
-| `application.income_updated` | Income changes during caseworker review may affect whether a household qualifies for expedited processing or which benefit amounts apply. Eligibility may need to re-run screening logic. | Income record changed during review | Eligibility (re-evaluate screening) |
-
-### Event envelope
-
-The adopted envelope format is [CloudEvents 1.0](https://cloudevents.io/) — see Decision 6. The envelope schema is defined in OpenAPI components for reuse and overlayability across all domains. Standard envelope fields:
-
-| Field | Description | Example |
-|---|---|---|
-| `specversion` | CloudEvents version | `"1.0"` |
-| `id` | Unique event ID | UUID |
-| `source` | Domain that emitted the event | `"/domains/intake"` |
-| `type` | Event type | `"org.codeforamerica.safety-net-blueprint.intake.application.submitted"` |
-| `time` | ISO 8601 timestamp | `"2026-04-07T14:00:00Z"` |
-| `datacontenttype` | Payload format | `"application/json"` |
-| `data` | Event-specific payload | see catalog above |
-
-**Event type naming convention:** `org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}` — see Decision 10.
 
 ---
 
@@ -310,12 +283,12 @@ Quick reference — each decision is detailed in the section below.
 | 2 | [Programs applied for — placement](#decision-2-programs-applied-for--placement) | **Decided: C** | Application-level alone can't distinguish voluntary non-application from ineligibility — the eligibility engine can exclude ineligible members using rules, but has no record of a member who opted out. Both levels makes intent explicit at intake and gives eligibility a clean input. |
 | 3 | [Program-specific eligibility attributes — structure](#decision-3-program-specific-eligibility-attributes--structure) | **Decided: A** | These are facts about the person, not the program — the same citizenship status is evaluated independently by each program's rules. No major vendor nests them per-program at intake. |
 | 4 | [Authorized representative — modeling](#decision-4-authorized-representative--modeling) | **Decided: C** | A `roles` array on ApplicationMember (rather than a single role value) allows a member to hold both `household_member` and `authorized_representative` simultaneously, supporting Medicaid's less restrictive rules while accurately representing SNAP's non-household-member requirement — the authorized rep's roles array simply omits `household_member`. No separate entity needed. |
-| 5 | [Domain events — scope](#decision-5-domain-events--scope) | **Decided: publish as needed** | Both transition and data mutation events are supported. Which specific events to emit is determined per-domain based on integration needs. Schema evolution practices (additive-only payloads, type versioning, canonical schemas in OpenAPI components) govern how events are added over time. |
-| 6 | [Event envelope format](#decision-6-event-envelope-format) | **Decided: A** | CloudEvents 1.0 is transport-agnostic, natively supported by AWS/Azure/GCP, and AsyncAPI-compatible. The envelope schema will be defined in OpenAPI components so it is overlayable and reusable across all domains. |
-| 7 | [Intake phase end — lifecycle state](#decision-7-intake-phase-end--lifecycle-state) | **Decided: C** | Domain autonomy: each domain owns its own state transitions. A `pending_determination` state would exist to serve a downstream domain's needs, not to represent meaningful business state in intake — an event handles that better. Intake signals what it knows (`review_completed`); eligibility publishes what it knows; intake closes the application based on its own logic. |
-| 8 | [Application data mutability and audit trail](#decision-8-application-data-mutability-and-audit-trail) | **Decided: C** | Audit logic should live once, not be duplicated in every domain. A cross-cutting audit domain subscribing to mutation events enables consistent version history across all domains and cross-domain queries. Mutation events must carry before/after field values or full snapshots to support version reconstruction. |
-| 9 | [submitted → under_review transition trigger](#decision-9-submitted--under_review-transition-trigger) | **Decided: B** | Consistent with Decision 7: intake owns its own state transitions but reacts to events from other domains. Intake subscribes to `task.claimed` from the workflow domain and transitions the application to `under_review`. One caseworker action; intake handles the rest automatically. |
-| 10 | [Event type naming convention](#decision-10-event-type-naming-convention) | **Decided: A** | Fully qualified type names are self-contained, collision-safe across organizations, and consistent with the CloudEvents community convention. Prefix is `org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}` — e.g., `org.codeforamerica.safety-net-blueprint.intake.application.submitted`. |
+| 5 | [Domain events — scope](#decision-5-domain-events--scope) | **Decided: publish as needed** | Both lifecycle transition events and generic resource events are supported. Which specific named events to emit is determined per-domain based on real integration needs. |
+| 6 | [Event envelope format](#decision-6-event-envelope-format) | **Decided: A** | CloudEvents 1.0 is transport-agnostic, natively supported by AWS/Azure/GCP, and AsyncAPI-compatible. |
+| 7 | [Intake phase end — lifecycle state](#decision-7-intake-phase-end--lifecycle-state) | **Decided: C** | Domain autonomy: each domain owns its own state transitions. A `pending_determination` state would exist to serve a downstream domain's needs, not to represent meaningful business state in intake — an event handles the signal better. |
+| 8 | [Application data mutability and audit trail](#decision-8-application-data-mutability-and-audit-trail) | **Decided: C** | Audit logic should live once, not be duplicated in every domain. A cross-cutting audit domain enables consistent version history and cross-domain queries. |
+| 9 | [submitted → under_review transition trigger](#decision-9-submitted--under_review-transition-trigger) | **Decided: B** | Consistent with [Decision 7](#decision-7-intake-phase-end--lifecycle-state): intake owns its own state transitions but reacts to events from other domains. One caseworker action triggers both domains. |
+| 10 | [Event type naming convention](#decision-10-event-type-naming-convention) | **Decided: A** | Fully qualified type names are self-contained, collision-safe across organizations, and consistent with the CloudEvents community convention. |
 | 11 | [Member-to-member relationship matrix (MAGI)](#decision-11-member-to-member-relationship-matrix-magi) | **Decided: A** | The `claimedAsDependentBy` and tax filing status fields cover the vast majority of MAGI household composition cases. The pairwise matrix only adds precision for the edge case where a non-primary adult is a parent of a child who isn't explicitly claimed as a dependent — that case is a known gap not covered by the baseline. |
 | 12 | [Person identity matching](#decision-12-person-identity-matching) | **Decided** | Identity matching is triggered at submission. The result is stored as `resolvedPersonId` on ApplicationMember. Whether the implementation is synchronous or asynchronous is left to the implementor — the contract is the same either way. |
 | 13 | [Income and expense detail at intake](#decision-13-income-and-expense-detail-at-intake) | **Decided: D** | Full income schema in the contract; only gross income required at submission (SNAP expedited screening minimum). All other detail is optional. Implementations decide how much the intake form collects — the contract does not constrain that choice. |
