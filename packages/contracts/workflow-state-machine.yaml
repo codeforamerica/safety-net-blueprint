@@ -489,7 +489,7 @@ transitions:
         description: Emit a domain event recording the priority change
 onCreate:
   actors: []
-  effects: []
+  effects:
     - type: evaluate-rules
       ruleType: assignment
       description: Evaluate assignment rules to route task to a queue
