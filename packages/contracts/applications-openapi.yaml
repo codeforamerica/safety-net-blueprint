@@ -13,13 +13,15 @@ info:
     name: API Support
     email: support@example.com
 servers:
-- url: https://api.example.com
+- url: https://api.example.com/intake
   description: Production server
-- url: http://localhost:8080
+- url: http://localhost:1080/intake
   description: Local development server
 tags:
 - name: Applications
   description: Manage public assistance applications.
+x-events: {}
+
 paths:
   "/applications":
     get:

@@ -106,6 +106,105 @@ test('OpenAPI Loader Tests', async (t) => {
     console.log(`  ✓ Pagination: limit=${metadata.pagination.limitDefault}, max=${metadata.pagination.limitMax}`);
   });
 
+  // ==========================================================================
+  // Server base path extraction (domain path prefixes)
+  // ==========================================================================
+
+  await t.test('discoverApiSpecs - excludes deprecated specs', () => {
+    const specs = discoverApiSpecs({ specsDir });
+    const names = specs.map(s => s.name);
+
+    assert.ok(!names.includes('search'), 'Should exclude search (x-status: deprecated)');
+    console.log(`  ✓ Deprecated specs excluded (${specs.length} specs discovered)`);
+  });
+
+  await t.test('extractMetadata - extracts serverBasePath from localhost URL', () => {
+    const spec = {
+      info: { title: 'Test API', version: '1.0.0' },
+      servers: [
+        { url: 'https://api.example.com/intake', description: 'Production' },
+        { url: 'http://localhost:1080/intake', description: 'Local' }
+      ],
+      paths: {
+        '/applications': { get: { operationId: 'listApplications', responses: {} } }
+      }
+    };
+
+    const metadata = extractMetadata(spec, 'applications');
+
+    assert.strictEqual(metadata.serverBasePath, '/intake', 'Should extract /intake from localhost URL');
+    console.log('  ✓ Extracts serverBasePath from localhost URL');
+  });
+
+  await t.test('extractMetadata - prefixes endpoint paths with serverBasePath', () => {
+    const spec = {
+      info: { title: 'Test API', version: '1.0.0' },
+      servers: [{ url: 'http://localhost:1080/intake' }],
+      paths: {
+        '/applications': { get: { operationId: 'listApplications', responses: {} } },
+        '/applications/{applicationId}': { get: { operationId: 'getApplication', responses: {} } }
+      }
+    };
+
+    const metadata = extractMetadata(spec, 'applications');
+    const paths = metadata.endpoints.map(e => e.path);
+
+    assert.ok(paths.includes('/intake/applications'), 'Collection path should include /intake prefix');
+    assert.ok(paths.includes('/intake/applications/{applicationId}'), 'Item path should include /intake prefix');
+    console.log('  ✓ Endpoint paths prefixed with serverBasePath');
+  });
+
+  await t.test('extractMetadata - does not double-prefix paths already starting with serverBasePath', () => {
+    const spec = {
+      info: { title: 'Test API', version: '1.0.0' },
+      servers: [{ url: 'http://localhost:1080/workflow' }],
+      paths: {
+        '/tasks': { get: { operationId: 'listTasks', responses: {} } },
+        '/workflow/metrics': { get: { operationId: 'listMetrics', responses: {} } }
+      }
+    };
+
+    const metadata = extractMetadata(spec, 'workflow');
+    const paths = metadata.endpoints.map(e => e.path);
+
+    assert.ok(paths.includes('/workflow/tasks'), 'Regular path should get /workflow prefix');
+    assert.ok(paths.includes('/workflow/metrics'), 'Already-prefixed path should not be doubled');
+    assert.ok(!paths.includes('/workflow/workflow/metrics'), 'Should not produce double prefix');
+    console.log('  ✓ Already-prefixed paths are not double-prefixed');
+  });
+
+  await t.test('extractMetadata - baseResource includes serverBasePath', () => {
+    const spec = {
+      info: { title: 'Test API', version: '1.0.0' },
+      servers: [{ url: 'http://localhost:1080/intake' }],
+      paths: {
+        '/applications': { get: { operationId: 'listApplications', responses: {} } },
+        '/applications/{applicationId}': { get: { operationId: 'getApplication', responses: {} } }
+      }
+    };
+
+    const metadata = extractMetadata(spec, 'applications');
+
+    assert.strictEqual(metadata.baseResource, '/intake/applications', 'baseResource should include serverBasePath');
+    console.log('  ✓ baseResource includes serverBasePath');
+  });
+
+  await t.test('extractMetadata - serverBasePath empty when no localhost path', () => {
+    const spec = {
+      info: { title: 'Test API', version: '1.0.0' },
+      servers: [{ url: 'http://localhost:8080' }],
+      paths: {
+        '/tasks': { get: { operationId: 'listTasks', responses: {} } }
+      }
+    };
+
+    const metadata = extractMetadata(spec, 'tasks');
+
+    assert.strictEqual(metadata.serverBasePath, '', 'Should have empty serverBasePath when no path in URL');
+    assert.ok(metadata.endpoints.some(e => e.path === '/tasks'), 'Path should not be prefixed');
+    console.log('  ✓ No serverBasePath when localhost URL has no path');
+  });
+
 });
 
 console.log('\n✓ All OpenAPI loader tests passed\n');

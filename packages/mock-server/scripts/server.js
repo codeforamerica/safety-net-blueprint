@@ -76,7 +76,9 @@ function parseSpecDirs() {
   }
 
   const seedArg = args.find(a => a.startsWith('--seed='));
-  const seedDir = seedArg ? resolve(seedArg.split('=')[1]) : null;
+  const seedDir = seedArg
+    ? resolve(seedArg.split('=')[1])
+    : resolve(import.meta.dirname, '..', 'seed');
 
   return { specDirs, seedDir };
 }
@@ -137,8 +139,8 @@ async function startMockServer(specDirs = null, seedDir = null) {
     });
 
     // Register SSE stream endpoint before item routes to avoid :id capture
-    app.get('/events/stream', createSseHandler());
-    console.log('  GET    /events/stream - Domain event stream (SSE)');
+    app.get('/platform/events/stream', createSseHandler());
+    console.log('  GET    /platform/events/stream - Domain event stream (SSE)');
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;

@@ -16,13 +16,15 @@ info:
     name: API Support
     email: support@example.com
 servers:
-- url: https://api.example.com
+- url: https://api.example.com/scheduling
   description: Production server
-- url: http://localhost:8080
+- url: http://localhost:1080/scheduling
   description: Local development server
 tags:
 - name: Appointments
   description: Manage appointments.
+x-events: {}
+
 paths:
   "/appointments":
     get:

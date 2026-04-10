@@ -352,6 +352,68 @@ test('Route Generator Tests', async (t) => {
     console.log('  ✓ Handles complex nested paths');
   });
 
+  // ==========================================================================
+  // Server base path — collection name derivation
+  // ==========================================================================
+
+  await t.test('registerRoutes - derives collection name by stripping serverBasePath', () => {
+    const app = createMockApp();
+    const metadata = {
+      name: 'applications',
+      title: 'Applications API',
+      serverBasePath: '/intake',
+      endpoints: [
+        { path: '/intake/applications', method: 'GET', operationId: 'listApplications' },
+        { path: '/intake/applications/{applicationId}', method: 'GET', operationId: 'getApplication' },
+        { path: '/intake/applications', method: 'POST', operationId: 'createApplication' }
+      ]
+    };
+
+    registerRoutes(app, metadata, 'http://localhost:1080');
+    const routes = app.getRoutes();
+
+    // All routes should be registered at the full prefixed path
+    const paths = routes.map(r => r.path);
+    assert.ok(paths.includes('/intake/applications'), 'List route registered at prefixed path');
+    assert.ok(paths.includes('/intake/applications/:applicationId'), 'Get route registered at prefixed path');
+
+    console.log('  ✓ Routes registered at prefixed paths with correct collection names');
+  });
+
+  await t.test('registerRoutes - collection name excludes serverBasePath segment', async () => {
+    // Verify that a GET handler uses "applications" as collection, not "intake"
+    // by checking the handler invokes findById with the right collection name.
+    // We do this by registering, then calling the GET handler with a mock req/res.
+    const app = createMockApp();
+    const metadata = {
+      name: 'applications',
+      title: 'Applications API',
+      serverBasePath: '/intake',
+      endpoints: [
+        { path: '/intake/applications/{applicationId}', method: 'GET', operationId: 'getApplication' }
+      ]
+    };
+
+    registerRoutes(app, metadata, 'http://localhost:1080');
+    const routes = app.getRoutes();
+
+    assert.strictEqual(routes.length, 1);
+    // The handler should reference collectionName "applications" not "intake"
+    // We can verify this by reading the endpointWithCollection from the closure
+    // by triggering it and observing that it looks in the right collection
+    // (a missing resource in "applications" returns 404, not 500)
+    let statusCode = null;
+    const mockReq = { params: { applicationId: 'nonexistent-id' } };
+    const mockRes = {
+      status: (code) => { statusCode = code; return { json: () => {} }; },
+      json: () => {}
+    };
+    routes[0].handler(mockReq, mockRes);
+    assert.strictEqual(statusCode, 404, 'Should return 404 for missing resource (not 500 from wrong collection)');
+
+    console.log('  ✓ Handler uses "applications" collection (not "intake")');
+  });
+
 });
 
 console.log('\n✓ All route generator tests passed\n');

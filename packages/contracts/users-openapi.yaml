@@ -25,9 +25,9 @@ info:
     email: support@example.com
 
 servers:
-  - url: https://api.example.com
+  - url: https://api.example.com/identity-access
     description: Production server
-  - url: http://localhost:8080
+  - url: http://localhost:1080/identity-access
     description: Local development server
 
 tags:
@@ -38,6 +38,8 @@ tags:
 
 security:
   - bearerAuth: []
+
+x-events: {}
 
 paths:
   # ─────────────────────────────────────────────────────────────────────────────

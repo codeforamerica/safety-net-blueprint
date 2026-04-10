@@ -63,6 +63,16 @@ export function buildSearchConditions(queryParams = {}, searchableFields = []) {
         continue;
       }
 
+      // traceid matches against the trace-id segment of the W3C traceparent field
+      // traceparent format: 00-{trace-id}-{parent-id}-{flags}
+      if (key === 'traceid') {
+        if (value !== undefined && value !== null && value !== '') {
+          whereClauses.push(`json_extract(data, '$.traceparent') LIKE ?`);
+          params.push(`%-${value}-%`);
+        }
+        continue;
+      }
+
       // Handle array parameters (e.g., programs[])
       if (Array.isArray(value)) {
         // For array fields, check if the JSON array contains the value

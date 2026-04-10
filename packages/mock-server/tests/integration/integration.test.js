@@ -569,7 +569,7 @@ async function runTests() {
   // =========================================================================
   const workflowApi = apis.find(api => api.name === 'workflow');
   if (workflowApi) {
-    const taskPath = '/tasks';
+    const taskPath = '/workflow/tasks';
     console.log(`\n${'='.repeat(70)}`);
     console.log(`State Machine RPC Tests: ${taskPath}`);
     console.log('='.repeat(70));
@@ -800,7 +800,7 @@ async function runTests() {
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' }
         });
 
-        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/platform/events?q=resourceId:${auditTaskId}`);
         const listData = await listResponse.json();
 
         if (listData.items && listData.items.length === 2) {
@@ -834,7 +834,7 @@ async function runTests() {
           body: JSON.stringify({ reason: 'Testing domain events' })
         });
 
-        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/platform/events?q=resourceId:${auditTaskId}`);
         const listData = await listResponse.json();
 
         if (listData.items && listData.items.length === 3) {
@@ -872,7 +872,7 @@ async function runTests() {
           body: JSON.stringify({ outcome: 'approved' })
         });
 
-        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/platform/events?q=resourceId:${auditTaskId}`);
         const listData = await listResponse.json();
 
         if (listData.items && listData.items.length === 5) {
@@ -900,17 +900,17 @@ async function runTests() {
     if (auditTaskId) {
       try {
         console.log(`\n  EVENT-5. GET single domain event by ID`);
-        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${auditTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/platform/events?q=resourceId:${auditTaskId}`);
         const listData = await listResponse.json();
 
         if (listData.items && listData.items.length > 0) {
           const eventId = listData.items[0].id;
-          const getResponse = await fetch(`${BASE_URL}/events/${eventId}`);
+          const getResponse = await fetch(`${BASE_URL}/platform/events/${eventId}`);
 
           if (getResponse.status === 200) {
             const event = await getResponse.json();
             if (event.id === eventId && event.resourceId === auditTaskId && event.occurredAt) {
-              console.log(`     ✓ PASS: GET /events/${eventId} returns correct event`);
+              console.log(`     ✓ PASS: GET /platform/events/${eventId} returns correct event`);
               totalPassed++;
             } else {
               console.log(`     ✗ FAIL: Event fields incorrect`);
@@ -937,7 +937,7 @@ async function runTests() {
   // Rule Evaluation Tests
   // =========================================================================
   if (workflowApi) {
-    const taskPath = '/tasks';
+    const taskPath = '/workflow/tasks';
     console.log(`\n${'='.repeat(70)}`);
     console.log('Rule Evaluation Tests');
     console.log('='.repeat(70));
@@ -948,7 +948,7 @@ async function runTests() {
 
     // Look up fixture queue IDs by name
     try {
-      const queuesRes = await fetch(`${BASE_URL}/queues`);
+      const queuesRes = await fetch(`${BASE_URL}/workflow/queues`);
       const queuesData = await queuesRes.json();
       for (const q of queuesData.items) {
         if (q.name === 'snap-intake') snapIntakeQueueId = q.id;
@@ -1075,7 +1075,7 @@ async function runTests() {
     if (snapTaskId) {
       try {
         console.log('\n  RULE-4. Verify "created" domain event from onCreate effects');
-        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${snapTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/platform/events?q=resourceId:${snapTaskId}`);
         const listData = await listResponse.json();
 
         const createdEvents = listData.items?.filter(e => e.action === 'created') || [];
@@ -1105,7 +1105,7 @@ async function runTests() {
   // Supervisor Operations Tests (assign, set-priority)
   // =========================================================================
   if (workflowApi) {
-    const taskPath = '/tasks';
+    const taskPath = '/workflow/tasks';
     console.log(`\n${'='.repeat(70)}`);
     console.log('Supervisor Operations Tests');
     console.log('='.repeat(70));
@@ -1215,7 +1215,7 @@ async function runTests() {
     if (supTaskId) {
       try {
         console.log(`\n  SUP-5. Verify assigned and priority_changed events emitted`);
-        const listResponse = await fetch(`${BASE_URL}/events?q=resourceId:${supTaskId}`);
+        const listResponse = await fetch(`${BASE_URL}/platform/events?q=resourceId:${supTaskId}`);
         const listData = await listResponse.json();
         const actions = (listData.items || []).map(e => e.action);
         const hasAssigned = actions.includes('assigned');

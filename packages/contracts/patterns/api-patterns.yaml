@@ -196,6 +196,208 @@ rpc_endpoints:
     - Detected by isActionPath(): paths with segments after the {id} parameter
 
 # =============================================================================
+# Events Endpoint Pattern
+# =============================================================================
+# Every domain API that emits domain events must expose a GET /events endpoint.
+# This provides a queryable event log for REST polling consumers and serves as
+# the on-ramp to pub/sub — the same event types and payloads are delivered via
+# broker subscription in a pub/sub implementation.
+#
+# Events are returned as CloudEvents 1.0 envelopes (see components/events.yaml).
+# Query parameters use CloudEvents attribute names for consistency with the
+# event payload itself.
+events_endpoint:
+  path: "/platform/events"
+  method: GET
+  description: |
+    Centralized, queryable log of all domain events across the blueprint.
+    Supports REST polling as an integration pattern and provides permanent
+    audit history for all state transitions and significant data mutations.
+    Events are returned in ascending time order (oldest first) to support
+    cursor-based polling.
+
+    Defined in platform-openapi.yaml. The /platform prefix may be overlaid
+    by state partners to match their own conventions.
+
+  parameters:
+    - name: type
+      in: query
+      description: |
+        Filter by CloudEvents type. Supports prefix matching with a trailing
+        wildcard (e.g., org.codeforamerica.safety-net-blueprint.intake.*).
+        Matches the `type` field in the CloudEvents envelope.
+      schema:
+        type: string
+      example: "org.codeforamerica.safety-net-blueprint.intake.application.submitted"
+
+    - name: source
+      in: query
+      description: |
+        Filter by CloudEvents source — the domain that produced the event
+        (e.g., /intake, /workflow). Matches the `source` field in the
+        CloudEvents envelope.
+      schema:
+        type: string
+      example: "/intake"
+
+    - name: subject
+      in: query
+      description: |
+        Filter by CloudEvents subject — the entity ID the event pertains to
+        (e.g., an application UUID). Because every domain uses the same subject
+        for the same entity, filtering by subject returns a complete cross-domain
+        timeline for that entity.
+      schema:
+        type: string
+        format: uuid
+
+    - name: traceid
+      in: query
+      description: |
+        Filter by W3C Trace Context trace ID extracted from the `traceparent`
+        attribute. All events sharing a trace ID were causally triggered by the
+        same root action, enabling full causal chain reconstruction in one query.
+      schema:
+        type: string
+
+    - name: start
+      in: query
+      description: |
+        Return only events at or after this timestamp (ISO 8601). Use as a
+        polling cursor — store the `time` of the last received event and pass
+        it as `start` on the next poll.
+      schema:
+        type: string
+        format: date-time
+
+    - name: end
+      in: query
+      description: |
+        Return only events before or at this timestamp (ISO 8601). Combined
+        with `start`, supports bounded historical queries (e.g., all changes
+        in a given day).
+      schema:
+        type: string
+        format: date-time
+
+    - name: limit
+      description: Maximum number of events to return.
+      ref: "./components/common-parameters.yaml#/LimitParam"
+
+    - name: offset
+      description: Number of events to skip.
+      ref: "./components/common-parameters.yaml#/OffsetParam"
+
+  response:
+    code: 200
+    schema_suffix: List
+    description: Paginated list of CloudEvents envelopes, ordered by time ascending.
+    body: |
+      Standard paginated list response (items, total, limit, offset, hasNext)
+      where each item is a CloudEvents 1.0 envelope. The envelope schema is
+      defined in components/events.yaml#/DomainEvent.
+
+  notes:
+    - The /events endpoint is read-only for consumers. Events are written
+      internally by producers as state machine transitions and data mutation
+      effects fire.
+    - Consumers should use `start` as a cursor for polling, advancing it to the
+      `time` of the last event received on each poll.
+    - The same event types and payloads delivered here are published to broker
+      topics in a pub/sub implementation. Moving from polling to pub/sub requires
+      no changes to event schemas.
+    - The `subject` filter is the primary cross-domain correlation mechanism.
+      The `traceid` filter reconstructs causal chains across domains.
+
+# =============================================================================
+# x-events Convention
+# =============================================================================
+x_events:
+  description: |
+    The x-events OpenAPI extension declares the domain events emitted by a
+    domain's API. It lives at the top level of each domain's OpenAPI spec and
+    is the source of truth for event payload schemas and CloudEvents type names.
+    AsyncAPI specs are generated from x-events combined with the domain's state
+    machine; state partners do not author AsyncAPI directly.
+
+  format:
+    location: Top level of each domain OpenAPI spec (alongside info, paths, components)
+    key: x-events
+    value: |
+      A map of event action names to event definitions. Each entry declares:
+        - type: the fully qualified CloudEvents type name
+        - summary: short description of what the event signals
+        - payload: $ref to the payload schema in components/schemas
+
+  example: |
+    x-events:
+      application.submitted:
+        type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
+        summary: Emitted when an application is formally submitted; starts the regulatory clock
+        payload:
+          $ref: "#/components/schemas/ApplicationSubmittedEvent"
+
+      application.withdrawn:
+        type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
+        summary: Emitted when an application is withdrawn by the applicant or a caseworker
+        payload:
+          $ref: "#/components/schemas/ApplicationWithdrawnEvent"
+
+  cloudevents_envelope:
+    description: |
+      All blueprint events use the CloudEvents 1.0 envelope. Core attributes:
+    attributes:
+      - name: specversion
+        value: "1.0"
+        required: true
+      - name: id
+        description: Unique event identifier (UUID)
+        required: true
+      - name: type
+        description: Fully qualified event type from x-events
+        required: true
+      - name: source
+        description: Domain base path (e.g., /intake, /workflow)
+        required: true
+      - name: subject
+        description: Entity ID the event pertains to (bare UUID)
+        required: true
+      - name: time
+        description: ISO 8601 timestamp when the event occurred
+        required: true
+      - name: datacontenttype
+        value: application/json
+        required: true
+      - name: data
+        description: Event payload; schema defined by the payload $ref in x-events
+        required: true
+      - name: traceparent
+        description: |
+          W3C Trace Context header (optional). Propagated from the triggering
+          request or event. The trace ID component is stable across the full
+          causal chain — every downstream event shares the same trace ID.
+        required: false
+
+  type_naming:
+    pattern: "org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}"
+    description: |
+      Self-contained and collision-safe in shared broker environments.
+      State partners may overlay the prefix to match their own namespace.
+    examples:
+      - org.codeforamerica.safety-net-blueprint.intake.application.submitted
+      - org.codeforamerica.safety-net-blueprint.workflow.task.created
+      - org.codeforamerica.safety-net-blueprint.workflow.task.claimed
+
+  versioning:
+    description: |
+      New fields may be added to an event payload without versioning.
+      Breaking changes (removed or renamed fields) introduce a new type
+      alongside the old one, published in parallel until all consumers migrate.
+    example:
+      - org.codeforamerica.safety-net-blueprint.intake.application.submitted
+      - org.codeforamerica.safety-net-blueprint.intake.application.submitted.v2
+
+# =============================================================================
 # Behavioral YAML Conventions
 # =============================================================================
 # State machine, rules, metrics, and SLA type YAML files are collectively called

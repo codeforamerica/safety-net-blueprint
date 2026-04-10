@@ -19,20 +19,110 @@ info:
     email: support@example.com
 
 servers:
-  - url: https://api.example.com
+  - url: https://api.example.com/workflow
     description: Production server
-  - url: http://localhost:8080
+  - url: http://localhost:1080/workflow
     description: Local development server
 
 tags:
   - name: Tasks
     description: Manage workflow tasks.
-  - name: Events
-    description: Read-only domain event log for task lifecycle transitions.
   - name: Queues
     description: Manage task routing queues.
   - name: Metrics
     description: Computed operational metrics derived from task and event data.
+
+x-events:
+  task.created:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.created
+    summary: Emitted when a task is first created
+    payload:
+      $ref: "#/components/schemas/TaskCreatedEvent"
+  task.assigned:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.assigned
+    summary: Emitted when a task is assigned to a caseworker or queue
+    payload:
+      $ref: "#/components/schemas/TaskAssignedEvent"
+  task.claimed:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.claimed
+    summary: Emitted when a caseworker claims a task
+    payload:
+      $ref: "#/components/schemas/TaskClaimedEvent"
+  task.released:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.released
+    summary: Emitted when a caseworker releases a claimed task back to the queue
+    payload:
+      $ref: "#/components/schemas/TaskReleasedEvent"
+  task.completed:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.completed
+    summary: Emitted when a task is completed with an outcome
+    payload:
+      $ref: "#/components/schemas/TaskCompletedEvent"
+  task.cancelled:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.cancelled
+    summary: Emitted when a task is cancelled
+    payload:
+      $ref: "#/components/schemas/TaskCancelledEvent"
+  task.reopened:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.reopened
+    summary: Emitted when a cancelled or completed task is reopened
+    payload:
+      $ref: "#/components/schemas/TaskReopenedEvent"
+  task.escalated:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.escalated
+    summary: Emitted when a task is escalated manually or automatically
+    payload:
+      $ref: "#/components/schemas/TaskEscalatedEvent"
+  task.de-escalated:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.de-escalated
+    summary: Emitted when an escalated task is de-escalated
+    payload:
+      $ref: "#/components/schemas/TaskDeEscalatedEvent"
+  task.awaiting_client:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.awaiting_client
+    summary: Emitted when a task is blocked pending client response
+    payload:
+      $ref: "#/components/schemas/TaskAwaitingClientEvent"
+  task.awaiting_verification:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.awaiting_verification
+    summary: Emitted when a task is blocked pending verification
+    payload:
+      $ref: "#/components/schemas/TaskAwaitingVerificationEvent"
+  task.resumed:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.resumed
+    summary: Emitted when a blocked task is manually resumed
+    payload:
+      $ref: "#/components/schemas/TaskResumedEvent"
+  task.system_resumed:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.system_resumed
+    summary: Emitted when a blocked task is automatically resumed by the system
+    payload:
+      $ref: "#/components/schemas/TaskSystemResumedEvent"
+  task.submitted_for_review:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.submitted_for_review
+    summary: Emitted when a task is submitted for supervisor review
+    payload:
+      $ref: "#/components/schemas/TaskSubmittedForReviewEvent"
+  task.approved:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.approved
+    summary: Emitted when a supervisor approves a task submitted for review
+    payload:
+      $ref: "#/components/schemas/TaskApprovedEvent"
+  task.returned_to_worker:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.returned_to_worker
+    summary: Emitted when a supervisor returns a task to the caseworker for revision
+    payload:
+      $ref: "#/components/schemas/TaskReturnedToWorkerEvent"
+  task.priority_changed:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.priority_changed
+    summary: Emitted when a task's priority is changed
+    payload:
+      $ref: "#/components/schemas/TaskPriorityChangedEvent"
+  task.sla_breached:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.sla_breached
+    summary: Emitted when a task exceeds its SLA deadline
+    payload:
+      $ref: "#/components/schemas/TaskSlaBreachedEvent"
 
 paths:
   "/queues":
@@ -282,78 +372,7 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  "/events":
-    get:
-      summary: List domain events
-      description: Retrieve a paginated list of domain events across all resources.
-      operationId: listEvents
-      tags:
-        - Events
-      parameters:
-        - $ref: "./components/parameters.yaml#/SearchQueryParam"
-        - $ref: "./components/parameters.yaml#/LimitParam"
-        - $ref: "./components/parameters.yaml#/OffsetParam"
-      responses:
-        "200":
-          description: A paginated collection of domain events.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DomainEventList"
-        "400":
-          $ref: "./components/responses.yaml#/BadRequest"
-        "500":
-          $ref: "./components/responses.yaml#/InternalError"
-
-  "/events/stream":
-    get:
-      summary: Stream domain events (SSE)
-      description: |
-        Real-time stream of domain events delivered as Server-Sent Events (SSE).
-
-        Connect with `Accept: text/event-stream`. Each event is delivered as a
-        `data:` line containing a JSON-encoded `DomainEvent` object.
-
-        The stream stays open until the client disconnects. A `: heartbeat` comment
-        is sent every 30 seconds to prevent proxy timeouts.
-      operationId: streamEvents
-      tags:
-        - Events
-      responses:
-        "200":
-          description: SSE stream of domain events.
-          content:
-            text/event-stream:
-              schema:
-                type: string
-                description: Newline-delimited SSE frames, each containing a JSON DomainEvent.
-
-  "/events/{eventId}":
-    parameters:
-      - $ref: "#/components/parameters/EventIdParam"
-
-    get:
-      summary: Get a domain event
-      description: Retrieve a single domain event by identifier.
-      operationId: getEvent
-      tags:
-        - Events
-      responses:
-        "200":
-          description: Domain event retrieved successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DomainEvent"
-              examples:
-                DomainEventExample1:
-                  $ref: "#/components/examples/DomainEventExample1"
-        "404":
-          $ref: "./components/responses.yaml#/NotFound"
-        "500":
-          $ref: "./components/responses.yaml#/InternalError"
-
-  "/workflow/metrics":
+  "/metrics":
     get:
       summary: List metrics
       description: Retrieve computed values for all workflow metrics.
@@ -415,7 +434,7 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  "/workflow/metrics/{metricId}":
+  "/metrics/{metricId}":
     parameters:
       - $ref: "#/components/parameters/MetricIdParam"
     get:
@@ -496,16 +515,6 @@ components:
         type: string
         format: uuid
       example: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90
-
-    EventIdParam:
-      name: eventId
-      in: path
-      required: true
-      description: Unique identifier of the domain event.
-      schema:
-        type: string
-        format: uuid
-      example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
 
     MetricIdParam:
       name: metricId
@@ -739,23 +748,6 @@ components:
               description: Timestamp when the task was last updated.
               readOnly: true
 
-    DomainEvent:
-      $ref: "./components/events.yaml#/DomainEvent"
-
-    DomainEventList:
-      description: Paginated list of domain events.
-      unevaluatedProperties: false
-      allOf:
-        - $ref: "./components/pagination.yaml#/Pagination"
-        - type: object
-          required:
-            - items
-          properties:
-            items:
-              type: array
-              items:
-                $ref: "#/components/schemas/DomainEvent"
-
     TaskCreate:
       allOf:
         - $ref: "#/components/schemas/TaskWritable"
@@ -909,6 +901,153 @@ components:
             - down
           description: Desired trend direction (for trend-type targets).
 
+    # Event payload schemas — referenced by x-events section above
+    TaskCreatedEvent:
+      type: object
+      properties: {}
+
+    TaskAssignedEvent:
+      type: object
+      properties:
+        assignedToId:
+          type: string
+          format: uuid
+          description: Caseworker the task was assigned to, if any.
+          nullable: true
+          x-relationship:
+            resource: User
+        queueId:
+          type: string
+          format: uuid
+          description: Queue the task was assigned to, if any.
+          nullable: true
+          x-relationship:
+            resource: Queue
+
+    TaskClaimedEvent:
+      type: object
+      properties: {}
+
+    TaskReleasedEvent:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: Why the task was released.
+
+    TaskCompletedEvent:
+      type: object
+      required:
+        - outcome
+      properties:
+        outcome:
+          type: string
+          description: The outcome recorded at completion.
+
+    TaskCancelledEvent:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: Why the task was cancelled.
+
+    TaskReopenedEvent:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: Why the task was reopened.
+
+    TaskEscalatedEvent:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: Why the task was escalated.
+
+    TaskDeEscalatedEvent:
+      type: object
+      properties: {}
+
+    TaskAwaitingClientEvent:
+      type: object
+      properties: {}
+
+    TaskAwaitingVerificationEvent:
+      type: object
+      properties: {}
+
+    TaskResumedEvent:
+      type: object
+      properties: {}
+
+    TaskSystemResumedEvent:
+      type: object
+      required:
+        - source
+        - result
+      properties:
+        source:
+          type: string
+          description: System that triggered the automated resumption.
+        result:
+          type: string
+          description: Result of the verification or external check.
+
+    TaskSubmittedForReviewEvent:
+      type: object
+      properties: {}
+
+    TaskApprovedEvent:
+      type: object
+      required:
+        - outcome
+      properties:
+        outcome:
+          type: string
+          description: The outcome recorded at approval.
+
+    TaskReturnedToWorkerEvent:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: Why the task was returned for revision.
+
+    TaskPriorityChangedEvent:
+      type: object
+      required:
+        - priority
+      properties:
+        priority:
+          type: string
+          description: The new priority value.
+        reason:
+          type: string
+          description: Why the priority was changed.
+          nullable: true
+
+    TaskSlaBreachedEvent:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: The SLA breach reason.
+          enum:
+            - sla_deadline_exceeded
+
   examples:
     QueueExample1:
       summary: SNAP intake queue
@@ -950,20 +1089,6 @@ components:
         startedAt: '2024-09-02T09:15:00Z'
         assignedToId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         createdAt: '2024-09-01T14:00:00Z'
-        updatedAt: '2024-09-02T09:15:00Z'
-
-    DomainEventExample1:
-      summary: Task claimed domain event
-      value:
-        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-        domain: workflow
-        resource: task
-        action: claimed
-        resourceId: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90
-        performedById: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-        occurredAt: '2024-09-02T09:15:00Z'
-        data: {}
-        createdAt: '2024-09-02T09:15:00Z'
         updatedAt: '2024-09-02T09:15:00Z'
 
     MetricExample1:

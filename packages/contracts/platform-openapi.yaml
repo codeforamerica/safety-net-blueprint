@@ -1,0 +1,442 @@
+openapi: 3.1.0
+info:
+  title: Platform API
+  version: 0.1.0
+  x-domain: platform
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    Cross-cutting platform services shared across all domains.
+
+    Includes the centralized event log (`/events`) and cross-resource search
+    (`/search`). The `/platform` base path may be overlaid by state partners
+    to match their own conventions.
+
+    > **Status: Alpha** — Breaking changes expected.
+
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/platform
+    description: Production server
+  - url: http://localhost:1080/platform
+    description: Local development server
+
+tags:
+  - name: Events
+    description: Centralized event log across all domains.
+  - name: Search
+    description: Cross-resource search across all domains.
+
+x-events: {}
+
+paths:
+  /events:
+    get:
+      summary: List events
+      description: |
+        Queryable log of all domain events across the blueprint. Supports
+        REST polling as an integration pattern and provides permanent audit
+        history regardless of whether a message broker is in use.
+
+        Events are returned in ascending time order (oldest first) to support
+        cursor-based polling.
+      operationId: listEvents
+      tags:
+        - Events
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - name: type
+          in: query
+          description: >
+            Filter by CloudEvents type. Supports prefix matching with a
+            trailing wildcard (e.g.,
+            `org.codeforamerica.safety-net-blueprint.intake.*`).
+          schema:
+            type: string
+          example: org.codeforamerica.safety-net-blueprint.intake.application.submitted
+        - name: source
+          in: query
+          description: Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+          schema:
+            type: string
+          example: /intake
+        - name: subject
+          in: query
+          description: >
+            Filter by CloudEvents subject — the entity ID the event pertains
+            to. Because every domain uses the same subject for the same entity,
+            this returns a complete cross-domain timeline for that entity.
+          schema:
+            type: string
+            format: uuid
+        - name: traceid
+          in: query
+          description: >
+            Filter by W3C Trace Context trace ID extracted from the
+            `traceparent` attribute. All events sharing a trace ID were
+            causally triggered by the same root action.
+          schema:
+            type: string
+        - name: start
+          in: query
+          description: Return only events at or after this timestamp (ISO 8601).
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          description: Return only events before or at this timestamp (ISO 8601).
+          schema:
+            type: string
+            format: date-time
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: Paginated list of CloudEvents envelopes, ordered by time ascending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainEventList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Publish an event
+      description: |
+        Publish a CloudEvents 1.0 envelope to the event log. Used by domain
+        producers to record state transitions and significant data mutations.
+      operationId: publishEvent
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DomainEvent"
+      responses:
+        "201":
+          description: Event published successfully.
+          headers:
+            Location:
+              description: URL of the published event.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainEvent"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /events/stream:
+    get:
+      summary: Stream domain events (SSE)
+      description: |
+        Real-time stream of domain events delivered as Server-Sent Events (SSE).
+
+        Connect with `Accept: text/event-stream`. Each event is delivered as a
+        `data:` line containing a JSON-encoded `DomainEvent` object.
+
+        The stream stays open until the client disconnects. A `: heartbeat` comment
+        is sent every 30 seconds to prevent proxy timeouts.
+      operationId: streamEvents
+      tags:
+        - Events
+      responses:
+        "200":
+          description: SSE stream of domain events.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Newline-delimited SSE frames, each containing a JSON DomainEvent.
+
+  /events/{eventId}:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        description: Unique identifier of the domain event.
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: Get a domain event
+      description: Retrieve a single domain event by its identifier.
+      operationId: getEvent
+      tags:
+        - Events
+      responses:
+        "200":
+          description: Domain event retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainEvent"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /search:
+    get:
+      summary: Search across resources
+      description: |
+        Search across all resource types (persons, cases, applications, tasks,
+        appointments) and return a unified result list. Results include typed
+        attributes for consistent client rendering and facet counts per resource type.
+      operationId: search
+      tags:
+        - Search
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: types
+          in: query
+          required: false
+          description: Filter results to specific resource types. When omitted, all types are searched.
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/SearchResultType"
+      responses:
+        "200":
+          description: A paginated list of search results with facet counts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResultList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+components:
+  schemas:
+    # Primary schemas
+
+    DomainEvent:
+      type: object
+      description: A CloudEvents 1.0 envelope.
+      required:
+        - specversion
+        - id
+        - type
+        - source
+        - subject
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          description: CloudEvents specification version.
+          enum:
+            - "1.0"
+        id:
+          type: string
+          format: uuid
+          description: Unique event identifier.
+        type:
+          type: string
+          description: >
+            Fully qualified CloudEvents event type following the convention
+            `org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}`.
+          example: org.codeforamerica.safety-net-blueprint.intake.application.submitted
+        source:
+          type: string
+          description: Domain base path that produced the event (e.g., `/intake`, `/workflow`).
+          example: /intake
+        subject:
+          type: string
+          format: uuid
+          description: Entity ID the event pertains to.
+        time:
+          type: string
+          format: date-time
+          description: When the event occurred.
+        datacontenttype:
+          type: string
+          description: Media type of the event payload.
+          enum:
+            - application/json
+        traceparent:
+          type:
+            - string
+            - "null"
+          description: >
+            W3C Trace Context header (optional). Propagated from the triggering
+            request or event. The trace ID component is stable across the full
+            causal chain.
+        data:
+          type: object
+          description: Event payload. Schema is defined per event type in each domain's x-events section.
+
+    SearchResult:
+      type: object
+      description: |
+        A single search result with a uniform shape regardless of the underlying
+        resource type. Attributes provide typed key-value pairs for consistent
+        client rendering.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - title
+        - url
+        - attributes
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the matched resource.
+        type:
+          $ref: "#/components/schemas/SearchResultType"
+        title:
+          type: string
+          description: Display title for the result (e.g., person name, case number).
+        url:
+          type: string
+          format: uri
+          description: Canonical API URL of the matched resource.
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Relevance score between 0 and 1. Higher is more relevant.
+        attributes:
+          type: array
+          description: Typed key-value pairs describing the result (e.g., status, date of birth, case number).
+          items:
+            $ref: "#/components/schemas/SearchResultAttribute"
+        createdAt:
+          type: string
+          format: date-time
+          description: When the matched resource was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the matched resource was last updated.
+
+    # Ancillary schemas (alphabetical)
+
+    DomainEventList:
+      description: Paginated list of domain events.
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/DomainEvent"
+
+    SearchFacet:
+      type: object
+      description: A result count for a single resource type, enabling UI to show type-based filtering.
+      additionalProperties: false
+      required:
+        - type
+        - count
+      properties:
+        type:
+          $ref: "#/components/schemas/SearchResultType"
+        count:
+          type: integer
+          minimum: 0
+          description: Number of matching results for this type.
+
+    SearchResultAttribute:
+      type: object
+      description: A typed key-value pair for rendering search result details.
+      additionalProperties: false
+      required:
+        - field
+        - value
+        - type
+      properties:
+        field:
+          type: string
+          description: Machine-readable field key (e.g., "dob", "status", "caseNumber").
+        label:
+          type: string
+          description: Human-readable display label (e.g., "Date of Birth", "Status", "Case Number").
+        value:
+          type: string
+          description: Display value, pre-formatted as a string regardless of type.
+        type:
+          type: string
+          description: |
+            Value type hint for client rendering:
+            - `string` — plain text (default)
+            - `date` — date value (client may reformat)
+            - `currency` — monetary amount (client may reformat)
+          enum:
+            - string
+            - date
+            - currency
+
+    SearchResultList:
+      type: object
+      description: Paginated search results with facet counts.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResult"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of matching results across all types.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of results requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more results are available beyond the current page.
+        facets:
+          type: array
+          description: Result counts per resource type.
+          items:
+            $ref: "#/components/schemas/SearchFacet"
+
+    SearchResultType:
+      type: string
+      description: The type of resource matched by the search.
+      enum:
+        - person
+        - case
+        - application
+        - task
+        - appointment
