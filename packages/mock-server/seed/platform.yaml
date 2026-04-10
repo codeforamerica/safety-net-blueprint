@@ -1,0 +1,64 @@
+# Seed data for platform — domain events in CloudEvents 1.0 format.
+# These represent historical events that pre-populate the event log for testing.
+
+EventExample1:
+  id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  specversion: "1.0"
+  type: org.codeforamerica.safety-net-blueprint.workflow.task.created
+  source: /workflow
+  subject: cf4d9294-3827-5c92-8c66-b53fa6cf44bb
+  time: "2024-01-01T00:00:00.000Z"
+  datacontenttype: application/json
+  traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  data:
+    id: cf4d9294-3827-5c92-8c66-b53fa6cf44bb
+    name: Opal Hartmann
+    description: Communis video allatus vacuus minus aduro utique.
+    status: pending
+    programType: snap
+    isExpedited: true
+    queueId: ae5ed10f-657d-55f3-b53c-b381ec583a1e
+    priority: expedited
+
+EventExample2:
+  id: b2c3d4e5-f6a7-8901-bcde-f12345678901
+  specversion: "1.0"
+  type: org.codeforamerica.safety-net-blueprint.workflow.task.claimed
+  source: /workflow
+  subject: cf4d9294-3827-5c92-8c66-b53fa6cf44bb
+  time: "2024-01-01T01:00:00.000Z"
+  datacontenttype: application/json
+  traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  data:
+    assignedToId: c076fe9f-2209-52c4-967c-6d0172469fea
+
+EventExample3:
+  id: c3d4e5f6-a7b8-9012-cdef-123456789012
+  specversion: "1.0"
+  type: org.codeforamerica.safety-net-blueprint.workflow.task.created
+  source: /workflow
+  subject: 52a109fb-4667-5e67-a1b3-860ec6865af3
+  time: "2024-01-31T00:00:00.000Z"
+  datacontenttype: application/json
+  traceparent: null
+  data:
+    id: 52a109fb-4667-5e67-a1b3-860ec6865af3
+    name: Naomie Hoeger
+    description: Expedita amiculum adipisci quasi traho adsidue theologus.
+    status: pending
+    programType: tanf
+    isExpedited: false
+    queueId: f46c5c87-b1fe-55c2-9166-873c2748d4f4
+    priority: high
+
+EventExample4:
+  id: d4e5f6a7-b8c9-0123-defa-234567890123
+  specversion: "1.0"
+  type: org.codeforamerica.safety-net-blueprint.workflow.task.claimed
+  source: /workflow
+  subject: 52a109fb-4667-5e67-a1b3-860ec6865af3
+  time: "2024-01-31T01:00:00.000Z"
+  datacontenttype: application/json
+  traceparent: null
+  data:
+    assignedToId: b637ec01-7c66-5587-9592-7bbee3509a36

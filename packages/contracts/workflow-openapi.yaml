@@ -123,6 +123,16 @@ x-events:
     summary: Emitted when a task exceeds its SLA deadline
     payload:
       $ref: "#/components/schemas/TaskSlaBreachedEvent"
+  task.updated:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.updated
+    summary: Emitted when a task is updated via PATCH
+    payload:
+      $ref: "#/components/schemas/TaskUpdatedEvent"
+  task.deleted:
+    type: org.codeforamerica.safety-net-blueprint.workflow.task.deleted
+    summary: Emitted when a task is deleted
+    payload:
+      $ref: "#/components/schemas/TaskDeletedEvent"
 
 paths:
   "/queues":
@@ -903,8 +913,8 @@ components:
 
     # Event payload schemas — referenced by x-events section above
     TaskCreatedEvent:
-      type: object
-      properties: {}
+      description: Snapshot of the newly created task resource.
+      $ref: "#/components/schemas/Task"
 
     TaskAssignedEvent:
       type: object
@@ -926,7 +936,15 @@ components:
 
     TaskClaimedEvent:
       type: object
-      properties: {}
+      required:
+        - assignedToId
+      properties:
+        assignedToId:
+          type: string
+          format: uuid
+          description: ID of the caseworker who claimed the task.
+          x-relationship:
+            resource: User
 
     TaskReleasedEvent:
       type: object
@@ -976,6 +994,9 @@ components:
     TaskDeEscalatedEvent:
       type: object
       properties: {}
+
+    TaskDeletedEvent:
+      $ref: "./components/events.yaml#/ResourceDeletedEvent"
 
     TaskAwaitingClientEvent:
       type: object
@@ -1047,6 +1068,9 @@ components:
           description: The SLA breach reason.
           enum:
             - sla_deadline_exceeded
+
+    TaskUpdatedEvent:
+      $ref: "./components/events.yaml#/ResourceUpdatedEvent"
 
   examples:
     QueueExample1:

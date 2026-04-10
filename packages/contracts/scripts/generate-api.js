@@ -148,6 +148,10 @@ function generateApiSpec(name, resource, componentsPrefix = './components') {
   const resourcePluralLower = resourcePlural.toLowerCase();
   const resourceIdParam = `${toCamelCase(resource)}Id`;
 
+  const resourceLower = resource.toLowerCase();
+  const resourceKebab = toKebabCase(resource);
+  const domain = toKebabCase(name);
+
   return `openapi: 3.1.0
 info:
   title: ${resource} API
@@ -166,6 +170,22 @@ servers:
 tags:
 - name: ${resourcePlural}
   description: Manage ${resourcePluralLower}.
+x-events:
+  ${resourceKebab}.created:
+    type: org.codeforamerica.safety-net-blueprint.${domain}.${resourceKebab}.created
+    summary: Emitted when a ${resourceLower} is created
+    payload:
+      $ref: "#/components/schemas/${resource}CreatedEvent"
+  ${resourceKebab}.updated:
+    type: org.codeforamerica.safety-net-blueprint.${domain}.${resourceKebab}.updated
+    summary: Emitted when a ${resourceLower} is updated via PATCH
+    payload:
+      $ref: "#/components/schemas/${resource}UpdatedEvent"
+  ${resourceKebab}.deleted:
+    type: org.codeforamerica.safety-net-blueprint.${domain}.${resourceKebab}.deleted
+    summary: Emitted when a ${resourceLower} is deleted
+    payload:
+      $ref: "#/components/schemas/${resource}DeletedEvent"
 paths:
   "/${resourcePluralLower}":
     get:
@@ -382,13 +402,24 @@ components:
           type: boolean
           description: Indicates whether more ${resourcePluralLower} are available beyond the current page.
 
+    # Event payload schemas — referenced by x-events section above
+    ${resource}CreatedEvent:
+      description: Snapshot of the newly created ${resourceLower} resource.
+      $ref: "#/components/schemas/${resource}"
+
+    ${resource}UpdatedEvent:
+      $ref: "${componentsPrefix}/events.yaml#/ResourceUpdatedEvent"
+
+    ${resource}DeletedEvent:
+      $ref: "${componentsPrefix}/events.yaml#/ResourceDeletedEvent"
+
   examples:
     ${resource}Example1:
       summary: Example ${resource} record
       value:
         id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         name: "Example ${resource} 1"
-        description: "This is an example ${resource.toLowerCase()}."
+        description: "This is an example ${resourceLower}."
         status: "active"
         createdAt: "2024-01-15T10:30:00Z"
         updatedAt: "2024-01-15T10:30:00Z"

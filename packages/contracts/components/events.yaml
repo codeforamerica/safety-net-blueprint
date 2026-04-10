@@ -1,66 +1,59 @@
-# Shared domain event schema
+# Shared event payload schemas for CloudEvents 1.0 domain events.
 #
-# DomainEvent is the unified audit trail record emitted whenever a state machine
-# transition fires or an object is created. All domains write to the same events
-# collection; domain + resource + action identify the event type.
+# These schemas define the standard data payloads for CRUD lifecycle events
+# that are emitted automatically by all REST handlers. Domain-specific
+# transition events define their own payload schemas locally.
 #
-# Used by: workflow-openapi.yaml
+# FieldChange and ResourceUpdatedEvent are shared because the updated event
+# shape (field, before, after) is identical across all domains and resources.
+# ResourceDeletedEvent is shared because deleted events carry no payload.
+#
+# ResourceCreatedEvent is intentionally NOT defined here — its payload is
+# the full resource snapshot, which varies by domain. Each domain defines
+# a {Resource}CreatedEvent that $ref's its own resource schema.
+#
+# Used by: workflow-openapi.yaml, and any domain OpenAPI spec that emits
+# CRUD lifecycle events.
 
-DomainEvent:
+FieldChange:
   type: object
-  description: |
-    An immutable record of a state transition or significant lifecycle event.
-    Emitted by the state machine engine whenever a transition fires or an object
-    is first created.
+  description: A single field change recorded in an updated event.
   additionalProperties: false
   required:
-    - id
-    - domain
-    - resource
-    - action
-    - resourceId
-    - performedById
-    - occurredAt
-    - createdAt
-    - updatedAt
+    - field
+    - before
+    - after
   properties:
-    id:
+    field:
       type: string
-      format: uuid
-      description: Unique identifier for the event.
-      readOnly: true
-    domain:
-      type: string
-      description: Domain that owns the event (e.g., workflow).
-    resource:
-      type: string
-      description: Resource type the event relates to (e.g., task).
-    action:
-      type: string
-      description: The action that occurred (e.g., created, claimed, completed).
-    resourceId:
-      type: string
-      format: uuid
-      description: Identifier of the resource that generated the event.
-    performedById:
-      type: string
-      format: uuid
-      description: User who triggered the event.
-    occurredAt:
-      type: string
-      format: date-time
-      description: When the event occurred.
-    data:
-      type: object
-      description: Transition-specific payload. Schema varies by action.
-      additionalProperties: true
-    createdAt:
-      type: string
-      format: date-time
-      description: Timestamp when the event record was created.
-      readOnly: true
-    updatedAt:
-      type: string
-      format: date-time
-      description: Timestamp when the event record was last updated.
-      readOnly: true
+      description: Name of the changed field.
+    before:
+      description: Value of the field before the update.
+    after:
+      description: Value of the field after the update.
+
+ResourceUpdatedEvent:
+  type: object
+  description: |
+    Payload for a CRUD-emitted updated event. Contains a field-level diff
+    recording which fields changed and their before/after values.
+
+    Emitted automatically by the mock server on every PATCH request.
+    Consumers can react to specific field mutations without fetching the
+    full resource.
+  required:
+    - changes
+  properties:
+    changes:
+      type: array
+      description: List of fields that changed, with before and after values.
+      items:
+        $ref: "#/FieldChange"
+
+ResourceDeletedEvent:
+  type: object
+  description: |
+    Payload for a CRUD-emitted deleted event. Carries no data — the entity
+    no longer exists and consumers should treat the subject ID as permanently
+    removed.
+  properties: {}

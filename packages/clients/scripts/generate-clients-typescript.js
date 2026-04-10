@@ -191,9 +191,14 @@ async function main() {
   }
   mkdirSync(outputDir, { recursive: true });
 
-  // Discover all OpenAPI spec files (match *-openapi.yaml convention)
+  // Discover all OpenAPI spec files (match *-openapi.yaml convention), skipping deprecated specs
   const specFiles = readdirSync(specsDir).filter(f => {
-    return f.endsWith('-openapi.yaml');
+    if (!f.endsWith('-openapi.yaml')) return false;
+    try {
+      return !readFileSync(join(specsDir, f), 'utf8').includes('x-status: deprecated');
+    } catch {
+      return true;
+    }
   });
 
   if (specFiles.length === 0) {

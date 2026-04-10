@@ -6,7 +6,7 @@ import { findById, findAll, update, create } from '../database-manager.js';
 import { findTransition, evaluateGuards, applyEffects } from '../state-machine-engine.js';
 import { updateSlaInfo } from '../sla-engine.js';
 import { processRuleEvaluations } from './rule-evaluation.js';
-import { eventBus } from '../event-bus.js';
+import { emitEvent } from '../emit-event.js';
 
 /**
  * Create a transition handler for an RPC endpoint.
@@ -129,19 +129,24 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
         }
       }
 
-      // Emit pending domain events
+      // Emit pending domain events via shared utility
+      const domain = stateMachine.domain;
+      const object = stateMachine.object.toLowerCase();
+      const source = `/${domain}`;
+      const traceparent = req.headers['traceparent'] || null;
       for (const event of pendingEvents) {
         try {
-          const stored = create('events', {
-            domain: stateMachine.domain,
-            resource: stateMachine.object.toLowerCase(),
+          emitEvent({
+            domain,
+            object,
             action: event.action,
             resourceId: resource.id,
-            performedById: callerId,
-            occurredAt: now,
-            data: event.data
+            source,
+            data: event.data || null,
+            callerId,
+            traceparent,
+            now,
           });
-          eventBus.emit('domain-event', stored);
         } catch (eventError) {
           console.error(`Failed to emit event "${event.action}":`, eventError.message);
         }

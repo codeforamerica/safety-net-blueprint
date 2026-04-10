@@ -6,6 +6,7 @@ import { findById, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { applyEffects } from '../state-machine-engine.js';
 import { processRuleEvaluations } from './rule-evaluation.js';
+import { emitEvent } from '../emit-event.js';
 
 /**
  * Create update handler for a resource
@@ -15,7 +16,7 @@ import { processRuleEvaluations } from './rule-evaluation.js';
  * @param {Array} rules - Rules for rule evaluation effects
  * @returns {Function} Express handler
  */
-export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, rules = []) {
+export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, rules = [], slaTypes = []) {
   const paramName = extractPathParam(endpoint.path);
   return (req, res) => {
     try {
@@ -65,8 +66,39 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         }
       }
 
+      // Compute field-level diff (before values for the updated event)
+      const changedFields = Object.keys(req.body);
+      const beforeValues = {};
+      for (const field of changedFields) {
+        beforeValues[field] = existing[field] ?? null;
+      }
+
       // Update in database (database manager handles deep merge and updatedAt timestamp)
       const updated = update(endpoint.collectionName, resourceId, req.body);
+
+      // Build changes array for the updated event
+      const changes = changedFields
+        .filter(field => updated[field] !== existing[field])
+        .map(field => ({ field, before: beforeValues[field], after: updated[field] ?? null }));
+
+      // Auto-emit updated event with field-level diff
+      try {
+        const domain = apiMetadata.serverBasePath.replace(/^\//, '');
+        const object = endpoint.collectionName.replace(/s$/, '');
+        emitEvent({
+          domain,
+          object,
+          action: 'updated',
+          resourceId,
+          source: apiMetadata.serverBasePath,
+          data: { changes },
+          callerId: req.headers['x-caller-id'] || null,
+          traceparent: req.headers['traceparent'] || null,
+          now: updated.updatedAt,
+        });
+      } catch (eventError) {
+        console.error('Failed to emit updated event:', eventError.message);
+      }
 
       // Fire onUpdate effects if any watched fields changed
       if (stateMachine?.onUpdate?.effects?.length > 0) {

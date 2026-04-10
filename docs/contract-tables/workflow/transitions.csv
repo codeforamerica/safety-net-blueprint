@@ -1,5 +1,5 @@
 From,To,Trigger,On,After,RelativeTo,CalendarType,Actors,Guards,Effects
-(create),pending,create,,,,,,,event; evaluate-rules; evaluate-rules
+(create),pending,create,,,,,,,evaluate-rules; evaluate-rules
 pending,in_progress,claim,,,,,caseworker; supervisor,taskIsUnassigned,set assignedToId = $caller.id; event
 in_progress,completed,complete,,,,,caseworker; supervisor,callerIsAssignedWorker,set completedAt = $now; set outcome = $request.outcome; set completionNotes = $request.notes; event; create
 in_progress,pending,release,,,,,caseworker; supervisor,callerIsAssignedWorker,set assignedToId = null; event; evaluate-rules; evaluate-rules

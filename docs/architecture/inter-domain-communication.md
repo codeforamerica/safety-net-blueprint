@@ -31,6 +31,42 @@ Event contracts for each domain live in two artifacts:
 
 AsyncAPI specs are generated from these two sources. State partners do not author AsyncAPI directly — they overlay the source artifacts and regenerate.
 
+### Event emission model
+
+Two complementary patterns determine when events are emitted:
+
+**1. CRUD auto-emit (REST handlers)**
+
+Every REST resource emits three lifecycle events automatically — no state machine declaration required:
+
+| Trigger | Event action | Payload (`data`) |
+|---------|-------------|------------------|
+| `POST /resources` | `{object}.created` | Full resource snapshot |
+| `PATCH /resources/{id}` | `{object}.updated` | `{ changes: [{ field, before, after }] }` |
+| `DELETE /resources/{id}` | `{object}.deleted` | `null` |
+
+The `before` and `after` values in `updated` events record field-level changes so consumers can react to specific mutations without fetching the full resource.
+
+**2. Declarative state machine events (RPC transitions)**
+
+Transitions declare their own events explicitly in the state machine YAML. Each `type: event` effect specifies the action verb and any payload fields to include — typically context values from `$request.*` or `$caller.*`:
+
+```yaml
+- type: event
+  action: claimed
+  data:
+    assignedToId: $caller.id
+```
+
+All events — both auto-emitted and declarative — use the same `emitEvent()` utility, which constructs the CloudEvents envelope, persists it to the shared `/platform/events` log, and broadcasts it over the SSE stream.
+
+The `type` field is always derived implicitly: `org.codeforamerica.safety-net-blueprint.{domain}.{object}.{action}`. There is no ambiguity about what constitutes a valid type — it always reflects a real operation on a real resource.
+
+**What does not emit events**
+
+- `GET` requests (read operations) never emit events — only state-changing operations do
+- Events are not emitted by the state machine at creation time — the REST create handler handles this universally
+
 ---
 
 ## `/events` Endpoint
@@ -50,7 +86,13 @@ GET /events?subject=00000004-0000-4000-8000-000000000001
 
 Filtering by `type` or `source` narrows results to a specific domain or event kind.
 
-For causal chain tracing, the `traceparent` attribute propagates the W3C Trace Context from the triggering request or event. The trace ID it carries is stable across the entire chain — every downstream event shares the same trace ID, so the full causal chain is recoverable in a single query filtered by trace ID.
+#### Distributed tracing
+
+Conforming implementations must propagate the W3C Trace Context `traceparent` header from each inbound HTTP request to every event emitted during that request's lifecycle. The `traceparent` value is included as a CloudEvents extension attribute (per the [CloudEvents Distributed Tracing extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/distributed-tracing.md)) and must not be modified — it carries a trace ID (stable across the full causal chain) and a parent span ID (the immediate parent operation).
+
+Clients must forward the `traceparent` header on all requests to enable end-to-end tracing. When an inbound request carries no `traceparent`, the implementation omits the attribute from emitted events rather than generating a synthetic value.
+
+The trace ID is stable across the entire chain — every event emitted from a single HTTP request shares the same trace ID, so the complete causal trail for any operation is recoverable by filtering events on `traceparent` prefix or by querying an OTLP-compatible backend.
 
 ---
 
