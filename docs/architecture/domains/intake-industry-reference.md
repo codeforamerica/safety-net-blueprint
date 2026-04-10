@@ -239,7 +239,7 @@ Events are listed with the operational or regulatory need that drives them — t
 
 | Event | Why it's needed | Trigger | Key payload fields | Primary consumers |
 |---|---|---|---|---|
-| `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. The workflow domain needs to create a caseworker task; communication needs to send a confirmation; eligibility needs to know the household scope. | `draft` → `submitted` | `applicationId`, `submittedAt`, `programs`, `memberCount`, `isExpedited` | Workflow (create intake task), Communication (confirmation notice), Eligibility |
+| `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. What happens next depends on program type — routing is not uniform (see Decision 15). Communication sends a confirmation; eligibility and workflow react per-program. | `draft` → `submitted` | `applicationId`, `submittedAt`, `programs`, `memberCount`, `isExpedited` | Workflow (program-type-aware routing — see Decision 15), Communication (confirmation notice), Eligibility (RTE for Medicaid) |
 | `application.opened` | Signals that a caseworker has begun active review. Workflow needs to update the task state; supervisors tracking queue throughput need to know when review started vs. when it was filed. | `submitted` → `under_review` | `applicationId`, `openedAt`, `assignedToId` | Workflow (update task to in_progress) |
 | `application.withdrawn` | A withdrawn application must stop all in-flight processing immediately. Open workflow tasks must be cancelled; any scheduled interview or document request must be voided; communication must notify the household. Failing to act on this event risks processing an application the household has abandoned. | any → `withdrawn` | `applicationId`, `withdrawnAt`, `reason` | Workflow (cancel open tasks), Communication (withdrawal notice) |
 | `application.closed` | Signals that intake is complete and the application is ready for or has received an eligibility determination. Case Management needs this event to know when to create a service delivery case (if approved). Without it, case management has no trigger to act. | `under_review` → `closed` | `applicationId`, `closedAt` | Case Management (create case if approved), Eligibility |
@@ -573,6 +573,43 @@ Arguments for a caseworker-triggered event with no new state:
 - **(C)** Omit from baseline — added via state overlay when Medicaid support is scoped; keeps baseline lean; risks inconsistent implementations across states
 
 **Decision:** Option A. The MAGI household composition approach (Decision 11) already depends on `claimedAsDependentBy` and tax filing status fields in the baseline. Flat fields on `ApplicationMember` are consistent with MAGI-in-the-Cloud and CalSAWS. States without Medicaid leave them empty.
+
+### Decision 15: Post-submission program routing — task creation and automated eligibility
+
+**Status:** Decided: B
+
+**What's being decided:** When `application.submitted` fires, what happens for each program in the application? Specifically: does every program generate a caseworker task immediately, or does routing depend on program type?
+
+**Background:**
+
+ACA regulations (45 CFR § 435.911–435.916) require states to attempt automated eligibility determination for MAGI Medicaid using electronic data sources — SSA income data, IRS tax data, and citizenship/immigration status — via the Federal Data Services Hub (FDSH) before routing to a caseworker. If real-time eligibility (RTE) succeeds, the applicant is auto-approved or auto-denied with no caseworker involvement. Only when RTE is inconclusive or denied does the application route to a caseworker. This automated first-pass runs immediately after submission, before any human has looked at the application.
+
+SNAP and TANF have no equivalent automated determination. A caseworker must conduct an interview and review documents. SNAP requires a caseworker task at submission (with expedited screening within 1 business day for potentially expedited households).
+
+This means routing at `application.submitted` is not uniform across programs:
+- **SNAP** → caseworker intake task immediately
+- **Medicaid (MAGI)** → RTE system first; caseworker task only if inconclusive or denied
+- **TANF** → caseworker intake task (state-defined, generally caseworker-driven)
+
+**Considerations:**
+- Creating a caseworker task for Medicaid at submission duplicates work — the caseworker task is unnecessary if RTE resolves the application automatically
+- States processing multi-program applications (SNAP + Medicaid) regularly need to route each program independently; CalSAWS, CBMS, and MAGI-in-the-Cloud implementations all treat Medicaid and SNAP routing separately
+- A subscription mechanism that always creates one task per program ignores program-specific automation and would create incorrect caseworker load for Medicaid
+- The blueprint cannot implement RTE (it requires access to FDSH, which is a federal data hub), but it should not preclude it — the architecture must leave room for a system actor to handle Medicaid before a caseworker task is created
+- Hardcoding "one caseworker task per program at submission" would require states to work around the blueprint rather than extend it
+
+**Options:**
+- **(A)** One task per program at submission — simple, consistent, but incorrect for Medicaid; creates caseworker tasks the state then has to cancel when RTE succeeds
+- **(B)** Program-type-aware configurable routing — the subscription wiring (#163) declares per-program-type what happens at submission; Medicaid routes to a system/RTE handler, SNAP routes to a caseworker queue; states configure the mapping
+- **(C)** Two-phase routing — one shared intake screening task at submission (all programs); program-specific tasks fan out after intake closes; avoids duplication but delays program-specific processing and doesn't reflect how RTE actually works (Medicaid RTE runs before intake screening, not after)
+
+**Decision:** Option B. The subscription mechanism established in #163 must be program-type-aware and configurable — it cannot assume all programs generate caseworker tasks at submission. Each program type declares its own first handler:
+
+- `snap` → caseworker task in the intake queue
+- `medicaid` → system handler (RTE); caseworker task only on inconclusive or denial
+- `tanf` → caseworker task (state overlay defines specifics)
+
+The blueprint defines this as an extensibility point, not a prescribed mapping. States configure what happens per program type. This is consistent with how CalSAWS, CBMS, and MAGI-in-the-Cloud implementations handle post-submission routing, and preserves correctness for states implementing Medicaid RTE.
 
 ---
 
