@@ -55,7 +55,9 @@ transitions:
         description: Assign task to the claiming worker
       - type: event
         action: claimed
-        description: Emit a domain event recording the claim
+        data:
+          assignedToId: $caller.id
+        description: Emit a domain event recording the claim and who claimed the task
   - trigger: complete
     from: in_progress
     to: completed
@@ -487,10 +489,7 @@ transitions:
         description: Emit a domain event recording the priority change
 onCreate:
   actors: []
-  effects:
-    - type: event
-      action: created
-      description: Emit a domain event when a task is first created
+  effects: []
     - type: evaluate-rules
       ruleType: assignment
       description: Evaluate assignment rules to route task to a queue
