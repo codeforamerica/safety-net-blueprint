@@ -32,6 +32,59 @@ All major platforms draw a hard boundary between the *intake phase* (a form-laye
 
 ---
 
+## Application lifecycle
+
+### States
+
+Based on regulatory requirements and vendor consensus:
+
+| State | Description |
+|---|---|
+| `draft` | Started but not yet submitted; no regulatory clock running |
+| `submitted` | Formally submitted; regulatory clock starts |
+| `under_review` | Assigned to a caseworker and being processed |
+| `withdrawn` | Applicant voluntarily withdrew before determination |
+| `closed` | Processing complete; determination made by eligibility domain |
+
+No vendor tracks the final determination (approved/denied) on the Application itself. That determination lives on the program delivery case or benefit assignment created downstream.
+
+### Regulatory clock
+
+**SNAP (7 CFR § 273.2):** The 30-day processing clock starts on the *date of application receipt* — the date the household submits a minimally complete application (name, address, signature). The clock does not start when a caseworker picks up the application. For online applications submitted after hours, the filing date is the next business day. States must process within 30 days (7 days for expedited).
+
+**Medicaid (42 CFR § 435.912):** The 45-day clock (90 days for disability-based Medicaid) starts on the application receipt date.
+
+**WIC (45 CFR Part 246):** No federal processing deadline. Certification period varies by participant category (see Out of scope).
+
+### What happens during intake
+
+The intake phase spans from filing through caseworker review and data collection. The key activities and their sequence:
+
+1. **Filing** — applicant submits a minimally complete application; regulatory clock starts; a single intake task is created for caseworker review covering all programs applied for (see Decision 15)
+2. **Confirmation notice** — the Communication domain sends an acknowledgment to the household confirming receipt of the application and the filing date; many states are required to provide this notice; it is triggered by `application.submitted` and is a Communication domain concern, not an intake domain concern
+3. **Identity matching** — the system attempts to match the applicant and household members to existing person records to prevent duplicate records and link to prior application history; see Decision 12
+4. **Queue assignment and routing** — the intake task is routed to the appropriate caseworker queue based on program type, geography, workload, or other state-configured rules; this is a workflow domain concern and happens before a caseworker opens the task
+5. **Automated eligibility determination (Medicaid)** — for MAGI Medicaid, the system immediately attempts real-time eligibility (RTE) via the Federal Data Services Hub (FDSH) using SSA income data, IRS tax data, and citizenship/immigration status; if RTE succeeds, Medicaid is auto-approved or auto-denied with no caseworker involvement; if inconclusive, Medicaid rolls into caseworker review; this runs before any caseworker action (45 CFR § 435.911–435.916)
+6. **Electronic data source checks** — in parallel with or shortly after filing, the system queries electronic data sources to pre-populate or verify applicant-reported data: IEVS/The Work Number for income and employment, SAVE for immigration and citizenship status, SSA for disability and benefit receipt; results inform the caseworker's review but do not replace it (unlike Medicaid RTE, these checks do not produce an eligibility determination)
+7. **Expedited screening** — for SNAP, the caseworker must determine within 1 business day whether the household qualifies for expedited processing (7-day track); this happens immediately after filing
+8. **Caseworker review and data correction** — the caseworker reviews what the applicant submitted for accuracy and completeness; the task's per-program status tells the caseworker which programs still require their action (e.g., Medicaid may already be resolved via RTE, electronic data source results may pre-fill or flag discrepancies); the caseworker may update, add, or correct application data on behalf of the household
+9. **Interview** — SNAP requires an interview at initial certification; some states waive this for renewals or specific populations; information gathered in the interview may result in updates to the application data (steps 8 and 9 are often interleaved)
+10. **Document collection and verification** — caseworker requests supporting documents; applicant has at least 10 days to provide them (SNAP); documents may trigger further data corrections
+11. **Data completion** — once the caseworker is satisfied that the application data is accurate and complete, the application is ready for eligibility determination; this is when the intake phase ends
+
+**Implication for the data model:** Application data is mutable during `under_review`. The intake domain must support caseworker-initiated updates to application records, not just the applicant's initial submission. This has audit trail implications — changes made by caseworkers after submission should be distinguishable from the original submitted data. See Design Decision 9.
+
+**What the intake domain does not do during this phase:** run eligibility rules, make approval/denial decisions, or create a service delivery case. Those are eligibility and case management domain concerns triggered by intake events.
+
+### Key transitions
+
+- **submit**: `draft` → `submitted` — applicant files; regulatory clock starts; triggers caseworker task creation and confirmation notice
+- **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; caseworker review begins; assignment (routing the application to a worker's queue) may happen separately via the workflow domain and does not necessarily trigger this transition; see Decision 10
+- **withdraw**: `submitted` | `under_review` → `withdrawn` — applicant-initiated; triggers open task cancellation
+- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination (or intake is abandoned); see Design Decision 8
+
+---
+
 ## Entity model
 
 ### Application
@@ -154,55 +207,6 @@ Financial facts collected to support eligibility determination.
 - **Assets/Resources**: per-person, typed (`resourceType`: bank account, vehicle, real property, life insurance), with `amount` and `description`
 
 These are well-established sub-entities with consistent structure across vendors. The primary design questions are boundary questions (what level of detail to collect in intake vs. what belongs in ongoing case management) rather than structural ones.
-
----
-
-## Application lifecycle
-
-### States
-
-Based on regulatory requirements and vendor consensus:
-
-| State | Description |
-|---|---|
-| `draft` | Started but not yet submitted; no regulatory clock running |
-| `submitted` | Formally submitted; regulatory clock starts |
-| `under_review` | Assigned to a caseworker and being processed |
-| `withdrawn` | Applicant voluntarily withdrew before determination |
-| `closed` | Processing complete; determination made by eligibility domain |
-
-No vendor tracks the final determination (approved/denied) on the Application itself. That determination lives on the program delivery case or benefit assignment created downstream.
-
-### Regulatory clock
-
-**SNAP (7 CFR § 273.2):** The 30-day processing clock starts on the *date of application receipt* — the date the household submits a minimally complete application (name, address, signature). The clock does not start when a caseworker picks up the application. For online applications submitted after hours, the filing date is the next business day. States must process within 30 days (7 days for expedited).
-
-**Medicaid (42 CFR § 435.912):** The 45-day clock (90 days for disability-based Medicaid) starts on the application receipt date.
-
-**WIC (45 CFR Part 246):** No federal processing deadline. Certification period varies by participant category (see Out of scope).
-
-### What happens during intake
-
-The intake phase spans from filing through caseworker review and data collection. The key activities and their sequence:
-
-1. **Filing** — applicant submits a minimally complete application; regulatory clock starts; a single intake task is created for caseworker review covering all programs applied for (see Decision 15)
-2. **Automated eligibility determination (Medicaid)** — for MAGI Medicaid, the system immediately attempts real-time eligibility (RTE) via the Federal Data Services Hub (FDSH) using SSA income data, IRS tax data, and citizenship/immigration status; if RTE succeeds, Medicaid is auto-approved or auto-denied with no caseworker involvement; if inconclusive, Medicaid rolls into the caseworker review in step 4; this runs in parallel with expedited screening and before any caseworker action (45 CFR § 435.911–435.916)
-3. **Expedited screening** — for SNAP, the caseworker must determine within 1 business day whether the household qualifies for expedited processing (7-day track); this happens immediately after filing
-4. **Caseworker review and data correction** — the caseworker reviews what the applicant submitted for accuracy and completeness; the task's per-program status tells the caseworker which programs still require their action (e.g., Medicaid may already be resolved via RTE); discrepancies identified during the interview or document review are corrected in the application record; the caseworker may update, add, or correct application data on behalf of the household
-5. **Interview** — SNAP requires an interview at initial certification; some states waive this for renewals or specific populations; information gathered in the interview may result in updates to the application data (steps 4 and 5 are often interleaved)
-6. **Document collection and verification** — caseworker requests supporting documents; applicant has at least 10 days to provide them (SNAP); documents may trigger further data corrections; verification against electronic data sources (IEVS, FDSH) may run in parallel
-7. **Data completion** — once the caseworker is satisfied that the application data is accurate and complete, the application is ready for eligibility determination; this is when the intake phase ends
-
-**Implication for the data model:** Application data is mutable during `under_review`. The intake domain must support caseworker-initiated updates to application records, not just the applicant's initial submission. This has audit trail implications — changes made by caseworkers after submission should be distinguishable from the original submitted data. See Design Decision 9.
-
-**What the intake domain does not do during this phase:** run eligibility rules, make approval/denial decisions, or create a service delivery case. Those are eligibility and case management domain concerns triggered by intake events.
-
-### Key transitions
-
-- **submit**: `draft` → `submitted` — applicant files; regulatory clock starts; triggers caseworker task creation and confirmation notice
-- **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; caseworker review begins; assignment (routing the application to a worker's queue) may happen separately via the workflow domain and does not necessarily trigger this transition; see Decision 10
-- **withdraw**: `submitted` | `under_review` → `withdrawn` — applicant-initiated; triggers open task cancellation
-- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination (or intake is abandoned); see Design Decision 8
 
 ---
 
