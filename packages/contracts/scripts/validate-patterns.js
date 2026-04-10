@@ -90,11 +90,16 @@ Flags:
 
     for (const specPath of specPaths) {
       const specName = basename(specPath);
-      console.log(`📋 Checking ${specName}...`);
 
       try {
         // Parse spec (without full dereferencing to keep $refs visible)
         const spec = await $RefParser.parse(specPath);
+
+        if (spec?.info?.['x-status'] === 'deprecated') {
+          continue;
+        }
+
+        console.log(`📋 Checking ${specName}...`);
         const issues = validateSpec(spec, specName);
 
         const errors = issues.filter(i => i.severity === 'error');
