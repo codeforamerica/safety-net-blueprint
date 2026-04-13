@@ -9,7 +9,6 @@ type: object
 required:
   - version
   - domain
-  - context
   - ruleSets
 additionalProperties: false
 
@@ -24,10 +23,28 @@ properties:
 
   context:
     type: array
-    description: Variable bindings available to rule conditions (e.g., "task.*").
+    description: >
+      Variable bindings available to rule conditions. Two forms are supported:
+      - String form: "task.*" binds the primary resource to the "task" namespace.
+      - Object form: resolves a related entity from the database before evaluation.
+        Properties: as (alias in conditions), entity (DB collection name), from (dot-path on the resource).
+        Example: { as: application, entity: applications, from: task.subjectId }
     items:
-      type: string
-    minItems: 1
+      oneOf:
+        - type: string
+        - type: object
+          required: [as, entity, from]
+          properties:
+            as:
+              type: string
+              description: Alias used to reference this entity in rule conditions (e.g., "application").
+            entity:
+              type: string
+              description: Database collection name to look up (e.g., "applications").
+            from:
+              type: string
+              description: Dot-path on the primary resource whose value is the entity ID (e.g., "task.subjectId").
+          additionalProperties: false
 
   ruleSets:
     type: array

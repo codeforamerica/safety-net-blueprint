@@ -162,6 +162,7 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
 | 18 | [Metrics as YAML contract artifacts](#decision-18-metrics-as-yaml-contract-artifacts) | Metric definitions are explicit, versionable, and portable — unlike proprietary GUI dashboards. |
 | 19 | [Duration metrics via event pairs, not pre-computed fields](#decision-19-duration-metrics-via-event-pairs) | Declarative model lets metric authors define new measurements without schema changes. |
 | 20 | [Pre-aggregation is an adapter-layer concern](#decision-20-pre-aggregation-is-an-adapter-layer-concern) | On-demand computation is simpler and always current for the baseline; states add pre-aggregation in their adapters. |
+| 21 | [Rule context enrichment via explicit entity bindings](#decision-21-rule-context-enrichment-via-explicit-entity-bindings) | Rule conditions reference subject entity fields via declared bindings; the engine resolves only what is declared before evaluation. |
 
 ---
 
@@ -540,6 +541,33 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
 - States building production implementations will add pre-aggregation in their adapters — the metric definitions remain the same; only the computation strategy changes.
 
 **Decision:** On-demand computation from live data for the baseline. Pre-aggregation is an adapter-layer performance optimization, not a contract concern.
+
+---
+
+### Decision 21: Rule context enrichment via explicit entity bindings
+
+**Status:** Decided
+
+**What's being decided:** How rule conditions access attributes of the subject entity (application, case) when routing or prioritizing a task, without requiring those attributes to be denormalized onto the task.
+
+**Considerations:**
+- Routing and priority rules often need subject attributes — program type, county, household size — that live on the application or case record, not the task. Requiring states to copy these fields onto the task at creation couples the task schema to the subject schema and fails when those attributes change after creation.
+- **Pega** resolves this via the clipboard: all case data is in-memory and in-scope during routing rule evaluation without any explicit step. Full live traversal is available, but the data dependencies of a rule are implicit — invisible unless you read the rule's condition logic.
+- **ServiceNow** uses dot-walking (SQL JOINs) for live traversal in conditions, but this has documented limitations in the no-code condition builder; scripted fallbacks are required for change-triggered rules.
+- **Salesforce** surfaces related record fields via cross-object formula fields — effectively live computed values — but requires an explicit `Get Records` action in Flow before conditions can reference non-formula fields.
+- **JSM** pre-loads parent/epic data into the automation context at trigger time; linked issue data requires an explicit Lookup Issues action before it can be referenced in conditions.
+- **Appian CMS** takes the most constrained approach: developers configure which related record fields are available to rule authors; the platform fetches those values at evaluation time. Rule data dependencies are explicit and bounded by configuration.
+- **IBM Cúram** passes pre-defined Workflow Data Objects (WDOs) to CER allocation rules — a structured, bounded context that the engine assembles. Arbitrary related-record access requires a custom function strategy.
+- The blueprint's rules are defined in YAML contract artifacts — the data dependencies of a rule set should be as readable as the rules themselves. Implicit live traversal (Pega/ServiceNow) makes those dependencies invisible without running the rules.
+
+**Options:**
+- **(A)** Denormalization — copy subject fields onto the task at creation. Simple to evaluate; couples task schema to subject schema; fails when subject data changes post-creation.
+- **(B)** Arbitrary live traversal — the engine resolves any related entity on demand during condition evaluation. Maximum flexibility; data dependencies are implicit and invisible in the contract artifact.
+- **(C) ✓** Explicit context bindings — rule authors declare which entities to resolve in the rules YAML (`as`, `entity`, `from`). The engine fetches only what is declared before evaluation. Data dependencies are visible in the artifact itself, not buried in condition logic.
+
+**Decision:** Explicit context bindings (C). This follows the bounded-context model of Appian and Cúram — the most portable pattern for a blueprint that states customize. Unlike denormalization, it does not couple the task schema to the subject schema. Unlike arbitrary traversal, it keeps data dependencies readable in the contract artifact. States can extend context bindings via overlay to expose additional subject fields to rules without modifying the engine.
+
+**Customization:** States add or replace context bindings in their overlay of `workflow-rules.yaml` to expose additional subject entity fields to rule conditions.
 
 ---
 
