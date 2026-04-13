@@ -3,6 +3,30 @@ version: "1.0"
 domain: workflow
 resource: workflow/tasks
 ruleSets:
+  - id: application-submitted-intake-task
+    ruleType: task-creation
+    on: intake.application.submitted
+    evaluation: first-match-wins
+    context:
+      - as: application
+        entity: intake/applications
+        from: subject
+    rules:
+      - id: create-intake-review-task
+        order: 1
+        condition: true
+        action:
+          createResource:
+            entity: workflow/tasks
+            fields:
+              taskType: application_review
+              name: Application review
+              status: pending
+              subjectType: application
+              subjectId:
+                var: "this.subject"
+        description: Create an intake review task when an application is submitted.
+
   - id: workflow-assignment
     ruleType: assignment
     evaluation: first-match-wins
