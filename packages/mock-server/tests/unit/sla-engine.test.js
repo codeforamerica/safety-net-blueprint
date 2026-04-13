@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { updateSlaInfo } from '../../src/sla-engine.js';
+import { initializeSlaInfo, updateSlaInfo } from '../../src/sla-engine.js';
 
 // =============================================================================
 // Helpers
@@ -104,4 +104,67 @@ test('updateSlaInfo — skips already-terminal SLA entries', () => {
 test('updateSlaInfo — handles resource with no slaInfo gracefully', () => {
   const resource = { id: 'task-1', status: 'cancelled', slaInfo: [] };
   assert.doesNotThrow(() => updateSlaInfo(resource, SLA_TYPES, NOW, STATES));
+});
+
+// =============================================================================
+// resolvedEntities — context enrichment in SLA conditions
+// =============================================================================
+
+test('initializeSlaInfo — autoAssignWhen can reference resolved entity field', () => {
+  // initializeSlaInfo imported at top of file
+  const slaTypes = [
+    {
+      id: 'snap_expedited',
+      duration: { amount: 7, unit: 'days' },
+      autoAssignWhen: { '==': [{ var: 'application.isExpedited' }, true] }
+    }
+  ];
+  const resource = { id: 'task-1', subjectId: 'app-1', slaInfo: [] };
+  const resolvedEntities = { application: { id: 'app-1', isExpedited: true } };
+  initializeSlaInfo(resource, slaTypes, NOW, resolvedEntities);
+  assert.strictEqual(resource.slaInfo.length, 1);
+  assert.strictEqual(resource.slaInfo[0].slaTypeCode, 'snap_expedited');
+});
+
+test('initializeSlaInfo — autoAssignWhen does not fire when resolved entity field is false', () => {
+  // initializeSlaInfo imported at top of file
+  const slaTypes = [
+    {
+      id: 'snap_expedited',
+      duration: { amount: 7, unit: 'days' },
+      autoAssignWhen: { '==': [{ var: 'application.isExpedited' }, true] }
+    }
+  ];
+  const resource = { id: 'task-1', subjectId: 'app-1', slaInfo: [] };
+  const resolvedEntities = { application: { id: 'app-1', isExpedited: false } };
+  initializeSlaInfo(resource, slaTypes, NOW, resolvedEntities);
+  assert.strictEqual(resource.slaInfo.length, 0);
+});
+
+test('updateSlaInfo — pauseWhen can reference resolved entity field', () => {
+  const slaTypesWithPause = [
+    {
+      id: 'test_sla',
+      duration: { amount: 9, unit: 'days' },
+      pauseWhen: { '==': [{ var: 'application.pendingDocuments' }, true] }
+    }
+  ];
+  const resource = makeResource('in_progress');
+  const resolvedEntities = { application: { id: 'app-1', pendingDocuments: true } };
+  updateSlaInfo(resource, slaTypesWithPause, NOW, STATES, resolvedEntities);
+  assert.strictEqual(resource.slaInfo[0].status, 'paused');
+});
+
+test('updateSlaInfo — pauseWhen does not fire when resolved entity field is false', () => {
+  const slaTypesWithPause = [
+    {
+      id: 'test_sla',
+      duration: { amount: 9, unit: 'days' },
+      pauseWhen: { '==': [{ var: 'application.pendingDocuments' }, true] }
+    }
+  ];
+  const resource = makeResource('in_progress');
+  const resolvedEntities = { application: { id: 'app-1', pendingDocuments: false } };
+  updateSlaInfo(resource, slaTypesWithPause, NOW, STATES, resolvedEntities);
+  assert.strictEqual(resource.slaInfo[0].status, 'active');
 });
