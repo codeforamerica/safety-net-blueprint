@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   x-domain: intake
   x-api-type: system
-  x-status: stable
+  x-status: deprecated
   x-visibility: public
   description: |
     REST API for managing public assistance applications. The specification defines CRUD operations

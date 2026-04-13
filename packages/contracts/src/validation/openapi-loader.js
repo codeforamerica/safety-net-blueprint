@@ -255,7 +255,7 @@ export function extractIndividualResources(examples) {
 export async function loadAllSpecs({ specsDir } = {}) {
   const apiSpecs = discoverApiSpecs({ specsDir });
   const loadedSpecs = [];
-  
+
   for (const apiSpec of apiSpecs) {
     try {
       const spec = await loadSpec(apiSpec.specPath);
@@ -265,6 +265,6 @@ export async function loadAllSpecs({ specsDir } = {}) {
       console.warn(`Warning: Could not load ${apiSpec.name}:`, error.message);
     }
   }
-  
+
   return loadedSpecs;
 }

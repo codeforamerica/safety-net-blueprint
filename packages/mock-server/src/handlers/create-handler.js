@@ -46,11 +46,18 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // Create resource in database
       const resource = create(endpoint.collectionName, req.body);
 
+      // Apply initial state from state machine
+      if (stateMachine?.initialState) {
+        resource.status = stateMachine.initialState;
+        update(endpoint.collectionName, resource.id, { status: stateMachine.initialState });
+      }
+
       const callerId = req.headers['x-caller-id'] || 'system';
       const now = new Date().toISOString();
       const traceparent = req.headers['traceparent'] || null;
       const domain = apiMetadata.serverBasePath.replace(/^\//, '');
       const object = endpoint.collectionName.replace(/s$/, '');
+
 
       // Execute onCreate effects if this resource has a state machine
       if (stateMachine?.onCreate) {
