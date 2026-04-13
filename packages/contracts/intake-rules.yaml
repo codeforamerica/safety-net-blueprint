@@ -5,7 +5,7 @@ resource: intake/applications
 ruleSets:
   - id: task-claimed-open-application
     ruleType: status-transition
-    on: workflow.task.claimed
+    "on": workflow.task.claimed
     evaluation: first-match-wins
     context:
       - as: task
@@ -34,7 +34,5 @@ ruleSets:
             entity: intake/applications
             idFrom: application.id
             transition: open
-        description: >
-          When a caseworker claims an application_review task, transition the linked
-          application from submitted to under_review. Guards on the intake open
-          transition enforce that only system-role callers can execute this.
+        description: |
+          When a caseworker claims an application_review task, transition the linked application from submitted to under_review. Guards on the intake open transition enforce that only system-role callers can execute this.

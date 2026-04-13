@@ -5,7 +5,7 @@ resource: workflow/tasks
 ruleSets:
   - id: application-submitted-intake-task
     ruleType: task-creation
-    on: intake.application.submitted
+    "on": intake.application.submitted
     evaluation: first-match-wins
     context:
       - as: application
@@ -24,9 +24,8 @@ ruleSets:
               status: pending
               subjectType: application
               subjectId:
-                var: "this.subject"
+                var: this.subject
         description: Create an intake review task when an application is submitted.
-
   - id: workflow-assignment
     ruleType: assignment
     evaluation: first-match-wins
