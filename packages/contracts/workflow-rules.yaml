@@ -10,6 +10,7 @@ ruleSets:
       - as: application
         entity: intake/applications
         from: subjectId
+        optional: true
     rules:
       - id: snap-to-snap-queue
         order: 1
