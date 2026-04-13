@@ -51,7 +51,7 @@ Key fields:
 - `serviceId` — which ExternalService was called
 - `callMode` — `sync` or `async` for this specific call
 - `status` — current state in the call lifecycle
-- `requestingResourceId` — the resource that triggered the call (task ID, determination ID, etc.); combined with `serviceId`, serves as the idempotency key — if a `pending` call already exists for the same resource and service, the duplicate submission can be detected and rejected
+- `requestingResourceId` — the resource that triggered the call (task ID, determination ID, etc.); combined with `serviceId`, serves as the idempotency key (see [Decision 8](#decision-8-idempotency-via-requestingresourceid--serviceid))
 
 All other call metadata — requesting domain, timestamps of individual transitions, result payload — is captured in the CloudEvents emitted on each lifecycle transition. The trace context propagated in CloudEvent headers links the call back to the originating request.
 
@@ -101,6 +101,11 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 | 5 | [Events as audit trail; ExternalServiceCall for lifecycle](#decision-5-events-as-audit-trail-externalservicecall-for-lifecycle) | CloudEvents log is the immutable audit record; ExternalServiceCall governs the call lifecycle and serves as the correlation handle |
 | 6 | [Calling domains own subscription logic](#decision-6-calling-domains-own-subscription-logic) | The rules that determine when to call an external service live in the calling domain, not in Data Exchange |
 | 7 | [Result payload schemas per service type](#decision-7-result-payload-schemas-per-service-type) | Each service type defines its own result schema; composite service types reuse component schemas |
+| 8 | [Idempotency via requestingResourceId + serviceId](#decision-8-idempotency-via-requestingresourceid--serviceid) | Duplicate submissions are detected by checking for an existing pending call on the same resource and service |
+| 9 | [Credentials not in config](#decision-9-credentials-not-in-config) | `data-exchange-config.yaml` holds connection parameters only; credentials are injected at deploy time |
+| 10 | [Failure classification via failureReason](#decision-10-failure-classification-via-failurereason) | `call.failed` event carries a `failureReason` field so calling domains can distinguish retriable from non-retriable failures |
+| 11 | [Partial results for composite calls](#decision-11-partial-results-for-composite-calls) | Composite calls resolve to `completed` with `matchStatus: partial`; consumers evaluate sufficiency |
+| 12 | [Event delivery and audit separation](#decision-12-event-delivery-and-audit-separation) | `/events` delivers results to subscribers; event store is the audit record; `/audit` endpoint deferred |
 
 ---
 
@@ -241,11 +246,97 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 - **(C) ✓** Per service type — each service type defines a result schema in the OpenAPI spec; adapters produce results conforming to the schema for that type; states extend via overlay.
 
 **Common envelope** (all service types):
-- `matchStatus` — `matched`, `not_matched`, `inconclusive`, `pending_manual_review`
+- `matchStatus` — `matched`, `not_matched`, `partial`, `inconclusive`, `pending_manual_review`
 - `expiresAt` — optional; populated only when the external service returns a validity window
 - `data` — service-type-specific payload
 
 **Customization:** States extend service type result schemas via overlay to capture additional fields returned by their specific external service endpoints.
+
+---
+
+### Decision 8: Idempotency via requestingResourceId + serviceId
+
+**What's being decided:** How to prevent duplicate external service calls when a calling domain retries a submission — for example, after a network failure.
+
+**Considerations:**
+- A duplicate IEVS or SAVE query has real cost and compliance implications — external agencies may count queries against the agency's usage, and duplicate calls create redundant audit records.
+- CloudEvent trace context handles correlation (linking a call back to its origin) but does not prevent a second submission from being treated as a new call.
+- `requestingResourceId` combined with `serviceId` forms a natural semantic idempotency key: there should only ever be one active call for a given resource against a given service at a time.
+- If a `pending` call already exists for the same `requestingResourceId` + `serviceId`, the duplicate submission can be detected at the Data Exchange contract layer before reaching the external service.
+
+**Options:**
+- **(A)** No deduplication at Data Exchange — calling domains are responsible for not submitting duplicates; adapters rely on external service idempotency
+- **(B)** Caller-supplied idempotency key — calling domain passes an explicit key; Data Exchange deduplicates on it
+- **(C) ✓** Semantic deduplication — Data Exchange checks for an existing `pending` call on the same `requestingResourceId` + `serviceId`; rejects or returns the existing call if found
+
+---
+
+### Decision 9: Credentials not in config
+
+**What's being decided:** Where credentials for external services (API keys, certificates, OAuth tokens) live relative to `data-exchange-config.yaml`.
+
+**Considerations:**
+- Credentials in a config file would end up in version control, violating secrets management best practice.
+- ServiceNow separates credential records from spoke definitions; Salesforce separates Named Credentials from integration configuration — the pattern is consistent across major vendors.
+- `data-exchange-config.yaml` is an overlay point that states share and version; it is not a secrets store.
+
+**Options:**
+- **(A)** Credentials in `data-exchange-config.yaml` — simple but insecure; credentials in version control
+- **(B) ✓** Config file holds connection parameters only (endpoint URL, timeout, service version); credentials are injected at deploy time via environment variables or a state-configured secrets manager; adapters retrieve them from the state's secrets infrastructure
+
+---
+
+### Decision 10: Failure classification via failureReason
+
+**What's being decided:** Whether to distinguish between types of call failures so calling domains can react appropriately.
+
+**Considerations:**
+- `failed` as a single terminal state conflates connection errors (potentially retriable), service errors (potentially retriable), and authentication errors (not retriable without operational intervention).
+- Calling domains need to know whether to retry, escalate, or proceed without the data — the appropriate response differs by failure type.
+- `failureReason` in the event payload keeps the lifecycle simple (one `failed` state) while giving consumers the context they need.
+- Putting `failureReason` on the ExternalServiceCall resource would conflict with the principle that events are the record of truth.
+
+**Options:**
+- **(A)** Single `failed` state with no sub-classification — calling domains treat all failures identically
+- **(B)** `failureReason` on the ExternalServiceCall resource — queryable but duplicates what is in the event
+- **(C) ✓** `failureReason` in the `call.failed` event payload only — values: `connection_error`, `service_error`, `authentication_error`; resource stays lean
+
+---
+
+### Decision 11: Partial results for composite calls
+
+**What's being decided:** How `eligibility_hub` calls resolve when FDSH returns some sub-results but not others.
+
+**Considerations:**
+- FDSH can return partial results — if one upstream source (e.g., IRS) is unavailable, SAVE and SSA results may still be returned.
+- Treating partial responses as `failed` discards useful data and forces the calling domain to retry the entire composite call.
+- Adding a new `partial` lifecycle state complicates the state machine and every consumer that subscribes to result events.
+- The calling domain is best positioned to decide whether the returned sub-results are sufficient to proceed with its determination.
+
+**Options:**
+- **(A)** `failed` — any missing sub-result fails the whole call; useful data discarded
+- **(B)** New `partial` lifecycle state — adds complexity to the state machine and all consumers
+- **(C) ✓** `completed` with `matchStatus: partial` — call resolves as completed; missing sub-results carry `matchStatus: inconclusive`; consumer evaluates sufficiency
+
+---
+
+### Decision 12: Event delivery and audit separation
+
+**What's being decided:** How async results are delivered to calling domains, and how the audit record is maintained.
+
+**Considerations:**
+- For sync calls, the full result is returned in the HTTP response — no event subscription needed.
+- For async and event-triggered calls, the `call.completed` event is the delivery mechanism — calling domains subscribe and receive the full result payload inline. Querying an event store to retrieve async results is inconsistent with event-driven architecture.
+- The event store retains all events (including full result payloads) as the immutable audit record, consistent with the platform CloudEvents approach established in #210.
+- A separate `/audit` endpoint is additive — the event store can feed an audit store via a projection without any breaking contract changes. Introducing it prematurely adds complexity before the access control and retention requirements are fully defined (#216).
+- Result payloads contain PII. Data classification annotations on result schema fields (defined by #216) will govern what the event store exposes to each consumer class.
+
+**Options:**
+- **(A)** Separate result endpoint — calling domains fetch results from `GET /external-service-calls/{id}/result`; creates a second retrieval path alongside event delivery
+- **(B)** Event store query — calling domains query `/events` for past results; inconsistent with event-driven subscription model
+- **(C) ✓** Event delivery with deferred audit endpoint — `call.completed` event carries the full result payload; calling domains subscribe and receive results inline; event store is the audit record; `/audit` endpoint deferred until #216 defines access control and retention requirements
+
+**Dependencies:** Data classification annotations on result schema fields → #216. Centralized event store access controls and retention policies → #216.
 
 ---
 
