@@ -3,6 +3,7 @@
  */
 
 import { findById, deleteResource } from '../database-manager.js';
+import { emitEvent } from '../emit-event.js';
 
 /**
  * Create delete handler for a resource
@@ -27,7 +28,26 @@ export function createDeleteHandler(apiMetadata, endpoint) {
       
       // Delete the resource
       deleteResource(endpoint.collectionName, resourceId);
-      
+
+      // Auto-emit deleted event
+      try {
+        const domain = apiMetadata.serverBasePath.replace(/^\//, '');
+        const object = endpoint.collectionName.replace(/s$/, '');
+        emitEvent({
+          domain,
+          object,
+          action: 'deleted',
+          resourceId,
+          source: apiMetadata.serverBasePath,
+          data: null,
+          callerId: req.headers['x-caller-id'] || null,
+          traceparent: req.headers['traceparent'] || null,
+          now: new Date().toISOString(),
+        });
+      } catch (eventError) {
+        console.error('Failed to emit deleted event:', eventError.message);
+      }
+
       res.status(204).send();
     } catch (error) {
       console.error('Delete handler error:', error);

@@ -44,7 +44,6 @@ Tasks move through a defined set of states. The **SLA clock** tracks time toward
 
 The following effects run automatically when a task is first created:
 
-- Emit `created` event
 - Re-evaluate assignment rules
 - Re-evaluate priority rules
 

@@ -130,6 +130,7 @@ function collectYamlFiles(sourceDir, baseDir = sourceDir) {
     } else if (file.name.endsWith('.yaml')) {
       const relativePath = relative(baseDir, sourcePath);
       const content = readFileSync(sourcePath, 'utf8');
+      if (content.includes('x-status: deprecated')) continue;
       const spec = yaml.load(content);
       yamlFiles.push({ relativePath, sourcePath, spec });
     }
