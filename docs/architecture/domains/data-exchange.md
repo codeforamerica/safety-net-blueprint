@@ -357,6 +357,18 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 
 ---
 
+## Customization
+
+States customize the Data Exchange domain primarily through `data-exchange-config.yaml` overlays and calling domain rules.
+
+| Customization point | How |
+|---|---|
+| External service endpoint URLs | Overlay `data-exchange-config.yaml` — blueprint defines federal service entries with placeholder config; states fill in their endpoint URLs |
+| Default call mode per service | Set `defaultCallMode` on any ExternalService entry in `data-exchange-config.yaml`; can be overridden per call by the calling domain |
+| State-specific services | Add entries to `data-exchange-config.yaml` following the same schema as the blueprint-defined federal entries |
+| Result schema extensions | Overlay result schemas to capture additional fields returned by state-specific external service endpoints (see Decision 7) |
+| When external service calls are triggered | Overlay the calling domain's rules YAML — Data Exchange is a pure execution layer; trigger logic stays in Eligibility, Workflow, or Client Management (see Decision 6) |
+
 ## Known gaps
 
 - **Retry logic** — no defined mechanism for automatic retries on retriable failures (`connection_error`, `service_error`). States will need to implement retry orchestration in their calling domain rules or adapter layer.
