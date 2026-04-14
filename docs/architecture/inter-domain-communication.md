@@ -97,6 +97,22 @@ The target architecture is pub/sub with CloudEvents messages. Most implementatio
 
 ---
 
+## Open Issues
+
+### PII in event payloads
+
+Event payloads for some domains — particularly Data Exchange (`call.completed`) — contain PII: income amounts, immigration status, and potentially SSNs. These events are written to the `/events` store as the immutable audit record.
+
+How PII should be handled in event payloads has not been decided. Options:
+
+- **Include PII in events; control access at the event store layer** — PII is stored in plaintext; access control on the `/events` endpoint determines who can read it. Simple but may not meet IRS FTI safeguarding requirements (IRS Pub. 1075) or state PII retention policies.
+- **Encrypt PII fields in event payloads** — sensitive fields are encrypted before writing to the event store; only authorized consumers hold the decryption key. Keeps the event-driven model intact but adds key management complexity.
+- **Strip PII from events; require a secured fetch for result data** — events carry only status and correlation IDs; consumers retrieve full results via a separate secured endpoint. Keeps PII off the event bus but adds a retrieval step for async consumers and contradicts the current Data Exchange decision to deliver full results inline.
+
+This must be resolved before the Data Exchange event schemas can be finalized. It may also affect event payload design in other domains that carry personal data (e.g., intake applications, communications).
+
+---
+
 ## Further Reading
 
 - [ADR: Inter-Domain Communication](../decisions/inter-domain-communication.md)
