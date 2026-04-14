@@ -104,4 +104,18 @@ Steps 2 and 3 live in the Workflow domain as verification tasks — not in Data 
 - Data matching requires a Computer Matching Agreement (5 U.S.C. § 552a).
 - Existing schema references: `ImmigrationInfo` in `persons-openapi.yaml` captures document fields; `CitizenshipInfo` captures citizenship status — result schema should align with these.
 
-> **Verification needed:** Step 2/3 request format and response field names should be confirmed against the USCIS SAVE API integration guide (available to registered agencies from USCIS). The immigration status codes above reflect program-level categories; USCIS returns specific USCIS status codes that agencies map to these categories.
+## Access and documentation
+
+**The SAVE API technical specification (the Integration Control Agreement, or ICA) is gated to registered agencies.** It is not publicly available — agencies must have an active SAVE agreement with USCIS and log into the SAVE portal to download it.
+
+Current version: **ICA v38** (in beta as of early 2026). Key changes in v38:
+- Migration from legacy SOAP to REST API architecture
+- New initial response structure for immigration status and employment authorization
+- Aligns web service responses with manual verification responses
+
+The field names in this doc reflect the SAVE process as described in publicly available USCIS program documentation. The exact REST field names, response envelope structure, and USCIS-specific status codes are in the ICA.
+
+To obtain the authoritative field specification:
+- Contact your **state SAVE program coordinator** — registered agencies can access the ICA v38 beta directly from the SAVE portal
+- Email **SAVE.help@uscis.dhs.gov** for integration support
+- Note: if your state is currently on a SOAP integration, plan for the REST migration in v38

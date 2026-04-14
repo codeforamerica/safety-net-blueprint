@@ -45,7 +45,9 @@ The federal framework mandating quarterly income verification for active SNAP ca
 
 ### IVES — Income Verification Express Service
 
-Used to obtain IRS tax transcripts for specific tax years. More direct than IEVS — returns detailed return data rather than the quarterly IEVS income summary. Can be used synchronously for real-time intake processing.
+> **Not applicable for benefits agencies.** IVES (Form 4506-C) is a service for mortgage lenders and other third parties to obtain tax transcripts with taxpayer consent. Benefits agencies accessing IRS income data for SNAP/Medicaid do so through the IEVS channel under their Computer Matching Agreement, not through IVES. The fields below describe tax transcript content that is also accessible via IEVS, not an IVES-specific integration.
+
+Used to understand what data is available in IRS tax transcripts. Transcript content is the same whether accessed via IEVS or referenced here.
 
 **Call mode:** Sync or async depending on transcript type and state configuration
 
@@ -84,9 +86,16 @@ Used to obtain IRS tax transcripts for specific tax years. More direct than IEVS
 
 ## Regulatory and access notes
 
-- All IRS data is Federal Tax Information (FTI) governed by IRS Publication 1075. Agencies must implement IRS Publication 1075 safeguarding controls before accessing IEVS or IVES.
+- All IRS data is Federal Tax Information (FTI) governed by IRS Publication 1075. Agencies must implement IRS Publication 1075 safeguarding controls before accessing IEVS.
 - Computer Matching Agreements (5 U.S.C. § 552a) are required for IEVS access.
 - Authority for IRS to share FTI with SNAP/TANF agencies: 26 U.S.C. § 6103(l)(7). For Medicaid: IRC § 6103(l)(19).
 - IRS imposes query volume limits; rate tracking is a state infrastructure concern (see [data-exchange.md Known gaps](../architecture/domains/data-exchange.md#known-gaps)).
 
-> **Verification needed:** Specific field names and response envelope formats vary by state IEVS integration and may differ from the field names above. Confirm with your state's IRS IEVS liaison or USDA FNS technical guidance before finalizing schemas.
+## Access and documentation
+
+**The IEVS data exchange format is not publicly documented.** Each state's exchange format is defined in its own Computer Matching Agreement with IRS and governed by IRS Publication 1075 safeguarding requirements. The field names above represent the data IRS provides conceptually; the actual format (record layout, field names, codes) is gated behind agency agreements.
+
+To obtain the authoritative field specification:
+- Contact your state's **IRS FTI coordinator** — they hold the state's data exchange format documentation
+- Reference your state's **Computer Matching Agreement** with IRS, which defines the exchange schema
+- IRS Publication 1075 (publicly available) describes safeguarding requirements but not the exchange format itself
