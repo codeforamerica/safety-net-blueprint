@@ -53,6 +53,8 @@ Key fields:
 - `status` — current state in the call lifecycle
 - `requestingResourceId` — the resource that triggered the call (task ID, determination ID, etc.); combined with `serviceId`, serves as the idempotency key (see [Decision 8](#decision-8-idempotency-via-requestingresourceid--serviceid))
 
+The ExternalServiceCall request body carries no PII input payload (SSN, name, date of birth, etc.). The `requestingResourceId` is sufficient for the adapter to retrieve whatever person or case data it needs when executing the call. See [Decision 13](#decision-13-no-pii-in-request-payload).
+
 All other call metadata — requesting domain, timestamps of individual transitions, result payload — is captured in the CloudEvents emitted on each lifecycle transition. The trace context propagated in CloudEvent headers links the call back to the originating request.
 
 ## ExternalServiceCall lifecycle
@@ -114,6 +116,7 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 | 10 | [Failure classification via failureReason](#decision-10-failure-classification-via-failurereason) | `call.failed` event carries a `failureReason` field so calling domains can distinguish retriable from non-retriable failures |
 | 11 | [Partial results for composite calls](#decision-11-partial-results-for-composite-calls) | Composite calls resolve to `completed` with `matchStatus: partial`; consumers evaluate sufficiency |
 | 12 | [Event delivery and audit separation](#decision-12-event-delivery-and-audit-separation) | `/events` delivers results to subscribers; event store is the audit record; `/audit` endpoint deferred |
+| 13 | [No PII in request payload](#decision-13-no-pii-in-request-payload) | ExternalServiceCall submission carries no PII; adapters use `requestingResourceId` to retrieve input data |
 
 ---
 
@@ -335,6 +338,22 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 - **(A)** Separate result endpoint — calling domains fetch results from `GET /external-service-calls/{id}/result`; creates a second retrieval path alongside event delivery
 - **(B)** Event store query — calling domains query `/events` for past results; inconsistent with event-driven subscription model
 - **(C) ✓** Event delivery with deferred audit endpoint — `call.completed` event carries the full result payload; calling domains subscribe and receive results inline; event store is the audit record; `/audit` endpoint deferred until access control and retention requirements are defined
+
+---
+
+### Decision 13: No PII in request payload
+
+**What's being decided:** Whether the ExternalServiceCall submission includes the PII input data (SSN, name, date of birth) needed by the external service, or whether adapters retrieve that data themselves.
+
+**Considerations:**
+- Including SSN and other PII in the ExternalServiceCall request body would encode sensitive field schemas into the blueprint contract and route PII through the Data Exchange API surface unnecessarily.
+- The `requestingResourceId` gives the adapter a correlation handle to look up the associated person or case record from the source domain when executing the call.
+- ServiceNow Integration Hub and Cúram Data Hub both follow this pattern — the calling process passes a record reference; the integration layer retrieves data as needed from the source system.
+- Keeping PII out of the request body also means the ExternalServiceCall resource itself (returned by GET) contains no sensitive fields — only lifecycle state and identifiers.
+
+**Options:**
+- **(A)** PII inline — request body includes SSN, name, DOB, and other service-specific input fields. PII flows through the Data Exchange contract surface; blueprint spec encodes sensitive field schemas.
+- **(B) ✓** No PII in request body — submission carries only `serviceId`, `requestingResourceId`, and `callMode`; adapters use `requestingResourceId` to fetch person/case data from the source domain when executing the call.
 
 ---
 
