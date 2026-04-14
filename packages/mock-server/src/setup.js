@@ -118,7 +118,17 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
       const msg = seedErrors
         .map(e => `  ${e.api}${e.key ? ` [${e.key}]` : ''}: ${e.message}`)
         .join('\n');
-      throw new Error(`Seed data validation failed:\n${msg}`);
+      const looksLikeExpandMismatch = seedErrors.some(e =>
+        e.message.includes("must have required property") ||
+        e.message.includes("must NOT have additional properties")
+      );
+      const hint = looksLikeExpandMismatch
+        ? '\n\nHint: If you are using an overlay with x-relationship.style: expand, ' +
+          'your seed data must use the post-expansion field names (e.g., "person" not "personId"). ' +
+          'Regenerate seed data from your resolved specs:\n' +
+          `  npm run mock:seed -- --spec=${specsDir} --out=<seed-dir>`
+        : '';
+      throw new Error(`Seed data validation failed:\n${msg}${hint}`);
     }
     if (verbose) {
       console.log('✓ Seed data valid');
