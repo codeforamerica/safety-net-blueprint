@@ -886,12 +886,6 @@ api_classification:
             get:
               x-domain: intake
 
-    # x-api-type: Removed. The contract-driven architecture expresses API type
-    # through which contract artifacts exist (OpenAPI only = data-shaped/REST,
-    # OpenAPI + state machine = behavior-shaped/REST + RPC), not through a
-    # metadata tag. Existing specs may still have x-api-type values; these are
-    # ignored and will be cleaned up. See design-decisions.md for history.
-
     x-status:
       description: Implementation/lifecycle status of the API or operation
       type: string
@@ -989,6 +983,135 @@ api_classification:
       openapi/intake/applications.yaml
       openapi/client-management/persons.yaml
       openapi/identity-access/users.yaml
+
+# =============================================================================
+# OpenAPI Extensions (x- Extensions)
+# =============================================================================
+# All x- extensions used in Safety Net Blueprint contract artifacts, listed
+# alphabetically. x- extensions are OpenAPI-standard extension points that
+# carry machine-readable semantics beyond the core OpenAPI specification.
+# See docs/architecture/x-extensions.md for the full reference.
+x_extensions:
+
+  x-domain:
+    description: >
+      The business domain this API belongs to. Required on all API specs.
+      Enables filtering, domain-specific documentation generation, and future
+      folder reorganization without changing file locations.
+    location: info level (entire API) or operation level (multi-domain specs)
+    type: string
+    required: true
+    values:
+      - case-management
+      - client-management
+      - communication
+      - data-exchange
+      - document-management
+      - eligibility
+      - identity-access
+      - intake
+      - platform
+      - reporting
+      - scheduling
+      - search
+      - workflow
+    example: |
+      info:
+        title: Workflow Service API
+        x-domain: workflow
+
+  x-events:
+    description: >
+      Declares the domain events emitted by an API. Placed at the top level of
+      an OpenAPI spec (peer to info:, paths:). Each key is an event name in
+      dot notation (e.g., task.created). AsyncAPI specs and event documentation
+      are generated from this section combined with the domain's state machine.
+      See x-events Convention section for full schema.
+    location: top-level (peer to info, paths)
+    type: object
+    example: |
+      x-events:
+        task.created:
+          type: org.codeforamerica.safety-net-blueprint.workflow.task.created
+          summary: Emitted when a task is first created
+          payload:
+            $ref: "#/components/schemas/TaskCreatedEvent"
+
+  x-enum-source:
+    description: >
+      Declares that a string field's valid enum values are derived from another
+      contract artifact rather than being hardcoded in the OpenAPI spec. The
+      value is a path expression into the source artifact (e.g., states[].id,
+      slaTypes[].id). The resolve pipeline injects the actual enum values at
+      build time, keeping the OpenAPI spec in sync with behavioral contracts
+      without duplication.
+    location: schema property level (on string fields whose valid values come from another artifact)
+    type: string
+    example: |
+      status:
+        type: string
+        x-enum-source: states[].id
+        description: Current lifecycle state. Valid values injected from workflow-state-machine.yaml.
+
+      slaTypeCode:
+        type: string
+        x-enum-source: slaTypes[].id
+        description: Identifies which SLA type applies. Valid values injected from workflow-sla-types.yaml.
+
+  x-relationship:
+    description: >
+      Annotates a UUID foreign-key field to identify the related resource.
+      Required on all fields that end in Id and have format: uuid. Enables
+      tooling to generate relationship diagrams, validate referential integrity,
+      and optionally expand related resources inline (style: expand).
+    location: schema property level (on FK fields)
+    type: object
+    fields:
+      resource: Name of the related schema (PascalCase, e.g., Queue)
+      style: >
+        Optional. "expand" causes the mock server to replace the Id field with
+        an inline object of the related resource. Default: reference by ID only.
+    example: |
+      queueId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Queue
+
+  x-status:
+    description: >
+      Implementation or lifecycle status of the API or a specific operation.
+      Applied at info level for the entire API, or at operation level for
+      partial implementations. Tooling uses this to generate status banners
+      and filter documentation views.
+    location: info level or operation level
+    type: string
+    values:
+      - planned     # Designed but not implemented
+      - alpha       # Early implementation, breaking changes expected
+      - beta        # Feature complete, stabilizing
+      - stable      # Production ready, follows semver
+      - deprecated  # Still functional but being phased out
+    example: |
+      info:
+        title: Workflow Service API
+        x-status: alpha
+
+  x-visibility:
+    description: >
+      Who can access this API or operation. Drives documentation visibility,
+      API gateway policies, and client generation scoping.
+    location: info level or operation level
+    type: string
+    default: internal
+    values:
+      - public    # External consumers (clients, partners)
+      - partner   # Authorized integration partners
+      - internal  # Staff and system-to-system only
+    example: |
+      info:
+        title: Applications API
+        x-visibility: public
 
 # =============================================================================
 # Validation Rules
@@ -1791,198 +1914,54 @@ long_running_operations:
       trade_off: More complex, connection management issues
 
 # =============================================================================
-# Circuit Breakers# =============================================================================
-# STATUS: Not yet implemented
-circuit_breakers:
-  description: |
-    Protect the system when external dependencies fail. Circuit breakers prevent
-    cascade failures by failing fast when a dependency is unavailable.
-
-  when_to_use:
-    - External verification sources (IRS, SSA, state databases)
-    - Vendor system adapters (workflow tools, case management systems)
-    - Notice delivery services (email, SMS, postal)
-    - Any external API with potential for latency or availability issues
-
-  states:
-    closed:
-      description: Normal operation - requests pass through
-      behavior: Track failure rate
-    open:
-      description: Dependency is failing - fail fast without calling
-      behavior: Return fallback response or error immediately
-    half_open:
-      description: Testing if dependency has recovered
-      behavior: Allow limited requests through to test
-
-  configuration:
-    failure_threshold:
-      description: Number/percentage of failures before opening circuit
-      recommended: 5 failures or 50% error rate in 30 seconds
-    reset_timeout:
-      description: Time to wait before trying half-open
-      recommended: 30 seconds
-    half_open_requests:
-      description: Number of test requests in half-open state
-      recommended: 3 requests
-    timeout:
-      description: Request timeout before counting as failure
-      recommended: 10 seconds for external APIs
-
-  fallback_strategies:
-    verification_sources:
-      - strategy: Manual fallback
-        description: Route to manual verification queue
-        example: "If IRS unavailable, create manual verification task"
-      - strategy: Cached data
-        description: Use last known good data with staleness indicator
-        example: "Use cached wage data from previous verification"
-      - strategy: Graceful degradation
-        description: Continue without this data source
-        example: "Skip optional verification, flag for later"
-
-    vendor_adapters:
-      - strategy: Queue for retry
-        description: Store operation for later replay
-        example: "Queue task creation for retry when vendor recovers"
-      - strategy: Local fallback
-        description: Use local implementation temporarily
-        example: "Use mock database until vendor system recovers"
-
-  monitoring:
-    metrics:
-      - circuit_state: Current state (closed/open/half_open)
-      - circuit_failures: Failure count that triggered open
-      - circuit_success_rate: Success rate after recovery
-    alerts:
-      - Circuit opened (dependency down)
-      - Circuit stuck open for > 5 minutes
-      - High failure rate approaching threshold
-
-  openapi_extension:
-    name: x-circuit-breaker
-    location: Operation level
-    example: |
-      paths:
-        /processes/workflow/verification/start:
-          post:
-            x-circuit-breaker:
-              enabled: true
-              fallback: manual_verification
-              timeout_ms: 10000
-
+# Config-Managed Resources
 # =============================================================================
-# Data Classification# =============================================================================
-# STATUS: Not yet implemented
-data_classification:
-  description: |
-    All API fields should be classified for appropriate handling. Classification
-    drives encryption, logging, access control, and retention policies.
+# Resources that exist in both a *-config.yaml file and as runtime API resources
+# (creatable via POST) carry a source field so consumers can distinguish system
+# entries from user-created ones without attempting a destructive operation first.
+config_managed_resources:
+  description: >
+    Some collections contain both "system" resources (defined in a *-config.yaml
+    deployment artifact, present in every deployment) and "user" resources (created
+    at runtime via the API). The source field signals which is which, enabling
+    frontends to disable destructive actions for system resources upfront rather
+    than discovering the constraint via a 409.
 
-  classifications:
-    pii:
-      description: Personally Identifiable Information - can identify an individual
-      handling:
-        - Encrypt at rest
-        - Mask in logs (show last 4 digits max)
-        - Log all access for audit
-        - Exclude from search indexes unless necessary
-        - Subject to right-to-deletion requests
-      retention: Per program requirements, typically 7 years after case closure
+  industry_context: |
+    This pattern is consistent with how major platforms handle system vs. user resources:
+    - ServiceNow: sys_scope distinguishes system (global) from user/app-scoped records
+    - Salesforce: Type or source enum fields on Queue and other admin objects
+    - IBM Cúram: systemFlag boolean on reference data tables
+    - JSM: permission-based only (no field; 403/405 is the signal — less consumer-friendly)
 
-    sensitive:
-      description: Sensitive data that is not PII but requires protection
-      handling:
-        - Encrypt at rest
-        - Exclude from general logs
-        - Restrict access by role
-        - May appear in audit logs
-      retention: Same as PII
+  source_field:
+    description: Required on any resource that has both config-managed and runtime variants.
+    type: string
+    enum:
+      - system   # Defined in *-config.yaml; cannot be deleted via API (409)
+      - user     # Created via POST; can be deleted
+    readOnly: true
+    placement: top-level resource schema property, alongside id/createdAt/updatedAt
+    example: |
+      Queue:
+        type: object
+        required:
+          - id
+          - name
+          - source
+          - createdAt
+          - updatedAt
+        properties:
+          source:
+            type: string
+            enum: [system, user]
+            readOnly: true
+            description: >
+              Origin of the queue. "system" queues are defined in workflow-config.yaml
+              and cannot be deleted via the API. "user" queues are created at runtime
+              and can be deleted.
 
-    internal:
-      description: Internal operational data
-      handling:
-        - Standard encryption at rest
-        - May appear in logs
-        - Standard access controls
-      retention: Per operational needs
-
-    public:
-      description: Non-sensitive reference data
-      handling:
-        - Standard encryption at rest
-        - May be cached
-        - May appear in logs
-        - No special access restrictions
-      retention: Indefinite for reference data
-
-  pii_fields:
-    description: Fields that should be classified as PII
-    fields:
-      - socialSecurityNumber
-      - dateOfBirth
-      - firstName
-      - lastName
-      - middleName
-      - maidenName
-      - address (all address fields)
-      - phoneNumber
-      - email
-      - driversLicenseNumber
-      - passportNumber
-      - alienNumber
-      - bankAccountNumber
-      - routingNumber
-      - medicaidId
-      - medicareId
-
-  sensitive_fields:
-    description: Fields that should be classified as sensitive
-    fields:
-      - income (all income fields)
-      - assets (all asset fields)
-      - expenses
-      - medicalConditions
-      - disabilityStatus
-      - immigrationStatus
-      - citizenshipStatus
-      - criminalHistory
-      - drugScreeningResults
-      - caseNotes
-      - internalNotes
-
-  openapi_extensions:
-    x-data-classification:
-      description: Classification level for this field
-      type: string
-      enum: [pii, sensitive, internal, public]
-      location: Schema property level
-      example: |
-        Person:
-          properties:
-            socialSecurityNumber:
-              type: string
-              x-data-classification: pii
-              x-encrypt: true
-            income:
-              type: number
-              x-data-classification: sensitive
-
-    x-encrypt:
-      description: Whether this field must be encrypted at rest
-      type: boolean
-      default: false (true for pii/sensitive)
-      location: Schema property level
-
-    x-mask-in-logs:
-      description: How to mask this field in logs
-      type: string
-      enum: [full, last4, hash, exclude]
-      default: exclude for pii, full for sensitive
-      location: Schema property level
-
-  implementation_notes:
-    - Use schema preprocessing to validate classifications are set
-    - Generate data handling documentation from classifications
-    - API gateway/middleware can enforce masking based on extensions
-    - Audit logging can use classifications to determine detail level
+  mock_server_behavior:
+    config_seeding: Config entries are inserted with source set to "system".
+    runtime_create: POST handler sets source to "user" for collections that have config entries.
+    delete_guard: DELETE returns 409 CONFIG_MANAGED for any resource with a config-managed ID.
