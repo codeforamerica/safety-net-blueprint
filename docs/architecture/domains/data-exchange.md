@@ -309,11 +309,14 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 - Treating partial responses as `failed` discards useful data and forces the calling domain to retry the entire composite call.
 - Adding a new `partial` lifecycle state complicates the state machine and every consumer that subscribes to result events.
 - The calling domain is best positioned to decide whether the returned sub-results are sufficient to proceed.
+- `inconclusive` and `unavailable` are meaningfully different for sub-results: `inconclusive` means data was returned but a match could not be determined (may need manual review); `unavailable` means the source system did not respond (may warrant retry). Conflating them forces calling domains to treat retriable failures the same as data quality issues.
 
 **Options:**
 - **(A)** `failed` — any missing sub-result fails the whole call; useful data discarded
 - **(B)** New `partial` lifecycle state — adds complexity to the state machine and all consumers
-- **(C) ✓** `completed` with `matchStatus: partial` — call resolves as completed; missing sub-results carry `matchStatus: inconclusive`; consumer evaluates sufficiency
+- **(C) ✓** `completed` with `matchStatus: partial` — call resolves as completed; unavailable sub-results carry `matchStatus: unavailable`; sub-results that returned data but could not be matched carry `matchStatus: inconclusive`; consumer evaluates sufficiency
+
+**Sub-result structure:** Absent sub-results appear as objects with `matchStatus: unavailable` rather than being omitted. Named properties per sub-result type (e.g., `incomeResult`, `immigrationResult`) allow each to carry its own typed schema via `$ref`.
 
 ---
 
