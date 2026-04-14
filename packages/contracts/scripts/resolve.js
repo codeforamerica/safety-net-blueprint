@@ -592,7 +592,7 @@ function findEnumSources(node, path = '') {
   const findings = [];
   if (!node || typeof node !== 'object' || Array.isArray(node)) return findings;
 
-  if (node['x-enum-source']) {
+  if (node['x-enum-source'] && typeof node['x-enum-source'] === 'string') {
     findings.push({ path, source: node['x-enum-source'] });
   }
 
