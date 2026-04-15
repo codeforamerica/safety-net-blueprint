@@ -653,6 +653,13 @@ components:
           type: string
           x-enum-source: states[].id
           description: Current lifecycle state. Valid values are injected at resolve time from workflow-state-machine.yaml.
+        taskType:
+          type: string
+          description: >
+            The type of work this task represents (e.g., application_review, interview,
+            document_review). Used by state machine guards to enable type-specific
+            lifecycle branches and by routing rules for type-aware assignment.
+            Open string — states extend via overlay without schema changes.
         subjectType:
           type: string
           enum:

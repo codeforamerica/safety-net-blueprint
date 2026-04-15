@@ -38,12 +38,69 @@ properties:
     minItems: 1
 
 $defs:
+  # ---------------------------------------------------------------------------
+  # Action types — platform-level primitives available to all domains.
+  # Domain-specific actions (assignToQueue, setPriority) are also defined here
+  # so the schema is the single source of truth for what each action expects.
+  # ---------------------------------------------------------------------------
+
+  ActionCreateResource:
+    type: object
+    description: >
+      Creates a new resource in the specified domain/collection. Generic platform
+      action — any domain's rules can use this to create any resource type.
+      Field values may be literals or JSON Logic expressions evaluated against
+      the current rule context (e.g., { var: "this.subject" } to reference the
+      event subject).
+    required: [entity, fields]
+    properties:
+      entity:
+        type: string
+        pattern: "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+        description: Target entity in domain/resource format (e.g., workflow/tasks).
+      fields:
+        type: object
+        description: >
+          Field name/value pairs for the new resource. Values may be literals
+          or JSON Logic expressions resolved against the current rule context.
+        minProperties: 1
+        additionalProperties: true
+    additionalProperties: false
+
+  ActionTriggerTransition:
+    type: object
+    description: >
+      Triggers a state machine transition on a related entity. Generic platform
+      action — any domain's rules can invoke a transition on any entity type.
+      The entity ID is resolved from the current rule context using idFrom.
+    required: [entity, idFrom, transition]
+    properties:
+      entity:
+        type: string
+        pattern: "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+        description: Target entity in domain/resource format (e.g., intake/applications).
+      idFrom:
+        type: string
+        description: >
+          Dot-path in the rule context whose value is the ID of the entity to
+          transition. Examples: "application.id", "this.subjectId".
+      transition:
+        type: string
+        description: The transition trigger to invoke (e.g., "open", "submit").
+    additionalProperties: false
+
+  # ---------------------------------------------------------------------------
+  # Context, rule sets, and rules
+  # ---------------------------------------------------------------------------
+
   ContextBinding:
     type: object
     description: >
       Declares a related entity to resolve before rule evaluation. The entity is fetched
       by ID from the declared source and made available in rule conditions under the given alias.
       The calling resource is always available as "this" — no binding needed.
+      For event-triggered rule sets, "this" is the event envelope; from-paths resolve
+      against envelope fields (subject, type, source, data, time).
     required: [as, entity, from]
     properties:
       as:
@@ -59,9 +116,11 @@ $defs:
       from:
         type: string
         description: >
-          Dot-path on the calling resource (or a previously resolved entity) whose value
-          is the ID to look up. Examples: "subjectId", "application.caseId".
-          Validated against the resource schema by validate-rules.js.
+          Dot-path on "this" (or a previously resolved entity) whose value is the ID
+          to look up. For event-triggered rule sets, resolves against the event envelope
+          (e.g., "subject" resolves to the event's subject field).
+          For on-demand rule sets, resolves against the calling resource schema.
+          Validated against the resource schema by validate-rules.js for on-demand sets.
       optional:
         type: boolean
         description: >
@@ -73,7 +132,11 @@ $defs:
 
   RuleSet:
     type: object
-    description: A group of rules with a shared type and evaluation strategy.
+    description: >
+      A group of rules with a shared type and evaluation strategy. When `on` is present,
+      the rule set is event-triggered — evaluated when a matching domain event fires.
+      When `on` is absent, the rule set is on-demand — evaluated when the calling resource
+      is created or transitions state.
     required:
       - id
       - ruleType
@@ -85,7 +148,15 @@ $defs:
         description: Unique identifier for overlay targeting.
       ruleType:
         type: string
-        description: Rule category (e.g., assignment, priority, escalation, alert).
+        description: Rule category (e.g., assignment, priority, escalation, task-creation).
+      on:
+        type: string
+        description: >
+          CloudEvents type to subscribe to. Presence of this field makes the rule set
+          event-triggered. The event envelope is available as "this" in conditions and
+          context binding from-paths (fields: subject, type, source, data, time, id).
+          Accepts the full type (org.codeforamerica.safety-net-blueprint.intake.application.submitted)
+          or a short suffix form (intake.application.submitted).
       evaluation:
         type: string
         enum:
@@ -96,7 +167,7 @@ $defs:
         description: >
           Related entities to resolve before evaluating this rule set.
           Each binding resolves one entity by ID and makes it available under its alias.
-          The calling resource is always available as "this" without declaration.
+          The calling resource (or event envelope) is always available as "this" without declaration.
         items:
           $ref: "#/$defs/ContextBinding"
       rules:
@@ -125,17 +196,42 @@ $defs:
       condition:
         description: >
           JSON Logic expression evaluated against context variables.
-          Reference the calling resource as "this.fieldName".
+          Reference the calling resource (or event envelope) as "this.fieldName".
           Reference resolved entities as "alias.fieldName" (e.g., "application.programs").
           Use `true` for catch-all/default rules.
       action:
         type: object
-        description: Type-specific action map (e.g., assignToQueue, setPriority).
+        description: >
+          One or more actions to execute when this rule matches. Each key is an action
+          type; the value is the action payload. Known platform action types are validated
+          by schema; unknown keys are allowed for state-defined custom actions.
         minProperties: 1
+        properties:
+          assignToQueue:
+            type: string
+            description: Name of the queue to assign the resource to.
+          setPriority:
+            type: string
+            enum: [expedited, high, normal, low]
+            description: Priority value to set on the resource.
+          createResource:
+            $ref: "#/$defs/ActionCreateResource"
+          triggerTransition:
+            $ref: "#/$defs/ActionTriggerTransition"
         additionalProperties: true
       fallbackAction:
         type: object
         description: Action to take if the primary action fails (e.g., queue not found).
+        properties:
+          assignToQueue:
+            type: string
+          setPriority:
+            type: string
+            enum: [expedited, high, normal, low]
+          createResource:
+            $ref: "#/$defs/ActionCreateResource"
+          triggerTransition:
+            $ref: "#/$defs/ActionTriggerTransition"
         additionalProperties: true
       description:
         type: string

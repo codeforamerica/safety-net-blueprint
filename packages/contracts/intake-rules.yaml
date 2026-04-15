@@ -1,0 +1,38 @@
+$schema: ./schemas/rules-schema.yaml
+version: "1.0"
+domain: intake
+resource: intake/applications
+ruleSets:
+  - id: task-claimed-open-application
+    ruleType: status-transition
+    "on": workflow.task.claimed
+    evaluation: first-match-wins
+    context:
+      - as: task
+        entity: workflow/tasks
+        from: subject
+      - as: application
+        entity: intake/applications
+        from: task.subjectId
+        optional: true
+    rules:
+      - id: open-application-on-intake-task-claim
+        order: 1
+        condition:
+          and:
+            - "!=":
+                - var: application.id
+                - null
+            - "==":
+                - var: task.taskType
+                - application_review
+            - "==":
+                - var: application.status
+                - submitted
+        action:
+          triggerTransition:
+            entity: intake/applications
+            idFrom: application.id
+            transition: open
+        description: |
+          When a caseworker claims an application_review task, transition the linked application from submitted to under_review. Guards on the intake open transition enforce that only system-role callers can execute this.

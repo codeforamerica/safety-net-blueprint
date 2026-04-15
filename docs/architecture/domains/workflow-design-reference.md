@@ -581,13 +581,75 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
 
 **Static validation:** `validate-rules.js` runs at `npm run validate` and checks entity paths against discoverable API resources and `from` fields against the calling resource's schema. Runtime: bindings are required by default — any resolution failure (entity not found, `from` path resolves to no value) skips the rule set and is logged as an error. Bindings marked `optional: true` skip only the failing binding (warning logged) and allow the rule set to continue without it. This is stricter than industry defaults (JSM, Salesforce Flow, Appian, and Cúram all continue with null on resolution failure), but catches misconfigured rules explicitly rather than silently routing with missing data.
 
+**Event-triggered rule sets:** The same context enrichment model applies to event-triggered rule sets. The event envelope is `this` — `this.subject`, `this.type`, `this.source`, `this.data.*`. Context bindings resolve related entities from the envelope fields using `from: subject` (the standard CloudEvents subject field, typically the affected resource ID). There is no separate "event context" namespace; rules access the envelope as the primary record and resolve everything else through explicit bindings.
+
 **Known gap:** Runtime error handling — what surfaces to callers when rule evaluation is skipped, how to distinguish degraded evaluation from no-op evaluation — is a separate design concern. See [issue #220](https://github.com/codeforamerica/safety-net-blueprint/issues/220).
 
 **Customization:** States add or replace context bindings in their overlay of `workflow-rules.yaml` to expose additional subject entity fields to rule conditions.
 
 ---
 
-### Decision 22: Queue definitions live in workflow-config.yaml, not only as runtime API resources
+### Decision 22: Event envelope as the base evaluation context for event-triggered rule sets
+
+**Status:** Decided
+
+**What's being decided:** When a domain event fires and an event-triggered rule set evaluates, what is the primary "resource" — the `this` alias and the source for context binding `from` paths?
+
+**Options:**
+- **(A) ✓ Event envelope as `this`** — `this.subject`, `this.type`, `this.source`, `this.data.*`, etc. Context bindings resolve related entities from envelope fields (e.g., `from: subject` looks up the subject entity). Rule authors start at the envelope and walk down to the entities they need.
+- **(B) Pre-fetched subject as `this`** — the event engine looks up the subject entity first and makes it `this`, so conditions read `this.programs` rather than `application.programs`. Removes one binding declaration; hides the resolution from the contract artifact.
+- **(C) Event data payload as `this`** — the `data` field of the CloudEvents envelope is the root context. Loses access to envelope metadata (type, source, time) in conditions.
+
+**Decision:** Event envelope as `this` (A). Starting at the envelope provides the most capability: rule authors can reference any envelope field (subject, type, time, source, data) without losing access to it. Options B and C each discard envelope information that conditions or future extensions might need. The envelope-first model also uses the same `this` alias and context binding mechanics as on-demand rule sets — no new concepts for rule authors to learn.
+
+**Industry comparison:** JSM Automation uses the triggering issue as the base context (analogous to B — subject first). ServiceNow Event Management rules pass the event record as the base context (analogous to A — envelope first). Salesforce Flow event-triggered flows use the platform event record as the entry record (A). Pega event strategies use the event message payload directly (C). The blueprint follows the ServiceNow/Salesforce pattern — envelope first — because it provides a richer starting context and aligns with the CloudEvents envelope as the canonical event representation used everywhere else in the architecture.
+
+**Customization:** States writing custom event-triggered rule sets use `this.subject` to reference the triggering resource ID and declare context bindings to resolve the full entity. The envelope-first model gives states access to `this.type` and `this.source` for multi-source subscriptions without additional binding declarations.
+
+---
+
+### Decision 23: Reactive cross-domain coordination via event subscriptions
+
+**Status:** Decided
+
+**What's being decided:** When a workflow event (e.g., `task.claimed`) should trigger a status change in another domain (e.g., intake application moves to `under_review`), where does the coordination logic live and who calls whom?
+
+**Options:**
+- **(A) Imperative push — workflow triggers intake:** The workflow domain's rule set or state machine effect directly calls the intake state machine transition when a task is claimed. Workflow is the active party; intake is passive.
+- **(B) ✓ Reactive subscription — intake subscribes to workflow events:** The intake domain declares a rule set with `on: workflow.task.claimed`. When the event fires, intake evaluates its own rules and decides whether to transition the application. Workflow has no knowledge of downstream reactions.
+
+**Decision:** Reactive subscription (B). This keeps cross-domain coupling out of the publishing domain's contracts. States that want to suppress or modify the `task.claimed → application.open` behavior override `intake-rules.yaml`, not workflow contracts — a cleaner overlay target. The workflow domain emits events; what reacts is each domain's own concern.
+
+**Industry comparison:** ServiceNow Business Rules on separate tables (each table handles its own reaction to events from other tables). Salesforce Platform Events — subscribers handle their own reactions via separate flows. Pega case types subscribe to each other's events via Event Strategies rather than direct case-to-case calls. Appian Process Models can subscribe to process events from other processes. IBM Cúram Workflow uses event-driven handoffs between case types via the case lifecycle manager. The reactive pattern is the majority approach across major platforms; imperative cross-domain calls exist (Pega `StartCasing` activity) but are generally considered tighter coupling and harder to customize per state.
+
+**`triggerTransition` as a platform action:** The intake subscription uses `triggerTransition` to invoke the `open` transition on the application. This action calls the existing state machine transition engine with a `system` identity — no new transition capability, just a routing layer that reaches the already-built machinery. The contract declares which transition to call; the engine validates guards and applies effects as it would for any HTTP-triggered transition.
+
+**Customization:** States override `intake-rules.yaml` to change the conditions under which a task claim moves an application to review, or to suppress it entirely. The workflow domain requires no change.
+
+---
+
+### Decision 24: Generic platform action types with named schemas in rules-schema.yaml
+
+**Status:** Decided
+
+**What's being decided:** How action types that are useful across multiple domains (create a resource, trigger a transition) are defined and validated so any domain's rules can use them without duplicating schema definitions.
+
+**Options:**
+- **(A) Domain-specific action names** — each domain defines its own action keywords (`createTask`, `openApplication`). Simple to implement; every domain reimplements the same concepts with different names; no cross-domain reuse.
+- **(B) ✓ Generic platform actions with named schemas** — `createResource` and `triggerTransition` are defined once in `rules-schema.yaml` as named `$defs`. Any domain's rules YAML uses these keywords and gets schema validation automatically. Domain-specific actions (e.g., `assignToQueue`, `setPriority`) are also defined in the same schema as the single source of truth for all action types.
+- **(C) Action type registry in a separate catalog file** — a standalone `action-catalog.yaml` documents and validates action types separately from the rules schema. Cleaner separation; adds a second file for rule authors to consult.
+
+**Decision:** Generic platform actions with named schemas in `rules-schema.yaml` (B). The rules schema is already consulted for every rules YAML file; adding action type `$defs` there makes the schema both a validator and the complete documentation for what actions are available. States writing custom rules see exactly what fields each action expects from the schema alone.
+
+**Industry comparison:** ServiceNow has a built-in action library for Business Rule scripts — generic actions (Set field, Create record, Run script) reusable across any table. JSM Automation has ~30 generic action types (Edit issue, Create sub-task, Transition issue) available to all projects. Salesforce Flow Standard Actions are global across all object types. Pega Data Transforms and Activities are reusable across case types. All major platforms maintain a shared action vocabulary; domain-specific behavior is a specialization of generic primitives, not a parallel vocabulary.
+
+**`on:` as discriminator (no separate `kind` field):** The presence of the `on:` field distinguishes event-triggered rule sets from on-demand sets. No separate `kind:` field is needed — `on:` being present IS the trigger declaration, following the principle that a single field should carry one meaning. JSON Schema `if/then` can enforce constraints specific to each mode.
+
+**Customization:** States add custom action types by using `additionalProperties: true` on the `action` field — the schema validates known types strictly but does not reject unknown ones. States implement custom action handlers in their adapter layer and register them alongside the platform registry.
+
+---
+
+### Decision 25: Queue definitions live in workflow-config.yaml, not only as runtime API resources
 
 **What's being decided:** Whether the baseline queue catalog is seed data for the mock server, or a deployment-time configuration artifact that states can overlay.
 

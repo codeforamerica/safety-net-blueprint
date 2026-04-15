@@ -8,7 +8,6 @@ ApplicationExample1:
   status: submitted
   programs:
     - snap
-    - medicaid
   channel: online
   isExpedited: false
   submittedAt: "2026-04-01T09:15:00Z"

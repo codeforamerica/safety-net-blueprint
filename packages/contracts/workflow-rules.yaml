@@ -3,6 +3,29 @@ version: "1.0"
 domain: workflow
 resource: workflow/tasks
 ruleSets:
+  - id: application-submitted-intake-task
+    ruleType: task-creation
+    "on": intake.application.submitted
+    evaluation: first-match-wins
+    context:
+      - as: application
+        entity: intake/applications
+        from: subject
+    rules:
+      - id: create-intake-review-task
+        order: 1
+        condition: true
+        action:
+          createResource:
+            entity: workflow/tasks
+            fields:
+              taskType: application_review
+              name: Application review
+              status: pending
+              subjectType: application
+              subjectId:
+                var: this.subject
+        description: Create an intake review task when an application is submitted.
   - id: workflow-assignment
     ruleType: assignment
     evaluation: first-match-wins
@@ -12,17 +35,21 @@ ruleSets:
         from: subjectId
         optional: true
     rules:
-      - id: snap-to-snap-queue
+      - id: snap-only-to-snap-queue
         order: 1
         condition:
-          in:
-            - snap
-            - var: application.programs
+          and:
+            - "==":
+                - var: application.programs.length
+                - 1
+            - in:
+                - snap
+                - var: application.programs
         action:
           assignToQueue: snap-intake
         fallbackAction:
           assignToQueue: general-intake
-        description: Route tasks linked to a SNAP application to the SNAP intake queue.
+        description: Route tasks linked to a SNAP-only application to the SNAP intake queue. Multi-program applications fall through to general intake.
       - id: default-to-general-queue
         order: 2
         condition: true
