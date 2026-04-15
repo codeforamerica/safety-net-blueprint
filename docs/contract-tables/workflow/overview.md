@@ -134,13 +134,21 @@ Data sent when calling a trigger endpoint. Required fields must always be includ
 
 Rules are evaluated automatically at key lifecycle moments (on create, on update, and after certain transitions). They determine how tasks are routed and prioritized.
 
+### Task creation
+
+Evaluation strategy: **first-match-wins**
+
+| # | Condition | Action | Fallback |
+|---|-----------|--------|----------|
+| 1 | true | createResource: {"entity":"workflow/tasks","fields":{"taskType":"application_review","name":"Application review","status":"pending","subjectType":"application","subjectId":{"var":"this.subject"}}} | — |
+
 ### Assignment
 
 Evaluation strategy: **first-match-wins**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | application.programs.snap = true | Assign to **snap-intake** queue | Assign to **general-intake** queue |
+| 1 | application.programs.length = 1 and "snap" in application.programs | Assign to **snap-intake** queue | Assign to **general-intake** queue |
 | 2 | true | Assign to **general-intake** queue | — |
 
 ### Priority
@@ -149,7 +157,7 @@ Evaluation strategy: **first-match-wins**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | task.isExpedited = true | Set priority to **expedited** | — |
+| 1 | this.isExpedited = true | Set priority to **expedited** | — |
 | 2 | true | Set priority to **normal** | — |
 
 ---

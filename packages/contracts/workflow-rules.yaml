@@ -10,7 +10,8 @@ ruleSets:
     context:
       - as: application
         entity: intake/applications
-        from: {var: "subject"}
+        from:
+          var: subject
     rules:
       - id: create-intake-review-task
         order: 1
@@ -32,7 +33,8 @@ ruleSets:
     context:
       - as: application
         entity: intake/applications
-        from: {var: "subjectId"}
+        from:
+          var: subjectId
         optional: true
     rules:
       - id: snap-only-to-snap-queue
