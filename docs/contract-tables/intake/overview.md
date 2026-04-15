@@ -82,3 +82,17 @@ Data sent when calling a trigger endpoint. Required fields must always be includ
 | `withdraw` | `reason` *(string)* | — |
 | `close` | — | — |
 | `flag-expedited` | — | — |
+
+---
+
+## Rules
+
+Rules are evaluated automatically at key lifecycle moments (on create, on update, and after certain transitions). They determine how tasks are routed and prioritized.
+
+### Status transition
+
+Evaluation strategy: **first-match-wins**
+
+| # | Condition | Action | Fallback |
+|---|-----------|--------|----------|
+| 1 | application.id != null and task.taskType = "application_review" and application.status = "submitted" | triggerTransition: {"entity":"intake/applications","idFrom":"application.id","transition":"open"} | — |

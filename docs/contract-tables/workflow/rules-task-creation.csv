@@ -1,0 +1,2 @@
+Order,Condition,Action,Fallback,Description
+1,true,"{""createResource"":{""entity"":""workflow/tasks"",""fields"":{""taskType"":""application_review"",""name"":""Application review"",""status"":""pending"",""subjectType"":""application"",""subjectId"":{""var"":""this.subject""}}}}",,Create an intake review task when an application is submitted.

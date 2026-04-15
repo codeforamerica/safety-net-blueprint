@@ -35,7 +35,7 @@ function buildDependencies() {
  * @param {Object} resource - The primary resource being evaluated
  * @returns {Object|null} Map of alias → fetched entity, or null if a required entity is missing
  */
-function resolveContextEntities(contextBindings, resource) {
+export function resolveContextEntities(contextBindings, resource) {
   const resolved = {};
 
   for (const binding of contextBindings || []) {

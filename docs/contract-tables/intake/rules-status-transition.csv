@@ -1,0 +1,3 @@
+Order,Condition,Action,Fallback,Description
+1,"{""and"":[{""!="":[{""var"":""application.id""},null]},{""=="":[{""var"":""task.taskType""},""application_review""]},{""=="":[{""var"":""application.status""},""submitted""]}]}","{""triggerTransition"":{""entity"":""intake/applications"",""idFrom"":""application.id"",""transition"":""open""}}",,"When a caseworker claims an application_review task, transition the linked application from submitted to under_review. Guards on the intake open transition enforce that only system-role callers can execute this.
+"

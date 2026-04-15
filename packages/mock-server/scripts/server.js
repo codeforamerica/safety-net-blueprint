@@ -13,6 +13,7 @@ import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
+import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { closeAll } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
@@ -141,6 +142,9 @@ async function startMockServer(specDirs = null, seedDir = null) {
     // Register SSE stream endpoint before item routes to avoid :id capture
     app.get('/platform/events/stream', createSseHandler());
     console.log('  GET    /platform/events/stream - Domain event stream (SSE)');
+
+    // Register event subscriptions (event-triggered rule sets)
+    registerEventSubscriptions(allRules, allStateMachines, allSlaTypes);
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
