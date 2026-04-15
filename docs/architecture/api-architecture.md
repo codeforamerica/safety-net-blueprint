@@ -113,3 +113,4 @@ Idempotency, circuit breakers, error handling, and long-running operation patter
 | **Maintainability** | |
 | Configuration management | [api-architecture.md](#configuration-management) (this file) |
 | Schema patterns | [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) |
+| OpenAPI extensions (x- extensions) | [x-extensions.md](x-extensions.md) |

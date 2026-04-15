@@ -1,0 +1,13 @@
+$schema: ./workflow-config-schema.yaml
+version: "1.0"
+domain: workflow
+
+# Queue catalog — all entries are config-managed and cannot be deleted via API.
+# States may add queues via overlay; entries here are present in all deployments.
+queues:
+  - id: ae5ed10f-657d-55f3-b53c-b381ec583a1e
+    name: snap-intake
+    description: Queue for SNAP program intake tasks.
+  - id: f46c5c87-b1fe-55c2-9166-873c2748d4f4
+    name: general-intake
+    description: Default queue for all other intake tasks.

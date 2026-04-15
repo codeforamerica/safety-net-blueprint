@@ -3,7 +3,6 @@ info:
   title: User Service API
   version: 0.1.0
   x-domain: identity-access
-  x-api-type: cross-cutting
   x-status: stable
   x-visibility: internal
   description: |

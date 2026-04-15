@@ -543,6 +543,7 @@ components:
       required:
         - id
         - name
+        - source
         - createdAt
         - updatedAt
       properties:
@@ -560,6 +561,18 @@ components:
           type: string
           maxLength: 2000
           description: Human-readable description of the queue's purpose.
+        source:
+          type: string
+          enum:
+            - system
+            - user
+          readOnly: true
+          description: >
+            Origin of the queue. "system" queues are defined in workflow-config.yaml
+            and cannot be deleted via the API. "user" queues are created at runtime
+            via POST /queues and can be deleted. Consumers may use this field to
+            disable destructive actions for system queues without first attempting
+            the operation.
         createdAt:
           type: string
           format: date-time
@@ -1086,6 +1099,7 @@ components:
         id: c1d2e3f4-a5b6-7890-cdef-1234567890ab
         name: snap-intake
         description: Queue for SNAP program intake tasks.
+        source: system
         createdAt: '2024-08-01T08:00:00Z'
         updatedAt: '2024-08-01T08:00:00Z'
 

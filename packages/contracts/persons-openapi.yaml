@@ -3,7 +3,6 @@ info:
   title: Person Service API
   version: 1.0.0
   x-domain: client-management
-  x-api-type: system
   x-status: stable
   x-visibility: internal
   description: |

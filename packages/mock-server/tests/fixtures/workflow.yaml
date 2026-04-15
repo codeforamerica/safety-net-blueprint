@@ -6,18 +6,21 @@
 # Key names match spec $ref expectations (QueueExample1 etc.).
 # Naming decoupling tracked in issue #167.
 
-# Queue fixtures — names must match what rule tests expect.
+# Queue fixtures — reference config-managed IDs from workflow-config.yaml.
+# These IDs are stable; the queues are seeded at startup by the config loader.
 QueueExample1:
-  id: "00000008-0000-4000-8000-000000000001"
+  id: "ae5ed10f-657d-55f3-b53c-b381ec583a1e"
   name: snap-intake
   description: Queue for SNAP program intake tasks.
+  source: system
   createdAt: "2024-01-01T00:00:00Z"
   updatedAt: "2024-01-01T00:00:00Z"
 
 QueueExample2:
-  id: "00000008-0000-4000-8000-000000000002"
+  id: "f46c5c87-b1fe-55c2-9166-873c2748d4f4"
   name: general-intake
-  description: General intake queue for non-program-specific tasks.
+  description: Default queue for all other intake tasks.
+  source: system
   createdAt: "2024-01-01T00:00:00Z"
   updatedAt: "2024-01-01T00:00:00Z"
 
@@ -28,7 +31,7 @@ TaskExample1:
   status: pending
   programType: snap
   isExpedited: false
-  queueId: "00000008-0000-4000-8000-000000000001"
+  queueId: "ae5ed10f-657d-55f3-b53c-b381ec583a1e"
   priority: normal
   createdAt: "2024-01-01T00:00:00Z"
   updatedAt: "2024-01-01T00:00:00Z"

@@ -11,6 +11,9 @@ import { discoverStateMachines } from './state-machine-loader.js';
 import { discoverRules } from './rules-loader.js';
 import { discoverSlaTypes } from './sla-loader.js';
 import { discoverMetrics } from './metrics-loader.js';
+import { discoverConfigs } from './config-loader.js';
+import { insertResource } from './database-manager.js';
+import { registerConfigManaged } from './config-registry.js';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -111,6 +114,25 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   // Seed databases from example files
   const summary = seedAllDatabases(apiSpecs, specsDir, seedDir);
 
+  // Seed config-managed resources (after seedAllDatabases, which clears collections first)
+  const configs = discoverConfigs(specsDir);
+  for (const config of configs) {
+    for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
+      for (const entry of entries) {
+        // Strip x- extension fields before storing — they are config artifact metadata
+        const { ...data } = entry;
+        for (const key of Object.keys(data)) {
+          if (key.startsWith('x-')) delete data[key];
+        }
+        insertResource(catalogKey, { ...data, source: 'system' });
+        registerConfigManaged(catalogKey, data.id);
+      }
+      if (verbose) {
+        console.log(`✓ Seeded ${entries.length} config-managed ${catalogKey} (${config.domain})`);
+      }
+    }
+  }
+
   // Validate seed data against schemas
   if (!skipValidation) {
     const seedErrors = validateSeedData(seedDir, apiSpecs);
@@ -135,7 +157,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, rules, slaTypes, metrics, summary };
+  return { apiSpecs, stateMachines, rules, slaTypes, metrics, configs, summary };
 }
 
 /**

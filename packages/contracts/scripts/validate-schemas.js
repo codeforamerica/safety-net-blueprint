@@ -4,7 +4,7 @@
  * Discovers YAML files with a $schema field and validates them against the declared schema.
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { resolve, relative, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -96,6 +96,23 @@ async function main() {
   let hasErrors = false;
   const results = [];
   const baseDir = isSingleFile ? dirname(specDir) : specDir;
+
+  // Preload schemas from the schemas/ subdirectory so cross-file $refs resolve.
+  // Schemas are added with a key matching their relative path (e.g. "schemas/config-schema.yaml")
+  // so that $ref: "schemas/config-schema.yaml" in a domain schema resolves correctly.
+  const schemasSubdir = resolve(baseDir, 'schemas');
+  if (existsSync(schemasSubdir) && statSync(schemasSubdir).isDirectory()) {
+    for (const f of readdirSync(schemasSubdir)) {
+      if (!f.endsWith('.yaml') && !f.endsWith('.yml')) continue;
+      try {
+        const content = readFileSync(resolve(schemasSubdir, f), 'utf8');
+        const schema = yaml.load(content);
+        ajv.addSchema(schema, `schemas/${f}`);
+      } catch {
+        // Skip files that fail to parse
+      }
+    }
+  }
 
   for (const { filePath, schemaPath, doc } of filesToValidate) {
     const relFile = relative(baseDir, filePath);

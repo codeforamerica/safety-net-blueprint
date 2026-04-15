@@ -649,6 +649,18 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
 
 ---
 
+### Decision 25: Queue definitions live in workflow-config.yaml, not only as runtime API resources
+
+**What's being decided:** Whether the baseline queue catalog is seed data for the mock server, or a deployment-time configuration artifact that states can overlay.
+
+**Considerations:**
+- All major vendors (JSM, ServiceNow, IBM Cúram, Appian, Salesforce Gov Cloud) separate queue and category configuration from runtime case data. Queues are created by deployment, not by caseworkers at runtime.
+- Seeding queues from mock server example YAML (alongside task test fixtures) conflates test data with canonical deployment configuration. States have no overlay mechanism — they must fork the file.
+
+**Decision:** Queue definitions live in `workflow-config.yaml`, following the same artifact pattern as `workflow-sla-types.yaml` and `workflow-metrics.yaml`. All entries in a config file are config-managed by convention: they are seeded on startup and cannot be deleted via API (DELETE returns 409). States extend the catalog via overlay.
+
+---
+
 ## Known gaps and future considerations
 
 Standard capabilities found in major workflow systems (JSM, ServiceNow, IBM Cúram, Salesforce Government Cloud, Pega, Appian), and the blueprint's current coverage. See [References](#references) for system descriptions.
