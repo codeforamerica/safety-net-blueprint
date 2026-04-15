@@ -80,11 +80,16 @@ Create `openapi/components/{resource-plural}.yaml`:
 
 Create `openapi/{resource-plural}.yaml`:
 
+> **x- extensions:** The `info` block requires `x-domain`, `x-status`, and `x-visibility`. Top-level `x-events` declares domain events. `x-relationship` annotates FK fields. See [x-extensions reference](../architecture/x-extensions.md) for the full catalog.
+
 ```yaml
 openapi: 3.1.0
 info:
   title: {Resource} Service API
   version: 1.0.0
+  x-domain: {domain}      # Required — business domain (e.g., workflow, intake)
+  x-status: alpha         # Required — lifecycle status
+  x-visibility: internal  # Required — access level
   description: |
     REST API for managing {resources}.
   contact:

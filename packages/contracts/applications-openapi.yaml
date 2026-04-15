@@ -3,7 +3,6 @@ info:
   title: Application Service API
   version: 1.0.0
   x-domain: intake
-  x-api-type: system
   x-status: deprecated
   x-visibility: public
   description: |

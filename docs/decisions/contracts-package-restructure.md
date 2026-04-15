@@ -144,8 +144,8 @@ All `packages/schemas` &rarr; `packages/contracts`, all `@safety-net/schemas` &r
 - `docs/getting-started/frontend-developers.md`
 
 **Integration:**
-- `docs/integration/api-clients.md`
-- `docs/integration/package-publishing.md`
+- `docs/guides/api-clients.md`
+- `docs/guides/package-publishing.md`
 
 **Architecture:**
 - `docs/architecture/api-architecture.md`

@@ -4,6 +4,7 @@
 
 import { create, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
+import { hasConfigManagedResources } from '../config-registry.js';
 import { applyEffects } from '../state-machine-engine.js';
 import { initializeSlaInfo } from '../sla-engine.js';
 import { processRuleEvaluations } from './rule-evaluation.js';
@@ -45,6 +46,13 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // Create resource in database
       const resource = create(endpoint.collectionName, req.body);
+
+      // Mark runtime-created resources as user-sourced when the collection
+      // also has config-managed (system) entries, so consumers can distinguish them
+      if (hasConfigManagedResources(endpoint.collectionName)) {
+        resource.source = 'user';
+        update(endpoint.collectionName, resource.id, { source: 'user' });
+      }
 
       // Apply initial state from state machine
       if (stateMachine?.initialState) {

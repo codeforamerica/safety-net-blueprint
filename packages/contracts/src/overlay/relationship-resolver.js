@@ -69,6 +69,73 @@ function discoverRelationships(spec) {
 }
 
 // =============================================================================
+// Schema Dependency Helpers
+// =============================================================================
+
+/**
+ * Walk a schema object and collect all internal $ref targets of the form
+ * "#/components/schemas/X", returning the schema names (e.g., "User", "Address").
+ *
+ * @param {*} node - Any value (recursively walked)
+ * @returns {Set<string>} Schema names referenced
+ */
+function findSchemaRefs(node) {
+  const refs = new Set();
+  function walk(n) {
+    if (!n || typeof n !== 'object') return;
+    if (Array.isArray(n)) { for (const item of n) walk(item); return; }
+    for (const [key, value] of Object.entries(n)) {
+      if (key === '$ref' && typeof value === 'string' && value.startsWith('#/components/schemas/')) {
+        refs.add(value.slice('#/components/schemas/'.length));
+      } else {
+        walk(value);
+      }
+    }
+  }
+  walk(node);
+  return refs;
+}
+
+/**
+ * Copy a schema (and all its transitive $ref dependencies) from the schema index
+ * into a target spec's components/schemas. Skips schemas already present in the target.
+ * Uses the schema index to locate transitive deps that may live in different source specs.
+ *
+ * @param {string} schemaName - Schema to copy
+ * @param {object} sourceSpec - Spec where schemaName is defined
+ * @param {object} targetSpec - Spec to copy into
+ * @param {Map<string, { spec: object, specFile: string }>} schemaIndex - Cross-spec schema index
+ * @param {Set<string>} [visited] - Cycle guard (schema names already processed)
+ */
+function copySchemaWithDependencies(schemaName, sourceSpec, targetSpec, schemaIndex, visited = new Set()) {
+  if (visited.has(schemaName)) return;
+  visited.add(schemaName);
+
+  if (!targetSpec.components) targetSpec.components = {};
+  if (!targetSpec.components.schemas) targetSpec.components.schemas = {};
+
+  // Already in target spec — no need to copy, but still recurse for its deps
+  if (!targetSpec.components.schemas[schemaName]) {
+    const schema = sourceSpec.components?.schemas?.[schemaName];
+    if (!schema) return;
+    targetSpec.components.schemas[schemaName] = JSON.parse(JSON.stringify(schema));
+  }
+
+  // Walk the now-copied schema for transitive $ref dependencies
+  const deps = findSchemaRefs(targetSpec.components.schemas[schemaName]);
+  for (const depName of deps) {
+    if (visited.has(depName)) continue;
+    if (targetSpec.components.schemas[depName]) {
+      visited.add(depName);
+      continue;
+    }
+    const depSource = schemaIndex.get(depName);
+    if (!depSource) continue;
+    copySchemaWithDependencies(depName, depSource.spec, targetSpec, schemaIndex, visited);
+  }
+}
+
+// =============================================================================
 // Schema Index
 // =============================================================================
 
@@ -181,13 +248,17 @@ function applyLinksOnly(schema, fields) {
  * Renames the FK field (fooId → foo) and replaces it with the related object schema.
  * Resolution is build-time: the expanded object is always present, no query param needed.
  *
+ * For full-object expand (no fields list), copies the target schema and all its transitive
+ * $ref dependencies into the target spec's components/schemas so the local $ref resolves.
+ *
  * @param {string} schemaName - Name of the schema being transformed (for warnings)
  * @param {object} schema - The schema object (mutated in place)
  * @param {Array<{ propertyName: string, relationship: object }>} fields - Annotated FK fields
  * @param {Map} schemaIndex - Schema index for cross-spec resolution
  * @param {string[]} warnings - Warning accumulator
+ * @param {object} spec - The full target spec (needed to copy schemas for cross-spec refs)
  */
-function applyExpand(schemaName, schema, fields, schemaIndex, warnings) {
+function applyExpand(schemaName, schema, fields, schemaIndex, warnings, spec) {
   for (const { propertyName, relationship } of fields) {
     // Build the expanded schema
     let expandedSchema;
@@ -202,9 +273,10 @@ function applyExpand(schemaName, schema, fields, schemaIndex, warnings) {
         properties: subsetProperties
       };
     } else {
-      // Full $ref to target schema
+      // Full $ref to target schema — copy schema and all transitive deps into this spec
       const targetInfo = schemaIndex.get(relationship.resource);
       if (targetInfo) {
+        copySchemaWithDependencies(relationship.resource, targetInfo.spec, spec, schemaIndex);
         expandedSchema = { $ref: `#/components/schemas/${relationship.resource}` };
       } else {
         warnings.push(
@@ -465,7 +537,7 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     }
 
     if (expandFields.length > 0) {
-      applyExpand(schemaName, schema, expandFields, schemaIndex, warnings);
+      applyExpand(schemaName, schema, expandFields, schemaIndex, warnings, spec);
 
       for (const field of expandFields) {
         expandRenames.push({

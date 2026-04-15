@@ -343,6 +343,99 @@ test('relationship-resolver tests', async (t) => {
     assert.strictEqual(props.assignedTo.$ref, '#/components/schemas/User');
   });
 
+  await t.test('resolveRelationships expand - copies cross-spec schema into target spec so $ref resolves', () => {
+    // Task is in workflow-spec, User is in users-spec — two separate specs
+    const usersSpec = {
+      components: {
+        schemas: {
+          User: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } }
+        }
+      }
+    };
+    const workflowSpec = {
+      components: {
+        schemas: {
+          Task: {
+            type: 'object',
+            properties: {
+              assignedToId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'User', style: 'expand' }
+              }
+            }
+          }
+          // User is NOT in workflowSpec — it lives in usersSpec
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([
+      ['workflow-spec.yaml', workflowSpec],
+      ['users-spec.yaml', usersSpec]
+    ]));
+    const { result } = resolveRelationships(workflowSpec, 'links-only', schemaIndex);
+
+    // $ref is present on the expanded field
+    assert.strictEqual(result.components.schemas.Task.properties.assignedTo.$ref, '#/components/schemas/User');
+    // User schema was copied into the target spec — no dangling $ref
+    assert.ok(result.components.schemas.User, 'User schema should be copied into target spec');
+    assert.deepStrictEqual(result.components.schemas.User, usersSpec.components.schemas.User);
+  });
+
+  await t.test('resolveRelationships expand - transitively copies schemas referenced by the copied schema', () => {
+    // Task → User (users-spec), User.$ref → Address (address-spec)
+    const addressSpec = {
+      components: {
+        schemas: {
+          Address: { type: 'object', properties: { street: { type: 'string' }, city: { type: 'string' } } }
+        }
+      }
+    };
+    const usersSpec = {
+      components: {
+        schemas: {
+          User: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              address: { $ref: '#/components/schemas/Address' }
+            }
+          }
+          // Address is in addressSpec, not here
+        }
+      }
+    };
+    const workflowSpec = {
+      components: {
+        schemas: {
+          Task: {
+            type: 'object',
+            properties: {
+              assignedToId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'User', style: 'expand' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([
+      ['workflow-spec.yaml', workflowSpec],
+      ['users-spec.yaml', usersSpec],
+      ['address-spec.yaml', addressSpec]
+    ]));
+    const { result } = resolveRelationships(workflowSpec, 'links-only', schemaIndex);
+
+    // Both User and its transitive dep Address are copied into the target spec
+    assert.ok(result.components.schemas.User, 'User should be copied into target spec');
+    assert.ok(result.components.schemas.Address, 'Address (transitive dep) should be copied into target spec');
+    assert.deepStrictEqual(result.components.schemas.Address, addressSpec.components.schemas.Address);
+  });
+
   await t.test('resolveRelationships expand - updates required array when FK field was required', () => {
     const spec = {
       components: {

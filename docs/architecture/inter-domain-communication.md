@@ -139,6 +139,19 @@ The target architecture is pub/sub with CloudEvents messages. Most implementatio
 
 ---
 
+## PII in event payloads
+
+Event payloads may contain PII, FTI (Federal Tax Information), or PHI (Protected Health Information). How states safeguard this data in their event infrastructure is an implementation concern, not a blueprint contract concern — the blueprint does not prescribe an encryption mechanism, access control policy, or key management approach.
+
+The blueprint's responsibility is to mark which fields are sensitive so that adapters know what requires protection. Schema fields carrying regulated data are annotated with `x-data-classification` (see [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml)). Classifications: `pii`, `fti`, `phi`.
+
+States are responsible for:
+- Applying appropriate safeguards to classified fields in event payloads (encryption, access control, log masking)
+- Meeting regulatory requirements for the classifications present in their deployment (IRS Pub. 1075 for `fti`, HIPAA for `phi`)
+- Ensuring their event store and broker infrastructure meets those requirements
+
+---
+
 ## Further Reading
 
 - [ADR: Inter-Domain Communication](../decisions/inter-domain-communication.md)

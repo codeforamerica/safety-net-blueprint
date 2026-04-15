@@ -243,26 +243,24 @@ function runTests() {
   // ============================================================
   console.log('\n--- tokensToSqlConditions ---\n');
 
-  test('generates full-text exact match SQL', () => {
+  test('generates full-text exact match SQL using json_tree', () => {
     const tokens = [{ type: TokenType.FULL_TEXT, field: null, value: 'john' }];
-    const searchableFields = ['name', 'email'];
-    const { whereClauses, params } = tokensToSqlConditions(tokens, searchableFields);
+    const { whereClauses, params } = tokensToSqlConditions(tokens, ['name', 'email']);
 
     assertEqual(whereClauses.length, 1);
-    assertEqual(params.length, 2);
+    assertEqual(params.length, 1);
     assertEqual(params[0], 'john');
-    assertEqual(params[1], 'john');
+    assertEqual(whereClauses[0].includes('json_tree'), true);
   });
 
-  test('generates full-text contains SQL (*value*)', () => {
+  test('generates full-text contains SQL (*value*) using json_tree', () => {
     const tokens = [{ type: TokenType.FULL_TEXT_CONTAINS, field: null, value: 'john' }];
-    const searchableFields = ['name', 'email'];
-    const { whereClauses, params } = tokensToSqlConditions(tokens, searchableFields);
+    const { whereClauses, params } = tokensToSqlConditions(tokens, ['name', 'email']);
 
     assertEqual(whereClauses.length, 1);
-    assertEqual(params.length, 2);
+    assertEqual(params.length, 1);
     assertEqual(params[0], '%john%');
-    assertEqual(params[1], '%john%');
+    assertEqual(whereClauses[0].includes('json_tree'), true);
   });
 
   test('generates full-text starts with SQL (value*)', () => {
@@ -398,14 +396,13 @@ function runTests() {
   test('full pipeline: q=john status:active -deleted:*', () => {
     const q = 'john status:active -deleted:*';
     const tokens = parseQueryString(q);
-    const searchableFields = ['name', 'email'];
-    const { whereClauses, params } = tokensToSqlConditions(tokens, searchableFields);
+    const { whereClauses, params } = tokensToSqlConditions(tokens, ['name', 'email']);
 
     assertEqual(tokens.length, 3);
     assertEqual(whereClauses.length, 3);
-    // Full text exact match adds params for each searchable field
-    assertEqual(params.slice(0, 2), ['john', 'john']);
-    assertEqual(params[2], 'active');
+    // Full-text match uses json_tree — one param for the search value
+    assertEqual(params[0], 'john');
+    assertEqual(params[1], 'active');
   });
 
   test('full pipeline: q=programs:snap,tanf state:TX,CA', () => {

@@ -4,6 +4,7 @@
 
 import { findById, deleteResource } from '../database-manager.js';
 import { emitEvent } from '../emit-event.js';
+import { isConfigManaged } from '../config-registry.js';
 
 /**
  * Create delete handler for a resource
@@ -25,7 +26,15 @@ export function createDeleteHandler(apiMetadata, endpoint) {
           message: `${capitalize(paramName.replace(/Id$/, ''))} not found`
         });
       }
-      
+
+      // Block deletion of config-managed resources
+      if (isConfigManaged(endpoint.collectionName, resourceId)) {
+        return res.status(409).json({
+          code: 'CONFIG_MANAGED',
+          message: `${capitalize(paramName.replace(/Id$/, ''))} is managed by deployment configuration and cannot be deleted`
+        });
+      }
+
       // Delete the resource
       deleteResource(endpoint.collectionName, resourceId);
 

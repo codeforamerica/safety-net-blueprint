@@ -1,0 +1,24 @@
+# Generic JSON Schema for domain config YAML files.
+# Validates the common envelope (version and domain required).
+# Domain-specific schemas extend this for catalog entry validation.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Domain Config
+description: Schema for domain configuration YAML files. Validates the common envelope.
+type: object
+required:
+  - version
+  - domain
+
+properties:
+  $schema:
+    type: string
+    description: Reference to the validating JSON Schema.
+
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  domain:
+    type: string
+    description: Domain namespace (e.g., workflow, data-exchange).

@@ -85,8 +85,8 @@ Visit `http://localhost:3000` for interactive API docs.
 - [Search Patterns](./docs/guides/search-patterns.md) — Search and filter syntax
 
 ### Integration
-- [API Clients](./docs/integration/api-clients.md) — Generated TypeScript clients
-- [CI/CD for Backend](./docs/integration/ci-cd-backend.md) — Contract test your API implementation
+- [API Clients](./docs/guides/api-clients.md) — Generated TypeScript clients
+- [CI/CD for Backend](./docs/guides/ci-cd-backend.md) — Contract test your API implementation
 - [CI/CD for Frontend](https://github.com/codeforamerica/safety-net-harness/blob/main/docs/integration/ci-cd-frontend.md) — Build and test frontend apps (in harness repo)
 
 ### Reference

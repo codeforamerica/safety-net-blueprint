@@ -11,6 +11,9 @@ import { discoverStateMachines } from './state-machine-loader.js';
 import { discoverRules } from './rules-loader.js';
 import { discoverSlaTypes } from './sla-loader.js';
 import { discoverMetrics } from './metrics-loader.js';
+import { discoverConfigs } from './config-loader.js';
+import { insertResource } from './database-manager.js';
+import { registerConfigManaged } from './config-registry.js';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -111,6 +114,25 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   // Seed databases from example files
   const summary = seedAllDatabases(apiSpecs, specsDir, seedDir);
 
+  // Seed config-managed resources (after seedAllDatabases, which clears collections first)
+  const configs = discoverConfigs(specsDir);
+  for (const config of configs) {
+    for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
+      for (const entry of entries) {
+        // Strip x- extension fields before storing — they are config artifact metadata
+        const { ...data } = entry;
+        for (const key of Object.keys(data)) {
+          if (key.startsWith('x-')) delete data[key];
+        }
+        insertResource(catalogKey, { ...data, source: 'system' });
+        registerConfigManaged(catalogKey, data.id);
+      }
+      if (verbose) {
+        console.log(`✓ Seeded ${entries.length} config-managed ${catalogKey} (${config.domain})`);
+      }
+    }
+  }
+
   // Validate seed data against schemas
   if (!skipValidation) {
     const seedErrors = validateSeedData(seedDir, apiSpecs);
@@ -118,14 +140,24 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
       const msg = seedErrors
         .map(e => `  ${e.api}${e.key ? ` [${e.key}]` : ''}: ${e.message}`)
         .join('\n');
-      throw new Error(`Seed data validation failed:\n${msg}`);
+      const looksLikeExpandMismatch = seedErrors.some(e =>
+        e.message.includes("must have required property") ||
+        e.message.includes("must NOT have additional properties")
+      );
+      const hint = looksLikeExpandMismatch
+        ? '\n\nHint: If you are using an overlay with x-relationship.style: expand, ' +
+          'your seed data must use the post-expansion field names (e.g., "person" not "personId"). ' +
+          'Regenerate seed data from your resolved specs:\n' +
+          `  npm run mock:seed -- --spec=${specsDir} --out=<seed-dir>`
+        : '';
+      throw new Error(`Seed data validation failed:\n${msg}${hint}`);
     }
     if (verbose) {
       console.log('✓ Seed data valid');
     }
   }
 
-  return { apiSpecs, stateMachines, rules, slaTypes, metrics, summary };
+  return { apiSpecs, stateMachines, rules, slaTypes, metrics, configs, summary };
 }
 
 /**

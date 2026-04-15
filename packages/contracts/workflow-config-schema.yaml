@@ -1,0 +1,56 @@
+# JSON Schema for workflow-config.yaml
+# Extends the generic config envelope (schemas/config-schema.yaml)
+# with workflow-specific queue catalog validation.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Workflow Config
+description: Schema for workflow-config.yaml. Validates queue catalog entries.
+
+allOf:
+  - $ref: "schemas/config-schema.yaml"
+
+type: object
+required:
+  - queues
+
+properties:
+  domain:
+    const: workflow
+    description: Must be "workflow".
+
+  queues:
+    type: array
+    description: >
+      Queue catalog. Defines the routing queues available across all deployments.
+      All entries in a config file are config-managed: they are seeded by the mock
+      server on startup and cannot be deleted via the API.
+    minItems: 1
+    items:
+      $ref: "#/$defs/QueueConfig"
+
+unevaluatedProperties: false
+
+$defs:
+  QueueConfig:
+    type: object
+    description: A routing queue definition.
+    required:
+      - id
+      - name
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        format: uuid
+        description: >
+          Stable identifier. Referenced by tasks (queueId) and API responses.
+          Use a fixed UUID so overlay authors can target specific queues.
+      name:
+        type: string
+        minLength: 1
+        maxLength: 200
+        description: Machine-readable name (e.g., snap-intake).
+      description:
+        type: string
+        maxLength: 2000
+        description: Human-readable description of the queue's purpose.

@@ -12,7 +12,7 @@ See also: [API Architecture](api-architecture.md) | [Design Rationale](design-ra
 
 ### Overview
 
-The Safety Net Benefits API is organized into 7 domains, with 5 cross-cutting concerns:
+The Safety Net Benefits API is organized into 8 domains, with 5 cross-cutting concerns:
 
 | Domain | Design Status | Purpose |
 |--------|---------------|---------|
@@ -21,6 +21,7 @@ The Safety Net Benefits API is organized into 7 domains, with 5 cross-cutting co
 | **Eligibility** | Not started | Program-specific interpretation and determination |
 | **Case Management** | Partial | Ongoing client relationships and staff assignments |
 | **Workflow** | Partial (pending approval) | Work items, tasks, SLAs, and verification |
+| **Data Exchange** | Design complete | Facade for all external agency and data source interactions |
 | **Scheduling** | Partial | Appointments and scheduling coordination |
 | **Document Management** | Not started | Files and uploads |
 
@@ -164,6 +165,22 @@ Cross-resource search spanning all domains. **[Details →](cross-cutting/search
 - Uniform result shape — clients render results without per-type logic; new resource types are automatically supported
 - Typed attributes enable smart UI formatting (dates, statuses, currency) without per-type rendering code
 
+#### Data Exchange
+
+External service integrations — a facade for all interactions with IRS, SSA, USCIS SAVE, state wage databases, and other external data sources. **[Details →](domains/data-exchange.md)**
+
+| Entity | Purpose |
+|--------|---------|
+| **ExternalService** | Catalog of available external data sources (defined at deployment time in `data-exchange-config.yaml`) |
+| **ExternalServiceCall** | Runtime resource tracking a single external service call from submission through resolution |
+
+**Key decisions:**
+- Data Exchange acts as a facade — other domains call Data Exchange; Data Exchange calls external services
+- Supports both sync (blocking, result inline) and async (event-driven, calling domain waits) call modes
+- ExternalService catalog is defined in `data-exchange-config.yaml`; blueprint defines known federal service entries (IRS, SSA, USCIS SAVE); states overlay with their endpoint configuration
+- Domain events emitted on ExternalServiceCall transitions constitute the immutable audit record for federal data matching compliance (7 CFR § 272.8, 42 CFR § 435.945)
+- VerificationSource (planned for Workflow) is superseded — VerificationTask references ExternalServiceCall records from Data Exchange instead
+
 #### Scheduling
 
 Time-based coordination. **[Details →](domains/scheduling.md)**
@@ -235,7 +252,16 @@ Files and uploads.
 │  SLAType, TaskAuditEvent      │   │  EligibilityUnit, Determination │
 │  "What work needs to be done" │◀──│  "Program-specific              │
 └───────────────────────────────┘   │   interpretation"               │
-                                    └─────────────────────────────────┘
+               │                    └─────────────────────────────────┘
+               │                                    │
+               └────────────────┬───────────────────┘
+                                ▼
+               ┌─────────────────────────────────────┐
+               │  DATA EXCHANGE                      │
+               │  ExternalService, ExternalServiceCall│
+               │  "Facade for IRS, SSA, SAVE,        │
+               │   state wage databases, and others" │
+               └─────────────────────────────────────┘
 ```
 
 **Flow notes:**
@@ -296,6 +322,7 @@ Domain-specific design has been moved to separate files:
 |--------|------|
 | Workflow | [domains/workflow.md](domains/workflow.md) |
 | Case Management | [domains/case-management.md](domains/case-management.md) |
+| Data Exchange | [domains/data-exchange.md](domains/data-exchange.md) |
 | Scheduling | [domains/scheduling.md](domains/scheduling.md) |
 | Communication | [cross-cutting/communication.md](cross-cutting/communication.md) |
 | Search | [cross-cutting/search.md](cross-cutting/search.md) |

@@ -294,60 +294,32 @@ function tokenToSqlCondition(token, searchableFields) {
   const { type, field, value } = token;
 
   switch (type) {
-    // Full-text search types (search across multiple fields)
+    // Full-text search types — search all string values at any depth using json_tree()
     case TokenType.FULL_TEXT: {
-      if (searchableFields.length === 0) {
-        return { clause: null, tokenParams: [] };
-      }
-      // Exact match across searchable fields
-      const clauses = searchableFields.map(f =>
-        `LOWER(COALESCE(json_extract(data, '$.${f}'), '')) = LOWER(?)`
-      );
       return {
-        clause: `(${clauses.join(' OR ')})`,
-        tokenParams: searchableFields.map(() => value)
+        clause: `EXISTS (SELECT 1 FROM json_tree(data) WHERE type = 'text' AND LOWER(value) = LOWER(?))`,
+        tokenParams: [value]
       };
     }
 
     case TokenType.FULL_TEXT_CONTAINS: {
-      if (searchableFields.length === 0) {
-        return { clause: null, tokenParams: [] };
-      }
-      const clauses = searchableFields.map(f =>
-        `LOWER(COALESCE(json_extract(data, '$.${f}'), '')) LIKE LOWER(?)`
-      );
-      const pattern = `%${value}%`;
       return {
-        clause: `(${clauses.join(' OR ')})`,
-        tokenParams: searchableFields.map(() => pattern)
+        clause: `EXISTS (SELECT 1 FROM json_tree(data) WHERE type = 'text' AND LOWER(value) LIKE LOWER(?))`,
+        tokenParams: [`%${value}%`]
       };
     }
 
     case TokenType.FULL_TEXT_STARTS_WITH: {
-      if (searchableFields.length === 0) {
-        return { clause: null, tokenParams: [] };
-      }
-      const clauses = searchableFields.map(f =>
-        `LOWER(COALESCE(json_extract(data, '$.${f}'), '')) LIKE LOWER(?)`
-      );
-      const pattern = `${value}%`;
       return {
-        clause: `(${clauses.join(' OR ')})`,
-        tokenParams: searchableFields.map(() => pattern)
+        clause: `EXISTS (SELECT 1 FROM json_tree(data) WHERE type = 'text' AND LOWER(value) LIKE LOWER(?))`,
+        tokenParams: [`${value}%`]
       };
     }
 
     case TokenType.FULL_TEXT_ENDS_WITH: {
-      if (searchableFields.length === 0) {
-        return { clause: null, tokenParams: [] };
-      }
-      const clauses = searchableFields.map(f =>
-        `LOWER(COALESCE(json_extract(data, '$.${f}'), '')) LIKE LOWER(?)`
-      );
-      const pattern = `%${value}`;
       return {
-        clause: `(${clauses.join(' OR ')})`,
-        tokenParams: searchableFields.map(() => pattern)
+        clause: `EXISTS (SELECT 1 FROM json_tree(data) WHERE type = 'text' AND LOWER(value) LIKE LOWER(?))`,
+        tokenParams: [`%${value}`]
       };
     }
 

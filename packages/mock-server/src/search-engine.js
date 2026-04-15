@@ -41,17 +41,12 @@ export function buildSearchConditions(queryParams = {}, searchableFields = []) {
     params.push(...qParams);
   }
 
-  // Handle legacy 'search' parameter (searches across multiple fields)
-  // This provides backward compatibility
-  if (queryParams.search && searchableFields.length > 0) {
-    const searchClauses = searchableFields.map(field =>
-      `LOWER(COALESCE(json_extract(data, '$.${field}'), '')) LIKE LOWER(?)`
+  // Handle legacy 'search' parameter — searches all string values at any depth
+  if (queryParams.search) {
+    whereClauses.push(
+      `EXISTS (SELECT 1 FROM json_tree(data) WHERE type = 'text' AND LOWER(value) LIKE LOWER(?))`
     );
-    whereClauses.push(`(${searchClauses.join(' OR ')})`);
-
-    // Add search pattern for each field
-    const searchPattern = `%${queryParams.search}%`;
-    searchableFields.forEach(() => params.push(searchPattern));
+    params.push(`%${queryParams.search}%`);
   }
 
   // Handle specific field filters (exact match) - legacy support
