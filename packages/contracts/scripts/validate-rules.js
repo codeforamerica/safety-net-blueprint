@@ -207,20 +207,34 @@ function validateRulesFile(filePath, rules, resourceIndex) {
     const resolvedSchemas = new Map();
 
     for (const binding of ruleSet.context || []) {
-      if (!binding.as || !binding.entity || !binding.from) continue;
+      if (!binding.as || !binding.from) continue;
 
-      // 1. Validate entity path exists
-      if (!resourceIndex.has(binding.entity)) {
-        errors.push(
-          `${label} ruleSet "${ruleSet.id}": entity "${binding.entity}" does not match any discoverable API resource`
-        );
-      } else {
-        // Register this entity's schema for chaining validation
-        resolvedSchemas.set(binding.as, resourceIndex.get(binding.entity));
+      // Extract dot-path string from from field.
+      // Accepts bare string ("subjectId") or JSON Logic {var: "path"} form.
+      // Complex JSON Logic expressions (non-var) are skipped — no static path to validate.
+      const fromPath = typeof binding.from === 'string'
+        ? binding.from
+        : (typeof binding.from?.var === 'string' ? binding.from.var : null);
+
+      // 1. Validate entity path exists (entity bindings only — collection bindings have no entity)
+      if (binding.entity) {
+        if (!resourceIndex.has(binding.entity)) {
+          errors.push(
+            `${label} ruleSet "${ruleSet.id}": entity "${binding.entity}" does not match any discoverable API resource`
+          );
+        } else {
+          // Register this entity's schema for chaining validation
+          resolvedSchemas.set(binding.as, resourceIndex.get(binding.entity));
+        }
       }
 
-      // 2. Validate from path exists on the calling resource or a previously resolved entity
-      const fromParts = binding.from.split('.');
+      // 2. Validate from path exists on the calling resource or a previously resolved entity.
+      // Skip for:
+      //   - event-triggered rule sets: "this" is the event envelope, not the calling resource schema
+      //   - complex JSON Logic expressions: no static dot-path to validate
+      if (ruleSet.on || fromPath === null) continue;
+
+      const fromParts = fromPath.split('.');
       const fromRoot = fromParts[0];
       const fromField = fromParts.length > 1 ? fromParts.slice(1).join('.') : null;
 
@@ -230,12 +244,12 @@ function validateRulesFile(filePath, rules, resourceIndex) {
         if (!chainSchema) {
           errors.push(
             `${label} ruleSet "${ruleSet.id}" binding "${binding.as}": ` +
-            `"from" path "${binding.from}" references "${fromRoot}" which is not a previously resolved entity alias`
+            `"from" path "${fromPath}" references "${fromRoot}" which is not a previously resolved entity alias`
           );
         } else if (chainSchema.size > 0 && !chainSchema.has(fromField)) {
           errors.push(
             `${label} ruleSet "${ruleSet.id}" binding "${binding.as}": ` +
-            `"from" path "${binding.from}" — field "${fromField}" not found on "${fromRoot}" schema`
+            `"from" path "${fromPath}" — field "${fromField}" not found on "${fromRoot}" schema`
           );
         }
       } else {

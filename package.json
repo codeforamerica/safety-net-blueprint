@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "start": "node packages/mock-server/scripts/server.js --spec=packages/contracts",
-    "validate": "node packages/contracts/scripts/validate-openapi.js --spec=packages/contracts && node packages/contracts/scripts/validate-patterns.js --spec=packages/contracts && node packages/contracts/scripts/validate-schemas.js --spec=packages/contracts",
+    "validate": "node packages/contracts/scripts/validate-openapi.js --spec=packages/contracts && node packages/contracts/scripts/validate-patterns.js --spec=packages/contracts && node packages/contracts/scripts/validate-schemas.js --spec=packages/contracts && node packages/contracts/scripts/validate-rules.js --spec=packages/contracts",
     "validate:syntax": "node packages/contracts/scripts/validate-openapi.js --spec=packages/contracts",
     "validate:patterns": "node packages/contracts/scripts/validate-patterns.js --spec=packages/contracts",
     "validate:schemas": "node packages/contracts/scripts/validate-schemas.js --spec=packages/contracts",
