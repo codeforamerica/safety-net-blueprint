@@ -10,10 +10,10 @@ ruleSets:
     context:
       - as: task
         entity: workflow/tasks
-        from: subject
+        from: {var: "subject"}
       - as: application
         entity: intake/applications
-        from: task.subjectId
+        from: {var: "task.subjectId"}
         optional: true
     rules:
       - id: open-application-on-intake-task-claim
