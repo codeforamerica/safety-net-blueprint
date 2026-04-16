@@ -1,6 +1,8 @@
 # ADR: Authentication and Authorization Patterns
 
-**Status:** Proposed
+> **Superseded.** This ADR has been superseded by the [Identity & Access architecture document](../architecture/cross-cutting/identity-access.md), which covers all decisions documented here and extends them with OAuth scope model, service-to-service authentication, event actor provenance, and API security declarations. Refer to that document for the current record.
+
+**Status:** Superseded
 
 **Date:** 2026-01-26
 
