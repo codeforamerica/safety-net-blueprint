@@ -1,11 +1,24 @@
-// Figma plugin main thread — has access to the Figma API
-// Communicates with the UI via figma.ui.postMessage / figma.ui.on('message', ...)
+import { renderBlueprint } from './renderer.js';
+import intake from './blueprints/intake.json';
+import type { Blueprint } from './types.js';
 
-figma.showUI(__html__, { width: 320, height: 240, title: 'Service Blueprint' });
+const BLUEPRINTS: Record<string, Blueprint> = {
+  intake: intake as Blueprint,
+};
 
-figma.ui.on('message', (msg: { type: string; blueprint: string }) => {
+figma.showUI(__html__, { width: 320, height: 180, title: 'Service Blueprint' });
+
+figma.ui.on('message', async (msg: { type: string; blueprint: string }) => {
   if (msg.type === 'generate') {
-    // Generation logic goes here (Phase 3)
-    figma.notify('Generating service blueprint...');
+    const blueprint = BLUEPRINTS[msg.blueprint];
+    if (!blueprint) {
+      figma.notify(`Unknown blueprint: ${msg.blueprint}`, { error: true });
+      return;
+    }
+    try {
+      await renderBlueprint(blueprint);
+    } catch (e) {
+      figma.notify(`Error: ${(e as Error).message}`, { error: true });
+    }
   }
 });
