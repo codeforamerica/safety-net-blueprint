@@ -19,6 +19,8 @@ All blueprint events use the [CloudEvents 1.0](https://cloudevents.io/) envelope
 | `time` | When the event occurred |
 | `data` | Event payload (domain-specific) |
 | `traceparent` *(optional)* | W3C Trace Context header propagated from the triggering request or event; carries a trace ID (stable across the full causal chain) and parent ID (immediate parent) |
+| `authtype` *(optional)* | CloudEvents Auth Context extension. Principal type of the actor who triggered the event. Required when `authid` is present. Values: `user`, `service_account`, `api_key`, `system`, `unauthenticated`, `unknown`. Required for FTI-governed events per IRS Pub. 1075. |
+| `authid` *(optional)* | CloudEvents Auth Context extension. Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. |
 
 State partners may overlay the `type` prefix to match their own namespace.
 

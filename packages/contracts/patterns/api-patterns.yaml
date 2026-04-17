@@ -377,6 +377,20 @@ x_events:
           request or event. The trace ID component is stable across the full
           causal chain — every downstream event shares the same trace ID.
         required: false
+      - name: authtype
+        description: |
+          CloudEvents Auth Context extension (optional). Principal type of the
+          actor who triggered the event. Required when authid is present.
+          Required for FTI-governed events per IRS Pub. 1075.
+          Values: user, service_account, api_key, system, unauthenticated, unknown.
+        required: false
+      - name: authid
+        description: |
+          CloudEvents Auth Context extension (optional). Principal identifier
+          (userId from JWT claims) of the actor who triggered the event. No PII —
+          user ID only, not name or email. Required when authtype is present.
+          Required for FTI-governed events per IRS Pub. 1075.
+        required: false
 
   type_naming:
     pattern: "org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}"
