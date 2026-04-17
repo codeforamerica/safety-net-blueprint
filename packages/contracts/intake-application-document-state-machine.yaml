@@ -1,0 +1,17 @@
+$schema: ./schemas/state-machine-schema.yaml
+version: "1.0"
+object: ApplicationDocument
+domain: intake
+apiSpec: intake-openapi.yaml
+states:
+  - id: requested
+    slaClock: stopped
+  - id: verified
+    slaClock: stopped
+initialState: requested
+transitions:
+  - trigger: verify
+    from: requested
+    to: verified
+    effects:
+      - type: event

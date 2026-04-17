@@ -1,0 +1,286 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="780" viewBox="0 0 1400 780" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+
+  <defs>
+    <linearGradient id="headerGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1976D2"/>
+      <stop offset="100%" stop-color="#1565C0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="780" fill="#ffffff"/>
+
+  <!-- Left label column -->
+  <rect x="0" y="0" width="150" height="780" fill="#F1F3F5"/>
+
+  <!-- Phase header -->
+  <rect x="150" y="0" width="1250" height="58" fill="url(#headerGrad)"/>
+
+  <!-- Row backgrounds -->
+  <rect x="150" y="58"  width="1250" height="87"  fill="#FFF8E1"/>
+  <!-- Caseworker: main content -->
+  <rect x="150" y="145" width="1250" height="285" fill="#E8F5E9"/>
+  <!-- Caseworker: design notes section -->
+  <rect x="150" y="430" width="1250" height="155" fill="#F1F8E9"/>
+  <!-- System -->
+  <rect x="150" y="585" width="1250" height="180" fill="#EDE7F6"/>
+
+  <!-- Outer border -->
+  <rect x="0" y="0" width="1400" height="765" fill="none" stroke="#ced4da" stroke-width="1"/>
+
+  <!-- Vertical phase dividers -->
+  <line x1="150"  y1="58" x2="150"  y2="765" stroke="#ced4da" stroke-width="1"/>
+  <line x1="400"  y1="0"  x2="400"  y2="765" stroke="#ced4da" stroke-width="1"/>
+  <line x1="650"  y1="0"  x2="650"  y2="765" stroke="#ced4da" stroke-width="1"/>
+  <line x1="900"  y1="0"  x2="900"  y2="765" stroke="#ced4da" stroke-width="1"/>
+  <line x1="1150" y1="0"  x2="1150" y2="765" stroke="#ced4da" stroke-width="1"/>
+
+  <!-- Horizontal separators -->
+  <line x1="0" y1="58"  x2="1400" y2="58"  stroke="#ced4da" stroke-width="1"/>
+  <!-- Line of visibility -->
+  <line x1="0" y1="145" x2="1400" y2="145" stroke="#868e96" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <!-- Internal separator: design notes divider -->
+  <line x1="150" y1="430" x2="1400" y2="430" stroke="#a5d6a7" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- Line of interaction -->
+  <line x1="0" y1="585" x2="1400" y2="585" stroke="#868e96" stroke-width="1.5" stroke-dasharray="8,4"/>
+
+
+  <!-- ===== PHASE HEADERS ===== -->
+
+  <text x="275"  y="25" text-anchor="middle" font-size="13" font-weight="700" fill="white">1 · Submitted</text>
+  <text x="275"  y="44" text-anchor="middle" font-size="11" fill="#90CAF9">Application in queue</text>
+
+  <text x="525"  y="25" text-anchor="middle" font-size="13" font-weight="700" fill="white">2 · Under Review</text>
+  <text x="525"  y="44" text-anchor="middle" font-size="11" fill="#90CAF9">Caseworker claims task</text>
+
+  <text x="775"  y="25" text-anchor="middle" font-size="13" font-weight="700" fill="white">3 · Active Review</text>
+  <text x="775"  y="44" text-anchor="middle" font-size="11" fill="#90CAF9">Verifications arriving</text>
+
+  <text x="1025" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="white">4 · Interview</text>
+  <text x="1025" y="44" text-anchor="middle" font-size="11" fill="#90CAF9">Scheduled appointment</text>
+
+  <text x="1275" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="white">5 · Decision</text>
+  <text x="1275" y="44" text-anchor="middle" font-size="11" fill="#90CAF9">Eligibility determined</text>
+
+
+  <!-- ===== LEFT LABEL COLUMN ===== -->
+
+  <text x="75" y="102" text-anchor="middle" font-size="12" font-weight="600" fill="#E65100">Applicant</text>
+
+  <text text-anchor="middle" font-size="12" font-weight="600" fill="#2E7D32">
+    <tspan x="75" y="258">Caseworker</tspan>
+    <tspan x="75" dy="17">sees</tspan>
+  </text>
+
+  <text text-anchor="middle" font-size="10" font-weight="600" fill="#388E3C">
+    <tspan x="75" y="468">Design</tspan>
+    <tspan x="75" dy="14">notes</tspan>
+  </text>
+
+  <text text-anchor="middle" font-size="12" font-weight="600" fill="#4527A0">
+    <tspan x="75" y="662">Background</tspan>
+    <tspan x="75" dy="17">system</tspan>
+  </text>
+
+  <text x="3" y="141" font-size="8" fill="#adb5bd" font-style="italic">line of visibility</text>
+  <text x="3" y="581" font-size="8" fill="#adb5bd" font-style="italic">line of interaction</text>
+
+
+  <!-- ===== APPLICANT ROW ===== -->
+
+  <rect x="163" y="67" width="725" height="60" rx="5"
+        fill="#FFB300" fill-opacity="0.12" stroke="#FFB300" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="525" y="90" text-anchor="middle" font-size="12" font-weight="600" fill="#E65100">
+    Applicant uploads supporting documents
+  </text>
+  <text x="525" y="108" text-anchor="middle" font-size="11" fill="#BF360C">
+    Can happen at any time after submission — before or after caseworker claims
+  </text>
+
+
+  <!-- ===== CASEWORKER ROW — MAIN CONTENT ===== -->
+
+  <!-- Phase 1 -->
+  <text x="162" y="168" font-size="11" font-weight="600" fill="#2E7D32">Applicant-provided</text>
+  <text font-size="11" fill="#388E3C">
+    <tspan x="162" y="184">• Household members</tspan>
+    <tspan x="162" dy="15">  &amp; demographics</tspan>
+    <tspan x="162" dy="15">• Programs applied for</tspan>
+    <tspan x="162" dy="15">• Self-reported income</tspan>
+    <tspan x="162" dy="15">  &amp; expenses</tspan>
+    <tspan x="162" dy="15">• Contact information</tspan>
+  </text>
+
+  <!-- Phase 2 -->
+  <text x="412" y="168" font-size="11" font-weight="600" fill="#2E7D32">Opens the case</text>
+  <text font-size="11" fill="#388E3C">
+    <tspan x="412" y="184">• Full application detail</tspan>
+    <tspan x="412" dy="15">• Document checklist</tspan>
+    <tspan x="412" dy="15">  (status varies):</tspan>
+    <tspan x="412" dy="15">  some docs verified,</tspan>
+    <tspan x="412" dy="15">  others outstanding</tspan>
+    <tspan x="412" dy="16">• Interview to schedule</tspan>
+  </text>
+  <!-- UX opportunity: doc checklist at a glance -->
+  <rect x="412" y="283" width="228" height="48" rx="4" fill="#C8E6C9" stroke="#66BB6A" stroke-width="1"/>
+  <text font-size="10" fill="#1B5E20">
+    <tspan x="424" y="298" font-weight="600">UX opportunity</tspan>
+    <tspan x="424" dy="13">"3 of 5 documents verified"</tspan>
+    <tspan x="424" dy="13">Show completion at a glance</tspan>
+  </text>
+
+  <!-- Phase 3 -->
+  <text x="662" y="168" font-size="11" font-weight="600" fill="#2E7D32">Verifications arrive</text>
+  <text x="662" y="182" font-size="10" fill="#558B2F" font-style="italic">(asynchronously — hours to days)</text>
+  <text font-size="11" fill="#388E3C">
+    <tspan x="662" y="199">• FDSH — citizenship (both)</tspan>
+    <tspan x="662" dy="15">• IEVS — income (SNAP)</tspan>
+    <tspan x="662" dy="15">• SAVE — immigration (both)</tspan>
+    <tspan x="662" dy="15">• SSA — SSN (both)</tspan>
+  </text>
+  <text x="662" y="272" font-size="11" font-weight="600" fill="#2E7D32">Checklist updates</text>
+  <text font-size="11" fill="#388E3C">
+    <tspan x="662" y="287">• New items if check</tspan>
+    <tspan x="662" dy="15">  is inconclusive</tspan>
+  </text>
+
+  <!-- Phase 4 -->
+  <text x="912" y="168" font-size="11" font-weight="600" fill="#2E7D32">Interview details</text>
+  <text font-size="11" fill="#388E3C">
+    <tspan x="912" y="184">• Scheduled date &amp; time</tspan>
+    <tspan x="912" dy="15">• Interview notes</tspan>
+    <tspan x="912" dy="20">Open issues to resolve:</tspan>
+    <tspan x="912" dy="15">• Outstanding docs</tspan>
+    <tspan x="912" dy="15">• Inconclusive checks</tspan>
+  </text>
+
+  <!-- Phase 5 -->
+  <text x="1162" y="168" font-size="11" font-weight="600" fill="#2E7D32">Eligibility determinations</text>
+  <text font-size="11" fill="#388E3C">
+    <tspan x="1162" y="184" font-weight="600" font-style="italic">SNAP</tspan>
+    <tspan dy="0"> — income-based</tspan>
+    <tspan x="1162" dy="15">• Household size &amp; income</tspan>
+    <tspan x="1162" dy="15">• Expenses applied</tspan>
+    <tspan x="1162" dy="15">• Outcome + date</tspan>
+  </text>
+  <text font-size="11" fill="#388E3C">
+    <tspan x="1162" y="250" font-weight="600" font-style="italic">Medicaid</tspan>
+    <tspan dy="0"> — real-time MAGI</tspan>
+    <tspan x="1162" dy="15">• Real-time eligibility check</tspan>
+    <tspan x="1162" dy="15">• May return immediately</tspan>
+    <tspan x="1162" dy="15">• Outcome + date</tspan>
+  </text>
+
+
+  <!-- ===== CASEWORKER ROW — DESIGN NOTES SECTION ===== -->
+
+  <!-- Phase 1: UX opportunity — queue priority signals -->
+  <rect x="163" y="440" width="228" height="57" rx="4" fill="#C8E6C9" stroke="#66BB6A" stroke-width="1"/>
+  <text font-size="10" fill="#1B5E20">
+    <tspan x="175" y="455" font-weight="600">UX opportunity</tspan>
+    <tspan x="175" dy="13">Surface priority signals in queue:</tspan>
+    <tspan x="175" dy="13">expedited flags, days waiting,</tspan>
+    <tspan x="175" dy="13">missing critical info</tspan>
+  </text>
+
+  <!-- Phase 2: UX opportunity — surface interview scheduling prompt -->
+  <rect x="413" y="436" width="228" height="44" rx="4" fill="#C8E6C9" stroke="#66BB6A" stroke-width="1"/>
+  <text font-size="10" fill="#1B5E20">
+    <tspan x="425" y="451" font-weight="600">UX opportunity</tspan>
+    <tspan x="425" dy="13">Surface interview scheduling prompt</tspan>
+    <tspan x="425" dy="13">immediately when review begins</tspan>
+  </text>
+  <!-- Phase 2: Pain point — federal check status not visible -->
+  <rect x="413" y="486" width="228" height="44" rx="4" fill="#FFCCBC" stroke="#FF8A65" stroke-width="1"/>
+  <text font-size="10" fill="#BF360C">
+    <tspan x="425" y="501" font-weight="600">Pain point</tspan>
+    <tspan x="425" dy="13">Federal check status not visible —</tspan>
+    <tspan x="425" dy="13">pending checks have no UI state</tspan>
+  </text>
+
+  <!-- Phase 3: Pain point — inconclusive results appear silently -->
+  <rect x="663" y="440" width="228" height="44" rx="4" fill="#FFCCBC" stroke="#FF8A65" stroke-width="1"/>
+  <text font-size="10" fill="#BF360C">
+    <tspan x="675" y="455" font-weight="600">Pain point</tspan>
+    <tspan x="675" dy="13">Inconclusive results add new checklist</tspan>
+    <tspan x="675" dy="13">items with no explanation of why</tspan>
+  </text>
+  <!-- Phase 3: UX opportunity — highlight changes -->
+  <rect x="663" y="492" width="228" height="44" rx="4" fill="#C8E6C9" stroke="#66BB6A" stroke-width="1"/>
+  <text font-size="10" fill="#1B5E20">
+    <tspan x="675" y="507" font-weight="600">UX opportunity</tspan>
+    <tspan x="675" dy="13">Highlight what changed since last</tspan>
+    <tspan x="675" dy="13">visit: "3 new results arrived"</tspan>
+  </text>
+
+  <!-- Phase 4: Pain point — separate scheduling system -->
+  <rect x="913" y="440" width="228" height="44" rx="4" fill="#FFCCBC" stroke="#FF8A65" stroke-width="1"/>
+  <text font-size="10" fill="#BF360C">
+    <tspan x="925" y="455" font-weight="600">Pain point</tspan>
+    <tspan x="925" dy="13">Interview scheduled in a separate</tspan>
+    <tspan x="925" dy="13">system — no deep link from case</tspan>
+  </text>
+  <!-- Phase 4: UX opportunity — pre-fill interview agenda -->
+  <rect x="913" y="492" width="228" height="44" rx="4" fill="#C8E6C9" stroke="#66BB6A" stroke-width="1"/>
+  <text font-size="10" fill="#1B5E20">
+    <tspan x="925" y="507" font-weight="600">UX opportunity</tspan>
+    <tspan x="925" dy="13">Pre-fill interview agenda from</tspan>
+    <tspan x="925" dy="13">open verification issues</tspan>
+  </text>
+
+  <!-- Phase 5: Pain point — dual system entry -->
+  <rect x="1163" y="440" width="228" height="44" rx="4" fill="#FFCCBC" stroke="#FF8A65" stroke-width="1"/>
+  <text font-size="10" fill="#BF360C">
+    <tspan x="1175" y="455" font-weight="600">Pain point</tspan>
+    <tspan x="1175" dy="13">Determinations may need entry</tspan>
+    <tspan x="1175" dy="13">in both this and state systems</tspan>
+  </text>
+  <!-- Phase 5: UX opportunity — ready to close -->
+  <rect x="1163" y="492" width="228" height="44" rx="4" fill="#C8E6C9" stroke="#66BB6A" stroke-width="1"/>
+  <text font-size="10" fill="#1B5E20">
+    <tspan x="1175" y="507" font-weight="600">UX opportunity</tspan>
+    <tspan x="1175" dy="13">"Ready to close" indicator when</tspan>
+    <tspan x="1175" dy="13">all determinations are complete</tspan>
+  </text>
+
+
+  <!-- ===== SYSTEM ROW ===== -->
+
+  <!-- Phase 1 -->
+  <text x="162" y="606" font-size="11" font-weight="600" fill="#4527A0">On submit</text>
+  <text font-size="11" fill="#5E35B1">
+    <tspan x="162" y="621">• Person matching attempted</tspan>
+    <tspan x="162" dy="15">  (existing case/record lookup)</tspan>
+    <tspan x="162" dy="15">• Document checklist created</tspan>
+    <tspan x="162" dy="15">  (income, identity, residency)</tspan>
+    <tspan x="162" dy="15">• Federal checks initiated</tspan>
+    <tspan x="162" dy="15">• Task added to queue</tspan>
+  </text>
+
+  <!-- Phase 2 -->
+  <text x="412" y="606" font-size="11" font-weight="600" fill="#4527A0">On claim</text>
+  <text font-size="11" fill="#5E35B1">
+    <tspan x="412" y="621">• Interview record created</tspan>
+  </text>
+
+  <!-- Phase 3 -->
+  <text x="662" y="606" font-size="11" font-weight="600" fill="#4527A0">Results processing</text>
+  <text font-size="11" fill="#5E35B1">
+    <tspan x="662" y="621">• Checklist updated as results</tspan>
+    <tspan x="662" dy="15">  arrive (hours to days)</tspan>
+    <tspan x="662" dy="15">• ApplicationMember fields updated:</tspan>
+    <tspan x="662" dy="15">  citizenship status (FDSH),</tspan>
+    <tspan x="662" dy="15">  immigration status (SAVE)</tspan>
+  </text>
+
+  <!-- Phase 5 -->
+  <text x="1162" y="606" font-size="11" font-weight="600" fill="#4527A0">Eligibility engines</text>
+  <text font-size="11" fill="#5E35B1">
+    <tspan x="1162" y="621">• SNAP: rules-based on</tspan>
+    <tspan x="1162" dy="15">  collected household data</tspan>
+    <tspan x="1162" dy="15">• Medicaid: real-time MAGI</tspan>
+    <tspan x="1162" dy="15">  check via state HIX or</tspan>
+    <tspan x="1162" dy="15">  eligibility engine</tspan>
+  </text>
+
+</svg>

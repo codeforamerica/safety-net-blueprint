@@ -3,4 +3,5 @@ draft,submitted,submit,,,,,applicant; caseworker,"any: callerIsApplicant, caller
 submitted,under_review,open,,,,,system,callerIsSystem,event
 submitted | under_review,withdrawn,withdraw,,,,,applicant; caseworker; supervisor,"any: callerIsApplicant, callerIsCaseworker, callerIsSupervisor",set withdrawnAt = $now; event
 under_review,closed,close,,,,,caseworker; supervisor; system,"any: callerIsCaseworker, callerIsSupervisor, callerIsSystem",set closedAt = $now; event
+under_review,,complete-review,,,,,caseworker; supervisor,"any: callerIsCaseworker, callerIsSupervisor",event
 submitted | under_review,,flag-expedited,,,,,caseworker; supervisor; system,"any: callerIsCaseworker, callerIsSupervisor, callerIsSystem",set isExpedited = true; event

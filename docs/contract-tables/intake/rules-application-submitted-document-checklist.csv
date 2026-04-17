@@ -1,0 +1,5 @@
+Order,Condition,Action,Fallback,Description
+1,"{""in"":[""snap"",{""var"":""application.programs""}]}","{""createResource"":{""entity"":""intake/applications/documents"",""fields"":{""applicationId"":{""var"":""application.id""},""category"":""income""}}}",,Request income documentation for SNAP applicants (Decision 16).
+2,"{""in"":[""snap"",{""var"":""application.programs""}]}","{""createResource"":{""entity"":""intake/applications/documents"",""fields"":{""applicationId"":{""var"":""application.id""},""category"":""identity""}}}",,Request identity documentation for SNAP applicants (Decision 16).
+3,"{""in"":[""snap"",{""var"":""application.programs""}]}","{""createResource"":{""entity"":""intake/applications/documents"",""fields"":{""applicationId"":{""var"":""application.id""},""category"":""residency""}}}",,Request residency documentation for SNAP applicants (Decision 16).
+4,"{""in"":[""medicaid"",{""var"":""application.programs""}]}","{""createResource"":{""entity"":""intake/applications/documents"",""fields"":{""applicationId"":{""var"":""application.id""},""category"":""identity""}}}",,Request identity documentation for Medicaid applicants (Decision 16).

@@ -196,6 +196,126 @@ rpc_endpoints:
     - Detected by isActionPath(): paths with segments after the {id} parameter
 
 # =============================================================================
+# Sub-Resource Path Patterns
+# =============================================================================
+# Paths that nest a child resource under a parent, distinct from RPC trigger paths.
+# The noun/verb distinction determines which pattern applies:
+#
+#   Noun  → sub-resource (this section):  GET /applications/{id}/documents
+#   Verb  → RPC transition (rpc_endpoints): POST /applications/{id}/submit
+#
+# Both use the /{resources}/{resourceId}/{segment} structure. The segment is a
+# noun (plural for collections, singular for singletons) for sub-resources and a
+# verb (action word) for RPC endpoints.
+sub_resource_paths:
+
+  # ---------------------------------------------------------------------------
+  # Collection sub-resource
+  # ---------------------------------------------------------------------------
+  # Follows the same conventions as top-level CRUD endpoints. Collection path
+  # supports GET (list) and POST (create). Item path supports GET, PATCH, and
+  # DELETE. This mirrors how GitHub (POST /repos/{owner}/{repo}/issues,
+  # PATCH /repos/{owner}/{repo}/issues/{number}) and Google Calendar
+  # (POST /calendars/{id}/events, DELETE /calendars/{id}/events/{eventId})
+  # handle nested resources.
+  #
+  # Whether a parallel top-level collection exists depends on the resource.
+  # Some child resources are only accessible via the nested path; others also
+  # have a top-level collection for cross-parent queries.
+  collection:
+    collection_path:
+      pattern: "/{resources}/{resourceId}/{subResources}"
+      methods:
+        GET:
+          description: |
+            Scoped list of child resources belonging to the parent. Identical
+            response shape and query parameters as a top-level list endpoint:
+            items, total, limit, offset, hasNext; supports q / limit / offset.
+          success_response:
+            code: 200
+            body: Standard list response (items, total, limit, offset, hasNext)
+          error_responses: [400, 500]
+        POST:
+          description: |
+            Create a child resource scoped to the parent. The parent ID in the
+            URL replaces the need to include it in the request body. Returns 201
+            with a Location header pointing to the new child item path.
+          success_response:
+            code: 201
+            headers:
+              - name: Location
+                description: URL of the newly created child resource
+          error_responses: [400, 422, 500]
+
+    item_path:
+      pattern: "/{resources}/{resourceId}/{subResources}/{subResourceId}"
+      methods:
+        GET:
+          description: Get a specific child resource by ID.
+          success_response:
+            code: 200
+            body: Child resource object
+          error_responses: [404, 500]
+        PATCH:
+          description: Partial update of a specific child resource. All fields optional.
+          success_response:
+            code: 200
+            body: Updated child resource object
+          error_responses: [400, 404, 422, 500]
+        DELETE:
+          description: Delete a specific child resource.
+          success_response:
+            code: 204
+          error_responses: [404, 500]
+
+    examples:
+      - GET    /applications/{applicationId}/documents
+      - POST   /applications/{applicationId}/documents
+      - GET    /applications/{applicationId}/documents/{documentId}
+      - PATCH  /applications/{applicationId}/documents/{documentId}
+      - DELETE /applications/{applicationId}/documents/{documentId}
+      - GET    /tasks/{taskId}/comments
+
+  # ---------------------------------------------------------------------------
+  # Singleton sub-resource: exactly one child per parent
+  # ---------------------------------------------------------------------------
+  # Example: GET   /applications/{applicationId}/interview
+  #          PATCH /applications/{applicationId}/interview
+  #
+  # Exactly one child resource per parent. The parent ID fully identifies the
+  # child — no {subResourceId} in the path. Use when a regulatory or domain
+  # obligation produces exactly one record per parent (e.g., one Interview per
+  # application per certification period).
+  singleton:
+    path_pattern: "/{resources}/{resourceId}/{subResource}"
+    methods: [GET, PATCH]
+    description: |
+      Returns or updates the single child resource associated with the parent.
+      No {subResourceId} in the path — the parent ID is the full key.
+      GET returns the resource object directly (not wrapped in items[]).
+      PATCH follows the standard partial-update pattern (all fields optional,
+      returns updated resource).
+    success_responses:
+      get:
+        code: 200
+        body: Resource object (not wrapped in items[])
+      patch:
+        code: 200
+        body: Updated resource object
+    error_responses:
+      404: Child not yet created for this parent
+    notes:
+      - Segment is singular — signals a one-to-one relationship.
+      - No POST — singletons are system-created (e.g., by the rules engine),
+        not caller-created.
+      - No DELETE — the singleton exists for the lifetime of the parent.
+      - The child is also accessible at its own item endpoint
+        (GET /{subResources}/{subResourceId}) via its id field.
+    examples:
+      - GET   /applications/{applicationId}/interview
+      - PATCH /applications/{applicationId}/interview
+
+# =============================================================================
 # Events Endpoint Pattern
 # =============================================================================
 # Every domain API that emits domain events must expose a GET /events endpoint.

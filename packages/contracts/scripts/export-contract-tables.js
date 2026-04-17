@@ -434,7 +434,9 @@ function jsonLogicToFeel(expr) {
     case 'or':  return (Array.isArray(args) ? args : [args]).map(jsonLogicToFeel).join(' or ');
     case 'not': return `not(${jsonLogicToFeel(Array.isArray(args) ? args[0] : args)})`;
     case '!':   return `not(${jsonLogicToFeel(Array.isArray(args) ? args[0] : args)})`;
-    case 'in':  return `${jsonLogicToFeel(args[0])} in [${args[1].map(v => jsonLogicToFeel(v)).join(', ')}]`;
+    case 'in':  return Array.isArray(args[1])
+      ? `${jsonLogicToFeel(args[0])} in [${args[1].map(v => jsonLogicToFeel(v)).join(', ')}]`
+      : `${jsonLogicToFeel(args[0])} in ${jsonLogicToFeel(args[1])}`;
     default: return JSON.stringify(expr);
   }
 }

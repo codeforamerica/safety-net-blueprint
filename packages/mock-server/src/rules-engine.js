@@ -69,3 +69,40 @@ export function evaluateRuleSet(ruleSet, contextData) {
 
   return { matched: false };
 }
+
+/**
+ * Evaluate a ruleSet using all-match semantics: collect every rule whose condition is true.
+ * Returns an array of matched results (one per matching rule), in evaluation order.
+ * Used for rule sets with evaluation: all-match (e.g., document checklists that create
+ * one resource per matching rule rather than stopping at the first match).
+ * @param {Object} ruleSet - RuleSet definition with rules array
+ * @param {Object} contextData - Context object built by buildRuleContext
+ * @returns {Array<{ ruleId: string, action: Object, fallbackAction: Object|null }>}
+ */
+export function evaluateAllMatchRuleSet(ruleSet, contextData) {
+  if (!ruleSet || !ruleSet.rules) return [];
+
+  const sortedRules = [...ruleSet.rules].sort((a, b) => a.order - b.order);
+  const matches = [];
+
+  for (const rule of sortedRules) {
+    let conditionMet = false;
+
+    if (rule.condition === true) {
+      conditionMet = true;
+    } else {
+      try {
+        conditionMet = jsonLogic.apply(rule.condition, contextData);
+      } catch (err) {
+        console.warn(`Rule "${rule.id}" condition evaluation failed: ${err.message}`);
+        continue;
+      }
+    }
+
+    if (conditionMet) {
+      matches.push({ ruleId: rule.id, action: rule.action, fallbackAction: rule.fallbackAction || null });
+    }
+  }
+
+  return matches;
+}

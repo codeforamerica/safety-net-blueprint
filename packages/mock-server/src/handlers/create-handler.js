@@ -152,8 +152,9 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         console.error('Failed to emit created event:', eventError.message);
       }
 
-      // Build Location header
-      const location = `${baseUrl}${endpoint.path}/${resource.id}`;
+      // Build Location header — use req.path (actual URL) rather than endpoint.path
+      // so sub-resource POSTs like /applications/app-123/documents get the right URL.
+      const location = `${baseUrl}${req.path}/${resource.id}`;
 
       res.status(201)
         .header('Location', location)

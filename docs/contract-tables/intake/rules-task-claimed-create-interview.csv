@@ -1,0 +1,2 @@
+Order,Condition,Action,Fallback,Description
+1,"{""=="":[{""var"":""task.taskType""},""application_review""]}","{""createResource"":{""entity"":""intake/applications/interview"",""fields"":{""applicationId"":{""var"":""task.subjectId""}}}}",,Create an Interview record when a caseworker claims an application_review task; the Interview tracks the SNAP regulatory obligation and will accumulate appointment IDs as they are scheduled

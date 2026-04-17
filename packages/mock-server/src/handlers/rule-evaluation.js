@@ -7,6 +7,7 @@ import { findAll, findById } from '../database-manager.js';
 import { findRuleSet } from '../rules-loader.js';
 import { buildRuleContext, evaluateRuleSet, resolvePath } from '../rules-engine.js';
 import { executeActions } from '../action-handlers.js';
+import { deriveCollectionName } from '../collection-utils.js';
 
 /**
  * Build the dependencies object for action handlers.
@@ -41,12 +42,14 @@ export function resolveContextEntities(contextBindings, resource) {
   for (const binding of contextBindings || []) {
     if (typeof binding !== 'object' || !binding.as || !binding.entity || !binding.from) continue;
 
-    // Parse domain/resource format — collection name is the last path segment
-    const collectionName = binding.entity.split('/').pop();
+    // Derive DB collection name from entity path (e.g., intake/applications/documents → application-documents)
+    const collectionName = deriveCollectionName(binding.entity, binding.entity.split('/')[0]);
 
-    // Resolve the from path against resource fields + previously resolved entities (chaining)
+    // Resolve the from path against resource fields + previously resolved entities (chaining).
+    // from: accepts a bare dot-path string or a JSON Logic { var: "..." } expression (Decision 21).
+    const fromPath = typeof binding.from === 'object' && binding.from.var ? binding.from.var : binding.from;
     const lookupContext = { ...resource, ...resolved };
-    const entityId = resolvePath(lookupContext, binding.from);
+    const entityId = resolvePath(lookupContext, fromPath);
 
     if (!entityId) {
       if (binding.optional) {

@@ -17,6 +17,7 @@ import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { closeAll } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
+import { emitEventEnvelope } from '../src/emit-event.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -142,6 +143,29 @@ async function startMockServer(specDirs = null, seedDir = null) {
     // Register SSE stream endpoint before item routes to avoid :id capture
     app.get('/platform/events/stream', createSseHandler());
     console.log('  GET    /platform/events/stream - Domain event stream (SSE)');
+
+    // Register event injection endpoint — accepts a CloudEvents 1.0 envelope and
+    // fires it to the event bus so event-triggered rule sets can respond to it.
+    // Useful for simulating events from external domains during integration testing.
+    app.post('/platform/events', (req, res) => {
+      const event = req.body;
+      if (!event?.type || !event?.specversion) {
+        const missing = ['specversion', 'type'].filter(f => !event?.[f]);
+        return res.status(422).json({
+          code: 'VALIDATION_ERROR',
+          message: 'Request body must be a CloudEvents 1.0 envelope',
+          details: missing.map(f => ({ field: f, message: 'required' }))
+        });
+      }
+      try {
+        const stored = emitEventEnvelope(event);
+        res.status(202).json(stored);
+      } catch (err) {
+        console.error('Failed to emit injected event:', err.message);
+        res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: err.message }] });
+      }
+    });
+    console.log('  POST   /platform/events - Inject external domain event (testing)');
 
     // Register event subscriptions (event-triggered rule sets)
     registerEventSubscriptions(allRules, allStateMachines, allSlaTypes);

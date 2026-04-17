@@ -1,0 +1,44 @@
+sequenceDiagram
+    actor Applicant
+    actor Caseworker
+    participant Intake
+    participant Workflow
+    participant DataExchange as Data Exchange
+    participant Scheduling
+    participant DocMgmt as Document Management
+    participant Eligibility
+
+    Applicant->>Intake: POST /applications/{id}/submit
+    Intake->>Intake: application: draft → submitted
+    Intake-->>Workflow: intake.application.submitted
+    Workflow->>Workflow: create intake_review task (SLA clock starts)
+    Intake->>DataExchange: create service-call (subscription: intake.application.submitted)
+    Note over DataExchange: Data exchange fans out per-member<br/>checks (FDSH, IEVS, SAVE, SSA)
+    Intake->>Intake: create document checklist (subscription: intake.application.submitted)
+
+    DataExchange-->>Intake: data-exchange.service-call.completed
+    Intake->>Intake: write result to ApplicationMember.verifications
+    opt serviceType=fdsh, result=inconclusive
+        Intake->>Intake: create citizenship ApplicationDocument
+    end
+
+    Caseworker->>Workflow: POST /tasks/{id}/claim
+    Workflow-->>Intake: workflow.task.claimed
+    Intake->>Intake: application: submitted → under_review
+    Intake->>Intake: create Interview record
+
+    Caseworker->>Scheduling: schedule appointment (subjectType: interview)
+    Scheduling-->>Intake: scheduling.appointment.scheduled
+    Intake->>Intake: append appointmentId to Interview.appointments
+
+    DocMgmt-->>Intake: document-management.document.verified
+    Intake->>Intake: ApplicationDocument: requested → verified
+
+    Eligibility-->>Intake: eligibility.determination.completed
+    Intake->>Intake: write outcome to ApplicationMember.programDeterminations
+
+    Caseworker->>Intake: POST /applications/{id}/complete-review
+    Intake-->>Workflow: intake.application.review_completed
+
+    Caseworker->>Intake: POST /applications/{id}/close
+    Intake->>Intake: application: under_review → closed

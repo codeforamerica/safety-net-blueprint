@@ -1,0 +1,5 @@
+Order,Condition,Action,Fallback,Description
+1,"{""=="":[{""var"":""this.data.subjectType""},""interview""]}","{""appendToArray"":{""entity"":""intake/applications/interview"",""idFrom"":""this.data.subjectId"",""field"":""appointments"",""value"":{""var"":""this.subject""}}}",,"Add the scheduled appointment ID to the linked Interview's appointments list (Decision 15).
+Only fires when the appointment's subjectType is ""interview"", ensuring non-interview
+appointments scheduled via the shared scheduling domain are ignored.
+"

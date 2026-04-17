@@ -145,6 +145,8 @@ Intake owns this entity because the obligation is regulatory (7 CFR § 273.2(e))
 
 **Key fields:** `id`, `applicationId`, `appointments` (array of appointmentIds from the scheduling domain — one-to-many to accommodate reschedules), `waiverGranted`, `waiverReason`, `completedAt`
 
+**Linkage constraint:** The `scheduling.appointment.scheduled` subscription can link an appointment to the correct Interview only when the caseworker schedules from within the application context, so the scheduling system can populate `subjectType: interview` and `subjectId: {interviewId}` on the appointment automatically. Scheduling from a standalone module without that context produces an unlinked appointment.
+
 See [Decision 15](#decision-15-interview-entity-model), [Decision 16](#decision-16-interview-task-creation-timing).
 
 ---
@@ -176,6 +178,8 @@ Based on regulatory requirements and vendor consensus:
 
 ## Domain events
 
+See [`docs/architecture/diagrams/intake-flow.mmd`](../diagrams/intake-flow.mmd) for a sequence diagram of the full intake flow across all domains.
+
 ### Event types
 
 The intake domain emits two kinds of events:
@@ -206,6 +210,8 @@ Events from other domains that intake reacts to:
 | `workflow.task.claimed` | A caseworker claiming the intake review task signals they have begun active review — intake should reflect this in the application lifecycle. See [Decision 8](#decision-8-submitted--under_review-transition-trigger). | Trigger `submitted → under_review` on the linked application |
 | `eligibility.determination_complete` | Eligibility publishes outcomes per program; intake subscribes to determine when all programs are resolved and the application can be closed. See [Decision 6](#decision-6-intake-phase-end--lifecycle-state). | Trigger `close` when all programs are determined |
 | `data-exchange.service-call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns inconclusive (e.g., FDSH citizenship check), the rules engine creates conditional document requests for affected members. See [Decision 14](#decision-14-document-checklist-generation), [Decision 18](#decision-18-data-exchange-orchestration). | Rules engine creates `intake/application-documents` for affected members |
+| `scheduling.appointment.scheduled` | Intake must link each scheduled appointment to the correct Interview entity so the appointments array stays current. Required for caseworkers to see appointment history and for the interview completion flow to be traceable. See [Decision 15](#decision-15-interview-entity-model). | Rules engine appends the appointmentId to `Interview.appointments` for the linked interview |
+| `document-management.document.verified` | When a document is verified, intake must reflect the updated status so caseworkers see current verification state during review without querying document management separately. | Rules engine updates `ApplicationDocument.status` to `verified` on the linked record |
 
 ---
 

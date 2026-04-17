@@ -71,11 +71,13 @@ export function createDeleteHandler(apiMetadata, endpoint) {
 
 /**
  * Extract the path parameter name from an OpenAPI path pattern.
- * Example: /cases/{caseId} => caseId
+ * Returns the LAST parameter so sub-item paths like
+ * /resources/{parentId}/sub/{subId} resolve to the sub-resource id.
  */
 function extractPathParam(path) {
-  const match = path.match(/\{([^}]+)\}/);
-  return match ? match[1] : 'id';
+  const matches = path.match(/\{([^}]+)\}/g);
+  if (!matches) return 'id';
+  return matches[matches.length - 1].replace(/[{}]/g, '');
 }
 
 /**

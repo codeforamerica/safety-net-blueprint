@@ -1,0 +1,5 @@
+Order,Condition,Action,Fallback,Description
+1,true,"{""createResource"":{""entity"":""data-exchange/service-calls"",""fields"":{""applicationId"":{""var"":""application.id""},""requestedAt"":{""var"":""this.time""}}}}",,"Initiate electronic verification when an application is submitted (Decision 18).
+Forward subscription — the data exchange domain fans out per-member checks internally
+(FDSH, IEVS, SAVE, SSA) and emits data-exchange.service-call.completed per result.
+"

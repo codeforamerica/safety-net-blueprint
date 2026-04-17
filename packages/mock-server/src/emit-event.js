@@ -9,8 +9,33 @@
  */
 
 import { randomUUID } from 'crypto';
-import { create } from './database-manager.js';
+import { create, insertResource } from './database-manager.js';
 import { eventBus } from './event-bus.js';
+
+/**
+ * Emit a pre-built CloudEvents 1.0 envelope directly to the event bus.
+ * Used by POST /platform/events to inject externally-sourced domain events
+ * (e.g., events from other domains during integration testing).
+ *
+ * Unlike emitEvent (which constructs the type from domain/object/action),
+ * this function stores the envelope as-is, preserving the caller-supplied id
+ * so injected events can be correlated with external systems.
+ *
+ * @param {Object} envelope - CloudEvents 1.0 object with at minimum `type` and `specversion`
+ * @returns {Object} The stored event record
+ */
+export function emitEventEnvelope(envelope) {
+  const record = {
+    specversion: '1.0',
+    datacontenttype: 'application/json',
+    ...envelope,
+    id: envelope.id || randomUUID(),
+    time: envelope.time || new Date().toISOString(),
+  };
+  insertResource('events', record);
+  eventBus.emit('domain-event', record);
+  return record;
+}
 
 /**
  * Emit a domain event.
