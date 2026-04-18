@@ -1,0 +1,167 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "definitions-schema.json",
+  "title": "Blueprint Definitions",
+  "description": "Schema for *.definitions.yaml companion files used to generate service blueprints from contracts.",
+  "type": "object",
+  "required": ["domain", "name", "stateMachine", "lanes", "phases"],
+  "additionalProperties": false,
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "Domain name matching the state machine's domain field (e.g. 'intake')."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name for the blueprint (used as the Figma frame title and SVG heading)."
+    },
+    "stateMachine": {
+      "type": "string",
+      "description": "Relative path from this file to the state machine YAML it references."
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered list of swim-lanes. The generator maps actors to lanes via the 'actors' field.",
+      "items": {
+        "$ref": "#/definitions/Lane"
+      }
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered list of blueprint phases. Each phase becomes a column in the grid.",
+      "items": {
+        "$ref": "#/definitions/Phase"
+      }
+    }
+  },
+  "definitions": {
+    "ActorType": {
+      "type": "string",
+      "enum": ["applicant", "caseworker", "supervisor", "system"]
+    },
+    "CardType": {
+      "type": "string",
+      "enum": [
+        "person-action",
+        "staff-action",
+        "system",
+        "policy",
+        "domain-event",
+        "data-entity",
+        "pain-point",
+        "opportunity",
+        "note"
+      ]
+    },
+    "Card": {
+      "type": "object",
+      "required": ["type", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/definitions/CardType" },
+        "actor": {
+          "$ref": "#/definitions/ActorType",
+          "description": "Required when type is 'person-action'. Determines card color."
+        },
+        "text": { "type": "string" },
+        "subtext": { "type": "string" }
+      }
+    },
+    "Lane": {
+      "type": "object",
+      "required": ["id", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "actors": {
+          "type": "array",
+          "description": "Actors whose person-action cards are placed in this lane. May be empty for editorial lanes (regulations, data-events).",
+          "items": { "$ref": "#/definitions/ActorType" }
+        }
+      }
+    },
+    "ActorCard": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string" },
+        "subtext": { "type": "string" }
+      }
+    },
+    "Event": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A state change that occurs during this phase. Use 'published' for events this domain emits (maps to a state machine transition trigger). Use 'subscribed' for events this domain receives from another domain (maps to a rules file 'on:' entry). Exactly one must be present.",
+      "properties": {
+        "published": {
+          "type": "string",
+          "description": "State machine transition trigger name. The generator derives person-action cards from the transition's actors list and a domain-event card from the transition's event effect."
+        },
+        "subscribed": {
+          "type": "string",
+          "description": "Cross-domain event name this domain subscribes to (e.g. 'workflow.task.claimed'). The generator resolves the triggered transition from the rules file, emits a domain-event card from that transition's event effect, and generates person-action cards from actorCards."
+        },
+        "actorCards": {
+          "type": "object",
+          "description": "Display text for person-action cards, keyed by actor name. For 'published' events, overrides auto-generated text. For 'subscribed' events, required — actors cannot be derived from the cross-domain event.",
+          "additionalProperties": { "$ref": "#/definitions/ActorCard" }
+        }
+      }
+    },
+    "Regulation": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Short label for the regulatory requirement."
+        },
+        "citation": {
+          "type": "string",
+          "description": "CFR or statutory citation (e.g. '7 CFR § 273.2(g)')."
+        },
+        "subtext": {
+          "type": "string",
+          "description": "Clarifying note (e.g. 'If household meets expedited criteria')."
+        }
+      }
+    },
+    "Phase": {
+      "type": "object",
+      "required": ["id", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "sublabel": { "type": "string" },
+        "description": {
+          "type": "string",
+          "description": "Prose explanation of what this phase represents. For human readers of the definitions file."
+        },
+        "events": {
+          "type": "array",
+          "description": "State machine triggers that occur in this phase. Generator uses these to derive person-action and domain-event cards. May be empty for editorial phases with no state machine trigger.",
+          "items": { "$ref": "#/definitions/Event" }
+        },
+        "regulations": {
+          "type": "array",
+          "description": "Policy and regulatory requirements that apply in this phase. Rendered as policy cards in the regulations lane.",
+          "items": { "$ref": "#/definitions/Regulation" }
+        },
+        "extras": {
+          "type": "object",
+          "description": "Cards that cannot be derived from the state machine. Keys are lane IDs. Use for: sub-domain actions (workflow, scheduling), editorial applicant-experience content, data entities, background system actions.",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/Card" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { Blueprint, Card, CardType, Cell, Lane, Phase } from './types.js';
+import { ActorType, Blueprint, Card, CardType, Cell, Lane, Phase } from './types.js';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -30,14 +30,23 @@ interface CardPalette {
 }
 
 const PALETTE: Record<CardType, CardPalette> = {
-  'staff-action': { headerBg: '#5C4B9A', bodyBg: '#EAE5F5', headerFg: '#FFFFFF', bodyFg: '#2A2040', label: 'STAFF ACTION' },
-  'system':       { headerBg: '#1E6B4A', bodyBg: '#D4EDE1', headerFg: '#FFFFFF', bodyFg: '#0A2E1E', label: 'SYSTEM'       },
-  'policy':       { headerBg: '#C4A882', bodyBg: '#F5EDE0', headerFg: '#3D2B0E', bodyFg: '#3D2B0E', label: 'POLICY'       },
-  'pain-point':   { headerBg: '#C05C5C', bodyBg: '#F5D4D4', headerFg: '#1A0A0A', bodyFg: '#2A1A1A', label: 'PAIN POINT'  },
-  'opportunity':  { headerBg: '#E8A030', bodyBg: '#FFF0D0', headerFg: '#3D2800', bodyFg: '#3D2800', label: 'OPPORTUNITY'  },
-  'domain-event': { headerBg: '#0D7B8C', bodyBg: '#D0EEF2', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT'        },
-  'data-entity':  { headerBg: '#2B5F8E', bodyBg: '#D0E2F0', headerFg: '#FFFFFF', bodyFg: '#0A1E34', label: 'DATA'         },
-  'note':         { headerBg: '#FFFDE7', bodyBg: '#FFFDE7', headerFg: '#333333', bodyFg: '#555555', label: ''             },
+  'staff-action':  { headerBg: '#5C4B9A', bodyBg: '#EAE5F5', headerFg: '#FFFFFF', bodyFg: '#2A2040', label: 'STAFF ACTION'  },
+  'system':        { headerBg: '#1E6B4A', bodyBg: '#D4EDE1', headerFg: '#FFFFFF', bodyFg: '#0A2E1E', label: 'SYSTEM'        },
+  'policy':        { headerBg: '#C4A882', bodyBg: '#F5EDE0', headerFg: '#3D2B0E', bodyFg: '#3D2B0E', label: 'POLICY'        },
+  'pain-point':    { headerBg: '#C05C5C', bodyBg: '#F5D4D4', headerFg: '#1A0A0A', bodyFg: '#2A1A1A', label: 'PAIN POINT'   },
+  'opportunity':   { headerBg: '#E8A030', bodyBg: '#FFF0D0', headerFg: '#3D2800', bodyFg: '#3D2800', label: 'OPPORTUNITY'   },
+  'domain-event':  { headerBg: '#0D7B8C', bodyBg: '#D0EEF2', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT'         },
+  'data-entity':   { headerBg: '#2B5F8E', bodyBg: '#D0E2F0', headerFg: '#FFFFFF', bodyFg: '#0A1E34', label: 'DATA'          },
+  'note':          { headerBg: '#FFFDE7', bodyBg: '#FFFDE7', headerFg: '#333333', bodyFg: '#555555', label: ''              },
+  'person-action': { headerBg: '#5C4B9A', bodyBg: '#EAE5F5', headerFg: '#FFFFFF', bodyFg: '#2A2040', label: 'PERSON'        },
+};
+
+// Per-actor colors for person-action cards. Overrides PALETTE['person-action'] when actor is set.
+const ACTOR_PALETTE: Record<ActorType, CardPalette> = {
+  'applicant':  { headerBg: '#D97C20', bodyBg: '#FDECD4', headerFg: '#3D1800', bodyFg: '#3D1800', label: 'APPLICANT'  },
+  'caseworker': { headerBg: '#5C4B9A', bodyBg: '#EAE5F5', headerFg: '#FFFFFF', bodyFg: '#2A2040', label: 'CASEWORKER' },
+  'supervisor': { headerBg: '#3D5C8C', bodyBg: '#D4DCE8', headerFg: '#FFFFFF', bodyFg: '#0A1E34', label: 'SUPERVISOR' },
+  'system':     { headerBg: '#1E6B4A', bodyBg: '#D4EDE1', headerFg: '#FFFFFF', bodyFg: '#0A2E1E', label: 'SYSTEM'     },
 };
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
@@ -147,7 +156,9 @@ function renderNoteCard(card: Card, cardWidth: number): FrameNode {
 
 // Typed cards: colored header (title + label) + lighter body (subtext).
 function renderTypedCard(card: Card, cardWidth: number): FrameNode {
-  const p = PALETTE[card.type];
+  const p = card.type === 'person-action' && card.actor
+    ? ACTOR_PALETTE[card.actor]
+    : PALETTE[card.type];
   const textWidth = cardWidth - CARD_PADDING * 2;
 
   const header = vFrame('header', 6);
@@ -218,7 +229,7 @@ function buildKey(blueprintName: string): FrameNode {
     'staff-action', 'system', 'policy',
     'pain-point', 'opportunity',
     'domain-event', 'data-entity',
-    'note',
+    'note', 'person-action',
   ];
 
   let y = 24 + title.height + 4 + sub.height + 20;

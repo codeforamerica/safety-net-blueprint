@@ -1,0 +1,273 @@
+# intake-definitions.yaml
+#
+# Blueprint definitions for the intake service blueprint.
+# Combined with intake-state-machine.yaml by generate-blueprint.js to produce
+# intake.json (Figma plugin input) and intake.svg (rendered output).
+#
+# How cards are generated:
+#   - Person-action cards come from the state machine transition's actors list
+#     (system actor is skipped; actorCards overrides provide the display text).
+#   - Domain-event cards come from the state machine transition's event effects.
+#   - Policy cards come from each phase's regulations list.
+#   - Everything else (data entities, background systems, editorial content not
+#     in the intake state machine) goes in extras, keyed by lane ID.
+#
+# Phases 3–5 (active-review, interview, decision) are editorial sub-phases of
+# the under_review state. They have no direct intake trigger event, so their
+# events list is empty and all cards come from extras.
+
+domain: intake
+name: "Intake Service Blueprint"
+stateMachine: "../../../../contracts/intake-state-machine.yaml"
+
+lanes:
+  - id: applicant
+    label: "Applicant"
+    actors: [applicant]
+  - id: caseworker
+    label: "Caseworker sees"
+    actors: [caseworker, supervisor]
+  - id: regulations
+    label: "Program requirements"
+    actors: []
+  - id: data-events
+    label: "Data & events"
+    actors: []
+  - id: background
+    label: "Background system"
+    actors: [system]
+
+phases:
+
+  # ── Phase 1: Submitted ─────────────────────────────────────────────────────
+  # State machine: submit trigger (draft → submitted), actors: [applicant, caseworker]
+  # Domain event: application.submitted
+  # Regulatory clocks start here.
+  - id: submitted
+    label: "1 · Submitted"
+    sublabel: "Application in queue"
+    description: >
+      Applicant has formally submitted their application. Regulatory processing
+      clocks start. Federal verification checks are initiated in the background.
+    events:
+      - published: submit
+        actorCards:
+          applicant:
+            text: "Submits application"
+            subtext: "Online or in person; starts the regulatory clock"
+          caseworker:
+            text: "Submits application on behalf of applicant"
+            subtext: "In-person or assisted submission"
+    regulations:
+      - text: "SNAP: 30-day processing clock starts"
+        citation: "7 CFR § 273.2(g)(1)"
+      - text: "Expedited SNAP: 7-day clock"
+        citation: "7 CFR § 273.2(i)"
+        subtext: "If household meets expedited criteria"
+      - text: "Medicaid: 45-day clock starts"
+        citation: "42 CFR § 435.912"
+        subtext: "90 days if disability determination needed"
+    extras:
+      applicant:
+        - type: person-action
+          actor: applicant
+          text: "Uploads supporting documents"
+          subtext: "Can happen at any time after submission — before or after caseworker claims"
+      data-events:
+        - type: data-entity
+          text: "Application created"
+          subtext: "status: submitted, submittedAt"
+        - type: data-entity
+          text: "VerificationItems created"
+          subtext: "Income, identity, and residency obligations"
+        - type: data-entity
+          text: "Workflow task created"
+          subtext: "Added to intake queue"
+      background:
+        - type: system
+          text: "Person matching attempted"
+          subtext: "Existing case or record lookup"
+        - type: system
+          text: "Federal checks initiated"
+          subtext: "FDSH, IEVS, SAVE, SSA"
+        - type: system
+          text: "Task added to intake queue"
+
+  # ── Phase 2: Under Review ──────────────────────────────────────────────────
+  # subscribed: workflow.task.claimed
+  #   intake-rules.yaml on: workflow.task.claimed → triggers 'open' transition
+  #   → emits application.opened
+  # The caseworker is the actor in the workflow domain who claims the task;
+  # the intake SM open transition is actors: [system] (fired programmatically).
+  - id: under-review
+    label: "2 · Under Review"
+    sublabel: "Caseworker claims task"
+    description: >
+      Caseworker has claimed the task and opened the application. The interview
+      is scheduled. If the household qualifies, the expedited SLA track is flagged.
+    events:
+      - subscribed: workflow.task.claimed
+        actorCards:
+          caseworker:
+            text: "Claims task and opens the case"
+            subtext: "Full application detail, verification checklist, and interview to schedule become visible"
+      - subscribed: scheduling.appointment.scheduled
+        # intake-rules.yaml: on scheduling.appointment.scheduled → appendToArray on Interview.appointments
+        # The caseworker scheduling the appointment is what causes this event to fire
+        actorCards:
+          caseworker:
+            text: "Schedules interview"
+    regulations: []
+    extras:
+      # TEMPORARY: remove once PR #241 (feat/intake-event-subscriptions) merges —
+      # scheduling.appointment.scheduled will resolve and generate this card automatically
+      caseworker:
+        - type: person-action
+          actor: caseworker
+          text: "Schedules interview"
+      data-events:
+        # flag-expedited is a conditional action — shown as a domain-event rather than
+        # generating ambiguous caseworker action cards in the main flow
+        - type: domain-event
+          text: "application.expedited_flagged"
+          subtext: "If applicable — escalates to 7-day SLA track"
+        - type: data-entity
+          text: "Application updated"
+          subtext: "status: under_review"
+        - type: data-entity
+          text: "Interview record created"
+      background:
+        - type: system
+          text: "Interview record created"
+        - type: system
+          text: "Application opened event emitted"
+
+  # ── Phase 3: Active Review ─────────────────────────────────────────────────
+  # No intake state machine trigger — editorial sub-phase of under_review.
+  # Represents the period when federal verification results arrive asynchronously
+  # (hours to days after submission). Caseworker monitors and follows up.
+  - id: active-review
+    label: "3 · Active Review"
+    sublabel: "Verifications arriving"
+    description: >
+      Federal verification results arrive asynchronously over hours to days.
+      Caseworker monitors the verification checklist and follows up on
+      inconclusive results by requesting additional documents.
+    events: []
+    regulations:
+      - text: "Federal verifications required"
+        citation: "42 U.S.C. § 1320b-7"
+        subtext: "FDSH (citizenship), SAVE (immigration), IEVS (income, SNAP only), SSA (SSN)"
+    extras:
+      applicant:
+        - type: person-action
+          actor: applicant
+          text: "Responds to verification requests"
+          subtext: "Provides documents or additional information requested by the caseworker"
+      caseworker:
+        - type: person-action
+          actor: caseworker
+          text: "Reviews verification results as they arrive"
+          subtext: "FDSH (citizenship), IEVS (income, SNAP), SAVE (immigration), SSA (SSN)"
+        - type: person-action
+          actor: caseworker
+          text: "Follows up on inconclusive checks"
+          subtext: "Requests additional documents when checklist items are added"
+      data-events:
+        - type: data-entity
+          text: "VerificationItems updated"
+          subtext: "Results from FDSH, IEVS, SAVE, SSA — set as results arrive"
+        - type: data-entity
+          text: "DataExchangeRequests"
+          subtext: "One per federal check; status updates as results return"
+      background:
+        - type: system
+          text: "Verification checklist updated"
+          subtext: "As results arrive — hours to days after submission"
+        - type: system
+          text: "VerificationItem fields updated"
+          subtext: "Citizenship status (FDSH), immigration status (SAVE)"
+
+  # ── Phase 4: Interview ─────────────────────────────────────────────────────
+  # No intake state machine trigger — editorial sub-phase of under_review.
+  # Represents the scheduled interview appointment. Required by SNAP policy
+  # before an eligibility determination can be made.
+  - id: interview
+    label: "4 · Interview"
+    sublabel: "Scheduled appointment"
+    description: >
+      Applicant attends the required SNAP interview. Caseworker resolves any
+      outstanding documents and inconclusive verification results.
+    events: []
+    regulations:
+      - text: "SNAP: Interview required before determination"
+        citation: "7 CFR § 273.2(e)"
+        subtext: "May be waived by state policy"
+    extras:
+      applicant:
+        - type: person-action
+          actor: applicant
+          text: "Attends interview"
+          subtext: "In person, by phone, or video depending on state policy"
+      caseworker:
+        - type: person-action
+          actor: caseworker
+          text: "Conducts interview"
+          subtext: "Resolves outstanding documents and inconclusive verification results"
+      data-events:
+        - type: data-entity
+          text: "Interview updated"
+          subtext: "Scheduled date, notes, and outcome recorded"
+      background:
+        - type: system
+          text: "Interview details recorded"
+
+  # ── Phase 5: Decision ──────────────────────────────────────────────────────
+  # State machine: close trigger (under_review → closed), actors: [caseworker, supervisor, system]
+  # Domain event: application.closed
+  #
+  # application.review_completed is not in the intake state machine — it is an
+  # inter-domain signal to the eligibility domain and is added via extras.
+  - id: decision
+    label: "5 · Decision"
+    sublabel: "Eligibility determined"
+    description: >
+      Caseworker makes eligibility determinations for each program. Intake closes
+      and a service case is created if the applicant is approved.
+    events:
+      - published: close
+        actorCards:
+          caseworker:
+            text: "Makes eligibility determination"
+            subtext: "Applies household size, income, and expense data; records outcome and date"
+          supervisor:
+            text: "Approves eligibility determination"
+    regulations:
+      - text: "SNAP: Determination within 30 days (7 if expedited)"
+        citation: "7 CFR § 273.2(g)"
+      - text: "Medicaid: Determination within 45 days"
+        citation: "42 CFR § 435.912"
+      - text: "Notice of Action required"
+        subtext: "Adverse action notice required for denials and closures"
+    extras:
+      applicant:
+        - type: person-action
+          actor: applicant
+          text: "Receives eligibility notice"
+          subtext: "Approval, denial, or pending notice per program"
+      data-events:
+        - type: domain-event
+          text: "application.review_completed"
+          subtext: "Signals eligibility domain to begin determination — no state change"
+        - type: data-entity
+          text: "Application updated"
+          subtext: "status: closed, disposition: approved | denied | referred"
+      background:
+        - type: system
+          text: "SNAP rules engine invoked"
+          subtext: "Income and expense calculations against household data"
+        - type: system
+          text: "Medicaid MAGI check"
+          subtext: "Real-time via state HIX or eligibility engine"
+        - type: system
+          text: "Notices generated and queued"

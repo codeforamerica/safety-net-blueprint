@@ -5,11 +5,16 @@
   "type": "module",
   "scripts": {
     "build": "node build.js",
-    "watch": "node build.js --watch"
+    "watch": "node build.js --watch",
+    "generate": "node generate-blueprint.js",
+    "validate": "node validate-definitions.js",
+    "render": "node render-svg.js"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.101.0",
+    "ajv": "^8.17.1",
     "esbuild": "^0.25.0",
+    "js-yaml": "^4.1.0",
     "typescript": "^5.7.0"
   }
 }
