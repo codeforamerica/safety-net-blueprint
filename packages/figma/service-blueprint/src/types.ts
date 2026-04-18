@@ -1,23 +1,22 @@
 export type CardType =
-  | 'ux-opportunity'       // green  — user experience improvement opportunity
-  | 'pain-point'           // orange — friction or barrier in the current experience
-  | 'program-requirement'  // blue   — regulatory or policy requirement
-  | 'data-entity'          // teal   — data entity created or updated
-  | 'domain-event'         // purple — event emitted by the system
-  | 'note';                // grey   — general annotation or process step
+  | 'staff-action'  // purple — caseworker or staff action
+  | 'system'        // green  — automated system action or output
+  | 'policy'        // beige  — regulatory or policy requirement
+  | 'pain-point'    // salmon — friction or barrier
+  | 'opportunity'   // amber  — UX opportunity or improvement idea
+  | 'domain-event'  // teal   — event emitted by the system
+  | 'data-entity'   // blue   — data entity created or updated (related to domain-event)
+  | 'note';         // cream  — general annotation (sticky-note style)
 
 export interface Card {
   type: CardType;
   text: string;
-  subtext?: string; // secondary line: citation, field list, detail
+  subtext?: string; // appears in the lighter body section below the colored header
 }
 
 export interface Lane {
   id: string;
   label: string;
-  headerBg: string; // hex — background color for the lane label cell
-  headerFg: string; // hex — text color for the lane label
-  rowBg?: string;   // hex — optional tint for the lane row background
 }
 
 export interface Phase {

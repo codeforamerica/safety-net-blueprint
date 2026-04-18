@@ -1,34 +1,48 @@
 import { Blueprint, Card, CardType, Cell, Lane, Phase } from './types.js';
 
-// ── Layout constants ─────────────────────────────────────────────────────────
+// ── Layout constants ──────────────────────────────────────────────────────────
 
-const LANE_LABEL_WIDTH = 140;
 const PHASE_WIDTH      = 280;
-const HEADER_HEIGHT    = 56;
+const LANE_LABEL_WIDTH = 120;
+const HEADER_HEIGHT    = 64;
 const CELL_PADDING     = 12;
-const CARD_GAP         = 8;
-const CARD_CORNER      = 6;
-const BORDER_COLOR     = '#DEE2E6';
-const HEADER_BG        = '#1565C0';
-const HEADER_FG        = '#FFFFFF';
-const PHASE_SUB_FG     = '#90CAF9';
+const CARD_WIDTH       = PHASE_WIDTH - CELL_PADDING * 2;  // 256
+const CARD_PADDING     = 14;
+const CARD_CORNER      = 8;
+const CARD_GAP         = 12;
+const KEY_CARD_WIDTH   = 220;
+const KEY_PANEL_WIDTH  = KEY_CARD_WIDTH + 40;
+const KEY_GAP          = 56;
+const KEY_TOTAL        = KEY_PANEL_WIDTH + KEY_GAP;
+const ROW_MIN_HEIGHT   = 80;
 
-// ── Card color palette ───────────────────────────────────────────────────────
+// ── Card palette ──────────────────────────────────────────────────────────────
+// Colors match the established service blueprint convention.
+// domain-event and data-entity use related teal/blue tones (both are data-layer concerns).
+// No icon prefixes — Unicode characters don't match the SVG icons in existing blueprints.
 
-interface CardPalette { bg: string; fg: string; border: string; label: string }
+interface CardPalette {
+  headerBg: string;
+  bodyBg:   string;
+  headerFg: string;
+  bodyFg:   string;
+  label:    string;
+}
 
-const CARD_PALETTE: Record<CardType, CardPalette> = {
-  'ux-opportunity':      { bg: '#E8F5E9', fg: '#2E7D32', border: '#66BB6A', label: 'UX opportunity' },
-  'pain-point':          { bg: '#FBE9E7', fg: '#BF360C', border: '#FF8A65', label: 'Pain point' },
-  'program-requirement': { bg: '#E3F2FD', fg: '#1565C0', border: '#64B5F6', label: 'Requirement' },
-  'data-entity':         { bg: '#E0F2F1', fg: '#00695C', border: '#4DB6AC', label: 'Data' },
-  'domain-event':        { bg: '#EDE7F6', fg: '#4527A0', border: '#9575CD', label: 'Event' },
-  'note':                { bg: '#F5F5F5', fg: '#424242', border: '#BDBDBD', label: '' },
+const PALETTE: Record<CardType, CardPalette> = {
+  'staff-action': { headerBg: '#5C4B9A', bodyBg: '#EAE5F5', headerFg: '#FFFFFF', bodyFg: '#2A2040', label: 'STAFF ACTION' },
+  'system':       { headerBg: '#1E6B4A', bodyBg: '#D4EDE1', headerFg: '#FFFFFF', bodyFg: '#0A2E1E', label: 'SYSTEM'       },
+  'policy':       { headerBg: '#C4A882', bodyBg: '#F5EDE0', headerFg: '#3D2B0E', bodyFg: '#3D2B0E', label: 'POLICY'       },
+  'pain-point':   { headerBg: '#C05C5C', bodyBg: '#F5D4D4', headerFg: '#1A0A0A', bodyFg: '#2A1A1A', label: 'PAIN POINT'  },
+  'opportunity':  { headerBg: '#E8A030', bodyBg: '#FFF0D0', headerFg: '#3D2800', bodyFg: '#3D2800', label: 'OPPORTUNITY'  },
+  'domain-event': { headerBg: '#0D7B8C', bodyBg: '#D0EEF2', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT'        },
+  'data-entity':  { headerBg: '#2B5F8E', bodyBg: '#D0E2F0', headerFg: '#FFFFFF', bodyFg: '#0A1E34', label: 'DATA'         },
+  'note':         { headerBg: '#FFFDE7', bodyBg: '#FFFDE7', headerFg: '#333333', bodyFg: '#555555', label: ''             },
 };
 
-// ── Color helpers ────────────────────────────────────────────────────────────
+// ── Color helpers ─────────────────────────────────────────────────────────────
 
-function hex(h: string): RGB {
+function rgb(h: string): RGB {
   return {
     r: parseInt(h.slice(1, 3), 16) / 255,
     g: parseInt(h.slice(3, 5), 16) / 255,
@@ -37,240 +51,318 @@ function hex(h: string): RGB {
 }
 
 function fill(color: string): SolidPaint[] {
-  return [{ type: 'SOLID', color: hex(color) }];
+  return [{ type: 'SOLID', color: rgb(color) }];
 }
 
-function stroke(color: string): SolidPaint[] {
-  return [{ type: 'SOLID', color: hex(color) }];
-}
+// ── Frame helpers ─────────────────────────────────────────────────────────────
 
-// ── Frame helpers ────────────────────────────────────────────────────────────
-
-function frame(name: string): FrameNode {
+function vFrame(name: string, gap = 0): FrameNode {
   const f = figma.createFrame();
   f.name = name;
   f.fills = [];
+  f.layoutMode = 'VERTICAL';
+  f.primaryAxisSizingMode = 'AUTO';
+  f.counterAxisSizingMode = 'AUTO';
+  f.itemSpacing = gap;
   f.clipsContent = false;
   return f;
 }
 
-function hStack(name: string, gap = 0): FrameNode {
-  const f = frame(name);
-  f.layoutMode = 'HORIZONTAL';
-  f.primaryAxisSizingMode = 'AUTO';
-  f.counterAxisSizingMode = 'AUTO';
-  f.primaryAxisAlignItems = 'MIN';
-  f.counterAxisAlignItems = 'MIN';
-  f.itemSpacing = gap;
+function freeFrame(name: string): FrameNode {
+  const f = figma.createFrame();
+  f.name = name;
+  f.fills = [];
+  f.layoutMode = 'NONE';
+  f.clipsContent = false;
   return f;
 }
 
-function vStack(name: string, gap = 0): FrameNode {
-  const f = frame(name);
-  f.layoutMode = 'VERTICAL';
-  f.primaryAxisSizingMode = 'AUTO';
-  f.counterAxisSizingMode = 'AUTO';
-  f.primaryAxisAlignItems = 'MIN';
-  f.counterAxisAlignItems = 'MIN';
-  f.itemSpacing = gap;
-  return f;
-}
+// ── Text helper ───────────────────────────────────────────────────────────────
 
-// ── Text helper ──────────────────────────────────────────────────────────────
-
-function text(
+function txt(
   content: string,
   size: number,
   style: 'Regular' | 'Medium' | 'Semi Bold',
   color: string,
-  width?: number
+  wrapWidth?: number
 ): TextNode {
   const t = figma.createText();
   t.fontName = { family: 'Inter', style };
   t.fontSize = size;
   t.fills = fill(color);
   t.characters = content;
-  if (width !== undefined) {
+  if (wrapWidth !== undefined) {
     t.textAutoResize = 'HEIGHT';
-    t.resize(width, t.height);
+    t.resize(wrapWidth, t.height);
   }
   return t;
 }
 
-// ── Card renderer ────────────────────────────────────────────────────────────
+// ── Divider helpers ───────────────────────────────────────────────────────────
 
-function renderCard(card: Card): FrameNode {
-  const palette = CARD_PALETTE[card.type];
-  const textWidth = PHASE_WIDTH - CELL_PADDING * 2 - CARD_PADDING * 2;
+function hDivider(container: FrameNode, x: number, y: number, width: number, color = '#CCCCCC'): void {
+  const r = figma.createRectangle();
+  container.appendChild(r);
+  r.x = x; r.y = y;
+  r.resize(width, 1);
+  r.fills = fill(color);
+}
 
-  const wrapper = vStack(`card:${card.type}`, 4);
-  wrapper.paddingTop    = CARD_PADDING;
-  wrapper.paddingBottom = CARD_PADDING;
-  wrapper.paddingLeft   = CARD_PADDING;
-  wrapper.paddingRight  = CARD_PADDING;
-  wrapper.fills         = fill(palette.bg);
-  wrapper.strokes       = stroke(palette.border);
-  wrapper.strokeWeight  = 1;
-  wrapper.cornerRadius  = CARD_CORNER;
-  wrapper.resize(PHASE_WIDTH - CELL_PADDING * 2, 1);
-  wrapper.primaryAxisSizingMode   = 'AUTO';
-  wrapper.counterAxisSizingMode   = 'FIXED';
+function vDivider(container: FrameNode, x: number, y: number, height: number, color = '#DDDDDD'): void {
+  const r = figma.createRectangle();
+  container.appendChild(r);
+  r.x = x; r.y = y;
+  r.resize(1, height);
+  r.fills = fill(color);
+}
 
-  if (palette.label) {
-    const label = text(palette.label, 9, 'Semi Bold', palette.fg, textWidth);
-    wrapper.appendChild(label);
-    label.layoutSizingHorizontal = 'FILL';
-  }
+// ── Card rendering ────────────────────────────────────────────────────────────
 
-  const main = text(card.text, 11, 'Medium', palette.fg, textWidth);
-  wrapper.appendChild(main);
-  main.layoutSizingHorizontal = 'FILL';
+// Note cards: single cream section, no type label.
+function renderNoteCard(card: Card, cardWidth: number): FrameNode {
+  const p = PALETTE['note'];
+  const textWidth = cardWidth - CARD_PADDING * 2;
+
+  const f = vFrame('card:note', 6);
+  f.fills = fill(p.headerBg);
+  f.paddingTop = f.paddingBottom = CARD_PADDING;
+  f.paddingLeft = f.paddingRight = CARD_PADDING;
+  f.resize(cardWidth, 1);
+  f.primaryAxisSizingMode = 'AUTO';
+  f.counterAxisSizingMode = 'FIXED';
+  f.cornerRadius = CARD_CORNER;
+
+  const titleNode = txt(card.text, 13, 'Semi Bold', p.headerFg, textWidth);
+  f.appendChild(titleNode);
+  titleNode.layoutSizingHorizontal = 'FILL';
 
   if (card.subtext) {
-    const sub = text(card.subtext, 10, 'Regular', palette.fg, textWidth);
-    sub.opacity = 0.72;
-    wrapper.appendChild(sub);
+    const sub = txt(card.subtext, 11, 'Regular', p.bodyFg, textWidth);
+    f.appendChild(sub);
     sub.layoutSizingHorizontal = 'FILL';
   }
 
-  return wrapper;
+  return f;
 }
 
-// ── Cell renderer ────────────────────────────────────────────────────────────
+// Typed cards: colored header (title + label) + lighter body (subtext).
+function renderTypedCard(card: Card, cardWidth: number): FrameNode {
+  const p = PALETTE[card.type];
+  const textWidth = cardWidth - CARD_PADDING * 2;
 
-function renderCell(cards: Card[], phaseId: string, laneId: string): FrameNode {
-  const cell = vStack(`cell:${laneId}/${phaseId}`, CARD_GAP);
-  cell.paddingTop    = CELL_PADDING;
-  cell.paddingBottom = CELL_PADDING;
-  cell.paddingLeft   = CELL_PADDING;
-  cell.paddingRight  = CELL_PADDING;
-  cell.resize(PHASE_WIDTH, 1);
-  cell.primaryAxisSizingMode = 'AUTO';
-  cell.counterAxisSizingMode = 'FIXED';
-  cell.strokes      = stroke(BORDER_COLOR);
-  cell.strokeWeight = 1;
-  cell.strokeAlign  = 'INSIDE';
+  const header = vFrame('header', 6);
+  header.fills = fill(p.headerBg);
+  header.paddingTop = header.paddingBottom = CARD_PADDING;
+  header.paddingLeft = header.paddingRight = CARD_PADDING;
+  header.resize(cardWidth, 1);
+  header.primaryAxisSizingMode = 'AUTO';
+  header.counterAxisSizingMode = 'FIXED';
 
-  for (const card of cards) {
-    cell.appendChild(renderCard(card));
+  const titleNode = txt(card.text, 14, 'Semi Bold', p.headerFg, textWidth);
+  header.appendChild(titleNode);
+  titleNode.layoutSizingHorizontal = 'FILL';
+
+  const labelNode = txt(p.label, 11, 'Regular', p.headerFg, textWidth);
+  header.appendChild(labelNode);
+  labelNode.layoutSizingHorizontal = 'FILL';
+
+  const cardFrame = vFrame(`card:${card.type}`, 0);
+  cardFrame.resize(cardWidth, 1);
+  cardFrame.primaryAxisSizingMode = 'AUTO';
+  cardFrame.counterAxisSizingMode = 'FIXED';
+  cardFrame.cornerRadius = CARD_CORNER;
+  cardFrame.clipsContent = true;
+  cardFrame.appendChild(header);
+
+  if (card.subtext) {
+    const body = vFrame('body', 0);
+    body.fills = fill(p.bodyBg);
+    body.paddingTop = body.paddingBottom = CARD_PADDING;
+    body.paddingLeft = body.paddingRight = CARD_PADDING;
+    body.resize(cardWidth, 1);
+    body.primaryAxisSizingMode = 'AUTO';
+    body.counterAxisSizingMode = 'FIXED';
+
+    const sub = txt(card.subtext, 12, 'Regular', p.bodyFg, textWidth);
+    body.appendChild(sub);
+    sub.layoutSizingHorizontal = 'FILL';
+
+    cardFrame.appendChild(body);
   }
 
-  return cell;
+  return cardFrame;
 }
 
-// ── Phase header cell ────────────────────────────────────────────────────────
+export function renderCard(card: Card, cardWidth: number = CARD_WIDTH): FrameNode {
+  return card.type === 'note'
+    ? renderNoteCard(card, cardWidth)
+    : renderTypedCard(card, cardWidth);
+}
 
-function renderPhaseHeader(phase: Phase): FrameNode {
-  const cell = vStack(`phase:${phase.id}`, 4);
-  cell.paddingTop    = 10;
-  cell.paddingBottom = 10;
-  cell.paddingLeft   = 12;
-  cell.paddingRight  = 12;
-  cell.resize(PHASE_WIDTH, HEADER_HEIGHT);
-  cell.primaryAxisSizingMode = 'FIXED';
-  cell.counterAxisSizingMode = 'FIXED';
-  cell.primaryAxisAlignItems = 'CENTER';
-  cell.fills   = fill(HEADER_BG);
-  cell.strokes = stroke(BORDER_COLOR);
-  cell.strokeWeight = 1;
-  cell.strokeAlign  = 'INSIDE';
+// ── Legend key ────────────────────────────────────────────────────────────────
 
-  cell.appendChild(text(phase.label, 13, 'Semi Bold', HEADER_FG));
-  if (phase.sublabel) {
-    cell.appendChild(text(phase.sublabel, 11, 'Regular', PHASE_SUB_FG));
+function buildKey(blueprintName: string): FrameNode {
+  const panel = freeFrame('Legend');
+  panel.fills = fill('#F8F8F8');
+  panel.resize(KEY_PANEL_WIDTH, 100);
+
+  const title = txt(blueprintName, 13, 'Semi Bold', '#1A1A1A');
+  panel.appendChild(title);
+  title.x = 20; title.y = 24;
+
+  const sub = txt('Card types — copy to add', 10, 'Regular', '#888888');
+  panel.appendChild(sub);
+  sub.x = 20; sub.y = 24 + title.height + 4;
+
+  const types: CardType[] = [
+    'staff-action', 'system', 'policy',
+    'pain-point', 'opportunity',
+    'domain-event', 'data-entity',
+    'note',
+  ];
+
+  let y = 24 + title.height + 4 + sub.height + 20;
+  for (const type of types) {
+    const p = PALETTE[type];
+    const sample = renderCard(
+      { type, text: p.label || 'Note', subtext: 'Description' },
+      KEY_CARD_WIDTH
+    );
+    panel.appendChild(sample);
+    sample.x = 20; sample.y = y;
+    y += sample.height + 10;
   }
 
-  return cell;
+  panel.resize(KEY_PANEL_WIDTH, y + 24);
+  return panel;
 }
 
-// ── Lane label cell ──────────────────────────────────────────────────────────
-
-function renderLaneLabel(lane: Lane, height: number): FrameNode {
-  const cell = vStack(`lane:${lane.id}`);
-  cell.resize(LANE_LABEL_WIDTH, height);
-  cell.primaryAxisSizingMode = 'FIXED';
-  cell.counterAxisSizingMode = 'FIXED';
-  cell.primaryAxisAlignItems = 'CENTER';
-  cell.counterAxisAlignItems = 'CENTER';
-  cell.fills   = fill(lane.headerBg);
-  cell.strokes = stroke(BORDER_COLOR);
-  cell.strokeWeight = 1;
-  cell.strokeAlign  = 'INSIDE';
-
-  const label = text(lane.label, 12, 'Semi Bold', lane.headerFg);
-  label.textAlignHorizontal = 'CENTER';
-  label.textAutoResize = 'WIDTH_AND_HEIGHT';
-  cell.appendChild(label);
-
-  return cell;
-}
-
-// ── Corner cell ──────────────────────────────────────────────────────────────
-
-function renderCorner(): FrameNode {
-  const cell = frame('corner');
-  cell.resize(LANE_LABEL_WIDTH, HEADER_HEIGHT);
-  cell.fills   = fill(HEADER_BG);
-  cell.strokes = stroke(BORDER_COLOR);
-  cell.strokeWeight = 1;
-  cell.strokeAlign  = 'INSIDE';
-  return cell;
-}
-
-// ── Main render function ─────────────────────────────────────────────────────
+// ── Main render ───────────────────────────────────────────────────────────────
 
 export async function renderBlueprint(blueprint: Blueprint): Promise<void> {
   await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
   await figma.loadFontAsync({ family: 'Inter', style: 'Medium' });
   await figma.loadFontAsync({ family: 'Inter', style: 'Semi Bold' });
 
-  // Index cells by "laneId/phaseId"
   const cellMap = new Map<string, Cell>();
   for (const cell of blueprint.cells) {
     cellMap.set(`${cell.laneId}/${cell.phaseId}`, cell);
   }
 
-  const outer = vStack(blueprint.name, 0);
-  outer.fills = fill('#FFFFFF');
+  // ── First pass: render all cards, compute row heights ──────────────────────
+  // Cards are NOT wrapped in cell frames — they become direct children of the
+  // container so designers can select and drag them with a single click.
 
-  // ── Header row ──
-  const headerRow = hStack('header', 0);
-  headerRow.appendChild(renderCorner());
-  for (const phase of blueprint.phases) {
-    headerRow.appendChild(renderPhaseHeader(phase));
-  }
-  outer.appendChild(headerRow);
+  interface RenderedCell { cards: FrameNode[]; contentHeight: number }
+  const cellGrid: RenderedCell[][] = [];
+  const rowHeights: number[] = [];
 
-  // ── Lane rows ──
   for (const lane of blueprint.lanes) {
-    // Render all phase cells first so we can measure the tallest one
-    const cells: FrameNode[] = blueprint.phases.map((phase) => {
+    const laneRow: RenderedCell[] = [];
+    let maxH = ROW_MIN_HEIGHT;
+
+    for (const phase of blueprint.phases) {
       const entry = cellMap.get(`${lane.id}/${phase.id}`);
-      return renderCell(entry?.cards ?? [], phase.id, lane.id);
-    });
+      const cards = (entry?.cards ?? []).map(c => renderCard(c, CARD_WIDTH));
 
-    // Row height = tallest cell (after auto-layout settles)
-    // Figma auto-layout sizes frames when children are added to the canvas.
-    // We use a temporary parent to force layout, then measure.
-    const tempRow = hStack('_measure', 0);
-    figma.currentPage.appendChild(tempRow);
-    for (const c of cells) tempRow.appendChild(c);
-    const rowHeight = Math.max(tempRow.height, 80);
-    // Detach children to re-parent into the real row
-    for (const c of cells) c.remove();
-    tempRow.remove();
+      let h = CELL_PADDING;
+      for (const card of cards) h += card.height + CARD_GAP;
+      if (cards.length > 0) h = h - CARD_GAP + CELL_PADDING;
+      else h = CELL_PADDING * 2;
 
-    const row = hStack(`lane:${lane.id}`, 0);
-    if (lane.rowBg) row.fills = fill(lane.rowBg);
+      const contentHeight = Math.max(h, ROW_MIN_HEIGHT);
+      laneRow.push({ cards, contentHeight });
+      maxH = Math.max(maxH, contentHeight);
+    }
 
-    row.appendChild(renderLaneLabel(lane, rowHeight));
-    for (const c of cells) row.appendChild(c);
-
-    outer.appendChild(row);
+    cellGrid.push(laneRow);
+    rowHeights.push(maxH);
   }
 
-  figma.currentPage.appendChild(outer);
-  figma.viewport.scrollAndZoomIntoView([outer]);
+  const tableWidth  = LANE_LABEL_WIDTH + blueprint.phases.length * PHASE_WIDTH;
+  const tableHeight = HEADER_HEIGHT + rowHeights.reduce((a, b) => a + b, 0);
+  const totalWidth  = KEY_TOTAL + tableWidth;
 
+  // ── Container ──────────────────────────────────────────────────────────────
+  const container = freeFrame(blueprint.name);
+  container.fills = fill('#FFFFFF');
+  container.resize(totalWidth, Math.max(tableHeight, 400));
+  figma.currentPage.appendChild(container);
+
+  // ── Legend key ─────────────────────────────────────────────────────────────
+  const key = buildKey(blueprint.name);
+  container.appendChild(key);
+  key.x = 0; key.y = 0;
+
+  const bpX = KEY_TOTAL; // blueprint left edge
+
+  // ── Phase headers ──────────────────────────────────────────────────────────
+  for (let i = 0; i < blueprint.phases.length; i++) {
+    const phase = blueprint.phases[i];
+    const colX = bpX + LANE_LABEL_WIDTH + i * PHASE_WIDTH;
+
+    const label = txt(phase.label, 15, 'Semi Bold', '#1A1A1A');
+    container.appendChild(label);
+    label.x = colX + (PHASE_WIDTH - label.width) / 2;
+    label.y = 12;
+
+    if (phase.sublabel) {
+      const sub = txt(phase.sublabel, 11, 'Regular', '#888888');
+      container.appendChild(sub);
+      sub.x = colX + (PHASE_WIDTH - sub.width) / 2;
+      sub.y = 12 + label.height + 4;
+    }
+  }
+
+  hDivider(container, bpX, HEADER_HEIGHT, tableWidth, '#AAAAAA');
+
+  // ── Lane rows ──────────────────────────────────────────────────────────────
+  let y = HEADER_HEIGHT;
+
+  for (let li = 0; li < blueprint.lanes.length; li++) {
+    const lane = blueprint.lanes[li];
+    const rowH = rowHeights[li];
+
+    if (li > 0) hDivider(container, bpX, y, tableWidth, '#CCCCCC');
+
+    // Lane label
+    const laneLabel = txt(lane.label, 11, 'Semi Bold', '#555555');
+    container.appendChild(laneLabel);
+    laneLabel.x = bpX + (LANE_LABEL_WIDTH - laneLabel.width) / 2;
+    laneLabel.y = y + (rowH - laneLabel.height) / 2;
+
+    // Lane label column divider
+    vDivider(container, bpX + LANE_LABEL_WIDTH, y, rowH);
+
+    // Cards — placed directly in container (no cell wrapper)
+    for (let pi = 0; pi < blueprint.phases.length; pi++) {
+      const { cards } = cellGrid[li][pi];
+      const baseX = bpX + LANE_LABEL_WIDTH + pi * PHASE_WIDTH;
+
+      let cardY = y + CELL_PADDING;
+      for (const card of cards) {
+        container.appendChild(card);
+        card.x = baseX + CELL_PADDING;
+        card.y = cardY;
+        cardY += card.height + CARD_GAP;
+      }
+
+      // Phase column divider
+      if (pi < blueprint.phases.length - 1) {
+        vDivider(container, baseX + PHASE_WIDTH, y, rowH);
+      }
+    }
+
+    y += rowH;
+  }
+
+  // Outer edges
+  hDivider(container, bpX, y, tableWidth, '#AAAAAA');
+  vDivider(container, bpX, HEADER_HEIGHT, y - HEADER_HEIGHT, '#AAAAAA');
+  vDivider(container, bpX + tableWidth, HEADER_HEIGHT, y - HEADER_HEIGHT, '#AAAAAA');
+
+  container.resize(totalWidth, Math.max(y, 400));
+
+  figma.viewport.scrollAndZoomIntoView([container]);
   figma.notify(`Generated: ${blueprint.name}`);
 }
