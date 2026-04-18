@@ -2,14 +2,29 @@
 /**
  * generate-blueprint.js
  *
- * Reads a blueprint definitions YAML file and its referenced state machine YAML,
+ * Reads a blueprint context YAML file and its referenced state machine YAML,
  * then writes a blueprint JSON file consumable by the Figma plugin.
  *
  * Usage:
- *   node generate-blueprint.js src/blueprints/intake-definitions.yaml
- *   npm run generate -- src/blueprints/intake-definitions.yaml
+ *   node generate-blueprint.js src/blueprints/intake-context.yaml
+ *   npm run generate -- src/blueprints/intake-context.yaml
  *
- * Output: src/blueprints/<domain>.json  (alongside the definitions file)
+ * Output: <input-dir>/<domain>.json  (alongside the context file)
+ *
+ * Context file structure:
+ *   Each sub-phase has a 'cards' map keyed by lane ID. Cards are listed in
+ *   the order they appear on the blueprint.
+ *
+ *   An item with an 'event' field is an event slot — it expands in-place:
+ *     - In actor lanes (applicant, caseworker, system, etc.) → person-action card
+ *     - In the 'data' lane → domain-event card derived from the transition's event effect
+ *
+ *   If an event slot references an event not yet in the state machine or rules
+ *   file but provides explicit 'text', the card is still generated (with a warning).
+ *   This allows context files to reference events that are not yet wired up.
+ *
+ *   All other items are passed through as regular cards.
+ *   Policy cards support a 'citation' field that is merged into subtext.
  */
 
 import { readFileSync, writeFileSync } from 'fs';
@@ -23,7 +38,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const defsPath = process.argv[2];
 if (!defsPath) {
-  console.error('Usage: node generate-blueprint.js <definitions.yaml>');
+  console.error('Usage: node generate-blueprint.js <context.yaml>');
   process.exit(1);
 }
 
@@ -43,7 +58,7 @@ try {
   const rules = yaml.load(readFileSync(rulesPath, 'utf8'));
   ruleSets = rules.ruleSets ?? [];
 } catch {
-  // No rules file found — subscribed-event phase triggers won't resolve
+  // No rules file found — subscribed event slots won't resolve to domain-event cards
 }
 
 // ── Build transition index ────────────────────────────────────────────────────
@@ -56,8 +71,6 @@ for (const t of (sm.transitions ?? [])) {
 // ── Build subscribed-event index ──────────────────────────────────────────────
 // Maps external event name → the SM transition it triggers (or null if the rule
 // set uses a non-transition action like appendToArray or createResource).
-// Multiple rule sets may share the same on: value (e.g. workflow.task.claimed);
-// the first one with a triggerTransition wins for domain-event card derivation.
 
 const subscribedEvents = new Map(); // event name → SM transition | null
 
@@ -68,16 +81,17 @@ for (const ruleSet of ruleSets) {
     const name = rule.action?.triggerTransition?.transition;
     if (name) { transition = smTransitions.get(name) ?? null; break; }
   }
-  // Only set if not seen yet, or if we now have a transition and previously had null
   if (!subscribedEvents.has(ruleSet.on) || (transition && !subscribedEvents.get(ruleSet.on))) {
     subscribedEvents.set(ruleSet.on, transition);
   }
 }
 
-// ── Build actor → lane mapping ────────────────────────────────────────────────
+// ── Build lane maps ───────────────────────────────────────────────────────────
 
 const actorToLane = new Map(); // actor string → lane id
+const laneToActors = new Map(); // lane id → actor[]
 for (const lane of (defs.lanes ?? [])) {
+  laneToActors.set(lane.id, lane.actors ?? []);
   for (const actor of (lane.actors ?? [])) {
     actorToLane.set(actor, lane.id);
   }
@@ -85,120 +99,32 @@ for (const lane of (defs.lanes ?? [])) {
 
 // ── Build blueprint ───────────────────────────────────────────────────────────
 
-const lanes  = defs.lanes.map(l => ({ id: l.id, label: l.label }));
+const lanes = defs.lanes.map(l => ({ id: l.id, label: l.label }));
+
 const phases = defs.phases.map(p => ({
-  id: p.id, label: p.label, ...(p.sublabel ? { sublabel: p.sublabel } : {}),
+  id: p.id,
+  label: p.label,
+  subPhases: p.subPhases.map(sp => ({ id: sp.id, label: sp.label })),
 }));
 
-// cellCards[laneId/phaseId] = Card[]
+// cellCards[laneId/subPhaseId] = Card[]
 const cellCards = new Map();
-const getCell = (laneId, phaseId) => {
-  const key = `${laneId}/${phaseId}`;
+const getCell = (laneId, subPhaseId) => {
+  const key = `${laneId}/${subPhaseId}`;
   if (!cellCards.has(key)) cellCards.set(key, []);
   return cellCards.get(key);
 };
 
 for (const phase of defs.phases) {
-
-  // 1. Person-action and domain-event cards from phase events
-  for (const evt of (phase.events ?? [])) {
-    let transition;
-
-    if (evt.published) {
-      // published: domain emits this event via a state machine transition actor initiates
-      transition = smTransitions.get(evt.published);
-      if (!transition) {
-        console.warn(`Warning: published trigger '${evt.published}' not found in state machine (phase '${phase.id}')`);
-        continue;
-      }
-
-      // Person-action cards — one per non-system actor
-      for (const actor of (transition.actors ?? [])) {
-        if (actor === 'system') continue;
-        const laneId = actorToLane.get(actor);
-        if (!laneId) {
-          console.warn(`Warning: actor '${actor}' has no mapped lane (phase '${phase.id}')`);
-          continue;
+  for (const subPhase of (phase.subPhases ?? [])) {
+    for (const [laneId, cardItems] of Object.entries(subPhase.cards ?? {})) {
+      for (const item of cardItems) {
+        if (item.event) {
+          expandEventSlot(item, laneId, subPhase.id);
+        } else {
+          getCell(laneId, subPhase.id).push(buildRegularCard(item));
         }
-        const override = evt.actorCards?.[actor];
-        const card = {
-          type: 'person-action',
-          actor,
-          text: override?.text ?? `${titleCase(actor)}: ${transition.trigger}`,
-          ...(override?.subtext ? { subtext: override.subtext } : {}),
-        };
-        getCell(laneId, phase.id).push(card);
       }
-
-    } else if (evt.subscribed) {
-      // subscribed: domain receives this event from another domain; rules file maps it to an SM transition
-      if (!subscribedEvents.has(evt.subscribed)) {
-        console.warn(`Warning: subscribed event '${evt.subscribed}' not found in rules file (phase '${phase.id}')`);
-        continue;
-      }
-      transition = subscribedEvents.get(evt.subscribed); // may be null
-
-      // Person-action cards come from actorCards only — actors cannot be derived from the external event
-      for (const [actor, override] of Object.entries(evt.actorCards ?? {})) {
-        const laneId = actorToLane.get(actor);
-        if (!laneId) {
-          console.warn(`Warning: actor '${actor}' has no mapped lane (phase '${phase.id}')`);
-          continue;
-        }
-        const card = {
-          type: 'person-action',
-          actor,
-          text: override.text,
-          ...(override.subtext ? { subtext: override.subtext } : {}),
-        };
-        getCell(laneId, phase.id).push(card);
-      }
-
-      // If no transition is triggered, no domain-event card — any data side-effects go in extras
-      if (!transition) continue;
-
-    } else {
-      console.warn(`Warning: event in phase '${phase.id}' has neither 'published' nor 'subscribed' — skipping`);
-      continue;
-    }
-
-    // Domain-event card — from the resolved transition's event effect (applies to both published and subscribed)
-    const eventEffect = (transition.effects ?? []).find(e => e.type === 'event');
-    if (eventEffect) {
-      const raw = eventEffect.description ?? '';
-      const subtext = raw.replace(/^Emit [^\u2014]+\u2014\s*/, '').trim();
-      const objectPrefix = sm.object ? sm.object.toLowerCase() : sm.domain;
-      const card = {
-        type: 'domain-event',
-        text: `${objectPrefix}.${eventEffect.action}`,
-        ...(subtext ? { subtext } : {}),
-      };
-      getCell('data-events', phase.id).push(card);
-    }
-  }
-
-  // 2. Policy cards from regulations
-  for (const reg of (phase.regulations ?? [])) {
-    let subtext;
-    if (reg.citation && reg.subtext) {
-      subtext = `${reg.subtext} — ${reg.citation}`;
-    } else if (reg.citation) {
-      subtext = reg.citation;
-    } else if (reg.subtext) {
-      subtext = reg.subtext;
-    }
-    const card = {
-      type: 'policy',
-      text: reg.text,
-      ...(subtext ? { subtext } : {}),
-    };
-    getCell('regulations', phase.id).push(card);
-  }
-
-  // 3. Extras — verbatim cards keyed by lane ID
-  for (const [laneId, cards] of Object.entries(phase.extras ?? {})) {
-    for (const card of cards) {
-      getCell(laneId, phase.id).push({ ...card });
     }
   }
 }
@@ -207,10 +133,10 @@ for (const phase of defs.phases) {
 const cells = [];
 for (const [key, cards] of cellCards.entries()) {
   if (cards.length === 0) continue;
-  const slashIdx = key.indexOf('/');
-  const laneId   = key.slice(0, slashIdx);
-  const phaseId  = key.slice(slashIdx + 1);
-  cells.push({ laneId, phaseId, cards });
+  const slashIdx   = key.indexOf('/');
+  const laneId     = key.slice(0, slashIdx);
+  const subPhaseId = key.slice(slashIdx + 1);
+  cells.push({ laneId, subPhaseId, cards });
 }
 
 const blueprint = {
@@ -226,6 +152,95 @@ const blueprint = {
 const outPath = join(defsDir, `${defs.domain}.json`);
 writeFileSync(outPath, JSON.stringify(blueprint, null, 2) + '\n');
 console.log(`Wrote ${outPath}`);
+
+// ── Card builders ─────────────────────────────────────────────────────────────
+
+function expandEventSlot(item, laneId, subPhaseId) {
+  const eventName = item.event;
+
+  // Resolve the transition — published transitions first, then subscribed
+  let transition = null;
+  let found = false;
+  if (smTransitions.has(eventName)) {
+    transition = smTransitions.get(eventName);
+    found = true;
+  } else if (subscribedEvents.has(eventName)) {
+    transition = subscribedEvents.get(eventName); // may be null
+    found = true;
+  }
+
+  if (!found) {
+    if (item.text) {
+      // Event not yet wired up but text provided — generate card and warn
+      console.warn(`Warning: event '${eventName}' not found in state machine or rules file (sub-phase '${subPhaseId}') — using provided text`);
+    } else {
+      console.warn(`Warning: event '${eventName}' not found in state machine or rules file (sub-phase '${subPhaseId}') — skipping`);
+      return;
+    }
+  }
+
+  if (laneId === 'data') {
+    // Expand to domain-event card — requires a resolved transition
+    if (!transition) return;
+    const eventEffect = (transition.effects ?? []).find(e => e.type === 'event');
+    if (!eventEffect) return;
+    const raw = eventEffect.description ?? '';
+    const subtext = raw.replace(/^Emit [^\u2014]+\u2014\s*/, '').trim();
+    const objectPrefix = sm.object ? sm.object.toLowerCase() : sm.domain;
+    getCell(laneId, subPhaseId).push({
+      type: 'domain-event',
+      text: `${objectPrefix}.${eventEffect.action}`,
+      ...(subtext ? { subtext } : {}),
+    });
+  } else {
+    // Expand to person-action card
+    const actor = item.actor ?? deriveActorForLane(laneId, transition);
+    const text  = item.text  ?? (actor ? `${titleCase(actor)}: ${eventName}` : null);
+    if (!text) {
+      console.warn(`Warning: cannot derive text for event '${eventName}' in lane '${laneId}' (sub-phase '${subPhaseId}') — skipping`);
+      return;
+    }
+    getCell(laneId, subPhaseId).push({
+      type: 'person-action',
+      ...(actor ? { actor } : {}),
+      text,
+      ...(item.subtext ? { subtext: item.subtext } : {}),
+    });
+  }
+}
+
+function buildRegularCard(item) {
+  // Policy cards: merge citation + subtext into a single subtext string
+  if (item.type === 'policy') {
+    let subtext;
+    if (item.citation && item.subtext) {
+      subtext = `${item.subtext} — ${item.citation}`;
+    } else if (item.citation) {
+      subtext = item.citation;
+    } else if (item.subtext) {
+      subtext = item.subtext;
+    }
+    return {
+      type: 'policy',
+      text: item.text,
+      ...(subtext ? { subtext } : {}),
+    };
+  }
+
+  // All other cards — pass through standard fields
+  return {
+    type: item.type,
+    ...(item.actor ? { actor: item.actor } : {}),
+    text: item.text,
+    ...(item.subtext ? { subtext: item.subtext } : {}),
+  };
+}
+
+function deriveActorForLane(laneId, transition) {
+  if (!transition) return null;
+  const laneActors = laneToActors.get(laneId) ?? [];
+  return (transition.actors ?? []).find(a => laneActors.includes(a)) ?? null;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

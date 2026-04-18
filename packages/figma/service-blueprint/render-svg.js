@@ -38,7 +38,9 @@ const outPath   = outArg ? resolve(outArg) : join(inputDir, `${stem}.svg`);
 
 const PHASE_WIDTH      = 280;
 const LANE_LABEL_WIDTH = 120;
-const HEADER_HEIGHT    = 64;
+const PHASE_ROW_H      = 52;   // height of the Phase grouping row
+const SUBPHASE_ROW_H   = 40;   // height of the Sub phase column-label row
+const HEADER_HEIGHT    = PHASE_ROW_H + SUBPHASE_ROW_H;
 const CELL_PADDING     = 12;
 const CARD_WIDTH       = PHASE_WIDTH - CELL_PADDING * 2;   // 256
 const CARD_PADDING     = 14;
@@ -97,13 +99,15 @@ const ICON_DEFS = {
     minX: 179.632, minY: 980.226, w: 12.88, h: 13.333,
     d: 'M187.405 980.226C187.572 980.226 187.713 980.346 187.733 980.506L187.985 982.273C188.392 982.439 188.766 982.659 189.112 982.926L190.773 982.259C190.806 982.246 190.846 982.24 190.886 982.24C191.006 982.24 191.119 982.299 191.179 982.406L192.512 984.712C192.592 984.859 192.559 985.039 192.433 985.139L191.026 986.24C191.052 986.453 191.072 986.666 191.072 986.893C191.072 987.119 191.052 987.333 191.026 987.546L192.433 988.646C192.559 988.746 192.592 988.926 192.512 989.073L191.179 991.379C191.119 991.486 191.006 991.546 190.893 991.546C190.853 991.546 190.813 991.539 190.773 991.526L189.112 990.86C188.766 991.12 188.392 991.346 187.985 991.513L187.733 993.28C187.712 993.439 187.572 993.559 187.405 993.559H184.739C184.573 993.559 184.432 993.439 184.412 993.28L184.159 991.513C183.753 991.346 183.379 991.126 183.032 990.86L181.372 991.526C181.339 991.539 181.299 991.546 181.259 991.546C181.139 991.546 181.026 991.486 180.966 991.379L179.632 989.073C179.552 988.926 179.585 988.746 179.712 988.646L181.119 987.546C181.093 987.333 181.072 987.113 181.072 986.893C181.072 986.673 181.093 986.453 181.119 986.24L179.712 985.139C179.586 985.039 179.545 984.859 179.632 984.712L180.966 982.406C181.026 982.299 181.139 982.24 181.252 982.24C181.292 982.24 181.332 982.246 181.372 982.259L183.032 982.926C183.379 982.666 183.753 982.439 184.159 982.273L184.412 980.506C184.432 980.346 184.573 980.226 184.739 980.226H187.405ZM185.472 982.459L185.365 983.212L184.659 983.499C184.386 983.613 184.112 983.772 183.825 983.986L183.226 984.439L182.532 984.159L181.686 983.82L181.219 984.626L181.939 985.186L182.532 985.653L182.439 986.406C182.419 986.606 182.405 986.76 182.405 986.893C182.405 987.026 182.419 987.18 182.439 987.386L182.532 988.139L181.939 988.606L181.219 989.166L181.686 989.973L182.532 989.632L183.239 989.346L183.846 989.813C184.112 990.013 184.379 990.166 184.665 990.285L185.372 990.573L185.479 991.326L185.606 992.226H186.539L186.672 991.326L186.779 990.573L187.485 990.285C187.759 990.172 188.032 990.012 188.318 989.799L188.919 989.346L189.612 989.626L190.459 989.966L190.926 989.159L190.205 988.599L189.612 988.132L189.705 987.379C189.725 987.179 189.739 987.033 189.739 986.893C189.739 986.753 189.732 986.612 189.705 986.406L189.612 985.653L190.205 985.186L190.919 984.619L190.452 983.813L189.606 984.153L188.899 984.439L188.292 983.973C188.025 983.773 187.758 983.619 187.472 983.499L186.766 983.212L186.659 982.459L186.532 981.559H185.606L185.472 982.459ZM186.072 984.226C187.546 984.226 188.739 985.42 188.739 986.893C188.739 988.366 187.546 989.559 186.072 989.559C184.599 989.559 183.406 988.366 183.405 986.893C183.405 985.42 184.599 984.226 186.072 984.226ZM186.072 985.559C185.339 985.559 184.739 986.16 184.739 986.893C184.74 987.626 185.339 988.226 186.072 988.226C186.806 988.226 187.405 987.626 187.405 986.893C187.405 986.16 186.806 985.559 186.072 985.559Z',
   },
-  'database': {
-    minX: 180.071, minY: 1303.893, w: 12.0, h: 12.0,
-    d: 'M186.071 1315.89C184.393 1315.89 182.974 1315.63 181.812 1315.12C180.651 1314.6 180.071 1313.97 180.071 1313.23V1306.56C180.071 1305.83 180.657 1305.2 181.829 1304.68C183.001 1304.15 184.415 1303.89 186.071 1303.89C187.726 1303.89 189.14 1304.15 190.312 1304.68C191.485 1305.2 192.071 1305.83 192.071 1306.56V1313.23C192.071 1313.97 191.49 1314.6 190.329 1315.12C189.168 1315.63 187.749 1315.89 186.071 1315.89ZM186.071 1307.91C187.06 1307.91 188.054 1307.77 189.054 1307.48C190.054 1307.2 190.615 1306.9 190.737 1306.58C190.615 1306.25 190.057 1305.95 189.062 1305.66C188.068 1305.37 187.071 1305.23 186.071 1305.23C185.06 1305.23 184.068 1305.37 183.096 1305.65C182.124 1305.93 181.56 1306.24 181.404 1306.58C181.56 1306.91 182.124 1307.21 183.096 1307.49C184.068 1307.77 185.06 1307.91 186.071 1307.91ZM186.071 1311.23C186.537 1311.23 186.987 1311.2 187.421 1311.16C187.854 1311.11 188.268 1311.05 188.662 1310.97C189.057 1310.88 189.429 1310.78 189.779 1310.66C190.129 1310.54 190.449 1310.4 190.737 1310.24V1308.24C190.449 1308.4 190.129 1308.54 189.779 1308.66C189.429 1308.78 189.057 1308.88 188.662 1308.97C188.268 1309.05 187.854 1309.11 187.421 1309.16C186.987 1309.2 186.537 1309.23 186.071 1309.23C185.604 1309.23 185.149 1309.2 184.704 1309.16C184.26 1309.11 183.84 1309.05 183.446 1308.97C183.051 1308.88 182.682 1308.78 182.337 1308.66C181.993 1308.54 181.682 1308.4 181.404 1308.24V1310.24C181.682 1310.4 181.993 1310.54 182.337 1310.66C182.682 1310.78 183.051 1310.88 183.446 1310.97C183.84 1311.05 184.26 1311.11 184.704 1311.16C185.149 1311.2 185.604 1311.23 186.071 1311.23ZM186.071 1314.56C186.582 1314.56 187.101 1314.52 187.629 1314.44C188.157 1314.36 188.643 1314.26 189.087 1314.13C189.532 1314.01 189.904 1313.86 190.204 1313.7C190.504 1313.54 190.682 1313.38 190.737 1313.21V1311.58C190.449 1311.73 190.129 1311.87 189.779 1311.99C189.429 1312.11 189.057 1312.22 188.662 1312.3C188.268 1312.38 187.854 1312.45 187.421 1312.49C186.987 1312.54 186.537 1312.56 186.071 1312.56C185.604 1312.56 185.149 1312.54 184.704 1312.49C184.26 1312.45 183.84 1312.38 183.446 1312.3C183.051 1312.22 182.682 1312.11 182.337 1311.99C181.993 1311.87 181.682 1311.73 181.404 1311.58V1313.23C181.46 1313.39 181.635 1313.55 181.929 1313.71C182.224 1313.86 182.593 1314.01 183.037 1314.13C183.482 1314.26 183.971 1314.36 184.504 1314.44C185.037 1314.52 185.56 1314.56 186.071 1314.56Z',
+  'document': {
+    // Material Icons "description" — 24×24 viewBox, Apache 2.0
+    minX: 0, minY: 0, w: 24, h: 24,
+    d: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z',
   },
-  'event-hand': {
-    minX: 178.071, minY: 1948.3, w: 16.0, h: 14.8,
-    d: 'M187.157 1954.76L183.918 1951.52L185.004 1950.45L187.157 1952.61L191.48 1948.3L192.547 1949.37L187.157 1954.76ZM182.642 1960.44L187.937 1961.88L192.471 1960.47C192.407 1960.36 192.315 1960.26 192.195 1960.18C192.074 1960.1 191.937 1960.05 191.785 1960.05H187.937C187.595 1960.05 187.322 1960.04 187.118 1960.02C186.915 1959.99 186.706 1959.94 186.49 1959.86L184.718 1959.27L185.137 1957.79L186.68 1958.3C186.896 1958.37 187.15 1958.42 187.442 1958.45C187.734 1958.49 188.166 1958.52 188.737 1958.53C188.737 1958.39 188.696 1958.26 188.614 1958.13C188.531 1958 188.433 1957.92 188.318 1957.88L183.861 1956.24H182.642V1960.44ZM178.071 1963.1V1954.72H183.861C183.95 1954.72 184.039 1954.73 184.128 1954.75C184.217 1954.77 184.299 1954.79 184.376 1954.82L188.852 1956.47C189.271 1956.63 189.61 1956.89 189.871 1957.27C190.131 1957.65 190.261 1958.07 190.261 1958.53H191.785C192.42 1958.53 192.96 1958.74 193.404 1959.16C193.849 1959.58 194.071 1960.13 194.071 1960.82V1961.58L187.976 1963.48L182.642 1962V1963.1H178.071ZM179.595 1961.58H181.118V1956.24H179.595V1961.58Z',
+  'lightning': {
+    // Material Icons "bolt" — 24×24 viewBox, Apache 2.0
+    minX: 0, minY: 0, w: 24, h: 24,
+    d: 'M7 2v11h3v9l7-12h-4l4-8z',
   },
   'diamond-alert': {
     minX: 179.387, minY: 2272.21, w: 13.367, h: 13.37,
@@ -127,7 +131,7 @@ const ICON_DEFS = {
 function iconKey(type, actor) {
   if (type === 'person-action') return actor === 'supervisor' ? 'person-group' : 'person-single';
   if (type === 'staff-action')  return 'person-single';
-  return { system: 'gear', 'data-entity': 'database', 'domain-event': 'event-hand',
+  return { system: 'gear', 'data-entity': 'document', 'domain-event': 'lightning',
            'pain-point': 'diamond-alert', opportunity: 'lightbulb', note: null,
            policy: 'building' }[type] ?? null;
 }
@@ -324,13 +328,23 @@ function renderLegend(blueprintName, x, y) {
 // ── Main render ───────────────────────────────────────────────────────────────
 
 function renderBlueprint(bp) {
+  // Flatten phase → subPhase hierarchy into ordered column list
+  const columns = []; // { phase, subPhase }
+  for (const phase of bp.phases) {
+    for (const subPhase of phase.subPhases) {
+      columns.push({ phase, subPhase });
+    }
+  }
+  const numCols = columns.length;
+
   const cellMap = new Map();
   for (const cell of bp.cells) {
-    cellMap.set(`${cell.laneId}/${cell.phaseId}`, cell);
+    cellMap.set(`${cell.laneId}/${cell.subPhaseId}`, cell);
   }
 
   // First pass: render all cards, compute row heights
-  const cardGrid   = []; // cardGrid[laneIdx][phaseIdx] = { cards: renderedCard[], contentH }
+  // cardGrid[laneIdx][colIdx] = { rendered, srcCards }
+  const cardGrid   = [];
   const rowHeights = [];
 
   for (let li = 0; li < bp.lanes.length; li++) {
@@ -338,25 +352,19 @@ function renderBlueprint(bp) {
     const laneRow = [];
     let maxH      = ROW_MIN_HEIGHT;
 
-    for (let pi = 0; pi < bp.phases.length; pi++) {
-      const phase   = bp.phases[pi];
-      const entry   = cellMap.get(`${lane.id}/${phase.id}`);
+    for (let ci = 0; ci < numCols; ci++) {
+      const { subPhase } = columns[ci];
+      const entry    = cellMap.get(`${lane.id}/${subPhase.id}`);
       const srcCards = entry?.cards ?? [];
 
-      // Render cards at temporary position (0, 0) to get heights
-      const rendered = [];
-      for (const card of srcCards) {
-        const r = renderCard(card, 0, 0, CARD_WIDTH);
-        rendered.push(r);
-      }
+      const rendered = srcCards.map(c => renderCard(c, 0, 0, CARD_WIDTH));
 
       let h = CELL_PADDING;
       for (const r of rendered) h += r.height + CARD_GAP;
-      if (rendered.length > 0) h = h - CARD_GAP + CELL_PADDING;
-      else h = CELL_PADDING * 2;
+      h = rendered.length > 0 ? h - CARD_GAP + CELL_PADDING : CELL_PADDING * 2;
 
       const contentH = Math.max(h, ROW_MIN_HEIGHT);
-      laneRow.push({ rendered, contentH });
+      laneRow.push({ rendered, srcCards, contentH });
       maxH = Math.max(maxH, contentH);
     }
 
@@ -364,7 +372,7 @@ function renderBlueprint(bp) {
     rowHeights.push(maxH);
   }
 
-  const tableWidth  = LANE_LABEL_WIDTH + bp.phases.length * PHASE_WIDTH;
+  const tableWidth  = LANE_LABEL_WIDTH + numCols * PHASE_WIDTH;
   const tableHeight = HEADER_HEIGHT + rowHeights.reduce((a, b) => a + b, 0);
   const totalWidth  = KEY_TOTAL + tableWidth;
   const totalHeight = Math.max(tableHeight, 400);
@@ -380,24 +388,44 @@ function renderBlueprint(bp) {
   const { svg: legendSvg } = renderLegend(bp.name, 0, 0);
   parts.push(legendSvg);
 
-  const bpX = KEY_TOTAL; // blueprint left edge
+  const bpX  = KEY_TOTAL; // blueprint left edge
+  const font = 'font-family="Inter, system-ui, sans-serif"';
 
-  // Phase headers
-  for (let i = 0; i < bp.phases.length; i++) {
-    const phase  = bp.phases[i];
-    const colX   = bpX + LANE_LABEL_WIDTH + i * PHASE_WIDTH;
-    const colMid = colX + PHASE_WIDTH / 2;
+  // ── Phase row ────────────────────────────────────────────────────────────────
+  // "Phase" label in left column; phase label spanning its sub-phase columns.
+  const phaseRowMidY = PHASE_ROW_H / 2 + 5; // approximate vertical center for text baseline
+  parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${phaseRowMidY}" text-anchor="middle" ${font} font-size="13" font-weight="bold" fill="#1A1A1A">Phase</text>`);
 
-    parts.push(`<text x="${colMid}" y="${12 + 15}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="bold" fill="#1A1A1A">${escapeXml(phase.label)}</text>`);
-    if (phase.sublabel) {
-      parts.push(`<text x="${colMid}" y="${12 + 15 + 18 + 4 + 11}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#888888">${escapeXml(phase.sublabel)}</text>`);
-    }
+  let colStart = 0;
+  for (const phase of bp.phases) {
+    const spanCols = phase.subPhases.length;
+    const phaseX   = bpX + LANE_LABEL_WIDTH + colStart * PHASE_WIDTH;
+    const phaseW   = spanCols * PHASE_WIDTH;
+    const phaseMid = phaseX + phaseW / 2;
+    parts.push(`<text x="${phaseMid}" y="${phaseRowMidY}" text-anchor="middle" ${font} font-size="15" font-weight="bold" fill="#1A1A1A">${escapeXml(phase.label)}</text>`);
+    colStart += spanCols;
   }
 
-  // Outer top divider
+  // Heavy rule below Phase row
+  parts.push(`<line x1="${bpX}" y1="${PHASE_ROW_H}" x2="${bpX + tableWidth}" y2="${PHASE_ROW_H}" stroke="#1A1A1A" stroke-width="2"/>`);
+
+  // ── Sub phase row ─────────────────────────────────────────────────────────────
+  // "Sub phase" label in left column; sub-phase label per column.
+  const subRowY    = PHASE_ROW_H;
+  const subRowMidY = subRowY + SUBPHASE_ROW_H / 2 + 4;
+  parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${subRowMidY}" text-anchor="middle" ${font} font-size="11" font-weight="bold" fill="#1A1A1A">Sub phase</text>`);
+
+  for (let ci = 0; ci < numCols; ci++) {
+    const { subPhase } = columns[ci];
+    const colX   = bpX + LANE_LABEL_WIDTH + ci * PHASE_WIDTH;
+    const colMid = colX + PHASE_WIDTH / 2;
+    parts.push(`<text x="${colMid}" y="${subRowMidY}" text-anchor="middle" ${font} font-size="13" font-weight="bold" fill="#1A1A1A">${escapeXml(subPhase.label)}</text>`);
+  }
+
+  // Light rule below Sub phase row
   parts.push(`<line x1="${bpX}" y1="${HEADER_HEIGHT}" x2="${bpX + tableWidth}" y2="${HEADER_HEIGHT}" stroke="#AAAAAA" stroke-width="1"/>`);
 
-  // Lane rows
+  // ── Lane rows ─────────────────────────────────────────────────────────────────
   let rowY = HEADER_HEIGHT;
 
   for (let li = 0; li < bp.lanes.length; li++) {
@@ -410,34 +438,29 @@ function renderBlueprint(bp) {
 
     // Lane label
     const midY = rowY + rowH / 2;
-    parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${midY + 4}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="bold" fill="#555555">${escapeXml(lane.label)}</text>`);
+    parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${midY + 4}" text-anchor="middle" ${font} font-size="11" font-weight="bold" fill="#555555">${escapeXml(lane.label)}</text>`);
 
     // Lane label column divider
     parts.push(`<line x1="${bpX + LANE_LABEL_WIDTH}" y1="${rowY}" x2="${bpX + LANE_LABEL_WIDTH}" y2="${rowY + rowH}" stroke="#DDDDDD" stroke-width="1"/>`);
 
-    // Cards in each phase column
-    for (let pi = 0; pi < bp.phases.length; pi++) {
-      const { rendered } = cardGrid[li][pi];
-      const baseX = bpX + LANE_LABEL_WIDTH + pi * PHASE_WIDTH;
+    // Cards in each sub-phase column
+    for (let ci = 0; ci < numCols; ci++) {
+      const { rendered, srcCards } = cardGrid[li][ci];
+      const baseX = bpX + LANE_LABEL_WIDTH + ci * PHASE_WIDTH;
 
       let cardY = rowY + CELL_PADDING;
-      for (const r of rendered) {
-        // Re-render at correct position
-        const phase = bp.phases[pi];
-        const entry = cellMap.get(`${lane.id}/${phase.id}`);
-        // Use the source card from the cell map (rendered[] are pre-computed for height only)
-        const idx = rendered.indexOf(r);
-        const srcCard = entry?.cards[idx];
-        if (srcCard) {
-          const { svg } = renderCard(srcCard, baseX + CELL_PADDING, cardY, CARD_WIDTH);
-          parts.push(svg);
-        }
-        cardY += r.height + CARD_GAP;
+      for (let ri = 0; ri < rendered.length; ri++) {
+        const { svg } = renderCard(srcCards[ri], baseX + CELL_PADDING, cardY, CARD_WIDTH);
+        parts.push(svg);
+        cardY += rendered[ri].height + CARD_GAP;
       }
 
-      // Phase column divider (not after last column)
-      if (pi < bp.phases.length - 1) {
-        parts.push(`<line x1="${baseX + PHASE_WIDTH}" y1="${rowY}" x2="${baseX + PHASE_WIDTH}" y2="${rowY + rowH}" stroke="#DDDDDD" stroke-width="1"/>`);
+      // Column divider — slightly heavier at phase boundaries
+      if (ci < numCols - 1) {
+        const isPhaseEnd = columns[ci].phase !== columns[ci + 1].phase;
+        const divColor = isPhaseEnd ? '#AAAAAA' : '#DDDDDD';
+        const divWidth = isPhaseEnd ? 1.5 : 1;
+        parts.push(`<line x1="${baseX + PHASE_WIDTH}" y1="${rowY}" x2="${baseX + PHASE_WIDTH}" y2="${rowY + rowH}" stroke="${divColor}" stroke-width="${divWidth}"/>`);
       }
     }
 

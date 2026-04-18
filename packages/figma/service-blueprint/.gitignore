@@ -1,2 +1,5 @@
 node_modules/
 dist/
+
+# State-specific blueprint content (never commit — use gists for sharing)
+src/blueprints/states/

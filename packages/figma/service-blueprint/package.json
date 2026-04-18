@@ -6,9 +6,9 @@
   "scripts": {
     "build": "node build.js",
     "watch": "node build.js --watch",
-    "generate": "node generate-blueprint.js",
-    "validate": "node validate-definitions.js",
-    "render": "node render-svg.js"
+    "generate": "node generate-blueprint.js src/blueprints/intake-context.yaml",
+    "validate": "node validate-definitions.js src/blueprints/intake-context.yaml",
+    "render": "node render-svg.js src/blueprints/intake.json"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.101.0",

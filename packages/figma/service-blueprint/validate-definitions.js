@@ -2,11 +2,11 @@
 /**
  * validate-definitions.js
  *
- * Validates a blueprint definitions YAML file against definitions-schema.json.
+ * Validates a blueprint context YAML file against definitions-schema.json.
  *
  * Usage:
- *   node validate-definitions.js src/blueprints/intake-definitions.yaml
- *   npm run validate -- src/blueprints/intake-definitions.yaml
+ *   node validate-definitions.js src/blueprints/intake-context.yaml
+ *   npm run validate -- src/blueprints/intake-context.yaml
  */
 
 import { readFileSync } from 'fs';
@@ -19,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const inputPath = process.argv[2];
 if (!inputPath) {
-  console.error('Usage: node validate-definitions.js <definitions.yaml>');
+  console.error('Usage: node validate-definitions.js <context.yaml>');
   process.exit(1);
 }
 
@@ -52,26 +52,23 @@ if (valid) {
   const warnings = [];
 
   const laneIds = new Set(definitions.lanes.map(l => l.id));
-  const actorToLane = new Map();
-  for (const lane of definitions.lanes) {
-    for (const actor of (lane.actors ?? [])) {
-      actorToLane.set(actor, lane.id);
-    }
-  }
 
   for (const phase of definitions.phases) {
-    // Check extras reference valid lane IDs
-    for (const laneId of Object.keys(phase.extras ?? {})) {
-      if (!laneIds.has(laneId)) {
-        warnings.push(`Phase '${phase.id}': extras references unknown lane '${laneId}'`);
-      }
-    }
+    for (const subPhase of (phase.subPhases ?? [])) {
 
-    // Check person-action cards in extras have actor field
-    for (const [laneId, cards] of Object.entries(phase.extras ?? {})) {
-      for (const card of cards) {
-        if (card.type === 'person-action' && !card.actor) {
-          warnings.push(`Phase '${phase.id}', lane '${laneId}': person-action card "${card.text}" is missing 'actor' field`);
+      // Check cards reference valid lane IDs
+      for (const laneId of Object.keys(subPhase.cards ?? {})) {
+        if (!laneIds.has(laneId)) {
+          warnings.push(`Sub-phase '${subPhase.id}': cards references unknown lane '${laneId}'`);
+        }
+      }
+
+      // Check explicit person-action cards have an actor field
+      for (const [laneId, cardItems] of Object.entries(subPhase.cards ?? {})) {
+        for (const item of cardItems) {
+          if (item.type === 'person-action' && !item.actor) {
+            warnings.push(`Sub-phase '${subPhase.id}', lane '${laneId}': person-action card "${item.text}" is missing 'actor' field`);
+          }
         }
       }
     }

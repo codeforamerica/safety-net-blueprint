@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "definitions-schema.json",
-  "title": "Blueprint Definitions",
-  "description": "Schema for *.definitions.yaml companion files used to generate service blueprints from contracts.",
+  "title": "Blueprint Context",
+  "description": "Schema for *.context.yaml files used to generate service blueprints from contracts.",
   "type": "object",
   "required": ["domain", "name", "stateMachine", "lanes", "phases"],
   "additionalProperties": false,
@@ -22,7 +22,7 @@
     "lanes": {
       "type": "array",
       "minItems": 1,
-      "description": "Ordered list of swim-lanes. The generator maps actors to lanes via the 'actors' field.",
+      "description": "Ordered list of swim-lanes. The generator maps actor names to lanes via the 'actors' field.",
       "items": {
         "$ref": "#/definitions/Lane"
       }
@@ -30,7 +30,7 @@
     "phases": {
       "type": "array",
       "minItems": 1,
-      "description": "Ordered list of blueprint phases. Each phase becomes a column in the grid.",
+      "description": "Ordered list of phases. Each phase is a grouping header that spans one or more sub-phase columns.",
       "items": {
         "$ref": "#/definitions/Phase"
       }
@@ -45,7 +45,6 @@
       "type": "string",
       "enum": [
         "person-action",
-        "staff-action",
         "system",
         "policy",
         "domain-event",
@@ -54,20 +53,6 @@
         "opportunity",
         "note"
       ]
-    },
-    "Card": {
-      "type": "object",
-      "required": ["type", "text"],
-      "additionalProperties": false,
-      "properties": {
-        "type": { "$ref": "#/definitions/CardType" },
-        "actor": {
-          "$ref": "#/definitions/ActorType",
-          "description": "Required when type is 'person-action'. Determines card color."
-        },
-        "text": { "type": "string" },
-        "subtext": { "type": "string" }
-      }
     },
     "Lane": {
       "type": "object",
@@ -78,88 +63,74 @@
         "label": { "type": "string" },
         "actors": {
           "type": "array",
-          "description": "Actors whose person-action cards are placed in this lane. May be empty for editorial lanes (regulations, data-events).",
+          "description": "Actors whose person-action cards are placed in this lane. May be empty for editorial lanes (regulations, data, pain-points).",
           "items": { "$ref": "#/definitions/ActorType" }
         }
       }
     },
-    "ActorCard": {
+    "CardItem": {
       "type": "object",
-      "required": ["text"],
-      "additionalProperties": false,
+      "description": "An item in a lane's card list. Either a regular card (has 'type') or an event slot (has 'event'). Exactly one must be present.\n\nEvent slot — expands in-place based on lane type:\n  actor lanes → person-action card (actor derived from transition or provided explicitly)\n  'data' lane → domain-event card derived from the transition's event effect\n\nIf the event is not yet wired up in the state machine or rules file but 'text' is provided, the card is still generated with a warning. This allows context files to reference events in progress.\n\nRegular card — passed through as-is. Policy cards support a 'citation' field merged into subtext.",
       "properties": {
+        "event": {
+          "type": "string",
+          "description": "State machine trigger or subscribed event name. Mutually exclusive with 'type'."
+        },
+        "type": {
+          "$ref": "#/definitions/CardType",
+          "description": "Card type for regular cards. Mutually exclusive with 'event'."
+        },
+        "actor": {
+          "$ref": "#/definitions/ActorType",
+          "description": "For person-action cards and event slots in actor lanes. Determines card color. Required on explicit person-action cards; optional on event slots (derived from the transition's actors list if omitted)."
+        },
         "text": { "type": "string" },
-        "subtext": { "type": "string" }
-      }
-    },
-    "Event": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "A state change that occurs during this phase. Use 'published' for events this domain emits (maps to a state machine transition trigger). Use 'subscribed' for events this domain receives from another domain (maps to a rules file 'on:' entry). Exactly one must be present.",
-      "properties": {
-        "published": {
-          "type": "string",
-          "description": "State machine transition trigger name. The generator derives person-action cards from the transition's actors list and a domain-event card from the transition's event effect."
-        },
-        "subscribed": {
-          "type": "string",
-          "description": "Cross-domain event name this domain subscribes to (e.g. 'workflow.task.claimed'). The generator resolves the triggered transition from the rules file, emits a domain-event card from that transition's event effect, and generates person-action cards from actorCards."
-        },
-        "actorCards": {
-          "type": "object",
-          "description": "Display text for person-action cards, keyed by actor name. For 'published' events, overrides auto-generated text. For 'subscribed' events, required — actors cannot be derived from the cross-domain event.",
-          "additionalProperties": { "$ref": "#/definitions/ActorCard" }
-        }
-      }
-    },
-    "Regulation": {
-      "type": "object",
-      "required": ["text"],
-      "additionalProperties": false,
-      "properties": {
-        "text": {
-          "type": "string",
-          "description": "Short label for the regulatory requirement."
-        },
+        "subtext": { "type": "string" },
         "citation": {
           "type": "string",
-          "description": "CFR or statutory citation (e.g. '7 CFR § 273.2(g)')."
-        },
-        "subtext": {
-          "type": "string",
-          "description": "Clarifying note (e.g. 'If household meets expedited criteria')."
+          "description": "CFR or statutory citation for policy cards (e.g. '7 CFR § 273.2(g)'). Merged into subtext by the generator."
         }
       }
     },
-    "Phase": {
+    "SubPhase": {
       "type": "object",
       "required": ["id", "label"],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string" },
-        "label": { "type": "string" },
-        "sublabel": { "type": "string" },
+        "label": {
+          "type": "string",
+          "description": "Column header label for this sub-phase."
+        },
         "description": {
           "type": "string",
-          "description": "Prose explanation of what this phase represents. For human readers of the definitions file."
+          "description": "Prose explanation of what this sub-phase represents. For human readers of the context file."
         },
-        "events": {
-          "type": "array",
-          "description": "State machine triggers that occur in this phase. Generator uses these to derive person-action and domain-event cards. May be empty for editorial phases with no state machine trigger.",
-          "items": { "$ref": "#/definitions/Event" }
-        },
-        "regulations": {
-          "type": "array",
-          "description": "Policy and regulatory requirements that apply in this phase. Rendered as policy cards in the regulations lane.",
-          "items": { "$ref": "#/definitions/Regulation" }
-        },
-        "extras": {
+        "cards": {
           "type": "object",
-          "description": "Cards that cannot be derived from the state machine. Keys are lane IDs. Use for: sub-domain actions (workflow, scheduling), editorial applicant-experience content, data entities, background system actions.",
+          "description": "Ordered card lists keyed by lane ID. Cards appear on the blueprint in the order listed. Mix event slots and regular cards freely.",
           "additionalProperties": {
             "type": "array",
-            "items": { "$ref": "#/definitions/Card" }
+            "items": { "$ref": "#/definitions/CardItem" }
           }
+        }
+      }
+    },
+    "Phase": {
+      "type": "object",
+      "required": ["id", "label", "subPhases"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": {
+          "type": "string",
+          "description": "Spanning header label for this phase group."
+        },
+        "subPhases": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Ordered list of sub-phases (columns) within this phase group.",
+          "items": { "$ref": "#/definitions/SubPhase" }
         }
       }
     }

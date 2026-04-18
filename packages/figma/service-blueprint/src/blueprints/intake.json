@@ -8,108 +8,112 @@
     },
     {
       "id": "caseworker",
-      "label": "Caseworker sees"
+      "label": "Caseworker"
+    },
+    {
+      "id": "system",
+      "label": "Background system"
     },
     {
       "id": "regulations",
-      "label": "Program requirements"
+      "label": "Regulatory requirements"
     },
     {
-      "id": "data-events",
+      "id": "data",
       "label": "Data & events"
-    },
-    {
-      "id": "background",
-      "label": "Background system"
     }
   ],
   "phases": [
     {
-      "id": "submitted",
-      "label": "1 · Submitted",
-      "sublabel": "Application in queue"
+      "id": "application-intake",
+      "label": "Application intake",
+      "subPhases": [
+        {
+          "id": "awareness",
+          "label": "Pre-application"
+        },
+        {
+          "id": "submitted",
+          "label": "Submission"
+        }
+      ]
     },
     {
-      "id": "under-review",
-      "label": "2 · Under Review",
-      "sublabel": "Caseworker claims task"
+      "id": "application-review",
+      "label": "Application review",
+      "subPhases": [
+        {
+          "id": "automated-screening",
+          "label": "Automated screening"
+        },
+        {
+          "id": "under-review",
+          "label": "Case assignment"
+        },
+        {
+          "id": "active-review",
+          "label": "Data review"
+        },
+        {
+          "id": "interview",
+          "label": "Program verification"
+        }
+      ]
     },
     {
-      "id": "active-review",
-      "label": "3 · Active Review",
-      "sublabel": "Verifications arriving"
-    },
-    {
-      "id": "interview",
-      "label": "4 · Interview",
-      "sublabel": "Scheduled appointment"
-    },
-    {
-      "id": "decision",
-      "label": "5 · Decision",
-      "sublabel": "Eligibility determined"
+      "id": "eligibility-determination",
+      "label": "Eligibility determination",
+      "subPhases": [
+        {
+          "id": "benefits-calculation",
+          "label": "Determination"
+        },
+        {
+          "id": "decision",
+          "label": "Closeout"
+        }
+      ]
     }
   ],
   "cells": [
     {
+      "laneId": "data",
+      "subPhaseId": "awareness",
+      "cards": [
+        {
+          "type": "note",
+          "text": "Out of scope for this implementation",
+          "subtext": "Outreach, benefit screening, and pre-application triage vary by state. This column is a placeholder for states that want to document this phase alongside intake."
+        }
+      ]
+    },
+    {
       "laneId": "applicant",
-      "phaseId": "submitted",
+      "subPhaseId": "submitted",
       "cards": [
         {
           "type": "person-action",
           "actor": "applicant",
           "text": "Submits application",
           "subtext": "Online or in person; starts the regulatory clock"
-        },
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Uploads supporting documents",
-          "subtext": "Can happen at any time after submission — before or after caseworker claims"
         }
       ]
     },
     {
       "laneId": "caseworker",
-      "phaseId": "submitted",
+      "subPhaseId": "submitted",
       "cards": [
         {
           "type": "person-action",
           "actor": "caseworker",
           "text": "Submits application on behalf of applicant",
-          "subtext": "In-person or assisted submission"
-        }
-      ]
-    },
-    {
-      "laneId": "data-events",
-      "phaseId": "submitted",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "application.submitted",
-          "subtext": "starts the regulatory clock; triggers caseworker task creation and confirmation notice"
-        },
-        {
-          "type": "data-entity",
-          "text": "Application created",
-          "subtext": "status: submitted, submittedAt"
-        },
-        {
-          "type": "data-entity",
-          "text": "VerificationItems created",
-          "subtext": "Income, identity, and residency obligations"
-        },
-        {
-          "type": "data-entity",
-          "text": "Workflow task created",
-          "subtext": "Added to intake queue"
+          "subtext": "Assisted or in-person submission"
         }
       ]
     },
     {
       "laneId": "regulations",
-      "phaseId": "submitted",
+      "subPhaseId": "submitted",
       "cards": [
         {
           "type": "policy",
@@ -129,18 +133,49 @@
       ]
     },
     {
-      "laneId": "background",
-      "phaseId": "submitted",
+      "laneId": "data",
+      "subPhaseId": "submitted",
+      "cards": [
+        {
+          "type": "note",
+          "text": "Application record created — not a case",
+          "subtext": "A service case is only created if the applicant is approved. Submitted fields are stored as structured data — no PDF, no manual re-entry."
+        },
+        {
+          "type": "domain-event",
+          "text": "application.submitted",
+          "subtext": "starts the regulatory clock; triggers caseworker task creation and confirmation notice"
+        },
+        {
+          "type": "data-entity",
+          "text": "Application created",
+          "subtext": "status: submitted, submittedAt, all submitted fields as structured data"
+        },
+        {
+          "type": "data-entity",
+          "text": "VerificationItems created",
+          "subtext": "Income, identity, and residency obligations — one record per requirement"
+        },
+        {
+          "type": "data-entity",
+          "text": "Workflow task created",
+          "subtext": "Added to intake queue; automated confirmation sent to applicant"
+        }
+      ]
+    },
+    {
+      "laneId": "system",
+      "subPhaseId": "submitted",
       "cards": [
         {
           "type": "system",
-          "text": "Person matching attempted",
-          "subtext": "Existing case or record lookup"
+          "text": "Submission confirmation sent to applicant",
+          "subtext": "Automated — no manual step required"
         },
         {
           "type": "system",
           "text": "Federal checks initiated",
-          "subtext": "FDSH, IEVS, SAVE, SSA"
+          "subtext": "FDSH, IEVS, SAVE, SSA — triggered automatically at submission"
         },
         {
           "type": "system",
@@ -149,35 +184,65 @@
       ]
     },
     {
+      "laneId": "data",
+      "subPhaseId": "automated-screening",
+      "cards": [
+        {
+          "type": "domain-event",
+          "text": "application.expedited_flagged",
+          "subtext": "If applicable — escalates to 7-day SLA track"
+        },
+        {
+          "type": "data-entity",
+          "text": "Application updated",
+          "subtext": "isExpedited: true, priority: expedited (if flagged)"
+        }
+      ]
+    },
+    {
+      "laneId": "system",
+      "subPhaseId": "automated-screening",
+      "cards": [
+        {
+          "type": "system",
+          "text": "Person matching",
+          "subtext": "Links application to an existing person or case record if found — no new case is created at submission"
+        },
+        {
+          "type": "system",
+          "text": "Eligibility pre-check",
+          "subtext": "Screens for expedited criteria and program eligibility indicators"
+        },
+        {
+          "type": "system",
+          "text": "Queue routing and SLA assignment",
+          "subtext": "Routes to program-specific queue; assigns SLA track per program"
+        }
+      ]
+    },
+    {
       "laneId": "caseworker",
-      "phaseId": "under-review",
+      "subPhaseId": "under-review",
       "cards": [
         {
           "type": "person-action",
-          "actor": "caseworker",
-          "text": "Claims task and opens the case",
-          "subtext": "Full application detail, verification checklist, and interview to schedule become visible"
+          "text": "Claims task from queue",
+          "subtext": "Application detail, verification checklist, and scheduling become visible"
         },
         {
           "type": "person-action",
-          "actor": "caseworker",
           "text": "Schedules interview"
         }
       ]
     },
     {
-      "laneId": "data-events",
-      "phaseId": "under-review",
+      "laneId": "data",
+      "subPhaseId": "under-review",
       "cards": [
         {
           "type": "domain-event",
           "text": "application.opened",
           "subtext": "signals caseworker has begun active review"
-        },
-        {
-          "type": "domain-event",
-          "text": "application.expedited_flagged",
-          "subtext": "If applicable — escalates to 7-day SLA track"
         },
         {
           "type": "data-entity",
@@ -191,13 +256,9 @@
       ]
     },
     {
-      "laneId": "background",
-      "phaseId": "under-review",
+      "laneId": "system",
+      "subPhaseId": "under-review",
       "cards": [
-        {
-          "type": "system",
-          "text": "Interview record created"
-        },
         {
           "type": "system",
           "text": "Application opened event emitted"
@@ -205,8 +266,47 @@
       ]
     },
     {
+      "laneId": "applicant",
+      "subPhaseId": "active-review",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "applicant",
+          "text": "Receives notification to submit verification documents (if needed)"
+        },
+        {
+          "type": "person-action",
+          "actor": "applicant",
+          "text": "Submits verification documents (if needed)"
+        }
+      ]
+    },
+    {
+      "laneId": "caseworker",
+      "subPhaseId": "active-review",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Reviews application"
+        },
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Confirms program-agnostic data",
+          "subtext": "Demographics, household members, and relationships"
+        },
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Follows up on inconclusive verification checks",
+          "subtext": "Requests additional documents when checklist items remain unresolved"
+        }
+      ]
+    },
+    {
       "laneId": "regulations",
-      "phaseId": "active-review",
+      "subPhaseId": "active-review",
       "cards": [
         {
           "type": "policy",
@@ -216,43 +316,13 @@
       ]
     },
     {
-      "laneId": "applicant",
-      "phaseId": "active-review",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Responds to verification requests",
-          "subtext": "Provides documents or additional information requested by the caseworker"
-        }
-      ]
-    },
-    {
-      "laneId": "caseworker",
-      "phaseId": "active-review",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Reviews verification results as they arrive",
-          "subtext": "FDSH (citizenship), IEVS (income, SNAP), SAVE (immigration), SSA (SSN)"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Follows up on inconclusive checks",
-          "subtext": "Requests additional documents when checklist items are added"
-        }
-      ]
-    },
-    {
-      "laneId": "data-events",
-      "phaseId": "active-review",
+      "laneId": "data",
+      "subPhaseId": "active-review",
       "cards": [
         {
           "type": "data-entity",
           "text": "VerificationItems updated",
-          "subtext": "Results from FDSH, IEVS, SAVE, SSA — set as results arrive"
+          "subtext": "Results from FDSH, IEVS, SAVE, SSA — status and result fields updated as results arrive"
         },
         {
           "type": "data-entity",
@@ -262,35 +332,19 @@
       ]
     },
     {
-      "laneId": "background",
-      "phaseId": "active-review",
+      "laneId": "system",
+      "subPhaseId": "active-review",
       "cards": [
         {
           "type": "system",
-          "text": "Verification checklist updated",
-          "subtext": "As results arrive — hours to days after submission"
-        },
-        {
-          "type": "system",
-          "text": "VerificationItem fields updated",
-          "subtext": "Citizenship status (FDSH), immigration status (SAVE)"
-        }
-      ]
-    },
-    {
-      "laneId": "regulations",
-      "phaseId": "interview",
-      "cards": [
-        {
-          "type": "policy",
-          "text": "SNAP: Interview required before determination",
-          "subtext": "May be waived by state policy — 7 CFR § 273.2(e)"
+          "text": "Verification checklist updated automatically",
+          "subtext": "As federal results arrive — hours to days after submission"
         }
       ]
     },
     {
       "laneId": "applicant",
-      "phaseId": "interview",
+      "subPhaseId": "interview",
       "cards": [
         {
           "type": "person-action",
@@ -302,30 +356,57 @@
     },
     {
       "laneId": "caseworker",
-      "phaseId": "interview",
+      "subPhaseId": "interview",
       "cards": [
         {
           "type": "person-action",
           "actor": "caseworker",
-          "text": "Conducts interview",
-          "subtext": "Resolves outstanding documents and inconclusive verification results"
+          "text": "Conducts program-specific verification",
+          "subtext": "Reviews data applicable to each program the applicant applied for"
+        },
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Conducts SNAP interview"
+        },
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Resolves remaining verification items",
+          "subtext": "Marks inconclusive items resolved or requests final documents"
         }
       ]
     },
     {
-      "laneId": "data-events",
-      "phaseId": "interview",
+      "laneId": "regulations",
+      "subPhaseId": "interview",
+      "cards": [
+        {
+          "type": "policy",
+          "text": "SNAP: Interview required before determination",
+          "subtext": "May be waived by state policy — 7 CFR § 273.2(e)"
+        }
+      ]
+    },
+    {
+      "laneId": "data",
+      "subPhaseId": "interview",
       "cards": [
         {
           "type": "data-entity",
           "text": "Interview updated",
           "subtext": "Scheduled date, notes, and outcome recorded"
+        },
+        {
+          "type": "data-entity",
+          "text": "VerificationItems resolved",
+          "subtext": "Final status set for each obligation"
         }
       ]
     },
     {
-      "laneId": "background",
-      "phaseId": "interview",
+      "laneId": "system",
+      "subPhaseId": "interview",
       "cards": [
         {
           "type": "system",
@@ -335,45 +416,19 @@
     },
     {
       "laneId": "caseworker",
-      "phaseId": "decision",
+      "subPhaseId": "benefits-calculation",
       "cards": [
         {
           "type": "person-action",
           "actor": "caseworker",
-          "text": "Makes eligibility determination",
-          "subtext": "Applies household size, income, and expense data; records outcome and date"
-        },
-        {
-          "type": "person-action",
-          "actor": "supervisor",
-          "text": "Approves eligibility determination"
-        }
-      ]
-    },
-    {
-      "laneId": "data-events",
-      "phaseId": "decision",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "application.closed",
-          "subtext": "signals intake is complete; triggers case creation if approved"
-        },
-        {
-          "type": "domain-event",
-          "text": "application.review_completed",
-          "subtext": "Signals eligibility domain to begin determination — no state change"
-        },
-        {
-          "type": "data-entity",
-          "text": "Application updated",
-          "subtext": "status: closed, disposition: approved | denied | referred"
+          "text": "Reviews eligibility calculation results",
+          "subtext": "Identifies any unexpected results before recording determination"
         }
       ]
     },
     {
       "laneId": "regulations",
-      "phaseId": "decision",
+      "subPhaseId": "benefits-calculation",
       "cards": [
         {
           "type": "policy",
@@ -384,7 +439,65 @@
           "type": "policy",
           "text": "Medicaid: Determination within 45 days",
           "subtext": "42 CFR § 435.912"
+        }
+      ]
+    },
+    {
+      "laneId": "data",
+      "subPhaseId": "benefits-calculation",
+      "cards": [
+        {
+          "type": "domain-event",
+          "text": "application.review_completed",
+          "subtext": "Signals eligibility domain to begin determination — no intake state change"
+        }
+      ]
+    },
+    {
+      "laneId": "system",
+      "subPhaseId": "benefits-calculation",
+      "cards": [
+        {
+          "type": "system",
+          "text": "Rules engine invoked",
+          "subtext": "Income and expense calculations against household data, per program"
+        }
+      ]
+    },
+    {
+      "laneId": "applicant",
+      "subPhaseId": "decision",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "applicant",
+          "text": "Receives determination notice",
+          "subtext": "Approval, denial, or pending notice per program"
+        }
+      ]
+    },
+    {
+      "laneId": "caseworker",
+      "subPhaseId": "decision",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Records determination",
+          "subtext": "Eligibility outcome and date recorded per program"
         },
+        {
+          "type": "person-action",
+          "actor": "supervisor",
+          "text": "Approves determination",
+          "subtext": "Required for determinations above supervisor threshold"
+        }
+      ]
+    },
+    {
+      "laneId": "regulations",
+      "subPhaseId": "decision",
+      "cards": [
         {
           "type": "policy",
           "text": "Notice of Action required",
@@ -393,34 +506,34 @@
       ]
     },
     {
-      "laneId": "applicant",
-      "phaseId": "decision",
+      "laneId": "data",
+      "subPhaseId": "decision",
       "cards": [
         {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Receives eligibility notice",
-          "subtext": "Approval, denial, or pending notice per program"
+          "type": "data-entity",
+          "text": "Application updated",
+          "subtext": "status: closed, disposition: approved | denied | referred"
+        },
+        {
+          "type": "domain-event",
+          "text": "application.closed",
+          "subtext": "signals intake is complete; triggers case creation if approved"
+        },
+        {
+          "type": "domain-event",
+          "text": "Event log available",
+          "subtext": "Full audit trail of every status change, verification result, and determination"
         }
       ]
     },
     {
-      "laneId": "background",
-      "phaseId": "decision",
+      "laneId": "system",
+      "subPhaseId": "decision",
       "cards": [
         {
           "type": "system",
-          "text": "SNAP rules engine invoked",
-          "subtext": "Income and expense calculations against household data"
-        },
-        {
-          "type": "system",
-          "text": "Medicaid MAGI check",
-          "subtext": "Real-time via state HIX or eligibility engine"
-        },
-        {
-          "type": "system",
-          "text": "Notices generated and queued"
+          "text": "Notices generated and queued",
+          "subtext": "Automated — no manual notice generation step"
         }
       ]
     }

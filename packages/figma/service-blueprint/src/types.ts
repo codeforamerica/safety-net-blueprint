@@ -24,16 +24,21 @@ export interface Lane {
   label: string;
 }
 
+export interface SubPhase {
+  id: string;
+  label: string;
+}
+
 export interface Phase {
   id: string;
   label: string;
-  sublabel?: string;
+  subPhases: SubPhase[];
 }
 
-// A cell is the intersection of one lane and one phase.
+// A cell is the intersection of one lane and one sub-phase column.
 export interface Cell {
   laneId: string;
-  phaseId: string;
+  subPhaseId: string;
   cards: Card[];
 }
 
