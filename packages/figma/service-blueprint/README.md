@@ -72,7 +72,9 @@ All display text is free-form and safe to change:
 - Sub-phase `description` — human-readable notes, not rendered in the diagram
 - Card `text`, `subtext`, and `citation` — no constraints
 
-You can also freely add, remove, or reorder cards within a lane, and add, remove, or reorder phases and sub-phases.
+You can also freely add or remove cards within a lane, and reorder cards within a lane.
+
+Phase and sub-phase order reflects the workflow defined in the state machine contracts — don't reorder them. Their sequence represents the actual process flow, not an editorial choice.
 
 ### What can break things
 
