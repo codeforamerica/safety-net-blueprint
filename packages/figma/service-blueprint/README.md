@@ -16,7 +16,7 @@ npm install
 
 ## Using the baseline blueprint
 
-The repo includes a baseline intake blueprint. To build and load it:
+The repo includes a baseline intake blueprint. Additional domain blueprints are planned as future work. To build and load it:
 
 ```bash
 node build.js        # builds to dist/
