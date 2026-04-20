@@ -72,19 +72,8 @@ All display text is free-form and safe to change:
 - Sub-phase `description` — human-readable notes, not rendered in the diagram
 - Card `text`, `subtext`, and `citation` — no constraints
 
-You can freely add editorial cards anywhere — `policy`, `pain-point`, `opportunity`, `note`, and `person-action` cards with explicit text. Avoid moving or removing existing cards in the system and data lanes; those represent contract-defined behavior and should stay aligned to their workflow steps.
+You can freely add editorial cards anywhere — `policy`, `pain-point`, `opportunity`, `note`, and `person-action` cards with explicit text. Card `type` must be one of those defined values, and `person-action` cards require an `actor` (`applicant`, `caseworker`, `supervisor`, or `system`). Avoid moving or removing existing cards in the system and data lanes; those represent contract-defined behavior and should stay aligned to their workflow steps.
 
-Phase and sub-phase order reflects the workflow defined in the state machine contracts — avoid reordering existing ones, since their sequence represents the actual process flow. Adding new phases or sub-phases is fine, including inserting them between existing ones to document state-specific steps. Keep `event:` slots out of new phases or sub-phases, since those require a matching state machine transition.
+Phase and sub-phase order reflects the workflow defined in the state machine contracts — avoid reordering existing ones, since their sequence represents the actual process flow. Adding new phases or sub-phases is fine, including inserting them between existing ones to document state-specific steps. Keep `event:` slots out of new phases or sub-phases; the baseline already covers all available events and renaming or moving them will break card generation.
 
-### What can break things
-
-These fields are load-bearing — change them carefully and always run `validate` afterward:
-
-- **Lane `id`** — cards in every sub-phase are keyed by lane ID. Rename one and all its cards disappear from the output.
-- **`event:` values** — the baseline context file already uses all available events. Don't rename or move event slots; they must match a trigger or event name in the state machine YAML or the card will not generate correctly.
-- **Card `type`** — must be one of the defined values: `person-action`, `system`, `policy`, `domain-event`, `data-entity`, `pain-point`, `opportunity`, `note`.
-- **Card `actor`** — must be `applicant`, `caseworker`, `supervisor`, or `system`. Required on every `person-action` card.
-- **`domain`** — must match the `domain` field in the referenced state machine YAML.
-- **`stateMachine`** — relative path to the state machine file; must resolve to a real file.
-
-**Rule of thumb:** labels and prose are safe. IDs, types, actor values, and event references are load-bearing.
+Don't rename lane `id` values — cards in every sub-phase are keyed by lane ID and will disappear from the output if the ID changes.
