@@ -76,8 +76,6 @@ You can freely add editorial cards anywhere — `policy`, `pain-point`, `opportu
 
 Phase and sub-phase order reflects the workflow defined in the state machine contracts — avoid reordering existing ones, since their sequence represents the actual process flow. Adding new phases or sub-phases is fine, including inserting them between existing ones to document state-specific steps. Keep `event:` slots out of new phases or sub-phases, since those require a matching state machine transition.
 
-System, data, and event cards form the technical layer of the blueprint and should stay grouped together, aligned to their corresponding workflow steps. Even where individual cards aren't yet formally contract-driven, treat the technical layer as a unit — states should add to it or annotate it, not move it around. The goal is that every card in those lanes eventually traces back to a contract artifact.
-
 ### What can break things
 
 These fields are load-bearing — change them carefully and always run `validate` afterward:
