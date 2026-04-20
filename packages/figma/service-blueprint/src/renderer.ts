@@ -66,8 +66,8 @@ function fill(color: string): SolidPaint[] {
 
 // ── Card icons ────────────────────────────────────────────────────────────────
 // Paths extracted from the Figma Service Blueprint component library SVG export.
-// Coordinates are in Figma canvas space; Figma normalises the bounding box when
-// rendering, so the raw d strings can be passed directly to vectorPaths.
+// Coordinates are in Figma canvas space. normalizePath() translates them to
+// origin (0,0) before passing to vectorPaths, which Figma requires.
 
 const ICON_SIZE = 14;  // px — rendered icon size
 const ICON_GAP  = 4;   // px — gap between icon and label text
@@ -110,6 +110,37 @@ const ICON_DEFS: Record<string, IconDef> = {
     d: 'M182.737 3247.23H181.404V3251.89H182.737V3247.23ZM186.737 3247.23H185.404V3251.89H186.737V3247.23ZM192.404 3253.23H179.737V3254.56H192.404V3253.23ZM190.737 3247.23H189.404V3251.89H190.737V3247.23ZM186.071 3242.73L189.544 3244.56H182.597L186.071 3242.73ZM186.071 3241.23L179.737 3244.56V3245.89H192.404V3244.56L186.071 3241.23Z',
   },
 };
+
+// Translate all absolute-coordinate SVG commands by (-dx, -dy) so the path
+// bounding box starts at (0, 0). Relative commands (lowercase) pass through
+// unchanged. Handles M, L, C, H, V, Z and their lowercase equivalents.
+function normalizePath(d: string, dx: number, dy: number): string {
+  if (dx === 0 && dy === 0) return d;
+  const tokens = d.match(/[A-Za-z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g) ?? [];
+  const out: string[] = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i++];
+    if (!/^[A-Za-z]$/.test(t)) continue; // skip stray numbers
+    const upper = t.toUpperCase();
+    const abs   = t === upper;
+    out.push(t);
+    const shift = (n: string, isX: boolean) =>
+      abs ? String(parseFloat(n) - (isX ? dx : dy)) : n;
+    const xy = () => {
+      out.push(shift(tokens[i++], true));
+      out.push(shift(tokens[i++], false));
+    };
+    while (i < tokens.length && !/^[A-Za-z]$/.test(tokens[i])) {
+      if (upper === 'M' || upper === 'L') { xy(); }
+      else if (upper === 'C') { xy(); xy(); xy(); }
+      else if (upper === 'H') { out.push(shift(tokens[i++], true)); }
+      else if (upper === 'V') { out.push(shift(tokens[i++], false)); }
+      else { out.push(tokens[i++]); } // Z or unknown — pass through
+    }
+  }
+  return out.join(' ');
+}
 
 function iconKey(type: CardType, actor?: ActorType): string | null {
   if (type === 'person-action') return actor === 'supervisor' ? 'person-group' : 'person-single';
@@ -251,7 +282,7 @@ function renderTypedCard(card: Card, cardWidth: number): FrameNode {
 
     const iconScale = ICON_SIZE / Math.max(def.w, def.h);
     const v = figma.createVector();
-    v.vectorPaths = [{ windingRule: 'NONZERO', data: def.d }];
+    v.vectorPaths = [{ windingRule: 'NONZERO', data: normalizePath(def.d, def.minX, def.minY) }];
     v.fills = fill(p.headerFg);
     v.strokes = [];
     v.resize(def.w * iconScale, def.h * iconScale);
