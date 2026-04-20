@@ -1,10 +1,11 @@
-import { ActorType, Blueprint, Card, CardType, Cell, Lane, Phase } from './types.js';
+import { ActorType, Blueprint, Card, CardType, Cell, Phase, SubPhase } from './types.js';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
 const PHASE_WIDTH      = 280;
 const LANE_LABEL_WIDTH = 120;
-const HEADER_HEIGHT    = 64;
+const HEADER_HEIGHT    = 72;   // two-row header: phase group (top) + sub-phase (bottom)
+const PHASE_HEADER_H   = 30;   // height of the phase group row
 const CELL_PADDING     = 12;
 const CARD_WIDTH       = PHASE_WIDTH - CELL_PADDING * 2;  // 256
 const CARD_PADDING     = 14;
@@ -225,14 +226,28 @@ function buildKey(blueprintName: string): FrameNode {
   panel.appendChild(sub);
   sub.x = 20; sub.y = 24 + title.height + 4;
 
+  let y = 24 + title.height + 4 + sub.height + 20;
+
+  // Standard card types (not person-action — those are shown per-actor below)
   const types: CardType[] = [
-    'staff-action', 'system', 'policy',
+    'system', 'policy',
     'pain-point', 'opportunity',
     'domain-event', 'data-entity',
-    'note', 'person-action',
+    'note',
   ];
 
-  let y = 24 + title.height + 4 + sub.height + 20;
+  // Person-action actor variants shown first
+  const actors: ActorType[] = ['applicant', 'caseworker', 'supervisor'];
+  for (const actor of actors) {
+    const sample = renderCard(
+      { type: 'person-action', actor, text: ACTOR_PALETTE[actor].label, subtext: 'Action taken' },
+      KEY_CARD_WIDTH
+    );
+    panel.appendChild(sample);
+    sample.x = 20; sample.y = y;
+    y += sample.height + 10;
+  }
+
   for (const type of types) {
     const p = PALETTE[type];
     const sample = renderCard(
@@ -250,14 +265,27 @@ function buildKey(blueprintName: string): FrameNode {
 
 // ── Main render ───────────────────────────────────────────────────────────────
 
+// Flat sub-phase entry carrying its parent phase reference
+interface SubPhaseEntry extends SubPhase {
+  phase: Phase;
+}
+
 export async function renderBlueprint(blueprint: Blueprint): Promise<void> {
   await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
   await figma.loadFontAsync({ family: 'Inter', style: 'Medium' });
   await figma.loadFontAsync({ family: 'Inter', style: 'Semi Bold' });
 
+  // Build flat column list from nested phases → subPhases
+  const columns: SubPhaseEntry[] = [];
+  for (const phase of blueprint.phases) {
+    for (const sp of phase.subPhases) {
+      columns.push({ ...sp, phase });
+    }
+  }
+
   const cellMap = new Map<string, Cell>();
   for (const cell of blueprint.cells) {
-    cellMap.set(`${cell.laneId}/${cell.phaseId}`, cell);
+    cellMap.set(`${cell.laneId}/${cell.subPhaseId}`, cell);
   }
 
   // ── First pass: render all cards, compute row heights ──────────────────────
@@ -272,8 +300,8 @@ export async function renderBlueprint(blueprint: Blueprint): Promise<void> {
     const laneRow: RenderedCell[] = [];
     let maxH = ROW_MIN_HEIGHT;
 
-    for (const phase of blueprint.phases) {
-      const entry = cellMap.get(`${lane.id}/${phase.id}`);
+    for (const col of columns) {
+      const entry = cellMap.get(`${lane.id}/${col.id}`);
       const cards = (entry?.cards ?? []).map(c => renderCard(c, CARD_WIDTH));
 
       let h = CELL_PADDING;
@@ -290,7 +318,7 @@ export async function renderBlueprint(blueprint: Blueprint): Promise<void> {
     rowHeights.push(maxH);
   }
 
-  const tableWidth  = LANE_LABEL_WIDTH + blueprint.phases.length * PHASE_WIDTH;
+  const tableWidth  = LANE_LABEL_WIDTH + columns.length * PHASE_WIDTH;
   const tableHeight = HEADER_HEIGHT + rowHeights.reduce((a, b) => a + b, 0);
   const totalWidth  = KEY_TOTAL + tableWidth;
 
@@ -307,21 +335,44 @@ export async function renderBlueprint(blueprint: Blueprint): Promise<void> {
 
   const bpX = KEY_TOTAL; // blueprint left edge
 
-  // ── Phase headers ──────────────────────────────────────────────────────────
-  for (let i = 0; i < blueprint.phases.length; i++) {
-    const phase = blueprint.phases[i];
+  // ── Phase group headers (top row) ──────────────────────────────────────────
+  // One label per phase, spanning all its sub-phase columns.
+  {
+    let colOffset = 0;
+    for (const phase of blueprint.phases) {
+      const spanW = phase.subPhases.length * PHASE_WIDTH;
+      const spanX = bpX + LANE_LABEL_WIDTH + colOffset * PHASE_WIDTH;
+
+      const label = txt(phase.label, 13, 'Semi Bold', '#1A1A1A');
+      container.appendChild(label);
+      label.x = spanX + (spanW - label.width) / 2;
+      label.y = 8;
+
+      colOffset += phase.subPhases.length;
+
+      // Phase group divider (right edge, not after last phase)
+      if (colOffset < columns.length) {
+        vDivider(container, bpX + LANE_LABEL_WIDTH + colOffset * PHASE_WIDTH, 0, HEADER_HEIGHT, '#AAAAAA');
+      }
+    }
+  }
+
+  // Mid-header rule separating phase row from sub-phase row
+  hDivider(container, bpX + LANE_LABEL_WIDTH, PHASE_HEADER_H, tableWidth - LANE_LABEL_WIDTH, '#CCCCCC');
+
+  // ── Sub-phase headers (bottom row) ─────────────────────────────────────────
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
     const colX = bpX + LANE_LABEL_WIDTH + i * PHASE_WIDTH;
 
-    const label = txt(phase.label, 15, 'Semi Bold', '#1A1A1A');
+    const label = txt(col.label, 11, 'Regular', '#555555');
     container.appendChild(label);
     label.x = colX + (PHASE_WIDTH - label.width) / 2;
-    label.y = 12;
+    label.y = PHASE_HEADER_H + 6;
 
-    if (phase.sublabel) {
-      const sub = txt(phase.sublabel, 11, 'Regular', '#888888');
-      container.appendChild(sub);
-      sub.x = colX + (PHASE_WIDTH - sub.width) / 2;
-      sub.y = 12 + label.height + 4;
+    // Sub-phase divider (lighter, within a phase group)
+    if (i < columns.length - 1 && columns[i + 1].phase.id === col.phase.id) {
+      vDivider(container, colX + PHASE_WIDTH, PHASE_HEADER_H, HEADER_HEIGHT - PHASE_HEADER_H, '#DDDDDD');
     }
   }
 
@@ -346,9 +397,9 @@ export async function renderBlueprint(blueprint: Blueprint): Promise<void> {
     vDivider(container, bpX + LANE_LABEL_WIDTH, y, rowH);
 
     // Cards — placed directly in container (no cell wrapper)
-    for (let pi = 0; pi < blueprint.phases.length; pi++) {
-      const { cards } = cellGrid[li][pi];
-      const baseX = bpX + LANE_LABEL_WIDTH + pi * PHASE_WIDTH;
+    for (let ci = 0; ci < columns.length; ci++) {
+      const { cards } = cellGrid[li][ci];
+      const baseX = bpX + LANE_LABEL_WIDTH + ci * PHASE_WIDTH;
 
       let cardY = y + CELL_PADDING;
       for (const card of cards) {
@@ -358,9 +409,10 @@ export async function renderBlueprint(blueprint: Blueprint): Promise<void> {
         cardY += card.height + CARD_GAP;
       }
 
-      // Phase column divider
-      if (pi < blueprint.phases.length - 1) {
-        vDivider(container, baseX + PHASE_WIDTH, y, rowH);
+      // Column divider — heavier at phase boundaries, lighter within a phase
+      if (ci < columns.length - 1) {
+        const isPhaseBreak = columns[ci + 1].phase.id !== columns[ci].phase.id;
+        vDivider(container, baseX + PHASE_WIDTH, y, rowH, isPhaseBreak ? '#AAAAAA' : '#DDDDDD');
       }
     }
 

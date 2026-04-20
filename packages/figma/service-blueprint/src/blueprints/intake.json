@@ -226,11 +226,13 @@
       "cards": [
         {
           "type": "person-action",
+          "actor": "caseworker",
           "text": "Claims task from queue",
           "subtext": "Application detail, verification checklist, and scheduling become visible"
         },
         {
           "type": "person-action",
+          "actor": "caseworker",
           "text": "Schedules interview"
         }
       ]
