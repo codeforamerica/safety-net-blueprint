@@ -62,3 +62,28 @@ To validate a context file before generating:
 ```bash
 node validate-definitions.js src/blueprints/states/<state>/<domain>-context.yaml
 ```
+
+### What's safe to edit
+
+All display text is free-form and safe to change:
+
+- `name` — the diagram title
+- Lane, phase, and sub-phase `label` values — all header text
+- Sub-phase `description` — human-readable notes, not rendered in the diagram
+- Card `text`, `subtext`, and `citation` — no constraints
+
+You can also freely add, remove, or reorder cards within a lane, and add, remove, or reorder phases and sub-phases.
+
+### What can break things
+
+These fields are load-bearing — change them carefully and always run `validate` afterward:
+
+- **Lane `id`** — cards in every sub-phase are keyed by lane ID. Rename one and all its cards disappear from the output.
+- **Sub-phase `id`** — referenced by `event:` slots when resolving state machine transitions. Changing an ID can break event expansion.
+- **`event:` values** — must match a trigger or event name in the state machine YAML. A mismatch produces a warning and may generate an empty or incorrect card.
+- **Card `type`** — must be one of the defined values: `person-action`, `system`, `policy`, `domain-event`, `data-entity`, `pain-point`, `opportunity`, `note`.
+- **Card `actor`** — must be `applicant`, `caseworker`, `supervisor`, or `system`. Required on every `person-action` card.
+- **`domain`** — must match the `domain` field in the referenced state machine YAML.
+- **`stateMachine`** — relative path to the state machine file; must resolve to a real file.
+
+**Rule of thumb:** labels and prose are safe. IDs, types, actor values, and event references are load-bearing.
