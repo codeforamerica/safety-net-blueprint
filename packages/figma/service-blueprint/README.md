@@ -76,14 +76,13 @@ You can also freely add or remove cards within a lane, and reorder cards within 
 
 Phase and sub-phase order reflects the workflow defined in the state machine contracts — don't reorder them. Their sequence represents the actual process flow, not an editorial choice.
 
-You can insert new phases or sub-phases between existing ones to document state-specific context — human actions, policy requirements, pain points, opportunities, and notes. Cards of those types are passed through as-is with no state machine dependency. What you cannot do in a new phase or sub-phase is use `event:` slots — those require a matching state machine transition to expand and only make sense aligned to the existing workflow steps.
+You can insert new phases or sub-phases between existing ones to document state-specific context. The only constraint is that `event:` slots must reference a valid state machine trigger — so stick to explicit cards in any new phases or sub-phases you add. `system` and `data-entity` cards with explicit `text` are fine anywhere. What to avoid is `event:` slots in the data lane, since those expand into `domain-event` cards derived from the state machine and require a matching transition.
 
 ### What can break things
 
 These fields are load-bearing — change them carefully and always run `validate` afterward:
 
 - **Lane `id`** — cards in every sub-phase are keyed by lane ID. Rename one and all its cards disappear from the output.
-- **Sub-phase `id`** — referenced by `event:` slots when resolving state machine transitions. Changing an ID can break event expansion.
 - **`event:` values** — must match a trigger or event name in the state machine YAML. A mismatch produces a warning and may generate an empty or incorrect card.
 - **Card `type`** — must be one of the defined values: `person-action`, `system`, `policy`, `domain-event`, `data-entity`, `pain-point`, `opportunity`, `note`.
 - **Card `actor`** — must be `applicant`, `caseworker`, `supervisor`, or `system`. Required on every `person-action` card.
