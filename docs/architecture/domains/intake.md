@@ -22,6 +22,7 @@ The intake domain is responsible for capturing and structuring the data a househ
 
 - **Application** — the root record representing one submission by a household
 - **ApplicationMember** — a person linked to the application (applying or counted in household)
+- **Verification** — a unified checklist record covering paper document requirements and electronic service check results
 - Income, expenses, and assets — financial facts collected per person or household
 
 **What this domain produces:** a structured, verified data record that downstream domains (eligibility, workflow, case management) can act on.
@@ -125,17 +126,15 @@ See [Decision 11](#decision-11-income-and-expense-detail-at-intake).
 
 ---
 
-### VerificationItem
+### Verification
 
-A verification obligation linked to an application — representing one item on the household's verification checklist. Tracks both document-based obligations (e.g., provide a pay stub) and electronic verification results (e.g., an FDSH citizenship check returned inconclusive).
+A unified record representing one item on the household's verification checklist — covering both paper document requirements (e.g., provide a pay stub) and electronic service check results (e.g., an FDSH citizenship check). All major platforms converge on a unified verification concept that covers both types. See [Decision 19](#decision-19-unified-verification-entity) for the choice.
 
-All major platforms have an equivalent checklist concept: Pega has "document request" case objects; Cúram has evidence-gathering checklist items; Salesforce has document checklist items. The blueprint unifies document and electronic verification obligations into one entity, consistent with the ex parte requirement (42 CFR § 435.911) that electronic checks precede paper requests.
+Verification records are created by the rules engine in response to intake events, not manually by caseworkers under normal circumstances. Household-level obligations (e.g., proof of residency) are linked to the application only. Member-level obligations (e.g., proof of income, citizenship) are linked to both the application and the specific member.
 
-Obligations are created at two points: at submission (baseline requirements from the programs applied for) and after electronic service calls return inconclusive (conditional requirements, per ex parte rules). Household-level obligations (e.g., proof of residency) are linked to the application only. Member-level obligations (e.g., proof of income, citizenship) are linked to both the application and the specific member.
+**Key fields:** `id`, `applicationId`, `memberId` (nullable — null for household-level obligations), `verificationType` (`document` | `electronic`), `category` (`citizenship`, `income`, `identity`, `residency`, `immigration`, etc.), `status` (`pending` | `inconclusive` | `satisfied` | `waived` | `cannot_verify`), `source` (for electronic: `fdsh` | `ievs` | `save` | `ssa`), `evidence` (for document: IDs of verified documents from document management), `createdAt`, `updatedAt`
 
-**Key fields:** `memberId` (nullable — null for household-level obligations), `category` (`citizenship`, `income`, `identity`, `residency`, `immigration`, etc.), `verificationType` (`document`, `electronic`, `self_attestation`), `status` (`pending`, `satisfied`, `waived`, `cannot_verify`), `evidenceId` (nullable — references the service call or document that satisfied the obligation, disambiguated by `verificationType`)
-
-See [Decision 14](#decision-14-verification-checklist-generation).
+See [Decision 14](#decision-14-verification-checklist-generation), [Decision 19](#decision-19-unified-verification-entity).
 
 ---
 
@@ -211,9 +210,9 @@ Events from other domains that intake reacts to:
 |---|---|---|
 | `workflow.task.claimed` | A caseworker claiming the intake review task signals they have begun active review — intake should reflect this in the application lifecycle. See [Decision 8](#decision-8-submitted--under_review-transition-trigger). | Trigger `submitted → under_review` on the linked application |
 | `eligibility.determination_complete` | Eligibility publishes outcomes per program; intake subscribes to determine when all programs are resolved and the application can be closed. See [Decision 6](#decision-6-intake-phase-end--lifecycle-state). | Trigger `close` when all programs are determined |
-| `data-exchange.service-call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns a result, the rules engine updates the affected `VerificationItem` status — satisfied if verified, or creating a conditional document-based obligation if inconclusive. See [Decision 14](#decision-14-verification-checklist-generation), [Decision 17](#decision-17-external-service-verification-write-backs), [Decision 18](#decision-18-data-exchange-orchestration). | Rules engine updates `VerificationItem` status; creates document-based `VerificationItem` if inconclusive |
+| `data-exchange.service-call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns a result, the rules engine updates the affected `Verification` status — satisfied if verified, or creating a conditional document-based obligation if inconclusive. See [Decision 14](#decision-14-verification-checklist-generation), [Decision 17](#decision-17-external-service-verification-write-backs), [Decision 18](#decision-18-data-exchange-orchestration). | Rules engine updates `Verification` status; creates document-based `Verification` if inconclusive |
 | `scheduling.appointment.scheduled` | Intake must link each scheduled appointment to the correct Interview entity so the appointments array stays current. Required for caseworkers to see appointment history and for the interview completion flow to be traceable. See [Decision 15](#decision-15-interview-entity-model). | Rules engine appends the appointmentId to `Interview.appointments` for the linked interview |
-| `document-management.document.verified` | When a submitted document is reviewed and accepted, the corresponding verification obligation is satisfied. Without this event, intake has no trigger to mark the `VerificationItem` as satisfied when the caseworker completes document review. | Rules engine sets matching `VerificationItem` to `satisfied` |
+| `document-management.document.verified` | When a submitted document is reviewed and accepted, the corresponding verification obligation is satisfied. Without this event, intake has no trigger to mark the `Verification` as satisfied when the caseworker completes document review. | Rules engine transitions the matching `Verification` record to `satisfied` and records the document ID in its `evidence` list |
 
 ---
 
@@ -236,11 +235,12 @@ Quick reference — each decision is detailed in the section below.
 | 11 | [Income and expense detail at intake](#decision-11-income-and-expense-detail-at-intake) | Full schema, only gross income required — implementations decide how much detail to collect. |
 | 12 | [MAGI tax filing status fields](#decision-12-magi-tax-filing-status-fields) | Flat fields in the baseline — required by the MAGI household composition logic from [Decision 9](#decision-9-member-to-member-relationship-matrix-magi). |
 | 13 | [Post-submission program routing — task creation and automated eligibility](#decision-13-post-submission-program-routing--task-creation-and-automated-eligibility) | One intake task per application with per-program status — programs under automated processing marked at task creation. |
-| 14 | [Verification checklist generation](#decision-14-verification-checklist-generation) | Rules-driven `VerificationItem` records replace document-only checklists — unified for document and electronic obligations. |
+| 14 | [Verification checklist generation](#decision-14-verification-checklist-generation) | Rules-driven `Verification` records cover both paper document requirements and electronic check obligations. |
 | 15 | [Interview entity model](#decision-15-interview-entity-model) | Dedicated Interview entity in intake — not a generic appointment type; scheduling owns mechanics, intake owns regulatory tracking. |
 | 16 | [Interview task creation timing](#decision-16-interview-task-creation-timing) | Interview task created at task claim time (when caseworker is known), not at submission. |
-| 17 | [External service verification write-backs](#decision-17-external-service-verification-write-backs) | Write-backs update `VerificationItem` status; verified facts (if any) still written to ApplicationMember. |
+| 17 | [External service verification write-backs](#decision-17-external-service-verification-write-backs) | Obligation status → `Verification` record; verified facts → `ApplicationMember` fields. |
 | 18 | [Data exchange orchestration](#decision-18-data-exchange-orchestration) | Intake rules create `data-exchange/service-calls` resources — data exchange stays generic; field mapping lives in rules. |
+| 19 | [Unified Verification entity](#decision-19-unified-verification-entity) | Single `Verification` entity with `verificationType` replaces `ApplicationDocument` and `ApplicationMember.verifications[]`. |
 
 ---
 
@@ -560,11 +560,11 @@ States running RTE synchronously — completing it before the intake task is cre
 
 **Rules engine design:**
 
-`VerificationItem` records are created by `all-match` rule sets (all matching rules fire, not just the first). Each rule set binds the application and, where member-level obligations are needed, iterates over members using a collection binding.
+`Verification` records are created by `all-match` rule sets (all matching rules fire, not just the first). Each rule set binds the application and, where member-level obligations are needed, iterates over members using a collection binding.
 
 Household-level obligations (one per application): rule sets without collection iteration — a single `createResource` per matching rule.
 
-Member-level obligations (one per qualifying member): rule sets with a collection binding on `application.members`, using `for/in/if` iteration to create one `VerificationItem` per member.
+Member-level obligations (one per qualifying member): rule sets with a collection binding on `application.members`, using `for/in/if` iteration to create one `Verification` per member.
 
 Example structure (per-member income obligation):
 ```yaml
@@ -584,7 +584,7 @@ rules:
           - in: [snap, {var: member.programs}]
           - "!=": [{var: member.hasIncome}, false]
       createResource:
-        entity: intake/applications/verification-items
+        entity: intake/applications/verifications
         fields:
           applicationId: {var: application.id}
           memberId: {var: member.id}
@@ -593,15 +593,15 @@ rules:
           status: pending
 ```
 
-Citizenship obligations illustrate the two-phase pattern: at submission, an `electronic` `VerificationItem` is created for FDSH; when `data-exchange.service-call.completed` fires with result `verified`, the item is set to `satisfied`; if inconclusive, a new `document` `VerificationItem` is created for the paper citizenship proof.
+Citizenship obligations illustrate the two-phase pattern: at submission, an `electronic` `Verification` is created for FDSH; when `data-exchange.service-call.completed` fires with result `verified`, the item is set to `satisfied`; if inconclusive, a new `document` `Verification` is created for the paper citizenship proof.
 
 **Options:**
 - **(A)** Hardcoded in intake — requirements defined as static program-to-document mappings; simpler but not state-customizable
-- **(B)** ✓ Rules-driven unified checklist — `all-match` rule sets generate `VerificationItem` records covering both document and electronic obligations; states customize via overlay; intake domain has no verification requirement logic; consistent with Pega, Cúram, and Salesforce patterns; supports ex parte two-phase flow without a separate entity type
+- **(B)** ✓ Rules-driven unified checklist — `all-match` rule sets generate `Verification` records covering both document and electronic obligations; states customize via overlay; intake domain has no verification requirement logic; consistent with Pega, Cúram, and Salesforce patterns; supports ex parte two-phase flow without a separate entity type
 
 **Note on rules condition language:** JSON Logic (an open spec) is the condition layer for rule set expressions. DMN (Decision Model and Notation, OMG standard) was considered — it is supported by Camunda, Red Hat Decision Manager, and Flowable — but ruled out: DMN is XML-table-based and too heavyweight for a YAML-native format. The action vocabulary (`createResource`, `triggerTransition`, `for/in` iteration) is necessarily domain-specific regardless of condition language.
 
-**Deferred:** `category` enum values (`residency`, `income`, `identity`, `citizenship`, `immigration`, `utilities_shelter`, etc.) are defined in the `VerificationItem` contract implementation issue.
+**Deferred:** `category` enum values (`residency`, `income`, `identity`, `citizenship`, `immigration`, `utilities_shelter`, etc.) are defined in the `Verification` contract implementation issue.
 
 ---
 
@@ -652,14 +652,14 @@ Citizenship obligations illustrate the two-phase pattern: at submission, an `ele
 **Considerations:**
 - All federal external verification services operate per-person: FDSH checks citizenship and income per SSN; IEVS/The Work Number checks employment and income per SSN; SAVE checks immigration status per person. None return household-level aggregate results.
 - The result carries two distinct kinds of information: (1) **whether the obligation is satisfied** (was citizenship verified? was income verified?) and (2) **verified facts** (the confirmed income amount, the confirmed citizenship status). These are different concerns — one is a checklist status, the other is a data update to the member record.
-- Writing the obligation outcome directly to `ApplicationMember` as a status field blends checklist management with member data. It also doesn't generalize: once `VerificationItem` exists as a unified checklist entity (see [Decision 14](#decision-14-verification-checklist-generation)), the obligation status naturally belongs there, not as a separate field on `ApplicationMember`.
+- Writing the obligation outcome directly to `ApplicationMember` as a status field blends checklist management with member data. It also doesn't generalize: once `Verification` exists as a unified checklist entity (see [Decision 14](#decision-14-verification-checklist-generation)), the obligation status naturally belongs there, not as a separate field on `ApplicationMember`.
 - Writing verified facts (e.g., confirmed income amount, confirmed citizenship status) to `ApplicationMember` is correct — those are person facts that belong on the member record and are used by the eligibility domain for determination.
 
 **Decision:** Write-backs split by concern:
-- **Obligation status** → `VerificationItem`. When `data-exchange.service-call.completed` fires, the rules engine updates the corresponding `VerificationItem` status (`satisfied`, `cannot_verify`) and, if inconclusive, creates a new document-based `VerificationItem` per ex parte rules.
+- **Obligation status** → `Verification`. When `data-exchange.service-call.completed` fires, the rules engine transitions the corresponding `Verification` to `satisfied` or `inconclusive`; if inconclusive, creates a new document-based `Verification` for the paper document requirement.
 - **Verified facts** → `ApplicationMember`. Facts confirmed by the external service (confirmed income amount, confirmed citizenship status, confirmed immigration category) are written to the member record via `triggerTransition` or field updates — available to eligibility for determination.
 
-No verification obligation fields live on `Application`. No verification status fields live on `ApplicationMember` — those moved to `VerificationItem`.
+No verification obligation fields live on `Application`. No verification status fields live on `ApplicationMember` — those moved to `Verification`.
 
 **Deferred:** The specific `ApplicationMember` fields updated per service (FDSH, IEVS, SAVE, SSA) — names, types, and allowed values — are defined in the `ApplicationMember` contract implementation issue.
 
@@ -700,6 +700,38 @@ action:
 
 ---
 
+### Decision 19: Unified Verification entity
+
+**Status:** Decided: B
+
+**What's being decided:** Whether paper document requirements and electronic service check results are tracked in a single `Verification` entity or in separate structures.
+
+**Considerations:**
+- Pega uses `VerificationRequest` for both paper and electronic; Salesforce PSS uses `VerificationRequest` with a `Type` field (`Document`, `DataCheck`, or `Both`); Cúram tracks document evidence and electronic evidence under a single evidence framework — the industry converges on unified
+- 42 CFR § 435.940–960 requires states to document electronic verification attempts and their results; a unified entity provides a complete regulatory audit trail in one place
+- A split model (`ApplicationDocument` for paper + `ApplicationMember.verifications[]` for electronic) forces caseworkers to consult two data structures to see the full verification state and prevents a single lifecycle from applying to both obligation types
+- `ApplicationMember.verifications[]` is an array with no independent lifecycle — electronic results cannot be individually queried or transitioned through states
+
+**Options:**
+- **(A)** Separate entities — `ApplicationDocument` for paper requirements; `ApplicationMember.verifications[]` for electronic results; two structures, two query paths, no shared lifecycle
+- **(B)** ✓ Unified `Verification` entity — `verificationType: document | electronic` discriminates the two; a single API endpoint (`/applications/{id}/verifications`) covers the full checklist; a shared lifecycle applies to both types
+
+**Lifecycle:**
+
+| State | Description |
+|---|---|
+| `pending` | Obligation exists, not yet resolved |
+| `inconclusive` | Check or document returned an inconclusive result; transitional — caseworker must take further action |
+| `satisfied` | Verification complete — document verified or electronic check confirmed |
+| `waived` | Caseworker granted a waiver |
+| `cannot_verify` | Unable to satisfy the obligation after exhausting available options |
+
+Transitions: `pending → satisfied | inconclusive | waived | cannot_verify`; `inconclusive → satisfied | waived | cannot_verify`. Terminal states: `satisfied`, `waived`, `cannot_verify`.
+
+**Customization:** The `category` enum (`citizenship`, `income`, `identity`, `residency`, `immigration`, etc.) and `source` enum (`fdsh`, `ievs`, `save`, `ssa`) are overlay-extensible. States may add program-specific verification categories or additional electronic source identifiers.
+
+---
+
 ## Out of scope
 
 The following are explicitly not intake domain concerns:
@@ -709,7 +741,7 @@ The following are explicitly not intake domain concerns:
 | Eligibility determination | Eligibility | The intake domain collects and structures data; it does not run eligibility rules or produce approved/denied outcomes |
 | Recertification / renewal | Case Management | Triggered by an existing case nearing expiration, not a new applicant event |
 | Notices and communications | Communication | The Communication domain subscribes to intake events (`application.submitted`, `application.withdrawn`) and sends notices; intake does not own notice generation |
-| Document file storage and retrieval | Document Management | Intake owns verification obligation records (`VerificationItem`); document management owns the actual file storage, retrieval, and retention lifecycle |
+| Document file storage and retrieval | Document Management | Intake owns verification obligation records (`Verification`); document management owns the actual file storage, retrieval, and retention lifecycle |
 | Pre-screening / eligibility screening | Portal / UI layer | Pre-screening does not start the regulatory clock and is a portal concern; the intake domain lifecycle starts at application submission |
 | Appointment scheduling mechanics | Scheduling | Intake owns the `Interview` entity (regulatory obligation); the scheduling domain owns appointments (time, location, confirmation, reminders). See [Decision 15](#decision-15-interview-entity-model). |
 | WIC certification | Future — WIC domain | WIC uses a clinical certification model requiring a CPA, with no federal processing deadline and participant categories not present in SNAP/Medicaid. The WIC model departs significantly enough from the intake domain model to warrant its own design when WIC support is scoped. |
