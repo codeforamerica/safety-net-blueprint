@@ -30,14 +30,14 @@ Re-running always creates a fresh frame — it won't overwrite existing work.
 
 State-specific content files are never committed to this repo (they're gitignored). A state's files are distributed separately — ask your team lead for the right place to get them.
 
-Once you have the state's content file (`intake-context.yaml`):
+Once you have the state's content file (`<domain>-context.yaml`):
 
-1. Place it at `src/blueprints/states/<state>/intake-context.yaml`
+1. Place it at `src/blueprints/states/<state>/`
 2. Generate the blueprint JSON:
    ```bash
-   node generate-blueprint.js src/blueprints/states/<state>/intake-context.yaml
+   node generate-blueprint.js src/blueprints/states/<state>/<domain>-context.yaml
    ```
-   This writes `src/blueprints/states/<state>/intake.json`.
+   This writes `src/blueprints/states/<state>/<domain>.json`.
 3. Build the plugin against that data:
    ```bash
    node build.js src/blueprints/states/<state> <output-dir>
@@ -47,7 +47,7 @@ Once you have the state's content file (`intake-context.yaml`):
 To preview the blueprint without Figma, render it as an SVG locally:
 
 ```bash
-node render-svg.js src/blueprints/states/<state>/intake.json
+node render-svg.js src/blueprints/states/<state>/<domain>.json
 ```
 
 ## Authoring content
@@ -57,5 +57,5 @@ The YAML context file is the human-editable source. It defines the swim lanes, p
 To validate a context file before generating:
 
 ```bash
-node validate-definitions.js src/blueprints/states/<state>/intake-context.yaml
+node validate-definitions.js src/blueprints/states/<state>/<domain>-context.yaml
 ```
