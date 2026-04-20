@@ -1,5 +1,5 @@
 import { renderBlueprint } from './renderer.js';
-import intake from './blueprints/intake.json';
+import intake from './blueprints/_current.json';
 import type { Blueprint } from './types.js';
 
 const BLUEPRINTS: Record<string, Blueprint> = {

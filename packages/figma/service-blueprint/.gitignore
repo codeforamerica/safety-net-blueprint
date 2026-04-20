@@ -3,3 +3,6 @@ dist/
 
 # State-specific blueprint content (never commit — use gists for sharing)
 src/blueprints/states/
+
+# Active blueprint staged for build (written by build.js)
+src/blueprints/_current.json
