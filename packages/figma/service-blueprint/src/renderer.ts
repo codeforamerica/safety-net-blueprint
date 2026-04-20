@@ -111,33 +111,48 @@ const ICON_DEFS: Record<string, IconDef> = {
   },
 };
 
-// Translate all absolute-coordinate SVG commands by (-dx, -dy) so the path
-// bounding box starts at (0, 0). Relative commands (lowercase) pass through
-// unchanged. Handles M, L, C, H, V, Z and their lowercase equivalents.
+// Normalize SVG path data for Figma's vectorPaths:
+// 1. Translate all coordinates by (-dx, -dy) so the bounding box starts at (0,0).
+// 2. Expand H/V/h/v to L commands — Figma's vectorPaths parser rejects H and V.
+// 3. Convert all relative commands to absolute, tracking current cursor position.
 function normalizePath(d: string, dx: number, dy: number): string {
-  if (dx === 0 && dy === 0) return d;
   const tokens = d.match(/[A-Za-z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g) ?? [];
   const out: string[] = [];
   let i = 0;
+  let cx = 0, cy = 0;   // current point (canvas coords, before translation)
+  let mx = 0, my = 0;   // last explicit M point (for Z reset)
+
+  const num  = () => parseFloat(tokens[i++]);
+  const more = () => i < tokens.length && !/^[A-Za-z]$/.test(tokens[i]);
+  const pt   = (x: number, y: number) => `${+(x - dx).toFixed(4)} ${+(y - dy).toFixed(4)}`;
+
   while (i < tokens.length) {
-    const t = tokens[i++];
-    if (!/^[A-Za-z]$/.test(t)) continue; // skip stray numbers
-    const upper = t.toUpperCase();
-    const abs   = t === upper;
-    out.push(t);
-    const shift = (n: string, isX: boolean) =>
-      abs ? String(parseFloat(n) - (isX ? dx : dy)) : n;
-    const xy = () => {
-      out.push(shift(tokens[i++], true));
-      out.push(shift(tokens[i++], false));
-    };
-    while (i < tokens.length && !/^[A-Za-z]$/.test(tokens[i])) {
-      if (upper === 'M' || upper === 'L') { xy(); }
-      else if (upper === 'C') { xy(); xy(); xy(); }
-      else if (upper === 'H') { out.push(shift(tokens[i++], true)); }
-      else if (upper === 'V') { out.push(shift(tokens[i++], false)); }
-      else { out.push(tokens[i++]); } // Z or unknown — pass through
-    }
+    const cmd = tokens[i++];
+    if (!/^[A-Za-z]$/.test(cmd)) continue;
+    if (cmd === 'Z' || cmd === 'z') { out.push('Z'); cx = mx; cy = my; continue; }
+
+    do {
+      switch (cmd) {
+        case 'M': { const x=num(),y=num(); mx=cx=x; my=cy=y; out.push(`M ${pt(x,y)}`); break; }
+        case 'm': { const x=cx+num(),y=cy+num(); mx=cx=x; my=cy=y; out.push(`M ${pt(x,y)}`); break; }
+        case 'L': { const x=num(),y=num(); cx=x; cy=y; out.push(`L ${pt(x,y)}`); break; }
+        case 'l': { const x=cx+num(),y=cy+num(); cx=x; cy=y; out.push(`L ${pt(x,y)}`); break; }
+        case 'H': { const x=num(); cx=x; out.push(`L ${pt(x,cy)}`); break; }
+        case 'h': { const x=cx+num(); cx=x; out.push(`L ${pt(x,cy)}`); break; }
+        case 'V': { const y=num(); cy=y; out.push(`L ${pt(cx,y)}`); break; }
+        case 'v': { const y=cy+num(); cy=y; out.push(`L ${pt(cx,y)}`); break; }
+        case 'C': {
+          const x1=num(),y1=num(),x2=num(),y2=num(),x=num(),y=num();
+          out.push(`C ${pt(x1,y1)} ${pt(x2,y2)} ${pt(x,y)}`); cx=x; cy=y; break;
+        }
+        case 'c': {
+          // All offsets relative to current point at start of this segment
+          const ox=cx,oy=cy;
+          const x1=ox+num(),y1=oy+num(),x2=ox+num(),y2=oy+num(),x=ox+num(),y=oy+num();
+          out.push(`C ${pt(x1,y1)} ${pt(x2,y2)} ${pt(x,y)}`); cx=x; cy=y; break;
+        }
+      }
+    } while (more());
   }
   return out.join(' ');
 }
