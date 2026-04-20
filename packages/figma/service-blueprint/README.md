@@ -28,21 +28,24 @@ Re-running always creates a fresh frame — it won't overwrite existing work.
 
 ## Customizing for a state
 
-State-specific content files are never committed to this repo (they're gitignored). A state's files are distributed separately — ask your team lead for the right place to get them.
+State-specific content files are never committed to this repo (they're gitignored). Start from the baseline context file for the domain and modify it for your state.
 
-Once you have the state's content file (`<domain>-context.yaml`):
-
-1. Place it at `src/blueprints/states/<state>/`
-2. Generate the blueprint JSON:
+1. Copy the baseline context file as a starting point:
+   ```bash
+   mkdir -p src/blueprints/states/<state>
+   cp src/blueprints/<domain>-context.yaml src/blueprints/states/<state>/<domain>-context.yaml
+   ```
+2. Edit `src/blueprints/states/<state>/<domain>-context.yaml` with state-specific content.
+3. Generate the blueprint JSON:
    ```bash
    node generate-blueprint.js src/blueprints/states/<state>/<domain>-context.yaml
    ```
    This writes `src/blueprints/states/<state>/<domain>.json`.
-3. Build the plugin against that data:
+4. Build the plugin against that data:
    ```bash
    node build.js src/blueprints/states/<state> <output-dir>
    ```
-4. In Figma Desktop, import the manifest from `<output-dir>/manifest.json` and run the plugin.
+5. In Figma Desktop, import the manifest from `<output-dir>/manifest.json` and run the plugin.
 
 To preview the blueprint without Figma, render it as an SVG locally:
 
