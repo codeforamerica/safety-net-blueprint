@@ -157,7 +157,7 @@
 </g>
 <text x="1302" y="350.8" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF"><tspan x="1302" dy="14.0">Claims task from queue</tspan></text>
 <g transform="translate(1064.790,-64.007) scale(1.31246)"><path d="M186.071 336.826C186.844 336.826 187.471 337.453 187.471 338.226C187.471 338.999 186.844 339.626 186.071 339.626C185.297 339.626 184.671 338.999 184.671 338.226C184.671 337.453 185.297 336.826 186.071 336.826ZM186.071 342.826C188.054 342.826 190.137 343.796 190.137 344.226V344.959H182.004V344.226C182.004 343.796 184.087 342.826 186.071 342.826ZM186.071 335.559C184.597 335.559 183.404 336.753 183.404 338.226C183.404 339.696 184.597 340.893 186.071 340.893C187.544 340.893 188.737 339.696 188.737 338.226C188.737 336.753 187.544 335.559 186.071 335.559ZM186.071 341.559C184.294 341.559 180.737 342.449 180.737 344.226V346.226H191.404V344.226C191.404 342.449 187.847 341.559 186.071 341.559Z" fill="#FFFFFF"/></g>
-<text x="1320" y="376.4" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="normal" fill="#FFFFFF"><tspan x="1320" dy="11.0">PERSON</tspan></text>
+<text x="1320" y="376.4" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="normal" fill="#FFFFFF"><tspan x="1320" dy="11.0">CASEWORKER</tspan></text>
 <text x="1302" y="419.8" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="normal" fill="#1A1040"><tspan x="1302" dy="12.0">Application detail, verification</tspan><tspan x="1302" dy="16.8">checklist, and scheduling become</tspan><tspan x="1302" dy="16.8">visible</tspan></text>
 <clipPath id="cc68"><rect x="1288" y="496.19999999999993" width="256" height="69.0" rx="8"/></clipPath>
 <g clip-path="url(#cc68)">
@@ -165,7 +165,7 @@
 </g>
 <text x="1302" y="510.2" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF"><tspan x="1302" dy="14.0">Schedules interview</tspan></text>
 <g transform="translate(1064.790,95.393) scale(1.31246)"><path d="M186.071 336.826C186.844 336.826 187.471 337.453 187.471 338.226C187.471 338.999 186.844 339.626 186.071 339.626C185.297 339.626 184.671 338.999 184.671 338.226C184.671 337.453 185.297 336.826 186.071 336.826ZM186.071 342.826C188.054 342.826 190.137 343.796 190.137 344.226V344.959H182.004V344.226C182.004 343.796 184.087 342.826 186.071 342.826ZM186.071 335.559C184.597 335.559 183.404 336.753 183.404 338.226C183.404 339.696 184.597 340.893 186.071 340.893C187.544 340.893 188.737 339.696 188.737 338.226C188.737 336.753 187.544 335.559 186.071 335.559ZM186.071 341.559C184.294 341.559 180.737 342.449 180.737 344.226V346.226H191.404V344.226C191.404 342.449 187.847 341.559 186.071 341.559Z" fill="#FFFFFF"/></g>
-<text x="1320" y="535.8" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="normal" fill="#FFFFFF"><tspan x="1320" dy="11.0">PERSON</tspan></text>
+<text x="1320" y="535.8" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="normal" fill="#FFFFFF"><tspan x="1320" dy="11.0">CASEWORKER</tspan></text>
 <line x1="1556" y1="324.79999999999995" x2="1556" y2="742.1999999999999" stroke="#DDDDDD" stroke-width="1"/>
 <clipPath id="cc69"><rect x="1568" y="336.79999999999995" width="256" height="69.0" rx="8"/></clipPath>
 <g clip-path="url(#cc69)">

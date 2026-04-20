@@ -19,7 +19,7 @@ npm install
 The repo includes a baseline intake blueprint. Additional domain blueprints are planned as future work. To build and load it:
 
 ```bash
-node build.js        # builds to dist/
+node ../build.js        # builds Figma plugin and renders SVG
 ```
 
 In Figma Desktop: **Plugins → Development → Import plugin from manifest…**, select `dist/manifest.json`. Run the plugin from the same menu and click **Generate**.
@@ -43,15 +43,10 @@ State-specific content files are never committed to this repo (they're gitignore
    This writes `src/blueprints/states/<state>/<domain>.json`.
 4. Build the plugin against that data:
    ```bash
-   node build.js src/blueprints/states/<state> <output-dir>
+   node ../build.js src/blueprints/states/<state> <output-dir>
    ```
+   This builds the Figma plugin and renders an SVG preview alongside the blueprint JSON.
 5. In Figma Desktop, import the manifest from `<output-dir>/manifest.json` and run the plugin.
-
-To preview the blueprint without Figma, render it as an SVG locally:
-
-```bash
-node render-svg.js src/blueprints/states/<state>/<domain>.json
-```
 
 ## Authoring content
 
