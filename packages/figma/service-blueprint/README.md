@@ -76,7 +76,9 @@ You can also freely add or remove cards within a lane, and reorder cards within 
 
 Phase and sub-phase order reflects the workflow defined in the state machine contracts — don't reorder them. Their sequence represents the actual process flow, not an editorial choice.
 
-You can insert new phases or sub-phases between existing ones to document state-specific context. The only constraint is that `event:` slots must reference a valid state machine trigger — so stick to explicit cards in any new phases or sub-phases you add. `system` and `data-entity` cards with explicit `text` are fine anywhere. What to avoid is `event:` slots in the data lane, since those expand into `domain-event` cards derived from the state machine and require a matching transition.
+You can insert new phases or sub-phases between existing ones to document state-specific context — human actions, policy requirements, pain points, and opportunities. Keep `event:` slots out of new phases or sub-phases, since those require a matching state machine transition.
+
+System, data, and event cards form the technical layer of the blueprint and should stay grouped together, aligned to their corresponding workflow steps. Even where individual cards aren't yet formally contract-driven, treat the technical layer as a unit — states should add to it or annotate it, not move it around. The goal is that every card in those lanes eventually traces back to a contract artifact.
 
 ### What can break things
 
