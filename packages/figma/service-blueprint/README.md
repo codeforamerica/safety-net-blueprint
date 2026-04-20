@@ -12,7 +12,7 @@ Generates service blueprint diagrams as native Figma frames and components. Cont
 ## For designers: generating a blueprint
 
 1. Open Figma Desktop.
-2. Go to **Plugins → Development → Import plugin from manifest…** and select `dist/manifest.json` (or `dist/co/manifest.json` for Colorado).
+2. Go to **Plugins → Development → Import plugin from manifest…** and select the `manifest.json` in your built output directory.
 3. Open any Figma file and run the plugin from the **Plugins → Development** menu.
 4. Click **Generate**. The plugin creates a new frame in the current page.
 5. Customize the generated frame — move, resize, restyle, or add annotations as needed.
@@ -52,14 +52,14 @@ npm packages used (all dev dependencies — nothing is shipped to users):
 ### Build
 
 ```bash
-node build.js                                    # baseline → dist/
-node build.js src/blueprints/states/co dist/co   # state-specific → dist/co/
-node build.js --watch                            # watch mode
+node build.js                                          # baseline → dist/
+node build.js src/blueprints/states/<state> dist/out   # state-specific → dist/out/
+node build.js --watch                                  # watch mode
 ```
 
 The build stages the selected blueprint JSON to `src/blueprints/_current.json`, bundles `src/main.ts` with esbuild, and copies `ui.html` and a manifest into the output directory.
 
-Load the plugin in Figma Desktop via **Plugins → Development → Import plugin from manifest…**, pointing to `dist/manifest.json`.
+Load the plugin in Figma Desktop via **Plugins → Development → Import plugin from manifest…**, pointing to the `manifest.json` in your output directory.
 
 The plugin's manifest declares `"documentAccess": "dynamic-page"`, which means Figma will prompt for permission to access the current page when the plugin runs. This is required to create frames and components. No network access or external permissions are needed.
 
@@ -146,14 +146,14 @@ npm run render       # renders a local SVG preview (no Figma needed)
 
 The context file lives at `src/blueprints/intake-context.yaml`. State-specific context files live at `src/blueprints/states/<state>/intake-context.yaml`.
 
-### Adding a state
+### Building for a state
 
-1. Create `src/blueprints/states/<state>/intake-context.yaml` with state-specific content.
-2. Run `npm run generate` (or point the generate script at the state file) to produce `intake.json`.
-3. Build: `node build.js src/blueprints/states/<state> dist/<state>`.
-4. Load `dist/<state>/manifest.json` in Figma.
+State-specific blueprint files are gitignored and never committed to this repo — distribute them via gist or a shared drive.
 
-State-specific files are gitignored (`src/blueprints/states/`). Use gists or a shared drive to distribute them.
+1. Place the state's `intake-context.yaml` in `src/blueprints/states/<state>/`.
+2. Generate the JSON: `node generate-blueprint.js src/blueprints/states/<state>/intake-context.yaml`
+3. Build: `node build.js src/blueprints/states/<state> <output-dir>`
+4. Load `<output-dir>/manifest.json` in Figma Desktop.
 
 ---
 
