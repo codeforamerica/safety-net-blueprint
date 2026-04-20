@@ -74,9 +74,7 @@ All display text is free-form and safe to change:
 
 You can also freely add or remove cards within a lane, and reorder cards within a lane.
 
-Phase and sub-phase order reflects the workflow defined in the state machine contracts — don't reorder them. Their sequence represents the actual process flow, not an editorial choice.
-
-You can insert new phases or sub-phases between existing ones to document state-specific context — human actions, policy requirements, pain points, and opportunities. Keep `event:` slots out of new phases or sub-phases, since those require a matching state machine transition.
+Phase and sub-phase order reflects the workflow defined in the state machine contracts — avoid reordering existing ones, since their sequence represents the actual process flow. Adding new phases or sub-phases is fine, including inserting them between existing ones to document state-specific steps. Keep `event:` slots out of new phases or sub-phases, since those require a matching state machine transition.
 
 System, data, and event cards form the technical layer of the blueprint and should stay grouped together, aligned to their corresponding workflow steps. Even where individual cards aren't yet formally contract-driven, treat the technical layer as a unit — states should add to it or annotate it, not move it around. The goal is that every card in those lanes eventually traces back to a contract artifact.
 
