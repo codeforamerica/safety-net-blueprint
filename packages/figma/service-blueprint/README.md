@@ -72,7 +72,7 @@ All display text is free-form and safe to change:
 - Sub-phase `description` — human-readable notes, not rendered in the diagram
 - Card `text`, `subtext`, and `citation` — no constraints
 
-You can also freely add or remove cards within a lane, and reorder cards within a lane.
+You can freely add editorial cards anywhere — `policy`, `pain-point`, `opportunity`, `note`, and `person-action` cards with explicit text. Avoid moving or removing existing cards in the system and data lanes; those represent contract-defined behavior and should stay aligned to their workflow steps.
 
 Phase and sub-phase order reflects the workflow defined in the state machine contracts — avoid reordering existing ones, since their sequence represents the actual process flow. Adding new phases or sub-phases is fine, including inserting them between existing ones to document state-specific steps. Keep `event:` slots out of new phases or sub-phases, since those require a matching state machine transition.
 
