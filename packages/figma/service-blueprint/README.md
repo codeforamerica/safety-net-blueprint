@@ -76,6 +76,8 @@ You can also freely add or remove cards within a lane, and reorder cards within 
 
 Phase and sub-phase order reflects the workflow defined in the state machine contracts — don't reorder them. Their sequence represents the actual process flow, not an editorial choice.
 
+You can insert new phases or sub-phases between existing ones to document state-specific context — human actions, policy requirements, pain points, opportunities, and notes. Cards of those types are passed through as-is with no state machine dependency. What you cannot do in a new phase or sub-phase is use `event:` slots — those require a matching state machine transition to expand and only make sense aligned to the existing workflow steps.
+
 ### What can break things
 
 These fields are load-bearing — change them carefully and always run `validate` afterward:
