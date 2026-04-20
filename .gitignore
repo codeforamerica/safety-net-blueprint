@@ -16,6 +16,8 @@ resolved/
 
 # Generated READMEs (built from README.content.md + template at prepack time)
 packages/*/README.md
+# packages/design is not a published npm package — its README is hand-authored
+!packages/design/README.md
 
 # npm pack tarballs
 *.tgz
