@@ -81,7 +81,7 @@ Phase and sub-phase order reflects the workflow defined in the state machine con
 These fields are load-bearing — change them carefully and always run `validate` afterward:
 
 - **Lane `id`** — cards in every sub-phase are keyed by lane ID. Rename one and all its cards disappear from the output.
-- **`event:` values** — must match a trigger or event name in the state machine YAML. A mismatch produces a warning and may generate an empty or incorrect card.
+- **`event:` values** — the baseline context file already uses all available events. Don't rename or move event slots; they must match a trigger or event name in the state machine YAML or the card will not generate correctly.
 - **Card `type`** — must be one of the defined values: `person-action`, `system`, `policy`, `domain-event`, `data-entity`, `pain-point`, `opportunity`, `note`.
 - **Card `actor`** — must be `applicant`, `caseworker`, `supervisor`, or `system`. Required on every `person-action` card.
 - **`domain`** — must match the `domain` field in the referenced state machine YAML.
