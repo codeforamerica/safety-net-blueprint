@@ -458,8 +458,8 @@ function renderBlueprint(bp) {
       // Column divider — slightly heavier at phase boundaries
       if (ci < numCols - 1) {
         const isPhaseEnd = columns[ci].phase !== columns[ci + 1].phase;
-        const divColor = isPhaseEnd ? '#AAAAAA' : '#DDDDDD';
-        const divWidth = isPhaseEnd ? 1.5 : 1;
+        const divColor = isPhaseEnd ? '#1A1A1A' : '#DDDDDD';
+        const divWidth = isPhaseEnd ? 3 : 1;
         parts.push(`<line x1="${baseX + PHASE_WIDTH}" y1="${rowY}" x2="${baseX + PHASE_WIDTH}" y2="${rowY + rowH}" stroke="${divColor}" stroke-width="${divWidth}"/>`);
       }
     }
