@@ -5,18 +5,19 @@
  * Runs the Figma plugin build and the SVG renderer in sequence.
  *
  * Usage:
- *   node build.js                                    # baseline → figma/dist/
+ *   node build.js                                    # baseline → figma/dist/ + svg/
  *   node build.js <input-dir> <output-dir>           # state-specific
  *   node build.js --watch                            # watch mode (Figma only)
  *
  * Examples:
  *   node build.js states/co dist/co
  *
- * The SVG is written alongside the blueprint JSON (or to --out if passed).
+ * SVG files are written to service-blueprints/svg/ (sibling of figma/).
  * Watch mode is passed through to the Figma build only — SVG is rendered once.
  */
 
 import { execFileSync } from 'child_process';
+import { mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -41,7 +42,11 @@ if (!args.includes('--watch')) {
 
   const blueprintJson = path.join(inputDir, 'intake.json');
 
-  execFileSync('node', [path.join(__dirname, 'render-svg.js'), blueprintJson], {
+  const svgDir = path.join(__dirname, 'svg');
+  mkdirSync(svgDir, { recursive: true });
+  const svgOut = path.join(svgDir, 'intake.svg');
+
+  execFileSync('node', [path.join(__dirname, 'render-svg.js'), blueprintJson, '--out', svgOut], {
     stdio: 'inherit',
   });
 }

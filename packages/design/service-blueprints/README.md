@@ -29,7 +29,7 @@ The repo includes a baseline intake blueprint. Additional domain blueprints are 
 node build.js        # builds Figma plugin → figma/dist/ and renders SVG
 ```
 
-The SVG is written alongside the blueprint JSON at `figma/src/blueprints/<domain>.svg`.
+The SVG is written to `svg/<domain>.svg` (a sibling of the `figma/` directory).
 
 In Figma Desktop: **Plugins → Development → Import plugin from manifest…**, select `figma/dist/manifest.json`. Run the plugin from the same menu and click **Generate**.
 
@@ -54,7 +54,7 @@ State-specific content files are never committed to this repo (they're gitignore
    ```bash
    node build.js figma/src/blueprints/states/<state> <output-dir>
    ```
-   This builds the Figma plugin and renders an SVG preview alongside the blueprint JSON.
+   This builds the Figma plugin and renders an SVG preview to `svg/<domain>.svg`.
 5. In Figma Desktop, import the manifest from `<output-dir>/manifest.json` and run the plugin.
 
 ## Authoring content

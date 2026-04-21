@@ -517,6 +517,16 @@
           "actor": "caseworker",
           "text": "Resolves remaining verification items",
           "subtext": "Marks inconclusive items resolved or requests final documents"
+        },
+        {
+          "type": "opportunity",
+          "text": "Opportunity: Collect H.R.1 work requirement data at interview",
+          "subtext": "Stop-gap until the data model is updated to capture work requirement fields at submission. Supplemental interview questions cover hours worked per week, caregiver status and ages of dependents, and enrollment in approved work or community engagement programs. Caseworkers work from an H.R.1 supplement to the standard interview guide."
+        },
+        {
+          "type": "opportunity",
+          "text": "Opportunity: Request work compliance documentation",
+          "subtext": "Use the existing document request mechanism for work requirement evidence — pay stubs, employer statements, volunteer logs, caregiving attestation, and medical exemption documentation. Flows through the standard caseworker document request → applicant upload path."
         }
       ]
     },
@@ -528,6 +538,16 @@
           "type": "policy",
           "text": "SNAP: Interview required before determination",
           "subtext": "May be waived by state policy — 7 CFR § 273.2(e)"
+        },
+        {
+          "type": "policy",
+          "text": "H.R.1: SNAP ABAWD work requirement expansion",
+          "subtext": "Expands age range subject to ABAWD work requirements; adds parental work requirements for adults with children above the age threshold. Existing application forms likely do not capture the data needed to evaluate compliance or exemption. — H.R.1 (pending)"
+        },
+        {
+          "type": "policy",
+          "text": "H.R.1: Medicaid community engagement requirement",
+          "subtext": "Adults required to demonstrate work, volunteering, caregiving, or education hours to maintain Medicaid eligibility. Data fields for engagement type and hours are not currently captured in most state application forms. — H.R.1 (pending)"
         }
       ]
     },
@@ -544,6 +564,11 @@
           "type": "data-entity",
           "text": "VerificationItems resolved",
           "subtext": "Final status set for each obligation"
+        },
+        {
+          "type": "note",
+          "text": "Future work: new VerificationItem types for H.R.1 compliance",
+          "subtext": "New obligation types needed — ABAWD work compliance, Medicaid community engagement, work requirement exemption. Each tracks submitted evidence and verification status alongside existing income and identity items."
         }
       ]
     },
