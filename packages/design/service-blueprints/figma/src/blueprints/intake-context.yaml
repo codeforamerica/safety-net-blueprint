@@ -26,7 +26,7 @@ lanes:
     label: "Caseworker"
     actors: [caseworker, supervisor]
   - id: system
-    label: "Background system"
+    label: "System"
     actors: [system]
   - id: regulations
     label: "Regulatory requirements"
@@ -100,14 +100,6 @@ phases:
             - type: note
               text: "Future state: submission confirmation sent to applicant automatically"
               subtext: "Requires a communications contract — notification type, channel, and content are not yet defined."
-            - type: system
-              text: "Federal checks initiated"
-              subtext: "FDSH, IEVS, SAVE, SSA, RTE (if Medicaid) — triggered automatically at submission"
-            - type: note
-              text: "Multi-program applications share check results across programs"
-              subtext: "FDSH Hub consolidates access to SSA and DHS/SAVE data for Medicaid — running those checks separately alongside it is redundant. IEVS is the exception: it is a SNAP-specific federal mandate and runs regardless. Results should be shared across programs rather than re-run per program."
-            - type: system
-              text: "Task added to intake queue"
 
   # ── Phase 2: Application review ───────────────────────────────────────────────
   - id: application-review
@@ -122,9 +114,6 @@ phases:
           queue routing. No caseworker step separates them.
         cards:
           data:
-            - type: domain-event
-              text: "application.expedited_flagged"
-              subtext: "If applicable — escalates to 7-day SLA track"
             - type: data-entity
               text: "Application updated"
               subtext: "isExpedited: true, priority: expedited (if flagged)"
@@ -133,23 +122,41 @@ phases:
               subtext: "Per-program eligibility indicators emitted by eligibility domain based on submitted (unverified) data — not a legal determination"
           system:
             - type: system
+              domain: data-exchange
+              text: "Federal checks initiated"
+              subtext: "In response to application.submitted — FDSH, IEVS, SAVE, SSA, RTE (if Medicaid)"
+            - type: note
+              text: "Multi-program applications share check results across programs"
+              subtext: "FDSH Hub consolidates access to SSA and DHS/SAVE data for Medicaid — running those checks separately alongside it is redundant. IEVS is the exception: it is a SNAP-specific federal mandate and runs regardless. Results should be shared across programs rather than re-run per program."
+            - type: system
+              domain: workflow
+              text: "Task created in intake queue"
+              subtext: "In response to application.submitted — task routed to program-specific queue"
+            - type: system
+              domain: client-management
               text: "Person matching"
-              subtext: "Links application to an existing person record. An exact match may surface a prior or active case. Fuzzy matches are flagged for caseworker review."
+              subtext: "In response to application.submitted — links application to an existing person record. An exact match may surface a prior or active case. Fuzzy matches are flagged for caseworker review."
             - type: note
               text: "Future work: client management domain contract"
               subtext: "Person matching results (exact, fuzzy, no match) and resolution require a client management contract defining the PersonMatchResult entity and person.match_* event types. Intake consumes the result but identity resolution is owned by client management."
-            - type: note
-              text: "Future work: eligibility domain — expedited screening"
-              subtext: "Eligibility domain subscribes to application.submitted, evaluates submitted data against expedited criteria, and emits application.expedited_flagged. State machine hook exists; evaluator requires eligibility domain contract."
-            - type: note
-              text: "Future work: eligibility domain — program pre-screening"
-              subtext: "Eligibility domain emits application.prescreened with per-program eligibility indicators. Informs queue routing and sets caseworker expectations — not a legal determination."
             - type: system
+              domain: workflow
               text: "Queue routing and SLA assignment"
-              subtext: "Routes to program-specific queue; assigns SLA track per program"
+              subtext: "In response to application.submitted — routes to program-specific queue; assigns SLA track per program"
             - type: note
               text: "Future state: smart routing by caseworker skills"
               subtext: "Route expedited cases to experienced workers, disability-related Medicaid to specialists, and non-English applications to caseworkers with matching language skills. Requires caseload and skills visibility per worker."
+            - type: system
+              domain: eligibility
+              text: "Expedited screening"
+              subtext: "In response to application.submitted — evaluates submitted data against expedited criteria; publishes eligibility.application.expedited if applicable. Future work: requires eligibility domain contract."
+            - type: system
+              domain: intake
+              text: "Application flagged as expedited"
+              subtext: "In response to eligibility.application.expedited — updates application (isExpedited: true, assigns expedited SLA track)"
+            - type: note
+              text: "Future work: eligibility domain — program pre-screening"
+              subtext: "Eligibility domain emits application.prescreened with per-program eligibility indicators. Informs queue routing and sets caseworker expectations — not a legal determination."
 
       # ── Sub-phase 2b: Task assignment ─────────────────────────────────────────
       - id: under-review
@@ -162,6 +169,10 @@ phases:
             - event: workflow.task.claimed
               actor: caseworker
               text: "Reviews prioritized queue and claims task"
+            - type: person-action
+              actor: caseworker
+              text: "Opens application with pre-screened view"
+              subtext: "Verification checklist reflects current status — items cleared by fast-returning federal checks or documents uploaded at submission are already resolved"
             - type: note
               text: "Queue shows SLA deadline and priority — caseworker sees what needs attention first"
             - type: note
@@ -182,7 +193,6 @@ phases:
               text: "Appointment-to-application linkage must be enforced at the UI layer"
               subtext: "The contract cannot prevent scheduling directly in an external tool. Launching the scheduler from the application screen ensures the appointment links back to the right application."
           data:
-            - event: workflow.task.claimed
             - type: data-entity
               text: "Application updated"
               subtext: "status: under_review"
@@ -190,8 +200,9 @@ phases:
               text: "Interview record created"
           system:
             - type: system
-              text: "Application opens with pre-screened view"
-              subtext: "Verification checklist reflects current status — items cleared by fast-returning federal checks or documents uploaded at submission are already resolved"
+              domain: intake
+              text: "Interview record created"
+              subtext: "In response to scheduling.appointment.scheduled — links appointment to application; creates interview record"
 
       # ── Sub-phase 2c: Verification review ─────────────────────────────────────
       - id: active-review
@@ -273,7 +284,7 @@ phases:
           system:
             - type: system
               text: "Verification checklist updated automatically as results arrive"
-              subtext: "Results push to the caseworker's view in real time — no refresh required"
+              subtext: "In response to incoming verification results — results push to the caseworker's view in real time; no refresh required"
             - type: system
               text: "VerificationItem status updated when document is adjudicated"
             - type: note
@@ -369,13 +380,14 @@ phases:
               text: "Medicaid: Determination within 45 days"
               citation: "42 CFR § 435.912"
           data:
-            - type: domain-event
+            - type: domain-event-published
               text: "application.review_completed"
               subtext: "Fires automatically when all VerificationItems are resolved — triggers eligibility domain, no caseworker action required"
           system:
             - type: system
+              domain: eligibility
               text: "Rules engine invoked automatically"
-              subtext: "Income and expense calculations against household data, per program"
+              subtext: "In response to application.review_completed — income and expense calculations against household data, per program"
 
       # ── Sub-phase 3b: Closeout ────────────────────────────────────────────────
       - id: decision

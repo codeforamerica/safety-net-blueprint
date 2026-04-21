@@ -186,9 +186,13 @@ function expandEventSlot(item, laneId, subPhaseId) {
     if (!eventEffect) return;
     const raw = eventEffect.description ?? '';
     const subtext = raw.replace(/^Emit [^\u2014]+\u2014\s*/, '').trim();
+    // Subscribed events are not shown in the data lane — they appear as
+    // SYSTEM (INTAKE) cards in the system lane, authored in the context YAML.
+    if (subscribedEvents.has(eventName) && !smTransitions.has(eventName)) return;
+
     const objectPrefix = sm.object ? sm.object.toLowerCase() : sm.domain;
     getCell(laneId, subPhaseId).push({
-      type: 'domain-event',
+      type: 'domain-event-published',
       text: `${objectPrefix}.${eventEffect.action}`,
       ...(subtext ? { subtext } : {}),
     });
@@ -230,7 +234,8 @@ function buildRegularCard(item) {
   // All other cards — pass through standard fields
   return {
     type: item.type,
-    ...(item.actor ? { actor: item.actor } : {}),
+    ...(item.actor  ? { actor:  item.actor  } : {}),
+    ...(item.domain ? { domain: item.domain } : {}),
     text: item.text,
     ...(item.subtext ? { subtext: item.subtext } : {}),
   };

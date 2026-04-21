@@ -62,7 +62,8 @@ const PALETTE = {
   'policy':        { headerBg: '#EDD7CD', bodyBg: '#F8F6F5', headerFg: '#3D2B0E', bodyFg: '#3D2B0E', label: 'POLICY'        },
   'pain-point':    { headerBg: '#EB646B', bodyBg: '#F9E9EA', headerFg: '#1A0000', bodyFg: '#2A0A0A', label: 'PAIN POINT'   },
   'opportunity':   { headerBg: '#FDAF49', bodyBg: '#FEF1DD', headerFg: '#3D2800', bodyFg: '#3D2800', label: 'OPPORTUNITY'   },
-  'domain-event':  { headerBg: '#2E6276', bodyBg: '#E7F2F5', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT'         },
+  'domain-event':           { headerBg: '#2E6276', bodyBg: '#E7F2F5', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT'             },
+  'domain-event-published': { headerBg: '#2E6276', bodyBg: '#E7F2F5', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT (PUBLISHED)' },
   'data-entity':   { headerBg: '#154C21', bodyBg: '#E3F5E1', headerFg: '#FFFFFF', bodyFg: '#0A2E1E', label: 'DATA'          },
   'note':          { headerBg: '#FDDA40', bodyBg: '#FFFBE7', headerFg: '#333333', bodyFg: '#555555', label: ''              },
   'person-action': { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'PERSON'        },
@@ -79,7 +80,11 @@ function getPalette(card) {
   if (card.type === 'person-action' && card.actor && ACTOR_PALETTE[card.actor]) {
     return ACTOR_PALETTE[card.actor];
   }
-  return PALETTE[card.type] ?? PALETTE['note'];
+  const p = PALETTE[card.type] ?? PALETTE['note'];
+  if (card.type === 'system' && card.domain) {
+    return { ...p, label: `SYSTEM (${card.domain.toUpperCase()})` };
+  }
+  return p;
 }
 
 // ── Card icons (extracted from Figma Service Blueprint component library) ─────
@@ -131,7 +136,8 @@ const ICON_DEFS = {
 function iconKey(type, actor) {
   if (type === 'person-action') return actor === 'supervisor' ? 'person-group' : 'person-single';
   if (type === 'staff-action')  return 'person-single';
-  return { system: 'gear', 'data-entity': 'document', 'domain-event': 'lightning',
+  return { system: 'gear', 'data-entity': 'document',
+           'domain-event': 'lightning', 'domain-event-published': 'lightning',
            'pain-point': 'diamond-alert', opportunity: 'lightbulb', note: null,
            policy: 'building' }[type] ?? null;
 }
@@ -301,11 +307,11 @@ function renderLegend(blueprintName, x, y) {
     { type: 'applicant-action',  card: { type: 'person-action', actor: 'applicant',  text: 'APPLICANT',  subtext: 'Description' } },
     { type: 'caseworker-action', card: { type: 'person-action', actor: 'caseworker', text: 'CASEWORKER', subtext: 'Description' } },
     { type: 'supervisor-action', card: { type: 'person-action', actor: 'supervisor', text: 'SUPERVISOR', subtext: 'Description' } },
-    { type: 'system',      card: { type: 'system',       text: 'SYSTEM',       subtext: 'Description' } },
-    { type: 'policy',      card: { type: 'policy',       text: 'POLICY',       subtext: 'Description' } },
-    { type: 'domain-event',card: { type: 'domain-event', text: 'EVENT',        subtext: 'Description' } },
-    { type: 'data-entity', card: { type: 'data-entity',  text: 'DATA',         subtext: 'Description' } },
-    { type: 'note',        card: { type: 'note',         text: 'Note',         subtext: 'Description' } },
+    { type: 'system',                card: { type: 'system',                domain: 'domain', text: 'SYSTEM',     subtext: 'Description' } },
+    { type: 'policy',                card: { type: 'policy',                               text: 'POLICY',     subtext: 'Description' } },
+    { type: 'domain-event-published',  card: { type: 'domain-event-published',  text: 'EVENT',  subtext: 'Description' } },
+    { type: 'data-entity',           card: { type: 'data-entity',                          text: 'DATA',       subtext: 'Description' } },
+    { type: 'note',                  card: { type: 'note',                                 text: 'Note',       subtext: 'Description' } },
   ];
 
   let cardY = y + 24 + 13 + 16 + 4 + 10 + 14 + 20;
