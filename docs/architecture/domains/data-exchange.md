@@ -41,6 +41,7 @@ Key fields:
 - `serviceType` — category: `income_verification`, `identity_verification`, `immigration_status`, `enrollment_check`, `eligibility_hub`, `incarceration_check`
 - `defaultCallMode` — `sync` or `async`
 - `programs` — which programs use this service (`snap`, `medicaid`, `tanf`, or `all`)
+- `requestingResourceType` — the resource type adapters fetch when executing the call (e.g., `intake/applications/members`); adapters look this up from the catalog rather than callers passing it per-call. See [Decision 14](#decision-14-resource-type-in-service-config).
 
 ### ExternalServiceCall
 
@@ -52,8 +53,9 @@ Key fields:
 - `callMode` — `sync` or `async` for this specific call
 - `status` — current state in the call lifecycle
 - `requestingResourceId` — the resource that triggered the call (task ID, determination ID, etc.); combined with `serviceId`, serves as the idempotency key (see [Decision 8](#decision-8-idempotency-via-requestingresourceid--serviceid))
+- `data` — optional object for non-PII per-call context fields (e.g., which programs to check); polymorphic on `serviceType` — each service type has a corresponding OpenAPI input schema component that defines the valid fields. See [Decision 15](#decision-15-per-service-input-schemas).
 
-The ExternalServiceCall request body carries no PII input payload (SSN, name, date of birth, etc.). The `requestingResourceId` is sufficient for the adapter to retrieve whatever person or case data it needs when executing the call. See [Decision 13](#decision-13-no-pii-in-request-payload).
+The ExternalServiceCall request body carries no PII input payload (SSN, name, date of birth, etc.). Adapters retrieve sensitive fields from the source domain using `requestingResourceId` and the `requestingResourceType` declared in the service catalog entry. See [Decision 13](#decision-13-no-pii-in-request-payload) and [Decision 14](#decision-14-resource-type-in-service-config).
 
 All other call metadata — requesting domain, timestamps of individual transitions, result payload — is captured in the CloudEvents emitted on each lifecycle transition. The trace context propagated in CloudEvent headers links the call back to the originating request.
 
@@ -116,7 +118,9 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 | 10 | [Failure classification via failureReason](#decision-10-failure-classification-via-failurereason) | `call.failed` event carries a `failureReason` field so calling domains can distinguish retriable from non-retriable failures |
 | 11 | [Partial results for composite calls](#decision-11-partial-results-for-composite-calls) | Composite calls resolve to `completed` with `matchStatus: partial`; consumers evaluate sufficiency |
 | 12 | [Event delivery and audit separation](#decision-12-event-delivery-and-audit-separation) | `/events` delivers results to subscribers; event store is the audit record; `/audit` endpoint deferred |
-| 13 | [No PII in request payload](#decision-13-no-pii-in-request-payload) | ExternalServiceCall submission carries no PII; adapters use `requestingResourceId` to retrieve input data |
+| 13 | [No PII in request payload](#decision-13-no-pii-in-request-payload) | ExternalServiceCall carries no PII; adapters use system credentials to fetch sensitive fields from the source domain |
+| 14 | [Resource type in service config](#decision-14-resource-type-in-service-config) | Resource type declared in the ExternalService catalog entry; callers pass only `serviceId` and `requestingResourceId` |
+| 15 | [Per-service input schemas](#decision-15-per-service-input-schemas) | `data` field is polymorphic on `serviceType`; per-service-type input schema components in OpenAPI, mirroring result schemas (Decision 7) |
 
 ---
 
@@ -343,17 +347,56 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 
 ### Decision 13: No PII in request payload
 
-**What's being decided:** Whether the ExternalServiceCall submission includes the PII input data (SSN, name, date of birth) needed by the external service, or whether adapters retrieve that data themselves.
+**What's being decided:** Whether the ExternalServiceCall submission includes PII input data (SSN, name, date of birth), or whether adapters retrieve sensitive fields themselves from the source domain.
 
 **Considerations:**
 - Including SSN and other PII in the ExternalServiceCall request body would encode sensitive field schemas into the blueprint contract and route PII through the Data Exchange API surface unnecessarily.
-- The `requestingResourceId` gives the adapter a correlation handle to look up the associated person or case record from the source domain when executing the call.
-- ServiceNow Integration Hub and Cúram Data Hub both follow this pattern — the calling process passes a record reference; the integration layer retrieves data as needed from the source system.
-- Keeping PII out of the request body also means the ExternalServiceCall resource itself (returned by GET) contains no sensitive fields — only lifecycle state and identifiers.
+- The `requestingResourceId` + the resource type declared in the service catalog (Decision 14) gives the adapter everything needed to call the source domain API and retrieve sensitive fields.
+- ServiceNow Integration Hub and Cúram Data Hub both follow this pattern — the calling process passes a record reference; the integration layer retrieves data as needed using system credentials.
+- Keeping PII out of the request body means the ExternalServiceCall resource itself (returned by GET) contains no sensitive fields — only lifecycle state and identifiers.
+- Adapters are trusted system actors deployed by the state, with system-level credentials scoped to read the source domain APIs they need. No dedicated PII endpoint is required; adapters call the same standard API endpoints that other consumers use, governed by access control.
 
 **Options:**
 - **(A)** PII inline — request body includes SSN, name, DOB, and other service-specific input fields. PII flows through the Data Exchange contract surface; blueprint spec encodes sensitive field schemas.
-- **(B) ✓** No PII in request body — submission carries only `serviceId`, `requestingResourceId`, and `callMode`; adapters use `requestingResourceId` to fetch person/case data from the source domain when executing the call.
+- **(B) ✓** No PII in request body — submission carries `serviceId`, `requestingResourceId`, and optionally `callMode` and `data`; adapters use system credentials to fetch sensitive fields from the source domain using `requestingResourceId` and the resource type from the service catalog.
+
+---
+
+### Decision 14: Resource type in service config
+
+**What's being decided:** Whether adapters infer the resource type to fetch from the service catalog, or whether callers must pass it explicitly with each ExternalServiceCall submission.
+
+**Considerations:**
+- A bare `requestingResourceId` UUID gives adapters no type information — they cannot construct the source domain API call without knowing whether the resource is an ApplicationMember, a Task, or something else.
+- Federal services map predictably to resource types: FDSH, IEVS, SAVE, and SSA all operate on member-level records (`intake/applications/members`). Requiring callers to pass this per-call is boilerplate with no flexibility benefit.
+- ServiceNow spoke actions declare the target record type (`table`) in the action configuration, not per-invocation. Cúram integration events include entity type as a formal attribute of the exchange specification, not the runtime request. Both treat resource type as a catalog-level concern.
+- If a state-specific service operates on a different resource type, they declare it in their overlay service config entry — no per-call change is needed.
+
+**Options:**
+- **(A)** Caller passes resource type — `requestingResourceType` field on each ExternalServiceCall submission. Flexible per-call but adds boilerplate for the common case where a service always operates on one type.
+- **(B) ✓** Service config declares resource type — each ExternalService entry includes `requestingResourceType`; adapters look it up from the catalog. Callers pass only `serviceId` and `requestingResourceId`.
+
+**Customization:** States overlay `data-exchange-config.yaml` to set the `requestingResourceType` appropriate for their service configuration. State-specific services may operate on different resource types than the baseline federal service entries.
+
+---
+
+### Decision 15: Per-service input schemas
+
+**What's being decided:** How non-PII, per-call context fields (e.g., which programs to check, a check date) are passed to adapters and validated.
+
+**Considerations:**
+- Some external service calls require per-call configuration that varies by invocation and cannot be inferred from the requesting resource alone. For example, a citizenship check might cover only SNAP eligibility for one call, and both SNAP and Medicaid for another.
+- These fields are not PII — they are configuration flags or context parameters. Putting them in the request body does not violate the Decision 13 constraint.
+- ServiceNow spoke actions define typed input fields per action in the spoke definition; Cúram integration frameworks support typed input attributes per exchange type. Both define input schemas at the service type level, not inline per-call.
+- Decision 7 defines per-service-type result schemas as OpenAPI components, discriminated by `serviceType`. The same pattern applied to input schemas keeps the full contract surface (request and result) in the OpenAPI spec rather than split across the spec and the service config.
+- The codebase already uses a polymorphic field pattern (`subjectId` + `subjectType`) where a field's schema varies based on a sibling type discriminator. The `data` field follows this same pattern: `serviceType` on the ExternalServiceCall is the discriminator; per-service-type input schema components define what `data` contains for each type.
+
+**Options:**
+- **(A)** Open `data` object only — callers pass any fields in a freeform object; no schema validation. Adapters discover what fields are available without a contract.
+- **(B)** Per-service `inputSchema` in service config — documented alongside deployment config in `data-exchange-config.yaml`. Input schemas are not discoverable via the OpenAPI spec; tooling cannot validate them.
+- **(C) ✓** Per-service-type input schemas as OpenAPI components — ExternalServiceCall has a `data` field whose schema is polymorphic on `serviceType`, with per-service-type input schema components (e.g., `EligibilityHubInputData`, `IncomeVerificationInputData`) defined in the OpenAPI spec. Callers read the component for their service type to know what fields are valid. Mirrors Decision 7 for result schemas and the existing polymorphic field pattern.
+
+**Customization:** States extend per-service-type input schemas via OpenAPI overlay to add state-specific non-PII input fields their adapters accept.
 
 ---
 
@@ -377,6 +420,7 @@ States customize the Data Exchange domain primarily through `data-exchange-confi
 - **Manual review resolution** — when a call result carries `matchStatus: pending_manual_review`, there is no defined mechanism for a caseworker to adjudicate and resolve the pending status. This likely belongs in the Workflow domain (a task type) but is not yet designed.
 - **Audit endpoint** — deferred in Decision 12; access control and data retention requirements (#216) must be defined before this can be specified.
 - **Rate limiting and usage tracking** — external agencies limit query volume; no mechanism is defined for tracking usage against agency-imposed quotas or rate limits.
+- **Intake rules mismatch** — the current `intake-rules.yaml` creates `data-exchange/service-calls` resources with `applicationId` and `requestedAt`, but the ExternalServiceCall contract requires `serviceId`, `requestingResourceId`, and optionally `callMode` and `data`. This will be corrected when the data exchange OpenAPI contract is implemented (see #240).
 
 ## References
 
