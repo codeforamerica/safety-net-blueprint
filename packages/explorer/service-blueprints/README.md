@@ -62,7 +62,14 @@ To generate a blueprint from your own content files, point the build at your dir
 node build.js <path/to/your/dir>
 ```
 
-Your directory should contain `intake.json` (generated from your own context file). The SVG is written alongside it.
+Your directory should contain a context YAML file. Generate `intake.json` from it first, then run the build:
+
+```bash
+node generate-blueprint.js <path/to/your/dir/context.yaml>
+node build.js <path/to/your/dir>
+```
+
+The SVG is written alongside `intake.json` in your directory.
 
 To override colors, add a `theme.yaml` to your directory. See `config/theme.yaml` for the format — only the values you specify are overridden.
 
@@ -89,8 +96,8 @@ All display text is free-form and safe to change:
 - Sub-phase `description` — human-readable notes, not rendered in the diagram
 - Card `text`, `subtext`, and `citation` — no constraints
 
-You can freely add editorial cards anywhere — `policy`, `pain-point`, `opportunity`, `note`, and `person-action` cards with explicit text. Card `type` must be one of those defined values, and `person-action` cards require an `actor` (`applicant`, `caseworker`, `supervisor`, or `system`). Avoid moving or removing existing cards in the system and data lanes; those represent contract-defined behavior and should stay aligned to their workflow steps.
+You can freely add editorial cards anywhere — `policy`, `pain-point`, `opportunity`, `note`, and `person-action` cards with explicit text. Card `type` must be one of those defined values, and `person-action` cards require an `actor` (`applicant`, `caseworker`, or `supervisor`). Avoid moving or removing existing cards in the system and data lanes; those represent contract-defined behavior and should stay aligned to their workflow steps.
 
-Phase and sub-phase order reflects the workflow defined in the state machine contracts — avoid reordering existing ones, since their sequence represents the actual process flow. Adding new phases or sub-phases is fine, including inserting them between existing ones to document state-specific steps. Keep `event:` slots out of new phases or sub-phases; the baseline already covers all available events and renaming or moving them will break card generation.
+Phase and sub-phase order reflects the workflow defined in the state machine contracts — avoid reordering existing ones, since their sequence represents the actual process flow. Adding new phases or sub-phases is fine, including inserting them between existing ones to document state-specific steps.
 
 Don't rename lane `id` values — cards in every sub-phase are keyed by lane ID and will disappear from the output if the ID changes.
