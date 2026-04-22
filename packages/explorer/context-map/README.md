@@ -4,9 +4,10 @@ An interactive diagram of the Safety Net Blueprint's bounded contexts and their 
 
 ## What it shows
 
-- **Overview** — all 8 domains in their layout positions, with color-coded relationship arrows (implemented, planned, or direct API call)
-- **Domain detail** — click any domain to see it centered, with all partner domains arranged around it and full event inventories labeled on each arrow
+- **Overview** — all domains in their layout positions, color-coded by design status, with a cross-cutting concerns banner
+- **Domain detail** — click any domain card to see it centered with all partner domains arranged around it, and event/API inventories labeled on each connection
 - **Navigation** — click any domain box to drill in; click "← Context Map" in the breadcrumb to return to the overview
+- Domains with status `not-started` appear in the overview but are not clickable and do not have a detail page
 
 ## Building
 
@@ -16,78 +17,76 @@ From this directory:
 node build.js
 ```
 
-Output goes to `output/`:
-- `overview.svg` — standalone overview diagram
-- `{domain-id}.svg` — standalone per-domain detail diagram (one per domain)
-- `context-map.html` — interactive single-page HTML assembling all SVGs with click navigation
+This runs `render.js` (reads config, generates HTML fragments) then `build-html.js` (assembles everything into a single file).
 
-Open `output/context-map.html` in any browser.
+Output goes to `output/context-map.html`. Open it in any browser.
 
-## Customizing
+## Config files
 
-All content comes from `config.yaml` — no code changes needed for label or event updates.
+There are two config files. Neither requires code changes for routine updates.
 
-### Renaming domains or events
+### `../config.yaml` — domain and event registry
 
-Edit `config.yaml` and change any `label`, `description`, or event name under `events:`. Then rebuild:
+The source of truth for all domain definitions, events, and API calls. Schema: [`../config-schema.json`](../config-schema.json).
 
-```bash
-node build.js
-```
+### `config.yaml` — diagram layout
 
-### Pointing at a custom config
+Controls the overview grid positions for each domain box. Schema: [`config-schema.json`](config-schema.json).
 
-You can maintain a separate `config.yaml` for a specific state or demo. The build scripts read from their own directory, so create a copy of this folder:
+## Adding or changing domains
 
-```
-context-map-demo/
-  config.yaml       ← your customized config
-  render.js         ← symlink or copy
-  build-html.js     ← symlink or copy
-  build.js          ← symlink or copy
-```
-
-Then run:
-
-```bash
-node build.js
-```
-
-The output lands in `context-map-demo/output/`.
-
-### Adding or removing domains
-
-Under `domains:` in `config.yaml`, each entry needs:
+Edit `../config.yaml`. Each domain entry needs:
 
 ```yaml
-- id: my_domain         # used as filename slug and navigation ID
-  label: My Domain      # displayed in the diagram
-  status: partial       # partial | not-started | design-complete
-  description: One line describing the domain
-  x: 220               # top-left corner in the overview layout (px)
-  y: 265
+- id: my_domain           # snake_case; used as navigation ID
+  label: My Domain        # display name in the diagram
+  status: partial         # partial | not-started | design-complete
+  description: One line describing the domain's responsibility
+  entities: [EntityA, EntityB]
 ```
 
-The `x`/`y` positions are for the overview grid only. Detail views use a circular layout computed automatically.
-
-### Adding or removing events
-
-Events live in `../config.yaml` (package-level). Each entry has one publisher and one or more subscribers:
+Then add a layout position in `config.yaml`:
 
 ```yaml
-- name: application.submitted   # event name shown as a label on each arrow
-  from: intake                  # publisher — always a single domain
-  status: planned               # implemented | planned
-  to:                           # one or more subscriber domain ids
+layout:
+  my_domain: { x: 300, y: 160 }   # top-left corner of the 220×105 px box
+```
+
+Rebuild with `node build.js`.
+
+## Adding or changing events
+
+Edit `../config.yaml` under `events:`. Each entry has one publisher and one or more subscribers:
+
+```yaml
+- name: application.submitted     # shown as a label on the connection
+  publisher: intake                # domain ID that emits the event
+  status: implemented              # implemented | planned
+  subscribers:
+    - workflow
     - eligibility
-    - client_management
-  # type: api                   # omit for event-driven; "api" = direct API call
 ```
 
-- `status: implemented` → solid blue arrow
-- `status: planned` → dashed gray arrow
-- `type: api` → dashed amber arrow (direct service call, not event-driven)
+The `status` reflects whether the publisher is emitting the event — not whether individual subscribers have implemented their handlers. List all subscribers in a single entry.
 
-If the same event has subscribers at different statuses (e.g., implemented to workflow, planned to eligibility), use two entries with the same name but different `status` values.
+## Adding or changing direct API calls
 
-The renderer expands each `(from, to)` pair into a separate arrow, groups arrows sharing `(from, to, type, status)` to stack event names as labels, and draws bidirectional pairs as parallel offset arrows with domain-labeled headers.
+Edit `../config.yaml` under `apis:`. Each entry is one operation and the domains that invoke it:
+
+```yaml
+- call: income verification (IRS)
+  domain: data_exchange
+  status: planned
+  callers:
+    - eligibility
+    - intake
+    - workflow
+```
+
+## How the diagram renders connections
+
+- One connection line per unique (publisher/caller, subscriber/callee) pair
+- Bidirectional connections draw as two parallel offset arrows
+- Events and API calls for the same pair are grouped into a single "Integrations" card on the connection midpoint
+- ⚡ = domain event, ⇄ = direct API call
+- The radius of the detail view layout auto-sizes based on the number of events in the busiest connection, clamped to keep all boxes within the canvas

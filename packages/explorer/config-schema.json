@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "explorer-config",
+  "title": "Explorer Config",
+  "description": "Shared domain and event registry for the safety-net-blueprint explorer package. Consumed by context-map and service-blueprints tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cross_cutting": {
+      "description": "Cross-cutting concerns shown as a banner on the context-map overview.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "domains": {
+      "description": "Bounded contexts in the system.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Unique identifier. Used as the filename slug and navigation ID. Must be snake_case.",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "description": "Display name shown in the diagram.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Design completion status. Domains with 'not-started' are shown in the overview but are not clickable and do not generate a detail page.",
+            "type": "string",
+            "enum": ["partial", "not-started", "design-complete"]
+          },
+          "description": {
+            "description": "One-line description of the domain's responsibility.",
+            "type": "string"
+          },
+          "entities": {
+            "description": "Key entities owned by this domain, shown as a subtitle in the diagram.",
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "events": {
+      "description": "Domain events (asynchronous, pub/sub). Status reflects whether the publisher is emitting the event, not whether individual subscribers have implemented their handlers.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "publisher", "status", "subscribers"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Event name, conventionally in dot notation (e.g. application.submitted).",
+            "type": "string"
+          },
+          "publisher": {
+            "description": "Domain ID that emits the event. Must match a domain id in the domains list.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Implementation status. Applies to all listed subscribers.",
+            "type": "string",
+            "enum": ["implemented", "planned"]
+          },
+          "subscribers": {
+            "description": "One or more domain IDs that consume the event. Each must match a domain id in the domains list.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    "apis": {
+      "description": "Direct synchronous API calls (point-to-point, not event-driven). Each entry represents one operation and the domains that invoke it.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["call", "domain", "status", "callers"],
+        "additionalProperties": false,
+        "properties": {
+          "call": {
+            "description": "Human-readable name of the operation being invoked.",
+            "type": "string"
+          },
+          "domain": {
+            "description": "Domain ID that exposes this operation. Must match a domain id in the domains list.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Implementation status.",
+            "type": "string",
+            "enum": ["implemented", "planned"]
+          },
+          "callers": {
+            "description": "One or more domain IDs that invoke this operation. Each must match a domain id in the domains list.",
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

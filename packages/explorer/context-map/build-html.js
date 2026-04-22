@@ -2,14 +2,15 @@
 /**
  * build-html.js
  *
- * Assembles per-domain SVGs from output/ into a single context-map.html
- * with click-to-navigate behavior.
+ * Assembles the overview HTML and per-domain HTML fragments into a single
+ * context-map.html with click-to-navigate behavior.
  *
  * Usage:
- *   node build-html.js [output-dir]
+ *   node render.js        # generates output/*.html fragments
+ *   node build-html.js    # assembles context-map.html
  */
 
-import { readFileSync, writeFileSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, dirname, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -18,55 +19,76 @@ const outDir = process.argv[2]
   ? resolve(process.argv[2])
   : resolve(__dirname, 'output');
 
-function readSvg(name) {
-  const raw = readFileSync(resolve(outDir, name), 'utf8');
-  // Strip XML declaration
-  return raw.replace(/<\?xml[^?]*\?>\s*/, '').trim();
+// ── Read fragment files ─────────────────────────────────────────────────────
+
+function readFile(name) {
+  return readFileSync(resolve(outDir, name), 'utf8')
+    .replace(/<\/script/gi, '<\\/script');
 }
 
-const files = readdirSync(outDir).filter(f => extname(f) === '.svg');
-const hasOverview = files.includes('overview.svg');
-const domainFiles = files.filter(f => f !== 'overview.svg');
+const content = {};
 
-// Build a map of id → SVG content
-const svgs = {};
-if (hasOverview) svgs['__overview__'] = readSvg('overview.svg');
-for (const f of domainFiles) {
-  svgs[basename(f, '.svg')] = readSvg(f);
+if (existsSync(resolve(outDir, 'overview.html'))) {
+  content['__overview__'] = readFile('overview.html');
 }
 
-const svgEntries = Object.entries(svgs)
-  .map(([id, content]) => `    ${JSON.stringify(id)}: ${JSON.stringify(content)}`)
+const detailFiles = readdirSync(outDir)
+  .filter(f => extname(f) === '.html' && f !== 'overview.html' && f !== 'context-map.html');
+
+for (const f of detailFiles) {
+  content[basename(f, '.html')] = readFile(f);
+}
+
+const contentEntries = Object.entries(content)
+  .map(([id, html]) => `    ${JSON.stringify(id)}: ${JSON.stringify(html)}`)
   .join(',\n');
+
+// ── Assemble ────────────────────────────────────────────────────────────────
 
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Safety Net Blueprint — Context Map</title>
+  <title>Safety Net Blueprint \u2014 Context Map</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f8fafc; }
-    #container {
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 24px 16px;
-    }
-    #map-wrapper {
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.10);
-      overflow: hidden;
-      max-width: 100%;
-    }
-    #map-wrapper svg {
-      display: block;
-      max-width: 100%;
-      height: auto;
-    }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f8fafc; overflow-x: auto; position: relative; }
+    #container { min-height: 100vh; padding: 24px; }
+    #map-wrapper { background: white; border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,0.10); overflow: hidden; width: 1400px; }
+
+    /* ── Overview ── */
+    .cm { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; background: white; }
+    .cm-banner { background: #f0fdf4; border: 1px solid #16a34a; border-radius: 6px; padding: 10px 16px; text-align: center; margin-bottom: 20px; }
+    .cm-banner-label { font-size: 9px; font-weight: 700; color: #15803d; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 3px; }
+    .cm-banner-items { font-size: 12px; color: #166534; }
+    .cm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+    .cm-domain { border-radius: 8px; padding: 16px 14px; cursor: default; min-height: 110px; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; transition: filter 0.15s; }
+    .cm-domain.partial         { background: #eff6ff; border: 1.5px solid #2563eb; cursor: pointer; }
+    .cm-domain.design-complete { background: #f0fdf4; border: 1.5px solid #16a34a; cursor: pointer; }
+    .cm-domain.not-started     { background: #f9fafb; border: 1.5px dashed #9ca3af; }
+    .cm-domain.partial:hover, .cm-domain.design-complete:hover { filter: brightness(0.96); }
+    .cm-title    { font-size: 15px; font-weight: 700; color: #111827; text-align: center; line-height: 1.2; }
+    .cm-entities { font-size: 9px; color: #9ca3af; text-align: center; width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .cm-desc     { font-size: 11px; color: #6b7280; text-align: center; }
+    .cm-legend   { display: flex; gap: 20px; padding: 8px 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; align-items: center; flex-wrap: wrap; }
+    .cm-legend-item { display: flex; align-items: center; gap: 6px; font-size: 9px; color: #374151; }
+    .cm-swatch   { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+    .cm-swatch.design-complete { background: #f0fdf4; border: 1.5px solid #16a34a; }
+    .cm-swatch.partial         { background: #eff6ff; border: 1.5px solid #2563eb; }
+    .cm-swatch.not-started     { background: #f9fafb; border: 1.5px dashed #9ca3af; }
+
+    /* ── Detail views ── */
+    .dt-wrap { position: relative; width: 1400px; height: 1100px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: white; overflow: hidden; }
+    .dt-nav  { position: absolute; top: 16px; left: 20px; font-size: 12px; z-index: 10; }
+    .dt-box  { position: absolute; width: 220px; border-radius: 8px; padding: 12px 14px; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; box-sizing: border-box; min-height: 105px; z-index: 2; }
+    .dt-box.nav { cursor: pointer; transition: filter 0.15s; }
+    .dt-box.nav:hover { filter: brightness(0.95); }
+    .dt-title    { font-size: 15px; font-weight: 700; color: #111827; line-height: 1.2; }
+    .dt-entities { font-size: 9px; color: #9ca3af; width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .dt-desc     { font-size: 11px; color: #6b7280; }
+    .dt-legend { position: absolute; bottom: 16px; left: 25px; right: 25px; display: flex; gap: 16px; padding: 8px 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; align-items: center; flex-wrap: wrap; font-size: 9px; z-index: 10; }
+
   </style>
 </head>
 <body>
@@ -75,25 +97,28 @@ const html = `<!DOCTYPE html>
   </div>
 
   <script>
-    const SVGS = {
-${svgEntries}
+    const CONTENT = {
+${contentEntries}
     };
 
     let current = '__overview__';
     const wrapper = document.getElementById('map-wrapper');
 
     function navigate(id) {
-      if (!SVGS[id]) return;
+      if (!CONTENT[id]) return;
       current = id;
-      wrapper.innerHTML = SVGS[id];
-      attachHandlers();
-    }
-
-    function attachHandlers() {
-      // Clickable domain boxes (data-navigate on <g> elements)
+      wrapper.innerHTML = CONTENT[id];
       wrapper.querySelectorAll('[data-navigate]').forEach(el => {
         el.addEventListener('click', () => navigate(el.getAttribute('data-navigate')));
       });
+      const btn = wrapper.querySelector('#toggle-int');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const visible = btn.textContent === 'Hide integrations';
+          wrapper.querySelectorAll('.int-box').forEach(b => b.style.display = visible ? 'none' : '');
+          btn.textContent = visible ? 'Show integrations' : 'Hide integrations';
+        });
+      }
     }
 
     navigate('__overview__');

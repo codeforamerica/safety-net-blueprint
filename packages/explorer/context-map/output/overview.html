@@ -1,0 +1,69 @@
+<div class="cm">
+  <div class="cm-banner">
+    <div class="cm-banner-label">Cross-cutting concerns</div>
+    <div class="cm-banner-items">Authentication & Authorization · Audit & History · Search · Observability · Reporting · Configuration Management</div>
+  </div>
+  <div class="cm-grid">
+    <div class="cm-domain not-started">
+      <div class="cm-title">Client Management</div>
+      <div class="cm-entities">Person · Client · Relationship</div>
+      <div class="cm-desc">Persistent client identity & history</div>
+    </div>
+    <div class="cm-domain partial" data-navigate="intake" title="Click to explore Intake">
+      <div class="cm-title">Intake</div>
+      <div class="cm-entities">Application · ApplicationMember · Income · Expense · Resource</div>
+      <div class="cm-desc">Application submission & intake processing</div>
+    </div>
+    <div class="cm-domain not-started">
+      <div class="cm-title">Eligibility</div>
+      <div class="cm-entities">EligibilityRequest · EligibilityUnit · Determination · VerificationRequirement</div>
+      <div class="cm-desc">Program eligibility determination</div>
+    </div>
+    <div class="cm-domain partial" data-navigate="case_management" title="Click to explore Case Management">
+      <div class="cm-title">Case Management</div>
+      <div class="cm-entities">Case · CaseWorker · Assignment · Office</div>
+      <div class="cm-desc">Cases, workers & staff assignments</div>
+    </div>
+    <div class="cm-domain not-started">
+      <div class="cm-title">Document Management</div>
+      <div class="cm-entities">Document · Upload · DocumentRequest</div>
+      <div class="cm-desc">Files, uploads & verification</div>
+    </div>
+    <div class="cm-domain partial" data-navigate="workflow" title="Click to explore Workflow">
+      <div class="cm-title">Workflow</div>
+      <div class="cm-entities">Task · Queue · VerificationTask · SLAType</div>
+      <div class="cm-desc">Task lifecycle, queues & SLA tracking</div>
+    </div>
+    <div class="cm-domain partial" data-navigate="data_exchange" title="Click to explore Data Exchange">
+      <div class="cm-title">Data Exchange</div>
+      <div class="cm-entities">ExternalServiceCall · IncomeVerification · IdentityVerification · ImmigrationStatus · EligibilityHub</div>
+      <div class="cm-desc">External service facade (IRS, SSA, SAVE)</div>
+    </div>
+    <div class="cm-domain partial" data-navigate="scheduling" title="Click to explore Scheduling">
+      <div class="cm-title">Scheduling</div>
+      <div class="cm-entities">Appointment · Schedule</div>
+      <div class="cm-desc">Appointments & interviews</div>
+    </div>
+    <div class="cm-domain not-started">
+      <div class="cm-title">Communications</div>
+      <div class="cm-entities">Notice · Template · DeliveryEvent · Preference</div>
+      <div class="cm-desc">Notices, letters & client alerts</div>
+    </div>
+    <div class="cm-domain not-started">
+      <div class="cm-title">Appeals & Hearings</div>
+      <div class="cm-entities">Appeal · Hearing · HearingOfficer · Decision</div>
+      <div class="cm-desc">Fair hearings & appeal decisions</div>
+    </div>
+    <div class="cm-domain not-started">
+      <div class="cm-title">Benefits & Payments</div>
+      <div class="cm-entities">BenefitIssuance · PaymentRecord · Overpayment · RecoupmentPlan</div>
+      <div class="cm-desc">Benefit issuance, EBT & recoupment</div>
+    </div>
+  </div>
+  <div class="cm-legend">
+    <div class="cm-legend-item"><div class="cm-swatch design-complete"></div> Domain complete</div>
+    <div class="cm-legend-item"><div class="cm-swatch partial"></div> Domain in progress</div>
+    <div class="cm-legend-item"><div class="cm-swatch not-started"></div> Domain planned</div>
+    <div style="margin-left:auto;font-size:9px;color:#9ca3af;font-style:italic;">Click a domain card to explore it</div>
+  </div>
+</div>

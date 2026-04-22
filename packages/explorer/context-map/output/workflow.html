@@ -1,0 +1,43 @@
+<div style="position:relative;width:1400px;height:1100px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:white;overflow:visible;" data-domain="workflow">
+  <div style="position:absolute;top:16px;left:20px;font-size:12px;z-index:10;">
+    <span data-navigate="__overview__" style="color:#2563eb;cursor:pointer;">← Context Map</span>
+    <span style="color:#6b7280;"> / Workflow</span>
+  </div>
+  <svg style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;" width="1400" height="1100" viewBox="0 0 1400 1100">
+  <defs>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10"
+      refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L0,10 L10,5 z" fill="#b0b7c3"/>
+    </marker>
+  </defs>
+  <line x1="690.0" y1="195.0" x2="698.4" y2="491.5" stroke="#b0b7c3" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+  <line x1="710.0" y1="497.5" x2="701.6" y2="201.0" stroke="#b0b7c3" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+  <line x1="710.0" y1="905.0" x2="701.6" y2="608.5" stroke="#b0b7c3" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+  <line x1="690.0" y1="602.5" x2="698.4" y2="899.0" stroke="#b0b7c3" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+  </svg>
+<div style="position:absolute;width:220px;min-height:105px;border-radius:8px;padding:12px 14px;left:700px;top:142.5px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;box-sizing:border-box;z-index:2;background:#eff6ff;border:1.5px solid #2563eb;cursor:pointer" data-navigate="data_exchange">
+  <div style="font-size:15px;font-weight:700;color:#111827;line-height:1.2;">Data Exchange</div>
+  <div style="font-size:11px;color:#6b7280;">External service facade (IRS, SSA, SAVE)</div>
+  <div style="font-size:9px;color:#9ca3af;width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">ExternalServiceCall · IncomeVerification · IdentityVerification · ImmigrationStatus · EligibilityHub</div>
+</div>
+<div style="position:absolute;width:220px;min-height:105px;border-radius:8px;padding:12px 14px;left:700px;top:957.5px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;box-sizing:border-box;z-index:2;background:#eff6ff;border:1.5px solid #2563eb;cursor:pointer" data-navigate="intake">
+  <div style="font-size:15px;font-weight:700;color:#111827;line-height:1.2;">Intake</div>
+  <div style="font-size:11px;color:#6b7280;">Application submission & intake processing</div>
+  <div style="font-size:9px;color:#9ca3af;width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">Application · ApplicationMember · Income · Expense · Resource</div>
+</div>
+<div style="position:absolute;width:220px;min-height:105px;border-radius:8px;padding:12px 14px;left:700px;top:550px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;box-sizing:border-box;z-index:2;background:#eff6ff;border:1.5px solid #2563eb">
+  <div style="font-size:15px;font-weight:700;color:#111827;line-height:1.2;">Workflow</div>
+  <div style="font-size:11px;color:#6b7280;">Task lifecycle, queues & SLA tracking</div>
+  <div style="font-size:9px;color:#9ca3af;width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">Task · Queue · VerificationTask · SLAType</div>
+</div>
+<div class="int-box" style="position:absolute;left:700.0px;top:346.3px;transform:translate(-50%,-50%);text-align:left;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8.5px;line-height:1.65;white-space:nowrap;z-index:3;background:white;border:1px solid #e5e7eb;border-radius:5px;padding:5px 8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);"><div style="font-size:7.5px;color:#9ca3af;margin-top:4px;">Data Exchange →</div><div style="color:#374151;"><span style="margin-right:3px;">⚡</span>call.completed</div><div style="color:#374151;"><span style="margin-right:3px;">⚡</span>call.submitted</div><div style="color:#374151;"><span style="margin-right:3px;">⚡</span>call.failed</div><div style="color:#374151;"><span style="margin-right:3px;">⚡</span>call.timed_out</div><div style="font-size:7.5px;color:#9ca3af;margin-top:4px;">→ Data Exchange</div><div style="color:#374151;"><span style="margin-right:3px;">⇄</span>immigration status (SAVE)</div><div style="color:#374151;"><span style="margin-right:3px;">⇄</span>income verification (IRS)</div><div style="color:#374151;"><span style="margin-right:3px;">⇄</span>identity verification (SSA)</div></div>
+<div class="int-box" style="position:absolute;left:700.0px;top:753.8px;transform:translate(-50%,-50%);text-align:left;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8.5px;line-height:1.65;white-space:nowrap;z-index:3;background:white;border:1px solid #e5e7eb;border-radius:5px;padding:5px 8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);"><div style="font-size:7.5px;color:#9ca3af;margin-top:4px;">Intake →</div><div style="color:#374151;"><span style="margin-right:3px;">⚡</span>application.expedited_flagged</div><div style="color:#374151;"><span style="margin-right:3px;">⚡</span>application.submitted</div><div style="color:#374151;"><span style="margin-right:3px;">⚡</span>application.withdrawn</div><div style="font-size:7.5px;color:#9ca3af;margin-top:4px;">→ Intake</div><div style="color:#374151;"><span style="margin-right:3px;">⚡</span>task.claimed</div></div>
+<div style="position:absolute;bottom:16px;left:25px;right:25px;display:flex;gap:16px;padding:8px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;align-items:center;flex-wrap:wrap;font-size:9px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:10;">
+  <span><span style="display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:middle;margin-right:4px;background:#f0fdf4;border:1.5px solid #16a34a;"></span>Domain complete</span>
+  <span><span style="display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:middle;margin-right:4px;background:#eff6ff;border:1.5px solid #2563eb;"></span>Domain partially complete</span>
+  <span><span style="display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:middle;margin-right:4px;background:#f9fafb;border:1.5px dashed #9ca3af;"></span>Domain planned</span>
+  <span>&#x26a1; Domain event</span>
+  <span>&#x21c4; Direct API call</span>
+  <button id="toggle-int" style="margin-left:auto;font-size:9px;font-family:inherit;cursor:pointer;padding:3px 10px;border:1px solid #d1d5db;border-radius:4px;background:white;color:#374151;">Hide integrations</button>
+</div>
+</div>
