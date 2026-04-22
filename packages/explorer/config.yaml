@@ -1,0 +1,239 @@
+# packages/explorer/config.yaml
+#
+# Shared domain and event registry for the explorer package.
+# Consumed by:
+#   - context-map (context-map/config.yaml adds diagram layout positions)
+#   - service-blueprints (event names referenced by string; future: auto-validate)
+#
+# Do not put diagram-specific settings here (layout positions, titles, etc.).
+
+# Cross-cutting concerns shown as a banner on the context-map overview.
+cross_cutting:
+  - Communication
+  - Search
+  - Observability
+  - Reporting
+  - Configuration Management
+
+# Bounded contexts
+# status: partial | not-started | design-complete
+domains:
+  - id: client_management
+    label: Client Management
+    status: not-started
+    description: Persistent client identity & history
+    entities: [Person, Client, Relationship]
+
+  - id: intake
+    label: Intake
+    status: partial
+    description: Application submission & intake processing
+    entities: [Application, ApplicationMember, Income, Expense, Resource]
+
+  - id: eligibility
+    label: Eligibility
+    status: not-started
+    description: Program eligibility determination
+    entities: [EligibilityRequest, EligibilityUnit, Determination, VerificationRequirement]
+
+  - id: case_management
+    label: Case Management
+    status: partial
+    description: Cases, workers & staff assignments
+    entities: [Case, CaseWorker, Assignment, Office]
+
+  - id: document_management
+    label: Document Management
+    status: not-started
+    description: Files, uploads & verification
+    entities: [Document, Upload, DocumentRequest]
+
+  - id: workflow
+    label: Workflow
+    status: partial
+    description: Task lifecycle, queues & SLA tracking
+    entities: [Task, Queue, VerificationTask, SLAType]
+
+  - id: data_exchange
+    label: Data Exchange
+    status: design-complete
+    description: External service facade (IRS, SSA, SAVE)
+    entities: [ExternalServiceCall, IncomeVerification, IdentityVerification, ImmigrationStatus, EligibilityHub]
+
+  - id: scheduling
+    label: Scheduling
+    status: partial
+    description: Appointments & interviews
+    entities: [Appointment, Schedule]
+
+# Domain events (asynchronous, pub/sub)
+#
+# publisher: the domain that emits the event (singleton)
+# subscribers: one or more domains that consume the event
+# status: implemented | planned  — one status per entry; applies to all listed subscribers
+#
+# The context-map renderer draws one arrow per (publisher, subscriber) pair,
+# grouping entries with the same pair and status to stack event names as labels.
+events:
+
+  # ── Implemented ─────────────────────────────────────────────────────────────
+
+  - name: application.submitted
+    publisher: intake
+    status: implemented
+    subscribers:
+      - workflow
+
+  - name: application.submitted
+    publisher: intake
+    status: planned
+    subscribers:
+      - eligibility
+      - client_management
+
+  - name: application.withdrawn
+    publisher: intake
+    status: implemented
+    subscribers:
+      - workflow
+
+  - name: application.expedited_flagged
+    publisher: intake
+    status: implemented
+    subscribers:
+      - workflow
+
+  # task.claimed transitions the linked application from submitted → under_review
+  - name: task.claimed
+    publisher: workflow
+    status: implemented
+    subscribers:
+      - intake
+
+  # application.closed triggers case creation when disposition is approved
+  - name: application.closed
+    publisher: intake
+    status: implemented
+    subscribers:
+      - case_management
+
+  - name: application.closed
+    publisher: intake
+    status: planned
+    subscribers:
+      - eligibility
+
+  # ── Planned ──────────────────────────────────────────────────────────────────
+
+  # application.review_completed fires automatically when all VerificationItems
+  # are resolved — triggers the eligibility rules engine, no caseworker action
+  - name: application.review_completed
+    publisher: intake
+    status: planned
+    subscribers:
+      - eligibility
+
+  # Eligibility → Intake: expedited screening result (in response to
+  # application.submitted). Intake sets isExpedited: true and assigns
+  # the expedited SLA track.
+  - name: eligibility.application.expedited
+    publisher: eligibility
+    status: planned
+    subscribers:
+      - intake
+
+  # determination_complete closes the application and triggers case creation
+  - name: determination_complete
+    publisher: eligibility
+    status: planned
+    subscribers:
+      - intake
+      - case_management
+
+  # Client Management → Intake: person match result surfaces prior case history
+  # and prompts caseworker review on fuzzy matches.
+  # Requires client management domain contract — see #249.
+  - name: person.match_resolved
+    publisher: client_management
+    status: planned
+    subscribers:
+      - intake
+
+  # Data Exchange → consumers: verification result received.
+  # Triggers conditional document requirement updates and task lifecycle events.
+  - name: call.completed
+    publisher: data_exchange
+    status: planned
+    subscribers:
+      - intake
+      - workflow
+      - eligibility
+      - client_management
+
+  # Data Exchange → workflow & eligibility: task/rules lifecycle events
+  - name: call.submitted
+    publisher: data_exchange
+    status: planned
+    subscribers:
+      - workflow
+      - eligibility
+
+  - name: call.failed
+    publisher: data_exchange
+    status: planned
+    subscribers:
+      - workflow
+      - eligibility
+
+  - name: call.timed_out
+    publisher: data_exchange
+    status: planned
+    subscribers:
+      - workflow
+      - eligibility
+
+  # Scheduling → Intake: appointment.scheduled creates the interview record.
+  # appointment.completed records the outcome for regulatory tracking.
+  - name: appointment.scheduled
+    publisher: scheduling
+    status: planned
+    subscribers:
+      - intake
+
+  - name: appointment.completed
+    publisher: scheduling
+    status: planned
+    subscribers:
+      - intake
+
+# Direct API calls (synchronous, point-to-point — not event-driven)
+#
+# caller: the domain initiating the call
+# callee: the domain (or facade) receiving the call
+# calls: list of service/operation types this caller can invoke
+# status: implemented | planned
+apis:
+
+  - caller: intake
+    callee: data_exchange
+    status: planned
+    calls:
+      - income verification (IRS)
+      - identity verification (SSA)
+      - immigration status (SAVE)
+
+  - caller: workflow
+    callee: data_exchange
+    status: planned
+    calls:
+      - income verification (IRS)
+      - identity verification (SSA)
+      - immigration status (SAVE)
+
+  - caller: eligibility
+    callee: data_exchange
+    status: planned
+    calls:
+      - income verification (IRS)
+      - identity verification (SSA)
+      - immigration status (SAVE)
