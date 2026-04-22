@@ -6,8 +6,6 @@
   "scripts": {
     "build": "node build.js",
     "watch": "node build.js --watch",
-    "generate": "node generate-blueprint.js ../config/intake-context.yaml",
-    "validate": "node validate-definitions.js ../config/intake-context.yaml",
     "render": "node ../render-svg.js ../output/intake.json"
   },
   "devDependencies": {

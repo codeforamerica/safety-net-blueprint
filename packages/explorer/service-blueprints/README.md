@@ -19,10 +19,10 @@ service-blueprints/
   output/                        # Generated outputs (committed)
     intake.json                  # Generated blueprint data (from generate-blueprint.js)
     intake.svg                   # Rendered SVG preview (from render-svg.js)
+  context-schema.json            # JSON schema for validating context files
+  generate-blueprint.js          # Generates intake.json from intake-context.yaml
+  validate-context.js            # Validates a context file against context-schema.json
   figma-plugin/                  # Figma plugin source and tooling
-    definitions-schema.json      # JSON schema for validating context files
-    generate-blueprint.js        # Generates intake.json from intake-context.yaml
-    validate-definitions.js      # Validates a context file against the schema
     build.js                     # Builds the Figma plugin (dist/)
     src/                         # Plugin TypeScript source
     dist/                        # Built plugin — load this in Figma Desktop (gitignored)
@@ -71,17 +71,13 @@ To override colors, add a `theme.yaml` to your directory. See `config/theme.yaml
 `config/intake-context.yaml` is the human-editable source. After editing it, regenerate the JSON:
 
 ```bash
-cd figma-plugin && npm run generate
-# or directly:
-node figma-plugin/generate-blueprint.js config/intake-context.yaml
+node generate-blueprint.js config/intake-context.yaml
 ```
 
 To validate a context file before generating:
 
 ```bash
-cd figma-plugin && npm run validate
-# or directly:
-node figma-plugin/validate-definitions.js config/intake-context.yaml
+node validate-context.js config/intake-context.yaml
 ```
 
 ### What's safe to edit

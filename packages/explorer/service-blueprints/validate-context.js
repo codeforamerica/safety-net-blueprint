@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
- * validate-definitions.js
+ * validate-context.js
  *
- * Validates a blueprint context YAML file against definitions-schema.json.
+ * Validates a blueprint context YAML file against context-schema.json.
  *
  * Usage:
- *   node validate-definitions.js ../config/intake-context.yaml
- *   npm run validate -- ../config/intake-context.yaml
+ *   node validate-context.js config/intake-context.yaml
  */
 
 import { readFileSync } from 'fs';
@@ -19,11 +18,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const inputPath = process.argv[2];
 if (!inputPath) {
-  console.error('Usage: node validate-definitions.js <context.yaml>');
+  console.error('Usage: node validate-context.js <context.yaml>');
   process.exit(1);
 }
 
-const schemaPath = resolve(__dirname, 'definitions-schema.json');
+const schemaPath = resolve(__dirname, 'context-schema.json');
 
 let definitions, schema;
 
