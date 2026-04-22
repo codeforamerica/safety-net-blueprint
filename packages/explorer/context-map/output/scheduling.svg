@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="960" height="800" viewBox="0 0 960 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow-2563eb" markerWidth="10" markerHeight="10"
+      refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L0,10 L10,5 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-9ca3af" markerWidth="10" markerHeight="10"
+      refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L0,10 L10,5 z" fill="#9ca3af"/>
+    </marker>
+    <marker id="arrow-d97706" markerWidth="10" markerHeight="10"
+      refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L0,10 L10,5 z" fill="#d97706"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="800" fill="white"/>
+
+  <text x="20" y="28" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#2563eb"
+    data-navigate="__overview__" style="cursor:pointer">← Context Map</text>
+  <text x="112" y="28" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#6b7280"> / Scheduling</text>
+
+  <!-- Flows -->
+  <line x1="480.0" y1="327.5" x2="480.0" y2="218.5" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrow-9ca3af)"/>
+
+  <!-- Event labels -->
+  <text text-anchor="start" font-family="'Courier New', Courier, monospace" font-size="8.5"><tspan x="498.0" y="273.0" font-size="7.5" fill="#9ca3af">→ Intake</tspan><tspan x="498.0" dy="11" fill="#9ca3af">appointment.scheduled</tspan><tspan x="498.0" dy="11" fill="#9ca3af">appointment.completed</tspan></text>
+
+  <!-- Partner domains -->
+  <g data-navigate="intake" style="cursor:pointer">
+    <rect x="370" y="107.5" width="220" height="105" rx="8"
+      fill="#eff6ff" stroke="#2563eb" stroke-width="1.5" />
+    <text x="480" y="135.5" text-anchor="middle"
+      font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#111827">Intake</text>
+    <text x="480" y="153.5" text-anchor="middle"
+      font-family="'Courier New', Courier, monospace" font-size="8.5" fill="#2563eb"
+      textLength="200" lengthAdjust="spacingAndGlyphs">Application · ApplicationMember · Income · Expense · Resource</text>
+    <text x="480" y="174.5" text-anchor="middle"
+      font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="10" fill="#6b7280"
+      textLength="200" lengthAdjust="spacingAndGlyphs">Application submission & intake processing</text>
+  </g>
+
+  <!-- Center domain -->
+  <g>
+    <rect x="370" y="327.5" width="220" height="105" rx="8"
+      fill="#eff6ff" stroke="#2563eb" stroke-width="1.5" />
+    <text x="480" y="355.5" text-anchor="middle"
+      font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#111827">Scheduling</text>
+    <text x="480" y="373.5" text-anchor="middle"
+      font-family="'Courier New', Courier, monospace" font-size="8.5" fill="#2563eb"
+      textLength="200" lengthAdjust="spacingAndGlyphs">Appointment · Schedule</text>
+    <text x="480" y="394.5" text-anchor="middle"
+      font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="10" fill="#6b7280"
+      textLength="200" lengthAdjust="spacingAndGlyphs">Appointments & interviews</text>
+  </g>
+
+  <g transform="translate(25, 732)">
+    <rect x="0" y="0" width="910" height="50" rx="4"
+      fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+    
+    <rect x="12" y="8" width="12" height="12" rx="2"
+      fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="28" y="19" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="9" fill="#374151">Partial implementation</text>
+    <rect x="315.3333333333333" y="8" width="12" height="12" rx="2"
+      fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="331.3333333333333" y="19" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="9" fill="#374151">Design complete</text>
+    <rect x="618.6666666666666" y="8" width="12" height="12" rx="2"
+      fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="634.6666666666666" y="19" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="9" fill="#374151">Not started</text>
+    
+    <line x1="12" y1="35" x2="34" y2="35"
+      stroke="#2563eb" stroke-width="2"/>
+    <text x="40" y="39" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="9" fill="#374151">Events implemented</text>
+    <line x1="315.3333333333333" y1="35" x2="337.3333333333333" y2="35"
+      stroke="#9ca3af" stroke-width="2"/>
+    <text x="343.3333333333333" y="39" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="9" fill="#374151">Events not yet implemented</text>
+    <line x1="618.6666666666666" y1="35" x2="640.6666666666666" y2="35"
+      stroke="#d97706" stroke-width="2"/>
+    <text x="646.6666666666666" y="39" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="9" fill="#374151">Direct API call</text>
+  </g>
+</svg>
