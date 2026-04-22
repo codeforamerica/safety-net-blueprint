@@ -5,8 +5,8 @@
  * Validates a blueprint context YAML file against definitions-schema.json.
  *
  * Usage:
- *   node validate-definitions.js src/blueprints/intake-context.yaml
- *   npm run validate -- src/blueprints/intake-context.yaml
+ *   node validate-definitions.js ../config/intake-context.yaml
+ *   npm run validate -- ../config/intake-context.yaml
  */
 
 import { readFileSync } from 'fs';
@@ -23,7 +23,7 @@ if (!inputPath) {
   process.exit(1);
 }
 
-const schemaPath = resolve(__dirname, 'src/blueprints/definitions-schema.json');
+const schemaPath = resolve(__dirname, 'definitions-schema.json');
 
 let definitions, schema;
 

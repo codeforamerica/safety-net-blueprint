@@ -14,8 +14,9 @@
  * Output: <input-dir>/<domain>.svg  (or path specified by --out)
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, dirname, join, basename } from 'path';
+import yaml from 'js-yaml';
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,70 @@ const blueprint = JSON.parse(readFileSync(resolve(inputPath), 'utf8'));
 const inputDir  = dirname(resolve(inputPath));
 const stem      = basename(inputPath, '.json');
 const outPath   = outArg ? resolve(outArg) : join(inputDir, `${stem}.svg`);
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+// Loads optional theme.yaml from the same directory as the input JSON.
+// States override only what they need — all other values fall back to defaults.
+
+const DEFAULT_THEME = {
+  cards: {
+    'staff-action':           { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'STAFF ACTION'      },
+    'system':                 { headerBg: '#137C69', bodyBg: '#F1FFFD', headerFg: '#FFFFFF', bodyFg: '#0A3A2E', label: 'SYSTEM'            },
+    'policy':                 { headerBg: '#EDD7CD', bodyBg: '#F8F6F5', headerFg: '#3D2B0E', bodyFg: '#3D2B0E', label: 'POLICY'            },
+    'pain-point':             { headerBg: '#EB646B', bodyBg: '#F9E9EA', headerFg: '#1A0000', bodyFg: '#2A0A0A', label: 'PAIN POINT'        },
+    'opportunity':            { headerBg: '#FDAF49', bodyBg: '#FEF1DD', headerFg: '#3D2800', bodyFg: '#3D2800', label: 'OPPORTUNITY'       },
+    'domain-event':           { headerBg: '#2E6276', bodyBg: '#E7F2F5', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT'             },
+    'domain-event-published': { headerBg: '#2E6276', bodyBg: '#E7F2F5', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT (PUBLISHED)' },
+    'data-entity':            { headerBg: '#154C21', bodyBg: '#E3F5E1', headerFg: '#FFFFFF', bodyFg: '#0A2E1E', label: 'DATA'              },
+    'note':                   { headerBg: '#FDDA40', bodyBg: '#FFFBE7', headerFg: '#333333', bodyFg: '#555555', label: ''                  },
+    'person-action':          { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'PERSON'            },
+  },
+  actors: {
+    'applicant':  { headerBg: '#D97C20', bodyBg: '#FDECD4', headerFg: '#3D1800', bodyFg: '#3D1800', label: 'APPLICANT'  },
+    'caseworker': { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'CASEWORKER' },
+    'supervisor': { headerBg: '#4F41B2', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'SUPERVISOR' },
+    'system':     { headerBg: '#137C69', bodyBg: '#F1FFFD', headerFg: '#FFFFFF', bodyFg: '#0A3A2E', label: 'SYSTEM'     },
+  },
+  structure: {
+    background:          '#FFFFFF',  // canvas fill
+    legendBg:            '#F8F8F8',  // legend panel background
+    headingFg:           '#1A1A1A',  // phase/subphase header text and phase row border
+    captionFg:           '#888888',  // legend caption text
+    tableOuterStroke:    '#AAAAAA',  // table outer border and subphase header bottom rule
+    rowDividerStroke:    '#CCCCCC',  // horizontal lane dividers
+    laneLabelFg:         '#555555',  // lane label text
+    columnDividerStroke: '#DDDDDD',  // subphase column dividers and lane label divider
+    phaseBoundaryStroke: '#1A1A1A',  // heavy vertical line at phase boundaries
+  },
+};
+
+function deepMerge(defaults, override) {
+  if (!override || typeof override !== 'object') return defaults;
+  const result = { ...defaults };
+  for (const [k, v] of Object.entries(override)) {
+    result[k] = (v && typeof v === 'object' && !Array.isArray(v))
+      ? deepMerge(defaults[k] ?? {}, v)
+      : v;
+  }
+  return result;
+}
+
+function loadTheme(dir) {
+  const themePath = join(dir, 'theme.yaml');
+  if (!existsSync(themePath)) return DEFAULT_THEME;
+  try {
+    const override = yaml.load(readFileSync(themePath, 'utf8')) ?? {};
+    const theme = deepMerge(DEFAULT_THEME, override);
+    console.log(`Theme: ${themePath}`);
+    return theme;
+  } catch (e) {
+    console.warn(`Warning: could not parse theme.yaml — ${e.message}. Using defaults.`);
+    return DEFAULT_THEME;
+  }
+}
+
+const THEME = loadTheme(inputDir);
+const S     = THEME.structure;  // shorthand for structural colors
 
 // ── Layout constants (match renderer.ts) ─────────────────────────────────────
 
@@ -54,33 +119,11 @@ const ROW_MIN_HEIGHT   = 80;
 const ICON_SIZE        = 14;   // px — card-type icon rendered left of type label
 const ICON_GAP         = 4;    // px — gap between icon and label text
 
-// ── Color palette (from Figma Service Blueprint component library) ─────────────
-
-const PALETTE = {
-  'staff-action':  { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'STAFF ACTION'  },
-  'system':        { headerBg: '#137C69', bodyBg: '#F1FFFD', headerFg: '#FFFFFF', bodyFg: '#0A3A2E', label: 'SYSTEM'        },
-  'policy':        { headerBg: '#EDD7CD', bodyBg: '#F8F6F5', headerFg: '#3D2B0E', bodyFg: '#3D2B0E', label: 'POLICY'        },
-  'pain-point':    { headerBg: '#EB646B', bodyBg: '#F9E9EA', headerFg: '#1A0000', bodyFg: '#2A0A0A', label: 'PAIN POINT'   },
-  'opportunity':   { headerBg: '#FDAF49', bodyBg: '#FEF1DD', headerFg: '#3D2800', bodyFg: '#3D2800', label: 'OPPORTUNITY'   },
-  'domain-event':           { headerBg: '#2E6276', bodyBg: '#E7F2F5', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT'             },
-  'domain-event-published': { headerBg: '#2E6276', bodyBg: '#E7F2F5', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT (PUBLISHED)' },
-  'data-entity':   { headerBg: '#154C21', bodyBg: '#E3F5E1', headerFg: '#FFFFFF', bodyFg: '#0A2E1E', label: 'DATA'          },
-  'note':          { headerBg: '#FDDA40', bodyBg: '#FFFBE7', headerFg: '#333333', bodyFg: '#555555', label: ''              },
-  'person-action': { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'PERSON'        },
-};
-
-const ACTOR_PALETTE = {
-  'applicant':  { headerBg: '#D97C20', bodyBg: '#FDECD4', headerFg: '#3D1800', bodyFg: '#3D1800', label: 'APPLICANT'  },
-  'caseworker': { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'CASEWORKER' },
-  'supervisor': { headerBg: '#4F41B2', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'SUPERVISOR' },
-  'system':     { headerBg: '#137C69', bodyBg: '#F1FFFD', headerFg: '#FFFFFF', bodyFg: '#0A3A2E', label: 'SYSTEM'     },
-};
-
 function getPalette(card) {
-  if (card.type === 'person-action' && card.actor && ACTOR_PALETTE[card.actor]) {
-    return ACTOR_PALETTE[card.actor];
+  if (card.type === 'person-action' && card.actor && THEME.actors[card.actor]) {
+    return THEME.actors[card.actor];
   }
-  const p = PALETTE[card.type] ?? PALETTE['note'];
+  const p = THEME.cards[card.type] ?? THEME.cards['note'];
   if (card.type === 'system' && card.domain) {
     return { ...p, label: `SYSTEM (${card.domain.toUpperCase()})` };
   }
@@ -297,11 +340,11 @@ function renderCard(card, x, y, cardWidth = CARD_WIDTH) {
 
 function renderLegend(blueprintName, x, y) {
   const parts = [];
-  parts.push(`<rect x="${x}" y="${y}" width="${KEY_PANEL_WIDTH}" height="100" fill="#F8F8F8" id="legend-bg"/>`);
+  parts.push(`<rect x="${x}" y="${y}" width="${KEY_PANEL_WIDTH}" height="100" fill="${S.legendBg}" id="legend-bg"/>`);
 
   // Title
-  parts.push(`<text x="${x + 20}" y="${y + 24 + 13}" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="bold" fill="#1A1A1A">${escapeXml(blueprintName)}</text>`);
-  parts.push(`<text x="${x + 20}" y="${y + 24 + 13 + 16 + 4 + 10}" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#888888">Card types — copy to add</text>`);
+  parts.push(`<text x="${x + 20}" y="${y + 24 + 13}" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="bold" fill="${S.headingFg}">${escapeXml(blueprintName)}</text>`);
+  parts.push(`<text x="${x + 20}" y="${y + 24 + 13 + 16 + 4 + 10}" font-family="Inter, system-ui, sans-serif" font-size="10" fill="${S.captionFg}">Card types — copy to add</text>`);
 
   const sampleTypes = [
     { type: 'applicant-action',  card: { type: 'person-action', actor: 'applicant',  text: 'APPLICANT',  subtext: 'Description' } },
@@ -324,7 +367,7 @@ function renderLegend(blueprintName, x, y) {
 
   // Fix legend background height now that we know content height
   const legendHeight = cardY - y + 24;
-  const fixedBg = `<rect x="${x}" y="${y}" width="${KEY_PANEL_WIDTH}" height="${legendHeight}" fill="#F8F8F8"/>`;
+  const fixedBg = `<rect x="${x}" y="${y}" width="${KEY_PANEL_WIDTH}" height="${legendHeight}" fill="${S.legendBg}"/>`;
   parts[0] = fixedBg;
   parts.push(...cardSvgParts);
 
@@ -388,7 +431,7 @@ function renderBlueprint(bp) {
   // SVG root
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">`);
   parts.push(`<defs></defs>`);
-  parts.push(`<rect width="${totalWidth}" height="${totalHeight}" fill="#FFFFFF"/>`);
+  parts.push(`<rect width="${totalWidth}" height="${totalHeight}" fill="${S.background}"/>`);
 
   // Legend
   const { svg: legendSvg } = renderLegend(bp.name, 0, 0);
@@ -400,7 +443,7 @@ function renderBlueprint(bp) {
   // ── Phase row ────────────────────────────────────────────────────────────────
   // "Phase" label in left column; phase label spanning its sub-phase columns.
   const phaseRowMidY = PHASE_ROW_H / 2 + 5; // approximate vertical center for text baseline
-  parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${phaseRowMidY}" text-anchor="middle" ${font} font-size="13" font-weight="bold" fill="#1A1A1A">Phase</text>`);
+  parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${phaseRowMidY}" text-anchor="middle" ${font} font-size="13" font-weight="bold" fill="${S.headingFg}">Phase</text>`);
 
   let colStart = 0;
   for (const phase of bp.phases) {
@@ -408,28 +451,28 @@ function renderBlueprint(bp) {
     const phaseX   = bpX + LANE_LABEL_WIDTH + colStart * PHASE_WIDTH;
     const phaseW   = spanCols * PHASE_WIDTH;
     const phaseMid = phaseX + phaseW / 2;
-    parts.push(`<text x="${phaseMid}" y="${phaseRowMidY}" text-anchor="middle" ${font} font-size="15" font-weight="bold" fill="#1A1A1A">${escapeXml(phase.label)}</text>`);
+    parts.push(`<text x="${phaseMid}" y="${phaseRowMidY}" text-anchor="middle" ${font} font-size="15" font-weight="bold" fill="${S.headingFg}">${escapeXml(phase.label)}</text>`);
     colStart += spanCols;
   }
 
   // Heavy rule below Phase row
-  parts.push(`<line x1="${bpX}" y1="${PHASE_ROW_H}" x2="${bpX + tableWidth}" y2="${PHASE_ROW_H}" stroke="#1A1A1A" stroke-width="2"/>`);
+  parts.push(`<line x1="${bpX}" y1="${PHASE_ROW_H}" x2="${bpX + tableWidth}" y2="${PHASE_ROW_H}" stroke="${S.phaseBoundaryStroke}" stroke-width="2"/>`);
 
   // ── Sub phase row ─────────────────────────────────────────────────────────────
   // "Sub phase" label in left column; sub-phase label per column.
   const subRowY    = PHASE_ROW_H;
   const subRowMidY = subRowY + SUBPHASE_ROW_H / 2 + 4;
-  parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${subRowMidY}" text-anchor="middle" ${font} font-size="11" font-weight="bold" fill="#1A1A1A">Sub phase</text>`);
+  parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${subRowMidY}" text-anchor="middle" ${font} font-size="11" font-weight="bold" fill="${S.headingFg}">Sub phase</text>`);
 
   for (let ci = 0; ci < numCols; ci++) {
     const { subPhase } = columns[ci];
     const colX   = bpX + LANE_LABEL_WIDTH + ci * PHASE_WIDTH;
     const colMid = colX + PHASE_WIDTH / 2;
-    parts.push(`<text x="${colMid}" y="${subRowMidY}" text-anchor="middle" ${font} font-size="13" font-weight="bold" fill="#1A1A1A">${escapeXml(subPhase.label)}</text>`);
+    parts.push(`<text x="${colMid}" y="${subRowMidY}" text-anchor="middle" ${font} font-size="13" font-weight="bold" fill="${S.headingFg}">${escapeXml(subPhase.label)}</text>`);
   }
 
   // Light rule below Sub phase row
-  parts.push(`<line x1="${bpX}" y1="${HEADER_HEIGHT}" x2="${bpX + tableWidth}" y2="${HEADER_HEIGHT}" stroke="#AAAAAA" stroke-width="1"/>`);
+  parts.push(`<line x1="${bpX}" y1="${HEADER_HEIGHT}" x2="${bpX + tableWidth}" y2="${HEADER_HEIGHT}" stroke="${S.tableOuterStroke}" stroke-width="1"/>`);
 
   // ── Lane rows ─────────────────────────────────────────────────────────────────
   let rowY = HEADER_HEIGHT;
@@ -439,15 +482,15 @@ function renderBlueprint(bp) {
     const rowH = rowHeights[li];
 
     if (li > 0) {
-      parts.push(`<line x1="${bpX}" y1="${rowY}" x2="${bpX + tableWidth}" y2="${rowY}" stroke="#CCCCCC" stroke-width="1"/>`);
+      parts.push(`<line x1="${bpX}" y1="${rowY}" x2="${bpX + tableWidth}" y2="${rowY}" stroke="${S.rowDividerStroke}" stroke-width="1"/>`);
     }
 
     // Lane label
     const midY = rowY + rowH / 2;
-    parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${midY + 4}" text-anchor="middle" ${font} font-size="11" font-weight="bold" fill="#555555">${escapeXml(lane.label)}</text>`);
+    parts.push(`<text x="${bpX + LANE_LABEL_WIDTH / 2}" y="${midY + 4}" text-anchor="middle" ${font} font-size="11" font-weight="bold" fill="${S.laneLabelFg}">${escapeXml(lane.label)}</text>`);
 
     // Lane label column divider
-    parts.push(`<line x1="${bpX + LANE_LABEL_WIDTH}" y1="${rowY}" x2="${bpX + LANE_LABEL_WIDTH}" y2="${rowY + rowH}" stroke="#DDDDDD" stroke-width="1"/>`);
+    parts.push(`<line x1="${bpX + LANE_LABEL_WIDTH}" y1="${rowY}" x2="${bpX + LANE_LABEL_WIDTH}" y2="${rowY + rowH}" stroke="${S.columnDividerStroke}" stroke-width="1"/>`);
 
     // Cards in each sub-phase column
     for (let ci = 0; ci < numCols; ci++) {
@@ -464,7 +507,7 @@ function renderBlueprint(bp) {
       // Column divider — slightly heavier at phase boundaries
       if (ci < numCols - 1) {
         const isPhaseEnd = columns[ci].phase !== columns[ci + 1].phase;
-        const divColor = isPhaseEnd ? '#1A1A1A' : '#DDDDDD';
+        const divColor = isPhaseEnd ? S.phaseBoundaryStroke : S.columnDividerStroke;
         const divWidth = isPhaseEnd ? 3 : 1;
         parts.push(`<line x1="${baseX + PHASE_WIDTH}" y1="${rowY}" x2="${baseX + PHASE_WIDTH}" y2="${rowY + rowH}" stroke="${divColor}" stroke-width="${divWidth}"/>`);
       }
@@ -474,9 +517,9 @@ function renderBlueprint(bp) {
   }
 
   // Outer edges
-  parts.push(`<line x1="${bpX}" y1="${rowY}" x2="${bpX + tableWidth}" y2="${rowY}" stroke="#AAAAAA" stroke-width="1"/>`);
-  parts.push(`<line x1="${bpX}" y1="${HEADER_HEIGHT}" x2="${bpX}" y2="${rowY}" stroke="#AAAAAA" stroke-width="1"/>`);
-  parts.push(`<line x1="${bpX + tableWidth}" y1="${HEADER_HEIGHT}" x2="${bpX + tableWidth}" y2="${rowY}" stroke="#AAAAAA" stroke-width="1"/>`);
+  parts.push(`<line x1="${bpX}" y1="${rowY}" x2="${bpX + tableWidth}" y2="${rowY}" stroke="${S.tableOuterStroke}" stroke-width="1"/>`);
+  parts.push(`<line x1="${bpX}" y1="${HEADER_HEIGHT}" x2="${bpX}" y2="${rowY}" stroke="${S.tableOuterStroke}" stroke-width="1"/>`);
+  parts.push(`<line x1="${bpX + tableWidth}" y1="${HEADER_HEIGHT}" x2="${bpX + tableWidth}" y2="${rowY}" stroke="${S.tableOuterStroke}" stroke-width="1"/>`);
 
   parts.push(`</svg>`);
 

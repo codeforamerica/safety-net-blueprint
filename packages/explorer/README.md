@@ -1,6 +1,6 @@
-# Design
+# Explorer
 
-Tools for designers working with safety net blueprint contracts.
+Visual and reference artifacts for the safety net blueprint.
 
 | Tool | Description |
 |---|---|

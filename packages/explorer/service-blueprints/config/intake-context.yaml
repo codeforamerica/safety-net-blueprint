@@ -7,8 +7,8 @@
 # Combined with intake-state-machine.yaml by generate-blueprint.js to produce
 # intake.json (Figma plugin input) and intake.svg (rendered output).
 #
-# State-specific versions with local research, pain points, and implementation
-# notes live in src/blueprints/states/{state}/ and are gitignored.
+# State-specific versions live in the state's own repo. Run build.js with the
+# state's input directory as the first argument to generate state-specific output.
 #
 # Structure:
 #   phases → sub-phases → cards (keyed by lane ID, ordered as they appear on the blueprint)
@@ -16,7 +16,7 @@
 
 domain: intake
 name: "Intake Service Blueprint"
-stateMachine: "../../../../../contracts/intake-state-machine.yaml"
+stateMachine: "../../../contracts/intake-state-machine.yaml"
 
 lanes:
   - id: applicant

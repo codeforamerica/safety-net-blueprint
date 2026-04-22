@@ -6,8 +6,8 @@
  * then writes a blueprint JSON file consumable by the Figma plugin.
  *
  * Usage:
- *   node generate-blueprint.js src/blueprints/intake-context.yaml
- *   npm run generate -- src/blueprints/intake-context.yaml
+ *   node generate-blueprint.js ../config/intake-context.yaml
+ *   npm run generate -- ../config/intake-context.yaml
  *
  * Output: <input-dir>/<domain>.json  (alongside the context file)
  *

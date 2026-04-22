@@ -4,10 +4,31 @@ Tools for generating service blueprint diagrams from blueprint contract data. Th
 
 Running `node build.js` produces two outputs from the same blueprint data:
 
-- **Figma plugin** (`figma/dist/`) — generates native Figma frames and components that designers can edit and customize
-- **SVG file** — a rendered preview of the same diagram, shareable without Figma
+- **Figma plugin** (`figma-plugin/dist/`) — generates native Figma frames and components that designers can edit and customize
+- **SVG file** (`output/<domain>.svg`) — a rendered preview of the same diagram, shareable without Figma
 
 The SVG is useful for quick review, documentation, and sharing with stakeholders who don't have Figma access. The Figma output is what designers use as a working baseline.
+
+## Directory layout
+
+```
+service-blueprints/
+  config/                        # Human-editable source files
+    intake-context.yaml          # Blueprint content (lanes, phases, cards)
+    theme.yaml                   # Optional color overrides (empty = use defaults)
+  output/                        # Generated outputs (committed)
+    intake.json                  # Generated blueprint data (from generate-blueprint.js)
+    intake.svg                   # Rendered SVG preview (from render-svg.js)
+  figma-plugin/                  # Figma plugin source and tooling
+    definitions-schema.json      # JSON schema for validating context files
+    generate-blueprint.js        # Generates intake.json from intake-context.yaml
+    validate-definitions.js      # Validates a context file against the schema
+    build.js                     # Builds the Figma plugin (dist/)
+    src/                         # Plugin TypeScript source
+    dist/                        # Built plugin — load this in Figma Desktop (gitignored)
+  build.js                       # Orchestrates: Figma plugin build + SVG render
+  render-svg.js                  # Standalone SVG renderer
+```
 
 ## What you need
 
@@ -15,56 +36,52 @@ The SVG is useful for quick review, documentation, and sharing with stakeholders
 - **Node.js 18+** and npm
 - Editor access to the Figma file you want to generate into (Viewer access is not enough)
 
-Install dependencies once from the `figma/` directory:
+Install dependencies once from the `figma-plugin/` directory:
 
 ```bash
-cd figma && npm install
+cd figma-plugin && npm install
 ```
 
 ## Using the baseline blueprint
 
-The repo includes a baseline intake blueprint. Additional domain blueprints are planned as future work. To build:
+The repo includes a baseline intake blueprint. To build:
 
 ```bash
-node build.js        # builds Figma plugin → figma/dist/ and renders SVG
+node build.js        # builds Figma plugin → figma-plugin/dist/ and renders SVG → output/intake.svg
 ```
 
-The SVG is written to `svg/<domain>.svg` (a sibling of the `figma/` directory).
-
-In Figma Desktop: **Plugins → Development → Import plugin from manifest…**, select `figma/dist/manifest.json`. Run the plugin from the same menu and click **Generate**.
+In Figma Desktop: **Plugins → Development → Import plugin from manifest…**, select `figma-plugin/dist/manifest.json`. Run the plugin from the same menu and click **Generate**.
 
 Re-running always creates a fresh frame — it won't overwrite existing work.
 
-## Customizing for a state
+## Customizing
 
-State-specific content files are never committed to this repo (they're gitignored). Start from the baseline context file for the domain and modify it for your state.
+To generate a blueprint from your own content files, point the build at your directory:
 
-1. Copy the baseline context file as a starting point:
-   ```bash
-   mkdir -p figma/src/blueprints/states/<state>
-   cp figma/src/blueprints/<domain>-context.yaml figma/src/blueprints/states/<state>/<domain>-context.yaml
-   ```
-2. Edit `figma/src/blueprints/states/<state>/<domain>-context.yaml` with state-specific content.
-3. Generate the blueprint JSON:
-   ```bash
-   node figma/generate-blueprint.js figma/src/blueprints/states/<state>/<domain>-context.yaml
-   ```
-   This writes `figma/src/blueprints/states/<state>/<domain>.json`.
-4. Build:
-   ```bash
-   node build.js figma/src/blueprints/states/<state> <output-dir>
-   ```
-   This builds the Figma plugin and renders an SVG preview to `svg/<domain>.svg`.
-5. In Figma Desktop, import the manifest from `<output-dir>/manifest.json` and run the plugin.
+```bash
+node build.js <path/to/your/dir>
+```
+
+Your directory should contain `intake.json` (generated from your own context file). The SVG is written alongside it.
+
+To override colors, add a `theme.yaml` to your directory. See `config/theme.yaml` for the format — only the values you specify are overridden.
 
 ## Authoring content
 
-The YAML context file is the human-editable source. It defines the swim lanes, phases, and cards for the blueprint. The JSON is generated from it — edit the YAML, not the JSON directly.
+`config/intake-context.yaml` is the human-editable source. After editing it, regenerate the JSON:
+
+```bash
+cd figma-plugin && npm run generate
+# or directly:
+node figma-plugin/generate-blueprint.js config/intake-context.yaml
+```
 
 To validate a context file before generating:
 
 ```bash
-node figma/validate-definitions.js figma/src/blueprints/states/<state>/<domain>-context.yaml
+cd figma-plugin && npm run validate
+# or directly:
+node figma-plugin/validate-definitions.js config/intake-context.yaml
 ```
 
 ### What's safe to edit

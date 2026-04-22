@@ -28,7 +28,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2).filter(a => a !== '--watch');
 const watch = process.argv.includes('--watch');
 
-const inputDir  = args[0] ? path.resolve(args[0]) : path.join(__dirname, 'src', 'blueprints');
+const inputDir  = args[0] ? path.resolve(args[0]) : path.join(__dirname, '..', 'output');
 const outputDir = args[1] ? path.resolve(args[1]) : path.join(__dirname, 'dist');
 
 // ── Validate input ────────────────────────────────────────────────────────────
@@ -42,9 +42,9 @@ if (!fs.existsSync(blueprintSrc)) {
 // ── Stage blueprint ───────────────────────────────────────────────────────────
 // Copy selected blueprint to the well-known path main.ts imports from.
 
-const currentPath = path.join(__dirname, 'src', 'blueprints', '_current.json');
+const currentPath = path.join(__dirname, 'src', '_current.json');
 fs.copyFileSync(blueprintSrc, currentPath);
-console.log(`Blueprint: ${path.relative(__dirname, blueprintSrc)} → src/blueprints/_current.json`);
+console.log(`Blueprint: ${path.relative(__dirname, blueprintSrc)} → src/_current.json`);
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 
