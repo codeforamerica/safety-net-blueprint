@@ -28,6 +28,8 @@ const config = {
   cross_cutting: pkgConfig.cross_cutting,
   events: pkgConfig.events,
   apis: pkgConfig.apis,
+  actors: pkgConfig.actors,
+  flows: pkgConfig.flows,
   domains: (pkgConfig.domains || []).map(d => ({
     ...d,
     ...(mapConfig.layout?.[d.id] || {}),
@@ -155,9 +157,11 @@ function groupIntoFlows(cfg) {
 
 /** Single gray arrowhead marker used by all flow lines. */
 function defsForFlows() {
+  // auto-start-reverse makes marker-start automatically flip 180° so both ends
+  // point correctly without needing a separate reversed marker definition.
   return `  <defs>
     <marker id="${FLOW_MARKER_ID}" markerWidth="10" markerHeight="10"
-      refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      refX="10" refY="5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
       <path d="M0,0 L0,10 L10,5 z" fill="${FLOW_LINE_COLOR}"/>
     </marker>
   </defs>`;
@@ -211,23 +215,213 @@ function arrowLine(x1, y1, x2, y2, lineColor, markerId, dash = null, offset = 0)
     stroke="${lineColor}" stroke-width="1.5" ${dashAttr} marker-end="url(#${markerId})"/>`;
 }
 
-// ── Legend helpers ─────────────────────────────────────────────────────────
+// ── Header bar helpers ──────────────────────────────────────────────────────
 
-/** HTML legend for detail views — lives inside .dt-wrap at the bottom. */
-function detailLegendHtml() {
-  const swatchStyle = (fill, stroke, dash) =>
-    `display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:middle;` +
-    `margin-right:4px;background:${fill};border:1.5px ${dash ? 'dashed' : 'solid'} ${stroke};`;
-  const legendStyle = 'position:absolute;bottom:16px;left:25px;right:25px;display:flex;gap:16px;' +
-    'padding:8px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;' +
-    'align-items:center;flex-wrap:wrap;font-size:9px;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;z-index:10;';
-  return `<div style="${legendStyle}">
-  <span><span style="${swatchStyle('#f0fdf4','#16a34a',false)}"></span>Domain complete</span>
-  <span><span style="${swatchStyle('#eff6ff','#2563eb',false)}"></span>Domain partially complete</span>
-  <span><span style="${swatchStyle('#f9fafb','#9ca3af',true )}"></span>Domain planned</span>
-  <span>&#x26a1; Domain event</span>
-  <span>&#x21c4; Direct API call</span>
-  <button id="toggle-int" style="margin-left:auto;font-size:9px;font-family:inherit;cursor:pointer;padding:3px 10px;border:1px solid #d1d5db;border-radius:4px;background:white;color:#374151;">Hide integrations</button>
+/**
+ * Top header bar for domain detail pages: breadcrumb (left) + legend (right).
+ * Replaces the old bottom legend and the separate nav div.
+ */
+function detailHeaderHtml(domainLabel) {
+  const sw = (fill, stroke, dash) =>
+    `display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;` +
+    `margin-right:3px;background:${fill};border:1.5px ${dash ? 'dashed' : 'solid'} ${stroke};`;
+  const bar = `position:absolute;top:0;left:0;right:0;height:44px;background:#f9fafb;` +
+    `border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 20px;` +
+    `gap:16px;z-index:10;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;`;
+  return `<div style="${bar}">` +
+    `<div style="font-size:12px;">` +
+    `<span data-navigate="__overview__" style="color:#2563eb;cursor:pointer;">&#8592; Context Map</span>` +
+    `<span style="color:#6b7280;"> / ${domainLabel}</span>` +
+    `</div>` +
+    `<div style="flex:1;"></div>` +
+    `<span><span style="${sw('#f0fdf4','#16a34a',false)}"></span>Complete</span>` +
+    `<span><span style="${sw('#eff6ff','#2563eb',false)}"></span>In progress</span>` +
+    `<span><span style="${sw('#f9fafb','#9ca3af',true )}"></span>Planned</span>` +
+    `<span>&#x26a1;&thinsp;Event &nbsp; &#x21c4;&thinsp;API call</span>` +
+    `<span style="color:#9ca3af;font-style:italic;">Hover to see integrations</span>` +
+    `</div>`;
+}
+
+/**
+ * Second header row listing flow sequence diagrams for a domain.
+ * Shown directly below the main header bar (top:44px).
+ */
+function flowsStrip(domainFlows) {
+  const links = domainFlows.map(f =>
+    `<span data-navigate="flow_${f.id}" style="cursor:pointer;padding:3px 10px;` +
+    `background:white;border:1px solid #bae6fd;border-radius:4px;color:#0284c7;` +
+    `font-size:9px;">${f.label}</span>`
+  ).join(' ');
+  return `<div style="position:absolute;top:44px;left:0;right:0;height:32px;` +
+    `background:#f0f9ff;border-bottom:1px solid #bae6fd;display:flex;` +
+    `align-items:center;padding:0 20px;gap:8px;z-index:10;` +
+    `font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">` +
+    `<span style="font-size:9px;color:#0369a1;font-weight:600;white-space:nowrap;">Flows</span>` +
+    `${links}</div>`;
+}
+
+/**
+ * Renders a sequence diagram for a single flow definition.
+ * Columns are dynamically sized to always fill 1400px regardless of participant count.
+ */
+function renderFlowPage(flow) {
+  const actorMap = Object.fromEntries((config.actors  || []).map(a => [a.id, a]));
+  const domainMap = Object.fromEntries(config.domains.map(d => [d.id, d]));
+  const eventMap  = Object.fromEntries((config.events || []).map(e => [e.name, e]));
+
+  const participants = (flow.participants || []).map(id => {
+    if (actorMap[id])  return { id, type: 'actor',  label: actorMap[id].label };
+    const d = domainMap[id];
+    if (d)             return { id, type: 'domain', label: d.label, status: d.status };
+    return             { id, type: 'unknown', label: id, status: 'not-started' };
+  });
+
+  const N = participants.length;
+
+  // Fit N columns into a fixed 1400px canvas.
+  // COL_GAP ≈ 0.3 × COL_W → inner = N×COL_W + (N-1)×COL_GAP
+  const CANVAS_W = 1400, ML = 60, MR = 60;
+  const inner    = CANVAS_W - ML - MR;
+  const COL_W    = Math.floor(inner / (N + 0.3 * (N - 1)));
+  const COL_GAP  = Math.round(COL_W * 0.3);
+  const W        = CANVAS_W;
+
+  const HEADER_TOP = 52, HEADER_H = 62;
+  const LIFELINE_Y = HEADER_TOP + HEADER_H + 14;
+  const FIRST_Y    = LIFELINE_Y + 38;
+  const STEP_H     = 82;
+  const FOOTER_H   = 80;
+
+  const nSteps = (flow.steps || []).length;
+  const H = Math.max(500, FIRST_Y + nSteps * STEP_H + FOOTER_H);
+
+  const colX   = participants.map((_, i) => ML + i * (COL_W + COL_GAP) + COL_W / 2);
+  const colIdx = Object.fromEntries(participants.map((p, i) => [p.id, i]));
+
+  // ── Column header divs ──────────────────────────────────────────────────────
+
+  const headerDivs = participants.map((p, i) => {
+    const left = colX[i] - COL_W / 2;
+    if (p.type === 'actor') {
+      const st = ['position:absolute', `left:${left}px`, `top:${HEADER_TOP}px`,
+        `width:${COL_W}px`, `height:${HEADER_H}px`,
+        'background:#fef3c7', 'border:1.5px solid #f59e0b', 'border-radius:8px',
+        'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
+        'box-sizing:border-box', 'z-index:2'].join(';');
+      return `<div style="${st}">` +
+        `<div style="font-size:9px;color:#b45309;margin-bottom:2px;">&#128100;</div>` +
+        `<div style="font-size:12px;font-weight:700;color:#78350f;">${p.label}</div></div>`;
+    }
+    const s = STATUS_STYLE[p.status] || STATUS_STYLE['not-started'];
+    const border = s.dash ? `1.5px dashed ${s.stroke}` : `1.5px solid ${s.stroke}`;
+    const st = ['position:absolute', `left:${left}px`, `top:${HEADER_TOP}px`,
+      `width:${COL_W}px`, `height:${HEADER_H}px`,
+      `background:${s.fill}`, `border:${border}`, 'border-radius:8px',
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'text-align:center', 'box-sizing:border-box', 'z-index:2', 'padding:4px 6px'].join(';');
+    return `<div style="${st}">` +
+      `<div style="font-size:12px;font-weight:700;color:#111827;">${p.label}</div></div>`;
+  }).join('\n');
+
+  // ── SVG: lifelines + arrows ─────────────────────────────────────────────────
+
+  const svgParts = [`  <defs>
+    <marker id="sq-gray"  markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#9ca3af" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-green" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#16a34a" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-amber" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#d97706" fill="none" stroke-width="1.5"/></marker>
+  </defs>`];
+
+  // Lifelines
+  for (let i = 0; i < N; i++) {
+    svgParts.push(
+      `  <line x1="${colX[i]}" y1="${LIFELINE_Y}" x2="${colX[i]}" y2="${H - FOOTER_H}" ` +
+      `stroke="${participants[i].type === 'actor' ? '#fde68a' : '#e5e7eb'}" stroke-width="1.5" stroke-dasharray="5,4"/>`
+    );
+  }
+
+  // Steps
+  const labelDivs = [];
+  (flow.steps || []).forEach((step, idx) => {
+    const y  = FIRST_Y + idx * STEP_H;
+    const fi = colIdx[step.from], ti = colIdx[step.to];
+    if (fi == null || ti == null) return;
+
+    const fx = colX[fi], tx = colX[ti];
+    const isActor   = participants[fi].type === 'actor';
+    const evStatus  = step.event ? (eventMap[step.event]?.status || 'planned') : null;
+    let color, markerId;
+    if      (isActor)                    { color = '#d97706'; markerId = 'sq-amber'; }
+    else if (evStatus === 'implemented') { color = '#16a34a'; markerId = 'sq-green'; }
+    else                                 { color = '#9ca3af'; markerId = 'sq-gray';  }
+
+    // Arrow — pull x2 back by 8px so arrowhead lands on the lifeline center
+    const dir = tx > fx ? 1 : -1;
+    const x2  = tx - dir * 8;
+    const dash = isActor ? 'stroke-dasharray="6,3"' : '';
+    svgParts.push(
+      `  <line x1="${fx}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="1.5" ${dash} marker-end="url(#${markerId})"/>`
+    );
+    svgParts.push(`  <circle cx="${fx}" cy="${y}" r="3" fill="${color}"/>`);
+    svgParts.push(`  <circle cx="${tx}" cy="${y}" r="3" fill="${color}"/>`);
+
+    // Label div — event name / action label above arrow, note below
+    const midX  = ((fx + tx) / 2).toFixed(1);
+    const aboveY = (y - 13).toFixed(1);
+    const belowY = (y + 4).toFixed(1);
+    const icon = !isActor && step.event ? '\u26a1\u202f' : '';
+    const mainText = step.event || step.label || '';
+
+    let above = `<div style="font-size:9px;font-weight:600;color:${color};white-space:nowrap;">${icon}${mainText}</div>`;
+    if (step.condition) above += `<div style="font-size:8px;color:#2563eb;font-style:italic;white-space:nowrap;">[${step.condition}]</div>`;
+
+    labelDivs.push(
+      `<div style="position:absolute;left:${midX}px;top:${aboveY}px;transform:translate(-50%,0);` +
+      `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;">${above}</div>`
+    );
+    if (step.note) {
+      labelDivs.push(
+        `<div style="position:absolute;left:${midX}px;top:${belowY}px;transform:translate(-50%,0);` +
+        `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;` +
+        `color:#6b7280;max-width:220px;white-space:normal;z-index:3;">${step.note}</div>`
+      );
+    }
+  });
+
+  // ── Header bar (breadcrumb + legend) ────────────────────────────────────────
+
+  const mkArrow = (color, dash) =>
+    `<svg width="28" height="10" style="overflow:visible;vertical-align:middle;">` +
+    `<line x1="2" y1="5" x2="20" y2="5" stroke="${color}" stroke-width="1.5"${dash ? ' stroke-dasharray="5,3"' : ''}/>` +
+    `<path d="M18,2 L26,5 L18,8" stroke="${color}" fill="none" stroke-width="1.5"/></svg>`;
+
+  const domainLabel = domainMap[flow.domain]?.label || flow.domain;
+
+  const flowHeader =
+    `<div style="position:absolute;top:0;left:0;right:0;height:44px;background:#f9fafb;` +
+    `border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 20px;` +
+    `gap:16px;z-index:10;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;">` +
+    `<div style="font-size:12px;">` +
+    `<span data-navigate="__overview__" style="color:#2563eb;cursor:pointer;">&#8592; Context Map</span>` +
+    `<span style="color:#6b7280;"> / </span>` +
+    `<span data-navigate="${flow.domain}" style="color:#2563eb;cursor:pointer;">${domainLabel}</span>` +
+    `<span style="color:#6b7280;"> / ${flow.label}</span>` +
+    `</div>` +
+    `<div style="flex:1;"></div>` +
+    `<span>${mkArrow('#16a34a', false)}&thinsp;Implemented</span>` +
+    `<span>${mkArrow('#9ca3af', false)}&thinsp;Planned</span>` +
+    `<span>${mkArrow('#d97706', true)}&thinsp;Human action</span>` +
+    `<span style="color:#2563eb;font-style:italic;">[condition]</span>` +
+    `</div>`;
+
+  return `<div style="position:relative;width:${W}px;height:${H}px;` +
+    `font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:white;overflow:visible;" ` +
+    `data-domain="${flow.domain}">
+${flowHeader}
+  <svg style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+${svgParts.join('\n')}
+  </svg>
+${headerDivs}
+${labelDivs.join('\n')}
 </div>`;
 }
 
@@ -257,18 +451,18 @@ function renderOverview() {
   }).join('\n    ');
 
   return `<div class="cm">
+  <div class="cm-legend">
+    <div class="cm-legend-item"><div class="cm-swatch design-complete"></div> Domain complete</div>
+    <div class="cm-legend-item"><div class="cm-swatch partial"></div> Domain in progress</div>
+    <div class="cm-legend-item"><div class="cm-swatch not-started"></div> Domain planned</div>
+    <div style="margin-left:auto;font-size:9px;color:#9ca3af;font-style:italic;">Click a domain card to explore it</div>
+  </div>
   <div class="cm-banner">
     <div class="cm-banner-label">Cross-cutting concerns</div>
     <div class="cm-banner-items">${crossCutting}</div>
   </div>
   <div class="cm-grid">
     ${cards}
-  </div>
-  <div class="cm-legend">
-    <div class="cm-legend-item"><div class="cm-swatch design-complete"></div> Domain complete</div>
-    <div class="cm-legend-item"><div class="cm-swatch partial"></div> Domain in progress</div>
-    <div class="cm-legend-item"><div class="cm-swatch not-started"></div> Domain planned</div>
-    <div style="margin-left:auto;font-size:9px;color:#9ca3af;font-style:italic;">Click a domain card to explore it</div>
   </div>
 </div>`;
 }
@@ -280,6 +474,10 @@ function renderDetail(domainId) {
 
   const center = config.domains.find(d => d.id === domainId);
   if (!center) throw new Error(`Unknown domain: ${domainId}`);
+
+  const domainFlows = (config.flows || []).filter(f => f.domain === domainId);
+  const hasFlows    = domainFlows.length > 0;
+  const flowsHtml   = hasFlows ? flowsStrip(domainFlows) : '';
 
   const domainMap = Object.fromEntries(config.domains.map(d => [d.id, d]));
   const flows = groupIntoFlows(config);
@@ -302,33 +500,18 @@ function renderDetail(domainId) {
     if (!pid) continue;
     eventCountsByPartner[pid] = (eventCountsByPartner[pid] || 0) + Math.max(f.names.length, 1);
   }
-  const maxEvents = Math.max(0, ...Object.values(eventCountsByPartner));
-  const maxLabelH = maxEvents * 14 + 2 * 12; // events + two direction headers
-
-  // Estimate the widest integration box across all connections for this domain.
-  // Helvetica Neue at 8.5px ≈ 6px/char average; add icon (16px) + box padding (24px).
-  let maxNameChars = 0;
-  for (const f of flows) {
-    if (f.from !== domainId && f.to !== domainId) continue;
-    for (const name of f.names) maxNameChars = Math.max(maxNameChars, name.length);
-  }
-  const maxLabelW = maxNameChars * 6 + 40; // icon + padding
-
-  // The integration box sits at the midpoint of the connection. For it to fit without
-  // overlapping either domain box, the gap between box edges must exceed the box extent.
-  // Use the larger of height and width to cover both horizontal and vertical connections.
-  const maxLabelExtent = Math.max(maxLabelH, maxLabelW);
-
   const n = partners.length;
-  const minRadius = n <= 2 ? 280 : n <= 4 ? 320 : 360;
   // Max safe radius: partners must stay fully within the canvas.
   // Binding constraint is the bottom (legend takes ~80px) and top (nav bar ~60px).
+  const topClear = hasFlows ? 82 : 50;   // header 44px + optional flows row 32px + gap
   const maxRadius = Math.min(
-    CX - BOX_W / 2 - 20,           // left/right
-    CY - BOX_H / 2 - 70,           // top (nav bar clearance)
-    H - CY - BOX_H / 2 - 90,       // bottom (legend clearance)
+    CX - BOX_W / 2 - 20,             // left/right
+    CY - BOX_H / 2 - topClear,       // top (header bar)
+    H - CY - BOX_H / 2 - 30,         // bottom (no legend — just canvas edge clearance)
   );
-  const radius = Math.max(minRadius, Math.min(maxRadius, BOX_W + maxLabelExtent + 120));
+  // Integration boxes are hover-to-reveal, so label extent no longer drives radius.
+  const minRadius = n <= 2 ? 240 : n <= 4 ? 270 : 300;
+  const radius = Math.min(maxRadius, minRadius);
   const partnerPositions = {};
   partners.forEach((id, i) => {
     const angle = (2 * Math.PI * i) / n - Math.PI / 2;
@@ -349,42 +532,33 @@ function renderDetail(domainId) {
     flowsByPartner[partnerId].push({ ...f, direction });
   }
 
-  const arrowLines = [];
-  const labelDivs  = [];
+  const arrowLines  = [];
+  const midCircles  = [];   // drawn after all lines so they always paint on top
+  const hitAreaDivs = [];   // invisible rotated divs covering each line — cursor-following tooltip targets
+  const contentDivs = [];   // hidden content stores keyed by int-id
+
+  let intIdx = 0;
 
   for (const [partnerId, partnerFlows] of Object.entries(flowsByPartner)) {
     const p = partnerPositions[partnerId];
     const [ex1, ey1] = boxEdge(CX, CY, p.cx, p.cy);
     const [ex2, ey2] = boxEdge(p.cx, p.cy, CX, CY);
-    const bidi = partnerFlows.some(f => f.direction === 'out') &&
-                 partnerFlows.some(f => f.direction === 'in');
+    // One line per connection pair: arrowhead(s) determined by direction(s)
+    const hasOut = partnerFlows.some(f => f.direction === 'out');
+    const hasIn  = partnerFlows.some(f => f.direction === 'in');
+    // Pull back from box edge only where an arrowhead will sit
+    const [lx1, ly1] = hasIn  ? gappedEdge(CX, CY, p.cx, p.cy)  : [ex1, ey1];
+    const [lx2, ly2] = hasOut ? gappedEdge(p.cx, p.cy, CX, CY)  : [ex2, ey2];
+    const mStart = hasIn  ? `marker-start="url(#${FLOW_MARKER_ID})"` : '';
+    const mEnd   = hasOut ? `marker-end="url(#${FLOW_MARKER_ID})"` : '';
+    arrowLines.push(
+      `  <line x1="${lx1.toFixed(1)}" y1="${ly1.toFixed(1)}" ` +
+      `x2="${lx2.toFixed(1)}" y2="${ly2.toFixed(1)}" ` +
+      `stroke="${FLOW_LINE_COLOR}" stroke-width="1.5" ${mStart} ${mEnd}/>`
+    );
 
-    // SVG arrows
-    for (const f of partnerFlows) {
-      const off = bidi ? (f.direction === 'out' ? 10 : -10) : 0;
-      const [ox, oy] = off !== 0 ? perpOffset(ex1, ey1, ex2, ey2, off) : [0, 0];
-      let lx1, ly1, lx2, ly2;
-      if (f.direction === 'out') {
-        lx1 = ex1 + ox; ly1 = ey1 + oy;
-        [lx2, ly2] = gappedEdge(p.cx, p.cy, lx1, ly1);
-      } else {
-        lx1 = ex2 + ox; ly1 = ey2 + oy;
-        [lx2, ly2] = gappedEdge(CX, CY, lx1, ly1);
-      }
-      arrowLines.push(
-        `  <line x1="${lx1.toFixed(1)}" y1="${ly1.toFixed(1)}" ` +
-        `x2="${lx2.toFixed(1)}" y2="${ly2.toFixed(1)}" ` +
-        `stroke="${FLOW_LINE_COLOR}" stroke-width="1.5" marker-end="url(#${FLOW_MARKER_ID})"/>`
-      );
-    }
-
-    // Place label box centered at the midpoint of the connection.
-    const ax = Math.max(120, Math.min(W - 120, (ex1 + ex2) / 2));
-    const ay = Math.max(100, Math.min(H - 60,  (ey1 + ey2) / 2));
-    const transformX = '-50%';
-    const textAlign  = 'left';
+    // Build tooltip content for this connection
     const partnerLabel = domainMap[partnerId]?.label || partnerId;
-
     let labelHtml = '';
     for (const f of partnerFlows) {
       const items = f.names.length > 0 ? f.names : (f.type === 'api' ? ['direct API'] : []);
@@ -396,8 +570,36 @@ function renderDetail(domainId) {
         labelHtml += `<div style="color:#374151;"><span style="margin-right:3px;">${icon}</span>${name}</div>`;
       }
     }
+
     if (labelHtml) {
-      labelDivs.push([ax, ay, transformX, textAlign, labelHtml]);
+      const cx = (ex1 + ex2) / 2, cy = (ey1 + ey2) / 2;
+      const dx = ex2 - ex1, dy = ey2 - ey1;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const angle = (Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2);
+
+      // Invisible rotated hit-area div covering the full connection line.
+      // z-index:1 keeps it below domain boxes (z-index:2) so box clicks still work.
+      hitAreaDivs.push(
+        `<div class="int-hit" data-int-id="${intIdx}" ` +
+        `style="position:absolute;left:${cx.toFixed(1)}px;top:${cy.toFixed(1)}px;` +
+        `width:${len.toFixed(1)}px;height:20px;` +
+        `transform:translate(-50%,-50%) rotate(${angle}deg);` +
+        `background:transparent;cursor:pointer;z-index:1;"></div>`
+      );
+      contentDivs.push(
+        `<div class="int-content" data-int-id="${intIdx}" style="display:none;">${labelHtml}</div>`
+      );
+
+      // ··· indicator drawn on top of all lines (midCircles layer)
+      midCircles.push(
+        `  <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="10" ` +
+        `fill="white" stroke="#d1d5db" stroke-width="1.5" pointer-events="none"/>` +
+        `\n  <text x="${cx.toFixed(1)}" y="${(cy + 3).toFixed(1)}" ` +
+        `font-size="9" text-anchor="middle" fill="#9ca3af" pointer-events="none" ` +
+        `font-family="'Helvetica Neue',Helvetica,Arial,sans-serif">\u00b7\u00b7\u00b7</text>`
+      );
+
+      intIdx++;
     }
   }
 
@@ -405,28 +607,18 @@ function renderDetail(domainId) {
     .map(id => domainBoxHtml(domainMap[id], partnerPositions[id].cx, partnerPositions[id].cy, true))
     .join('\n');
 
-  const labelDivsHtml = labelDivs.map(([ax, ay, transformX, textAlign, html]) =>
-    `<div class="int-box" style="position:absolute;left:${ax.toFixed(1)}px;top:${ay.toFixed(1)}px;` +
-    `transform:translate(${transformX},-50%);text-align:${textAlign};` +
-    `font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8.5px;line-height:1.65;` +
-    `white-space:nowrap;z-index:3;` +
-    `background:white;border:1px solid #e5e7eb;border-radius:5px;` +
-    `padding:5px 8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">${html}</div>`
-  ).join('\n');
-
-  return `<div style="position:relative;width:${W}px;height:${H}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:white;overflow:visible;" data-domain="${domainId}">
-  <div style="position:absolute;top:16px;left:20px;font-size:12px;z-index:10;">
-    <span data-navigate="__overview__" style="color:#2563eb;cursor:pointer;">← Context Map</span>
-    <span style="color:#6b7280;"> / ${center.label}</span>
-  </div>
+  return `<div style="position:relative;width:${W}px;height:${H}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:white;overflow:hidden;" data-domain="${domainId}">
+${detailHeaderHtml(center.label)}
+${flowsHtml}
   <svg style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 ${defsForFlows()}
 ${arrowLines.join('\n')}
+${midCircles.join('\n')}
   </svg>
+${hitAreaDivs.join('\n')}
+${contentDivs.join('\n')}
 ${partnerBoxes}
 ${domainBoxHtml(center, CX, CY, false)}
-${labelDivsHtml}
-${detailLegendHtml()}
 </div>`;
 }
 
@@ -441,4 +633,10 @@ for (const d of config.domains) {
   const html = renderDetail(d.id);
   writeFileSync(resolve(OUT_DIR, `${d.id}.html`), html, 'utf8');
   console.log(`Written: output/${d.id}.html`);
+}
+
+for (const flow of (config.flows || [])) {
+  const html = renderFlowPage(flow);
+  writeFileSync(resolve(OUT_DIR, `flow_${flow.id}.html`), html, 'utf8');
+  console.log(`Written: output/flow_${flow.id}.html`);
 }

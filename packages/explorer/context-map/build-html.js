@@ -53,9 +53,9 @@ const html = `<!DOCTYPE html>
   <title>Safety Net Blueprint \u2014 Context Map</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f8fafc; overflow-x: auto; position: relative; }
-    #container { min-height: 100vh; padding: 24px; }
-    #map-wrapper { background: white; border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,0.10); overflow: hidden; width: 1400px; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f8fafc; }
+    #container { min-height: 100vh; padding: 24px 0; overflow-x: hidden; }
+    #map-wrapper { background: white; box-shadow: 0 2px 16px rgba(0,0,0,0.10); overflow: hidden; width: 1400px; transform-origin: top left; }
 
     /* ── Overview ── */
     .cm { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; background: white; }
@@ -104,24 +104,71 @@ ${contentEntries}
     let current = '__overview__';
     const wrapper = document.getElementById('map-wrapper');
 
+    // Shared cursor-following tooltip for integration details on domain detail pages.
+    // position:fixed keeps it relative to the viewport and never causes document scroll.
+    const intTooltip = document.createElement('div');
+    intTooltip.id = 'int-tooltip';
+    intTooltip.style.cssText = [
+      'position:fixed', 'display:none', 'pointer-events:none',
+      "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif",
+      'font-size:8.5px', 'line-height:1.65', 'white-space:nowrap',
+      'z-index:9999', 'background:white', 'border:1px solid #e5e7eb',
+      'border-radius:5px', 'padding:5px 8px',
+      'box-shadow:0 2px 8px rgba(0,0,0,0.12)'
+    ].join(';');
+    document.body.appendChild(intTooltip);
+
+    // Scale the diagram to fill the available viewport width.
+    // transform: scale() keeps internal coordinates at 1400px; marginBottom compensates
+    // for the layout gap (scale < 1) or extension (scale > 1) left by the transform.
+    // Formula: offsetHeight * (scale - 1) is naturally negative below 1, positive above.
+    function fitDiagram() {
+      // outerWidth is the physical window size, unaffected by browser zoom level.
+      // clientWidth shrinks when the user zooms in, which fights the browser's
+      // native zoom and pushes the diagram off-screen. outerWidth stays constant
+      // across zoom changes and only changes when the window is actually resized.
+      const scale = window.outerWidth / 1400;
+      wrapper.style.transform = 'scale(' + scale + ')';
+      wrapper.style.marginBottom = Math.round(wrapper.offsetHeight * (scale - 1)) + 'px';
+    }
+
     function navigate(id) {
       if (!CONTENT[id]) return;
       current = id;
+      intTooltip.style.display = 'none';
       wrapper.innerHTML = CONTENT[id];
+      fitDiagram();
+
       wrapper.querySelectorAll('[data-navigate]').forEach(el => {
         el.addEventListener('click', () => navigate(el.getAttribute('data-navigate')));
       });
-      const btn = wrapper.querySelector('#toggle-int');
-      if (btn) {
-        btn.addEventListener('click', () => {
-          const visible = btn.textContent === 'Hide integrations';
-          wrapper.querySelectorAll('.int-box').forEach(b => b.style.display = visible ? 'none' : '');
-          btn.textContent = visible ? 'Show integrations' : 'Hide integrations';
+
+      // Map content by id for O(1) lookup
+      const intContent = {};
+      wrapper.querySelectorAll('.int-content').forEach(el => {
+        intContent[el.dataset.intId] = el.innerHTML;
+      });
+
+      // Wire up cursor-following tooltip on connection hit areas
+      wrapper.querySelectorAll('.int-hit').forEach(el => {
+        const html = intContent[el.dataset.intId] || '';
+        if (!html) return;
+        el.addEventListener('mouseenter', () => {
+          intTooltip.innerHTML = html;
+          intTooltip.style.display = 'block';
         });
-      }
+        el.addEventListener('mousemove', e => {
+          intTooltip.style.left = (e.clientX + 16) + 'px';
+          intTooltip.style.top  = (e.clientY + 10) + 'px';
+        });
+        el.addEventListener('mouseleave', () => {
+          intTooltip.style.display = 'none';
+        });
+      });
     }
 
     navigate('__overview__');
+    window.addEventListener('resize', fitDiagram);
   </script>
 </body>
 </html>`;

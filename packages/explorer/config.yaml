@@ -16,6 +16,15 @@ cross_cutting:
   - Reporting
   - Configuration Management
 
+# Human actors — used as swimlane participants in flow sequence diagrams.
+actors:
+  - id: applicant
+    label: Applicant
+  - id: caseworker
+    label: Caseworker
+  - id: supervisor
+    label: Supervisor
+
 # Bounded contexts
 # status: partial | not-started | design-complete
 domains:
@@ -192,6 +201,30 @@ events:
     subscribers:
       - workflow
 
+  # emitted on POST (resource creation) — no cross-domain subscribers yet
+  - name: application.created
+    publisher: intake
+    status: implemented
+    subscribers: []
+
+  # emitted when submitted application transitions to under_review;
+  # triggered internally by task.claimed via the intake rules file
+  - name: application.opened
+    publisher: intake
+    status: implemented
+    subscribers: []
+
+  # generic resource lifecycle events from OpenAPI x-events
+  - name: application.updated
+    publisher: intake
+    status: implemented
+    subscribers: []
+
+  - name: application.deleted
+    publisher: intake
+    status: implemented
+    subscribers: []
+
   # ── Scheduling ────────────────────────────────────────────────────────────────
 
   # appointment.scheduled creates the interview record in intake;
@@ -216,6 +249,129 @@ events:
     status: implemented
     subscribers:
       - intake
+
+  # emitted on task creation (onCreate hook)
+  - name: task.created
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # supervisor or system assigns task to a specific caseworker
+  - name: task.assigned
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # caseworker releases task back to queue
+  - name: task.released
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.completed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.cancelled
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.reopened
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # manual escalation by caseworker or supervisor
+  - name: task.escalated
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.de-escalated
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # task blocked waiting for applicant action
+  - name: task.awaiting_client
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # task blocked waiting for external verification result
+  - name: task.awaiting_verification
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # manually unblocked by caseworker or supervisor
+  - name: task.resumed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # unblocked by an incoming verification result
+  - name: task.system_resumed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.submitted_for_review
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.approved
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.returned_to_worker
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.priority_changed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # SLA deadline exceeded — federal compliance reporting trigger
+  - name: task.sla_breached
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # timer-triggered escalations (state machine only — not in OpenAPI x-events)
+  - name: task.auto_escalated
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # auto-cancelled after 30 days in awaiting_client
+  - name: task.auto_cancelled
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # auto-resumed after 7 days in awaiting_verification
+  - name: task.auto_resumed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # generic resource lifecycle events from OpenAPI x-events
+  - name: task.updated
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.deleted
+    publisher: workflow
+    status: implemented
+    subscribers: []
 
 # Direct API calls (synchronous, point-to-point — not event-driven)
 #
@@ -248,3 +404,167 @@ apis:
       - eligibility
       - intake
       - workflow
+
+# Event flows (ordered sequences of events for key business processes)
+#
+# domain: the primary domain this flow belongs to (shown on that domain's detail page)
+# participants: domain IDs in swimlane order (left to right in sequence diagram)
+# steps: ordered arrows in the diagram
+#   event:     event name from the events registry above
+#   from:      publisher domain ID
+#   to:        subscriber domain ID (fan-out = one step per subscriber)
+#   note:      optional annotation shown below the arrow label
+#   condition: optional guard label shown in [brackets] on the arrow
+flows:
+
+  # ── Intake flows ──────────────────────────────────────────────────────────────
+
+  # Triggered by submission; fans out in parallel to four domains.
+  # Eligibility and client_management respond async — not a strict sequence.
+  - id: application_submission
+    label: Application Submission
+    domain: intake
+    description: Events triggered when an application is submitted
+    participants: [applicant, caseworker, intake, workflow, eligibility, data_exchange, client_management]
+    steps:
+      - label: Submits application
+        from: applicant
+        to: intake
+        note: Online or in person; caseworker may submit on behalf of applicant
+      - event: application.submitted
+        from: intake
+        to: workflow
+        note: Task created in intake queue; SLA and queue routing assigned
+      - event: application.submitted
+        from: intake
+        to: eligibility
+        note: Expedited screening triggered
+      - event: application.submitted
+        from: intake
+        to: data_exchange
+        note: Federal checks initiated (FDSH, IEVS, SAVE, SSA)
+      - event: application.submitted
+        from: intake
+        to: client_management
+        note: Person matching initiated
+      - event: eligibility.application.expedited
+        from: eligibility
+        to: intake
+        condition: if expedited criteria met
+      - event: application.expedited_flagged
+        from: intake
+        to: workflow
+        condition: if expedited
+      - event: person.match_resolved
+        from: client_management
+        to: intake
+        note: Async — fuzzy matches require caseworker review
+      - label: Reviews match results; confirms match or creates new person record
+        from: caseworker
+        to: intake
+        note: One review per ApplicationMember; updates ApplicationMember.personId. Exact matches auto-confirmed; fuzzy matches require caseworker judgment
+      - event: call.completed
+        from: data_exchange
+        to: intake
+        note: Verification results arrive asynchronously; update VerificationItem statuses
+
+  # Caseworker works entirely through intake — scheduling and document uploads
+  # are launched from within intake to ensure linkage to the application.
+  - id: caseworker_review
+    label: Caseworker Review
+    domain: intake
+    description: From task claim through interview to verification complete
+    participants: [caseworker, supervisor, intake, workflow, scheduling, data_exchange]
+    steps:
+      - label: Claims task from queue
+        from: caseworker
+        to: intake
+        note: Caseworker selects from prioritized intake queue
+      - event: task.claimed
+        from: workflow
+        to: intake
+        note: Application transitions to under_review
+      - label: Schedules interview
+        from: caseworker
+        to: intake
+        note: Launched from within intake — ensures appointment links to application
+      - event: appointment.scheduled
+        from: scheduling
+        to: intake
+        note: Interview record created and linked to application
+      - event: call.completed
+        from: data_exchange
+        to: intake
+        note: Verification results arrive async; checklist updates in real time
+      - label: Reviews verification results; resolves satisfied items; flags items needing follow-up
+        from: caseworker
+        to: intake
+        note: Ongoing as results arrive — may trigger document requests or outreach before interview
+      - label: Conducts interview; resolves remaining verification items
+        from: caseworker
+        to: intake
+      - event: appointment.completed
+        from: scheduling
+        to: intake
+        note: Interview outcome recorded
+      - label: Escalates complex case or policy question
+        from: caseworker
+        to: intake
+        condition: if policy interpretation needed
+      - label: Reviews escalation; provides guidance or takes over resolution
+        from: supervisor
+        to: intake
+
+  # All VerificationItems resolved → auto-triggers eligibility rules engine.
+  # No caseworker action needed to start determination.
+  - id: determination
+    label: Eligibility Determination
+    domain: intake
+    description: From all verification items resolved through case creation
+    participants: [caseworker, supervisor, intake, eligibility, case_management]
+    steps:
+      - event: application.review_completed
+        from: intake
+        to: eligibility
+        note: Fires automatically when all VerificationItems are resolved
+      - event: determination_complete
+        from: eligibility
+        to: intake
+      - event: determination_complete
+        from: eligibility
+        to: case_management
+        condition: on approval
+      - label: Reviews determination results
+        from: caseworker
+        to: intake
+        note: Exception review only — not approving a calculation they triggered
+      - label: Records determination and rationale
+        from: caseworker
+        to: intake
+        note: Eligibility outcome, date, and reasoning recorded per program
+      - label: Approves determination
+        from: supervisor
+        to: intake
+        note: Required by state policy; previews notice before sending
+        condition: if supervisor approval required
+      - event: application.closed
+        from: intake
+        to: case_management
+      - event: application.closed
+        from: intake
+        to: eligibility
+
+  - id: withdrawal
+    label: Application Withdrawal
+    domain: intake
+    description: Application withdrawn by applicant or caseworker before determination
+    participants: [applicant, caseworker, intake, workflow]
+    steps:
+      - label: Requests withdrawal
+        from: applicant
+        to: intake
+        note: Or caseworker initiates; either may withdraw
+      - event: application.withdrawn
+        from: intake
+        to: workflow
+        note: Open task cancelled
