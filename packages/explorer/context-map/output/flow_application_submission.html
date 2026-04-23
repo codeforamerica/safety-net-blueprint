@@ -1,72 +1,130 @@
-<div style="position:relative;width:1400px;height:1066px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:white;overflow:visible;" data-domain="intake">
-<div style="position:absolute;top:0;left:0;right:0;height:44px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 20px;gap:16px;z-index:10;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;"><div style="font-size:12px;"><span data-navigate="__overview__" style="color:#2563eb;cursor:pointer;">&#8592; Context Map</span><span style="color:#6b7280;"> / </span><span data-navigate="intake" style="color:#2563eb;cursor:pointer;">Intake</span><span style="color:#6b7280;"> / Application Submission</span></div><div style="flex:1;"></div><span><svg width="28" height="10" style="overflow:visible;vertical-align:middle;"><line x1="2" y1="5" x2="20" y2="5" stroke="#16a34a" stroke-width="1.5"/><path d="M18,2 L26,5 L18,8" stroke="#16a34a" fill="none" stroke-width="1.5"/></svg>&thinsp;Implemented</span><span><svg width="28" height="10" style="overflow:visible;vertical-align:middle;"><line x1="2" y1="5" x2="20" y2="5" stroke="#9ca3af" stroke-width="1.5"/><path d="M18,2 L26,5 L18,8" stroke="#9ca3af" fill="none" stroke-width="1.5"/></svg>&thinsp;Planned</span><span><svg width="28" height="10" style="overflow:visible;vertical-align:middle;"><line x1="2" y1="5" x2="20" y2="5" stroke="#d97706" stroke-width="1.5" stroke-dasharray="5,3"/><path d="M18,2 L26,5 L18,8" stroke="#d97706" fill="none" stroke-width="1.5"/></svg>&thinsp;Human action</span><span style="color:#2563eb;font-style:italic;">[condition]</span></div>
-  <svg style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;" width="1400" height="1066" viewBox="0 0 1400 1066">
+<div style="position:relative;width:1400px;height:1886px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:white;overflow:visible;" data-domain="intake">
+<div style="position:absolute;top:0;left:0;right:0;height:44px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 20px;gap:16px;z-index:10;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;"><div style="font-size:12px;"><span data-navigate="__overview__" style="color:#2563eb;cursor:pointer;">&#8592; Context Map</span><span style="color:#6b7280;"> / </span><span data-navigate="intake" style="color:#2563eb;cursor:pointer;">Intake</span><span style="color:#6b7280;"> / Application Submission</span></div><div style="flex:1;"></div><span><svg width="28" height="10" style="overflow:visible;vertical-align:middle;"><line x1="2" y1="5" x2="20" y2="5" stroke="#16a34a" stroke-width="1.5"/><path d="M18,2 L26,5 L18,8" stroke="#16a34a" fill="none" stroke-width="1.5"/></svg>&thinsp;Implemented</span><span><svg width="28" height="10" style="overflow:visible;vertical-align:middle;"><line x1="2" y1="5" x2="20" y2="5" stroke="#9ca3af" stroke-width="1.5"/><path d="M18,2 L26,5 L18,8" stroke="#9ca3af" fill="none" stroke-width="1.5"/></svg>&thinsp;Planned</span><span><svg width="28" height="10" style="overflow:visible;vertical-align:middle;"><line x1="2" y1="5" x2="20" y2="5" stroke="#4f46e5" stroke-width="1.5"/><path d="M18,2 L26,5 L18,8" stroke="#4f46e5" fill="none" stroke-width="1.5"/></svg>&thinsp;Human action</span><span><svg width="28" height="10" style="overflow:visible;vertical-align:middle;"><line x1="2" y1="5" x2="20" y2="5" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/><path d="M18,2 L26,5 L18,8" stroke="#f97316" fill="none" stroke-width="1.5"/></svg>&thinsp;Gap &mdash; not yet designed</span><span style="color:#2563eb;font-style:italic;">[condition]</span><span style="color:#2563eb;">&#9645;&thinsp;opt</span><span style="color:#7c3aed;">&#9645;&thinsp;par</span></div>
+  <svg style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;" width="1400" height="1886" viewBox="0 0 1400 1886">
   <defs>
-    <marker id="sq-gray"  markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#9ca3af" fill="none" stroke-width="1.5"/></marker>
-    <marker id="sq-green" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#16a34a" fill="none" stroke-width="1.5"/></marker>
-    <marker id="sq-amber" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#d97706" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-gray"   markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#9ca3af" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-green"  markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#16a34a" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-indigo" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#4f46e5" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-orange" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#f97316" fill="none" stroke-width="1.5"/></marker>
   </defs>
-  <line x1="132.5" y1="128" x2="132.5" y2="986" stroke="#fde68a" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <line x1="321.5" y1="128" x2="321.5" y2="986" stroke="#fde68a" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <line x1="510.5" y1="128" x2="510.5" y2="986" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <line x1="699.5" y1="128" x2="699.5" y2="986" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <line x1="888.5" y1="128" x2="888.5" y2="986" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <line x1="1077.5" y1="128" x2="1077.5" y2="986" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <line x1="1266.5" y1="128" x2="1266.5" y2="986" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <line x1="132.5" y1="166" x2="502.5" y2="166" stroke="#d97706" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#sq-amber)"/>
-  <circle cx="132.5" cy="166" r="3" fill="#d97706"/>
-  <circle cx="510.5" cy="166" r="3" fill="#d97706"/>
-  <line x1="510.5" y1="248" x2="691.5" y2="248" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
-  <circle cx="510.5" cy="248" r="3" fill="#16a34a"/>
-  <circle cx="699.5" cy="248" r="3" fill="#16a34a"/>
-  <line x1="510.5" y1="330" x2="880.5" y2="330" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
-  <circle cx="510.5" cy="330" r="3" fill="#16a34a"/>
-  <circle cx="888.5" cy="330" r="3" fill="#16a34a"/>
-  <line x1="510.5" y1="412" x2="1069.5" y2="412" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
-  <circle cx="510.5" cy="412" r="3" fill="#16a34a"/>
-  <circle cx="1077.5" cy="412" r="3" fill="#16a34a"/>
-  <line x1="510.5" y1="494" x2="1258.5" y2="494" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
-  <circle cx="510.5" cy="494" r="3" fill="#16a34a"/>
-  <circle cx="1266.5" cy="494" r="3" fill="#16a34a"/>
-  <line x1="888.5" y1="576" x2="518.5" y2="576" stroke="#9ca3af" stroke-width="1.5"  marker-end="url(#sq-gray)"/>
-  <circle cx="888.5" cy="576" r="3" fill="#9ca3af"/>
-  <circle cx="510.5" cy="576" r="3" fill="#9ca3af"/>
-  <line x1="510.5" y1="658" x2="691.5" y2="658" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
-  <circle cx="510.5" cy="658" r="3" fill="#16a34a"/>
-  <circle cx="699.5" cy="658" r="3" fill="#16a34a"/>
-  <line x1="1266.5" y1="740" x2="518.5" y2="740" stroke="#9ca3af" stroke-width="1.5"  marker-end="url(#sq-gray)"/>
-  <circle cx="1266.5" cy="740" r="3" fill="#9ca3af"/>
-  <circle cx="510.5" cy="740" r="3" fill="#9ca3af"/>
-  <line x1="321.5" y1="822" x2="502.5" y2="822" stroke="#d97706" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#sq-amber)"/>
-  <circle cx="321.5" cy="822" r="3" fill="#d97706"/>
-  <circle cx="510.5" cy="822" r="3" fill="#d97706"/>
-  <line x1="1077.5" y1="904" x2="518.5" y2="904" stroke="#9ca3af" stroke-width="1.5"  marker-end="url(#sq-gray)"/>
-  <circle cx="1077.5" cy="904" r="3" fill="#9ca3af"/>
-  <circle cx="510.5" cy="904" r="3" fill="#9ca3af"/>
+  <rect x="62" y="543.2" width="1276" height="340.3" rx="3" fill="rgba(37,99,235,0.04)" stroke="#2563eb" stroke-width="1" stroke-dasharray="5,3"/>
+  <polygon points="62,543.2 90,543.2 98,551.2 90,559.2 62,559.2" fill="#2563eb" fill-opacity="0.18" stroke="#2563eb" stroke-width="1"/>
+  <text x="76.0" y="555.2" font-size="9" font-weight="700" text-anchor="middle" fill="#2563eb" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">opt</text>
+  <text x="104.0" y="555.2" font-size="9" fill="#2563eb" font-style="italic" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">[if expedited criteria met]</text>
+  <rect x="62" y="871.2" width="1276" height="176.3" rx="3" fill="rgba(37,99,235,0.04)" stroke="#2563eb" stroke-width="1" stroke-dasharray="5,3"/>
+  <polygon points="62,871.2 90,871.2 98,879.2 90,887.2 62,887.2" fill="#2563eb" fill-opacity="0.18" stroke="#2563eb" stroke-width="1"/>
+  <text x="76.0" y="883.2" font-size="9" font-weight="700" text-anchor="middle" fill="#2563eb" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">opt</text>
+  <text x="104.0" y="883.2" font-size="9" fill="#2563eb" font-style="italic" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">[if Medicaid applied]</text>
+  <rect x="50" y="215.2" width="1300" height="1488.3" rx="3" fill="rgba(124,58,237,0.03)" stroke="#7c3aed" stroke-width="1" stroke-dasharray="5,3"/>
+  <polygon points="50,215.2 78,215.2 86,223.2 78,231.2 50,231.2" fill="#7c3aed" fill-opacity="0.18" stroke="#7c3aed" stroke-width="1"/>
+  <text x="64.0" y="227.2" font-size="9" font-weight="700" text-anchor="middle" fill="#7c3aed" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">par</text>
+  <text x="92.0" y="227.2" font-size="9" fill="#7c3aed" font-style="italic" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">[Triggered concurrently — responses may arrive in any order]</text>
+  <line x1="50" y1="371.0" x2="1350" y2="371.0" stroke="#7c3aed" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="50" y1="1027.0" x2="1350" y2="1027.0" stroke="#7c3aed" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="50" y1="1355.0" x2="1350" y2="1355.0" stroke="#7c3aed" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="145" y1="128" x2="145" y2="1806" stroke="#fde68a" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="366" y1="128" x2="366" y2="1806" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="587" y1="128" x2="587" y2="1806" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="808" y1="128" x2="808" y2="1806" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="1029" y1="128" x2="1029" y2="1806" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="1250" y1="128" x2="1250" y2="1806" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="145" y1="166" x2="358" y2="166" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#sq-indigo)"/>
+  <circle cx="145" cy="166" r="3" fill="#4f46e5"/>
+  <circle cx="366" cy="166" r="3" fill="#4f46e5"/>
+  <line x1="366" y1="248" x2="579" y2="248" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
+  <circle cx="366" cy="248" r="3" fill="#16a34a"/>
+  <circle cx="587" cy="248" r="3" fill="#16a34a"/>
+  <line x1="587" y1="330" x2="623" y2="330" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="623" y1="330" x2="623" y2="350" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="623" y1="350" x2="595" y2="350" stroke="#6b7280" stroke-width="1.5" marker-end="url(#sq-gray)"/>
+  <circle cx="587" cy="330" r="3" fill="#6b7280"/>
+  <line x1="366" y1="412" x2="800" y2="412" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
+  <circle cx="366" cy="412" r="3" fill="#16a34a"/>
+  <circle cx="808" cy="412" r="3" fill="#16a34a"/>
+  <line x1="808" y1="494" x2="844" y2="494" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="844" y1="494" x2="844" y2="514" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="844" y1="514" x2="816" y2="514" stroke="#6b7280" stroke-width="1.5" marker-end="url(#sq-gray)"/>
+  <circle cx="808" cy="494" r="3" fill="#6b7280"/>
+  <line x1="808" y1="576" x2="374" y2="576" stroke="#9ca3af" stroke-width="1.5"  marker-end="url(#sq-gray)"/>
+  <circle cx="808" cy="576" r="3" fill="#9ca3af"/>
+  <circle cx="366" cy="576" r="3" fill="#9ca3af"/>
+  <line x1="366" y1="658" x2="402" y2="658" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="402" y1="658" x2="402" y2="678" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="402" y1="678" x2="374" y2="678" stroke="#6b7280" stroke-width="1.5" marker-end="url(#sq-gray)"/>
+  <circle cx="366" cy="658" r="3" fill="#6b7280"/>
+  <line x1="366" y1="740" x2="579" y2="740" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
+  <circle cx="366" cy="740" r="3" fill="#16a34a"/>
+  <circle cx="587" cy="740" r="3" fill="#16a34a"/>
+  <line x1="587" y1="822" x2="623" y2="822" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="623" y1="822" x2="623" y2="842" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="623" y1="842" x2="595" y2="842" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#sq-orange)"/>
+  <circle cx="587" cy="822" r="3" fill="#f97316"/>
+  <line x1="808" y1="904" x2="374" y2="904" stroke="#9ca3af" stroke-width="1.5"  marker-end="url(#sq-gray)"/>
+  <circle cx="808" cy="904" r="3" fill="#9ca3af"/>
+  <circle cx="366" cy="904" r="3" fill="#9ca3af"/>
+  <line x1="366" y1="986" x2="402" y2="986" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="402" y1="986" x2="402" y2="1006" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="402" y1="1006" x2="374" y2="1006" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#sq-orange)"/>
+  <circle cx="366" cy="986" r="3" fill="#f97316"/>
+  <line x1="366" y1="1068" x2="1021" y2="1068" stroke="#9ca3af" stroke-width="1.5"  marker-end="url(#sq-gray)"/>
+  <circle cx="366" cy="1068" r="3" fill="#9ca3af"/>
+  <circle cx="1029" cy="1068" r="3" fill="#9ca3af"/>
+  <line x1="1029" y1="1150" x2="1065" y2="1150" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="1065" y1="1150" x2="1065" y2="1170" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="1065" y1="1170" x2="1037" y2="1170" stroke="#6b7280" stroke-width="1.5" marker-end="url(#sq-gray)"/>
+  <circle cx="1029" cy="1150" r="3" fill="#6b7280"/>
+  <line x1="1029" y1="1232" x2="374" y2="1232" stroke="#9ca3af" stroke-width="1.5"  marker-end="url(#sq-gray)"/>
+  <circle cx="1029" cy="1232" r="3" fill="#9ca3af"/>
+  <circle cx="366" cy="1232" r="3" fill="#9ca3af"/>
+  <line x1="366" y1="1314" x2="402" y2="1314" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="402" y1="1314" x2="402" y2="1334" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="402" y1="1334" x2="374" y2="1334" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#sq-orange)"/>
+  <circle cx="366" cy="1314" r="3" fill="#f97316"/>
+  <line x1="366" y1="1396" x2="1242" y2="1396" stroke="#16a34a" stroke-width="1.5"  marker-end="url(#sq-green)"/>
+  <circle cx="366" cy="1396" r="3" fill="#16a34a"/>
+  <circle cx="1250" cy="1396" r="3" fill="#16a34a"/>
+  <line x1="1250" y1="1478" x2="1286" y2="1478" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="1286" y1="1478" x2="1286" y2="1498" stroke="#6b7280" stroke-width="1.5"/>
+  <line x1="1286" y1="1498" x2="1258" y2="1498" stroke="#6b7280" stroke-width="1.5" marker-end="url(#sq-gray)"/>
+  <circle cx="1250" cy="1478" r="3" fill="#6b7280"/>
+  <line x1="1250" y1="1560" x2="374" y2="1560" stroke="#9ca3af" stroke-width="1.5"  marker-end="url(#sq-gray)"/>
+  <circle cx="1250" cy="1560" r="3" fill="#9ca3af"/>
+  <circle cx="366" cy="1560" r="3" fill="#9ca3af"/>
+  <line x1="366" y1="1642" x2="402" y2="1642" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="402" y1="1642" x2="402" y2="1662" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="402" y1="1662" x2="374" y2="1662" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#sq-orange)"/>
+  <circle cx="366" cy="1642" r="3" fill="#f97316"/>
   </svg>
-<div style="position:absolute;left:60px;top:52px;width:145px;height:62px;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;z-index:2"><div style="font-size:9px;color:#b45309;margin-bottom:2px;">&#128100;</div><div style="font-size:12px;font-weight:700;color:#78350f;">Applicant</div></div>
-<div style="position:absolute;left:249px;top:52px;width:145px;height:62px;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;z-index:2"><div style="font-size:9px;color:#b45309;margin-bottom:2px;">&#128100;</div><div style="font-size:12px;font-weight:700;color:#78350f;">Caseworker</div></div>
-<div style="position:absolute;left:438px;top:52px;width:145px;height:62px;background:#eff6ff;border:1.5px solid #2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Intake</div></div>
-<div style="position:absolute;left:627px;top:52px;width:145px;height:62px;background:#eff6ff;border:1.5px solid #2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Workflow</div></div>
-<div style="position:absolute;left:816px;top:52px;width:145px;height:62px;background:#f9fafb;border:1.5px dashed #9ca3af;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Eligibility</div></div>
-<div style="position:absolute;left:1005px;top:52px;width:145px;height:62px;background:#eff6ff;border:1.5px solid #2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Data Exchange</div></div>
-<div style="position:absolute;left:1194px;top:52px;width:145px;height:62px;background:#f9fafb;border:1.5px dashed #9ca3af;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Client Management</div></div>
-<div style="position:absolute;left:321.5px;top:153.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#d97706;white-space:nowrap;">Submits application</div></div>
-<div style="position:absolute;left:321.5px;top:170.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Online or in person; caseworker may submit on behalf of applicant</div>
-<div style="position:absolute;left:605.0px;top:235.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.submitted</div></div>
-<div style="position:absolute;left:605.0px;top:252.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Task created in intake queue; SLA and queue routing assigned</div>
-<div style="position:absolute;left:699.5px;top:317.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.submitted</div></div>
-<div style="position:absolute;left:699.5px;top:334.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Expedited screening triggered</div>
-<div style="position:absolute;left:794.0px;top:399.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.submitted</div></div>
-<div style="position:absolute;left:794.0px;top:416.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Federal checks initiated (FDSH, IEVS, SAVE, SSA)</div>
-<div style="position:absolute;left:888.5px;top:481.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.submitted</div></div>
-<div style="position:absolute;left:888.5px;top:498.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Person matching initiated</div>
-<div style="position:absolute;left:699.5px;top:563.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;">⚡ eligibility.application.expedited</div><div style="font-size:8px;color:#2563eb;font-style:italic;white-space:nowrap;">[if expedited criteria met]</div></div>
-<div style="position:absolute;left:605.0px;top:645.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.expedited_flagged</div><div style="font-size:8px;color:#2563eb;font-style:italic;white-space:nowrap;">[if expedited]</div></div>
-<div style="position:absolute;left:888.5px;top:727.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;">⚡ person.match_resolved</div></div>
-<div style="position:absolute;left:888.5px;top:744.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Async — fuzzy matches require caseworker review</div>
-<div style="position:absolute;left:416.0px;top:809.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#d97706;white-space:nowrap;">Reviews match results; confirms match or creates new person record</div></div>
-<div style="position:absolute;left:416.0px;top:826.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">One review per ApplicationMember; updates ApplicationMember.personId. Exact matches auto-confirmed; fuzzy matches require caseworker judgment</div>
-<div style="position:absolute;left:794.0px;top:891.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;">⚡ call.completed</div></div>
-<div style="position:absolute;left:794.0px;top:908.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Verification results arrive asynchronously; update VerificationItem statuses</div>
+<div style="position:absolute;left:60px;top:52px;width:170px;height:62px;background:#eef2ff;border:1.5px solid #4f46e5;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;z-index:2"><div style="font-size:9px;color:#4338ca;margin-bottom:2px;">&#128100;</div><div style="font-size:12px;font-weight:700;color:#3730a3;">Applicant</div></div>
+<div style="position:absolute;left:281px;top:52px;width:170px;height:62px;background:#eff6ff;border:1.5px solid #2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Intake</div></div>
+<div style="position:absolute;left:502px;top:52px;width:170px;height:62px;background:#eff6ff;border:1.5px solid #2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Workflow</div></div>
+<div style="position:absolute;left:723px;top:52px;width:170px;height:62px;background:#f9fafb;border:1.5px dashed #9ca3af;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Eligibility</div></div>
+<div style="position:absolute;left:944px;top:52px;width:170px;height:62px;background:#eff6ff;border:1.5px solid #2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Data Exchange</div></div>
+<div style="position:absolute;left:1165px;top:52px;width:170px;height:62px;background:#f9fafb;border:1.5px dashed #9ca3af;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;z-index:2;padding:4px 6px"><div style="font-size:12px;font-weight:700;color:#111827;">Client Management</div></div>
+<div style="position:absolute;left:255.5px;top:153.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#4f46e5;white-space:nowrap;">Submits application</div></div>
+<div style="position:absolute;left:255.5px;top:170.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Online or in person; caseworker may submit on behalf of applicant</div>
+<div style="position:absolute;left:476.5px;top:235.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.submitted</div></div>
+<div style="position:absolute;left:629.0px;top:321.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#6b7280;white-space:nowrap;z-index:3;">Task created in intake queue; SLA and queue routing assigned</div>
+<div style="position:absolute;left:587.0px;top:399.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.submitted</div></div>
+<div style="position:absolute;left:850.0px;top:485.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#6b7280;white-space:nowrap;z-index:3;">Expedited screening initiated</div>
+<div style="position:absolute;left:587.0px;top:563.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;">⚡ eligibility.application.expedited</div></div>
+<div style="position:absolute;left:408.0px;top:649.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#6b7280;white-space:nowrap;z-index:3;">Set isExpedited = true on application</div>
+<div style="position:absolute;left:476.5px;top:727.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.expedited_flagged</div><div style="font-size:8px;color:#2563eb;font-style:italic;white-space:nowrap;">[if expedited]</div></div>
+<div style="position:absolute;left:629.0px;top:813.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#f97316;white-space:nowrap;z-index:3;">⚠️ Assign expedited SLA track</div>
+<div class="int-hit" data-int-id="g0" style="position:absolute;left:587px;top:817px;width:42px;height:34px;background:transparent;cursor:help;z-index:4;"></div><div class="int-content" data-int-id="g0" style="display:none;"><div style="font-size:7.5px;font-weight:700;color:#f97316;">⚠️ Gap</div><div style="font-size:8px;color:#374151;">Expedited SLA type and workflow task switching not yet designed</div></div>
+<div style="position:absolute;left:587.0px;top:891.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;">⚡ eligibility.rte_completed</div></div>
+<div style="position:absolute;left:408.0px;top:977.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#f97316;white-space:nowrap;z-index:3;">⚠️ Create RTE verification record with Medicaid eligibility outcome</div>
+<div class="int-hit" data-int-id="g1" style="position:absolute;left:366px;top:981px;width:42px;height:34px;background:transparent;cursor:help;z-index:4;"></div><div class="int-content" data-int-id="g1" style="display:none;"><div style="font-size:7.5px;font-weight:700;color:#f97316;">⚠️ Gap</div><div style="font-size:8px;color:#374151;">rte verification type not yet defined in intake contracts</div></div>
+<div style="position:absolute;left:697.5px;top:1055.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;">Initiates federal verification checks</div></div>
+<div style="position:absolute;left:697.5px;top:1072.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;color:#6b7280;max-width:220px;white-space:normal;z-index:3;">Direct API calls — FDSH, IEVS, SAVE, SSA (not event-driven)</div>
+<div style="position:absolute;left:1071.0px;top:1141.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#6b7280;white-space:nowrap;z-index:3;">Federal checks initiated</div>
+<div style="position:absolute;left:697.5px;top:1219.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;">⚡ call.completed</div></div>
+<div style="position:absolute;left:408.0px;top:1305.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#f97316;white-space:nowrap;z-index:3;">⚠️ Update verification records with federal check results</div>
+<div class="int-hit" data-int-id="g2" style="position:absolute;left:366px;top:1309px;width:42px;height:34px;background:transparent;cursor:help;z-index:4;"></div><div class="int-content" data-int-id="g2" style="display:none;"><div style="font-size:7.5px;font-weight:700;color:#f97316;">⚠️ Gap</div><div style="font-size:8px;color:#374151;">Intake handler for call.completed updating verifications not yet designed</div></div>
+<div style="position:absolute;left:808.0px;top:1383.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#16a34a;white-space:nowrap;">⚡ application.submitted</div></div>
+<div style="position:absolute;left:1292.0px;top:1469.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#6b7280;white-space:nowrap;z-index:3;">Person matching initiated</div>
+<div style="position:absolute;left:808.0px;top:1547.0px;transform:translate(-50%,0);text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;"><div style="font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;">⚡ person.match_resolved</div></div>
+<div style="position:absolute;left:408.0px;top:1633.0px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;color:#f97316;white-space:nowrap;z-index:3;">⚠️ Auto-confirm exact matches; queue fuzzy matches for caseworker review</div>
+<div class="int-hit" data-int-id="g3" style="position:absolute;left:366px;top:1637px;width:42px;height:34px;background:transparent;cursor:help;z-index:4;"></div><div class="int-content" data-int-id="g3" style="display:none;"><div style="font-size:7.5px;font-weight:700;color:#f97316;">⚠️ Gap</div><div style="font-size:8px;color:#374151;">Person match auto-confirmation behavior not yet designed in intake</div></div>
+<div data-navigate="flow_caseworker_review" style="position:absolute;left:60px;top:1706px;width:1280px;height:36px;border:1.5px solid #93c5fd;border-radius:4px;background:#eff6ff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;"><span style="position:absolute;top:3px;left:6px;font-size:7px;font-weight:700;color:#2563eb;border:1px solid #93c5fd;border-radius:2px;padding:0 3px;background:white;">ref</span><span style="font-size:10px;color:#2563eb;font-weight:600;">Caseworker Review &#8594;</span></div>
 </div>

@@ -65,6 +65,9 @@ const EVENT_TEXT_COLOR = {
 const FLOW_LINE_COLOR = '#b0b7c3';
 const FLOW_MARKER_ID  = 'arrow-gray';
 
+// Gap color — behavior or contract not yet designed
+const GAP_COLOR = '#f97316'; // orange-500
+
 // ── Geometry helpers ───────────────────────────────────────────────────────
 
 /** Where does the line from (cx,cy) toward (tx,ty) exit the box centered at (cx,cy)? */
@@ -260,6 +263,72 @@ function flowsStrip(domainFlows) {
     `${links}</div>`;
 }
 
+// ── Combined fragment helpers ───────────────────────────────────────────────
+
+const FRAGMENT_STYLES = {
+  par: { stroke: '#7c3aed', fill: 'rgba(124,58,237,0.03)', label: 'par' },
+  opt: { stroke: '#2563eb', fill: 'rgba(37,99,235,0.04)',  label: 'opt' },
+};
+
+/** Recursively flatten nested steps — fragment wrappers are unwrapped, not yielded. */
+function flattenSteps(steps) {
+  const result = [];
+  for (const step of steps) {
+    if (step.fragment !== undefined) {
+      if (step.operands) {
+        for (const op of step.operands) {
+          result.push(...flattenSteps(op.steps || []));
+        }
+      } else {
+        result.push(...flattenSteps(step.steps || []));
+      }
+    } else {
+      result.push(step);
+    }
+  }
+  return result;
+}
+
+/**
+ * Walk nested steps and collect fragment descriptors with flat step index extents.
+ * Returns: [{ type, label, depth, startIdx, endIdx, separators }]
+ * startIdx/endIdx are indices into the flat (leaf) step array.
+ * separators: flat indices of the last step in each operand (except the last) — used
+ * to draw horizontal divider lines between parallel/alternative operands.
+ */
+function collectFragments(steps) {
+  const fragments = [];
+  let flatIdx = 0;
+
+  function walk(steps, depth) {
+    for (const step of steps) {
+      if (step.fragment !== undefined) {
+        const startIdx = flatIdx;
+        const separators = [];
+        if (step.operands) {
+          for (let i = 0; i < step.operands.length; i++) {
+            walk(step.operands[i].steps || [], depth + 1);
+            if (i < step.operands.length - 1) {
+              separators.push(flatIdx - 1); // last leaf index of this operand
+            }
+          }
+        } else {
+          walk(step.steps || [], depth + 1);
+        }
+        const endIdx = flatIdx - 1;
+        if (endIdx >= startIdx) {
+          fragments.push({ type: step.fragment, label: step.label, depth, startIdx, endIdx, separators });
+        }
+      } else {
+        flatIdx++;
+      }
+    }
+  }
+
+  walk(steps, 0);
+  return fragments;
+}
+
 /**
  * Renders a sequence diagram for a single flow definition.
  * Columns are dynamically sized to always fill 1400px regardless of participant count.
@@ -291,8 +360,12 @@ function renderFlowPage(flow) {
   const FIRST_Y    = LIFELINE_Y + 38;
   const STEP_H     = 82;
   const FOOTER_H   = 80;
+  const SELF_W     = 36;   // how far right the self-arrow loop extends
+  const SELF_H     = 20;   // vertical drop of the self-arrow loop
 
-  const nSteps = (flow.steps || []).length;
+  const flatSteps = flattenSteps(flow.steps || []);
+  const nSteps    = flatSteps.length;
+  const fragments = collectFragments(flow.steps || []);
   const H = Math.max(500, FIRST_Y + nSteps * STEP_H + FOOTER_H);
 
   const colX   = participants.map((_, i) => ML + i * (COL_W + COL_GAP) + COL_W / 2);
@@ -305,12 +378,12 @@ function renderFlowPage(flow) {
     if (p.type === 'actor') {
       const st = ['position:absolute', `left:${left}px`, `top:${HEADER_TOP}px`,
         `width:${COL_W}px`, `height:${HEADER_H}px`,
-        'background:#fef3c7', 'border:1.5px solid #f59e0b', 'border-radius:8px',
+        'background:#eef2ff', 'border:1.5px solid #4f46e5', 'border-radius:8px',
         'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
         'box-sizing:border-box', 'z-index:2'].join(';');
       return `<div style="${st}">` +
-        `<div style="font-size:9px;color:#b45309;margin-bottom:2px;">&#128100;</div>` +
-        `<div style="font-size:12px;font-weight:700;color:#78350f;">${p.label}</div></div>`;
+        `<div style="font-size:9px;color:#4338ca;margin-bottom:2px;">&#128100;</div>` +
+        `<div style="font-size:12px;font-weight:700;color:#3730a3;">${p.label}</div></div>`;
     }
     const s = STATUS_STYLE[p.status] || STATUS_STYLE['not-started'];
     const border = s.dash ? `1.5px dashed ${s.stroke}` : `1.5px solid ${s.stroke}`;
@@ -326,10 +399,58 @@ function renderFlowPage(flow) {
   // ── SVG: lifelines + arrows ─────────────────────────────────────────────────
 
   const svgParts = [`  <defs>
-    <marker id="sq-gray"  markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#9ca3af" fill="none" stroke-width="1.5"/></marker>
-    <marker id="sq-green" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#16a34a" fill="none" stroke-width="1.5"/></marker>
-    <marker id="sq-amber" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#d97706" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-gray"   markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#9ca3af" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-green"  markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#16a34a" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-indigo" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#4f46e5" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-orange" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#f97316" fill="none" stroke-width="1.5"/></marker>
   </defs>`];
+
+  // ── Fragment rectangles (drawn before lifelines so they sit behind everything) ──
+  const FRAG_PAD = 10;
+  for (const frag of fragments) {
+    const style  = FRAGMENT_STYLES[frag.type] || FRAGMENT_STYLES['opt'];
+    const inset  = frag.depth * 12;
+    const fx     = ML - FRAG_PAD + inset;
+    const fw     = (W - ML - MR) + FRAG_PAD * 2 - inset * 2;
+    const fy     = (FIRST_Y + frag.startIdx * STEP_H - STEP_H * 0.4).toFixed(1);
+    const fh     = (STEP_H * (frag.endIdx - frag.startIdx + 1) + STEP_H * 0.15).toFixed(1);
+
+    // Fragment border
+    svgParts.push(
+      `  <rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" ` +
+      `rx="3" fill="${style.fill}" stroke="${style.stroke}" stroke-width="1" stroke-dasharray="5,3"/>`
+    );
+
+    // Pentagon label (type box in top-left corner of fragment)
+    const lw = 28, lh = 16, lx = fx, ly = parseFloat(fy);
+    svgParts.push(
+      `  <polygon points="${lx},${ly} ${lx+lw},${ly} ${lx+lw+8},${ly+lh/2} ${lx+lw},${ly+lh} ${lx},${ly+lh}" ` +
+      `fill="${style.stroke}" fill-opacity="0.18" stroke="${style.stroke}" stroke-width="1"/>`
+    );
+    svgParts.push(
+      `  <text x="${(lx + lw/2).toFixed(1)}" y="${(ly + lh - 4).toFixed(1)}" ` +
+      `font-size="9" font-weight="700" text-anchor="middle" fill="${style.stroke}" ` +
+      `font-family="${FONT}">${style.label}</text>`
+    );
+
+    // Guard / condition label
+    if (frag.label) {
+      svgParts.push(
+        `  <text x="${(lx + lw + 14).toFixed(1)}" y="${(ly + lh - 4).toFixed(1)}" ` +
+        `font-size="9" fill="${style.stroke}" font-style="italic" ` +
+        `font-family="${FONT}">[${frag.label}]</text>`
+      );
+    }
+
+    // Operand separator lines (dashed horizontal dividers between par/alt branches)
+    for (const sepIdx of (frag.separators || [])) {
+      const sy = (FIRST_Y + (sepIdx + 0.5) * STEP_H).toFixed(1);
+      svgParts.push(
+        `  <line x1="${fx}" y1="${sy}" x2="${fx + fw}" y2="${sy}" ` +
+        `stroke="${style.stroke}" stroke-width="1" stroke-dasharray="4,2"/>`
+      );
+    }
+  }
 
   // Lifelines
   for (let i = 0; i < N; i++) {
@@ -341,8 +462,69 @@ function renderFlowPage(flow) {
 
   // Steps
   const labelDivs = [];
-  (flow.steps || []).forEach((step, idx) => {
-    const y  = FIRST_Y + idx * STEP_H;
+  let gapIdx = 0;
+  flatSteps.forEach((step, idx) => {
+    const y = FIRST_Y + idx * STEP_H;
+
+    // ── ref fragment ────────────────────────────────────────────────────────
+    if (step.ref) {
+      const refFlow  = (config.flows || []).find(f => f.id === step.ref);
+      const refLabel = refFlow?.label || step.label || step.ref;
+      const flowIds  = (config.flows || []).map(f => f.id);
+      const isBack   = flowIds.indexOf(step.ref) < flowIds.indexOf(flow.id);
+      const arrow    = isBack ? '&#8592;' : '&#8594;';
+      const refText  = isBack ? `${arrow} ${refLabel}` : `${refLabel} ${arrow}`;
+      const boxH2    = 36;
+      const boxY     = y - boxH2 / 2;
+      labelDivs.push(
+        `<div data-navigate="flow_${step.ref}" style="position:absolute;left:${ML}px;top:${boxY}px;` +
+        `width:${W - ML - MR}px;height:${boxH2}px;border:1.5px solid #93c5fd;border-radius:4px;` +
+        `background:#eff6ff;display:flex;align-items:center;justify-content:center;` +
+        `cursor:pointer;z-index:3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">` +
+        `<span style="position:absolute;top:3px;left:6px;font-size:7px;font-weight:700;color:#2563eb;` +
+        `border:1px solid #93c5fd;border-radius:2px;padding:0 3px;background:white;">ref</span>` +
+        `<span style="font-size:10px;color:#2563eb;font-weight:600;">${refText}</span>` +
+        `</div>`
+      );
+      return;
+    }
+
+    // ── self-message ─────────────────────────────────────────────────────────
+    if (step.self) {
+      const si = colIdx[step.self];
+      if (si == null) return;
+      const sx    = colX[si];
+      const isGap = !!step.gap;
+      const color = isGap ? GAP_COLOR : '#6b7280';
+      const dash  = isGap ? ' stroke-dasharray="5,3"' : '';
+      const marker = isGap ? 'sq-orange' : 'sq-gray';
+      const prefix = isGap ? '\u26a0\ufe0f\u202f' : '';
+      svgParts.push(
+        `  <line x1="${sx}" y1="${y}" x2="${sx + SELF_W}" y2="${y}" stroke="${color}" stroke-width="1.5"${dash}/>` +
+        `\n  <line x1="${sx + SELF_W}" y1="${y}" x2="${sx + SELF_W}" y2="${y + SELF_H}" stroke="${color}" stroke-width="1.5"${dash}/>` +
+        `\n  <line x1="${sx + SELF_W}" y1="${y + SELF_H}" x2="${sx + 8}" y2="${y + SELF_H}" stroke="${color}" stroke-width="1.5"${dash} marker-end="url(#${marker})"/>` +
+        `\n  <circle cx="${sx}" cy="${y}" r="3" fill="${color}"/>`
+      );
+      labelDivs.push(
+        `<div style="position:absolute;left:${(sx + SELF_W + 6).toFixed(1)}px;top:${(y - 9).toFixed(1)}px;` +
+        `font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
+        `color:${color};white-space:nowrap;z-index:3;">${prefix}${step.label || ''}</div>`
+      );
+      if (isGap && step.gap_description) {
+        const id = `g${gapIdx++}`;
+        labelDivs.push(
+          `<div class="int-hit" data-int-id="${id}" style="position:absolute;` +
+          `left:${sx}px;top:${(y - 5)}px;width:${SELF_W + 6}px;height:${SELF_H + 14}px;` +
+          `background:transparent;cursor:help;z-index:4;"></div>` +
+          `<div class="int-content" data-int-id="${id}" style="display:none;">` +
+          `<div style="font-size:7.5px;font-weight:700;color:${GAP_COLOR};">\u26a0\ufe0f Gap</div>` +
+          `<div style="font-size:8px;color:#374151;">${step.gap_description}</div>` +
+          `</div>`
+        );
+      }
+      return;
+    }
+
     const fi = colIdx[step.from], ti = colIdx[step.to];
     if (fi == null || ti == null) return;
 
@@ -350,14 +532,15 @@ function renderFlowPage(flow) {
     const isActor   = participants[fi].type === 'actor';
     const evStatus  = step.event ? (eventMap[step.event]?.status || 'planned') : null;
     let color, markerId;
-    if      (isActor)                    { color = '#d97706'; markerId = 'sq-amber'; }
-    else if (evStatus === 'implemented') { color = '#16a34a'; markerId = 'sq-green'; }
-    else                                 { color = '#9ca3af'; markerId = 'sq-gray';  }
+    if      (step.gap)                   { color = GAP_COLOR; markerId = 'sq-orange'; }
+    else if (isActor)                    { color = '#4f46e5'; markerId = 'sq-indigo'; }
+    else if (evStatus === 'implemented') { color = '#16a34a'; markerId = 'sq-green';  }
+    else                                 { color = '#9ca3af'; markerId = 'sq-gray';   }
 
     // Arrow — pull x2 back by 8px so arrowhead lands on the lifeline center
     const dir = tx > fx ? 1 : -1;
     const x2  = tx - dir * 8;
-    const dash = isActor ? 'stroke-dasharray="6,3"' : '';
+    const dash = step.gap ? 'stroke-dasharray="5,3"' : isActor ? 'stroke-dasharray="6,3"' : '';
     svgParts.push(
       `  <line x1="${fx}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="1.5" ${dash} marker-end="url(#${markerId})"/>`
     );
@@ -367,11 +550,12 @@ function renderFlowPage(flow) {
     // Label div — event name / action label above arrow, note below
     const midX  = ((fx + tx) / 2).toFixed(1);
     const aboveY = (y - 13).toFixed(1);
-    const belowY = (y + 4).toFixed(1);
+    const belowY = (y + 4 + (step.condition ? 12 : 0)).toFixed(1);
+    const gapPrefix = step.gap ? '\u26a0\ufe0f\u202f' : '';
     const icon = !isActor && step.event ? '\u26a1\u202f' : '';
     const mainText = step.event || step.label || '';
 
-    let above = `<div style="font-size:9px;font-weight:600;color:${color};white-space:nowrap;">${icon}${mainText}</div>`;
+    let above = `<div style="font-size:9px;font-weight:600;color:${color};white-space:nowrap;">${gapPrefix}${icon}${mainText}</div>`;
     if (step.condition) above += `<div style="font-size:8px;color:#2563eb;font-style:italic;white-space:nowrap;">[${step.condition}]</div>`;
 
     labelDivs.push(
@@ -383,6 +567,19 @@ function renderFlowPage(flow) {
         `<div style="position:absolute;left:${midX}px;top:${belowY}px;transform:translate(-50%,0);` +
         `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;` +
         `color:#6b7280;max-width:220px;white-space:normal;z-index:3;">${step.note}</div>`
+      );
+    }
+    if (step.gap && step.gap_description) {
+      const id = `g${gapIdx++}`;
+      const hitW = Math.abs(tx - fx) * 0.6;
+      labelDivs.push(
+        `<div class="int-hit" data-int-id="${id}" style="position:absolute;` +
+        `left:${midX}px;top:${(y - 14)}px;width:${hitW.toFixed(1)}px;height:28px;` +
+        `transform:translateX(-50%);background:transparent;cursor:help;z-index:4;"></div>` +
+        `<div class="int-content" data-int-id="${id}" style="display:none;">` +
+        `<div style="font-size:7.5px;font-weight:700;color:${GAP_COLOR};">\u26a0\ufe0f Gap</div>` +
+        `<div style="font-size:8px;color:#374151;">${step.gap_description}</div>` +
+        `</div>`
       );
     }
   });
@@ -409,8 +606,11 @@ function renderFlowPage(flow) {
     `<div style="flex:1;"></div>` +
     `<span>${mkArrow('#16a34a', false)}&thinsp;Implemented</span>` +
     `<span>${mkArrow('#9ca3af', false)}&thinsp;Planned</span>` +
-    `<span>${mkArrow('#d97706', true)}&thinsp;Human action</span>` +
+    `<span>${mkArrow('#4f46e5', false)}&thinsp;Human action</span>` +
+    `<span>${mkArrow('#f97316', true)}&thinsp;Gap &mdash; not yet designed</span>` +
     `<span style="color:#2563eb;font-style:italic;">[condition]</span>` +
+    `<span style="color:#2563eb;">&#9645;&thinsp;opt</span>` +
+    `<span style="color:#7c3aed;">&#9645;&thinsp;par</span>` +
     `</div>`;
 
   return `<div style="position:relative;width:${W}px;height:${H}px;` +

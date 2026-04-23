@@ -2,31 +2,33 @@
 /**
  * generate-blueprint.js
  *
- * Reads a blueprint context YAML file and its referenced state machine YAML,
- * then writes a blueprint JSON file consumable by the Figma plugin.
+ * Reads packages/explorer/config.yaml (flow definitions) and an annotations
+ * YAML file, then writes a blueprint JSON file consumable by the Figma plugin.
  *
  * Usage:
- *   node generate-blueprint.js config/intake-context.yaml
+ *   node generate-blueprint.js config/intake-annotations.yaml
  *
  * Output: output/<domain>.json
  *
- * Context file structure:
- *   Each sub-phase has a 'cards' map keyed by lane ID. Cards are listed in
- *   the order they appear on the blueprint.
+ * Annotations file structure:
+ *   lanes       — lane definitions (id, label, actors)
+ *   phases      — phases → sub-phases; each sub-phase may reference a flow +
+ *                 step indices from config.yaml, plus annotation-only cards
  *
- *   An item with an 'event' field is an event slot — it expands in-place:
- *     - In actor lanes (applicant, caseworker, system, etc.) → person-action card
- *     - In the 'data' lane → domain-event card derived from the transition's event effect
+ * Card derivation from config.yaml flow steps:
+ *   actor step  (from: actorId)  → person-action card in that actor's lane
+ *   self step   (self: domainId) → system card in the system lane
+ *   event step  (event: name)    → domain-event-published card in the data lane
+ *                                  (deduplicated when the same event fans out to
+ *                                  multiple subscribers in the same sub-phase)
+ *   gap step    (gap: true)      → note card with ⚠ prefix in the system lane
+ *   ref step    (ref: flowId)    → ignored
  *
- *   If an event slot references an event not yet in the state machine or rules
- *   file but provides explicit 'text', the card is still generated (with a warning).
- *   This allows context files to reference events that are not yet wired up.
- *
- *   All other items are passed through as regular cards.
- *   Policy cards support a 'citation' field that is merged into subtext.
+ * Annotation cards (regulations, data entities, notes, etc.) are merged in
+ * after the flow-derived cards in each sub-phase's lane.
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -35,75 +37,65 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 
-const defsPath = process.argv[2];
-if (!defsPath) {
-  console.error('Usage: node generate-blueprint.js <context.yaml>');
+const annotationsPath = process.argv[2];
+if (!annotationsPath) {
+  console.error('Usage: node generate-blueprint.js <annotations.yaml>');
   process.exit(1);
 }
 
 // ── Load files ────────────────────────────────────────────────────────────────
 
-const defsAbs  = resolve(defsPath);
-const defsDir  = dirname(defsAbs);
-const defs     = yaml.load(readFileSync(defsAbs, 'utf8'));
-const smAbs    = resolve(defsDir, defs.stateMachine);
-const sm       = yaml.load(readFileSync(smAbs, 'utf8'));
+const annotationsAbs = resolve(annotationsPath);
+const annotationsDir = dirname(annotationsAbs);
+const annotations    = yaml.load(readFileSync(annotationsAbs, 'utf8'));
 
-// Rules file is optional — auto-discovered as {domain}-rules.yaml alongside the state machine
-const smDir    = dirname(smAbs);
-let ruleSets   = [];
-try {
-  const rulesPath = join(smDir, `${sm.domain}-rules.yaml`);
-  const rules = yaml.load(readFileSync(rulesPath, 'utf8'));
-  ruleSets = rules.ruleSets ?? [];
-} catch {
-  // No rules file found — subscribed event slots won't resolve to domain-event cards
+// config.yaml lives two dirs up from service-blueprints/config/
+const configAbs  = resolve(annotationsDir, '..', '..', 'config.yaml');
+const pkgConfig  = yaml.load(readFileSync(configAbs, 'utf8'));
+
+// ── Build flow index ──────────────────────────────────────────────────────────
+
+const flowIndex = new Map(); // flow.id → flow
+for (const flow of (pkgConfig.flows || [])) {
+  flowIndex.set(flow.id, flow);
 }
 
-// ── Build transition index ────────────────────────────────────────────────────
+// ── Build actor → lane maps ───────────────────────────────────────────────────
 
-const smTransitions = new Map(); // trigger name → transition object
-for (const t of (sm.transitions ?? [])) {
-  smTransitions.set(t.trigger, t);
-}
-
-// ── Build subscribed-event index ──────────────────────────────────────────────
-// Maps external event name → the SM transition it triggers (or null if the rule
-// set uses a non-transition action like appendToArray or createResource).
-
-const subscribedEvents = new Map(); // event name → SM transition | null
-
-for (const ruleSet of ruleSets) {
-  if (!ruleSet.on) continue;
-  let transition = null;
-  for (const rule of (ruleSet.rules ?? [])) {
-    const name = rule.action?.triggerTransition?.transition;
-    if (name) { transition = smTransitions.get(name) ?? null; break; }
-  }
-  if (!subscribedEvents.has(ruleSet.on) || (transition && !subscribedEvents.get(ruleSet.on))) {
-    subscribedEvents.set(ruleSet.on, transition);
-  }
-}
-
-// ── Build lane maps ───────────────────────────────────────────────────────────
-
-const actorToLane = new Map(); // actor string → lane id
-const laneToActors = new Map(); // lane id → actor[]
-for (const lane of (defs.lanes ?? [])) {
-  laneToActors.set(lane.id, lane.actors ?? []);
-  for (const actor of (lane.actors ?? [])) {
+const actorToLane = new Map(); // actor id → lane id
+for (const lane of (annotations.lanes || [])) {
+  for (const actor of (lane.actors || [])) {
     actorToLane.set(actor, lane.id);
   }
 }
 
-// ── Build blueprint ───────────────────────────────────────────────────────────
+/** Recursively flatten flow steps — fragment wrappers are unwrapped, not yielded. */
+function flattenFlowSteps(steps) {
+  const result = [];
+  for (const step of steps) {
+    if (step.fragment !== undefined) {
+      if (step.operands) {
+        for (const op of step.operands) {
+          result.push(...flattenFlowSteps(op.steps || []));
+        }
+      } else {
+        result.push(...flattenFlowSteps(step.steps || []));
+      }
+    } else {
+      result.push(step);
+    }
+  }
+  return result;
+}
 
-const lanes = defs.lanes.map(l => ({ id: l.id, label: l.label }));
+// ── Assemble blueprint ────────────────────────────────────────────────────────
 
-const phases = defs.phases.map(p => ({
+const lanes = annotations.lanes.map(l => ({ id: l.id, label: l.label }));
+
+const phases = annotations.phases.map(p => ({
   id: p.id,
   label: p.label,
-  subPhases: p.subPhases.map(sp => ({ id: sp.id, label: sp.label })),
+  subPhases: (p.subPhases || []).map(sp => ({ id: sp.id, label: sp.label })),
 }));
 
 // cellCards[laneId/subPhaseId] = Card[]
@@ -114,15 +106,36 @@ const getCell = (laneId, subPhaseId) => {
   return cellCards.get(key);
 };
 
-for (const phase of defs.phases) {
-  for (const subPhase of (phase.subPhases ?? [])) {
-    for (const [laneId, cardItems] of Object.entries(subPhase.cards ?? {})) {
-      for (const item of cardItems) {
-        if (item.event) {
-          expandEventSlot(item, laneId, subPhase.id);
-        } else {
-          getCell(laneId, subPhase.id).push(buildRegularCard(item));
+for (const phase of (annotations.phases || [])) {
+  for (const subPhase of (phase.subPhases || [])) {
+
+    // ── Cards derived from config.yaml flow steps ──────────────────────────
+
+    if (subPhase.flow) {
+      const flow = flowIndex.get(subPhase.flow);
+      if (!flow) {
+        console.warn(`Warning: flow '${subPhase.flow}' not found in config.yaml`);
+      } else {
+        const allSteps     = flattenFlowSteps(flow.steps || []);
+        const stepIndices  = subPhase.steps ?? allSteps.map((_, i) => i);
+        const seenEvents   = new Set(); // deduplicate fan-out events in data lane
+        // lastEventTo[domainId] = most recent event name directed at that domain —
+        // used to auto-generate "In response to X" subtext on self-arrows.
+        const lastEventTo  = new Map();
+
+        for (const idx of stepIndices) {
+          const step = allSteps[idx];
+          if (!step) { console.warn(`Warning: step index ${idx} out of range in flow '${subPhase.flow}'`); continue; }
+          deriveCards(step, subPhase.id, seenEvents, lastEventTo);
         }
+      }
+    }
+
+    // ── Annotation-only cards ──────────────────────────────────────────────
+
+    for (const [laneId, cardItems] of Object.entries(subPhase.cards || {})) {
+      for (const item of cardItems) {
+        getCell(laneId, subPhase.id).push(buildAnnotationCard(item));
       }
     }
   }
@@ -139,8 +152,8 @@ for (const [key, cards] of cellCards.entries()) {
 }
 
 const blueprint = {
-  id:     `${defs.domain}-blueprint`,
-  name:   defs.name,
+  id:     `${annotations.domain}-blueprint`,
+  name:   annotations.name,
   lanes,
   phases,
   cells,
@@ -148,106 +161,95 @@ const blueprint = {
 
 // ── Write output ──────────────────────────────────────────────────────────────
 
-const outPath = join(defsDir, `${defs.domain}.json`);
+const outDir  = join(__dirname, 'output');
+mkdirSync(outDir, { recursive: true });
+const outPath = join(outDir, `${annotations.domain}.json`);
 writeFileSync(outPath, JSON.stringify(blueprint, null, 2) + '\n');
 console.log(`Wrote ${outPath}`);
 
-// ── Card builders ─────────────────────────────────────────────────────────────
+// ── Step → card derivation ────────────────────────────────────────────────────
 
-function expandEventSlot(item, laneId, subPhaseId) {
-  const eventName = item.event;
+function deriveCards(step, subPhaseId, seenEvents, lastEventTo) {
+  // Ref steps are inter-flow links — skip
+  if (step.ref !== undefined) return;
 
-  // Resolve the transition — published transitions first, then subscribed
-  let transition = null;
-  let found = false;
-  if (smTransitions.has(eventName)) {
-    transition = smTransitions.get(eventName);
-    found = true;
-  } else if (subscribedEvents.has(eventName)) {
-    transition = subscribedEvents.get(eventName); // may be null
-    found = true;
-  }
+  // Self-message step → system card (or note card if gap)
+  if (step.self !== undefined) {
+    const laneId = 'system';
+    // Auto-derive "In response to X" subtext from the last event directed at this domain
+    const triggerEvent = lastEventTo.get(step.self);
+    const autoSubtext  = triggerEvent ? `In response to event ${triggerEvent}` : null;
 
-  if (!found) {
-    if (item.text) {
-      // Event not yet wired up but text provided — generate card and warn
-      console.warn(`Warning: event '${eventName}' not found in state machine or rules file (sub-phase '${subPhaseId}') — using provided text`);
+    if (step.gap) {
+      const card = {
+        type:   'note',
+        domain: step.self,
+        text:   `\u26a0 ${step.label || step.self}`,
+      };
+      card.subtext = step.gap_description || autoSubtext || undefined;
+      if (card.subtext === undefined) delete card.subtext;
+      getCell(laneId, subPhaseId).push(card);
     } else {
-      console.warn(`Warning: event '${eventName}' not found in state machine or rules file (sub-phase '${subPhaseId}') — skipping`);
-      return;
+      const card = {
+        type:   'system',
+        domain: step.self,
+        text:   step.label || step.self,
+      };
+      card.subtext = step.note || autoSubtext || undefined;
+      if (card.subtext === undefined) delete card.subtext;
+      getCell(laneId, subPhaseId).push(card);
     }
+    return;
   }
 
-  if (laneId === 'data') {
-    // Expand to domain-event card — requires a resolved transition
-    if (!transition) return;
-    const eventEffect = (transition.effects ?? []).find(e => e.type === 'event');
-    if (!eventEffect) return;
-    const raw = eventEffect.description ?? '';
-    const subtext = raw.replace(/^Emit [^\u2014]+\u2014\s*/, '').trim();
-    // Subscribed events are not shown in the data lane — they appear as
-    // SYSTEM (INTAKE) cards in the system lane, authored in the context YAML.
-    if (subscribedEvents.has(eventName) && !smTransitions.has(eventName)) return;
-
-    const objectPrefix = sm.object ? sm.object.toLowerCase() : sm.domain;
-    getCell(laneId, subPhaseId).push({
-      type: 'domain-event-published',
-      text: `${objectPrefix}.${eventEffect.action}`,
-      ...(subtext ? { subtext } : {}),
-    });
-  } else {
-    // Expand to person-action card
-    const actor = item.actor ?? deriveActorForLane(laneId, transition);
-    const text  = item.text  ?? (actor ? `${titleCase(actor)}: ${eventName}` : null);
-    if (!text) {
-      console.warn(`Warning: cannot derive text for event '${eventName}' in lane '${laneId}' (sub-phase '${subPhaseId}') — skipping`);
-      return;
+  // Event step → domain-event card in data lane (deduplicated)
+  if (step.event !== undefined) {
+    // Track this event as the last one directed at the subscriber domain
+    if (step.to) lastEventTo.set(step.to, step.event);
+    if (!seenEvents.has(step.event)) {
+      seenEvents.add(step.event);
+      const card = { type: 'domain-event', text: step.event };
+      if (step.from) card.domain = step.from;
+      if (step.note) card.subtext = step.note;
+      getCell('data', subPhaseId).push(card);
     }
-    getCell(laneId, subPhaseId).push({
-      type: 'person-action',
-      ...(actor ? { actor } : {}),
-      text,
-      ...(item.subtext ? { subtext: item.subtext } : {}),
-    });
+    return;
+  }
+
+  // Actor step → person-action in actor's lane
+  if (step.label !== undefined && step.from !== undefined) {
+    const laneId = actorToLane.get(step.from);
+    if (!laneId) return; // from is a domain, not an actor — skip
+    const card = {
+      type:  'person-action',
+      actor: step.from,
+      text:  step.label,
+    };
+    if (step.note) card.subtext = step.note;
+    getCell(laneId, subPhaseId).push(card);
   }
 }
 
-function buildRegularCard(item) {
-  // Policy cards: merge citation + subtext into a single subtext string
+// ── Annotation card builder ───────────────────────────────────────────────────
+
+function buildAnnotationCard(item) {
   if (item.type === 'policy') {
     let subtext;
     if (item.citation && item.subtext) {
-      subtext = `${item.subtext} — ${item.citation}`;
+      subtext = `${item.subtext} \u2014 ${item.citation}`;
     } else if (item.citation) {
       subtext = item.citation;
-    } else if (item.subtext) {
+    } else {
       subtext = item.subtext;
     }
-    return {
-      type: 'policy',
-      text: item.text,
-      ...(subtext ? { subtext } : {}),
-    };
+    return { type: 'policy', text: item.text, ...(subtext ? { subtext } : {}) };
   }
 
-  // All other cards — pass through standard fields
   return {
-    type: item.type,
-    ...(item.actor  ? { actor:  item.actor  } : {}),
-    ...(item.domain ? { domain: item.domain } : {}),
-    text: item.text,
+    type:    item.type,
+    ...(item.actor   ? { actor:   item.actor   } : {}),
+    ...(item.domain  ? { domain:  item.domain  } : {}),
+    text:    item.text,
     ...(item.subtext ? { subtext: item.subtext } : {}),
   };
-}
-
-function deriveActorForLane(laneId, transition) {
-  if (!transition) return null;
-  const laneActors = laneToActors.get(laneId) ?? [];
-  return (transition.actors ?? []).find(a => laneActors.includes(a)) ?? null;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function titleCase(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
 }

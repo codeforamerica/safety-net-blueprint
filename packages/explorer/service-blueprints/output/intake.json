@@ -16,11 +16,11 @@
     },
     {
       "id": "regulations",
-      "label": "Regulatory requirements"
+      "label": "Regulations"
     },
     {
       "id": "data",
-      "label": "Data & events"
+      "label": "Events"
     }
   ],
   "phases": [
@@ -80,47 +80,7 @@
           "type": "person-action",
           "actor": "applicant",
           "text": "Submits application",
-          "subtext": "Online or in person"
-        },
-        {
-          "type": "note",
-          "text": "Submission starts the regulatory clock"
-        },
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Optionally uploads supporting documents at submission",
-          "subtext": "Can also be uploaded any time during review"
-        },
-        {
-          "type": "note",
-          "text": "Documents uploaded at submission are immediately available when the caseworker opens the task"
-        },
-        {
-          "type": "note",
-          "text": "Document-to-application linkage must be enforced at the UI layer",
-          "subtext": "The contract cannot prevent uploads directly to an external document system. The application screen must be the upload entry point to ensure documents link to the right verification item."
-        }
-      ]
-    },
-    {
-      "laneId": "caseworker",
-      "subPhaseId": "submitted",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Submits application on behalf of applicant",
-          "subtext": "Assisted or in-person submission"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Uploads documents provided by applicant at submission"
-        },
-        {
-          "type": "note",
-          "text": "Document-to-application linkage must be enforced at the UI layer"
+          "subtext": "Online or in person; caseworker may submit on behalf of applicant"
         }
       ]
     },
@@ -147,54 +107,37 @@
     },
     {
       "laneId": "data",
-      "subPhaseId": "submitted",
+      "subPhaseId": "automated-screening",
       "cards": [
         {
-          "type": "domain-event-published",
+          "type": "domain-event",
           "text": "application.submitted",
-          "subtext": "starts the regulatory clock; triggers caseworker task creation and confirmation notice"
+          "domain": "intake"
         },
         {
-          "type": "data-entity",
-          "text": "Application created",
-          "subtext": "status: submitted, submittedAt, all submitted fields as structured data"
+          "type": "domain-event",
+          "text": "eligibility.application.expedited",
+          "domain": "eligibility"
         },
         {
-          "type": "data-entity",
-          "text": "VerificationItems created",
-          "subtext": "Income, identity, and residency obligations — one record per requirement"
+          "type": "domain-event",
+          "text": "application.expedited_flagged",
+          "domain": "intake"
         },
         {
-          "type": "data-entity",
-          "text": "Workflow task created",
-          "subtext": "Added to intake queue; automated confirmation sent to applicant"
-        }
-      ]
-    },
-    {
-      "laneId": "system",
-      "subPhaseId": "submitted",
-      "cards": [
-        {
-          "type": "note",
-          "text": "Future state: submission confirmation sent to applicant automatically",
-          "subtext": "Requires a communications contract — notification type, channel, and content are not yet defined."
-        }
-      ]
-    },
-    {
-      "laneId": "data",
-      "subPhaseId": "automated-screening",
-      "cards": [
-        {
-          "type": "data-entity",
-          "text": "Application updated",
-          "subtext": "isExpedited: true, priority: expedited (if flagged)"
+          "type": "domain-event",
+          "text": "eligibility.rte_completed",
+          "domain": "eligibility"
         },
         {
-          "type": "note",
-          "text": "Future work: application.prescreened event",
-          "subtext": "Per-program eligibility indicators emitted by eligibility domain based on submitted (unverified) data — not a legal determination"
+          "type": "domain-event",
+          "text": "call.completed",
+          "domain": "data_exchange"
+        },
+        {
+          "type": "domain-event",
+          "text": "person.match_resolved",
+          "domain": "client_management"
         }
       ]
     },
@@ -204,59 +147,57 @@
       "cards": [
         {
           "type": "system",
-          "domain": "data-exchange",
-          "text": "Federal checks initiated",
-          "subtext": "In response to application.submitted — FDSH, IEVS, SAVE, SSA, RTE (if Medicaid)"
-        },
-        {
-          "type": "note",
-          "text": "Multi-program applications share check results across programs",
-          "subtext": "FDSH Hub consolidates access to SSA and DHS/SAVE data for Medicaid — running those checks separately alongside it is redundant. IEVS is the exception: it is a SNAP-specific federal mandate and runs regardless. Results should be shared across programs rather than re-run per program."
-        },
-        {
-          "type": "system",
           "domain": "workflow",
-          "text": "Task created in intake queue",
-          "subtext": "In response to application.submitted — task routed to program-specific queue"
-        },
-        {
-          "type": "system",
-          "domain": "client-management",
-          "text": "Person matching",
-          "subtext": "In response to application.submitted — links application to an existing person record. An exact match may surface a prior or active case. Fuzzy matches are flagged for caseworker review."
-        },
-        {
-          "type": "note",
-          "text": "Future work: client management domain contract",
-          "subtext": "Person matching results (exact, fuzzy, no match) and resolution require a client management contract defining the PersonMatchResult entity and person.match_* event types. Intake consumes the result but identity resolution is owned by client management."
-        },
-        {
-          "type": "system",
-          "domain": "workflow",
-          "text": "Queue routing and SLA assignment",
-          "subtext": "In response to application.submitted — routes to program-specific queue; assigns SLA track per program"
-        },
-        {
-          "type": "note",
-          "text": "Future state: smart routing by caseworker skills",
-          "subtext": "Route expedited cases to experienced workers, disability-related Medicaid to specialists, and non-English applications to caseworkers with matching language skills. Requires caseload and skills visibility per worker."
+          "text": "Task created in intake queue; SLA and queue routing assigned",
+          "subtext": "In response to event application.submitted"
         },
         {
           "type": "system",
           "domain": "eligibility",
-          "text": "Expedited screening",
-          "subtext": "In response to application.submitted — evaluates submitted data against expedited criteria; publishes eligibility.application.expedited if applicable. Future work: requires eligibility domain contract."
+          "text": "Expedited screening initiated",
+          "subtext": "Also initiates Medicaid RTE if applicable"
         },
         {
           "type": "system",
           "domain": "intake",
-          "text": "Application flagged as expedited",
-          "subtext": "In response to eligibility.application.expedited — updates application (isExpedited: true, assigns expedited SLA track)"
+          "text": "Set isExpedited = true on application",
+          "subtext": "In response to event eligibility.application.expedited"
         },
         {
           "type": "note",
-          "text": "Future work: eligibility domain — program pre-screening",
-          "subtext": "Eligibility domain emits application.prescreened with per-program eligibility indicators. Informs queue routing and sets caseworker expectations — not a legal determination."
+          "domain": "workflow",
+          "text": "⚠ Assign expedited SLA track",
+          "subtext": "Expedited SLA type and workflow task switching not yet designed"
+        },
+        {
+          "type": "note",
+          "domain": "intake",
+          "text": "⚠ Create RTE verification record with Medicaid eligibility outcome",
+          "subtext": "rte verification type not yet defined in intake contracts"
+        },
+        {
+          "type": "system",
+          "domain": "data_exchange",
+          "text": "Federal checks initiated",
+          "subtext": "FDSH, IEVS, SAVE, SSA"
+        },
+        {
+          "type": "note",
+          "domain": "intake",
+          "text": "⚠ Update verification records with federal check results",
+          "subtext": "Intake handler for call.completed updating verifications not yet designed"
+        },
+        {
+          "type": "system",
+          "domain": "client_management",
+          "text": "Person matching initiated",
+          "subtext": "In response to event application.submitted"
+        },
+        {
+          "type": "note",
+          "domain": "intake",
+          "text": "⚠ Auto-confirm exact matches; queue fuzzy matches for caseworker review",
+          "subtext": "Person match auto-confirmation behavior not yet designed in intake"
         }
       ]
     },
@@ -267,46 +208,14 @@
         {
           "type": "person-action",
           "actor": "caseworker",
-          "text": "Reviews prioritized queue and claims task"
+          "text": "Claims task from queue",
+          "subtext": "Caseworker selects from prioritized intake queue"
         },
         {
           "type": "person-action",
           "actor": "caseworker",
-          "text": "Opens application with pre-screened view",
-          "subtext": "Verification checklist reflects current status — items cleared by fast-returning federal checks or documents uploaded at submission are already resolved"
-        },
-        {
-          "type": "note",
-          "text": "Queue shows SLA deadline and priority — caseworker sees what needs attention first"
-        },
-        {
-          "type": "note",
-          "text": "Open decision: sort order could be enforced server-side (API sort params) or client-side (UI sorts on slaInfo and priority fields). Data exists on each task; contract does not currently guarantee ordering."
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Resolves fuzzy person match if flagged",
-          "subtext": "Reviews candidate person records and confirms the correct match — or creates a new record if none apply"
-        },
-        {
-          "type": "note",
-          "text": "A matched person record may surface a prior or active case",
-          "subtext": "Caseworker should review any linked case history before proceeding — relevant circumstances may already be on file"
-        },
-        {
-          "type": "note",
-          "text": "Future state: person match resolution requires client management domain contract — see #249"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Schedules interview"
-        },
-        {
-          "type": "note",
-          "text": "Appointment-to-application linkage must be enforced at the UI layer",
-          "subtext": "The contract cannot prevent scheduling directly in an external tool. Launching the scheduler from the application screen ensures the appointment links back to the right application."
+          "text": "Schedules interview",
+          "subtext": "Launched from within intake — ensures appointment links to application"
         }
       ]
     },
@@ -315,13 +224,15 @@
       "subPhaseId": "under-review",
       "cards": [
         {
-          "type": "data-entity",
-          "text": "Application updated",
-          "subtext": "status: under_review"
+          "type": "domain-event",
+          "text": "task.claimed",
+          "domain": "workflow",
+          "subtext": "Application transitions to under_review"
         },
         {
-          "type": "data-entity",
-          "text": "Interview record created"
+          "type": "domain-event",
+          "text": "appointment.scheduled",
+          "domain": "scheduling"
         }
       ]
     },
@@ -332,24 +243,19 @@
         {
           "type": "system",
           "domain": "intake",
-          "text": "Interview record created",
-          "subtext": "In response to scheduling.appointment.scheduled — links appointment to application; creates interview record"
+          "text": "Interview record created and linked to application",
+          "subtext": "In response to event appointment.scheduled"
         }
       ]
     },
     {
-      "laneId": "applicant",
+      "laneId": "data",
       "subPhaseId": "active-review",
       "cards": [
         {
-          "type": "note",
-          "text": "Future state: applicant receives notification when caseworker requests documents",
-          "subtext": "Triggered by caseworker action 'Requests additional documents for inconclusive items' — requires communications domain contract (#187)"
-        },
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Uploads requested documents"
+          "type": "domain-event",
+          "text": "call.completed",
+          "domain": "data_exchange"
         }
       ]
     },
@@ -360,79 +266,18 @@
         {
           "type": "person-action",
           "actor": "caseworker",
-          "text": "Reviews verification checklist — acts on flagged and inconclusive items"
-        },
-        {
-          "type": "note",
-          "text": "Already-cleared items are shown resolved — caseworker sees only what needs attention"
+          "text": "Reviews verification results; resolves satisfied items; flags items needing follow-up",
+          "subtext": "Ongoing as results arrive — may trigger document requests or outreach before interview"
         },
         {
           "type": "person-action",
           "actor": "caseworker",
-          "text": "Confirms household data not resolvable electronically",
-          "subtext": "Demographics, household members, and relationships"
-        },
-        {
-          "type": "note",
-          "text": "Only for items that couldn't clear through federal checks"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Reviews discrepancies between submitted data and verification results"
-        },
-        {
-          "type": "note",
-          "text": "VerificationItem shows submitted value alongside check result — no switching systems to compare"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Requests additional documents for inconclusive items"
-        },
-        {
-          "type": "note",
-          "text": "Future state: notification sent to applicant automatically",
-          "subtext": "Requires communications domain contract — see #187"
-        },
-        {
-          "type": "note",
-          "text": "Unresolved items requiring applicant input carry to the interview"
-        },
-        {
-          "type": "note",
-          "text": "Future state: outreach tracked as a communication record",
-          "subtext": "Each document request recorded with what was asked, when, and by whom — visible on the application for audit and continuity."
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Uploads documents provided by applicant in person, by mail, or by fax"
-        },
-        {
-          "type": "note",
-          "text": "Document-to-application linkage must be enforced at the UI layer"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Reviews documents uploaded by applicant",
-          "subtext": "Adjudicates each document against the verification item it satisfies; marks item resolved"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Escalates to supervisor when policy interpretation or override is needed",
-          "subtext": "Complex discrepancies, edge cases, or situations requiring judgment beyond standard guidance"
+          "text": "Escalates complex case or policy question"
         },
         {
           "type": "person-action",
           "actor": "supervisor",
-          "text": "Reviews escalated case; provides guidance or takes over resolution"
-        },
-        {
-          "type": "note",
-          "text": "Guidance documented — creates an audit trail for the decision"
+          "text": "Reviews escalation; provides guidance or takes over resolution"
         }
       ]
     },
@@ -453,89 +298,25 @@
       ]
     },
     {
-      "laneId": "data",
-      "subPhaseId": "active-review",
-      "cards": [
-        {
-          "type": "data-entity",
-          "text": "VerificationItems updated",
-          "subtext": "Results from FDSH, IEVS, SAVE, SSA, RTE — status and result fields updated as results arrive"
-        },
-        {
-          "type": "data-entity",
-          "text": "DataExchangeRequests",
-          "subtext": "One per federal check; status updates as results return"
-        }
-      ]
-    },
-    {
-      "laneId": "system",
-      "subPhaseId": "active-review",
-      "cards": [
-        {
-          "type": "system",
-          "text": "Verification checklist updated automatically as results arrive",
-          "subtext": "In response to incoming verification results — results push to the caseworker's view in real time; no refresh required"
-        },
-        {
-          "type": "system",
-          "text": "VerificationItem status updated when document is adjudicated"
-        },
-        {
-          "type": "note",
-          "text": "Future work: eligibility domain re-evaluates indicators as material verification results arrive",
-          "subtext": "Pre-screening indicators from submission may be stale once IEVS, FDSH, or SSA results return. Eligibility domain re-runs screening on updated data and emits a new application.prescreened event — updated indicators surface to the caseworker in real time."
-        }
-      ]
-    },
-    {
-      "laneId": "applicant",
-      "subPhaseId": "interview",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Attends interview",
-          "subtext": "In person, by phone, or video depending on state policy"
-        },
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Clarifies discrepancies flagged during verification review",
-          "subtext": "E.g. income reported differently than federal records — applicant explains or provides documentation"
-        }
-      ]
-    },
-    {
       "laneId": "caseworker",
       "subPhaseId": "interview",
       "cards": [
         {
           "type": "person-action",
           "actor": "caseworker",
-          "text": "Conducts SNAP interview"
-        },
+          "text": "Conducts interview; resolves remaining verification items"
+        }
+      ]
+    },
+    {
+      "laneId": "data",
+      "subPhaseId": "interview",
+      "cards": [
         {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Resolves discrepancies requiring applicant input",
-          "subtext": "Updates record based on applicant clarification or documentation provided at interview"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Resolves remaining verification items",
-          "subtext": "Marks inconclusive items resolved or requests final documents"
-        },
-        {
-          "type": "opportunity",
-          "text": "Opportunity: Collect H.R.1 work requirement data at interview",
-          "subtext": "Stop-gap until the data model is updated to capture work requirement fields at submission. Supplemental interview questions cover hours worked per week, caregiver status and ages of dependents, and enrollment in approved work or community engagement programs. Caseworkers work from an H.R.1 supplement to the standard interview guide."
-        },
-        {
-          "type": "opportunity",
-          "text": "Opportunity: Request work compliance documentation",
-          "subtext": "Use the existing document request mechanism for work requirement evidence — pay stubs, employer statements, volunteer logs, caregiving attestation, and medical exemption documentation. Flows through the standard caseworker document request → applicant upload path."
+          "type": "domain-event",
+          "text": "appointment.completed",
+          "domain": "scheduling",
+          "subtext": "Interview outcome recorded"
         }
       ]
     },
@@ -551,33 +332,41 @@
         {
           "type": "policy",
           "text": "H.R.1: SNAP ABAWD work requirement expansion",
-          "subtext": "Expands age range subject to ABAWD work requirements; adds parental work requirements for adults with children above the age threshold. Existing application forms likely do not capture the data needed to evaluate compliance or exemption. — H.R.1 (pending)"
+          "subtext": "Expands age range subject to ABAWD work requirements; adds parental work requirements for adults with children above the age threshold — H.R.1 (pending)"
         },
         {
           "type": "policy",
           "text": "H.R.1: Medicaid community engagement requirement",
-          "subtext": "Adults required to demonstrate work, volunteering, caregiving, or education hours to maintain Medicaid eligibility. Data fields for engagement type and hours are not currently captured in most state application forms. — H.R.1 (pending)"
+          "subtext": "Adults required to demonstrate work, volunteering, caregiving, or education hours to maintain Medicaid eligibility — H.R.1 (pending)"
         }
       ]
     },
     {
       "laneId": "data",
-      "subPhaseId": "interview",
+      "subPhaseId": "benefits-calculation",
       "cards": [
         {
-          "type": "data-entity",
-          "text": "Interview updated",
-          "subtext": "Scheduled date, notes, and outcome recorded"
+          "type": "domain-event",
+          "text": "application.review_completed",
+          "domain": "intake",
+          "subtext": "Fires automatically when all VerificationItems are resolved"
         },
         {
-          "type": "data-entity",
-          "text": "VerificationItems resolved",
-          "subtext": "Final status set for each obligation"
-        },
+          "type": "domain-event",
+          "text": "determination_complete",
+          "domain": "eligibility"
+        }
+      ]
+    },
+    {
+      "laneId": "system",
+      "subPhaseId": "benefits-calculation",
+      "cards": [
         {
-          "type": "note",
-          "text": "Future work: new VerificationItem types for H.R.1 compliance",
-          "subtext": "New obligation types needed — ABAWD work compliance, Medicaid community engagement, work requirement exemption. Each tracks submitted evidence and verification status alongside existing income and identity items."
+          "type": "system",
+          "domain": "eligibility",
+          "text": "Rules engine invoked",
+          "subtext": "Income and expense calculations against household data, per program"
         }
       ]
     },
@@ -588,16 +377,8 @@
         {
           "type": "person-action",
           "actor": "caseworker",
-          "text": "Reviews eligibility calculation results for unexpected outcomes"
-        },
-        {
-          "type": "note",
-          "text": "Exception review only — caseworker is not approving a calculation they triggered"
-        },
-        {
-          "type": "note",
-          "text": "Future state: decision support indicators",
-          "subtext": "System surfaces likely eligibility per program based on current record state — helps caseworker anticipate outcomes before the full rules engine runs."
+          "text": "Reviews determination results",
+          "subtext": "Exception review only — not approving a calculation they triggered"
         }
       ]
     },
@@ -618,41 +399,6 @@
       ]
     },
     {
-      "laneId": "data",
-      "subPhaseId": "benefits-calculation",
-      "cards": [
-        {
-          "type": "domain-event-published",
-          "text": "application.review_completed",
-          "subtext": "Fires automatically when all VerificationItems are resolved — triggers eligibility domain, no caseworker action required"
-        }
-      ]
-    },
-    {
-      "laneId": "system",
-      "subPhaseId": "benefits-calculation",
-      "cards": [
-        {
-          "type": "system",
-          "domain": "eligibility",
-          "text": "Rules engine invoked automatically",
-          "subtext": "In response to application.review_completed — income and expense calculations against household data, per program"
-        }
-      ]
-    },
-    {
-      "laneId": "applicant",
-      "subPhaseId": "decision",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Receives determination notice",
-          "subtext": "Approval, denial, or pending notice per program"
-        }
-      ]
-    },
-    {
       "laneId": "caseworker",
       "subPhaseId": "decision",
       "cards": [
@@ -663,45 +409,21 @@
           "subtext": "Eligibility outcome, date, and reasoning recorded per program"
         },
         {
-          "type": "note",
-          "text": "Rationale supports appeals and quality review"
-        },
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Previews notice before it is sent",
-          "subtext": "Quality check — caseworker confirms notice content is accurate before it reaches the applicant"
-        },
-        {
-          "type": "note",
-          "text": "Future state: notice preview generated by system",
-          "subtext": "System generates a draft notice for caseworker review before sending. Currently notices are queued automatically without a preview step."
-        },
-        {
           "type": "person-action",
           "actor": "supervisor",
           "text": "Approves determination",
-          "subtext": "Required by state policy"
-        },
+          "subtext": "Required by state policy; previews notice before sending"
+        }
+      ]
+    },
+    {
+      "laneId": "data",
+      "subPhaseId": "decision",
+      "cards": [
         {
-          "type": "note",
-          "text": "Future state: supervisor approval queue",
-          "subtext": "Supervisor sees pending approvals in their own prioritized queue — not just a handoff from the caseworker. Requires supervisor-facing workflow tooling."
-        },
-        {
-          "type": "person-action",
-          "actor": "supervisor",
-          "text": "Reviews sampled determinations for accuracy and regulatory compliance"
-        },
-        {
-          "type": "note",
-          "text": "QC review may be performed by supervisor or a dedicated quality reviewer",
-          "subtext": "Supports federal compliance audits — FNS for SNAP, CMS for Medicaid"
-        },
-        {
-          "type": "note",
-          "text": "Future state: system-assisted QC sampling",
-          "subtext": "System automatically flags a statistically valid sample of closed cases for review — reviewer works from a QC queue rather than selecting cases manually"
+          "type": "domain-event",
+          "text": "application.closed",
+          "domain": "intake"
         }
       ]
     },
@@ -713,38 +435,6 @@
           "type": "policy",
           "text": "Notice of Action required",
           "subtext": "Adverse action notice required for denials and closures"
-        }
-      ]
-    },
-    {
-      "laneId": "data",
-      "subPhaseId": "decision",
-      "cards": [
-        {
-          "type": "data-entity",
-          "text": "Application updated",
-          "subtext": "status: closed, disposition: approved | denied | referred"
-        },
-        {
-          "type": "note",
-          "text": "Service case created only on approval",
-          "subtext": "A case record is created when an application is approved — not at submission. Linked to the matched or newly created person record."
-        },
-        {
-          "type": "domain-event-published",
-          "text": "application.closed",
-          "subtext": "signals intake is complete; triggers case creation if approved"
-        }
-      ]
-    },
-    {
-      "laneId": "system",
-      "subPhaseId": "decision",
-      "cards": [
-        {
-          "type": "note",
-          "text": "Future state: notices generated and queued automatically",
-          "subtext": "Requires communications domain contract — see #187"
         }
       ]
     }

@@ -23,3 +23,5 @@ function run(script, ...args) {
 
 run('render.js');
 run('build-html.js');
+run('scan-gaps.js');
+run('export-png.js');

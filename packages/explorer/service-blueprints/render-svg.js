@@ -127,6 +127,9 @@ function getPalette(card) {
   if (card.type === 'system' && card.domain) {
     return { ...p, label: `SYSTEM (${card.domain.toUpperCase()})` };
   }
+  if (card.type === 'domain-event' && card.domain) {
+    return { ...p, label: `EVENT (${card.domain.toUpperCase()})` };
+  }
   return p;
 }
 

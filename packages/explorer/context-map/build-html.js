@@ -15,6 +15,7 @@ import { resolve, dirname, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const outDir = process.argv[2]
   ? resolve(process.argv[2])
   : resolve(__dirname, 'output');
@@ -138,6 +139,7 @@ ${contentEntries}
       intTooltip.style.display = 'none';
       wrapper.innerHTML = CONTENT[id];
       fitDiagram();
+      window.scrollTo(0, 0);
 
       wrapper.querySelectorAll('[data-navigate]').forEach(el => {
         el.addEventListener('click', () => navigate(el.getAttribute('data-navigate')));

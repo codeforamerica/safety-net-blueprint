@@ -14,19 +14,17 @@ The SVG is useful for quick review, documentation, and sharing with stakeholders
 ```
 service-blueprints/
   config/                        # Human-editable source files
-    intake-context.yaml          # Blueprint content (lanes, phases, cards)
+    intake-annotations.yaml      # Phase structure, regulations, data entities, notes
     theme.yaml                   # Optional color overrides (empty = use defaults)
   output/                        # Generated outputs (committed)
     intake.json                  # Generated blueprint data (from generate-blueprint.js)
     intake.svg                   # Rendered SVG preview (from render-svg.js)
-  context-schema.json            # JSON schema for validating context files
-  generate-blueprint.js          # Generates intake.json from intake-context.yaml
-  validate-context.js            # Validates a context file against context-schema.json
+  generate-blueprint.js          # Generates intake.json from config.yaml + annotations
   figma-plugin/                  # Figma plugin source and tooling
     build.js                     # Builds the Figma plugin (dist/)
     src/                         # Plugin TypeScript source
     dist/                        # Built plugin — load this in Figma Desktop (gitignored)
-  build.js                       # Orchestrates: Figma plugin build + SVG render
+  build.js                       # Orchestrates: generate → Figma plugin build + SVG render
   render-svg.js                  # Standalone SVG renderer
 ```
 
@@ -62,10 +60,10 @@ To generate a blueprint from your own content files, point the build at your dir
 node build.js <path/to/your/dir>
 ```
 
-Your directory should contain a context YAML file. Generate `intake.json` from it first, then run the build:
+Your directory should contain an annotations YAML file. The baseline `build.js` always generates `output/intake.json` from the baseline annotations. For a state-specific build, generate first and then run the build:
 
 ```bash
-node generate-blueprint.js <path/to/your/dir/context.yaml>
+node generate-blueprint.js <path/to/your/dir/annotations.yaml>
 node build.js <path/to/your/dir>
 ```
 
@@ -73,31 +71,21 @@ The SVG is written alongside `intake.json` in your directory.
 
 To override colors, add a `theme.yaml` to your directory. See `config/theme.yaml` for the format — only the values you specify are overridden.
 
-## Authoring content
+## How content is generated
 
-`config/intake-context.yaml` is the human-editable source. After editing it, regenerate the JSON:
+Blueprint content comes from two sources:
 
-```bash
-node generate-blueprint.js config/intake-context.yaml
-```
+- **`packages/explorer/config.yaml`** — the source of truth for flows. Actor steps, events, and system self-messages (including gap markers) are derived from flow steps automatically.
+- **`config/intake-annotations.yaml`** — the annotation layer. Defines phase/sub-phase structure and adds what config.yaml cannot: regulatory citations, data entity descriptions, detailed caseworker actions, notes, and opportunities.
 
-To validate a context file before generating:
+`build.js` runs `generate-blueprint.js` automatically — you don't need to run it manually.
 
-```bash
-node validate-context.js config/intake-context.yaml
-```
+### What to edit
 
-### What's safe to edit
+**To change workflow steps or add events:** edit `packages/explorer/config.yaml`.
 
-All display text is free-form and safe to change:
+**To add regulations, data entities, notes, or opportunities:** edit `config/intake-annotations.yaml`. Each sub-phase has a `cards` map keyed by lane ID. Supported card types: `policy`, `data-entity`, `note`, `opportunity`, `person-action`, `system`.
 
-- `name` — the diagram title
-- Lane, phase, and sub-phase `label` values — all header text
-- Sub-phase `description` — human-readable notes, not rendered in the diagram
-- Card `text`, `subtext`, and `citation` — no constraints
-
-You can freely add editorial cards anywhere — `policy`, `pain-point`, `opportunity`, `note`, and `person-action` cards with explicit text. Card `type` must be one of those defined values, and `person-action` cards require an `actor` (`applicant`, `caseworker`, or `supervisor`). Avoid moving or removing existing cards in the system and data lanes; those represent contract-defined behavior and should stay aligned to their workflow steps.
-
-Phase and sub-phase order reflects the workflow defined in the state machine contracts — avoid reordering existing ones, since their sequence represents the actual process flow. Adding new phases or sub-phases is fine, including inserting them between existing ones to document state-specific steps.
+**To change sub-phase structure:** add or reorder `subPhases` in `intake-annotations.yaml`. Each sub-phase references a flow + step indices — update the `flow` and `steps` fields to control which config.yaml steps are derived for that sub-phase.
 
 Don't rename lane `id` values — cards in every sub-phase are keyed by lane ID and will disappear from the output if the ID changes.

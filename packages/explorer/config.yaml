@@ -155,6 +155,14 @@ events:
     subscribers:
       - intake
 
+  # Medicaid real-time eligibility result in response to application.submitted;
+  # intake creates an RTE verification record with the Medicaid eligibility outcome
+  - name: eligibility.rte_completed
+    publisher: eligibility
+    status: planned
+    subscribers:
+      - intake
+
   # closes the application and triggers case creation
   - name: determination_complete
     publisher: eligibility
@@ -425,48 +433,84 @@ flows:
     label: Application Submission
     domain: intake
     description: Events triggered when an application is submitted
-    participants: [applicant, caseworker, intake, workflow, eligibility, data_exchange, client_management]
+    participants: [applicant, intake, workflow, eligibility, data_exchange, client_management]
     steps:
       - label: Submits application
         from: applicant
         to: intake
         note: Online or in person; caseworker may submit on behalf of applicant
-      - event: application.submitted
-        from: intake
-        to: workflow
-        note: Task created in intake queue; SLA and queue routing assigned
-      - event: application.submitted
-        from: intake
-        to: eligibility
-        note: Expedited screening triggered
-      - event: application.submitted
-        from: intake
-        to: data_exchange
-        note: Federal checks initiated (FDSH, IEVS, SAVE, SSA)
-      - event: application.submitted
-        from: intake
-        to: client_management
-        note: Person matching initiated
-      - event: eligibility.application.expedited
-        from: eligibility
-        to: intake
-        condition: if expedited criteria met
-      - event: application.expedited_flagged
-        from: intake
-        to: workflow
-        condition: if expedited
-      - event: person.match_resolved
-        from: client_management
-        to: intake
-        note: Async — fuzzy matches require caseworker review
-      - label: Reviews match results; confirms match or creates new person record
-        from: caseworker
-        to: intake
-        note: One review per ApplicationMember; updates ApplicationMember.personId. Exact matches auto-confirmed; fuzzy matches require caseworker judgment
-      - event: call.completed
-        from: data_exchange
-        to: intake
-        note: Verification results arrive asynchronously; update VerificationItem statuses
+      - fragment: par
+        label: "Triggered concurrently — responses may arrive in any order"
+        operands:
+          - steps:
+              - event: application.submitted
+                from: intake
+                to: workflow
+              - self: workflow
+                label: Task created in intake queue; SLA and queue routing assigned
+          - steps:
+              - event: application.submitted
+                from: intake
+                to: eligibility
+              - self: eligibility
+                label: Expedited screening initiated
+                note: Also initiates Medicaid RTE if applicable
+              - fragment: opt
+                label: "if expedited criteria met"
+                steps:
+                  - event: eligibility.application.expedited
+                    from: eligibility
+                    to: intake
+                  - self: intake
+                    label: Set isExpedited = true on application
+                  - event: application.expedited_flagged
+                    from: intake
+                    to: workflow
+                    condition: if expedited
+                  - self: workflow
+                    label: Assign expedited SLA track
+                    gap: true
+                    gap_description: Expedited SLA type and workflow task switching not yet designed
+              - fragment: opt
+                label: "if Medicaid applied"
+                steps:
+                  - event: eligibility.rte_completed
+                    from: eligibility
+                    to: intake
+                  - self: intake
+                    label: Create RTE verification record with Medicaid eligibility outcome
+                    gap: true
+                    gap_description: rte verification type not yet defined in intake contracts
+          - steps:
+              - label: Initiates federal verification checks
+                from: intake
+                to: data_exchange
+                note: "Direct API calls — FDSH, IEVS, SAVE, SSA (not event-driven)"
+              - self: data_exchange
+                label: Federal checks initiated
+                note: "FDSH, IEVS, SAVE, SSA"
+              - event: call.completed
+                from: data_exchange
+                to: intake
+              - self: intake
+                label: Update verification records with federal check results
+                gap: true
+                gap_description: Intake handler for call.completed updating verifications not yet designed
+          - steps:
+              - event: application.submitted
+                from: intake
+                to: client_management
+              - self: client_management
+                label: Person matching initiated
+              - event: person.match_resolved
+                from: client_management
+                to: intake
+              - self: intake
+                label: Auto-confirm exact matches; queue fuzzy matches for caseworker review
+                gap: true
+                gap_description: Person match auto-confirmation behavior not yet designed in intake
+      - ref: caseworker_review
+        label: Caseworker Review
 
   # Caseworker works entirely through intake — scheduling and document uploads
   # are launched from within intake to ensure linkage to the application.
@@ -476,6 +520,8 @@ flows:
     description: From task claim through interview to verification complete
     participants: [caseworker, supervisor, intake, workflow, scheduling, data_exchange]
     steps:
+      - ref: application_submission
+        label: Application Submission
       - label: Claims task from queue
         from: caseworker
         to: intake
@@ -491,11 +537,11 @@ flows:
       - event: appointment.scheduled
         from: scheduling
         to: intake
-        note: Interview record created and linked to application
+      - self: intake
+        label: Interview record created and linked to application
       - event: call.completed
         from: data_exchange
         to: intake
-        note: Verification results arrive async; checklist updates in real time
       - label: Reviews verification results; resolves satisfied items; flags items needing follow-up
         from: caseworker
         to: intake
@@ -514,6 +560,8 @@ flows:
       - label: Reviews escalation; provides guidance or takes over resolution
         from: supervisor
         to: intake
+      - ref: determination
+        label: Eligibility Determination
 
   # All VerificationItems resolved → auto-triggers eligibility rules engine.
   # No caseworker action needed to start determination.
@@ -523,10 +571,15 @@ flows:
     description: From all verification items resolved through case creation
     participants: [caseworker, supervisor, intake, eligibility, case_management]
     steps:
+      - ref: caseworker_review
+        label: Caseworker Review
       - event: application.review_completed
         from: intake
         to: eligibility
         note: Fires automatically when all VerificationItems are resolved
+      - self: eligibility
+        label: Rules engine invoked
+        note: Income and expense calculations against household data, per program
       - event: determination_complete
         from: eligibility
         to: intake

@@ -264,9 +264,15 @@ function renderNoteCard(card: Card, cardWidth: number): FrameNode {
 
 // Typed cards: colored header (title + label) + lighter body (subtext).
 function renderTypedCard(card: Card, cardWidth: number): FrameNode {
-  const p = card.type === 'person-action' && card.actor
+  let p = card.type === 'person-action' && card.actor
     ? ACTOR_PALETTE[card.actor]
     : PALETTE[card.type];
+  if (card.type === 'system' && card.domain) {
+    p = { ...p, label: `SYSTEM (${card.domain.toUpperCase()})` };
+  }
+  if (card.type === 'domain-event' && card.domain) {
+    p = { ...p, label: `EVENT (${card.domain.toUpperCase()})` };
+  }
   const textWidth = cardWidth - CARD_PADDING * 2;
 
   const header = vFrame('header', 6);

@@ -2,10 +2,11 @@
  * build.js
  *
  * Orchestrates all service blueprint outputs for a given blueprint dataset.
- * Runs the Figma plugin build and the SVG renderer in sequence.
+ * Runs generate-blueprint.js, the Figma plugin build, and the SVG renderer
+ * in sequence.
  *
  * Usage:
- *   node build.js                     # baseline (output/) → figma-plugin/dist/ + output/intake.svg
+ *   node build.js                     # baseline → output/intake.json + figma-plugin/dist/ + output/intake.svg
  *   node build.js <input-dir>         # state-specific — reads from and writes SVG to <input-dir>
  *   node build.js <input-dir> <out>   # state-specific with separate Figma plugin output dir
  *   node build.js --watch             # watch mode (Figma only)
@@ -23,6 +24,14 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
+
+// ── Generate blueprint JSON from config.yaml + annotations ───────────────────
+// Always regenerate from source before building Figma plugin or SVG.
+
+execFileSync('node', [
+  path.join(__dirname, 'generate-blueprint.js'),
+  path.join(__dirname, 'config', 'intake-annotations.yaml'),
+], { stdio: 'inherit' });
 
 // ── Figma plugin build ────────────────────────────────────────────────────────
 
