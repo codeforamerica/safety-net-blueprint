@@ -1,0 +1,19 @@
+{
+  "name": "@codeforamerica/safety-net-blueprint-explorer",
+  "version": "1.2.0",
+  "description": "Context map and service blueprint tooling for the Safety Net Blueprint",
+  "type": "module",
+  "scripts": {
+    "build": "node context-map/build.js && node service-blueprints/build.js",
+    "build:context-map": "node context-map/build.js",
+    "build:service-blueprints": "node service-blueprints/build.js"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "js-yaml": "^4.1.0"
+  },
+  "optionalDependencies": {
+    "jszip": "^3.10.1",
+    "puppeteer": "^22.0.0"
+  }
+}

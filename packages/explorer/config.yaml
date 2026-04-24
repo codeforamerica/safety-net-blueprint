@@ -1,0 +1,807 @@
+# packages/explorer/config.yaml
+#
+# Shared domain and event registry for the explorer package.
+# Consumed by:
+#   - context-map (context-map/config.yaml adds diagram layout positions)
+#   - service-blueprints (event names referenced by string; future: auto-validate)
+#
+# Do not put diagram-specific settings here (layout positions, titles, etc.).
+
+# Cross-cutting concerns shown as a banner on the context-map overview.
+cross_cutting:
+  - Authentication & Authorization
+  - Audit & History
+  - Search
+  - Observability
+  - Reporting
+  - Configuration Management
+
+# Human actors — used as swimlane participants in flow sequence diagrams.
+actors:
+  - id: applicant
+    label: Applicant
+  - id: caseworker
+    label: Caseworker
+  - id: supervisor
+    label: Supervisor
+
+# Bounded contexts
+# status: partial | not-started | design-complete
+domains:
+  - id: client_management
+    label: Client Management
+    status: not-started
+    description: Persistent client identity & history
+    entities: [Person, Client, Relationship]
+
+  - id: intake
+    label: Intake
+    status: partial
+    description: Application submission & intake processing
+    entities: [Application, ApplicationMember, Income, Expense, Resource]
+
+  - id: eligibility
+    label: Eligibility
+    status: not-started
+    description: Program eligibility determination
+    entities: [EligibilityRequest, EligibilityUnit, Determination, VerificationRequirement]
+
+  - id: case_management
+    label: Case Management
+    status: partial
+    description: Cases, workers & staff assignments
+    entities: [Case, CaseWorker, Assignment, Office]
+
+  - id: document_management
+    label: Document Management
+    status: not-started
+    description: Files, uploads & verification
+    entities: [Document, Upload, DocumentRequest]
+
+  - id: workflow
+    label: Workflow
+    status: partial
+    description: Task lifecycle, queues & SLA tracking
+    entities: [Task, Queue, VerificationTask, SLAType]
+
+  - id: data_exchange
+    label: Data Exchange
+    status: partial
+    description: External service facade (IRS, SSA, SAVE)
+    entities: [ExternalServiceCall, IncomeVerification, IdentityVerification, ImmigrationStatus, EligibilityHub]
+
+  - id: scheduling
+    label: Scheduling
+    status: partial
+    description: Appointments & interviews
+    entities: [Appointment, Schedule]
+
+  - id: communications
+    label: Communications
+    status: not-started
+    description: Notices, letters & client alerts
+    entities: [Notice, Template, DeliveryEvent, Preference]
+
+  - id: appeals_hearings
+    label: Appeals & Hearings
+    status: not-started
+    description: Fair hearings & appeal decisions
+    entities: [Appeal, Hearing, HearingOfficer, Decision]
+
+  - id: benefits_payments
+    label: Benefits & Payments
+    status: not-started
+    description: Benefit issuance, EBT & recoupment
+    entities: [BenefitIssuance, PaymentRecord, Overpayment, RecoupmentPlan]
+
+# Domain events (asynchronous, pub/sub)
+#
+# publisher: the domain that emits the event (singleton)
+# subscribers: one or more domains that consume the event
+# status: implemented | planned  — whether the publisher is emitting the event
+events:
+
+  # ── Client Management ─────────────────────────────────────────────────────────
+
+  # person match result surfaces prior case history and prompts caseworker
+  # review on fuzzy matches — requires client management domain contract (#249)
+  - name: person.match_resolved
+    publisher: client_management
+    status: planned
+    subscribers:
+      - intake
+
+  # ── Data Exchange ─────────────────────────────────────────────────────────────
+
+  # verification result received — triggers conditional document requirement
+  # updates and task lifecycle events
+  - name: call.completed
+    publisher: data_exchange
+    status: planned
+    subscribers:
+      - intake
+      - workflow
+      - eligibility
+      - client_management
+
+  - name: call.submitted
+    publisher: data_exchange
+    status: planned
+    subscribers:
+      - workflow
+      - eligibility
+
+  - name: call.failed
+    publisher: data_exchange
+    status: planned
+    subscribers:
+      - workflow
+      - eligibility
+
+  - name: call.timed_out
+    publisher: data_exchange
+    status: planned
+    subscribers:
+      - workflow
+      - eligibility
+
+  # ── Eligibility ───────────────────────────────────────────────────────────────
+
+  # expedited screening result in response to application.submitted;
+  # intake sets isExpedited: true and assigns the expedited SLA track
+  - name: eligibility.application.expedited
+    publisher: eligibility
+    status: planned
+    subscribers:
+      - intake
+
+  # Medicaid real-time eligibility result in response to application.submitted;
+  # intake creates an RTE verification record with the Medicaid eligibility outcome
+  - name: eligibility.rte_completed
+    publisher: eligibility
+    status: planned
+    subscribers:
+      - intake
+
+  # closes the application and triggers case creation
+  - name: determination_complete
+    publisher: eligibility
+    status: planned
+    subscribers:
+      - intake
+
+  # ── Document Management ──────────────────────────────────────────────────────
+
+  # emitted when an applicant or caseworker uploads a document linked to an application
+  - name: document.uploaded
+    publisher: document_management
+    status: planned
+    subscribers:
+      - intake
+
+  # ── Intake ───────────────────────────────────────────────────────────────────
+
+  # emitted when a verification item becomes inconclusive or fails electronic check;
+  # communications subscribes to send a document request notice to the applicant
+  - name: verification.failed
+    publisher: intake
+    status: planned
+    subscribers:
+      - communications
+
+  # emitted after caseworker records (and supervisor approves) determination;
+  # communications subscribes to generate and send the Notice of Action
+  - name: determination.recorded
+    publisher: intake
+    status: planned
+    subscribers:
+      - communications
+
+  # emitted when a determination requires supervisor sign-off before the NOA is sent;
+  # workflow subscribes to create a supervisor approval task
+  - name: determination.approval_needed
+    publisher: intake
+    status: planned
+    subscribers:
+      - workflow
+
+
+  # triggers case creation when disposition is approved
+  - name: application.closed
+    publisher: intake
+    status: implemented
+    subscribers:
+      - case_management
+
+  - name: application.expedited_flagged
+    publisher: intake
+    status: implemented
+    subscribers:
+      - workflow
+
+  # fires automatically when all VerificationItems are resolved —
+  # triggers the eligibility rules engine, no caseworker action needed
+  - name: application.review_completed
+    publisher: intake
+    status: planned
+    subscribers:
+      - eligibility
+
+  - name: application.submitted
+    publisher: intake
+    status: implemented
+    subscribers:
+      - workflow
+      - eligibility
+      - client_management
+
+  - name: application.withdrawn
+    publisher: intake
+    status: implemented
+    subscribers:
+      - workflow
+
+  # emitted on POST (resource creation) — no cross-domain subscribers yet
+  - name: application.created
+    publisher: intake
+    status: implemented
+    subscribers: []
+
+  # emitted when submitted application transitions to under_review;
+  # triggered internally by task.claimed via the intake rules file
+  - name: application.opened
+    publisher: intake
+    status: implemented
+    subscribers: []
+
+  # generic resource lifecycle events from OpenAPI x-events
+  - name: application.updated
+    publisher: intake
+    status: implemented
+    subscribers: []
+
+  - name: application.deleted
+    publisher: intake
+    status: implemented
+    subscribers: []
+
+  # ── Scheduling ────────────────────────────────────────────────────────────────
+
+  # appointment.scheduled creates the interview record in intake;
+  # appointment.completed records the outcome for regulatory tracking
+  - name: appointment.scheduled
+    publisher: scheduling
+    status: planned
+    subscribers:
+      - intake
+
+  - name: appointment.completed
+    publisher: scheduling
+    status: planned
+    subscribers:
+      - intake
+
+  # ── Workflow ─────────────────────────────────────────────────────────────────
+
+  # transitions the linked application from submitted → under_review
+  - name: task.claimed
+    publisher: workflow
+    status: implemented
+    subscribers:
+      - intake
+
+  # emitted on task creation (onCreate hook)
+  - name: task.created
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # supervisor or system assigns task to a specific caseworker
+  - name: task.assigned
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # caseworker releases task back to queue
+  - name: task.released
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.completed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.cancelled
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.reopened
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # manual escalation by caseworker or supervisor
+  - name: task.escalated
+    publisher: workflow
+    status: implemented
+    subscribers:
+      - intake
+
+  - name: task.de-escalated
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # task blocked waiting for applicant action
+  - name: task.awaiting_client
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # task blocked waiting for external verification result
+  - name: task.awaiting_verification
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # manually unblocked by caseworker or supervisor
+  - name: task.resumed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # unblocked by an incoming verification result
+  - name: task.system_resumed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.submitted_for_review
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.approved
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.returned_to_worker
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.priority_changed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # SLA deadline exceeded — federal compliance reporting trigger
+  - name: task.sla_breached
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # timer-triggered escalations (state machine only — not in OpenAPI x-events)
+  - name: task.auto_escalated
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # auto-cancelled after 30 days in awaiting_client
+  - name: task.auto_cancelled
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # auto-resumed after 7 days in awaiting_verification
+  - name: task.auto_resumed
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  # generic resource lifecycle events from OpenAPI x-events
+  - name: task.updated
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+  - name: task.deleted
+    publisher: workflow
+    status: implemented
+    subscribers: []
+
+# Direct API calls (synchronous, point-to-point — not event-driven)
+#
+# call: the operation being invoked
+# domain: the domain that exposes the operation
+# callers: one or more domains initiating the call
+# status: implemented | planned
+apis:
+
+  - call: immigration status (SAVE)
+    domain: data_exchange
+    status: planned
+    callers:
+      - eligibility
+      - intake
+      - workflow
+
+  - call: income verification (IRS)
+    domain: data_exchange
+    status: planned
+    callers:
+      - eligibility
+      - intake
+      - workflow
+
+  - call: identity verification (SSA)
+    domain: data_exchange
+    status: planned
+    callers:
+      - eligibility
+      - intake
+      - workflow
+
+# Event flows (ordered sequences of events for key business processes)
+#
+# domain: the primary domain this flow belongs to (shown on that domain's detail page)
+# participants: domain IDs in swimlane order (left to right in sequence diagram)
+# steps: ordered arrows in the diagram
+#   event:     event name from the events registry above
+#   from:      publisher domain ID
+#   to:        subscriber domain ID (fan-out = one step per subscriber)
+#   note:      optional annotation shown below the arrow label
+#   condition: optional guard label shown in [brackets] on the arrow
+flows:
+
+  # ── Intake flows ──────────────────────────────────────────────────────────────
+
+  # Triggered by submission; fans out in parallel to four domains.
+  # Eligibility and client_management respond async — not a strict sequence.
+  - id: application_submission
+    label: Application Submission
+    domain: intake
+    description: Events triggered when an application is submitted
+    participants: [applicant, intake, workflow, eligibility, data_exchange, client_management, document_management]
+    steps:
+      - fragment: submission
+        steps:
+          - label: Submits application
+            from: applicant
+            to: intake
+            note: Online or in person; caseworker may submit on behalf of applicant
+            regulatory:
+              - citation: "7 CFR § 273.2(g)(1)"
+                summary: "SNAP: 30-day processing clock starts"
+              - citation: "7 CFR § 273.2(i)"
+                summary: "Expedited SNAP: 7-day clock"
+                detail: "If household meets expedited criteria"
+              - citation: "42 CFR § 435.912"
+                summary: "Medicaid: 45-day clock starts"
+                detail: "90 days if disability determination needed"
+      - fragment: verification-items
+        steps:
+          - self: intake
+            label: Verification items and baseline document requirements created
+      - fragment: applicant-document-upload
+        type: opt
+        label: "if applicant submits supporting documents"
+        steps:
+          - label: Store documents
+            from: intake
+            to: document_management
+            gap: true
+            gap_description: Document storage API not yet designed
+          - self: intake
+            label: Documents linked to verification items
+      - fragment: submission-fanout
+        type: par
+        label: "Triggered concurrently — responses may arrive in any order"
+        operands:
+          - steps:
+              - event: application.submitted
+                from: intake
+                to: workflow
+              - self: workflow
+                label: Task created in intake queue; SLA and queue routing assigned
+          - steps:
+              - event: application.submitted
+                from: intake
+                to: eligibility
+              - self: eligibility
+                label: Expedited screening initiated
+                note: Also initiates Medicaid RTE if applicable
+              - fragment: expedited-screening
+                type: opt
+                label: "if expedited criteria met"
+                steps:
+                  - event: eligibility.application.expedited
+                    from: eligibility
+                    to: intake
+                  - self: intake
+                    label: Set isExpedited = true on application
+                  - event: application.expedited_flagged
+                    from: intake
+                    to: workflow
+                  - self: workflow
+                    label: Assign expedited SLA track
+                    gap: true
+                    gap_description: Expedited SLA type and workflow task switching not yet designed
+              - fragment: medicaid-rte
+                type: opt
+                label: "if Medicaid applied"
+                steps:
+                  - self: eligibility
+                    label: Medicaid real-time eligibility (RTE) check initiated
+                  - event: eligibility.rte_completed
+                    from: eligibility
+                    to: intake
+                  - self: intake
+                    label: Create RTE verification record with Medicaid eligibility outcome
+                    gap: true
+                    gap_description: rte verification type not yet defined in intake contracts
+          - steps:
+              - label: Initiates federal verification checks
+                from: intake
+                to: data_exchange
+                note: "Direct API calls — FDSH, IEVS, SAVE, SSA (not event-driven)"
+              - self: data_exchange
+                label: Federal checks initiated
+                note: "FDSH, IEVS, SAVE, SSA"
+              - event: call.completed
+                from: data_exchange
+                to: intake
+                note: One per service; results arrive asynchronously and in any order
+              - self: intake
+                label: Update verification records with federal check results
+                gap: true
+                gap_description: Intake handler for call.completed updating verifications not yet designed
+          - steps:
+              - event: application.submitted
+                from: intake
+                to: client_management
+              - self: client_management
+                label: Person matching initiated
+              - event: person.match_resolved
+                from: client_management
+                to: intake
+              - self: intake
+                label: Auto-confirm exact matches; queue fuzzy matches for caseworker review
+                gap: true
+                gap_description: Person match auto-confirmation behavior not yet designed in intake
+      - ref: caseworker_review
+        label: Caseworker Review
+
+  # Caseworker works entirely through intake — scheduling and document uploads
+  # are launched from within intake to ensure linkage to the application.
+  - id: caseworker_review
+    label: Caseworker Review
+    domain: intake
+    description: From task claim through interview to verification complete
+    participants: [caseworker, supervisor, intake, workflow, scheduling, document_management, communications]
+    steps:
+      - ref: application_submission
+        label: Application Submission
+
+      # ── Task claim ────────────────────────────────────────────────────────────
+      - fragment: task-claim
+        steps:
+          - label: Claims task from queue
+            from: caseworker
+            to: intake
+            note: Caseworker selects from prioritized intake queue
+          - label: Claim task
+            from: intake
+            to: workflow
+            note: API call to workflow
+          - event: task.claimed
+            from: workflow
+            to: intake
+          - self: intake
+            label: Application status → under_review
+
+      # ── Scheduling ───────────────────────────────────────────────────────────
+      - fragment: scheduling
+        steps:
+          - label: Schedules interview
+            from: caseworker
+            to: intake
+            note: Launched from within intake — ensures appointment links to application
+          - label: Schedule appointment
+            from: intake
+            to: scheduling
+            note: API call to scheduling
+          - event: appointment.scheduled
+            from: scheduling
+            to: intake
+          - self: intake
+            label: Interview record created and linked to application
+
+      # ── Verification review ───────────────────────────────────────────────────
+      - fragment: verification-review
+        steps:
+          - label: Reviews verification results; resolves satisfied items; flags unresolved
+            from: caseworker
+            to: intake
+            regulatory:
+              - citation: "42 U.S.C. § 1320b-7"
+                summary: "Federal verifications required"
+                detail: "FDSH (citizenship), SAVE (immigration), IEVS (income, SNAP only), SSA (SSN), RTE (existing coverage, Medicaid only)"
+              - citation: "42 CFR § 435.911"
+                summary: "Medicaid: electronic verification before requesting paper documents"
+                detail: "Ex parte rule — electronic checks must be attempted first; paper documents can only be requested when checks return inconclusive"
+          - self: intake
+            label: Verification item status updated
+            regulatory:
+              - citation: "42 CFR § 435.911"
+                summary: "Ex parte rule: paper documents may only be requested after electronic verification returns inconclusive"
+                detail: "Applies to citizenship (FDSH), immigration status (SAVE), and income (IEVS)"
+          - fragment: verification-failed
+            type: opt
+            label: "if verification failed"
+            steps:
+              - event: verification.failed
+                from: intake
+                to: communications
+                note: Communications sends document request notice to applicant
+              - label: Uploads supporting document; attaches to verification item
+                from: caseworker
+                to: intake
+              - label: Store document
+                from: intake
+                to: document_management
+                gap: true
+                gap_description: Document storage API not yet designed
+              - self: intake
+                label: Document linked to verification item as evidence
+
+      # ── Interview ─────────────────────────────────────────────────────────────
+      - fragment: interview
+        steps:
+          - label: Conducts interview; resolves remaining verification items
+            from: caseworker
+            to: intake
+            note: May require multiple appointments
+            regulatory:
+              - citation: "7 CFR § 273.2(e)"
+                summary: "SNAP: interview required before determination"
+                detail: "May be waived by state policy"
+              - citation: "H.R.1 (pending)"
+                summary: "SNAP ABAWD work requirement expansion"
+                detail: "Expands age range subject to work requirements; adds parental requirements for adults with children above the age threshold"
+              - citation: "H.R.1 (pending)"
+                summary: "Medicaid community engagement requirement"
+                detail: "Adults required to demonstrate work, volunteering, caregiving, or education hours to maintain Medicaid eligibility"
+          - label: Mark appointment complete
+            from: intake
+            to: scheduling
+            note: API call; may repeat for multi-session interviews
+          - event: appointment.completed
+            from: scheduling
+            to: intake
+            note: One per appointment; may repeat for multi-session interviews
+          - self: intake
+            label: Interview record updated
+
+      # ── Escalation ───────────────────────────────────────────────────────────
+      - fragment: escalation
+        type: opt
+        label: "if escalation required"
+        steps:
+          - label: Escalates case
+            from: caseworker
+            to: intake
+          - label: Escalate
+            from: intake
+            to: workflow
+            note: API call to workflow
+          - event: task.escalated
+            from: workflow
+            to: intake
+          - label: Claims escalated task
+            from: supervisor
+            to: intake
+          - label: Claim task
+            from: intake
+            to: workflow
+            note: API call to workflow
+          - event: task.claimed
+            from: workflow
+            to: intake
+          - self: intake
+            label: Application status → under supervisor review
+          - label: Reviews escalation; provides guidance or takes over resolution
+            from: supervisor
+            to: intake
+
+      - ref: determination
+        label: Eligibility Determination
+
+  - id: determination
+    label: Eligibility Determination
+    domain: intake
+    description: From caseworker submission through case creation
+    participants: [caseworker, supervisor, intake, eligibility, communications, workflow, case_management]
+    steps:
+      - ref: caseworker_review
+        label: Caseworker Review
+      - fragment: submit-for-determination
+        steps:
+          - label: Submits case for determination
+            from: caseworker
+            to: intake
+            note: Available when all verification items are resolved
+          - self: intake
+            label: Status updated to pending determination
+          - event: application.review_completed
+            from: intake
+            to: eligibility
+      - fragment: eligibility-calculation
+        steps:
+          - self: eligibility
+            label: Calculates eligibility
+            note: Income and expense calculations against household data, per program
+          - event: determination_complete
+            from: eligibility
+            to: intake
+          - self: intake
+            label: Records determination outcome
+          - label: Reviews determination results
+            from: caseworker
+            to: intake
+            note: Exception review only — not approving a calculation they triggered
+      - fragment: determination-decision
+        steps:
+          - label: Records determination and rationale
+            from: caseworker
+            to: intake
+            note: Eligibility outcome, date, and reasoning recorded per program
+            regulatory:
+              - citation: "7 CFR § 273.2(g)"
+                summary: "SNAP: determination within 30 days (7 if expedited)"
+              - citation: "42 CFR § 435.912"
+                summary: "Medicaid: determination within 45 days"
+          - fragment: supervisor-approval
+            type: opt
+            condition: if supervisor approval required
+            steps:
+              - self: intake
+                label: Evaluates if supervisor approval required
+              - event: determination.approval_needed
+                from: intake
+                to: workflow
+              - self: workflow
+                label: Task created in supervisor review queue; SLA assigned
+              - label: Claims task from queue
+                from: supervisor
+                to: intake
+                note: Supervisor selects from supervisor review queue
+              - label: Claim task
+                from: intake
+                to: workflow
+                note: API call to workflow
+              - event: task.claimed
+                from: workflow
+                to: intake
+              - self: intake
+                label: Determination status → pending approval
+              - label: Reviews and approves determination
+                from: supervisor
+                to: intake
+                note: If rejected, intake flags for revision and workflow reassigns caseworker task
+          - event: determination.recorded
+            from: intake
+            to: communications
+          - self: communications
+            label: Sends Notice of Action
+            note: Generated from determination outcome; delivered to applicant
+          - event: application.closed
+            from: intake
+            to: case_management
+          - self: case_management
+            label: Creates case
+
