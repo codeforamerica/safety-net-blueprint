@@ -22,7 +22,7 @@ if (!inputPath) {
   process.exit(1);
 }
 
-const schemaPath = resolve(__dirname, 'context-schema.json');
+const schemaPath = resolve(__dirname, '..', 'config', 'annotations-schema.json');
 
 let definitions, schema;
 

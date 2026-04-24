@@ -18,7 +18,7 @@ import yaml from 'js-yaml';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const pkgConfig = yaml.load(
-  readFileSync(resolve(__dirname, '..', 'config.yaml'), 'utf8')
+  readFileSync(resolve(__dirname, '..', 'config', 'config.yaml'), 'utf8')
 );
 
 // Load all contract YAML files as a single searchable text blob

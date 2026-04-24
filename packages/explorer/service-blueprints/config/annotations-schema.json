@@ -4,7 +4,7 @@
   "title": "Blueprint Context",
   "description": "Schema for *.context.yaml files used to generate service blueprints from contracts.",
   "type": "object",
-  "required": ["domain", "name", "stateMachine", "lanes", "phases"],
+  "required": ["domain", "name", "lanes", "phases"],
   "additionalProperties": false,
   "properties": {
     "domain": {
@@ -105,6 +105,20 @@
         "description": {
           "type": "string",
           "description": "Prose explanation of what this sub-phase represents. For human readers of the context file."
+        },
+        "flow": {
+          "type": "string",
+          "description": "Flow ID from config.yaml to derive cards from."
+        },
+        "sections": {
+          "type": "array",
+          "description": "Named sections (fragment names without type) from the flow to include in this sub-phase.",
+          "items": { "type": "string" }
+        },
+        "steps": {
+          "type": "array",
+          "description": "Legacy: flat step indices from the flow. Prefer sections.",
+          "items": { "type": "integer" }
         },
         "cards": {
           "type": "object",

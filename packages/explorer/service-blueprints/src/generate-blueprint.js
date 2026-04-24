@@ -23,9 +23,13 @@
  *                                  multiple subscribers in the same sub-phase)
  *   gap step    (gap: true)      → note card with ⚠ prefix in the system lane
  *   ref step    (ref: flowId)    → ignored
+ *   any step with regulatory:   → policy cards in the regulations lane
+ *                                  (citation + text + optional subtext)
  *
- * Annotation cards (regulations, data entities, notes, etc.) are merged in
- * after the flow-derived cards in each sub-phase's lane.
+ * Annotation cards (data entities, notes, etc.) are merged in after the
+ * flow-derived cards in each sub-phase's lane. Regulatory policy cards are
+ * derived automatically from step.regulatory in config.yaml — do not duplicate
+ * them in the annotations file.
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -88,6 +92,38 @@ function flattenFlowSteps(steps) {
   return result;
 }
 
+/**
+ * Collect all flattened steps that belong to any of the named sections.
+ * A section is a fragment whose `fragment` value (the name) is in the set.
+ * Recurses into other wrappers to find named sections nested within them
+ * (e.g. a named section inside a par operand).
+ */
+function collectSectionSteps(steps, sectionNames) {
+  const nameSet = new Set(sectionNames);
+  const result  = [];
+  for (const step of steps) {
+    if (step.fragment !== undefined) {
+      if (nameSet.has(step.fragment)) {
+        // This wrapper matches — collect all its steps (fully flattened)
+        if (step.operands) {
+          for (const op of step.operands) result.push(...flattenFlowSteps(op.steps || []));
+        } else {
+          result.push(...flattenFlowSteps(step.steps || []));
+        }
+      } else {
+        // Recurse to find named sections nested inside other wrappers
+        if (step.operands) {
+          for (const op of step.operands) result.push(...collectSectionSteps(op.steps || [], sectionNames));
+        } else {
+          result.push(...collectSectionSteps(step.steps || [], sectionNames));
+        }
+      }
+    }
+    // Plain steps are not yielded unless they're inside a matching section
+  }
+  return result;
+}
+
 // ── Assemble blueprint ────────────────────────────────────────────────────────
 
 const lanes = annotations.lanes.map(l => ({ id: l.id, label: l.label }));
@@ -116,16 +152,26 @@ for (const phase of (annotations.phases || [])) {
       if (!flow) {
         console.warn(`Warning: flow '${subPhase.flow}' not found in config.yaml`);
       } else {
-        const allSteps     = flattenFlowSteps(flow.steps || []);
-        const stepIndices  = subPhase.steps ?? allSteps.map((_, i) => i);
-        const seenEvents   = new Set(); // deduplicate fan-out events in data lane
-        // lastEventTo[domainId] = most recent event name directed at that domain —
-        // used to auto-generate "In response to X" subtext on self-arrows.
-        const lastEventTo  = new Map();
+        const seenEvents  = new Set();
+        const lastEventTo = new Map();
 
-        for (const idx of stepIndices) {
-          const step = allSteps[idx];
-          if (!step) { console.warn(`Warning: step index ${idx} out of range in flow '${subPhase.flow}'`); continue; }
+        let stepsToProcess;
+        if (subPhase.sections) {
+          // Preferred: resolve by named section
+          stepsToProcess = collectSectionSteps(flow.steps || [], subPhase.sections);
+        } else if (subPhase.steps) {
+          // Legacy: resolve by flat index
+          const allSteps = flattenFlowSteps(flow.steps || []);
+          stepsToProcess = subPhase.steps.map(idx => {
+            const step = allSteps[idx];
+            if (!step) console.warn(`Warning: step index ${idx} out of range in flow '${subPhase.flow}'`);
+            return step;
+          }).filter(Boolean);
+        } else {
+          stepsToProcess = flattenFlowSteps(flow.steps || []);
+        }
+
+        for (const step of stepsToProcess) {
           deriveCards(step, subPhase.id, seenEvents, lastEventTo);
         }
       }
@@ -161,7 +207,7 @@ const blueprint = {
 
 // ── Write output ──────────────────────────────────────────────────────────────
 
-const outDir  = join(__dirname, 'output');
+const outDir  = join(__dirname, '..', 'output');
 mkdirSync(outDir, { recursive: true });
 const outPath = join(outDir, `${annotations.domain}.json`);
 writeFileSync(outPath, JSON.stringify(blueprint, null, 2) + '\n');
@@ -227,6 +273,16 @@ function deriveCards(step, subPhaseId, seenEvents, lastEventTo) {
     };
     if (step.note) card.subtext = step.note;
     getCell(laneId, subPhaseId).push(card);
+  }
+
+  // Regulatory items on any step type → policy cards in the regulations lane
+  for (const reg of (step.regulatory || [])) {
+    const subtext = [reg.citation, reg.detail].filter(Boolean).join(' \u2014 ');
+    getCell('regulations', subPhaseId).push({
+      type:    'policy',
+      text:    reg.summary,
+      subtext: subtext || undefined,
+    });
   }
 }
 

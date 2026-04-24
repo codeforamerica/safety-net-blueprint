@@ -6,11 +6,14 @@
 # config.yaml is the source of truth for flow steps — actor actions, events,
 # and system self-messages are derived from it automatically. This file adds
 # only what config.yaml cannot express:
-#   - Phase and sub-phase structure (which flow steps belong where)
-#   - Regulatory / policy citations (regulations lane)
+#   - Phase and sub-phase structure (which flow sections belong where)
 #   - Data entity descriptions (data lane)
 #   - Notes, future-state markers, and opportunities
 #   - Detailed caseworker / applicant actions not captured as flow steps
+#
+# Sub-phases reference flow steps by named section (sections: [...]) rather than
+# by flat index so that adding steps to a flow never shifts downstream references.
+# Named sections are defined in config.yaml as fragment wrappers without a type.
 #
 # Lane IDs referenced in cards: applicant | caseworker | system | regulations | data
 
@@ -42,20 +45,7 @@ phases:
       - id: submitted
         label: "Submission"
         flow: application_submission
-        steps: [0]  # applicant "Submits application"
-        cards:
-          regulations:
-            - type: policy
-              text: "SNAP: 30-day processing clock starts"
-              citation: "7 CFR § 273.2(g)(1)"
-            - type: policy
-              text: "Expedited SNAP: 7-day clock"
-              citation: "7 CFR § 273.2(i)"
-              subtext: "If household meets expedited criteria"
-            - type: policy
-              text: "Medicaid: 45-day clock starts"
-              citation: "42 CFR § 435.912"
-              subtext: "90 days if disability determination needed"
+        sections: [submission, applicant-document-upload]
 
   # ── Phase 2: Application review ─────────────────────────────────────────────
 
@@ -66,50 +56,27 @@ phases:
       - id: automated-screening
         label: "Automated screening"
         flow: application_submission
-        # steps 1-18: application.submitted fan-out + subscriber self-arrows + async responses
-        steps: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+        sections: [verification-items, submission-fanout]
 
       - id: under-review
         label: "Task assignment"
         flow: caseworker_review
-        # steps 1-5: claims task, task.claimed, schedules, appointment.scheduled, interview record created
-        steps: [1, 2, 3, 4, 5]
+        sections: [task-claim, scheduling]
 
       - id: active-review
         label: "Verification review"
         flow: caseworker_review
-        # steps 6-7: call.completed + caseworker reviews; 10-11: escalates + supervisor reviews
-        steps: [6, 7, 10, 11]
-        cards:
-          regulations:
-            - type: policy
-              text: "Federal verifications required"
-              citation: "42 U.S.C. § 1320b-7"
-              subtext: "FDSH (citizenship), SAVE (immigration), IEVS (income, SNAP only), SSA (SSN), RTE (existing coverage, Medicaid only)"
-            - type: policy
-              text: "Medicaid: electronic verification before requesting paper documents"
-              citation: "42 CFR § 435.911"
-              subtext: "Ex parte rule — electronic checks must be attempted first; paper documents can only be requested when checks return inconclusive"
+        sections: [verification-review]
 
       - id: interview
         label: "Program verification"
         flow: caseworker_review
-        # steps 8-9: conducts interview, appointment.completed
-        steps: [8, 9]
-        cards:
-          regulations:
-            - type: policy
-              text: "SNAP: Interview required before determination"
-              citation: "7 CFR § 273.2(e)"
-              subtext: "May be waived by state policy"
-            - type: policy
-              text: "H.R.1: SNAP ABAWD work requirement expansion"
-              citation: "H.R.1 (pending)"
-              subtext: "Expands age range subject to ABAWD work requirements; adds parental work requirements for adults with children above the age threshold"
-            - type: policy
-              text: "H.R.1: Medicaid community engagement requirement"
-              citation: "H.R.1 (pending)"
-              subtext: "Adults required to demonstrate work, volunteering, caregiving, or education hours to maintain Medicaid eligibility"
+        sections: [interview]
+
+      - id: escalation
+        label: "Escalation"
+        flow: caseworker_review
+        sections: [escalation]
 
   # ── Phase 3: Eligibility determination ─────────────────────────────────────
 
@@ -117,25 +84,20 @@ phases:
     label: "Eligibility determination"
     subPhases:
 
+      - id: submit-for-determination
+        label: "Submit for determination"
+        flow: determination
+        sections: [submit-for-determination]
+
       - id: benefits-calculation
         label: "Determination"
         flow: determination
-        # steps 1-5: review_completed event, rules engine self-arrow, determination_complete×2, caseworker reviews
-        steps: [1, 2, 3, 4, 5]
-        cards:
-          regulations:
-            - type: policy
-              text: "SNAP: Determination within 30 days (7 if expedited)"
-              citation: "7 CFR § 273.2(g)"
-            - type: policy
-              text: "Medicaid: Determination within 45 days"
-              citation: "42 CFR § 435.912"
+        sections: [eligibility-calculation]
 
       - id: decision
         label: "Closeout"
         flow: determination
-        # steps 6-9: records determination, supervisor approves, application.closed×2
-        steps: [6, 7, 8, 9]
+        sections: [determination-decision]
         cards:
           regulations:
             - type: policy

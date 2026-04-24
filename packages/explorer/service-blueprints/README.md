@@ -15,17 +15,20 @@ The SVG is useful for quick review, documentation, and sharing with stakeholders
 service-blueprints/
   config/                        # Human-editable source files
     intake-annotations.yaml      # Phase structure, regulations, data entities, notes
+    annotations-schema.json      # JSON Schema for annotations YAML files
     theme.yaml                   # Optional color overrides (empty = use defaults)
+  src/                           # Build scripts
+    generate-blueprint.js        # Generates intake.json from config.yaml + annotations
+    render-svg.js                # Standalone SVG renderer
+    validate-context.js          # Validates an annotations file against annotations-schema.json
   output/                        # Generated outputs (committed)
-    intake.json                  # Generated blueprint data (from generate-blueprint.js)
-    intake.svg                   # Rendered SVG preview (from render-svg.js)
-  generate-blueprint.js          # Generates intake.json from config.yaml + annotations
+    intake.json                  # Generated blueprint data
+    intake.svg                   # Rendered SVG preview
   figma-plugin/                  # Figma plugin source and tooling
     build.js                     # Builds the Figma plugin (dist/)
     src/                         # Plugin TypeScript source
     dist/                        # Built plugin — load this in Figma Desktop (gitignored)
   build.js                       # Orchestrates: generate → Figma plugin build + SVG render
-  render-svg.js                  # Standalone SVG renderer
 ```
 
 ## What you need
@@ -34,10 +37,10 @@ service-blueprints/
 - **Node.js 18+** and npm
 - Editor access to the Figma file you want to generate into (Viewer access is not enough)
 
-Install dependencies once from the `figma-plugin/` directory:
+Install dependencies from the `packages/explorer` directory:
 
 ```bash
-cd figma-plugin && npm install
+npm install --workspace=packages/explorer
 ```
 
 ## Using the baseline blueprint
@@ -60,10 +63,10 @@ To generate a blueprint from your own content files, point the build at your dir
 node build.js <path/to/your/dir>
 ```
 
-Your directory should contain an annotations YAML file. The baseline `build.js` always generates `output/intake.json` from the baseline annotations. For a state-specific build, generate first and then run the build:
+Your directory should contain an annotations YAML file. For a state-specific build, generate first then run the build:
 
 ```bash
-node generate-blueprint.js <path/to/your/dir/annotations.yaml>
+node src/generate-blueprint.js <path/to/your/dir/annotations.yaml>
 node build.js <path/to/your/dir>
 ```
 
@@ -78,7 +81,7 @@ Blueprint content comes from two sources:
 - **`packages/explorer/config.yaml`** — the source of truth for flows. Actor steps, events, and system self-messages (including gap markers) are derived from flow steps automatically.
 - **`config/intake-annotations.yaml`** — the annotation layer. Defines phase/sub-phase structure and adds what config.yaml cannot: regulatory citations, data entity descriptions, detailed caseworker actions, notes, and opportunities.
 
-`build.js` runs `generate-blueprint.js` automatically — you don't need to run it manually.
+`build.js` runs `src/generate-blueprint.js` automatically — you don't need to run it manually.
 
 ### What to edit
 
@@ -86,6 +89,6 @@ Blueprint content comes from two sources:
 
 **To add regulations, data entities, notes, or opportunities:** edit `config/intake-annotations.yaml`. Each sub-phase has a `cards` map keyed by lane ID. Supported card types: `policy`, `data-entity`, `note`, `opportunity`, `person-action`, `system`.
 
-**To change sub-phase structure:** add or reorder `subPhases` in `intake-annotations.yaml`. Each sub-phase references a flow + step indices — update the `flow` and `steps` fields to control which config.yaml steps are derived for that sub-phase.
+**To change sub-phase structure:** add or reorder `subPhases` in `intake-annotations.yaml`. Each sub-phase references a flow and named sections via the `flow` and `sections` fields to control which config.yaml steps are derived for that sub-phase.
 
 Don't rename lane `id` values — cards in every sub-phase are keyed by lane ID and will disappear from the output if the ID changes.

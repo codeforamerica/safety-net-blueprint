@@ -60,38 +60,6 @@ const html = `<!DOCTYPE html>
     #container { min-height: 100vh; padding: 24px 0; overflow-x: hidden; }
     #map-wrapper { background: white; box-shadow: 0 2px 16px rgba(0,0,0,0.10); overflow: hidden; width: 1400px; transform-origin: top left; }
 
-    /* ── Overview ── */
-    .cm { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; background: white; }
-    .cm-banner { background: #f0fdf4; border: 1px solid #16a34a; border-radius: 6px; padding: 10px 16px; text-align: center; margin-bottom: 20px; }
-    .cm-banner-label { font-size: 9px; font-weight: 700; color: #15803d; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 3px; }
-    .cm-banner-items { font-size: 12px; color: #166534; }
-    .cm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
-    .cm-domain { border-radius: 8px; padding: 16px 14px; cursor: default; min-height: 110px; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; transition: filter 0.15s; }
-    .cm-domain.partial         { background: #eff6ff; border: 1.5px solid #2563eb; cursor: pointer; }
-    .cm-domain.design-complete { background: #f0fdf4; border: 1.5px solid #16a34a; cursor: pointer; }
-    .cm-domain.not-started     { background: #f9fafb; border: 1.5px dashed #9ca3af; }
-    .cm-domain.partial:hover, .cm-domain.design-complete:hover { filter: brightness(0.96); }
-    .cm-title    { font-size: 15px; font-weight: 700; color: #111827; text-align: center; line-height: 1.2; }
-    .cm-entities { font-size: 9px; color: #9ca3af; text-align: center; width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .cm-desc     { font-size: 11px; color: #6b7280; text-align: center; }
-    .cm-legend   { display: flex; gap: 20px; padding: 8px 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; align-items: center; flex-wrap: wrap; }
-    .cm-legend-item { display: flex; align-items: center; gap: 6px; font-size: 9px; color: #374151; }
-    .cm-swatch   { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
-    .cm-swatch.design-complete { background: #f0fdf4; border: 1.5px solid #16a34a; }
-    .cm-swatch.partial         { background: #eff6ff; border: 1.5px solid #2563eb; }
-    .cm-swatch.not-started     { background: #f9fafb; border: 1.5px dashed #9ca3af; }
-
-    /* ── Detail views ── */
-    .dt-wrap { position: relative; width: 1400px; height: 1100px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: white; overflow: hidden; }
-    .dt-nav  { position: absolute; top: 16px; left: 20px; font-size: 12px; z-index: 10; }
-    .dt-box  { position: absolute; width: 220px; border-radius: 8px; padding: 12px 14px; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; box-sizing: border-box; min-height: 105px; z-index: 2; }
-    .dt-box.nav { cursor: pointer; transition: filter 0.15s; }
-    .dt-box.nav:hover { filter: brightness(0.95); }
-    .dt-title    { font-size: 15px; font-weight: 700; color: #111827; line-height: 1.2; }
-    .dt-entities { font-size: 9px; color: #9ca3af; width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .dt-desc     { font-size: 11px; color: #6b7280; }
-    .dt-legend { position: absolute; bottom: 16px; left: 25px; right: 25px; display: flex; gap: 16px; padding: 8px 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; align-items: center; flex-wrap: wrap; font-size: 9px; z-index: 10; }
-
   </style>
 </head>
 <body>
@@ -130,6 +98,8 @@ ${contentEntries}
       // clientWidth shrinks when the user zooms in, which fights the browser's
       // native zoom and pushes the diagram off-screen. outerWidth stays constant
       // across zoom changes and only changes when the window is actually resized.
+      // Content must stay at x ≤ ~1360 to avoid clipping from the ~20px gap
+      // between outerWidth (includes OS chrome) and innerWidth (visible viewport).
       const scale = window.outerWidth / 1400;
       wrapper.style.transform = 'scale(' + scale + ')';
       wrapper.style.marginBottom = Math.round(wrapper.offsetHeight * (scale - 1)) + 'px';

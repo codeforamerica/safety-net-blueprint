@@ -17,9 +17,13 @@ From this directory:
 node build.js
 ```
 
-This runs `render.js` (reads config, generates HTML fragments → `dist/`) then `build-html.js` (assembles everything into a single file), then exports PNGs via Puppeteer.
+This runs the full pipeline:
+1. `src/render.js` — reads config, generates HTML fragments → `dist/`
+2. `src/build-html.js` — assembles everything into `output/context-map.html`
+3. `src/scan-gaps.js` — reports design gaps from config.yaml
+4. `src/export-png.js` — screenshots each view via Puppeteer → `dist/*.png` + `dist/context-map-export.zip`
 
-Tracked outputs go to `output/`: `context-map.html` and `context-map-export.zip`. The `dist/` folder holds intermediate fragments and PNGs and is not tracked in git.
+`output/` holds the tracked artifact (`context-map.html`). `dist/` holds intermediate fragments, PNGs, and the zip — not tracked in git.
 
 ## Config files
 
@@ -27,11 +31,11 @@ There are two config files. Neither requires code changes for routine updates.
 
 ### `../config.yaml` — domain and event registry
 
-The source of truth for all domain definitions, events, and API calls. Schema: [`../config-schema.json`](../config-schema.json).
+The source of truth for all domain definitions, events, flows, and API calls. Schema: [`../config-schema.json`](../config-schema.json).
 
-### `config.yaml` — diagram layout
+### `config/config.yaml` — diagram layout
 
-Controls the overview grid positions for each domain box. Schema: [`config-schema.json`](config-schema.json).
+Controls the overview grid positions for each domain box. Schema: [`config/config-schema.json`](config/config-schema.json).
 
 ## Adding or changing domains
 
@@ -45,7 +49,7 @@ Edit `../config.yaml`. Each domain entry needs:
   entities: [EntityA, EntityB]
 ```
 
-Then add a layout position in `config.yaml`:
+Then add a layout position in `config/config.yaml`:
 
 ```yaml
 layout:

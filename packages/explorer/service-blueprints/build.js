@@ -29,13 +29,17 @@ const args = process.argv.slice(2);
 // Always regenerate from source before building Figma plugin or SVG.
 
 execFileSync('node', [
-  path.join(__dirname, 'generate-blueprint.js'),
+  path.join(__dirname, 'src', 'generate-blueprint.js'),
   path.join(__dirname, 'config', 'intake-annotations.yaml'),
 ], { stdio: 'inherit' });
 
 // ── Figma plugin build ────────────────────────────────────────────────────────
 
-execFileSync('node', [path.join(__dirname, 'figma-plugin', 'build.js'), ...args], {
+// Figma plugin args: input dir (defaults to output/), optional output dir, optional --watch.
+// Strip any annotations YAML path that was passed to this orchestrator — the Figma
+// build reads intake.json from the output dir, not from the annotations file.
+const figmaArgs = args.filter(a => !a.endsWith('.yaml') && !a.endsWith('.yml'));
+execFileSync('node', [path.join(__dirname, 'figma-plugin', 'build.js'), ...figmaArgs], {
   stdio: 'inherit',
 });
 
@@ -43,15 +47,12 @@ execFileSync('node', [path.join(__dirname, 'figma-plugin', 'build.js'), ...args]
 // Skip in watch mode — SVG is a one-shot output.
 
 if (!args.includes('--watch')) {
-  const nonWatchArgs = args.filter(a => a !== '--watch');
-  const inputDir = nonWatchArgs[0]
-    ? path.resolve(nonWatchArgs[0])
-    : path.join(__dirname, 'output');
-
+  // generate-blueprint.js always writes to output/ — use that as the SVG input.
+  const inputDir      = path.join(__dirname, 'output');
   const blueprintJson = path.join(inputDir, 'intake.json');
   const svgOut        = path.join(inputDir, 'intake.svg');
 
-  execFileSync('node', [path.join(__dirname, 'render-svg.js'), blueprintJson, '--out', svgOut], {
+  execFileSync('node', [path.join(__dirname, 'src', 'render-svg.js'), blueprintJson, '--out', svgOut], {
     stdio: 'inherit',
   });
 }

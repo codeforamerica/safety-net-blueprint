@@ -64,6 +64,6 @@ for (let i = 0; i < keys.length; i++) {
 await browser.close();
 
 const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-const zipPath = resolve(htmlDir, 'context-map-export.zip');
+const zipPath = resolve(imgDir, 'context-map-export.zip');
 writeFileSync(zipPath, zipBuffer);
 console.log(`Written: ${zipPath}`);

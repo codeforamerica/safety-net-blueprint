@@ -25,7 +25,7 @@ function run(script, ...args) {
   execFileSync(node, [resolve(__dirname, script), ...args], { stdio: 'inherit' });
 }
 
-run('render.js',     distDir);
-run('build-html.js', distDir, outDir);
-run('scan-gaps.js');
-run('export-png.js', outDir, distDir);
+run('src/render.js',     distDir);
+run('src/build-html.js', distDir, outDir);
+run('src/scan-gaps.js');
+run('src/export-png.js', outDir, distDir);
