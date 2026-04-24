@@ -6,34 +6,36 @@
  * context-map.html with click-to-navigate behavior.
  *
  * Usage:
- *   node render.js        # generates output/*.html fragments
- *   node build-html.js    # assembles context-map.html
+ *   node render.js        # generates dist/*.html fragments
+ *   node build-html.js    # assembles output/context-map.html
  */
 
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const outDir = process.argv[2]
-  ? resolve(process.argv[2])
-  : resolve(__dirname, 'output');
+// srcDir: where render.js wrote the fragments (default: dist/)
+// outDir: where to write context-map.html (default: output/)
+const srcDir = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, 'dist');
+const outDir = process.argv[3] ? resolve(process.argv[3]) : resolve(__dirname, 'output');
+mkdirSync(outDir, { recursive: true });
 
 // ── Read fragment files ─────────────────────────────────────────────────────
 
 function readFile(name) {
-  return readFileSync(resolve(outDir, name), 'utf8')
+  return readFileSync(resolve(srcDir, name), 'utf8')
     .replace(/<\/script/gi, '<\\/script');
 }
 
 const content = {};
 
-if (existsSync(resolve(outDir, 'overview.html'))) {
+if (existsSync(resolve(srcDir, 'overview.html'))) {
   content['__overview__'] = readFile('overview.html');
 }
 
-const detailFiles = readdirSync(outDir)
+const detailFiles = readdirSync(srcDir)
   .filter(f => extname(f) === '.html' && f !== 'overview.html' && f !== 'context-map.html');
 
 for (const f of detailFiles) {

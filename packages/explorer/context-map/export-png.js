@@ -6,25 +6,28 @@
  * them into a zip file for easy sharing.
  *
  * Usage:
- *   node export-png.js [output-dir]
+ *   node export-png.js [html-dir [img-dir]]
  *
  * Output:
- *   output/<view>.png          — one PNG per view
- *   output/context-map-export.zip — all PNGs in a zip
+ *   dist/<view>.png               — one PNG per view (intermediary)
+ *   output/context-map-export.zip — zip of all PNGs (tracked artifact)
  */
 
 import puppeteer from 'puppeteer';
 import JSZip from 'jszip';
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir = process.argv[2]
-  ? resolve(process.argv[2])
-  : resolve(__dirname, 'output');
 
-const htmlPath = resolve(outDir, 'context-map.html');
+// htmlDir: where context-map.html lives and where the zip is written (default: output/)
+// imgDir:  where individual PNGs are written (default: dist/)
+const htmlDir = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, 'output');
+const imgDir  = process.argv[3] ? resolve(process.argv[3]) : resolve(__dirname, 'dist');
+mkdirSync(imgDir, { recursive: true });
+
+const htmlPath = resolve(htmlDir, 'context-map.html');
 const fileUrl = pathToFileURL(htmlPath).href;
 
 const browser = await puppeteer.launch({ headless: true });
@@ -52,7 +55,7 @@ for (let i = 0; i < keys.length; i++) {
   const png = await el.screenshot({ type: 'png' });
 
   const filename = key + '.png';
-  writeFileSync(resolve(outDir, filename), png);
+  writeFileSync(resolve(imgDir, filename), png);
   folder.file(filename, png);
 
   process.stdout.write(' done\n');
@@ -61,6 +64,6 @@ for (let i = 0; i < keys.length; i++) {
 await browser.close();
 
 const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-const zipPath = resolve(outDir, 'context-map-export.zip');
+const zipPath = resolve(htmlDir, 'context-map-export.zip');
 writeFileSync(zipPath, zipBuffer);
 console.log(`Written: ${zipPath}`);

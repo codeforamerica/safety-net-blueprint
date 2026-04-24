@@ -17,9 +17,9 @@ From this directory:
 node build.js
 ```
 
-This runs `render.js` (reads config, generates HTML fragments) then `build-html.js` (assembles everything into a single file).
+This runs `render.js` (reads config, generates HTML fragments → `dist/`) then `build-html.js` (assembles everything into a single file), then exports PNGs via Puppeteer.
 
-Output goes to `output/context-map.html`. Open it in any browser.
+Tracked outputs go to `output/`: `context-map.html` and `context-map-export.zip`. The `dist/` folder holds intermediate fragments and PNGs and is not tracked in git.
 
 ## Config files
 

@@ -36,7 +36,7 @@ const config = {
   })),
 };
 
-const OUT_DIR = resolve(__dirname, 'output');
+const OUT_DIR = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, 'dist');
 mkdirSync(OUT_DIR, { recursive: true });
 
 // ── Constants ──────────────────────────────────────────────────────────────
