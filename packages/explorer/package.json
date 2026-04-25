@@ -4,9 +4,11 @@
   "description": "Context map and service blueprint tooling for the Safety Net Blueprint",
   "type": "module",
   "scripts": {
-    "build": "node context-map/build.js && node service-blueprints/build.js",
+    "build": "node context-map/build.js && node service-blueprints/build.js && node adoption-model/build.js",
     "build:context-map": "node context-map/build.js",
-    "build:service-blueprints": "node service-blueprints/build.js"
+    "build:service-blueprints": "node service-blueprints/build.js",
+    "build:adoption-model": "node adoption-model/build.js",
+    "build:adoption-model:png": "node adoption-model/build.js --png"
   },
   "dependencies": {
     "ajv": "^8.17.1",
