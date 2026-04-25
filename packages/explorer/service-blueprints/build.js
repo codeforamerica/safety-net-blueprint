@@ -6,7 +6,7 @@
  * in sequence.
  *
  * Usage:
- *   node build.js                     # baseline → output/intake.json + figma-plugin/dist/ + output/intake.svg
+ *   node build.js                     # baseline → data/intake.json + figma-plugin/dist/ + output/intake.png
  *   node build.js <input-dir>         # state-specific — reads from and writes SVG to <input-dir>
  *   node build.js <input-dir> <out>   # state-specific with separate Figma plugin output dir
  *   node build.js --watch             # watch mode (Figma only)
@@ -18,6 +18,7 @@
  */
 
 import { execFileSync } from 'child_process';
+import { mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -35,9 +36,9 @@ execFileSync('node', [
 
 // ── Figma plugin build ────────────────────────────────────────────────────────
 
-// Figma plugin args: input dir (defaults to output/), optional output dir, optional --watch.
+// Figma plugin args: input dir (defaults to data/), optional output dir, optional --watch.
 // Strip any annotations YAML path that was passed to this orchestrator — the Figma
-// build reads intake.json from the output dir, not from the annotations file.
+// build reads intake.json from the data dir, not from the annotations file.
 const figmaArgs = args.filter(a => !a.endsWith('.yaml') && !a.endsWith('.yml'));
 execFileSync('node', [path.join(__dirname, 'figma-plugin', 'build.js'), ...figmaArgs], {
   stdio: 'inherit',
@@ -47,12 +48,15 @@ execFileSync('node', [path.join(__dirname, 'figma-plugin', 'build.js'), ...figma
 // Skip in watch mode — SVG is a one-shot output.
 
 if (!args.includes('--watch')) {
-  // generate-blueprint.js always writes to output/ — use that as the SVG input.
-  const inputDir      = path.join(__dirname, 'output');
-  const blueprintJson = path.join(inputDir, 'intake.json');
-  const svgOut        = path.join(inputDir, 'intake.svg');
+  // Render SVG to dist/ (intermediate), then export PNG to output/.
+  mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
+  const blueprintJson = path.join(__dirname, 'data', 'intake.json');
+  const svgOut        = path.join(__dirname, 'dist', 'intake.svg');
 
   execFileSync('node', [path.join(__dirname, 'src', 'render-svg.js'), blueprintJson, '--out', svgOut], {
     stdio: 'inherit',
   });
+
+  const { exportPng } = await import('./src/export-png.js');
+  await exportPng('intake');
 }
