@@ -183,6 +183,37 @@ Filter expressions support string, numeric, and boolean values:
 - `[?(@.order == 1)]` — numeric match
 - `[?(@.enabled == true)]` — boolean match
 
+## Global Config Options
+
+The `config` root key in any overlay file sets cross-cutting defaults that apply across the entire resolved spec. It is processed by the resolve pipeline before any `actions` are applied.
+
+```yaml
+# In any overlay file (e.g., openapi/overlays/<state>/modifications.yaml)
+overlay: 1.0.0
+info:
+  title: My State Overlay
+  version: 1.0.0
+
+config:
+  x-casing:
+    style: snake_case
+  x-pagination:
+    style: cursor
+  x-search:
+    style: filtered
+  x-relationship:
+    style: expand
+```
+
+| Key | Options | Default | Description |
+|-----|---------|---------|-------------|
+| `x-casing` | `camelCase`, `snake_case` | `camelCase` | Property name casing in resolved output |
+| `x-pagination.style` | `offset`, `cursor`, `page`, `links` | `offset` | Pagination strategy for list endpoints |
+| `x-search.style` | `simple`, `filtered`, `post-search` | `simple` | Search query pattern |
+| `x-relationship.style` | `links-only`, `expand`, `include`, `embed` | `links-only` | How FK references are represented in responses |
+
+Only include keys you want to override — omitted keys use their defaults. Each key may only be defined once across all overlay files for a state.
+
 ## Relationship Configuration
 
 FK fields in the base specs are plain string IDs. States can declare how related resources are represented in responses by adding `x-relationship` to FK fields via overlays. The resolver transforms the spec at build time based on the chosen style.
@@ -198,13 +229,7 @@ FK fields in the base specs are plain string IDs. States can declare how related
 
 ### Setting a global default
 
-Set the default style for all relationships in your config overlay:
-
-```yaml
-config:
-  x-relationship:
-    style: expand
-```
+Set `x-relationship.style` in the `config` block — see [Global Config Options](#global-config-options).
 
 ### Per-field configuration
 
