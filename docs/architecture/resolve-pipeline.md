@@ -62,9 +62,9 @@ The relationship resolver (`packages/contracts/src/overlay/relationship-resolver
 
 | Style | Effect | Schema change |
 |-------|--------|---------------|
+| `links-only` (default) | `links` object added alongside FK field | `personId` + `links.person: "/persons/{id}"` |
 | `expand` | FK field replaced with full object (or subset via `fields`) | `personId` → `person: {...}` |
-| `links-only` | `links` object added alongside FK field | `personId` + `links.person: "/persons/{id}"` |
-| `include` (default) | FK field included as-is | `personId` unchanged |
+| `include` | FK field included as-is | `personId` unchanged |
 
 Output from `resolveRelationships`:
 - `result` — the modified spec
@@ -81,7 +81,49 @@ After resolving relationships, `resolveExampleRelationships` applies the same tr
 
 The examples index is built from all examples files by resource type so cross-API lookups work.
 
-### 5. Output
+### 5. Environment Filtering
+
+When `--env` is provided, the pipeline removes any spec node annotated with `x-environments` that doesn't include the target environment, then strips the `x-environments` key from remaining nodes.
+
+```yaml
+# In your overlay or resolved spec
+paths:
+  /debug/health:
+    x-environments: [development, staging]
+    get:
+      summary: Health check (non-production only)
+```
+
+```bash
+# Production: /debug/health is removed
+safety-net-resolve --spec=... --overlay=... --out=./resolved --env=production
+
+# Development: /debug/health is kept, x-environments is stripped
+safety-net-resolve --spec=... --overlay=... --out=./resolved --env=development
+```
+
+Without `--env`, all sections are included as-is. See [x-environments](../x-extensions.md#x-environments) for the full extension reference.
+
+### 6. Placeholder Substitution
+
+When `--env-file` is provided or environment variables exist, `${VAR}` placeholders in string values are replaced with their resolved values.
+
+```yaml
+servers:
+  - url: ${API_BASE_URL}
+    description: API server
+```
+
+```bash
+# .env file
+API_BASE_URL=https://api.example.gov
+
+safety-net-resolve --spec=... --overlay=... --out=./resolved --env-file=.env
+```
+
+Environment variables (`process.env`) take precedence over `.env` file values. Unresolved placeholders produce warnings but don't fail the build.
+
+### 7. Output
 
 Resolved specs are written to the path specified by `--out` (default: `packages/resolved/`). The resolved directory mirrors the structure of `packages/contracts/` but contains fully-merged, relationship-resolved artifacts.
 

@@ -60,7 +60,7 @@ The baseline contracts are a starting point. States customize via overlays:
 - **SLA types**: replace or extend `workflow-sla-types.yaml` with state-specific deadlines and pause conditions
 - **Metrics**: replace or extend `workflow-metrics.yaml` with state-specific metrics and targets
 
-See the [State Overlays Guide](../../guides/state-overlays.md) for overlay mechanics.
+See the [Overlay Guide](../../guides/overlay-guide.md) for overlay mechanics.
 
 ## Contract Artifacts
 

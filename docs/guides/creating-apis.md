@@ -85,7 +85,7 @@ This runs:
 | Schema names | PascalCase | `CaseWorker` |
 | Property names | camelCase | `firstName` |
 
-These are the baseline conventions for base specs. The resolve pipeline can transform output per-state deployment — see [State Overlays: Global Config Options](./state-overlays.md#global-config-options).
+These are the baseline conventions for base specs. The resolve pipeline can transform output per-state deployment — see [Overlay Guide: Global Config Options](./overlay-guide.md#global-config-options).
 
 ---
 

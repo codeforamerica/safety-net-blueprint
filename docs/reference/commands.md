@@ -64,23 +64,23 @@ npm run validate:patterns
 
 ## Overlay Commands
 
-### `npm run overlay:resolve`
+### `npm run resolve`
 
 Resolves overlays against base specs, producing resolved specifications. Pass arguments after `--`.
 
 Copy base specs unchanged (no overlay):
 ```bash
-npm run overlay:resolve -- --base=packages/contracts --out=packages/contracts/resolved
+npm run resolve -- --spec=packages/contracts --out=packages/contracts/resolved
 ```
 
 Apply a state overlay:
 ```bash
-npm run overlay:resolve -- --base=packages/contracts --overlays=packages/contracts/overlays/example --out=packages/contracts/resolved
+npm run resolve -- --spec=packages/contracts --overlay=packages/contracts/overlays/example --out=packages/contracts/resolved
 ```
 
 See all flags:
 ```bash
-npm run overlay:resolve -- --help
+npm run resolve -- --help
 ```
 
 ## Generation Commands
@@ -241,7 +241,7 @@ npm run validate
 npm run mock:reset && npm start
 
 # Build state package (resolve overlay + generate + compile)
-STATE=<your-state> npm run overlay:resolve && node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
+npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir> && node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
 
 # Full test suite
 npm run validate && npm test && npm run test:integration

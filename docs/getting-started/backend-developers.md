@@ -6,7 +6,7 @@ This guide is for developers who work with the contract artifacts — OpenAPI sp
 
 See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
 
-> **Note:** OpenAPI specs, validation, overlays, the mock server for CRUD operations, the state machine engine (transitions, guards, `set`/`create`/`evaluate-rules` effects), and rule evaluation (assignment and priority) work today. Additional behavioral tooling — conversion scripts, cross-artifact validation, and metrics — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes both the current and target developer experience.
+> **Note:** OpenAPI specs, validation, overlays, the mock server for CRUD operations, the state machine engine (transitions, guards, `set`/`create`/`evaluate-rules` effects), rule evaluation (assignment and priority), and cross-artifact validation work today. Additional behavioral tooling — conversion scripts and metrics — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes both the current and target developer experience.
 
 ## What You'll Do
 
@@ -28,12 +28,12 @@ See also: [Contract-Driven Architecture](../architecture/contract-driven-archite
 The toolkit provides base specs, scripts, and a mock server as npm packages. States create their own repository and install the base packages:
 
 ```bash
-mkdir my-state-apis && cd my-state-apis
+mkdir <state-repo> && cd <state-repo>
 npm init -y
 npm install @codeforamerica/safety-net-blueprint-contracts @codeforamerica/safety-net-blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
 ```
 
-See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup process, including overlays, resolved specs, and CI pipeline configuration.
+See the [Setup Guide](../guides/setup-guide.md) for the full setup process, including overlays, resolved specs, and CI pipeline configuration.
 
 For development within this repository:
 
@@ -41,9 +41,6 @@ For development within this repository:
 git clone https://github.com/codeforamerica/safety-net-blueprint.git
 cd safety-net-blueprint
 npm install
-
-# Set your state (or add to your shell profile)
-export STATE=<your-state>
 
 # Verify installation
 npm run validate
@@ -104,20 +101,11 @@ npm run contracts:generate -- --domain workflow
 
 ### 3. Validate
 
-Today, `npm run validate` checks OpenAPI spec syntax and pattern compliance. The prototypes will extend validation to check cross-artifact consistency:
-
 ```bash
-# Validate OpenAPI specs (works today)
 npm run validate
-
-# What validation will also catch (planned):
-# - State machine states don't match OpenAPI status enums
-# - Effect targets reference schemas that don't exist
-# - Rule context variables don't resolve to real fields
-# - Field metadata source paths don't resolve to OpenAPI schema fields
-# - Transitions missing required audit effects
-# - Metric sources reference states/transitions that don't exist
 ```
+
+This runs OpenAPI syntax validation, lint, pattern compliance, schema validation, and cross-artifact consistency checks (e.g. rule entity paths resolve to real API resources, field paths exist on the referenced schemas).
 
 ### 4. Test with the Mock Server
 
@@ -125,7 +113,7 @@ The mock server serves REST APIs (CRUD endpoints from OpenAPI specs) and a behav
 
 ```bash
 # Within this repository
-STATE=<your-state> npm run mock:start:all
+npm run mock:start:all
 
 # Or in a state repository with resolved specs
 npm run mock:start
@@ -142,7 +130,7 @@ States customize contracts via overlays without forking the base files. Overlays
 
 ```bash
 # Within this repository
-STATE=<your-state> npm run overlay:resolve
+npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 
 # Or in a state repository
 npm run resolve
@@ -150,7 +138,7 @@ npm run resolve
 
 If you're working in the base repository rather than a state repository, you can use the example overlay (`packages/contracts/overlays/example/`) to test overlay behavior without setting up a full state configuration.
 
-See [State Overlays Guide](../guides/state-overlays.md) for overlay syntax and the [State Setup Guide](../guides/state-setup-guide.md) for the full state repository setup.
+See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax and the [Setup Guide](../guides/setup-guide.md) for the full repository setup.
 
 ## Building a Production Adapter
 
@@ -170,23 +158,23 @@ See [Contract-Driven Architecture — From Contracts to Implementation](../archi
 
 ## Key Commands
 
-Commands within this repository (uses `STATE` environment variable):
+Commands within this repository:
 
 | Command | When to Use |
 |---------|-------------|
 | `npm run validate` | After editing specs or generating contracts |
-| `npm run overlay:resolve` | After editing overlays (with STATE set) |
+| `npm run resolve -- --overlay=... --out=packages/resolved` | After editing overlays |
 | `npm run mock:reset` | After editing example data |
-| `npm start` | To test contracts interactively (mock server + Swagger UI) |
+| `npm run mock:start:all` | To test contracts interactively (mock server + Swagger UI) |
 | `npm run api:new` | To scaffold a new API |
 
-See the [State Setup Guide](../guides/state-setup-guide.md) for equivalent commands in a state repository.
+See the [Setup Guide](../guides/setup-guide.md) for equivalent commands in a state repository.
 
 ## Next Steps
 
-- [State Setup Guide](../guides/state-setup-guide.md) — Setting up a state repository with overlays, CI, and resolved specs
+- [Setup Guide](../guides/setup-guide.md) — Setting up a state repository with overlays, CI, and resolved specs
 - [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) — How contracts define the API surface and enable portability
 - [Workflow Prototype](../prototypes/workflow-prototype.md) — Complete example of behavioral contracts (state machine, rules, metrics)
 - [Application Review Prototype](../prototypes/application-review-prototype.md) — Complete example of field metadata contracts
-- [State Overlays](../guides/state-overlays.md) — How state variations work
+- [Overlay Guide](../guides/overlay-guide.md) — How state variations work
 - [Creating APIs](../guides/creating-apis.md) — Designing new API specifications
