@@ -100,7 +100,7 @@ A person linked to an application. May be the primary applicant, a household mem
 
 SNAP requires all household members to be listed regardless of whether they are individually applying (7 CFR § 273.1).
 
-**Key fields:** `firstName`, `lastName`, `dateOfBirth`, `gender`, `SSN`, `relationship`, `roles`, `programsApplyingFor`, `resolvedPersonId`
+**Key fields:** `firstName`, `lastName`, `dateOfBirth`, `sex`, `SSN`, `relationship`, `roles`, `programsApplyingFor`, `resolvedPersonId`
 
 See [Decision 1](#decision-1-role-vs-relationship-on-applicationmember), [Decision 2](#decision-2-programs-applied-for--placement), [Decision 4](#decision-4-authorized-representative--modeling), [Decision 10](#decision-10-person-identity-matching).
 

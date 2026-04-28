@@ -44,7 +44,7 @@ info:
 
 actions:
   # Replace enum values
-  - target: $.Person.properties.gender.enum
+  - target: $.Person.properties.sex.enum
     description: California Gender Recognition Act compliance
     update:
       - male
@@ -416,7 +416,7 @@ All commands below respect the `STATE` environment variable. When set, they auto
 Always include a `description` for each action:
 
 ```yaml
-- target: $.Person.properties.gender.enum
+- target: $.Person.properties.sex.enum
   description: California Gender Recognition Act compliance  # Good
   update: [...]
 ```
