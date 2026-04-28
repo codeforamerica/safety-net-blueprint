@@ -65,6 +65,36 @@ authoring_style:
       - required: false (default for parameters)
 
 # =============================================================================
+# Required Info Fields
+# =============================================================================
+# Every API spec must include these fields in its info: block.
+required_info_fields:
+  fields:
+    - name: title
+      description: Human-readable API name
+      example: "Applications API"
+    - name: version
+      description: API version (semver)
+      example: "1.0.0"
+    - name: x-domain
+      description: Business domain this API belongs to (see api_classification for values)
+      required: true
+      example: "intake"
+    - name: x-status
+      description: Lifecycle status; use alpha for new APIs (see api_classification for values)
+      required: true
+      default: alpha
+      example: "alpha"
+    - name: x-visibility
+      description: Audience; use internal by default (see api_classification for values)
+      required: true
+      default: internal
+      example: "internal"
+  note: |
+    The api:new generator scaffolds all required fields automatically.
+    Run npm run validate to catch missing fields.
+
+# =============================================================================
 # List Endpoint Pattern# =============================================================================
 list_endpoints:
   # All REST list endpoints (GET /resources) must include these parameters
