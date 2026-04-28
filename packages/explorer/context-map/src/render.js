@@ -390,7 +390,7 @@ function renderFlowPage(flow) {
       const refText  = isBack ? `${arrow} ${refLabel}` : `${refLabel} ${arrow}`;
       const boxH2 = 36, boxY = y - boxH2 / 2;
       labelDivs.push(
-        `<div data-navigate="flow_${step.ref}" style="position:absolute;left:${ML}px;top:${boxY}px;` +
+        `<div data-navigate="flow_${refFlow?.domain}_${step.ref}" style="position:absolute;left:${ML}px;top:${boxY}px;` +
         `width:${W - ML - MR}px;height:${boxH2}px;border:1.5px solid #93c5fd;border-radius:4px;` +
         `background:#eff6ff;display:flex;align-items:center;justify-content:center;` +
         `cursor:pointer;z-index:3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">` +
@@ -533,10 +533,10 @@ function renderFlowPage(flow) {
     `<div style="position:absolute;top:0;left:0;right:0;height:44px;background:#f9fafb;` +
     `border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 20px;` +
     `z-index:10;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">` +
-    `<div style="font-size:12px;">` +
-    `<span data-navigate="__overview__" style="color:#2563eb;cursor:pointer;">&#8592; Context Map</span>` +
+    `<div class="slide-nav" style="font-size:12px;">` +
+    `<span data-navigate="domains" style="color:#2563eb;cursor:pointer;">&#8592; Context Map</span>` +
     `<span style="color:#6b7280;"> / </span>` +
-    `<span data-navigate="${flow.domain}" style="color:#2563eb;cursor:pointer;">${domainLabel}</span>` +
+    `<span data-navigate="domain_${flow.domain}" style="color:#2563eb;cursor:pointer;">${domainLabel}</span>` +
     `<span style="color:#6b7280;"> / ${flow.label}</span>` +
     `</div>` +
     `<div style="position:absolute;right:20px;top:0;height:44px;display:flex;align-items:center;gap:14px;font-size:9px;">` +
@@ -587,7 +587,7 @@ function renderOverview() {
     ...headerBarParts(W, [
       svgText(config.title || 'Context Map', 700, 27, { anchor: 'middle', size: 13, weight: 700, fill: '#111827' }),
     ]),
-    svgText('Click a domain to explore', 12, 27, { anchor: 'start', size: 9, fill: '#9ca3af', italic: true }),
+    `<g class="slide-nav">${svgText('Click a domain to explore', 12, 27, { anchor: 'start', size: 9, fill: '#9ca3af', italic: true })}</g>`,
   ];
 
   // Cross-cutting banner
@@ -607,7 +607,7 @@ function renderOverview() {
     const { cx, cy } = d;
 
     const isNav   = d.status !== 'not-started';
-    const navAttr = isNav ? `data-navigate="${d.id}" cursor="pointer"` : '';
+    const navAttr = isNav ? `data-navigate="domain_${d.id}" cursor="pointer"` : '';
     parts.push(hexPoly(cx, cy, R_OV, d.status, navAttr));
 
     const labelLines = wrapLines(d.label, LABEL_W, 13);
@@ -687,7 +687,7 @@ function renderDetail(domainId) {
   // ── Header bar ─────────────────────────────────────────────────────────────
   parts.push(
     ...headerBarParts(W, [
-      `<g data-navigate="__overview__" cursor="pointer">`,
+      `<g class="slide-nav" data-navigate="domains" cursor="pointer">`,
       `  <text x="20" y="27" font-size="12" fill="#2563eb" font-family="${FONT}">&#8592; Context Map</text>`,
       `</g>`,
     ], center.label),
@@ -713,6 +713,7 @@ function renderDetail(domainId) {
 
   // ── Flows strip ───────────────────────────────────────────────────────────
   if (hasFlows) {
+    parts.push(`<g class="slide-nav">`);
     parts.push(
       `<rect x="0" y="44" width="${W}" height="32" fill="#f0f9ff"/>`,
       `<line x1="0" y1="76" x2="${W}" y2="76" stroke="#bae6fd" stroke-width="1"/>`,
@@ -723,13 +724,14 @@ function renderDetail(domainId) {
       const label = flow.label || flow.id;
       const tw = Math.ceil(label.length * 6.5 + 20);
       parts.push(
-        `<g data-navigate="flow_${flow.id}" cursor="pointer">`,
+        `<g data-navigate="flow_${flow.domain}_${flow.id}" cursor="pointer">`,
         `  <rect x="${fx}" y="50" width="${tw}" height="19" rx="4" fill="white" stroke="#bae6fd"/>`,
         `  ${svgText(label, fx + tw / 2, 63.5, { anchor: 'middle', size: 9, fill: '#0284c7' })}`,
         `</g>`,
       );
       fx += tw + 8;
     }
+    parts.push(`</g>`);
   }
 
   // ── Connection lines (plain gray, no arrowheads) ──────────────────────────
@@ -845,18 +847,18 @@ function renderDetail(domainId) {
 // ── Main ───────────────────────────────────────────────────────────────────
 
 const overviewHtml = renderOverview();
-writeFileSync(resolve(OUT_DIR, 'overview.html'), overviewHtml, 'utf8');
-console.log('Written: overview.html');
+writeFileSync(resolve(OUT_DIR, 'domains.html'), overviewHtml, 'utf8');
+console.log('Written: domains.html');
 
 for (const d of config.domains) {
   if (d.status === 'not-started') continue;
   const html = renderDetail(d.id);
-  writeFileSync(resolve(OUT_DIR, `${d.id}.html`), html, 'utf8');
-  console.log(`Written: ${d.id}.html`);
+  writeFileSync(resolve(OUT_DIR, `domain_${d.id}.html`), html, 'utf8');
+  console.log(`Written: domain_${d.id}.html`);
 }
 
 for (const flow of (config.flows || [])) {
   const html = renderFlowPage(flow);
-  writeFileSync(resolve(OUT_DIR, `flow_${flow.id}.html`), html, 'utf8');
-  console.log(`Written: flow_${flow.id}.html`);
+  writeFileSync(resolve(OUT_DIR, `flow_${flow.domain}_${flow.id}.html`), html, 'utf8');
+  console.log(`Written: flow_${flow.domain}_${flow.id}.html`);
 }
