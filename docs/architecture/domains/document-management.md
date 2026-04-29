@@ -217,7 +217,7 @@ States can extend the document lifecycle via overlay — adding custom states, t
 
 **Status:** Decided: B
 
-**What's being decided:** How documents are associated with applications and cases, and how those associations drive retention clocks.
+**What's being decided:** How documents are associated with the subjects they support across domains, and how those associations drive retention clocks.
 
 **Considerations:**
 - FNS policy supports reuse of documents across programs in a single application and across a household's applications over time. A model where each document belongs to exactly one application cannot support reuse without duplication — which creates retention management problems (which copy starts the clock?) and unnecessary storage cost.
