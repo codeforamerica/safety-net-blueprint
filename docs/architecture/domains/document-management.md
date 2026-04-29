@@ -168,7 +168,7 @@ States can extend the document lifecycle via overlay — adding custom states, t
 | 2 | [Context pass-through model](#decision-2-context-pass-through-model) | Opaque `metadata` field stores and echoes correlation IDs without interpretation. |
 | 3 | [Document-subject association model](#decision-3-document-subject-association-model) | `DocumentLink` junction entity with `closedAt` for cross-program reuse and retention management. |
 | 4 | [DocumentType as config-managed resource](#decision-4-documenttype-as-config-managed-resource) | Per-type retention configuration using the `config_managed_resources` pattern. |
-| 5 | [Records lifecycle model](#decision-5-records-lifecycle-model) | `active → retained → pending_disposition → destroyed` with `legalHold` as an orthogonal boolean. |
+| 5 | [Legal hold modeling](#decision-5-legal-hold-modeling) | `legalHold` boolean is orthogonal to the lifecycle — consistent with all major records management vendors. |
 | 6 | [File retrieval model](#decision-6-file-retrieval-model) | Both proxy and redirect responses documented; proxy is the default; states switch via overlay. |
 
 ---
@@ -251,16 +251,16 @@ States can extend the document lifecycle via overlay — adding custom states, t
 
 ---
 
-### Decision 5: Records lifecycle model
+### Decision 5: Legal hold modeling
 
 **Status:** Decided: B
 
-**What's being decided:** The lifecycle states for documents from active use through retention and destruction, and how legal hold interacts with the lifecycle.
+**What's being decided:** Whether legal hold is modeled as a lifecycle state or as an orthogonal flag independent of the document lifecycle.
+
+**Background:** DoD 5015.2 and all five major records management vendors (Laserfiche, Hyland OnBase, OpenText, IBM FileNet/IER, Microsoft Purview) converge on the same four-state lifecycle: active → retained → pending_disposition → destroyed. The naming varies — Purview uses "active/expired/pending disposal/deleted"; Laserfiche uses "active/cutoff/eligible for disposal/destroyed" — but the states are structurally identical. This lifecycle is not a decision point; it is the industry standard required by DoD 5015.2. The decision is how legal hold interacts with it.
 
 **Considerations:**
-- DoD 5015.2 is the operative US government certification standard for records management systems. It requires configurable retention schedules, hold management that suspends normal disposition, a disposition workflow with an explicit approval step, and audit trails for all disposition actions. OpenText (Documentum) and IBM FileNet/IER are DoD 5015.2 certified; Laserfiche and Hyland OnBase meet the functional requirements without formal certification.
-- ISO 15489:2016 defines four properties of trustworthy records (authenticity, reliability, integrity, usability) and is the international guidance standard. It is not a certifiable standard; DoD 5015.2 is the practical US government proxy.
-- All five vendors (Laserfiche, Hyland OnBase, OpenText, IBM FileNet/IER, Microsoft Purview) implement the same four-state lifecycle. The naming varies — Purview uses "active/expired/pending disposal/deleted"; Laserfiche uses "active/cutoff/eligible for disposal/destroyed" — but the states are structurally identical.
+- DoD 5015.2 requires hold management that suspends normal disposition. OpenText (Documentum) and IBM FileNet/IER are DoD 5015.2 certified; Laserfiche and Hyland OnBase meet the functional requirements without formal certification.
 - No major vendor treats legal hold as a lifecycle state. All implement it as an orthogonal flag that overrides the normal lifecycle — an object on legal hold can still be in `retained` state; the hold prevents advancement to disposition until lifted.
 - Medicaid estate recovery (42 CFR § 433.36) requires indefinite retention, handled by setting a very long `retentionYears` or using `document_date` as the trigger on the applicable document type.
 
