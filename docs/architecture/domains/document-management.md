@@ -66,6 +66,7 @@ Key fields:
 - `sizeBytes` — file size in bytes; supports storage quota management and upload validation
 - `uploadedById` — identity of the uploader; required by HIPAA (45 CFR § 164.312) for access audit and by DoD 5015.2 for records chain of custody
 - `createdAt` — upload timestamp; the authoritative record of when the file was received, independent of storage backend metadata
+- `contentHash` — SHA-256 hash of the file bytes; computed on upload. See [Decision 7](#decision-7-duplicate-detection).
 
 See [Decision 1](#decision-1-two-level-document-model). All major ECM platforms have an equivalent versioning concept: SharePoint SPFile versions, Box FileVersion, Salesforce ContentVersion, Documentum version labels, FileNet version series, Laserfiche version entry.
 
@@ -156,6 +157,8 @@ The document management domain emits events across four categories: document and
 | 4 | [DocumentType as config-managed resource](#decision-4-documenttype-as-config-managed-resource) | Per-type retention configuration using the `config_managed_resources` pattern. |
 | 5 | [Legal hold modeling](#decision-5-legal-hold-modeling) | `legalHold` boolean is orthogonal to the lifecycle — consistent with all major records management vendors. |
 | 6 | [File retrieval model](#decision-6-file-retrieval-model) | Both proxy and redirect responses documented; proxy is the default; states switch via overlay. |
+| 7 | [Duplicate detection](#decision-7-duplicate-detection) | Store `contentHash` on DocumentVersion; no response behavior in baseline. |
+| 8 | [Virus scanning model](#decision-8-virus-scanning-model) | Synchronous blocking by default — upload returns 422 if scan rejects. |
 
 ---
 
@@ -280,17 +283,60 @@ The document management domain emits events across four categories: document and
 
 ---
 
+### Decision 7: Duplicate detection
+
+**Status:** Decided: B
+
+**What's being decided:** Whether the baseline detects duplicate file uploads and what behavior it exposes when it does.
+
+**Considerations:**
+- M-Files and OpenText surface duplicate content warnings at upload time; neither enforces uniqueness by default — enforcement is configurable per document type.
+- In safety net programs, re-uploading the same file is common and often legitimate (caseworker retry, same pay stub for a different program). Any enforcement behavior should be state-configured, not a baseline default.
+- Storing a SHA-256 hash on every version enables detection at no cost to the upload path and makes the capability available to states without a contract change.
+
+**Options:**
+- **(A)** No detection — no hash stored; duplicate uploads not addressed
+- **(B)** ✓ Passive detection — `contentHash` stored on every `DocumentVersion`; baseline enforces nothing; states add warning or rejection behavior via customization
+- **(C)** Non-blocking warning — upload always succeeds; if a matching hash exists, `201` response includes `duplicateVersionId`
+- **(D)** Opt-in rejection — `?rejectDuplicates=true` on upload; `409 Conflict` if hash matches an existing version
+
+**Decision:** Baseline implements option B. See Customization for how states can implement C or D.
+
+---
+
+### Decision 8: Virus scanning model
+
+**Status:** Decided: B
+
+**What's being decided:** Whether the baseline exposes a contract surface for virus scanning, and whether scanning blocks the upload synchronously or happens asynchronously.
+
+**Considerations:**
+- Box blocks uploads synchronously, returning a `409` if a file is flagged — the uploader gets immediate feedback.
+- OpenText Documentum and IBM FileNet support async quarantine — the upload succeeds, but the document enters a quarantine state and is inaccessible until cleared.
+- For safety net documents (small files, submitted by applicants and caseworkers), synchronous blocking gives the clearest user experience: the uploader knows immediately to try again.
+- Async quarantine is better suited for large-file or batch pipelines where holding the HTTP connection open during scanning is not feasible.
+- Both models require a contract surface: synchronous adds a 422 error response to the upload endpoint; async adds a `scanStatus` field on `DocumentVersion` and a quarantine event.
+
+**Options:**
+- **(A)** No contract surface — scanning is purely an adapter infrastructure concern
+- **(B)** ✓ Synchronous blocking — upload returns `422 Unprocessable Entity` with error code `file_rejected_by_virus_scan` if the adapter's scanner rejects the file; no `DocumentVersion` is created
+- **(C)** Async quarantine — upload succeeds; `DocumentVersion` gets a `scanStatus` field (`pending`, `clean`, `quarantined`); a background scan updates the status; file content is inaccessible while quarantined
+
+**Decision:** Baseline implements option B. See Customization for how states can implement option C.
+
+---
+
 ## Customization
 
 ### Baseline constraints
 
-The following should not be removed or overlaid away:
+Elements with external compliance or structural dependencies:
 
 | Element | Reason | Decision |
 |---|---|---|
-| `active → retained → pending_disposition → destroyed` lifecycle states | Required for DoD 5015.2 compliance | [Decision 5](#decision-5-legal-hold-modeling) |
-| `legalHold` boolean | Required for DoD 5015.2 hold management | [Decision 5](#decision-5-legal-hold-modeling) |
-| Two-level `Document` + `DocumentVersion` structure | Foundation of versioning and cross-program reuse | [Decision 1](#decision-1-two-level-document-model) |
+| `active → retained → pending_disposition → destroyed` lifecycle states | DoD 5015.2 names these phases; renaming breaks certification conformance | [Decision 5](#decision-5-legal-hold-modeling) |
+| `legalHold` boolean | DoD 5015.2 requires a hold flag; renaming is acceptable | [Decision 5](#decision-5-legal-hold-modeling) |
+| Two-level `Document` + `DocumentVersion` structure | Removing it requires redesigning versioning and cross-program attachment | [Decision 1](#decision-1-two-level-document-model) |
 
 ### Document types
 
@@ -298,7 +344,7 @@ States configure baseline document types in a `document-management-config.yaml` 
 
 ### Entity fields
 
-States can add fields to Document, DocumentVersion, DocumentType, and DocumentLink via overlay. States that need typed access to correlation data (rather than opaque JSON) can add structured metadata fields to Document via overlay.
+States can add fields to Document, DocumentVersion, DocumentType, and DocumentLink via overlay.
 
 ### File retrieval delivery mode
 
@@ -308,18 +354,42 @@ The content endpoint defaults to proxy delivery (`200` with streamed bytes). Sta
 
 States can extend the document lifecycle via overlay — adding custom states, transitions, or guards.
 
+### Version restore
+
+States that need explicit restore semantics can add a `POST /documents/{documentId}/restore-version` endpoint. One approach: create a new `DocumentVersion` copying the target version's file content, update `Document.latestVersionId`, and emit a version-uploaded event. A `restoredFromVersionId` field on `DocumentVersion` can optionally preserve the audit trail context.
+
+### Virus scanning — async quarantine
+
+States that prefer async scanning (e.g., for large files or batch pipelines) could add a `scanStatus` field to `DocumentVersion` (`pending`, `clean`, `quarantined`) and make file content inaccessible while `scanStatus` is `pending` or `quarantined`. A background scan updates the status; if quarantined, a `document_version.quarantined` event fires so consumers (caseworkers, intake) know not to act on the version. Once cleared, the version becomes accessible normally.
+
+### E-signature
+
+States integrating a signing service (DocuSign, Adobe Sign, etc.) store the completed signed document as a new `DocumentVersion` upload. Two approaches for carrying signature metadata:
+
+- **Pass-through** — the signing integration passes envelope ID, signed-at timestamp, and signer identity via `Document.metadata`. The domain stores and echoes this without interpreting it.
+- **Typed fields** — states that want signature state to be queryable within the domain can add fields to `DocumentVersion` via overlay — for example `signatureStatus` (`unsigned`, `pending`, `signed`, `rejected`), `signedAt`, and `signedById`.
+
+### Chunked upload
+
+States that need resumable or chunked upload support can add a parallel upload session flow alongside the standard single-POST endpoint. One approach: a `POST /upload-sessions` endpoint initiates the session and returns a session ID; clients post chunks to `/upload-sessions/{id}/chunks`; a finalization call assembles the chunks and creates a `DocumentVersion` via the normal path. The TUS open protocol (tus.io) provides a well-established contract for this pattern if states want interoperable client support.
+
+### Duplicate detection
+
+`contentHash` is stored on every version but the baseline enforces nothing. States can build on it in two ways:
+
+- **Non-blocking warning** — if the incoming hash matches an existing version on the same document, the upload could succeed with `201` and include a `duplicateVersionId` in the response, allowing callers to decide what to do without blocking the upload.
+- **Opt-in rejection** — a `?rejectDuplicates=true` query parameter could return `409 Conflict` with the matching `duplicateVersionId` when a hash collision is found, for workflows where strict uniqueness is needed.
+
 ## Out of scope
+
+Adjacent concerns a reader might assume this domain owns, but that are not document management capabilities:
 
 | Capability | Domain | Notes |
 |---|---|---|
-| Virus scanning / malware detection | Storage adapter | Pre-upload scanning is a storage infrastructure concern |
-| OCR / content extraction | Data exchange | Text extraction and structured data production from documents |
 | Verification sufficiency decisions | Intake | Whether a document satisfies a verification obligation is an intake rules concern |
 | Eligibility determination | Eligibility | Document content does not feed directly into eligibility logic |
 | Caseworker review workflow | Workflow | Creating and routing review tasks in response to document uploads |
 | Case file assembly | Case management | Organizing documents into a case record view |
-| E-signature | Adapter layer | Out of scope for the baseline blueprint |
-| Bulk document import | Not in scope | Batch import from legacy systems is not a baseline capability |
 
 ## Capability coverage
 
@@ -329,15 +399,16 @@ States can extend the document lifecycle via overlay — adding custom states, t
 |---|---|---|
 | Document creation with metadata | All major platforms | **Planned** |
 | Version history (immutable per upload) | All major platforms | **Planned** |
-| Version restore | Enterprise ECM (Documentum, FileNet) | **Gap** — not yet assessed |
-| Concurrent edit locking | Documentum, FileNet, OnBase | **Not in scope** |
+| Version restore | Enterprise ECM (Documentum, FileNet) | **Not in scope** — core use case covered by uploading a new version; see Customization for adding explicit restore semantics |
+| Bulk document import | Enterprise ECM, migration tooling | **Not in scope** — migration concern; states use platform-specific ETL or direct data migration |
+| Concurrent edit locking | Documentum, FileNet, OnBase | **Not in scope** — documents are immutable per upload; no in-place editing model |
 
 ### Cross-program reuse
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
 | Document sharing across subjects | Laserfiche, FileNet IER, OnBase | **Planned** — DocumentLink model |
-| Duplicate detection | M-Files, OpenText | **Not in scope** |
+| Duplicate detection | M-Files, OpenText | **Planned** — `contentHash` on DocumentVersion. See [Decision 7](#decision-7-duplicate-detection). |
 
 ### Records management
 
@@ -346,7 +417,7 @@ States can extend the document lifecycle via overlay — adding custom states, t
 | Per-type retention scheduling | OnBase, Laserfiche, OpenText | **Planned** — DocumentType.retentionYears / retentionTrigger |
 | Legal hold | All DoD 5015.2 platforms | **Planned** — legalHold boolean |
 | Disposition approval (per document) | DoD 5015.2 requirement | **Planned** — `POST /documents/{id}/approve-disposition` RPC endpoint |
-| Bulk disposition approval | Laserfiche, OnBase batch review | **Gap** — batch endpoint not in baseline; tracked as future work |
+| Bulk disposition approval | Laserfiche, OnBase batch review | **Gap** — pending cross-cutting batch operation pattern design |
 | Destruction audit | DoD 5015.2 requirement | **Planned** — via events |
 
 ### Access and audit
@@ -354,8 +425,8 @@ States can extend the document lifecycle via overlay — adding custom states, t
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
 | Document access audit trail | HIPAA, DoD 5015.2 | **Planned** — event on content request |
-| Role-based access control | All major platforms | **Adapter layer** |
-| Document-level ACLs | Enterprise ECM | **Adapter layer** |
+| Role-based access control | All major platforms | **Not in scope** — identity-access domain |
+| Document-level ACLs | Enterprise ECM | **Planned** — see #261; depends on identity-access principal model |
 
 ### File delivery
 
@@ -363,7 +434,9 @@ States can extend the document lifecycle via overlay — adding custom states, t
 |---|---|---|
 | Proxied download (secure default) | Government deployments | **Planned** |
 | Redirect to signed URL (performance opt-in) | Box, S3-backed ECM | **Planned** — opt-in via overlay |
-| Chunked / resumable upload | S3 multipart, Azure Blob | **Adapter layer** |
+| Chunked / resumable upload | S3 multipart, Azure Blob | **Adapter layer** — storage-specific protocol; the upload endpoint contract stays as a single POST |
+| Virus scanning / malware detection | Enterprise ECM upload pipelines | **Planned** — synchronous blocking by default; see [Decision 8](#decision-8-virus-scanning-model) and Customization for async quarantine |
+| E-signature | DocuSign, Adobe Sign integrations in ECM | **Adapter layer** — no signing integration in baseline; states integrate DocuSign, Adobe Sign, or similar; the completed signed document is stored as a normal version upload |
 
 ### Integration
 
@@ -371,7 +444,7 @@ States can extend the document lifecycle via overlay — adding custom states, t
 |---|---|---|
 | Event emission on upload | Box, SharePoint/Graph, modern ECM | **Planned** — document_version.uploaded event |
 | Event emission on document creation | Modern ECM | **Planned** — document.created event |
-| Full-text search / OCR | OpenText, FileNet, OnBase | **Not in scope** — data exchange domain |
+| Full-text search / OCR | OpenText, FileNet, OnBase | **Not in scope** — content extraction is a storage adapter concern; full-text search belongs to the search domain |
 
 ## References
 
