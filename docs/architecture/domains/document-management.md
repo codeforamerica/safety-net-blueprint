@@ -8,7 +8,7 @@ The document management domain is the central store for uploaded files and their
 
 ## What happens during document management
 
-1. A document record is created, establishing a logical container with a type, title, and correlation metadata linking it to the relevant application or case.
+1. A document record is created, establishing a logical container with a type and title.
 2. A file is uploaded and attached to the document record as its first version.
 3. If a document needs to be replaced or corrected, a new version is uploaded. Each upload produces a new version record; previous versions are preserved.
 4. A document may be linked to multiple applications or cases, enabling cross-program reuse without duplication.
