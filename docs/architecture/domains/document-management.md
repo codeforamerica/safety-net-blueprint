@@ -151,7 +151,7 @@ The content endpoint defaults to proxy delivery (`200` with streamed bytes). Sta
 
 ### State machine
 
-States can extend the document lifecycle via overlay — adding custom states, transitions, or guards. The baseline four-state records lifecycle is not removable; states extend on top of it.
+States can extend the document lifecycle via overlay — adding custom states, transitions, or guards. The baseline four-state records lifecycle should not be removed — it is required for DoD 5015.2 compliance; states extend on top of it.
 
 ## Contract artifacts
 
@@ -189,7 +189,7 @@ States can extend the document lifecycle via overlay — adding custom states, t
 - **(A)** Flat file model — one entity per upload, no document concept
 - **(B)** ✓ Two-level model — `Document` (logical, stable identity) + `DocumentVersion` (physical, immutable per upload)
 
-**Customization:** States can add fields to both entities via overlay. The two-level structure is not overlayable — it is the foundation of the versioning and reuse model.
+**Customization:** States can add fields to both entities via overlay. The two-level structure should not be overlaid away — it is the foundation of the versioning and reuse model.
 
 ---
 
