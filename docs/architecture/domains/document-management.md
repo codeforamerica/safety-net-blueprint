@@ -268,7 +268,7 @@ States can extend the document lifecycle via overlay — adding custom states, t
 - **(A)** Integrated legal hold state — legal hold is a lifecycle state (e.g., `active → legal_hold → retained → ...`)
 - **(B)** ✓ Orthogonal boolean — `legalHold: boolean` is independent of lifecycle; `active → retained → pending_disposition → destroyed` with `legalHold` gating disposition
 
-**Customization:** States can add lifecycle states via overlay (e.g., a `quarantine` state for pending virus scan results). The baseline four states and the `legalHold` boolean cannot be removed — they are required for regulatory compliance.
+**Customization:** States can add lifecycle states via overlay (e.g., a `quarantine` state for pending virus scan results). The baseline four states and the `legalHold` boolean should not be removed — doing so would break DoD 5015.2 compliance.
 
 ---
 
