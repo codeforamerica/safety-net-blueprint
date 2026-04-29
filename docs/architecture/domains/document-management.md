@@ -256,6 +256,8 @@ The document management domain emits events across four categories: document and
 
 **What's being decided:** How consumers download file bytes — proxied through the API, redirected to storage via signed URL, or both.
 
+**Background:** There are exactly two HTTP mechanisms for serving file bytes from a storage backend: the API server fetches the file and streams it in the response body (`200`), or the API server issues a redirect and the client fetches directly from storage (`302`). These are the only two options. The decision is which to support and which to make the default.
+
 **Considerations:**
 - Proxied delivery (API streams bytes): full auth enforcement on every request, storage backend not exposed to clients, download auditable at API layer. Higher server load and latency.
 - Redirect delivery (302 to signed URL): direct client-to-storage download, lower API server load. Exposes storage bucket name and cloud provider to clients. Signed URL can be forwarded and used within its expiry window (typically 5–15 minutes) without re-authenticating to the API.
