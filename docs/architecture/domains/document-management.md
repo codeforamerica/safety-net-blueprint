@@ -139,20 +139,6 @@ The document management domain emits events across four categories: document and
 | `document_management.document.legal_hold_placed` | Notifies that a document has been placed under legal hold and will not advance through the retention lifecycle; standard in all DoD 5015.2 compliant platforms | `legalHold` set to `true` | Legal, compliance, case management |
 | `document_management.document.legal_hold_released` | Notifies that the legal hold has been lifted; document may now resume normal retention lifecycle | `legalHold` set to `false` | Legal, compliance, case management |
 
-## Customization
-
-### Document types
-
-States configure baseline document types in a `document-management-config.yaml` deployment artifact. Each type specifies `retentionYears` and `retentionTrigger`. States with longer retention requirements (e.g., Medicaid estate recovery) set an appropriate `retentionYears` value or use `document_date` as the trigger for documents without a clear closure event. States can also create additional document types at runtime via the API; runtime-created types are marked `source: user` and can be deleted, unlike config-seeded types.
-
-### File retrieval delivery mode
-
-The content endpoint defaults to proxy delivery (`200` with streamed bytes). States switch to redirect delivery (`302` to a signed storage URL) by adding an overlay that sets `x-content-delivery: redirect` on the `GET /document-versions/{id}/content` operation. The adapter reads this extension at startup. Both response shapes are already documented in the OpenAPI spec, so clients handle either without contract changes. See [Decision 6](#decision-6-file-retrieval-model) for the full trade-off analysis.
-
-### State machine
-
-States can extend the document lifecycle via overlay — adding custom states, transitions, or guards. The baseline four-state records lifecycle should not be removed — it is required for DoD 5015.2 compliance; states extend on top of it.
-
 ## Contract artifacts
 
 | Artifact | File |
@@ -189,8 +175,6 @@ States can extend the document lifecycle via overlay — adding custom states, t
 - **(A)** Flat file model — one entity per upload, no document concept
 - **(B)** ✓ Two-level model — `Document` (logical, stable identity) + `DocumentVersion` (physical, immutable per upload)
 
-**Customization:** States can add fields to both entities via overlay. The two-level structure should not be overlaid away — it is the foundation of the versioning and reuse model.
-
 ---
 
 ### Decision 2: Context pass-through model
@@ -208,8 +192,6 @@ States can extend the document lifecycle via overlay — adding custom states, t
 **Options:**
 - **(A)** Domain-aware — typed FK fields (`verificationId`, `taskId`) on Document
 - **(B)** ✓ Context pass-through — `metadata` is an opaque JSON object; callers provide correlation IDs; document management stores and echoes them in events unchanged
-
-**Customization:** States can add typed metadata fields via overlay if their adapter needs structured access to correlation data.
 
 ---
 
@@ -247,8 +229,6 @@ States can extend the document lifecycle via overlay — adding custom states, t
 - **(B)** Runtime-only — all types created via API, none seeded
 - **(C)** ✓ Config-managed — baseline types seeded via `document-management-config.yaml`; states add more at runtime; `source` field distinguishes them; per-type `retentionYears` and `retentionTrigger`
 
-**Customization:** States replace the baseline `document-management-config.yaml` with a state-specific version to adjust retention periods or add document types. `user`-source types are also created at runtime via the API.
-
 ---
 
 ### Decision 5: Legal hold modeling
@@ -267,8 +247,6 @@ States can extend the document lifecycle via overlay — adding custom states, t
 **Options:**
 - **(A)** Integrated legal hold state — legal hold is a lifecycle state (e.g., `active → legal_hold → retained → ...`)
 - **(B)** ✓ Orthogonal boolean — `legalHold: boolean` is independent of lifecycle; `active → retained → pending_disposition → destroyed` with `legalHold` gating disposition
-
-**Customization:** States can add lifecycle states via overlay (e.g., a `quarantine` state for pending virus scan results). The baseline four states and the `legalHold` boolean should not be removed — doing so would break DoD 5015.2 compliance.
 
 ---
 
@@ -298,9 +276,35 @@ States can extend the document lifecycle via overlay — adding custom states, t
 - **(B)** Redirect only
 - **(C)** ✓ Contract-neutral — both `200` (binary stream) and `302` (redirect) documented as valid responses on `GET /document-versions/{id}/content`; proxy is the default; states switch to redirect by adding `x-content-delivery: redirect` to the content operation via overlay
 
-**Customization:** Overlay sets `x-content-delivery: redirect` on `GET /document-versions/{id}/content`. The adapter reads this extension at startup and changes its delivery strategy accordingly.
-
 ---
+
+## Customization
+
+### Baseline constraints
+
+The following should not be removed or overlaid away:
+
+| Element | Reason | Decision |
+|---|---|---|
+| `active → retained → pending_disposition → destroyed` lifecycle states | Required for DoD 5015.2 compliance | [Decision 5](#decision-5-legal-hold-modeling) |
+| `legalHold` boolean | Required for DoD 5015.2 hold management | [Decision 5](#decision-5-legal-hold-modeling) |
+| Two-level `Document` + `DocumentVersion` structure | Foundation of versioning and cross-program reuse | [Decision 1](#decision-1-two-level-document-model) |
+
+### Document types
+
+States configure baseline document types in a `document-management-config.yaml` deployment artifact. Each type specifies `retentionYears` and `retentionTrigger`. States with longer retention requirements (e.g., Medicaid estate recovery) set an appropriate `retentionYears` value or use `document_date` as the trigger for documents without a clear closure event. States can also create additional document types at runtime via the API; runtime-created types are marked `source: user` and can be deleted, unlike config-seeded types.
+
+### Entity fields
+
+States can add fields to Document, DocumentVersion, DocumentType, and DocumentLink via overlay. States that need typed access to correlation data (rather than opaque JSON) can add structured metadata fields to Document via overlay.
+
+### File retrieval delivery mode
+
+The content endpoint defaults to proxy delivery (`200` with streamed bytes). States switch to redirect delivery (`302` to a signed storage URL) by adding an overlay that sets `x-content-delivery: redirect` on the `GET /document-versions/{id}/content` operation. The adapter reads this extension at startup. Both response shapes are already documented in the OpenAPI spec, so clients handle either without contract changes. See [Decision 6](#decision-6-file-retrieval-model) for the full trade-off analysis.
+
+### State machine
+
+States can extend the document lifecycle via overlay — adding custom states, transitions, or guards.
 
 ## Out of scope
 
