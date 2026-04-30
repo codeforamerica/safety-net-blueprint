@@ -38,18 +38,20 @@ ISO 15489:2016 defines the properties of trustworthy records (authenticity, reli
 
 ### Document
 
-The core record representing a document across all its versions. It holds the document's identity, type, and the context the uploader provided; the actual file content is stored in DocumentVersion records. See [Decision 1](#decision-1-two-level-document-model) for why a two-level model is used.
+The core record representing a document across all its versions. It holds the document's identity, type, and the correlation context callers have attached; the actual file content is stored in DocumentVersion records. See [Decision 1](#decision-1-two-level-document-model) for why a two-level model is used.
 
 Key fields:
 - `id` — UUID
 - `documentTypeId` — links to the DocumentType for this document; determines the retention period and which event starts the retention clock
 - `title` — human-readable label set by the uploading caller (e.g., "John Smith — Pay Stub March 2026"), distinct from the upload filename; standard across Salesforce ContentDocument, FileNet DocumentTitle, M-Files Name/Title, and SharePoint Title column
 - `documentDate` — optional ISO date representing the document's own date (e.g., the date printed on a pay stub or bank statement); set by the uploading caller; required when `DocumentType.retentionTrigger = document_date`; distinct from `DocumentVersion.createdAt`, which is the upload timestamp
-- `metadata` — a JSON object that callers use to pass context about what this document is for (e.g., an application ID or verification reference); stored and echoed in events without interpretation, so downstream systems can correlate the document with their own records without needing to query this domain. See [Decision 2](#decision-2-context-pass-through-model).
+- `metadata` — a JSON object that callers use to pass correlation context (e.g., an application ID, a verification reference, an e-signature envelope ID); stored and echoed in events without interpretation, so downstream systems can correlate the document with their own records without querying this domain; keys can be added or removed after creation via key-level endpoints without affecting other callers' keys. See [Decision 2](#decision-2-context-pass-through-model) and [Decision 12](#decision-12-metadata-mutability-and-update-model).
 - `lifecycleState` — where the document is in its records management lifecycle; determines whether the document is accessible, whether retention rules apply, and whether it is eligible for disposition; required by DoD 5015.2. See [Document lifecycle](#document-lifecycle).
 - `legalHold` — true/false flag, independent of lifecycle state; prevents the document from advancing to disposition until the hold is lifted, regardless of where it is in the retention schedule; required by DoD 5015.2 and implemented the same way on all major compliant platforms. See [Decision 5](#decision-5-legal-hold-modeling).
 - `latestVersionId` — links to the most recent DocumentVersion; provides a single authoritative pointer to the current file so consumers do not need to sort version history to find it. See [Decision 1](#decision-1-two-level-document-model).
 - `retentionDeadline` — the date when the retention period ends, computed when the document enters `retained` state as the trigger event timestamp plus `DocumentType.retentionYears`; the trigger timestamp varies by `DocumentType.retentionTrigger` (see [Document lifecycle](#document-lifecycle) for details); stored so the system can automatically advance the document to `pending_disposition` when the deadline passes without requiring a manual check; null until the document enters `retained` state
+- `dispositionApprovedBy` — identity of the records manager who authorized destruction; required by DoD 5015.2 for the destruction certificate; null until the document enters `destroyed` state. See [Decision 11](#decision-11-destruction-scope-and-metadata-retention).
+- `dispositionApprovedAt` — when destruction was authorized; the definitive date for the destruction certificate, distinct from `updatedAt` which is a generic last-modified timestamp; null until the document enters `destroyed` state. See [Decision 11](#decision-11-destruction-scope-and-metadata-retention).
 
 All major ECM platforms have an equivalent "document object" concept: SharePoint SPFile parent, Box File, Salesforce ContentDocument, Documentum SysObject, FileNet document class, Laserfiche entry.
 
@@ -103,14 +105,14 @@ Key fields:
 | `active` | Document is in active use and available for access | — |
 | `retained` | Retention trigger has fired; the document is past active use but must be kept for the full retention period before it can be reviewed for destruction — the minimum period is set by federal regulation | Running from trigger event per `DocumentType.retentionTrigger` |
 | `pending_disposition` | Retention period has elapsed; the document is held for a records manager to approve or defer destruction — DoD 5015.2 requires this review step before destruction | — |
-| `destroyed` | Document has been disposed of; file content is no longer accessible, but the record remains in this state as the required audit evidence of what was destroyed and when — DoD 5015.2 requires a destruction certificate. See [Decision 11](#decision-11-destruction-scope-and-metadata-retention). | — |
+| `destroyed` | Document has been disposed of; file content is no longer accessible, but the record stays so there is permanent proof of what was destroyed, when, and who authorized it — federal records law requires this evidence to survive the destruction itself. See [Decision 11](#decision-11-destruction-scope-and-metadata-retention). | — |
 
 ### Key transitions
 
 - **upload → active** — document and first version created in a single step on upload; document is active immediately. See [Decision 9](#decision-9-document-creation-model).
 - **retention trigger fires → retained** — for `case_closure` and `application_denial` triggers: all linked `DocumentLink.closedAt` values are set; for `document_date` and `submission_date` triggers: the configured condition is met; retention clock starts. See [Decision 3](#decision-3-document-subject-association-model).
 - **retention period elapsed → pending_disposition** — when `retentionDeadline` is reached and `legalHold` is false, the system automatically moves the document to `pending_disposition`; documents on legal hold remain in `retained` until the hold is lifted
-- **disposition approved → destroyed** — a records manager approves disposition via the API; the Document record transitions to `destroyed`; version metadata is retained as the required audit record of destruction but file content is no longer accessible; physical deletion of file bytes from storage is handled by the storage layer. See [Decision 11](#decision-11-destruction-scope-and-metadata-retention).
+- **disposition approved → destroyed** — a records manager approves disposition via the API; the Document record transitions to `destroyed` and `dispositionApprovedBy` / `dispositionApprovedAt` are set; version metadata is retained as the required audit record of destruction but file content is no longer accessible; physical deletion of file bytes from storage is handled by the storage layer. See [Decision 11](#decision-11-destruction-scope-and-metadata-retention).
 - **legalHold = true** — blocks advancement from `active` or `retained` regardless of retention schedule; document stays in its current state until hold is lifted. See [Decision 5](#decision-5-legal-hold-modeling).
 
 ## SLA and deadline management
@@ -163,6 +165,7 @@ The document management domain emits events across four categories: document and
 | 9 | [Document creation model](#decision-9-document-creation-model) | Document and first version are created atomically; upload is the creation event. |
 | 10 | [Retention trigger evaluation model](#decision-10-retention-trigger-evaluation-model) | `retentionTrigger` stored as data on DocumentType; state machine evaluates it generically. |
 | 11 | [Destruction scope and metadata retention](#decision-11-destruction-scope-and-metadata-retention) | Document and DocumentVersion records retained in `destroyed` state after destruction; content inaccessible via API. |
+| 12 | [Metadata mutability and update model](#decision-12-metadata-mutability-and-update-model) | Metadata keys are mutable via key-level PUT/DELETE endpoints; no operation replaces all keys at once. |
 
 ---
 
@@ -198,7 +201,7 @@ The document management domain emits events across four categories: document and
 
 **Options:**
 - **(A)** Domain-aware — typed FK fields (`verificationId`, `taskId`) on Document
-- **(B)** ✓ Context pass-through — `metadata` is an opaque JSON object; callers provide correlation IDs; document management stores and echoes them in events unchanged
+- **(B)** ✓ Context pass-through — `metadata` is an opaque JSON object; callers provide correlation IDs; document management stores and echoes the current state of `metadata` in events without interpreting it. See [Decision 12](#decision-12-metadata-mutability-and-update-model) for how keys are managed after creation.
 
 ---
 
@@ -210,7 +213,7 @@ The document management domain emits events across four categories: document and
 
 **Considerations:**
 - FNS policy supports reuse of documents across programs in a single application and across a household's applications over time. A model where each document belongs to exactly one application cannot support reuse without duplication — which creates retention management problems (which copy starts the clock?) and unnecessary storage cost.
-- IBM FileNet IER uses "containment relationships" (a document can be contained by multiple case objects). Laserfiche uses a folder/shortcut model for cross-case sharing. Hyland OnBase uses document-to-case link tables. All major government ECM platforms converge on a junction or link model for this reason.
+- IBM FileNet IER, Laserfiche, and Hyland OnBase all support linking a document to multiple case objects — through case folders, shortcut references, or link tables respectively. All major government ECM platforms converge on a junction or link model for this reason.
 - `DocumentLink.closedAt` is the trigger for closure-based retention types: when a subject closes, the system sets `closedAt` on all associated links. For documents linked to multiple subjects, each link has its own `closedAt`. For `case_closure` and `application_denial` triggers, retention starts from the latest `closedAt` across all links — the clock doesn't start until all associated subjects are closed.
 
 **Options:**
@@ -235,6 +238,8 @@ The document management domain emits events across four categories: document and
 - **(A)** Hardcoded enum — document types are a fixed contract enum
 - **(B)** Runtime-only — all types created via API, none seeded
 - **(C)** ✓ Config-managed — baseline types seeded via `document-management-config.yaml`; states add more at runtime; `source` field distinguishes them; per-type `retentionYears` and `retentionTrigger`
+
+**Customization:** See [Customization — Document types](#document-types) for how states configure baseline types and add program-specific ones.
 
 ---
 
@@ -261,13 +266,14 @@ The document management domain emits events across four categories: document and
 
 **Status:** Decided: C
 
-**What's being decided:** How file downloads work — whether the API streams the file to the requester or redirects them to fetch it directly from storage — given the security and performance differences between the two approaches.
+**What's being decided:** Whether to expose a dedicated endpoint for file content — separate from the version metadata endpoint — and if so, whether it streams the file to the requester or redirects them to fetch it from storage. The two questions are linked: the dedicated endpoint is what makes the audit record unambiguous.
 
 **Background:** There are exactly two HTTP mechanisms for serving file bytes from a storage backend: the API server fetches the file and streams it in the response body (`200`), or the API server issues a redirect and the client fetches directly from storage (`302`). These are the only two options. The decision is which to support and which to make the default.
 
 **Considerations:**
+- A dedicated content endpoint — separate from `GET /document-versions/{documentVersionId}` which returns JSON metadata — provides a single, unambiguous API call to log as "this file was accessed." HIPAA (45 CFR § 164.312) requires an audit record of who accessed which file and when. The alternative, a `downloadUrl` field on the version resource, loses this if the URL points directly to storage: the actual download happens outside the API and goes unobserved. Box, SharePoint, and Dropbox all use dedicated content endpoints for the same reason.
 - Proxied delivery (API streams bytes): full auth enforcement on every request, storage backend not exposed to clients, download auditable at API layer. Higher server load and latency.
-- Redirect delivery (302 to signed URL): direct client-to-storage download, lower API server load. Exposes storage bucket name and cloud provider to clients. Signed URL can be forwarded and used within its expiry window (typically 5–15 minutes) without re-authenticating to the API.
+- Redirect delivery (302 to a time-limited storage URL): direct client-to-storage download, lower API server load. Exposes storage bucket name and cloud provider to clients. The URL can be forwarded and used within its expiry window (typically 5–15 minutes) without re-authenticating to the API.
 - Box implements direct download via signed URL, logging URL issuance as the audit event. SharePoint and OnBase support both modes. Government deployments typically default to proxied for security posture.
 - The audit event fires when `GET /document-versions/{documentVersionId}/content` is called regardless of response type — the authorization event is captured at API layer in both modes.
 - For a blueprint targeting diverse state infrastructure (S3, Azure Blob, on-prem), delivery strategy is adapter-specific. Both response shapes should be documented so clients handle either.
@@ -306,7 +312,7 @@ The document management domain emits events across four categories: document and
 - **(C)** Non-blocking warning — upload always succeeds; if a matching hash exists, `201` response includes `duplicateVersionId`
 - **(D)** Opt-in rejection — `?rejectDuplicates=true` on upload; `409 Conflict` if hash matches an existing version
 
-**Decision:** Baseline implements option B. See Customization for how states can implement C or D.
+**Customization:** See [Customization — Duplicate detection](#duplicate-detection) for how states can implement options C or D.
 
 ---
 
@@ -317,10 +323,8 @@ The document management domain emits events across four categories: document and
 **What's being decided:** How virus scanning fits into the upload flow — whether a flagged file stops the upload immediately or is quarantined and reviewed afterward — given that the two approaches work very differently for users and for whoever builds the system.
 
 **Considerations:**
-- Box blocks uploads synchronously, returning a `409` if a file is flagged — the uploader gets immediate feedback.
-- OpenText Documentum and IBM FileNet support async quarantine — the upload succeeds, but the document enters a quarantine state and is inaccessible until cleared.
-- For safety net documents (small files, submitted by applicants and caseworkers), synchronous blocking gives the clearest user experience: the uploader knows immediately to try again.
-- Async quarantine is better suited for large-file or batch pipelines where holding the HTTP connection open during scanning is not feasible.
+- For safety net documents (small files submitted directly by applicants and caseworkers), synchronous blocking gives immediate feedback: the upload request is short-lived enough to hold open during a scan, and the uploader knows right away to try a different file.
+- Async quarantine — upload succeeds but content is inaccessible until a background scan completes — is better suited for large-file or batch pipelines where holding the HTTP connection open during scanning is not feasible. Some enterprise ECM platforms support this model for those use cases.
 - Both models require a contract surface: synchronous adds a 422 error response to the upload endpoint; async adds a `scanStatus` field on `DocumentVersion` and a quarantine event.
 
 **Options:**
@@ -328,7 +332,7 @@ The document management domain emits events across four categories: document and
 - **(B)** ✓ Synchronous blocking — upload returns `422 Unprocessable Entity` with error code `file_rejected_by_virus_scan` if the adapter's scanner rejects the file; no `DocumentVersion` is created
 - **(C)** Async quarantine — upload succeeds; `DocumentVersion` gets a `scanStatus` field (`pending`, `clean`, `quarantined`); a background scan updates the status; file content is inaccessible while quarantined
 
-**Decision:** Baseline implements option B. See Customization for how states can implement option C.
+**Customization:** See [Customization — Virus scanning — async quarantine](#virus-scanning--async-quarantine) for how states can implement option C.
 
 ---
 
@@ -382,6 +386,29 @@ The document management domain emits events across four categories: document and
 - **(A)** Records deleted — `Document` and all `DocumentVersion` database records removed; `GET /documents/{documentId}` returns `404`; only the `document.destroyed` event serves as audit record
 - **(B)** ✓ Records retained — `Document` remains in `destroyed` state; `DocumentVersion` records retained; `GET /documents/{documentId}` returns the document metadata with `lifecycleState: destroyed`; content endpoint returns an appropriate error; satisfies the DoD 5015.2 destruction certificate requirement alongside the `document.destroyed` event
 
+**Decision:** The destruction certificate is the combination of the retained `Document` record (what was destroyed, under which schedule) and `dispositionApprovedBy` / `dispositionApprovedAt` fields stamped at destruction time (who authorized it and when) — meeting the DoD 5015.2 requirement for documented evidence of what was destroyed and by whose authority.
+
+---
+
+### Decision 12: Metadata mutability and update model
+
+**Status:** Decided: B
+
+**What's being decided:** Whether the `metadata` correlation context on a Document can be updated after the document is created, and if so, how to structure updates so multiple callers can each manage their own keys without overwriting each other.
+
+**Considerations:**
+- Box, Google Drive, SharePoint, Salesforce, and IBM FileNet all make document metadata mutable after creation. Write-once is not an industry pattern.
+- Multiple systems may attach correlation context to the same document at different points — intake at upload time, a signing service when an e-signature workflow completes, workflow when it assigns a review task. All need to store their own key without knowing what other callers have set.
+- A PATCH that replaces the entire `metadata` JSON object risks overwriting another caller's key. Merge semantics (only update keys present in the request body) prevent this but cannot be enforced by the contract — they are a server convention a client can violate.
+- Key-level endpoints (`PUT /documents/{documentId}/metadata/{key}` and `DELETE /documents/{documentId}/metadata/{key}`) address one key per call. No operation replaces all keys at once, so the contract makes cross-caller overwrite structurally impossible. Box and Google Drive use this model for the same reason.
+
+**Options:**
+- **(A)** Write-once at creation — `metadata` is set on POST and cannot be updated; prevents overwrite but rules out post-upload correlation context
+- **(B)** ✓ Mutable via key-level endpoints — `PUT /documents/{documentId}/metadata/{key}` adds or replaces a single key; `DELETE /documents/{documentId}/metadata/{key}` removes one key; `metadata` is not included in the Document PATCH schema
+- **(C)** Mutable via merge PATCH — PATCH body is a partial JSON object; server merges at key level; overwrite prevention depends on server implementation, not contract structure
+
+**Customization:** States that need key namespacing or per-key access controls can add those constraints via overlay on the metadata endpoints.
+
 ---
 
 ## Customization
@@ -392,13 +419,20 @@ Elements with external compliance or structural dependencies:
 
 | Element | Reason | Decision |
 |---|---|---|
-| `active → retained → pending_disposition → destroyed` lifecycle states | DoD 5015.2 names these phases; renaming breaks certification conformance | [Decision 5](#decision-5-legal-hold-modeling) |
-| `legalHold` boolean | DoD 5015.2 requires a hold flag; renaming is acceptable | [Decision 5](#decision-5-legal-hold-modeling) |
-| Two-level `Document` + `DocumentVersion` structure | Removing it requires redesigning versioning and cross-program attachment | [Decision 1](#decision-1-two-level-document-model) |
+| Two-level `Document` + `DocumentVersion` structure | Removing it requires redesigning versioning and cross-program reuse | [Decision 1](#decision-1-two-level-document-model) |
+| `Document.lifecycleState` | The records management lifecycle itself; removing it collapses the retention and disposition system | [Decision 5](#decision-5-legal-hold-modeling) |
+| `Document.legalHold` | DoD 5015.2 requires a hold flag; renaming is acceptable | [Decision 5](#decision-5-legal-hold-modeling) |
+| `Document.documentTypeId` | Anchor for per-type retention rules; without it the retention system has no basis for computing deadlines | [Decision 10](#decision-10-retention-trigger-evaluation-model) |
+| `Document.retentionDeadline` | Stores the computed deadline so the system can automatically advance the document to `pending_disposition`; removing it requires an alternative mechanism | [Decision 10](#decision-10-retention-trigger-evaluation-model) |
+| `Document.dispositionApprovedBy` / `dispositionApprovedAt` | Required by DoD 5015.2 for the destruction certificate — who authorized destruction and when | [Decision 11](#decision-11-destruction-scope-and-metadata-retention) |
+| `DocumentVersion.uploadedById` | Required by HIPAA (45 CFR § 164.312) for chain-of-custody — who uploaded each version | — |
+| `DocumentVersion.createdAt` | Authoritative upload timestamp; the domain cannot rely on storage backend metadata for this | — |
+| `DocumentLink.closedAt` | The trigger event timestamp for closure-based retention; removing it breaks `case_closure` and `application_denial` retention triggers | [Decision 3](#decision-3-document-subject-association-model) |
+| `DocumentLink.linkedBy` | Required by HIPAA (45 CFR § 164.312) for chain-of-custody — who created each document-subject association | — |
 
 ### Document types
 
-States configure baseline document types in a `document-management-config.yaml` deployment artifact. Each type specifies `retentionYears` and `retentionTrigger`. States with longer retention requirements (e.g., Medicaid estate recovery) set an appropriate `retentionYears` value or use `document_date` as the trigger for documents without a clear closure event. States can also create additional document types at runtime via the API; runtime-created types are marked `source: user` and can be deleted, unlike config-seeded types.
+See [Decision 4](#decision-4-documenttype-as-config-managed-resource) for why document types are config-managed rather than hardcoded. States configure baseline document types in a `document-management-config.yaml` deployment artifact. Each type specifies `retentionYears` and `retentionTrigger`. States with longer retention requirements (e.g., Medicaid estate recovery) set an appropriate `retentionYears` value or use `document_date` as the trigger for documents without a clear closure event. States can also create additional document types at runtime via the API; runtime-created types are marked `source: user` and can be deleted, unlike config-seeded types.
 
 ### Entity fields
 
@@ -406,7 +440,7 @@ States can add fields to Document, DocumentVersion, DocumentType, and DocumentLi
 
 ### File retrieval delivery mode
 
-The content endpoint defaults to proxy delivery (`200` with streamed bytes). States switch to redirect delivery (`302` to a signed storage URL) by adding an overlay that sets `x-content-delivery: redirect` on the `GET /document-versions/{documentVersionId}/content` operation. The adapter reads this extension at startup. Both response shapes are already documented in the OpenAPI spec, so clients handle either without contract changes. See [Decision 6](#decision-6-file-retrieval-model) for the full trade-off analysis.
+The content endpoint defaults to proxy delivery (`200` with streamed bytes). States switch to redirect delivery (`302` to a signed storage URL) by adding an overlay that sets `x-content-delivery: redirect` on the `GET /document-versions/{documentVersionId}/content` operation. Both response shapes are already documented in the OpenAPI spec, so clients handle either without contract changes. See [Decision 6](#decision-6-file-retrieval-model) for the full trade-off analysis.
 
 ### State machine
 
@@ -418,13 +452,13 @@ States that need explicit restore semantics can add a `POST /documents/{document
 
 ### Virus scanning — async quarantine
 
-States that prefer async scanning (e.g., for large files or batch pipelines) could add a `scanStatus` field to `DocumentVersion` (`pending`, `clean`, `quarantined`) and make file content inaccessible while `scanStatus` is `pending` or `quarantined`. A background scan updates the status; if quarantined, a `document_version.quarantined` event fires so consumers (caseworkers, intake) know not to act on the version. Once cleared, the version becomes accessible normally.
+See [Decision 8](#decision-8-virus-scanning-model) for why the baseline chose synchronous blocking. States that prefer async scanning (e.g., for large files or batch pipelines) could add a `scanStatus` field to `DocumentVersion` (`pending`, `clean`, `quarantined`) and make file content inaccessible while `scanStatus` is `pending` or `quarantined`. A background scan updates the status; if quarantined, a `document_version.quarantined` event fires so consumers (caseworkers, intake) know not to act on the version. Once cleared, the version becomes accessible normally.
 
 ### E-signature
 
 States integrating a signing service (DocuSign, Adobe Sign, etc.) store the completed signed document as a new `DocumentVersion` upload. Two approaches for carrying signature metadata:
 
-- **Pass-through** — the signing integration passes envelope ID, signed-at timestamp, and signer identity via `Document.metadata`. The domain stores and echoes this without interpreting it.
+- **Pass-through** — the signing integration adds the envelope ID, signed-at timestamp, and signer identity as individual keys on `Document.metadata` via the key-level metadata endpoints after the signed document is uploaded. The domain stores and echoes these without interpreting them.
 - **Typed fields** — states that want signature state to be queryable within the domain can add fields to `DocumentVersion` via overlay — for example `signatureStatus` (`unsigned`, `pending`, `signed`, `rejected`), `signedAt`, and `signedById`.
 
 ### Chunked upload
@@ -433,7 +467,7 @@ States that need resumable or chunked upload support can add a parallel upload s
 
 ### Duplicate detection
 
-`contentHash` is stored on every version but the baseline enforces nothing. States can build on it in two ways:
+`contentHash` is stored on every version but the baseline enforces nothing. See [Decision 7](#decision-7-duplicate-detection) for why the baseline chose passive detection. States can build on it in two ways:
 
 - **Non-blocking warning** — if the incoming hash matches an existing version on the same document, the upload could succeed with `201` and include a `duplicateVersionId` in the response, allowing callers to decide what to do without blocking the upload.
 - **Opt-in rejection** — a `?rejectDuplicates=true` query parameter could return `409 Conflict` with the matching `duplicateVersionId` when a hash collision is found, for workflows where strict uniqueness is needed.
@@ -457,9 +491,10 @@ Adjacent concerns a reader might assume this domain owns, but that are not docum
 |---|---|---|
 | Document creation with metadata | All major platforms | **Planned** |
 | Version history (immutable per upload) | All major platforms | **Planned** |
-| Version restore | Enterprise ECM (Documentum, FileNet) | **Not in scope** — core use case covered by uploading a new version; see Customization for adding explicit restore semantics |
+| Version restore | Enterprise ECM (Documentum, FileNet) | **Not in scope** — core use case covered by uploading a new version; see [Customization — Version restore](#version-restore) for adding explicit restore semantics |
 | Bulk document import | Enterprise ECM (FileNet, OnBase, OpenText) for ongoing scanning workflows | **Planned** — see #260 |
 | Concurrent edit locking | Documentum, FileNet, OnBase | **Not in scope** — documents are immutable per upload; no in-place editing model |
+| Metadata key management (add/remove after creation) | Box (Metadata API), Google Drive (file properties) | **Planned** — key-level PUT/DELETE endpoints; see [Decision 12](#decision-12-metadata-mutability-and-update-model) |
 
 ### Cross-program reuse
 
@@ -493,7 +528,7 @@ Adjacent concerns a reader might assume this domain owns, but that are not docum
 | Proxied download (secure default) | Government deployments | **Planned** |
 | Redirect to signed URL (performance opt-in) | Box, S3-backed ECM | **Planned** — opt-in via overlay; see [Customization — File retrieval delivery mode](#file-retrieval-delivery-mode) |
 | Chunked / resumable upload | S3 multipart, Azure Blob | **Adapter layer** — storage-specific protocol; the upload endpoint contract stays as a single POST; see [Customization — Chunked upload](#chunked-upload) |
-| Virus scanning / malware detection | Enterprise ECM upload pipelines | **Planned** — synchronous blocking by default; see [Decision 8](#decision-8-virus-scanning-model) and [Customization — Virus scanning](#virus-scanning--async-quarantine) for async quarantine |
+| Virus scanning / malware detection | Enterprise ECM upload pipelines | **Adapter layer** — scanning is performed by the adapter; the contract defines the error surface (`422 file_rejected_by_virus_scan`) for when the adapter rejects a file; see [Decision 8](#decision-8-virus-scanning-model) and [Customization — Virus scanning](#virus-scanning--async-quarantine) for async quarantine |
 | E-signature | DocuSign, Adobe Sign integrations in ECM | **Adapter layer** — no signing integration in baseline; the completed signed document is stored as a normal version upload; see [Customization — E-signature](#e-signature) |
 
 ### Integration
@@ -502,7 +537,8 @@ Adjacent concerns a reader might assume this domain owns, but that are not docum
 |---|---|---|
 | Event emission on upload | Box, SharePoint/Graph, modern ECM | **Planned** — document_version.uploaded event |
 | Event emission on document creation | Modern ECM | **Planned** — document.created event |
-| Full-text search / OCR | OpenText, FileNet, OnBase | **Not in scope** — content extraction is a storage adapter concern; full-text search belongs to the search domain |
+| OCR / content extraction | OpenText, FileNet, OnBase | **Adapter layer** — text extraction on upload is a storage adapter concern; extracted content feeds the search domain |
+| Full-text search | OpenText, FileNet, OnBase | **Not in scope** — search domain |
 
 ## References
 
