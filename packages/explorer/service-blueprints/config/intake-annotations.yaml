@@ -1,0 +1,105 @@
+# intake-annotations.yaml
+#
+# Annotation layer for the intake service blueprint.
+# Consumed by generate-blueprint.js together with packages/explorer/config.yaml.
+#
+# config.yaml is the source of truth for flow steps — actor actions, events,
+# and system self-messages are derived from it automatically. This file adds
+# only what config.yaml cannot express:
+#   - Phase and sub-phase structure (which flow sections belong where)
+#   - Data entity descriptions (data lane)
+#   - Notes, future-state markers, and opportunities
+#   - Detailed caseworker / applicant actions not captured as flow steps
+#
+# Sub-phases reference flow steps by named section (sections: [...]) rather than
+# by flat index so that adding steps to a flow never shifts downstream references.
+# Named sections are defined in config.yaml as fragment wrappers without a type.
+#
+# Lane IDs referenced in cards: applicant | caseworker | system | regulations | data
+
+domain: intake
+name: "Intake Service Blueprint"
+
+lanes:
+  - id: applicant
+    label: "Applicant"
+    actors: [applicant]
+  - id: caseworker
+    label: "Caseworker"
+    actors: [caseworker, supervisor]
+  - id: system
+    label: "System"
+  - id: regulations
+    label: "Regulations"
+  - id: data
+    label: "Events"
+
+phases:
+
+  # ── Phase 1: Application intake ─────────────────────────────────────────────
+
+  - id: application-intake
+    label: "Application intake"
+    subPhases:
+
+      - id: submitted
+        label: "Submission"
+        flow: application_submission
+        sections: [submission, applicant-document-upload]
+
+  # ── Phase 2: Application review ─────────────────────────────────────────────
+
+  - id: application-review
+    label: "Application review"
+    subPhases:
+
+      - id: automated-screening
+        label: "Automated screening"
+        flow: application_submission
+        sections: [verification-items, submission-fanout]
+
+      - id: under-review
+        label: "Task assignment"
+        flow: caseworker_review
+        sections: [task-claim, scheduling]
+
+      - id: active-review
+        label: "Verification review"
+        flow: caseworker_review
+        sections: [verification-review]
+
+      - id: interview
+        label: "Program verification"
+        flow: caseworker_review
+        sections: [interview]
+
+      - id: escalation
+        label: "Escalation"
+        flow: caseworker_review
+        sections: [escalation]
+
+  # ── Phase 3: Eligibility determination ─────────────────────────────────────
+
+  - id: eligibility-determination
+    label: "Eligibility determination"
+    subPhases:
+
+      - id: submit-for-determination
+        label: "Submit for determination"
+        flow: determination
+        sections: [submit-for-determination]
+
+      - id: benefits-calculation
+        label: "Determination"
+        flow: determination
+        sections: [eligibility-calculation]
+
+      - id: decision
+        label: "Closeout"
+        flow: determination
+        sections: [determination-decision]
+        cards:
+          regulations:
+            - type: policy
+              text: "Notice of Action required"
+              subtext: "Adverse action notice required for denials and closures"

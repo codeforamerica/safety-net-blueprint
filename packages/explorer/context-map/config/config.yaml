@@ -1,0 +1,29 @@
+# context-map/config.yaml
+#
+# Diagram-specific settings for the context-map tool.
+# Domain definitions and events live in ../config.yaml (package-level).
+#
+# This file controls:
+#   - Diagram title and subtitle
+#   - Overview layout positions (top-left corner of each 175×82 px domain box)
+
+title: "Safety Net Blueprint — Context Map"
+subtitle: "Event-driven domain integration"
+
+# x, y: top-left corner of the domain box in the overview layout (px)
+# Box dimensions: 220 wide × 105 tall
+# 4-column grid centered in 1080px canvas
+#   columns at x=40,300,560,820 (gap=40px, margin=40px)
+#   rows at y=160,330
+layout:
+  client_management:   { x:  40, y: 160 }
+  intake:              { x: 300, y: 160 }
+  eligibility:         { x: 560, y: 160 }
+  case_management:     { x: 820, y: 160 }
+  document_management: { x:  40, y: 330 }
+  workflow:            { x: 300, y: 330 }
+  data_exchange:       { x: 560, y: 330 }
+  scheduling:          { x: 820, y: 330 }
+  communications:      { x:  40, y: 500 }
+  appeals_hearings:    { x: 300, y: 500 }
+  benefits_payments:   { x: 560, y: 500 }

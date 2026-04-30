@@ -1,0 +1,18 @@
+# theme.yaml
+#
+# Optional theme overrides for the SVG renderer.
+# State-specific repos can place a theme.yaml alongside their config files
+# to override colors. Only the values you specify are overridden — everything
+# else falls back to the defaults defined in render-svg.js.
+#
+# Structure mirrors the DEFAULT_THEME in render-svg.js:
+#   cards:    card type colors (headerBg, bodyBg, headerFg, bodyFg, label)
+#   actors:   actor-specific card colors (same fields)
+#   structure: structural/chrome colors
+#
+# Example — override just the applicant card header:
+#   cards:
+#     applicant:
+#       headerBg: '#005EA2'
+#
+# This file ships with no overrides so the baseline SVG uses the built-in defaults.

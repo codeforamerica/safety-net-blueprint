@@ -9,6 +9,7 @@
   },
   "workspaces": [
     "packages/*",
+    "packages/explorer/service-blueprints/figma-plugin",
     "!packages/resolved"
   ],
   "scripts": {
@@ -42,6 +43,8 @@
     "contract-tables:import": "node packages/contracts/scripts/import-contract-tables.js"
   },
   "devDependencies": {
-    "@marp-team/marp-cli": "^4.2.3"
+    "@marp-team/marp-cli": "^4.2.3",
+    "jszip": "^3.10.1",
+    "puppeteer": "^24.0.0"
   }
 }

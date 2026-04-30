@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "lib": ["ES6"],
+    "strict": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "typeRoots": ["./node_modules/@figma/plugin-typings"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

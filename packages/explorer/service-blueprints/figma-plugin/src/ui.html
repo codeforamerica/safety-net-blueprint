@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body {
+      font-family: Inter, sans-serif;
+      font-size: 13px;
+      margin: 16px;
+      color: #1a1a1a;
+    }
+    select, button {
+      width: 100%;
+      margin-top: 8px;
+      padding: 6px 8px;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #18a0fb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 8px;
+      margin-top: 16px;
+    }
+    button:hover { background: #0d8de0; }
+    label { font-weight: 500; }
+  </style>
+</head>
+<body>
+  <label for="blueprint">Blueprint</label>
+  <select id="blueprint">
+    <option value="intake">Intake</option>
+  </select>
+  <button id="generate">Generate</button>
+
+  <script>
+    document.getElementById('generate').addEventListener('click', () => {
+      const blueprint = document.getElementById('blueprint').value;
+      parent.postMessage({ pluginMessage: { type: 'generate', blueprint } }, '*');
+    });
+  </script>
+</body>
+</html>
