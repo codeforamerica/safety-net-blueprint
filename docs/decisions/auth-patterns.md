@@ -1,6 +1,8 @@
 # ADR: Authentication and Authorization Patterns
 
-**Status:** Proposed
+> **Superseded.** This ADR has been superseded by the [Identity & Access architecture document](../architecture/cross-cutting/identity-access.md), which extends the decisions here with OAuth scope model, service-to-service authentication, event actor provenance, and API security declarations. One decision changed: the User entity model no longer stores `personId` or `caseWorkerId`. The industry pattern — IBM Cúram (`ConcernRole.userAccount`), ServiceNow (`Task.assigned_to`), Salesforce (`Contact.OwnerId`) — is for domain entities to hold a `userId` reference back to User Service, not for User to hold references into other domains. Refer to that document for the current record.
+
+**Status:** Superseded
 
 **Date:** 2026-01-26
 

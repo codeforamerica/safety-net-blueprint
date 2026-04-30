@@ -6,7 +6,7 @@
  *   1. render.js     → generates HTML fragments → dist/
  *   2. build-html.js → assembles output/context-map.html from dist/
  *   3. scan-gaps.js  → reports design gaps from config.yaml
- *   4. export-png.js → screenshots each view → dist/*.png, output/context-map-export.zip
+ *   4. export-png.js → screenshots each view → dist/*.png, output/context-map-slides.zip
  *
  * Usage:
  *   node build.js

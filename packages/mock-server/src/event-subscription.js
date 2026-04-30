@@ -12,7 +12,7 @@
  */
 
 import { eventBus } from './event-bus.js';
-import { create, update, findAll } from './database-manager.js';
+import { create, update, findAll, findById } from './database-manager.js';
 import { buildRuleContext, evaluateRuleSet, evaluateAllMatchRuleSet, resolvePath } from './rules-engine.js';
 import { resolveContextEntities } from './handlers/rule-evaluation.js';
 import { executeActions } from './action-handlers.js';
@@ -20,6 +20,7 @@ import { executeTransition } from './state-machine-runner.js';
 import { applyEffects } from './state-machine-engine.js';
 import { processRuleEvaluations } from './handlers/rule-evaluation.js';
 import { emitEvent } from './emit-event.js';
+import { deriveCollectionName } from './collection-utils.js';
 
 const FULL_TYPE_PREFIX = 'org.codeforamerica.safety-net-blueprint.';
 
@@ -38,17 +39,22 @@ function eventTypeMatches(eventType, onValue) {
 }
 
 /**
- * Find the state machine for a domain/collection entity reference.
- * @param {string} entity - "domain/collection" format (e.g., "workflow/tasks")
+ * Find the state machine for a domain/resource entity reference.
+ * @param {string} entity - "domain/resource[/sub-resource]" format (e.g., "intake/applications/documents")
  * @param {Array} allStateMachines - from discoverStateMachines()
  * @returns {Object|null} The state machine contract, or null
  */
 function findStateMachineForEntity(entity, allStateMachines) {
-  const [domainName, collectionName] = entity.split('/');
-  const match = allStateMachines.find(sm =>
-    sm.domain === domainName &&
-    sm.object.toLowerCase() + 's' === collectionName
-  );
+  const domainName = entity.split('/')[0];
+  const collectionName = deriveCollectionName(entity, domainName);
+  const match = allStateMachines.find(sm => {
+    if (sm.domain !== domainName) return false;
+    // Convert PascalCase object name to kebab-plural: ApplicationDocument → application-documents
+    const kebabPlural = sm.object
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .toLowerCase() + 's';
+    return kebabPlural === collectionName;
+  });
   return match?.stateMachine || null;
 }
 
@@ -89,8 +95,9 @@ function buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes)
       }
     },
 
-    // For triggerTransition
+    // For triggerTransition / appendToArray
     resolvePath,
+    dbFindById: findById,
     executeTransition: (opts) => executeTransition({ ...opts, allRules, allSlaTypes })
   };
 }
@@ -133,16 +140,17 @@ export function registerEventSubscriptions(allRules, allStateMachines, allSlaTyp
         // Build rule context: this = event envelope, plus resolved entities
         const ruleContext = buildRuleContext(event, resolvedEntities);
 
-        // Build rich deps for platform actions
+        // Build rich deps for platform actions (needed for both evaluation paths)
         const deps = buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes);
 
-        // Evaluate rules and execute actions
         if (ruleSet.evaluation === 'all-match') {
-          const results = evaluateAllMatchRuleSet(ruleSet, ruleContext);
-          for (const result of results) {
-            executeActions(result.action, event, deps, result.fallbackAction);
+          // Execute every matching rule's action in order
+          const matches = evaluateAllMatchRuleSet(ruleSet, ruleContext);
+          for (const match of matches) {
+            executeActions(match.action, event, deps, match.fallbackAction);
           }
         } else {
+          // first-match-wins (default)
           const result = evaluateRuleSet(ruleSet, ruleContext);
           if (!result.matched) continue;
           executeActions(result.action, event, deps, result.fallbackAction);

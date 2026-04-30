@@ -28,7 +28,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2).filter(a => a !== '--watch');
 const watch = process.argv.includes('--watch');
 
-const inputDir  = args[0] ? path.resolve(args[0]) : path.join(__dirname, '..', 'output');
+const inputDir  = args[0] ? path.resolve(args[0]) : path.join(__dirname, '..', 'data');
 const outputDir = args[1] ? path.resolve(args[1]) : path.join(__dirname, 'dist');
 
 // ── Validate input ────────────────────────────────────────────────────────────

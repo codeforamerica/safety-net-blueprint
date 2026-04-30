@@ -31,12 +31,12 @@ function readFile(name) {
 
 const content = {};
 
-if (existsSync(resolve(srcDir, 'overview.html'))) {
-  content['__overview__'] = readFile('overview.html');
+if (existsSync(resolve(srcDir, 'domains.html'))) {
+  content['domains'] = readFile('domains.html');
 }
 
 const detailFiles = readdirSync(srcDir)
-  .filter(f => extname(f) === '.html' && f !== 'overview.html' && f !== 'context-map.html');
+  .filter(f => extname(f) === '.html' && f !== 'domains.html' && f !== 'context-map.html');
 
 for (const f of detailFiles) {
   content[basename(f, '.html')] = readFile(f);
@@ -141,7 +141,7 @@ ${contentEntries}
       });
     }
 
-    navigate('__overview__');
+    navigate('domains');
     window.addEventListener('resize', fitDiagram);
   </script>
 </body>

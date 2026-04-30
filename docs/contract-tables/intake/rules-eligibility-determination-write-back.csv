@@ -1,0 +1,5 @@
+Order,Condition,Action,Fallback,Description
+1,true,"{""appendToArray"":{""entity"":""intake/applications/members"",""idFrom"":""this.data.memberId"",""field"":""programDeterminations"",""value"":{""program"":{""var"":""this.data.program""},""outcome"":{""var"":""this.data.outcome""},""determinedAt"":{""var"":""this.data.determinedAt""}}}}",,"Write eligibility determination outcome back to ApplicationMember.programDeterminations.
+Informational write-back only — does not trigger application close. Medicaid RTE results
+may arrive before intake closes; SNAP results typically arrive after.
+"

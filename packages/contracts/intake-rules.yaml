@@ -4,7 +4,6 @@ domain: intake
 resource: intake/applications
 ruleSets:
   - id: task-claimed-open-application
-    ruleType: status-transition
     "on": workflow.task.claimed
     evaluation: first-match-wins
     context:
@@ -19,6 +18,266 @@ ruleSets:
         optional: true
     rules:
       - id: open-application-on-intake-task-claim
+        order: 1
+        condition:
+          and:
+            - "!=":
+                - var: application.id
+                - null
+            - "==":
+                - var: task.taskType
+                - application_review
+            - "==":
+                - var: application.status
+                - submitted
+        action:
+          triggerTransition:
+            entity: intake/applications
+            idFrom: application.id
+            transition: open
+        description: |
+          When a caseworker claims an application_review task, transition the linked application from submitted to under_review. Guards on the intake open transition enforce that only system-role callers can execute this.
+  - id: task-claimed-create-interview
+    "on": workflow.task.claimed
+    evaluation: first-match-wins
+    context:
+      - as: task
+        entity: workflow/tasks
+        from:
+          var: subject
+    rules:
+      - id: create-interview-on-task-claim
+        order: 1
+        condition:
+          "==":
+            - var: task.taskType
+            - application_review
+        action:
+          createResource:
+            entity: intake/applications/interview
+            fields:
+              applicationId:
+                var: task.subjectId
+        description: Create an Interview record when a caseworker claims an application_review task; the Interview tracks the SNAP regulatory obligation and will accumulate appointment IDs as they are scheduled
+  - id: application-submitted-data-exchange
+    "on": intake.application.submitted
+    evaluation: first-match-wins
+    context:
+      - as: application
+        entity: intake/applications
+        from:
+          var: subject
+    rules:
+      - id: initiate-verification-for-submitted-application
+        order: 1
+        condition: true
+        action:
+          createResource:
+            entity: data-exchange/service-calls
+            fields:
+              applicationId:
+                var: application.id
+              requestedAt:
+                var: this.time
+        description: |
+          Initiate electronic verification when an application is submitted (Decision 18).
+          Forward subscription — the data exchange domain fans out per-member checks internally
+          (FDSH, IEVS, SAVE, SSA) and emits data-exchange.service-call.completed per result.
+  - id: application-submitted-document-checklist
+    "on": intake.application.submitted
+    evaluation: all-match
+    context:
+      - as: application
+        entity: intake/applications
+        from:
+          var: subject
+    rules:
+      - id: snap-income-document
+        order: 1
+        condition:
+          in:
+            - snap
+            - var: application.programs
+        action:
+          createResource:
+            entity: intake/applications/documents
+            fields:
+              applicationId:
+                var: application.id
+              category: income
+        description: Request income documentation for SNAP applicants (Decision 16).
+      - id: snap-identity-document
+        order: 2
+        condition:
+          in:
+            - snap
+            - var: application.programs
+        action:
+          createResource:
+            entity: intake/applications/documents
+            fields:
+              applicationId:
+                var: application.id
+              category: identity
+        description: Request identity documentation for SNAP applicants (Decision 16).
+      - id: snap-residency-document
+        order: 3
+        condition:
+          in:
+            - snap
+            - var: application.programs
+        action:
+          createResource:
+            entity: intake/applications/documents
+            fields:
+              applicationId:
+                var: application.id
+              category: residency
+        description: Request residency documentation for SNAP applicants (Decision 16).
+      - id: medicaid-identity-document
+        order: 4
+        condition:
+          in:
+            - medicaid
+            - var: application.programs
+        action:
+          createResource:
+            entity: intake/applications/documents
+            fields:
+              applicationId:
+                var: application.id
+              category: identity
+        description: Request identity documentation for Medicaid applicants (Decision 16).
+  - id: verification-result-write-back
+    "on": data-exchange.service-call.completed
+    evaluation: first-match-wins
+    rules:
+      - id: append-verification-to-member
+        order: 1
+        condition: true
+        action:
+          appendToArray:
+            entity: intake/applications/members
+            idFrom: this.data.memberId
+            field: verifications
+            value:
+              type:
+                var: this.data.verificationType
+              status:
+                var: this.data.result
+              source:
+                var: this.data.serviceType
+              checkedAt:
+                var: this.time
+        description: Write electronic verification result back to ApplicationMember.verifications (Decision 17)
+  - id: fdsh-inconclusive-citizenship-document
+    "on": data-exchange.service-call.completed
+    evaluation: first-match-wins
+    rules:
+      - id: create-citizenship-document-on-fdsh-inconclusive
+        order: 1
+        condition:
+          and:
+            - "==":
+                - var: this.data.serviceType
+                - fdsh
+            - "==":
+                - var: this.data.result
+                - inconclusive
+        action:
+          createResource:
+            entity: intake/applications/documents
+            fields:
+              applicationId:
+                var: this.data.applicationId
+              memberId:
+                var: this.data.memberId
+              category: citizenship
+        description: |
+          Request citizenship documentation when FDSH returns an inconclusive result (Decision 14).
+          Ex parte verification failed; caseworker must collect paper documentation.
+  - id: appointment-scheduled-link-to-interview
+    "on": scheduling.appointment.scheduled
+    evaluation: first-match-wins
+    rules:
+      - id: add-appointment-to-interview
+        order: 1
+        condition:
+          "==":
+            - var: this.data.subjectType
+            - interview
+        action:
+          appendToArray:
+            entity: intake/applications/interview
+            idFrom: this.data.subjectId
+            field: appointments
+            value:
+              var: this.subject
+        description: |
+          Add the scheduled appointment ID to the linked Interview's appointments list (Decision 15).
+          Only fires when the appointment's subjectType is "interview", ensuring non-interview
+          appointments scheduled via the shared scheduling domain are ignored.
+  - id: document-verified-write-back
+    "on": document-management.document.verified
+    evaluation: first-match-wins
+    context:
+      - as: applicationDocument
+        entity: intake/applications/documents
+        from:
+          var: data.subjectId
+        optional: true
+    rules:
+      - id: verify-application-document
+        order: 1
+        condition:
+          "==":
+            - var: this.data.subjectType
+            - application-document
+        action:
+          triggerTransition:
+            entity: intake/applications/documents
+            idFrom: applicationDocument.id
+            transition: verify
+          appendToArray:
+            entity: intake/applications/documents
+            idFrom: applicationDocument.id
+            field: evidence
+            value:
+              var: this.subject
+        description: |
+          Transition the ApplicationDocument to verified and record the document ID in its
+          evidence list when document-management reports successful verification (Decision 15).
+          Only fires when the document's subjectType is "application-document", ensuring
+          documents uploaded in document-management without linking to an ApplicationDocument
+          (via subjectType/subjectId) are silently ignored — analogous to an appointment
+          scheduled without linking to an interview.
+  - id: eligibility-determination-write-back
+    "on": eligibility.determination.completed
+    evaluation: first-match-wins
+    rules:
+      - id: append-determination-to-member
+        order: 1
+        condition: true
+        action:
+          appendToArray:
+            entity: intake/applications/members
+            idFrom: this.data.memberId
+            field: programDeterminations
+            value:
+              program:
+                var: this.data.program
+              outcome:
+                var: this.data.outcome
+              determinedAt:
+                var: this.data.determinedAt
+        description: |
+          Write eligibility determination outcome back to ApplicationMember.programDeterminations.
+          Informational write-back only — does not trigger application close. Medicaid RTE results
+          may arrive before intake closes; SNAP results typically arrive after.
+  - id: status-transition
+    evaluation: first-match-wins
+    rules:
+      - id: rule-1
         order: 1
         condition:
           and:

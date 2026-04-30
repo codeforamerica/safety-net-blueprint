@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node build.js",
     "watch": "node build.js --watch",
-    "render": "node ../render-svg.js ../output/intake.json"
+    "render": "node ../src/render-svg.js ../data/intake.json --out ../dist/intake.svg"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.101.0",

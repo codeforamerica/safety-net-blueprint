@@ -1,0 +1,4 @@
+Order,Condition,Action,Fallback,Description
+1,"{""and"":[{""=="":[{""var"":""this.data.serviceType""},""fdsh""]},{""=="":[{""var"":""this.data.result""},""inconclusive""]}]}","{""createResource"":{""entity"":""intake/applications/documents"",""fields"":{""applicationId"":{""var"":""this.data.applicationId""},""memberId"":{""var"":""this.data.memberId""},""category"":""citizenship""}}}",,"Request citizenship documentation when FDSH returns an inconclusive result (Decision 14).
+Ex parte verification failed; caseworker must collect paper documentation.
+"

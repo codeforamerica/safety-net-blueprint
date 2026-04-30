@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { emitEvent } from '../../src/emit-event.js';
+import { emitEvent, emitEventEnvelope } from '../../src/emit-event.js';
 import { findAll, clearAll } from '../../src/database-manager.js';
 
 test('emitEvent', async (t) => {
@@ -170,6 +170,88 @@ test('emitEvent', async (t) => {
 
     assert.deepStrictEqual(stored.data, payload);
     console.log('  ✓ Stores event payload in data field');
+  });
+
+  // ==========================================================================
+  // emitEventEnvelope — pre-built envelope injection
+  // ==========================================================================
+
+  await t.test('emitEventEnvelope - stores and returns a pre-built envelope', () => {
+    clearAll('events');
+    const stored = emitEventEnvelope({
+      specversion: '1.0',
+      type: 'org.codeforamerica.safety-net-blueprint.intake.interview.completed',
+      source: '/intake',
+      subject: 'interview-1',
+      time: '2026-04-15T10:00:00.000Z',
+      data: { completedAt: '2026-04-15T10:00:00.000Z' },
+    });
+
+    assert.strictEqual(stored.specversion, '1.0');
+    assert.strictEqual(stored.type, 'org.codeforamerica.safety-net-blueprint.intake.interview.completed');
+    assert.strictEqual(stored.subject, 'interview-1');
+    assert.strictEqual(stored.time, '2026-04-15T10:00:00.000Z');
+    assert.ok(stored.id, 'Should have a generated id');
+    console.log('  ✓ emitEventEnvelope stores and returns pre-built envelope');
+  });
+
+  await t.test('emitEventEnvelope - persists to events collection', () => {
+    clearAll('events');
+    const stored = emitEventEnvelope({
+      specversion: '1.0',
+      type: 'intake.interview.completed',
+      source: '/intake',
+      subject: 'interview-2',
+      data: null,
+    });
+
+    const result = findAll('events', {});
+    assert.strictEqual(result.items.length, 1);
+    assert.strictEqual(result.items[0].id, stored.id);
+    console.log('  ✓ emitEventEnvelope persists to events collection');
+  });
+
+  await t.test('emitEventEnvelope - preserves provided id', () => {
+    clearAll('events');
+    const stored = emitEventEnvelope({
+      specversion: '1.0',
+      type: 'intake.interview.completed',
+      source: '/intake',
+      subject: 'interview-3',
+      id: 'my-explicit-id',
+      data: null,
+    });
+
+    assert.strictEqual(stored.id, 'my-explicit-id');
+    console.log('  ✓ emitEventEnvelope preserves provided id');
+  });
+
+  await t.test('emitEventEnvelope - generates id when not provided', () => {
+    clearAll('events');
+    const stored = emitEventEnvelope({
+      specversion: '1.0',
+      type: 'intake.interview.completed',
+      source: '/intake',
+      subject: 'interview-4',
+      data: null,
+    });
+
+    assert.ok(stored.id && stored.id.length > 0, 'Should generate an id');
+    console.log('  ✓ emitEventEnvelope generates id when not provided');
+  });
+
+  await t.test('emitEventEnvelope - defaults specversion and datacontenttype', () => {
+    clearAll('events');
+    const stored = emitEventEnvelope({
+      type: 'intake.interview.completed',
+      source: '/intake',
+      subject: 'interview-5',
+      data: null,
+    });
+
+    assert.strictEqual(stored.specversion, '1.0');
+    assert.strictEqual(stored.datacontenttype, 'application/json');
+    console.log('  ✓ emitEventEnvelope defaults specversion and datacontenttype');
   });
 
   // ==========================================================================

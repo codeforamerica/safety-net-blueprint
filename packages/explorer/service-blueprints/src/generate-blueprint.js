@@ -8,7 +8,7 @@
  * Usage:
  *   node generate-blueprint.js config/intake-annotations.yaml
  *
- * Output: output/<domain>.json
+ * Output: data/<domain>.json
  *
  * Annotations file structure:
  *   lanes       — lane definitions (id, label, actors)
@@ -207,7 +207,7 @@ const blueprint = {
 
 // ── Write output ──────────────────────────────────────────────────────────────
 
-const outDir  = join(__dirname, '..', 'output');
+const outDir  = join(__dirname, '..', 'data');
 mkdirSync(outDir, { recursive: true });
 const outPath = join(outDir, `${annotations.domain}.json`);
 writeFileSync(outPath, JSON.stringify(blueprint, null, 2) + '\n');

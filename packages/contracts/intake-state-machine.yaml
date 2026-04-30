@@ -72,6 +72,7 @@ transitions:
         action: opened
         data:
           openedAt: $now
+          programs: $object.programs
         description: Emit application.opened — signals caseworker has begun active review
   - trigger: withdraw
     from:
@@ -120,6 +121,21 @@ transitions:
         data:
           closedAt: $now
         description: Emit application.closed — signals intake is complete; triggers case creation if approved
+  - trigger: complete-review
+    from: under_review
+    actors:
+      - caseworker
+      - supervisor
+    guards:
+      - any:
+          - callerIsCaseworker
+          - callerIsSupervisor
+    effects:
+      - type: event
+        action: review_completed
+        data:
+          reviewCompletedAt: $now
+        description: Emit application.review_completed — signals data collection is complete; triggers eligibility determination. No state change — application stays under_review until eligibility outcomes are received.
   - trigger: flag-expedited
     from:
       - submitted
@@ -155,4 +171,5 @@ requestBodies:
     required:
       - reason
   - trigger: close
+  - trigger: complete-review
   - trigger: flag-expedited

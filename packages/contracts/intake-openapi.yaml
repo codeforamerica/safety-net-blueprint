@@ -25,6 +25,10 @@ servers:
 tags:
   - name: Applications
     description: Manage public assistance applications.
+  - name: Documents
+    description: Application document requirements and verification tracking.
+  - name: Interviews
+    description: SNAP interview obligation tracking.
 
 x-events:
   application.created:
@@ -57,6 +61,11 @@ x-events:
     summary: Emitted when an application is flagged for expedited processing
     payload:
       $ref: "#/components/schemas/ApplicationExpeditedFlaggedEvent"
+  application.review_completed:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.review_completed
+    summary: Emitted when a caseworker signals data collection is complete; triggers eligibility determination. No state change.
+    payload:
+      $ref: "#/components/schemas/ApplicationReviewCompletedEvent"
   application.updated:
     type: org.codeforamerica.safety-net-blueprint.intake.application.updated
     summary: Emitted when application fields are updated via PATCH (auto-emitted)
@@ -191,6 +200,183 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
+  /applications/{applicationId}/documents:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: List application documents
+      description: Retrieve document requirements for a specific application.
+      operationId: listApplicationDocuments
+      tags:
+        - Documents
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A paginated list of application documents.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDocumentList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create an application document
+      description: Create a document requirement scoped to this application. Under normal circumstances documents are created by the rules engine; this endpoint supports caseworker-initiated requests.
+      operationId: createApplicationDocument
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationDocumentCreate"
+      responses:
+        "201":
+          description: Application document created successfully.
+          headers:
+            Location:
+              description: URL of the newly created document resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDocument"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/documents/{documentId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/DocumentIdParam"
+
+    get:
+      summary: Get an application document
+      description: Retrieve a single document requirement by identifier.
+      operationId: getApplicationDocument
+      tags:
+        - Documents
+      responses:
+        "200":
+          description: Application document retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDocument"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update an application document
+      description: Apply partial updates to an application document.
+      operationId: updateApplicationDocument
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationDocumentUpdate"
+      responses:
+        "200":
+          description: Application document updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDocument"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Delete an application document
+      description: Remove a document requirement from this application.
+      operationId: deleteApplicationDocument
+      tags:
+        - Documents
+      responses:
+        "204":
+          description: Application document deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/interview:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: Get the interview
+      description: Retrieve the SNAP interview obligation record for this application.
+      operationId: getInterview
+      tags:
+        - Interviews
+      responses:
+        "200":
+          description: Interview retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update the interview
+      description: Apply partial updates to the interview record (e.g., set waiverGranted, record completedAt).
+      operationId: updateInterview
+      tags:
+        - Interviews
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewUpdate"
+      responses:
+        "200":
+          description: Interview updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
 components:
   parameters:
     ApplicationIdParam:
@@ -198,6 +384,15 @@ components:
       in: path
       required: true
       description: Unique identifier of the application.
+      schema:
+        type: string
+        format: uuid
+
+    DocumentIdParam:
+      name: documentId
+      in: path
+      required: true
+      description: Unique identifier of the application document.
       schema:
         type: string
         format: uuid
@@ -310,7 +505,183 @@ components:
               items:
                 $ref: "#/components/schemas/Application"
 
+    # ---------------------------------------------------------------------------
+    # ApplicationDocument
+    # ---------------------------------------------------------------------------
+
+    ApplicationDocumentWritable:
+      type: object
+      description: Client-writable fields for an application document requirement.
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: Member this document is required for. Null for household-level requirements (e.g., proof of residency).
+          nullable: true
+          x-relationship:
+            resource: ApplicationMember
+        category:
+          type: string
+          description: Type of documentation required.
+          enum:
+            - income
+            - identity
+            - residency
+            - citizenship
+
+    ApplicationDocument:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationDocumentWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - category
+            - status
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            status:
+              type: string
+              description: Current verification status of the document requirement.
+              readOnly: true
+              enum:
+                - requested
+                - verified
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            evidence:
+              type: array
+              description: >
+                IDs of documents in document-management that satisfy this checklist item.
+                Populated by the document-verified-write-back rule when a verified document
+                carries subjectType "application-document" and subjectId matching this record.
+              readOnly: true
+              items:
+                type: string
+                format: uuid
+
+    ApplicationDocumentCreate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationDocumentWritable"
+        - type: object
+          required:
+            - category
+
+    ApplicationDocumentUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationDocumentWritable"
+        - type: object
+          minProperties: 1
+
+    ApplicationDocumentList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApplicationDocument"
+
+    # ---------------------------------------------------------------------------
+    # Interview
+    # ---------------------------------------------------------------------------
+
+    InterviewWritable:
+      type: object
+      description: Caseworker-writable fields for an interview obligation record.
+      properties:
+        waiverGranted:
+          type:
+            - boolean
+            - "null"
+          description: Whether the interview requirement has been waived for this applicant.
+        waiverReason:
+          type: string
+          description: Reason the interview was waived. Required when waiverGranted is true.
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          description: When the caseworker attested the interview obligation was satisfied. Null until completed.
+          nullable: true
+
+    Interview:
+      allOf:
+        - $ref: "#/components/schemas/InterviewWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - appointments
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            appointments:
+              type: array
+              description: Appointment IDs from the scheduling domain accumulated for this interview obligation. Populated by the rules engine when scheduling.appointment.scheduled fires.
+              readOnly: true
+              items:
+                type: string
+                format: uuid
+                x-relationship:
+                  resource: External
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    InterviewUpdate:
+      allOf:
+        - $ref: "#/components/schemas/InterviewWritable"
+        - type: object
+          minProperties: 1
+
     # Event payload schemas — referenced by x-events section above
+
+    ApplicationReviewCompletedEvent:
+      type: object
+      description: Payload for application.review_completed — signals data collection is complete; triggers eligibility determination.
+      required:
+        - reviewCompletedAt
+      properties:
+        reviewCompletedAt:
+          type: string
+          format: date-time
+          description: When the caseworker signaled review was complete.
 
     ApplicationClosedEvent:
       type: object

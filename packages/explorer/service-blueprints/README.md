@@ -5,9 +5,9 @@ Tools for generating service blueprint diagrams from blueprint contract data. Th
 Running `node build.js` produces two outputs from the same blueprint data:
 
 - **Figma plugin** (`figma-plugin/dist/`) — generates native Figma frames and components that designers can edit and customize
-- **SVG file** (`output/<domain>.svg`) — a rendered preview of the same diagram, shareable without Figma
+- **PNG file** (`output/<domain>.png`) — a slide-deck-ready raster preview of the same diagram, shareable without Figma
 
-The SVG is useful for quick review, documentation, and sharing with stakeholders who don't have Figma access. The Figma output is what designers use as a working baseline.
+The PNG is useful for presentations, documentation, and sharing with stakeholders who don't have Figma access. The Figma output is what designers use as a working baseline.
 
 ## Directory layout
 
@@ -19,11 +19,15 @@ service-blueprints/
     theme.yaml                   # Optional color overrides (empty = use defaults)
   src/                           # Build scripts
     generate-blueprint.js        # Generates intake.json from config.yaml + annotations
-    render-svg.js                # Standalone SVG renderer
+    render-svg.js                # SVG renderer (writes to dist/)
+    export-png.js                # Converts dist SVG → output PNG via Puppeteer
     validate-context.js          # Validates an annotations file against annotations-schema.json
-  output/                        # Generated outputs (committed)
-    intake.json                  # Generated blueprint data
-    intake.svg                   # Rendered SVG preview
+  data/                          # Generated blueprint data (committed)
+    intake.json                  # Normalized blueprint data — consumed by Figma plugin and PNG renderer
+  dist/                          # Build intermediates (gitignored)
+    intake.svg                   # Intermediate SVG — converted to PNG during build
+  output/                        # Rendered outputs (committed)
+    intake.png                   # Slide-deck-ready PNG
   figma-plugin/                  # Figma plugin source and tooling
     build.js                     # Builds the Figma plugin (dist/)
     src/                         # Plugin TypeScript source
@@ -48,7 +52,7 @@ npm install --workspace=packages/explorer
 The repo includes a baseline intake blueprint. To build:
 
 ```bash
-node build.js        # builds Figma plugin → figma-plugin/dist/ and renders SVG → output/intake.svg
+node build.js        # builds Figma plugin → figma-plugin/dist/ and renders PNG → output/intake.png
 ```
 
 In Figma Desktop: **Plugins → Development → Import plugin from manifest…**, select `figma-plugin/dist/manifest.json`. Run the plugin from the same menu and click **Generate**.
@@ -70,7 +74,7 @@ node src/generate-blueprint.js <path/to/your/dir/annotations.yaml>
 node build.js <path/to/your/dir>
 ```
 
-The SVG is written alongside `intake.json` in your directory.
+The SVG is written to your directory alongside `intake.json`.
 
 To override colors, add a `theme.yaml` to your directory. See `config/theme.yaml` for the format — only the values you specify are overridden.
 

@@ -779,7 +779,7 @@ test('Overlay Resolver Tests', async (t) => {
     const file1 = {
       Person: {
         properties: {
-          gender: {
+          sex: {
             type: 'string',
             enum: ['male', 'female']
           }
@@ -793,7 +793,7 @@ test('Overlay Resolver Tests', async (t) => {
       }
     };
 
-    const target = '$.Person.properties.gender.enum';
+    const target = '$.Person.properties.sex.enum';
     const result1 = checkPathExists(file1, target);
     const result2 = checkPathExists(file2, target);
 

@@ -148,9 +148,18 @@ function findYamlFiles(dir) {
   return results;
 }
 
-/** Find the YAML file in outDir whose domain matches and whose $schema matches the expected type. */
-function findYamlForDomain(outDir, domain, schemaKeyword) {
+/** Find the YAML file in outDir whose domain matches and whose $schema matches the expected type.
+ *  When multiple YAML files match (e.g., a domain with multiple state machines), uses the
+ *  transitions CSV trigger names to pick the one with the most overlapping triggers.
+ *  Falls back to the YAML with the most existing transitions.
+ *  @param {string} outDir
+ *  @param {string} domain
+ *  @param {string} schemaKeyword
+ *  @param {Array} [csvs] - classified CSV descriptors for the current group (used for tiebreaking)
+ */
+function findYamlForDomain(outDir, domain, schemaKeyword, csvs) {
   const yamlFiles = findYamlFiles(outDir);
+  const matches = [];
   for (const filePath of yamlFiles) {
     try {
       const content = readFileSync(filePath, 'utf8');
@@ -160,13 +169,36 @@ function findYamlForDomain(outDir, domain, schemaKeyword) {
         doc.domain === domain &&
         doc.$schema && doc.$schema.includes(schemaKeyword)
       ) {
-        return { filePath, doc, rawContent: content };
+        matches.push({ filePath, doc, rawContent: content });
       }
     } catch {
       // skip
     }
   }
-  return null;
+  if (matches.length === 0) return null;
+  if (matches.length === 1) return matches[0];
+
+  // Multiple state machines for this domain — use transition trigger names to find the right one.
+  const transitionsCsv = (csvs || []).find(c => c.section === 'transitions');
+  if (transitionsCsv) {
+    const csvContent = readFileSync(transitionsCsv.csvPath, 'utf8');
+    const { headers, data } = parseCsv(csvContent);
+    const triggerIdx = headers.indexOf('Trigger');
+    const csvTriggers = new Set(data.map(row => row[triggerIdx]).filter(Boolean));
+
+    if (csvTriggers.size > 0) {
+      const scored = matches.map(m => {
+        const existingTriggers = new Set((m.doc.transitions || []).map(t => t.trigger));
+        const overlap = [...csvTriggers].filter(t => existingTriggers.has(t)).length;
+        return { ...m, overlap };
+      });
+      scored.sort((a, b) => b.overlap - a.overlap);
+      if (scored[0].overlap > 0) return scored[0];
+    }
+  }
+
+  // Fallback: prefer the YAML with more transitions (the richer/primary one)
+  return matches.sort((a, b) => (b.doc.transitions?.length || 0) - (a.doc.transitions?.length || 0))[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -339,8 +371,8 @@ function importRuleSet(csvData, existingDoc, ruleType) {
   const doc = { ...existingDoc };
   const ruleSets = [...(existingDoc.ruleSets || [])];
 
-  // Find existing ruleSet to preserve metadata
-  const existingIdx = ruleSets.findIndex(rs => rs.ruleType === ruleType);
+  // Find existing ruleSet to preserve metadata — match by id or ruleType (the YAML may use either)
+  const existingIdx = ruleSets.findIndex(rs => rs.id === ruleType || rs.ruleType === ruleType);
   const existingRuleSet = existingIdx >= 0 ? ruleSets[existingIdx] : {};
 
   const rules = csvData.data.map(row => {
@@ -358,9 +390,13 @@ function importRuleSet(csvData, existingDoc, ruleType) {
     return rule;
   });
 
+  // Ensure the ruleSet has an id: field as required by the schema.
+  // If the existing entry already has id:, the spread preserves it.
+  // If not (e.g., legacy entries using only ruleType:), set id from the ruleType.
+  const idField = existingRuleSet.id === undefined ? { id: ruleType } : {};
   const newRuleSet = {
     ...existingRuleSet,
-    ruleType,
+    ...idField,
     evaluation: existingRuleSet.evaluation || 'first-match-wins',
     rules,
   };
@@ -689,7 +725,7 @@ function main() {
     const { domain, schemaKey, csvs } = group;
 
     // Find the target YAML file, or create a new one if --name/--resource provided
-    let found = findYamlForDomain(outDir, domain, schemaKey);
+    let found = findYamlForDomain(outDir, domain, schemaKey, csvs);
     if (!found) {
       if (schemaKey === 'state-machine-schema') {
         const effectiveName = name || domain;

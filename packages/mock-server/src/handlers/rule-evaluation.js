@@ -7,6 +7,7 @@ import { findAll, findById } from '../database-manager.js';
 import { findRuleSet } from '../rules-loader.js';
 import { buildRuleContext, evaluateRuleSet, evaluateAllMatchRuleSet, resolvePath } from '../rules-engine.js';
 import { executeActions } from '../action-handlers.js';
+import { deriveCollectionName } from '../collection-utils.js';
 
 /**
  * Build the dependencies object for action handlers.
@@ -51,7 +52,7 @@ export function resolveContextEntities(contextBindings, resource) {
       continue;
     }
 
-    // Resolve the from path against resource fields + previously resolved entities (chaining)
+    // Resolve the from path against resource fields + previously resolved entities (chaining).
     const lookupContext = { ...resource, ...resolved };
     const fromValue = resolvePath(lookupContext, fromPath);
 

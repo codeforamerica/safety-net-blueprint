@@ -5,6 +5,7 @@
  */
 
 import jsonLogic from 'json-logic-js';
+import { deriveCollectionName } from './collection-utils.js';
 
 /**
  * Create a new resource in the specified domain/collection.
@@ -35,9 +36,8 @@ function createResource(actionValue, resource, deps) {
     return;
   }
 
-  const parts = entity.split('/');
-  const domainName = parts[0];
-  const collectionName = parts[1];
+  const domainName = entity.split('/')[0];
+  const collectionName = deriveCollectionName(entity, domainName);
 
   // Resolve field values — literals pass through; objects are JSON Logic expressions
   const resolvedFields = {};
@@ -134,7 +134,7 @@ function triggerTransition(actionValue, resource, deps) {
     return;
   }
 
-  const collectionName = entity.split('/')[1];
+  const collectionName = deriveCollectionName(entity, entity.split('/')[0]);
 
   const { success, error } = deps.executeTransition({
     resourceName: collectionName,
@@ -150,6 +150,42 @@ function triggerTransition(actionValue, resource, deps) {
   if (!success) {
     console.error(`triggerTransition: "${transition}" on ${entity}/${entityId} failed — ${error}`);
   }
+}
+
+/**
+ * Append a value to an array field on an existing resource.
+ * If the field doesn't exist yet, initializes it as a single-element array.
+ *
+ * @param {Object} actionValue - { entity: "domain/collection", idFrom: "dot.path", field: "fieldName", value: literal|jsonLogic }
+ * @param {Object} resource    - The current "this" context
+ * @param {Object} deps        - { context, resolvePath, dbFindById, dbUpdate }
+ */
+function appendToArray(actionValue, resource, deps) {
+  const { entity, idFrom, field, value } = actionValue || {};
+  if (!entity || !idFrom || !field || value === undefined) {
+    console.error('appendToArray: missing required fields "entity", "idFrom", "field", or "value"');
+    return;
+  }
+
+  const collectionName = deriveCollectionName(entity, entity.split('/')[0]);
+  const entityId = deps.resolvePath?.(deps.context || {}, idFrom);
+  if (!entityId) {
+    console.error(`appendToArray: "${idFrom}" resolved to no value in rule context`);
+    return;
+  }
+
+  const existing = deps.dbFindById?.(collectionName, entityId);
+  if (!existing) {
+    console.error(`appendToArray: ${entity}/${entityId} not found`);
+    return;
+  }
+
+  const resolvedValue = (value !== null && typeof value === 'object' && !Array.isArray(value))
+    ? jsonLogic.apply(value, deps.context || {})
+    : value;
+
+  const currentArray = Array.isArray(existing[field]) ? existing[field] : [];
+  deps.dbUpdate(collectionName, entityId, { [field]: [...currentArray, resolvedValue] });
 }
 
 /**
@@ -219,5 +255,6 @@ function forEach(actionValue, resource, deps) {
 export const platformActionRegistry = new Map([
   ['createResource', createResource],
   ['triggerTransition', triggerTransition],
+  ['appendToArray', appendToArray],
   ['forEach', forEach]
 ]);

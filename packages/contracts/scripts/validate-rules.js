@@ -140,6 +140,41 @@ function buildResourceIndex(specsDir) {
           }
         }
       }
+
+      // Also index sub-resource paths: /{collection}/{id}/{subCollection}
+      // These use the entity key format: domain/collection/subCollection
+      // e.g., /applications/{applicationId}/documents → intake/applications/documents
+      for (const subPath of Object.keys(spec.paths)) {
+        const subSegments = subPath.split('/').filter(Boolean);
+        if (
+          subSegments.length !== 3 ||
+          subSegments[0] !== collection ||
+          !subSegments[1].startsWith('{') ||
+          subSegments[2].startsWith('{')
+        ) continue;
+
+        const subCollection = subSegments[2];
+        const subKey = `${domain}/${collection}/${subCollection}`;
+        if (!index.has(subKey)) index.set(subKey, new Set());
+
+        // Try to find schema properties from GET /{collection}/{id}/{subCollection}/{subId}
+        const subIdPath = Object.keys(spec.paths).find(
+          p => p.startsWith(subPath + '/') && p.includes('{') && p.split('/').filter(Boolean).length === 4
+        );
+        const subItemPathItem = subIdPath && spec.paths[subIdPath];
+        if (subItemPathItem?.get?.responses?.['200']) {
+          const responseContent = subItemPathItem.get.responses['200'].content?.['application/json'];
+          const schemaRef = responseContent?.schema;
+          if (schemaRef) {
+            const schemaObj = schemaRef.$ref
+              ? resolveInternalRef(spec, schemaRef.$ref)
+              : schemaRef;
+            if (schemaObj) {
+              index.set(subKey, extractSchemaProperties(spec, schemaObj));
+            }
+          }
+        }
+      }
     }
   }
 

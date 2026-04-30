@@ -25,7 +25,7 @@ properties:
 
   resource:
     type: string
-    pattern: "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+    pattern: "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)+$"
     description: >
       The calling resource type in domain/resource format (e.g., workflow/tasks).
       Used by validate-rules.js to resolve schema properties for from-field validation.
@@ -106,7 +106,7 @@ $defs:
     properties:
       entity:
         type: string
-        pattern: "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+        pattern: "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)+$"
         description: Target entity in domain/resource format (e.g., workflow/tasks).
       fields:
         type: object
@@ -115,6 +115,30 @@ $defs:
           or JSON Logic expressions resolved against the current rule context.
         minProperties: 1
         additionalProperties: true
+    additionalProperties: false
+
+  ActionAppendToArray:
+    type: object
+    description: >
+      Appends a value to an array field on an existing resource. The resource is
+      identified by ID resolved from the current rule context using idFrom.
+    required: [entity, idFrom, field, value]
+    properties:
+      entity:
+        type: string
+        pattern: "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)+$"
+        description: Target entity in domain/resource format (e.g., intake/applications/documents).
+      idFrom:
+        type: string
+        description: >
+          Dot-path in the rule context whose value is the ID of the entity to update.
+      field:
+        type: string
+        description: Name of the array field to append to (e.g., "verifications").
+      value:
+        description: >
+          Value to append. May be a literal or a JSON Logic expression, or an object
+          whose field values are JSON Logic expressions resolved against the rule context.
     additionalProperties: false
 
   # ---------------------------------------------------------------------------
@@ -135,7 +159,7 @@ $defs:
     properties:
       entity:
         type: string
-        pattern: "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+        pattern: "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)+$"
         description: Target entity in domain/resource format (e.g., intake/applications).
       idFrom:
         type: string
@@ -188,7 +212,7 @@ $defs:
           (e.g., "application", "members").
       entity:
         type: string
-        pattern: "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+        pattern: "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)+$"
         description: >
           Source entity in domain/resource format (e.g., intake/applications).
           When present, `from` must resolve to an ID used to fetch this entity.
@@ -197,14 +221,21 @@ $defs:
           Validated by validate-rules.js.
       from:
         description: >
-          JSON Logic expression or bare dot-path evaluated against the current context
-          to produce the ID (when `entity` is present) or the value (when `entity` is
-          absent) to bind to the alias. Bare dot-paths are shorthand for
-          `{var: "path"}` — both forms are valid, but the JSON Logic form is preferred
-          for consistency with condition expressions.
+          Dot-path on "this" (or a previously resolved entity) whose value is the ID
+          to look up. For event-triggered rule sets, resolves against the event envelope
+          (e.g., "subject" resolves to the event's subject field).
+          For on-demand rule sets, resolves against the calling resource schema.
+          Validated against the resource schema by validate-rules.js for on-demand sets.
+          Accepts a bare dot-path string (e.g., "subject") or a JSON Logic var expression
+          (e.g., { var: "subject" }) — both forms are equivalent (Decision 21).
         oneOf:
           - type: string
           - type: object
+            required: [var]
+            properties:
+              var:
+                type: string
+            additionalProperties: false
       optional:
         type: boolean
         description: >
@@ -245,7 +276,6 @@ $defs:
       is created or transitions state.
     required:
       - id
-      - ruleType
       - evaluation
       - rules
     properties:
@@ -351,6 +381,8 @@ $defs:
             description: Priority value to set on the resource.
           createResource:
             $ref: "#/$defs/ActionCreateResource"
+          appendToArray:
+            $ref: "#/$defs/ActionAppendToArray"
           triggerTransition:
             $ref: "#/$defs/ActionTriggerTransition"
           forEach:
@@ -367,6 +399,8 @@ $defs:
             enum: [expedited, high, normal, low]
           createResource:
             $ref: "#/$defs/ActionCreateResource"
+          appendToArray:
+            $ref: "#/$defs/ActionAppendToArray"
           triggerTransition:
             $ref: "#/$defs/ActionTriggerTransition"
         additionalProperties: true

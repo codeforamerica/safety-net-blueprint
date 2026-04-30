@@ -941,7 +941,11 @@ function generateApiRequests(apiMetadata) {
     const displayMeta = { ...apiMetadata, name: endpointCollection };
     const isCollection = !endpoint.path.includes('{');
     const isItem = endpoint.path.includes('{');
-    const isRpc = endpoint.method === 'POST' && isItem;
+    // Sub-collection POSTs (path ends with a plural noun after a {param}) are CRUD creates,
+    // not state machine transitions. Only classify POST as RPC when the last segment is singular
+    // (a verb/action name like "submit", "open", "close") — never when it ends with 's'.
+    const endsWithPluralNoun = /\/[a-z][a-z0-9_-]*s$/.test(endpoint.path.trimEnd());
+    const isRpc = endpoint.method === 'POST' && isItem && !endsWithPluralNoun;
 
     // Match examples to endpoints by resource type
     const schemaPrefix = collectionToSchemaPrefix(endpointCollection);

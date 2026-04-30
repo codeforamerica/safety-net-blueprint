@@ -1,0 +1,2 @@
+Order,Condition,Action,Fallback,Description
+1,true,"{""appendToArray"":{""entity"":""intake/applications/members"",""idFrom"":""this.data.memberId"",""field"":""verifications"",""value"":{""type"":{""var"":""this.data.verificationType""},""status"":{""var"":""this.data.result""},""source"":{""var"":""this.data.serviceType""},""checkedAt"":{""var"":""this.time""}}}}",,Write electronic verification result back to ApplicationMember.verifications (Decision 17)
