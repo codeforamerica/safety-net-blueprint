@@ -11,6 +11,7 @@ The machine-readable catalog is in [`packages/contracts/patterns/api-patterns.ya
 | Extension | File type(s) | Location within file |
 |---|---|---|
 | `x-domain` | `*-openapi.yaml` | `info` level or operation level |
+| `x-environments` | Any spec node | `paths`, operations, schemas, or any other node |
 | `x-events` | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
 | `x-enum-source` | `*-openapi.yaml` | Schema property (on string fields with contract-derived enum values) |
 | `x-relationship` | `*-openapi.yaml` | Schema property (on FK fields ending in `Id`) |
@@ -33,6 +34,26 @@ info:
 ```
 
 Valid values: `case-management`, `client-management`, `communication`, `data-exchange`, `document-management`, `eligibility`, `identity-access`, `intake`, `platform`, `reporting`, `scheduling`, `search`, `workflow`.
+
+---
+
+## x-environments
+
+**File type:** Any spec node — `paths`, operations, schemas, or any other YAML node.
+
+Tags a spec section so the resolve pipeline includes it only in specific environments. When resolving with `--env=<name>`, nodes whose `x-environments` list does not include the target environment are removed. The `x-environments` key is stripped from nodes that are kept.
+
+```yaml
+paths:
+  /debug/health:
+    x-environments: [development, staging]
+    get:
+      summary: Health check (non-production only)
+```
+
+Without `--env`, all sections are included as-is regardless of `x-environments` annotations.
+
+See [Resolve Pipeline Architecture](resolve-pipeline.md#5-environment-filtering) for how this is applied during the pipeline.
 
 ---
 

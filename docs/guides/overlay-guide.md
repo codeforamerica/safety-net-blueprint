@@ -1,69 +1,24 @@
-# State Overlays Guide
+# Overlay Guide
 
 > **Status: Draft**
 
-State overlays allow you to customize API specifications for different states without duplicating the entire spec. Each state can have different enum values, additional properties, and terminology while sharing the same base structure.
+Overlays are the mechanism for customizing base specs without forking them. They let you adapt the base contracts to your requirements — different enum values, additional properties, local terminology — while still tracking the shared baseline.
 
 ## How It Works
 
-1. **Base schemas** in `openapi/` define the universal structure
-2. **Overlay files** in `openapi/overlays/{state}/modifications.yaml` declare modifications
-3. **Resolve script** merges base + overlay into `openapi/resolved/`
-4. **All tooling** operates on resolved specs
-
-## Setting Your State
+The resolve pipeline merges base specs with your overlay files into a resolved output directory. All tooling — mock server, Postman generation, client generation — operates on the resolved output, never the base specs directly.
 
 ```bash
-# Set via environment variable
-export STATE=<your-state>
-
-# Or prefix commands
-STATE=<your-state> npm start
-STATE=<your-state> npm run overlay:resolve
+npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 ```
 
-## Available States
-
-```bash
-# List available states (run without STATE set)
-npm run overlay:resolve
-# Output: Available states: <lists all configured states>
-```
+The example overlay in this repo is at `packages/contracts/overlays/example/`. See [Resolve Pipeline Architecture](../architecture/resolve-pipeline.md) for the full pipeline stages.
 
 ## Overlay File Structure
 
 Overlays use the [OpenAPI Overlay Specification 1.0.0](https://github.com/OAI/Overlay-Specification):
 
-```yaml
-# openapi/overlays/<your-state>/modifications.yaml
-overlay: 1.0.0
-info:
-  title: <Your State> Overlay
-  version: 1.0.0
-  description: <Your state>-specific modifications
-
-actions:
-  # Replace enum values
-  - target: $.Person.properties.sex.enum
-    description: California Gender Recognition Act compliance
-    update:
-      - male
-      - female
-      - nonbinary
-      - unknown
-
-  # Add new properties
-  - target: $.Person.properties
-    description: Add California county tracking
-    update:
-      countyCode:
-        type: string
-        description: California county code (01-58)
-        pattern: "^[0-5][0-9]$"
-      calfreshEligible:
-        type: boolean
-        description: CalFresh eligibility flag
-```
+Overlay files can be organized however you like — one file per OpenAPI spec being modified is a common pattern, but not required. The overlay directory is scanned recursively; any `.yaml` file starting with `overlay: 1.0.0` is discovered and applied.
 
 ## Overlay Actions
 
@@ -143,11 +98,11 @@ The same overlay mechanism works for behavioral YAML files — state machines, r
 
 ```yaml
 actions:
-  - target: $.Person.properties.status.enum   # OpenAPI target
+  - target: $.Person.properties.status.enum   # targets an OpenAPI spec file
     description: Use state-specific status values
     update: [active, inactive, pending_review]
 
-  - target: $.slaTypes[?(@.id == 'snap_expedited')].durationDays  # behavioral target
+  - target: $.slaTypes[?(@.id == 'snap_expedited')].durationDays  # targets a behavioral YAML file
     description: Extend SNAP expedited deadline per state waiver
     update: 10
 ```
@@ -183,6 +138,37 @@ Filter expressions support string, numeric, and boolean values:
 - `[?(@.order == 1)]` — numeric match
 - `[?(@.enabled == true)]` — boolean match
 
+## Global Config Options
+
+The `config` root key in any overlay file sets cross-cutting defaults that apply across the entire resolved spec. It is processed by the resolve pipeline before any `actions` are applied.
+
+```yaml
+# Example: global-config.yaml in your overlay directory
+overlay: 1.0.0
+info:
+  title: My State Overlay
+  version: 1.0.0
+
+config:
+  x-casing:
+    style: snake_case
+  x-pagination:
+    style: cursor
+  x-search:
+    style: filtered
+  x-relationship:
+    style: expand
+```
+
+| Key | Options | Default | Description |
+|-----|---------|---------|-------------|
+| `x-casing` | `camelCase`, `snake_case` | `camelCase` | Property name casing in resolved output |
+| `x-pagination.style` | `offset`, `cursor`, `page`, `links` | `offset` | Pagination strategy for list endpoints |
+| `x-search.style` | `simple`, `filtered`, `post-search` | `simple` | Search query pattern |
+| `x-relationship.style` | `links-only`, `expand`, `include`, `embed` | `links-only` | How FK references are represented in responses |
+
+Only include keys you want to override — omitted keys use their defaults. Each key may only appear once across all overlay files; duplicates produce an error. We recommend keeping config in a dedicated file (e.g., `global-config.yaml`) separate from schema modifications.
+
 ## Relationship Configuration
 
 FK fields in the base specs are plain string IDs. States can declare how related resources are represented in responses by adding `x-relationship` to FK fields via overlays. The resolver transforms the spec at build time based on the chosen style.
@@ -198,13 +184,7 @@ FK fields in the base specs are plain string IDs. States can declare how related
 
 ### Setting a global default
 
-Set the default style for all relationships in your config overlay:
-
-```yaml
-config:
-  x-relationship:
-    style: expand
-```
+Set `x-relationship.style` in the `config` block — see [Global Config Options](#global-config-options).
 
 ### Per-field configuration
 
@@ -292,7 +272,7 @@ Task:
 Use dot notation in `fields` to reach into related resources across FK chains. Each segment must correspond to an FK field annotated with `x-relationship` on the intermediate schema.
 
 ```yaml
-# Task.queueId → Queue, Queue.officeId → Office
+# Task.caseId → Case, Case.applicationId → Application
 x-relationship:
   resource: Case
   style: expand
@@ -334,80 +314,94 @@ fields:
 
 ## Target Path Syntax
 
-Targets use JSONPath-like syntax:
+Targets use JSONPath-like syntax. Where a schema lives determines its path prefix:
 
-| Target | Description |
-|--------|-------------|
-| `$.Person` | Root schema |
-| `$.Person.properties` | All properties |
-| `$.Person.properties.status` | Specific property |
-| `$.Person.properties.status.enum` | Enum values |
-| `$.Application.properties.programs.items` | Array item schema |
-| `$.slaTypes` | Top-level array in a behavioral YAML |
-| `$.slaTypes[?(@.id == 'snap_expedited')]` | Specific item in a behavioral YAML array |
-| `$.slaTypes[?(@.id == 'snap_expedited')].durationDays` | Property of a specific array item |
+- **Schemas in API spec files** (e.g., `workflow-openapi.yaml`) — nested under `components/schemas`, so the target starts with `$.components.schemas.`
+- **Schemas in shared component files** (e.g., `components/common.yaml`) — top-level in the file, so the target starts with `$.`
 
-## Creating a New State Overlay
+### File Disambiguation
 
-### 1. Create the Overlay Directory and File
-
-```bash
-# Create state directory and copy an existing overlay as a template
-mkdir openapi/overlays/<new-state>
-cp openapi/overlays/<existing-state>/modifications.yaml openapi/overlays/<new-state>/modifications.yaml
-```
-
-### 2. Update the Metadata
+When the same schema name appears in multiple files, use `file:` to specify which one. Without it, the resolver warns and skips ambiguous matches.
 
 ```yaml
-overlay: 1.0.0
-info:
-  title: New State Overlay
-  version: 1.0.0
-  description: New State-specific modifications
+- target: $.Program.enum
+  file: components/common.yaml
+  description: Replace program names with state terminology
+  update:
+    - snap
+    - tanf
+    - medicaid
 ```
 
-### 3. Define Your Actions
+### Version and API Disambiguation
 
-Add actions for each modification needed:
+When multiple API versions exist (e.g., `applications.yaml` and `applications-v2.yaml`), use `target-version` or `target-api` to narrow the match:
 
 ```yaml
-actions:
-  # Your state-specific changes
-  - target: $.Person.properties.programType.enum
-    description: State program names
-    update:
-      - snap
-      - tanf
-      - medicaid
+- target: $.components.schemas.Person.properties
+  target-version: 2
+  description: Add field only to v2 spec
+
+- target: $.components.schemas.Application
+  target-api: applications
+  description: Target a specific API by its x-domain value
 ```
 
-### 4. Validate
+`target-api` matches the spec's `info.x-api-id` value. `target-version` matches the filename version suffix (no suffix = 1, `-v2` = 2).
+
+## Creating a New Overlay
+
+Copy the example overlay as a starting point, then add actions for each modification needed:
 
 ```bash
-STATE=<new-state> npm run overlay:resolve
+cp packages/contracts/overlays/example/modifications.yaml <your-overlay-dir>/modifications.yaml
 ```
 
-The resolver will warn you about any invalid targets:
+## Working with Shared Types
 
+Shared types (Address, Name, etc.) live in `components/*.yaml` and are referenced by multiple API specs via `$ref`. There are two approaches to customizing them:
+
+### Approach 1: Modify the shared type via overlay
+
+Changes propagate to all specs that reference the type.
+
+```yaml
+# Add a field to Address — affects all APIs
+- target: $.Address.properties
+  file: components/contact.yaml
+  description: Add apartment/unit field to Address
+  update:
+    unit:
+      type: string
+      description: Apartment or unit number.
 ```
-Warnings:
-  ⚠ Target $.Person.properties.nonexistent.enum does not exist in base schema
+
+### Approach 2: Replace a $ref with an inline schema
+
+Decouple from the shared type entirely. Use `update` to swap a `$ref` with a custom inline schema.
+
+```yaml
+- target: $.components.schemas.Person.allOf.0.properties.address
+  file: persons.yaml
+  description: Use custom address format
+  update:
+    type: object
+    properties:
+      street1:
+        type: string
+      street2:
+        type: string
+      city:
+        type: string
+      state:
+        type: string
+        enum: [CA]
+      zipCode:
+        type: string
+        pattern: "^[0-9]{5}(-[0-9]{4})?$"
 ```
 
-## Commands
-
-All commands below respect the `STATE` environment variable. When set, they automatically resolve overlays and use state-specific schemas.
-
-| Command | Description |
-|---------|-------------|
-| `npm start` | Start mock server + Swagger UI |
-| `npm run validate` | Validate base schemas and examples |
-| `npm run mock:start` | Start mock server only |
-| `npm run mock:swagger` | Start Swagger UI only |
-| `npm run postman:generate` | Generate Postman collection |
-| `npm run test:integration` | Run integration tests |
-| `npm run overlay:resolve` | Manually resolve overlay for current STATE |
+Note: the `components/` folder is preserved in resolved output — this is expected and harmless. Downstream tools consume the resolved API spec files, not the component files directly.
 
 ## Best Practices
 
@@ -444,7 +438,7 @@ Each action should do one thing. Don't combine unrelated changes:
 Always validate after modifying overlays:
 
 ```bash
-STATE=<your-state> npm run overlay:resolve
+npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 ```
 
 ### Document State Differences
@@ -454,7 +448,7 @@ Add comments in the overlay explaining why changes are needed:
 ```yaml
 actions:
   # California uses branded program names per state law AB-1234
-  - target: $.Application.properties.programs.items.enum
+  - target: $.components.schemas.Application.properties.programs.items.enum
     description: California branded program names
     update:
       - calfresh      # California's SNAP program
@@ -478,9 +472,8 @@ actions:
 
 If your changes don't appear in resolved specs:
 
-1. Check STATE is set: `echo $STATE`
-2. Re-run resolution: `npm run overlay:resolve`
-3. Check the target path matches the file structure
+1. Re-run resolution: `npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>`
+2. Check the target path matches the file structure
 
 ### Validation Errors After Overlay
 
@@ -490,20 +483,7 @@ If validation fails after applying an overlay:
 2. Ensure enum values are valid strings
 3. Verify new properties have required fields (type, description)
 
-## Behavioral Artifacts (Overlay Support Planned)
-
-The following behavioral YAML artifacts exist alongside OpenAPI specs but are not yet overlayable — they are copied to the output directory unchanged. Overlay support is tracked in issue #174.
-
-| Artifact | File pattern | Planned overlay use |
-|----------|-------------|---------------------|
-| State machine | `*-state-machine.yaml` | Add/modify transitions, guards, effects |
-| Rules | `*-rules.yaml` | Replace or extend assignment/priority rules |
-| SLA types | `*-sla-types.yaml` | Override deadlines, `pauseWhen` conditions, `autoAssignWhen` logic |
-| Metrics | `*-metrics.yaml` | Add state-specific metrics or override targets |
-
-States that need different SLA deadlines or pause conditions will be able to supply their own `*-sla-types.yaml` via overlay once #174 lands.
-
 ## Reference
 
-- [State Customization Strategy](../decisions/state-customization.md)
+- [Customization Strategy](../decisions/state-customization.md)
 - [OpenAPI Overlay Specification](https://github.com/OAI/Overlay-Specification)

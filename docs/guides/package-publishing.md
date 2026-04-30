@@ -19,7 +19,7 @@ The `build-state-package.js` script performs these steps:
 
 ### 1. Resolve Overlay
 
-Merges base specs with state-specific modifications from `openapi/overlays/{state}/modifications.yaml`.
+Merges base specs with state-specific modifications from the overlay directory.
 
 ### 2. Generate Domain Clients
 
@@ -159,7 +159,7 @@ The generated package includes:
 
 ## Adding a New State
 
-1. Create the state overlay (see [State Overlays Guide](../guides/state-overlays.md))
+1. Create the state overlay (see [Overlay Guide](../guides/overlay-guide.md))
 2. Add the state to the workflow matrix in `.github/workflows/publish-packages.yml`:
 
 ```yaml

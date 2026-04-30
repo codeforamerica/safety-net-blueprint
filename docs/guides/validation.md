@@ -2,8 +2,6 @@
 
 > **Status: Draft**
 
-> **Note:** OpenAPI validation (syntax, linting, and pattern checks) works today. Behavioral contract validation — cross-artifact consistency checks for state machines, rules, metrics, and field metadata — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md).
-
 ## Quick Start
 
 ```bash
@@ -17,7 +15,7 @@ npm run validate:patterns     # API design patterns only
 When working with state overlays, resolve the overlay and check for target warnings:
 
 ```bash
-STATE=<your-state> npm run overlay:resolve
+npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 ```
 
 The resolver warns about invalid targets (e.g., paths that don't exist in the base schema). After resolving, validate the base specs to ensure no regressions:

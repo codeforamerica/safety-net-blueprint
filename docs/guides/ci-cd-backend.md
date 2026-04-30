@@ -31,7 +31,7 @@ jobs:
         run: npm run validate
 
       - name: Validate all state specs
-        run: STATE=<your-state> npm run overlay:resolve
+        run: npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 ```
 
 ### GitLab CI
@@ -43,7 +43,7 @@ validate:
   script:
     - npm install
     - npm run validate
-    - STATE=<your-state> npm run overlay:resolve
+    - npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 ```
 
 ## Contract Testing Your Backend
