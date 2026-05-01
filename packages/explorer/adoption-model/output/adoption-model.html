@@ -58,97 +58,26 @@
   <template id="tpl-s1">
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
 <style>
-  /*
-   * 18s one-shot — cumulative blast-radius reveal, holds at full red state:
-   * 0–4%   (0–0.7s):   bullet 1 fades in alone
-   * 18–20% (3.2–3.6s): Vendor 1 update fires — lines peak bright, bullet 2 in
-   * 36–40% (6.5–7.2s): Vendor 2 update fires — compliance warning pops, updates required follows
-   * 49–52% (8.8–9.4s): Custom App cascade — lines peak bright
-   * 54–56% (9.7–10s):  bullet 3 in
-   * 56–100% (10–18s):  all red, hold for emphasis (no reset)
-   */
+  /* Keyframe definitions — timing injected by setupS1() in the main script. */
 
-  /* Lines — peak stroke-width on fire, settle after ~1s, hold red */
-  @keyframes s1-la {
-    0%,3%   { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
-    20%     { stroke:#AF121D; opacity:1;    stroke-width:3.5; }
-    27%,100%{ stroke:#AF121D; opacity:0.95; stroke-width:2.5; }
+  @keyframes s1-fadein { 0%{opacity:0} 100%{opacity:1} }
+  @keyframes s1-line-fire {
+    0%  { stroke:#EF6C75; opacity:.25; stroke-width:1.5; }
+    25% { stroke:#AF121D; opacity:1;   stroke-width:3.5; }
+    100%{ stroke:#AF121D; opacity:.95; stroke-width:2.5; }
   }
-  @keyframes s1-lb {
-    0%,36%  { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
-    40%     { stroke:#AF121D; opacity:1;    stroke-width:3.5; }
-    47%,100%{ stroke:#AF121D; opacity:0.95; stroke-width:2.5; }
+  @keyframes s1-lens-fire  { from{fill:#FFB446} to{fill:#AF121D} }
+  @keyframes s1-cases-fire { from{fill:#000000} to{fill:#FFFFFF} }
+  @keyframes s1-ca-fire {
+    0%  { fill:#FFD699; stroke:#FFB446; stroke-width:1.5; }
+    25% { fill:#F9C8CB; stroke:#AF121D; stroke-width:3;   }
+    100%{ fill:#F9C8CB; stroke:#AF121D; stroke-width:2.5; }
   }
-  @keyframes s1-lc {
-    0%,49%  { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
-    52%     { stroke:#AF121D; opacity:1;    stroke-width:3.5; }
-    58%,100%{ stroke:#AF121D; opacity:0.95; stroke-width:2.5; }
+  @keyframes s1-v2ca-fire {
+    0%  { stroke:#EF6C75; stroke-width:1; opacity:.25; stroke-dasharray:none; }
+    25% { stroke:#AF121D; stroke-width:3; opacity:1;   stroke-dasharray:5,3;  }
+    100%{ stroke:#AF121D; stroke-width:2; opacity:.95; stroke-dasharray:5,3;  }
   }
-
-  /* "↑ vendor update" inside circles — fires and holds */
-  @keyframes s1-vu1 { 0%,16%{opacity:0} 18%,100%{opacity:1} }
-  @keyframes s1-vu2 { 0%,34%{opacity:0} 36%,100%{opacity:1} }
-
-  /* "▲ update/fix required" markers — fire and hold */
-  @keyframes s1-xa  { 0%,19%{opacity:0} 21%,100%{opacity:1} }
-  @keyframes s1-xb  { 0%,39%{opacity:0} 41%,100%{opacity:1} }
-  @keyframes s1-xc  { 0%,51%{opacity:0} 53%,100%{opacity:1} }
-
-  /* Custom App circle — peaks with V2 cascade, holds red */
-  @keyframes s1-ca {
-    0%,36%  { fill:#FFD699; stroke:#FFB446; stroke-width:1.5; }
-    40%     { fill:#F9C8CB; stroke:#AF121D; stroke-width:3; }
-    47%,100%{ fill:#F9C8CB; stroke:#AF121D; stroke-width:2.5; }
-  }
-  @keyframes s1-fix { 0%,51%{opacity:0} 53%,100%{opacity:1} }
-
-  /* V2→CustomApp integration line — breaks and holds broken */
-  @keyframes s1-v2ca {
-    0%,36%  { stroke:#EF6C75; stroke-width:1; opacity:0.25; stroke-dasharray:none; }
-    40%     { stroke:#AF121D; stroke-width:3;  opacity:1;    stroke-dasharray:5,3; }
-    47%,100%{ stroke:#AF121D; stroke-width:2;  opacity:0.95; stroke-dasharray:5,3; }
-  }
-  /* Compliance warning — pops with V2 vendor update, holds */
-  @keyframes s1-warn {
-    0%,34%{opacity:0}
-    37%,100%{opacity:1}
-  }
-
-  #s1-la1,#s1-la2,#s1-la3,#s1-la4 { animation: s1-la 18s ease-in-out 1 both; }
-  #s1-lb1,#s1-lb2,#s1-lb3,#s1-lb4 { animation: s1-lb 18s ease-in-out 1 both; }
-  #s1-lc1,#s1-lc2,#s1-lc3,#s1-lc4 { animation: s1-lc 18s ease-in-out 1 both; }
-  #s1-vu1      { animation: s1-vu1 18s ease-in-out 1 both; }
-  #s1-vu2      { animation: s1-vu2 18s ease-in-out 1 both; }
-  #s1-v1-label { animation: s1-xa  18s ease-in-out 1 both; }
-  #s1-v2-label { animation: s1-xb  18s ease-in-out 1 both; }
-  #s1-xa1,#s1-xa2,#s1-xa3,#s1-xa4 { animation: s1-xa 18s ease-in-out 1 both; }
-  #s1-xb1,#s1-xb2,#s1-xb3,#s1-xb4 { animation: s1-xb 18s ease-in-out 1 both; }
-  #s1-xc1,#s1-xc2,#s1-xc3,#s1-xc4 { animation: s1-xc 18s ease-in-out 1 both; }
-  #s1-v2ca      { animation: s1-v2ca 18s ease-in-out 1 both; }
-  #s1-warn      { animation: s1-warn  18s ease-in-out 1 both; }
-  #s1-ca-circle { animation: s1-ca   18s ease-in-out 1 both; }
-  #s1-fix       { animation: s1-fix  18s ease-in-out 1 both; }
-
-  /* Bullets — staggered in, hold visible */
-  @keyframes s1-b1 { 0%,1%{opacity:0} 4%,100%{opacity:1} }
-  @keyframes s1-b2 { 0%,19%{opacity:0} 22%,100%{opacity:1} }
-  @keyframes s1-b3 { 0%,53%{opacity:0} 56%,100%{opacity:1} }
-  #s1-b1 { animation: s1-b1 18s ease-in-out 1 both; }
-  #s1-b2 { animation: s1-b2 18s ease-in-out 1 both; }
-  #s1-b3 { animation: s1-b3 18s ease-in-out 1 both; }
-
-  /* Venn intersection lens — starts yellow, turns red with V1 update, holds red */
-  @keyframes s1-lens {
-    0%,17%  { fill:#FFB446; }
-    20%,100%{ fill:#AF121D; }
-  }
-  /* "Cases" label — black on yellow, white on red, holds white */
-  @keyframes s1-cases {
-    0%,17%  { fill:#000000; }
-    20%,100%{ fill:#FFFFFF; }
-  }
-  #s1-lens        { animation: s1-lens  18s ease-in-out 1 both; }
-  #s1-cases-label { animation: s1-cases 18s ease-in-out 1 both; }
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
@@ -288,39 +217,11 @@
   <template id="tpl-s2">
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
 <style>
-  /*
-   * Slide 2 — two-phase animation:
-   *
-   * Phase 1 (18s, one-shot, fill: both):
-   *   0–32%  tiles build in staggered
-   *   52–57% compliance labels + bullet 1 appear
-   *   67–72% bullet 3 appears
-   *   85–90% bullet 2 (you own the contracts) appears
-   *
-   * Phase 2 (7s loop, starts at 18s):
-   *   vendor swap on Eligibility + Case Management loops continuously
-   *   IBM Curam ↔ Salesforce / Tyler Technologies
-   */
+  /* Keyframe definitions — timing injected by setupS2() in the main script. */
 
-  /* ── Phase 1: Tile reveal ── */
-  @keyframes s2-t01 { 0%,1%{opacity:0}   4%,100%{opacity:1} }
-  @keyframes s2-t02 { 0%,4%{opacity:0}   7%,100%{opacity:1} }
-  @keyframes s2-t03 { 0%,7%{opacity:0}   10%,100%{opacity:1} }
-  @keyframes s2-t04 { 0%,10%{opacity:0}  13%,100%{opacity:1} }
-  @keyframes s2-t05 { 0%,13%{opacity:0}  16%,100%{opacity:1} }
-  @keyframes s2-t06 { 0%,16%{opacity:0}  19%,100%{opacity:1} }
-  @keyframes s2-t07 { 0%,19%{opacity:0}  22%,100%{opacity:1} }
-  @keyframes s2-t08 { 0%,22%{opacity:0}  25%,100%{opacity:1} }
-  @keyframes s2-t09 { 0%,25%{opacity:0}  28%,100%{opacity:1} }
-  @keyframes s2-t10 { 0%,28%{opacity:0}  31%,100%{opacity:1} }
+  @keyframes s2-fadein { from{opacity:0} to{opacity:1} }
 
-  /* ── Phase 1: Compliance + bullets ── */
-  @keyframes s2-comp { 0%,52%{opacity:0} 57%,100%{opacity:1} }
-  @keyframes s2-b1   { 0%,52%{opacity:0} 57%,100%{opacity:1} }
-  @keyframes s2-b3   { 0%,67%{opacity:0} 72%,100%{opacity:1} }
-  @keyframes s2-b2   { 0%,85%{opacity:0} 90%,100%{opacity:1} }
-
-  /* ── Phase 2: Vendor swap loop (7s, delay 18s) ── */
+  /* Phase 2: vendor swap visual behavior (percentages define the swap shape, not timing) */
   @keyframes s2-va-swap {
     0%,8%   { opacity:1 }   /* IBM visible */
     22%,78% { opacity:0 }   /* IBM hidden during swap */
@@ -336,30 +237,6 @@
     16%,84% { opacity:1 }
     92%,100%{ opacity:0 }
   }
-
-  /* ── Apply Phase 1 ── */
-  #s2-t01 { animation: s2-t01 18s ease-in-out both; }
-  #s2-t02 { animation: s2-t02 18s ease-in-out both; }
-  #s2-t03 { animation: s2-t03 18s ease-in-out both; }
-  #s2-t04 { animation: s2-t04 18s ease-in-out both; }
-  #s2-t05 { animation: s2-t05 18s ease-in-out both; }
-  #s2-t06 { animation: s2-t06 18s ease-in-out both; }
-  #s2-t07 { animation: s2-t07 18s ease-in-out both; }
-  #s2-t08 { animation: s2-t08 18s ease-in-out both; }
-  #s2-t09 { animation: s2-t09 18s ease-in-out both; }
-  #s2-t10 { animation: s2-t10 18s ease-in-out both; }
-
-  #s2-b1 { animation: s2-b1 18s ease-in-out both; }
-  #s2-b2 { animation: s2-b2 18s ease-in-out both; }
-  #s2-b3 { animation: s2-b3 18s ease-in-out both; }
-
-  #s2-c01,#s2-c02,#s2-c03,#s2-c04,#s2-c05,
-  #s2-c06,#s2-c07,#s2-c08,#s2-c09,#s2-c10 { animation: s2-comp 18s ease-in-out both; }
-
-  /* ── Apply Phase 2 (swap loop) ── */
-  #s2-va1,#s2-va2     { animation: s2-va-swap 7s ease-in-out 18s infinite; }
-  #s2-vb1,#s2-vb2     { animation: s2-vb-swap 7s ease-in-out 18s infinite; }
-  #s2-vg1,#s2-vg2     { animation: s2-vg-swap 7s ease-in-out 18s infinite; }
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
@@ -375,15 +252,41 @@
   <!-- Bullets — animated to match each beat -->
   <g id="s2-b1" opacity="0">
     <circle cx="88" cy="328" r="6" fill="#2B1A78"/>
-    <text x="104" y="333" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Every module has a defined place — organized end to end</text>
+    <text x="104" y="333" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">A complete platform, not a collection of pieces</text>
   </g>
   <g id="s2-b2" opacity="0">
-    <circle cx="88" cy="362" r="6" fill="#FFB446"/>
-    <text x="104" y="367" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">You own the contracts — write one adapter per vendor, everything else stays</text>
+    <circle cx="88" cy="362" r="6" fill="#00AD93"/>
+    <text x="104" y="367" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Compliance built into every module — requirements have an owner</text>
   </g>
   <g id="s2-b3" opacity="0">
-    <circle cx="88" cy="396" r="6" fill="#00AD93"/>
-    <text x="104" y="401" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Compliance built into every module — requirements have an owner</text>
+    <circle cx="88" cy="392" r="6" fill="#FFB446"/>
+    <text x="104" y="397" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">You own the contracts — swap one adapter, nothing else changes</text>
+    <!-- Cycling adapter badges — color-coded by type, one visible at a time -->
+    <!-- Yellow = commercial vendor / Green = custom or open / Light blue = AI-assisted -->
+    <g id="s2-vn1" opacity="0">
+      <rect x="104" y="405" width="90" height="17" rx="8" fill="#FFB446"/>
+      <text x="149" y="417" font-size="9" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">IBM Curam</text>
+    </g>
+    <g id="s2-vn2" opacity="0">
+      <rect x="104" y="405" width="100" height="17" rx="8" fill="#006152"/>
+      <text x="154" y="417" font-size="9" text-anchor="middle" font-weight="700" fill="#FFFFFF" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Custom code</text>
+    </g>
+    <g id="s2-vn3" opacity="0">
+      <rect x="104" y="405" width="130" height="17" rx="8" fill="#FFB446"/>
+      <text x="169" y="417" font-size="9" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Tyler Technologies</text>
+    </g>
+    <g id="s2-vn4" opacity="0">
+      <rect x="104" y="405" width="95" height="17" rx="8" fill="#A1B4EA"/>
+      <text x="151" y="417" font-size="9" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI-assisted</text>
+    </g>
+    <g id="s2-vn5" opacity="0">
+      <rect x="104" y="405" width="90" height="17" rx="8" fill="#FFB446"/>
+      <text x="149" y="417" font-size="9" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Salesforce</text>
+    </g>
+    <g id="s2-vn6" opacity="0">
+      <rect x="104" y="405" width="90" height="17" rx="8" fill="#006152"/>
+      <text x="149" y="417" font-size="9" text-anchor="middle" font-weight="700" fill="#FFFFFF" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Open source</text>
+    </g>
   </g>
 
   <!-- Divider -->
@@ -401,7 +304,7 @@
   <g id="s2-t01" opacity="0">
     <rect x="672" y="90" width="316" height="64" rx="4" fill="white"/>
     <text x="830" y="110" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Eligibility</text>
-    <text id="s2-va1" x="830" y="126" font-size="8.5" text-anchor="middle" font-weight="600" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">IBM Curam + adapter</text>
+    <text id="s2-va1" x="830" y="126" font-size="8.5" text-anchor="middle" font-weight="600" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">IBM Curam + adapter</text>
     <text id="s2-vb1" x="830" y="126" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">↻ Salesforce + adapter · contracts unchanged</text>
     <text id="s2-c01" x="830" y="142" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">MAGI · non-MAGI · SNAP income rules</text>
   </g>
@@ -410,7 +313,7 @@
   <g id="s2-t02" opacity="0">
     <rect x="672" y="162" width="316" height="64" rx="4" fill="white"/>
     <text x="830" y="182" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Case Management</text>
-    <text id="s2-va2" x="830" y="198" font-size="8.5" text-anchor="middle" font-weight="600" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">IBM Curam + adapter</text>
+    <text id="s2-va2" x="830" y="198" font-size="8.5" text-anchor="middle" font-weight="600" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">IBM Curam + adapter</text>
     <text id="s2-vb2" x="830" y="198" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">↻ Tyler Tech + adapter · contracts unchanged</text>
     <text id="s2-c02" x="830" y="214" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">federally mandated case records · retention</text>
   </g>
@@ -419,7 +322,7 @@
   <g id="s2-t03" opacity="0">
     <rect x="672" y="234" width="316" height="64" rx="4" fill="white"/>
     <text x="830" y="254" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Intake</text>
-    <text x="830" y="270" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">custom portal · state developed</text>
+    <text id="s2-i03" x="830" y="270" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">custom portal · state developed</text>
     <text id="s2-c03" x="830" y="286" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">SNAP · Medicaid · TANF · program screening</text>
   </g>
 
@@ -427,7 +330,7 @@
   <g id="s2-t04" opacity="0">
     <rect x="672" y="306" width="316" height="64" rx="4" fill="white"/>
     <text x="830" y="326" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
-    <text x="830" y="342" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">rules engine · AI-assisted</text>
+    <text id="s2-i04" x="830" y="342" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">rules engine · AI-assisted</text>
     <text id="s2-c04" x="830" y="358" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">SLA tracking · federal deadline enforcement</text>
   </g>
 
@@ -435,7 +338,7 @@
   <g id="s2-t05" opacity="0">
     <rect x="672" y="378" width="316" height="64" rx="4" fill="white"/>
     <text x="830" y="398" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Document Management</text>
-    <text x="830" y="414" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">cloud storage · vendor managed</text>
+    <text id="s2-i05" x="830" y="414" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">cloud storage · vendor managed</text>
     <text id="s2-c05" x="830" y="430" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">HIPAA · state retention schedules</text>
   </g>
 
@@ -445,7 +348,7 @@
   <g id="s2-t06" opacity="0">
     <rect x="1012" y="90" width="316" height="64" rx="4" fill="white"/>
     <text x="1170" y="110" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Client Management</text>
-    <text x="1170" y="126" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">custom CRM · state developed</text>
+    <text id="s2-i06" x="1170" y="126" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">custom CRM · state developed</text>
     <text id="s2-c06" x="1170" y="142" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">HIPAA · PII · identity proofing</text>
   </g>
 
@@ -453,7 +356,7 @@
   <g id="s2-t07" opacity="0">
     <rect x="1012" y="162" width="316" height="64" rx="4" fill="white"/>
     <text x="1170" y="182" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Scheduling</text>
-    <text x="1170" y="198" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">interview scheduler · in house</text>
+    <text id="s2-i07" x="1170" y="198" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">interview scheduler · in house</text>
     <text id="s2-c07" x="1170" y="214" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">SNAP interview requirements · 7 CFR § 273.2(e)</text>
   </g>
 
@@ -461,7 +364,7 @@
   <g id="s2-t08" opacity="0">
     <rect x="1012" y="234" width="316" height="64" rx="4" fill="white"/>
     <text x="1170" y="254" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Communications</text>
-    <text x="1170" y="270" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">notification hub · cloud managed</text>
+    <text id="s2-i08" x="1170" y="270" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">notification hub · cloud managed</text>
     <text id="s2-c08" x="1170" y="286" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">adverse action notices · 10-day advance notice rule</text>
   </g>
 
@@ -469,7 +372,7 @@
   <g id="s2-t09" opacity="0">
     <rect x="1012" y="306" width="316" height="64" rx="4" fill="white"/>
     <text x="1170" y="326" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Reporting</text>
-    <text x="1170" y="342" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">data warehouse · state built</text>
+    <text id="s2-i09" x="1170" y="342" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">data warehouse · state built</text>
     <text id="s2-c09" x="1170" y="358" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">ACF · PERM · federal data reporting</text>
   </g>
 
@@ -477,7 +380,7 @@
   <g id="s2-t10" opacity="0">
     <rect x="1012" y="378" width="316" height="64" rx="4" fill="white"/>
     <text x="1170" y="398" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Data Exchange</text>
-    <text x="1170" y="414" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">API connector · state built</text>
+    <text id="s2-i10" x="1170" y="414" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">API connector · state built</text>
     <text id="s2-c10" x="1170" y="430" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">FDSH · IEVS · SAVE · SSA verification</text>
   </g>
 
@@ -901,6 +804,156 @@
   </template>
 
   <script>
+    // ── S1 timing ──────────────────────────────────────────────────────────────
+    // Change a beat start (B1/B2/B3) to shift the whole beat.
+    // Change an offset to adjust spacing within a beat.
+    // All values are seconds.
+    const S1_T = {
+      // Animation durations
+      BULLET: 0.8,   // bullet fade-in
+      LINE:   2.0,   // lines turn red
+      MARKER: 0.5,   // ▲ markers appear
+      VU:     0.6,   // "vendor update" badge
+      LENS:   0.8,   // lens / circle color change
+
+      // Beat start times (when the bullet for that beat appears)
+      B1: 3,    // "systems overlap with no shared standard"
+      B2: 8,    // "vendor updates cascade to every connected app"
+      B3: 17,   // "compliance has no owner"
+
+      // Within-beat offsets (relative to beat start)
+      LENS_AFTER: 0.5,  // beat 1 — lens turns red after bullet
+      VU_AFTER:   1,    // beats 2+3 — vendor update badge after bullet
+      LA_AFTER:   2,    // beat 2 — consumer→V1 lines after bullet
+      XA_AFTER:   5,    // beat 2 — ▲ markers after bullet (after lines settle)
+      LB_AFTER:   1,    // beat 3 — consumer→V2 lines + CA line + CA circle (same time as VU)
+      WARN_AFTER: 1.5,  // beat 3 — compliance warning after bullet
+      XB_AFTER:   3.5,  // beat 3 — ▲ markers on V2 lines + v2-label + lc lines + fix badge + xc markers
+    };
+
+    function buildS1Css(t) {
+      const b1 = t.B1, b2 = t.B2, b3 = t.B3;
+      return [
+        // Beat 1
+        `#s1-b1          { animation: s1-fadein    ${t.BULLET}s ease-in-out ${b1}s both; }`,
+        `#s1-lens        { animation: s1-lens-fire  ${t.LENS}s   ease-in-out ${b1 + t.LENS_AFTER}s both; }`,
+        `#s1-cases-label { animation: s1-cases-fire ${t.LENS}s   ease-in-out ${b1 + t.LENS_AFTER}s both; }`,
+        // Beat 2
+        `#s1-b2                           { animation: s1-fadein    ${t.BULLET}s ease-in-out ${b2}s both; }`,
+        `#s1-vu1                          { animation: s1-fadein    ${t.VU}s     ease-in-out ${b2 + t.VU_AFTER}s both; }`,
+        `#s1-la1,#s1-la2,#s1-la3,#s1-la4 { animation: s1-line-fire ${t.LINE}s   ease-in-out ${b2 + t.LA_AFTER}s both; }`,
+        `#s1-xa1,#s1-xa2,#s1-xa3,#s1-xa4 { animation: s1-fadein    ${t.MARKER}s ease-in-out ${b2 + t.XA_AFTER}s both; }`,
+        `#s1-v1-label                     { animation: s1-fadein    ${t.MARKER}s ease-in-out ${b2 + t.LA_AFTER}s both; }`,
+        // Beat 3
+        `#s1-b3                            { animation: s1-fadein    ${t.BULLET}s ease-in-out ${b3}s both; }`,
+        `#s1-vu2                           { animation: s1-fadein    ${t.VU}s     ease-in-out ${b3 + t.VU_AFTER}s both; }`,
+        `#s1-lb1,#s1-lb2,#s1-lb3,#s1-lb4  { animation: s1-line-fire ${t.LINE}s   ease-in-out ${b3 + t.LB_AFTER}s both; }`,
+        `#s1-v2ca                          { animation: s1-v2ca-fire ${t.LINE}s   ease-in-out ${b3 + t.LB_AFTER}s both; }`,
+        `#s1-ca-circle                     { animation: s1-ca-fire   ${t.LINE}s   ease-in-out ${b3 + t.LB_AFTER}s both; }`,
+        `#s1-warn                          { animation: s1-fadein    ${t.MARKER}s ease-in-out ${b3 + t.WARN_AFTER}s both; }`,
+        `#s1-xb1,#s1-xb2,#s1-xb3,#s1-xb4  { animation: s1-fadein    ${t.MARKER}s ease-in-out ${b3 + t.XB_AFTER}s both; }`,
+        `#s1-v2-label                      { animation: s1-fadein    ${t.MARKER}s ease-in-out ${b3 + t.XB_AFTER}s both; }`,
+        `#s1-lc1,#s1-lc2,#s1-lc3,#s1-lc4  { animation: s1-line-fire ${t.LINE}s   ease-in-out ${b3 + t.XB_AFTER}s both; }`,
+        `#s1-fix                           { animation: s1-fadein    ${t.MARKER}s ease-in-out ${b3 + t.XB_AFTER}s both; }`,
+        `#s1-xc1,#s1-xc2,#s1-xc3,#s1-xc4  { animation: s1-fadein    ${t.MARKER}s ease-in-out ${b3 + t.XB_AFTER}s both; }`,
+      ].join('\n  ');
+    }
+
+    function setupS1() {
+      const svg = wrapper.querySelector('svg');
+      if (!svg) return;
+      const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+      style.textContent = buildS1Css(S1_T);
+      svg.appendChild(style);
+    }
+    // ───────────────────────────────────────────────────────────────────────────
+
+    // ── S2 timing ──────────────────────────────────────────────────────────────
+    // To shift when bullets appear: change B1/B2/B3.
+    // To change tile stagger speed: change TILE_STRIDE.
+    // To shift when Phase 2 starts: change PHASE1 (swap delay tracks it automatically).
+    const S2_T = {
+      // Tile reveal (Phase 1)
+      TILE_FADE:   0.4,   // how long each tile fades in
+      TILE_START:  3.0,   // when the first tile appears (after B1 is visible)
+      TILE_STRIDE: 0.54,  // seconds between successive tiles — last tile at ~7.9s
+
+      // Compliance labels + bullets (Phase 1)
+      B1:          1.5,   // bullet 1 first — "Every module has a defined place" → tiles follow
+      B2:          9.5,   // bullet 2 after tiles done — "Compliance built in" → compliance labels follow
+      COMP:        9.5,   // compliance labels appear with B2
+      B3:         13.0,   // bullet 3 last — "You own the contracts" → vendor swap follows
+      BULLET_FADE: 0.9,
+
+      // Phase 2 — vendor swap loop (starts when Phase 1 ends)
+      PHASE1:     16,     // total Phase 1 duration; Phase 2 delay equals this
+      SWAP_DUR:    7,     // vendor swap loop duration
+
+      // Vendor badge cycling (inside b3 bullet)
+      VN_COUNT:    6,     // number of vendor badges
+      VN_STRIDE:   4,     // seconds between each vendor badge appearing
+    };
+
+    function buildS2Css(t) {
+      const pad = i => String(i).padStart(2, '0');
+      const tiles = [1,2,3,4,5,6,7,8,9,10].map(i => {
+        const d = +(t.TILE_START + (i - 1) * t.TILE_STRIDE).toFixed(2);
+        return `#s2-t${pad(i)} { animation: s2-fadein ${t.TILE_FADE}s ease-in-out ${d}s both; }`;
+      });
+      // Compliance labels stagger in the same order as tiles
+      const comp = [1,2,3,4,5,6,7,8,9,10].map(i => {
+        const d = +(t.COMP + (i - 1) * t.TILE_STRIDE).toFixed(2);
+        return `#s2-c${pad(i)} { animation: s2-fadein ${t.BULLET_FADE}s ease-in-out ${d}s both; }`;
+      });
+      return [
+        ...tiles,
+        ...comp,
+        // Bullets
+        `#s2-b1 { animation: s2-fadein ${t.BULLET_FADE}s ease-in-out ${t.B1}s both; }`,
+        `#s2-b2 { animation: s2-fadein ${t.BULLET_FADE}s ease-in-out ${t.B2}s both; }`,
+        `#s2-b3 { animation: s2-fadein ${t.BULLET_FADE}s ease-in-out ${t.B3}s both; }`,
+        // Adapter badge cycling inside b3 — computed from VN_COUNT × VN_STRIDE
+        ...(() => {
+          const vnDur = t.VN_COUNT * t.VN_STRIDE;
+          // Percentages within the cycle for one badge slot
+          const pPop  = +(0.25 / vnDur * 100).toFixed(1);  // peak of entry overshoot
+          const pSettle = +(0.55 / vnDur * 100).toFixed(1); // settled at normal size
+          const pFadeStart = +((t.VN_STRIDE - 0.5) / vnDur * 100).toFixed(1); // start fade out
+          const pGone = +(t.VN_STRIDE / vnDur * 100).toFixed(1);              // fully gone
+          const ids = Array.from({length: t.VN_COUNT}, (_, i) => `#s2-vn${i+1}`).join(',');
+          return [
+            `${ids} { transform-box: fill-box; transform-origin: center; }`,
+            `@keyframes s2-vn-cycle {
+              0%           { opacity:0; transform:scale(0.88) }
+              ${pPop}%     { opacity:1; transform:scale(1.08) }
+              ${pSettle}%  { opacity:1; transform:scale(1.0)  }
+              ${pFadeStart}%{ opacity:1; transform:scale(1.0) }
+              ${pGone}%    { opacity:0; transform:scale(0.95) }
+              100%         { opacity:0; transform:scale(0.88) }
+            }`,
+            ...Array.from({length: t.VN_COUNT}, (_, i) =>
+              `#s2-vn${i+1} { animation: s2-vn-cycle ${vnDur}s ease-out ${t.B3 + i * t.VN_STRIDE}s infinite; }`
+            ),
+          ];
+        })(),
+        // Implementation lines (tiles 03–10) — appear when Phase 2 starts
+        `#s2-i03,#s2-i04,#s2-i05,#s2-i06,#s2-i07,#s2-i08,#s2-i09,#s2-i10 { animation: s2-fadein ${t.TILE_FADE}s ease-in-out ${t.PHASE1}s both; }`,
+        // Phase 2 swap loop (va1/va2 snap visible at 0% of their keyframe when loop starts)
+        `#s2-va1,#s2-va2 { animation: s2-va-swap ${t.SWAP_DUR}s ease-in-out ${t.PHASE1}s infinite; }`,
+        `#s2-vb1,#s2-vb2 { animation: s2-vb-swap ${t.SWAP_DUR}s ease-in-out ${t.PHASE1}s infinite; }`,
+        `#s2-vg1,#s2-vg2 { animation: s2-vg-swap ${t.SWAP_DUR}s ease-in-out ${t.PHASE1}s infinite; }`,
+      ].join('\n  ');
+    }
+
+    function setupS2() {
+      const svg = wrapper.querySelector('svg');
+      if (!svg) return;
+      const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+      style.textContent = buildS2Css(S2_T);
+      svg.appendChild(style);
+    }
+    // ───────────────────────────────────────────────────────────────────────────
+
     const CONTENT = {
       s1: document.getElementById('tpl-s1').innerHTML.trim(),
       s2: document.getElementById('tpl-s2').innerHTML.trim(),
@@ -925,6 +978,8 @@
       document.querySelectorAll('#top-nav button').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === id);
       });
+      if (id === 's1') setupS1();
+      if (id === 's2') setupS2();
       requestAnimationFrame(fitDiagram);
     }
 
