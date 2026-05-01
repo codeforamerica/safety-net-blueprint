@@ -59,74 +59,119 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
 <style>
   /*
-   * 10s cycle — cumulative blast-radius reveal:
-   * 0–8%   (0–0.8s):  base, all 12 lines dim
-   * 1–32%  (0.1–3.2s): "want to change Vendor 1?" appears
-   * 8–94%  (0.8–9.4s): Vendor 1's 4 lines stay red (cumulative)
-   * 28–59% (2.8–5.9s): "want to change Vendor 2?" appears
-   * 35–94% (3.5–9.4s): Vendor 2's 4 lines stay red (cumulative)
-   * 55–83% (5.5–8.3s): "want to change Custom?" appears
-   * 62–94% (6.2–9.4s): Custom's 4 lines stay red — all 12 lit
-   * 65–94% (6.5–9.4s): "12 connections to update" shown
-   * 94–100% (9.4–10s): reset
+   * 18s one-shot — cumulative blast-radius reveal, holds at full red state:
+   * 0–4%   (0–0.7s):   bullet 1 fades in alone
+   * 18–20% (3.2–3.6s): Vendor 1 update fires — lines peak bright, bullet 2 in
+   * 36–40% (6.5–7.2s): Vendor 2 update fires — compliance warning pops, updates required follows
+   * 49–52% (8.8–9.4s): Custom App cascade — lines peak bright
+   * 54–56% (9.7–10s):  bullet 3 in
+   * 56–100% (10–18s):  all red, hold for emphasis (no reset)
    */
+
+  /* Lines — peak stroke-width on fire, settle after ~1s, hold red */
   @keyframes s1-la {
-    0%,3%,100%  { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
-    8%          { stroke:#AF121D; opacity:1;    stroke-width:2.5; }
-    88%         { stroke:#AF121D; opacity:0.85; stroke-width:2.5; }
-    94%         { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
+    0%,3%   { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
+    20%     { stroke:#AF121D; opacity:1;    stroke-width:3.5; }
+    27%,100%{ stroke:#AF121D; opacity:0.95; stroke-width:2.5; }
   }
   @keyframes s1-lb {
-    0%,30%,100% { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
-    35%         { stroke:#AF121D; opacity:1;    stroke-width:2.5; }
-    88%         { stroke:#AF121D; opacity:0.85; stroke-width:2.5; }
-    94%         { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
+    0%,36%  { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
+    40%     { stroke:#AF121D; opacity:1;    stroke-width:3.5; }
+    47%,100%{ stroke:#AF121D; opacity:0.95; stroke-width:2.5; }
   }
   @keyframes s1-lc {
-    0%,57%,100% { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
-    62%         { stroke:#AF121D; opacity:1;    stroke-width:2.5; }
-    88%         { stroke:#AF121D; opacity:0.85; stroke-width:2.5; }
-    94%         { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
-  }
-  @keyframes s1-q1 {
-    0%,1%,100%  { opacity:0; }
-    5%   { opacity:0.8; }  27%  { opacity:0.8; }  32%  { opacity:0; }
-  }
-  @keyframes s1-q2 {
-    0%,28%,100% { opacity:0; }
-    32%  { opacity:0.8; }  54%  { opacity:0.8; }  59%  { opacity:0; }
-  }
-  @keyframes s1-q3 {
-    0%,55%,100% { opacity:0; }
-    59%  { opacity:0.8; }  78%  { opacity:0.8; }  83%  { opacity:0; }
-  }
-  @keyframes s1-total {
-    0%,65%,100% { opacity:0; }
-    70%  { opacity:1; }  88%  { opacity:1; }  94%  { opacity:0; }
+    0%,49%  { stroke:#EF6C75; opacity:0.25; stroke-width:1.5; }
+    52%     { stroke:#AF121D; opacity:1;    stroke-width:3.5; }
+    58%,100%{ stroke:#AF121D; opacity:0.95; stroke-width:2.5; }
   }
 
-  #s1-la1,#s1-la2,#s1-la3,#s1-la4 { animation: s1-la    10s ease-in-out infinite; }
-  #s1-lb1,#s1-lb2,#s1-lb3,#s1-lb4 { animation: s1-lb    10s ease-in-out infinite; }
-  #s1-lc1,#s1-lc2,#s1-lc3,#s1-lc4 { animation: s1-lc    10s ease-in-out infinite; }
-  #s1-q1    { animation: s1-q1    10s ease-in-out infinite; }
-  #s1-q2    { animation: s1-q2    10s ease-in-out infinite; }
-  #s1-q3    { animation: s1-q3    10s ease-in-out infinite; }
-  #s1-total { animation: s1-total 10s ease-in-out infinite; }
+  /* "↑ vendor update" inside circles — fires and holds */
+  @keyframes s1-vu1 { 0%,16%{opacity:0} 18%,100%{opacity:1} }
+  @keyframes s1-vu2 { 0%,34%{opacity:0} 36%,100%{opacity:1} }
+
+  /* "▲ update/fix required" markers — fire and hold */
+  @keyframes s1-xa  { 0%,19%{opacity:0} 21%,100%{opacity:1} }
+  @keyframes s1-xb  { 0%,39%{opacity:0} 41%,100%{opacity:1} }
+  @keyframes s1-xc  { 0%,51%{opacity:0} 53%,100%{opacity:1} }
+
+  /* Custom App circle — peaks with V2 cascade, holds red */
+  @keyframes s1-ca {
+    0%,36%  { fill:#FFD699; stroke:#FFB446; stroke-width:1.5; }
+    40%     { fill:#F9C8CB; stroke:#AF121D; stroke-width:3; }
+    47%,100%{ fill:#F9C8CB; stroke:#AF121D; stroke-width:2.5; }
+  }
+  @keyframes s1-fix { 0%,51%{opacity:0} 53%,100%{opacity:1} }
+
+  /* V2→CustomApp integration line — breaks and holds broken */
+  @keyframes s1-v2ca {
+    0%,36%  { stroke:#EF6C75; stroke-width:1; opacity:0.25; stroke-dasharray:none; }
+    40%     { stroke:#AF121D; stroke-width:3;  opacity:1;    stroke-dasharray:5,3; }
+    47%,100%{ stroke:#AF121D; stroke-width:2;  opacity:0.95; stroke-dasharray:5,3; }
+  }
+  /* Compliance warning — pops with V2 vendor update, holds */
+  @keyframes s1-warn {
+    0%,34%{opacity:0}
+    37%,100%{opacity:1}
+  }
+
+  #s1-la1,#s1-la2,#s1-la3,#s1-la4 { animation: s1-la 18s ease-in-out 1 both; }
+  #s1-lb1,#s1-lb2,#s1-lb3,#s1-lb4 { animation: s1-lb 18s ease-in-out 1 both; }
+  #s1-lc1,#s1-lc2,#s1-lc3,#s1-lc4 { animation: s1-lc 18s ease-in-out 1 both; }
+  #s1-vu1      { animation: s1-vu1 18s ease-in-out 1 both; }
+  #s1-vu2      { animation: s1-vu2 18s ease-in-out 1 both; }
+  #s1-v1-label { animation: s1-xa  18s ease-in-out 1 both; }
+  #s1-v2-label { animation: s1-xb  18s ease-in-out 1 both; }
+  #s1-xa1,#s1-xa2,#s1-xa3,#s1-xa4 { animation: s1-xa 18s ease-in-out 1 both; }
+  #s1-xb1,#s1-xb2,#s1-xb3,#s1-xb4 { animation: s1-xb 18s ease-in-out 1 both; }
+  #s1-xc1,#s1-xc2,#s1-xc3,#s1-xc4 { animation: s1-xc 18s ease-in-out 1 both; }
+  #s1-v2ca      { animation: s1-v2ca 18s ease-in-out 1 both; }
+  #s1-warn      { animation: s1-warn  18s ease-in-out 1 both; }
+  #s1-ca-circle { animation: s1-ca   18s ease-in-out 1 both; }
+  #s1-fix       { animation: s1-fix  18s ease-in-out 1 both; }
+
+  /* Bullets — staggered in, hold visible */
+  @keyframes s1-b1 { 0%,1%{opacity:0} 4%,100%{opacity:1} }
+  @keyframes s1-b2 { 0%,19%{opacity:0} 22%,100%{opacity:1} }
+  @keyframes s1-b3 { 0%,53%{opacity:0} 56%,100%{opacity:1} }
+  #s1-b1 { animation: s1-b1 18s ease-in-out 1 both; }
+  #s1-b2 { animation: s1-b2 18s ease-in-out 1 both; }
+  #s1-b3 { animation: s1-b3 18s ease-in-out 1 both; }
+
+  /* Venn intersection lens — starts yellow, turns red with V1 update, holds red */
+  @keyframes s1-lens {
+    0%,17%  { fill:#FFB446; }
+    20%,100%{ fill:#AF121D; }
+  }
+  /* "Cases" label — black on yellow, white on red, holds white */
+  @keyframes s1-cases {
+    0%,17%  { fill:#000000; }
+    20%,100%{ fill:#FFFFFF; }
+  }
+  #s1-lens        { animation: s1-lens  18s ease-in-out 1 both; }
+  #s1-cases-label { animation: s1-cases 18s ease-in-out 1 both; }
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
   <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">1 / 5</text>
 
   <!-- LEFT: Text column -->
-  <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">THE MESS</text>
+  <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">THE PROBLEM</text>
   <text x="80" y="172" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">The Platform</text>
   <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Is the Problem.</text>
-  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Your platform wasn't designed to change — it was designed to run.</text>
-  <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">The vendor owns the roadmap. Compliance is scattered across systems that don't coordinate.</text>
-  <circle cx="88" cy="338" r="6" fill="#AF121D"/>
-  <text x="104" y="343" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">A vendor update ripples to every app connected to it</text>
-  <circle cx="88" cy="372" r="6" fill="#AF121D"/>
-  <text x="104" y="377" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Systems overlap with no shared standard — compliance gaps go undetected</text>
+  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Every system is built to run — not to change.</text>
+  <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">The vendors own the roadmap. Nobody owns compliance.</text>
+  <g id="s1-b1" opacity="0">
+    <circle cx="88" cy="326" r="6" fill="#AF121D"/>
+    <text x="104" y="331" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Systems from different vendors overlap — no shared standard</text>
+  </g>
+  <g id="s1-b2" opacity="0">
+    <text x="88" y="363" font-size="13" font-weight="700" text-anchor="middle" fill="#AF121D" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+    <text x="104" y="363" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor updates require changes to every connected app</text>
+  </g>
+  <g id="s1-b3" opacity="0">
+    <text x="88" y="395" font-size="13" text-anchor="middle" fill="#AF121D" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">⚠</text>
+    <text x="104" y="395" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Compliance that spans systems has no owner — gaps can go undetected</text>
+  </g>
 
   <!-- Divider -->
   <line x1="620" y1="40" x2="620" y2="440" stroke="#E9CCBE" stroke-width="1"/>
@@ -142,10 +187,10 @@
   <line id="s1-la3" x1="727" y1="300" x2="1000" y2="155" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
   <line id="s1-la4" x1="727" y1="395" x2="1000" y2="155" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
   <!-- To Vendor 2 System (cx=1060, cy=245) -->
-  <line id="s1-lb1" x1="727" y1="110" x2="1060" y2="245" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
-  <line id="s1-lb2" x1="727" y1="205" x2="1060" y2="245" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
-  <line id="s1-lb3" x1="727" y1="300" x2="1060" y2="245" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
-  <line id="s1-lb4" x1="727" y1="395" x2="1060" y2="245" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
+  <line id="s1-lb1" x1="727" y1="110" x2="1060" y2="240" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
+  <line id="s1-lb2" x1="727" y1="205" x2="1060" y2="240" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
+  <line id="s1-lb3" x1="727" y1="300" x2="1060" y2="240" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
+  <line id="s1-lb4" x1="727" y1="395" x2="1060" y2="240" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
   <!-- To Custom App (cx=1255, cy=340) -->
   <line id="s1-lc1" x1="727" y1="110" x2="1255" y2="340" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
   <line id="s1-lc2" x1="727" y1="205" x2="1255" y2="340" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
@@ -153,22 +198,31 @@
   <line id="s1-lc4" x1="727" y1="395" x2="1255" y2="340" stroke="#EF6C75" stroke-width="1.5" opacity="0.25"/>
 
   <!-- Vendor 1 System — large circle, centered labels -->
-  <circle cx="1000" cy="155" r="70" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
+  <circle cx="1000" cy="155" r="82" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
   <text x="1000" y="147" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor 1</text>
   <text x="1000" y="163" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">System</text>
   <text x="1000" y="177" font-size="8.5" text-anchor="middle" fill="#000000" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Benefits · Eligibility</text>
 
-  <!-- Vendor 2 System — diagonal Venn overlap with V1 (distance ~108px, sum of radii 124px) -->
-  <circle cx="1060" cy="245" r="54" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
-  <text x="1060" y="237" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor 2</text>
-  <text x="1060" y="253" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">System</text>
-  <text x="1060" y="265" font-size="8.5" text-anchor="middle" fill="#000000" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
+  <!-- Vendor 2 System — fill circle only; text drawn after lens so it's not obscured -->
+  <circle cx="1060" cy="240" r="62" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
 
-  <!-- "Cases" label in the Venn intersection zone -->
-  <text x="1034" y="208" font-size="9" text-anchor="middle" font-weight="700" fill="#AF121D" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Cases</text>
+  <!-- Venn intersection: dark lens, V1 arc outline on top, "Cases" label in center -->
+  <!-- Intersection points of V1(cx=1000,cy=155,r=82) and V2(cx=1060,cy=240,r=62): (1078,181) and (998,237) -->
+  <path id="s1-lens" d="M 1078 181 A 82 82 0 0 0 998 237 A 62 62 0 0 0 1078 181 Z"/>
+  <!-- V1 circle outline redrawn on top so its arc is visible through the lens -->
+  <circle cx="1000" cy="155" r="82" fill="none" stroke="#FFB446" stroke-width="1.5"/>
+  <text id="s1-cases-label" x="1038" y="213" font-size="9" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Cases</text>
 
-  <!-- Custom App — larger circle, lower right -->
-  <circle cx="1255" cy="340" r="52" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
+  <!-- V2 text drawn after lens so it renders on top -->
+  <text x="1060" y="248" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor 2</text>
+  <text x="1060" y="264" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">System</text>
+  <text x="1060" y="276" font-size="8.5" text-anchor="middle" fill="#000000" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
+
+  <!-- V2 → Custom App integration line (shows coupling; breaks when V2 changes) -->
+  <line id="s1-v2ca" x1="1115" y1="268" x2="1210" y2="310" stroke="#EF6C75" stroke-width="1" opacity="0.25"/>
+
+  <!-- Custom App — larger circle, lower right; turns red when V2 break cascades -->
+  <circle id="s1-ca-circle" cx="1255" cy="340" r="52" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
   <text x="1255" y="330" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Custom</text>
   <text x="1255" y="346" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">App</text>
   <text x="1255" y="360" font-size="8.5" text-anchor="middle" fill="#000000" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Notifications · Scheduling</text>
@@ -189,11 +243,36 @@
   <text x="695" y="390" font-size="10" text-anchor="middle" font-weight="600" fill="#AF121D" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Federal</text>
   <text x="695" y="405" font-size="10" text-anchor="middle" font-weight="600" fill="#AF121D" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Reporting</text>
 
-  <!-- Animated prompts — appear beneath each circle when it lights up -->
-  <text id="s1-q1" x="1082" y="152" font-size="9" text-anchor="start" font-weight="600" fill="#5650BE" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor 1 makes a change</text>
-  <text id="s1-q2" x="1126" y="242" font-size="9" text-anchor="start" font-weight="600" fill="#5650BE" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor 2 makes a change</text>
-  <text id="s1-q3" x="1255" y="407" font-size="9" text-anchor="middle" font-weight="600" fill="#5650BE" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Custom App gets updated</text>
-  <text id="s1-total" x="1100" y="430" font-size="10" text-anchor="middle" font-weight="700" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">12 connections to update</text>
+  <!-- "vendor update" — fires first, inside each circle (the cause) -->
+  <text id="s1-vu1" x="1000" y="195" font-size="8" font-weight="600" text-anchor="middle" fill="#000000" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">↑ vendor update</text>
+  <text id="s1-vu2" x="1060" y="292" font-size="8" font-weight="600" text-anchor="middle" fill="#000000" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">↑ vendor update</text>
+
+  <!-- "update required" labels — to the right of each vendor circle (the effect) -->
+  <text id="s1-v1-label" x="1086" y="158" font-size="9" font-weight="700" text-anchor="start" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲ updates required</text>
+  <text id="s1-v2-label" x="1126" y="243" font-size="9" font-weight="700" text-anchor="start" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲ updates required</text>
+
+  <!-- Per-line markers — show blast radius (each line = one integration needing update) -->
+  <!-- Vendor 1 group -->
+  <text id="s1-xa1" x="864" y="137" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xa2" x="864" y="183" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xa3" x="864" y="230" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xa4" x="864" y="277" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <!-- Vendor 2 group -->
+  <text id="s1-xb1" x="894" y="181" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xb2" x="894" y="228" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xb3" x="894" y="275" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xb4" x="894" y="322" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <!-- Custom App group (cascade from V2 break) -->
+  <text id="s1-xc1" x="991" y="228" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xc2" x="991" y="275" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xc3" x="991" y="322" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+  <text id="s1-xc4" x="991" y="368" font-size="9" font-weight="700" text-anchor="middle" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲</text>
+
+  <!-- "fix required" badge — appears above Custom App when cascade fires (red = under duress) -->
+  <text id="s1-fix" x="1255" y="283" font-size="9" text-anchor="middle" font-weight="700" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">▲ fix required</text>
+
+  <!-- Compliance warning — right of V2, pops before "updates required" -->
+  <text id="s1-warn" x="1126" y="256" font-size="9" text-anchor="start" font-weight="700" fill="#AF121D" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">⚠ compliance gap introduced</text>
 
 </svg>
   </template>
@@ -210,30 +289,77 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
 <style>
   /*
-   * 12s one-shot — 10 domain tiles fade in sequentially (~0.96s apart).
-   * Each tile stays visible once it appears; no reset.
+   * Slide 2 — two-phase animation:
+   *
+   * Phase 1 (18s, one-shot, fill: both):
+   *   0–32%  tiles build in staggered
+   *   52–57% compliance labels + bullet 1 appear
+   *   67–72% bullet 3 appears
+   *   85–90% bullet 2 (you own the contracts) appears
+   *
+   * Phase 2 (7s loop, starts at 18s):
+   *   vendor swap on Eligibility + Case Management loops continuously
+   *   IBM Curam ↔ Salesforce / Tyler Technologies
    */
-  @keyframes s2-t01 { 0%,3%{opacity:0} 6%,100%{opacity:1} }
-  @keyframes s2-t02 { 0%,11%{opacity:0} 14%,100%{opacity:1} }
-  @keyframes s2-t03 { 0%,19%{opacity:0} 22%,100%{opacity:1} }
-  @keyframes s2-t04 { 0%,27%{opacity:0} 30%,100%{opacity:1} }
-  @keyframes s2-t05 { 0%,35%{opacity:0} 38%,100%{opacity:1} }
-  @keyframes s2-t06 { 0%,43%{opacity:0} 46%,100%{opacity:1} }
-  @keyframes s2-t07 { 0%,51%{opacity:0} 54%,100%{opacity:1} }
-  @keyframes s2-t08 { 0%,59%{opacity:0} 62%,100%{opacity:1} }
-  @keyframes s2-t09 { 0%,67%{opacity:0} 70%,100%{opacity:1} }
-  @keyframes s2-t10 { 0%,75%{opacity:0} 78%,100%{opacity:1} }
 
-  #s2-t01 { animation: s2-t01 12s ease-in-out both; }
-  #s2-t02 { animation: s2-t02 12s ease-in-out both; }
-  #s2-t03 { animation: s2-t03 12s ease-in-out both; }
-  #s2-t04 { animation: s2-t04 12s ease-in-out both; }
-  #s2-t05 { animation: s2-t05 12s ease-in-out both; }
-  #s2-t06 { animation: s2-t06 12s ease-in-out both; }
-  #s2-t07 { animation: s2-t07 12s ease-in-out both; }
-  #s2-t08 { animation: s2-t08 12s ease-in-out both; }
-  #s2-t09 { animation: s2-t09 12s ease-in-out both; }
-  #s2-t10 { animation: s2-t10 12s ease-in-out both; }
+  /* ── Phase 1: Tile reveal ── */
+  @keyframes s2-t01 { 0%,1%{opacity:0}   4%,100%{opacity:1} }
+  @keyframes s2-t02 { 0%,4%{opacity:0}   7%,100%{opacity:1} }
+  @keyframes s2-t03 { 0%,7%{opacity:0}   10%,100%{opacity:1} }
+  @keyframes s2-t04 { 0%,10%{opacity:0}  13%,100%{opacity:1} }
+  @keyframes s2-t05 { 0%,13%{opacity:0}  16%,100%{opacity:1} }
+  @keyframes s2-t06 { 0%,16%{opacity:0}  19%,100%{opacity:1} }
+  @keyframes s2-t07 { 0%,19%{opacity:0}  22%,100%{opacity:1} }
+  @keyframes s2-t08 { 0%,22%{opacity:0}  25%,100%{opacity:1} }
+  @keyframes s2-t09 { 0%,25%{opacity:0}  28%,100%{opacity:1} }
+  @keyframes s2-t10 { 0%,28%{opacity:0}  31%,100%{opacity:1} }
+
+  /* ── Phase 1: Compliance + bullets ── */
+  @keyframes s2-comp { 0%,52%{opacity:0} 57%,100%{opacity:1} }
+  @keyframes s2-b1   { 0%,52%{opacity:0} 57%,100%{opacity:1} }
+  @keyframes s2-b3   { 0%,67%{opacity:0} 72%,100%{opacity:1} }
+  @keyframes s2-b2   { 0%,85%{opacity:0} 90%,100%{opacity:1} }
+
+  /* ── Phase 2: Vendor swap loop (7s, delay 18s) ── */
+  @keyframes s2-va-swap {
+    0%,8%   { opacity:1 }   /* IBM visible */
+    22%,78% { opacity:0 }   /* IBM hidden during swap */
+    92%,100%{ opacity:1 }   /* IBM returns */
+  }
+  @keyframes s2-vb-swap {
+    0%,18%  { opacity:0 }   /* new vendor hidden */
+    30%,70% { opacity:1 }   /* new vendor shown */
+    82%,100%{ opacity:0 }   /* new vendor fades */
+  }
+  @keyframes s2-vg-swap {
+    0%,8%   { opacity:0 }
+    16%,84% { opacity:1 }
+    92%,100%{ opacity:0 }
+  }
+
+  /* ── Apply Phase 1 ── */
+  #s2-t01 { animation: s2-t01 18s ease-in-out both; }
+  #s2-t02 { animation: s2-t02 18s ease-in-out both; }
+  #s2-t03 { animation: s2-t03 18s ease-in-out both; }
+  #s2-t04 { animation: s2-t04 18s ease-in-out both; }
+  #s2-t05 { animation: s2-t05 18s ease-in-out both; }
+  #s2-t06 { animation: s2-t06 18s ease-in-out both; }
+  #s2-t07 { animation: s2-t07 18s ease-in-out both; }
+  #s2-t08 { animation: s2-t08 18s ease-in-out both; }
+  #s2-t09 { animation: s2-t09 18s ease-in-out both; }
+  #s2-t10 { animation: s2-t10 18s ease-in-out both; }
+
+  #s2-b1 { animation: s2-b1 18s ease-in-out both; }
+  #s2-b2 { animation: s2-b2 18s ease-in-out both; }
+  #s2-b3 { animation: s2-b3 18s ease-in-out both; }
+
+  #s2-c01,#s2-c02,#s2-c03,#s2-c04,#s2-c05,
+  #s2-c06,#s2-c07,#s2-c08,#s2-c09,#s2-c10 { animation: s2-comp 18s ease-in-out both; }
+
+  /* ── Apply Phase 2 (swap loop) ── */
+  #s2-va1,#s2-va2     { animation: s2-va-swap 7s ease-in-out 18s infinite; }
+  #s2-vb1,#s2-vb2     { animation: s2-vb-swap 7s ease-in-out 18s infinite; }
+  #s2-vg1,#s2-vg2     { animation: s2-vg-swap 7s ease-in-out 18s infinite; }
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
@@ -241,77 +367,126 @@
 
   <!-- LEFT: Text -->
   <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">THE BLUEPRINT</text>
-  <text x="80" y="172" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">A Modern Platform</text>
-  <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Architecture.</text>
-  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">A complete, open standard for safety net programs —</text>
-  <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">covering every domain from intake to reporting.</text>
-  <circle cx="88" cy="338" r="6" fill="#00AD93"/>
-  <text x="104" y="343" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Architecture quality — every domain, built to work together</text>
-  <circle cx="88" cy="372" r="6" fill="#5650BE"/>
-  <text x="104" y="377" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor independence — you own the contracts, not the vendor</text>
-  <circle cx="88" cy="406" r="6" fill="#AF121D"/>
-  <text x="104" y="411" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Compliance built in — regulatory requirements baked into the design</text>
+  <text x="80" y="172" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">The Blueprint</text>
+  <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Is the Answer.</text>
+  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Built to solve the problems every state platform faces.</text>
+  <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Organized. Vendor-independent. Compliance built in.</text>
+
+  <!-- Bullets — animated to match each beat -->
+  <g id="s2-b1" opacity="0">
+    <circle cx="88" cy="328" r="6" fill="#2B1A78"/>
+    <text x="104" y="333" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Every module has a defined place — organized end to end</text>
+  </g>
+  <g id="s2-b2" opacity="0">
+    <circle cx="88" cy="362" r="6" fill="#FFB446"/>
+    <text x="104" y="367" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">You own the contracts — write one adapter per vendor, everything else stays</text>
+  </g>
+  <g id="s2-b3" opacity="0">
+    <circle cx="88" cy="396" r="6" fill="#00AD93"/>
+    <text x="104" y="401" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Compliance built into every module — requirements have an owner</text>
+  </g>
 
   <!-- Divider -->
   <line x1="620" y1="40" x2="620" y2="440" stroke="#E9CCBE" stroke-width="1"/>
 
-  <!-- Blueprint Platform box -->
-  <rect x="652" y="58" width="700" height="374" rx="8" fill="#2B1A78"/>
-  <text x="1002" y="80" font-size="10" text-anchor="middle" font-weight="700" letter-spacing="2" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">BLUEPRINT PLATFORM</text>
-  <line x1="672" y1="88" x2="1332" y2="88" stroke="#5650BE" stroke-width="1" opacity="0.5"/>
+  <!-- Blueprint Platform box — taller to accommodate 3-line tiles -->
+  <rect x="652" y="52" width="700" height="412" rx="8" fill="#2B1A78"/>
+  <text x="1002" y="74" font-size="10" text-anchor="middle" font-weight="700" letter-spacing="2" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">BLUEPRINT PLATFORM</text>
+  <line x1="672" y1="82" x2="1332" y2="82" stroke="#5650BE" stroke-width="1" opacity="0.5"/>
 
-  <!-- Left column: Intake → Eligibility → Case Management → Workflow → Document Management -->
+  <!-- All tiles: 3 lines — name | implementation | compliance (compliance animates in, others with tile) -->
+  <!-- Left column: Eligibility → Case Management → Intake → Workflow → Document Management -->
+
+  <!-- Tile 01: Eligibility — vendor swap loop after build -->
   <g id="s2-t01" opacity="0">
-    <rect x="672" y="96" width="316" height="52" rx="4" fill="white"/>
-    <text x="830" y="113" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Intake</text>
-    <text x="830" y="129" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP · Medicaid · TANF · processing clocks</text>
+    <rect x="672" y="90" width="316" height="64" rx="4" fill="white"/>
+    <text x="830" y="110" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Eligibility</text>
+    <text id="s2-va1" x="830" y="126" font-size="8.5" text-anchor="middle" font-weight="600" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">IBM Curam + adapter</text>
+    <text id="s2-vb1" x="830" y="126" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">↻ Salesforce + adapter · contracts unchanged</text>
+    <text id="s2-c01" x="830" y="142" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">MAGI · non-MAGI · SNAP income rules</text>
   </g>
+
+  <!-- Tile 02: Case Management — vendor swap loop after build -->
   <g id="s2-t02" opacity="0">
-    <rect x="672" y="158" width="316" height="52" rx="4" fill="white"/>
-    <text x="830" y="175" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Eligibility</text>
-    <text x="830" y="191" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">MAGI · non-MAGI · SNAP income rules</text>
+    <rect x="672" y="162" width="316" height="64" rx="4" fill="white"/>
+    <text x="830" y="182" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Case Management</text>
+    <text id="s2-va2" x="830" y="198" font-size="8.5" text-anchor="middle" font-weight="600" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">IBM Curam + adapter</text>
+    <text id="s2-vb2" x="830" y="198" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">↻ Tyler Tech + adapter · contracts unchanged</text>
+    <text id="s2-c02" x="830" y="214" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">federally mandated case records · retention</text>
   </g>
+
+  <!-- Tile 03: Intake -->
   <g id="s2-t03" opacity="0">
-    <rect x="672" y="220" width="316" height="52" rx="4" fill="white"/>
-    <text x="830" y="237" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Case Management</text>
-    <text x="830" y="253" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">federally mandated case records · retention</text>
+    <rect x="672" y="234" width="316" height="64" rx="4" fill="white"/>
+    <text x="830" y="254" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Intake</text>
+    <text x="830" y="270" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">custom portal · state developed</text>
+    <text id="s2-c03" x="830" y="286" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">SNAP · Medicaid · TANF · program screening</text>
   </g>
+
+  <!-- Tile 04: Workflow -->
   <g id="s2-t04" opacity="0">
-    <rect x="672" y="282" width="316" height="52" rx="4" fill="white"/>
-    <text x="830" y="299" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
-    <text x="830" y="315" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SLA tracking · federal deadline enforcement</text>
+    <rect x="672" y="306" width="316" height="64" rx="4" fill="white"/>
+    <text x="830" y="326" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
+    <text x="830" y="342" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">rules engine · AI-assisted</text>
+    <text id="s2-c04" x="830" y="358" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">SLA tracking · federal deadline enforcement</text>
   </g>
+
+  <!-- Tile 05: Document Management -->
   <g id="s2-t05" opacity="0">
-    <rect x="672" y="344" width="316" height="52" rx="4" fill="white"/>
-    <text x="830" y="361" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Document Management</text>
-    <text x="830" y="377" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">HIPAA · state retention schedules</text>
+    <rect x="672" y="378" width="316" height="64" rx="4" fill="white"/>
+    <text x="830" y="398" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Document Management</text>
+    <text x="830" y="414" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">cloud storage · vendor managed</text>
+    <text id="s2-c05" x="830" y="430" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">HIPAA · state retention schedules</text>
   </g>
 
   <!-- Right column: Client Management → Scheduling → Communications → Reporting → Data Exchange -->
+
+  <!-- Tile 06: Client Management -->
   <g id="s2-t06" opacity="0">
-    <rect x="1012" y="96" width="316" height="52" rx="4" fill="white"/>
-    <text x="1170" y="113" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Client Management</text>
-    <text x="1170" y="129" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">HIPAA · PII · identity proofing</text>
+    <rect x="1012" y="90" width="316" height="64" rx="4" fill="white"/>
+    <text x="1170" y="110" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Client Management</text>
+    <text x="1170" y="126" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">custom CRM · state developed</text>
+    <text id="s2-c06" x="1170" y="142" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">HIPAA · PII · identity proofing</text>
   </g>
+
+  <!-- Tile 07: Scheduling -->
   <g id="s2-t07" opacity="0">
-    <rect x="1012" y="158" width="316" height="52" rx="4" fill="white"/>
-    <text x="1170" y="175" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Scheduling</text>
-    <text x="1170" y="191" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP interview requirements · 7 CFR § 273.2(e)</text>
+    <rect x="1012" y="162" width="316" height="64" rx="4" fill="white"/>
+    <text x="1170" y="182" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Scheduling</text>
+    <text x="1170" y="198" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">interview scheduler · in house</text>
+    <text id="s2-c07" x="1170" y="214" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">SNAP interview requirements · 7 CFR § 273.2(e)</text>
   </g>
+
+  <!-- Tile 08: Communications -->
   <g id="s2-t08" opacity="0">
-    <rect x="1012" y="220" width="316" height="52" rx="4" fill="white"/>
-    <text x="1170" y="237" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Communications</text>
-    <text x="1170" y="253" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">timely notice rules · 45 CFR § 205.10</text>
+    <rect x="1012" y="234" width="316" height="64" rx="4" fill="white"/>
+    <text x="1170" y="254" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Communications</text>
+    <text x="1170" y="270" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">notification hub · cloud managed</text>
+    <text id="s2-c08" x="1170" y="286" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">adverse action notices · 10-day advance notice rule</text>
   </g>
+
+  <!-- Tile 09: Reporting -->
   <g id="s2-t09" opacity="0">
-    <rect x="1012" y="282" width="316" height="52" rx="4" fill="white"/>
-    <text x="1170" y="299" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Reporting</text>
-    <text x="1170" y="315" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">ACF · PERM · federal data reporting</text>
+    <rect x="1012" y="306" width="316" height="64" rx="4" fill="white"/>
+    <text x="1170" y="326" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Reporting</text>
+    <text x="1170" y="342" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">data warehouse · state built</text>
+    <text id="s2-c09" x="1170" y="358" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">ACF · PERM · federal data reporting</text>
   </g>
+
+  <!-- Tile 10: Data Exchange -->
   <g id="s2-t10" opacity="0">
-    <rect x="1012" y="344" width="316" height="52" rx="4" fill="white"/>
-    <text x="1170" y="361" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Data Exchange</text>
-    <text x="1170" y="377" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">MAGI MEDS · PARIS · data sharing agreements</text>
+    <rect x="1012" y="378" width="316" height="64" rx="4" fill="white"/>
+    <text x="1170" y="398" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Data Exchange</text>
+    <text x="1170" y="414" font-size="8.5" text-anchor="middle" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">API connector · state built</text>
+    <text id="s2-c10" x="1170" y="430" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">FDSH · IEVS · SAVE · SSA verification</text>
+  </g>
+
+  <!-- Vendor glow borders — rendered last, appear only during swap loop -->
+  <g id="s2-vg1" opacity="0">
+    <rect x="672" y="90" width="316" height="64" rx="4" fill="none" stroke="#FFB446" stroke-width="2.5"/>
+  </g>
+  <g id="s2-vg2" opacity="0">
+    <rect x="672" y="162" width="316" height="64" rx="4" fill="none" stroke="#FFB446" stroke-width="2.5"/>
   </g>
 
 </svg>
@@ -329,24 +504,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
 <style>
   /*
-   * 21s cycle — CA (t≈0.5–7s), TX (t≈7.5–14s), CO (t≈14.5–21s), loops.
-   * Each state: 0.5s lead gap, 0.5s fade in, 5s hold, 1s fade out.
+   * 18s cycle — CA rules (0–6s), TX rules (6–12s), Blueprint update (12–18s)
    */
-  @keyframes s3-ca {
-    0%,2.5%,33.5%,100% { opacity:0; }
-    5%,28.5%           { opacity:1; }
+  @keyframes s3-ca-badge {
+    0%,2%,31%,100% { opacity:0; }
+    5%,28%         { opacity:1; }
   }
-  @keyframes s3-tx {
-    0%,36%,67%,100% { opacity:0; }
-    38.5%,62%       { opacity:1; }
+  @keyframes s3-ca-row {
+    0%,8%,31%,100% { opacity:0; }
+    11%,28%        { opacity:1; }
   }
-  @keyframes s3-co {
-    0%,69%,100% { opacity:0; }
-    71.5%,95.5% { opacity:1; }
+  @keyframes s3-tx-badge {
+    0%,33%,64%,100% { opacity:0; }
+    36%,61%         { opacity:1; }
   }
-  #s3-ca { animation: s3-ca 21s ease-in-out infinite; }
-  #s3-tx { animation: s3-tx 21s ease-in-out infinite; }
-  #s3-co { animation: s3-co 21s ease-in-out infinite; }
+  @keyframes s3-tx-row {
+    0%,39%,64%,100% { opacity:0; }
+    42%,61%         { opacity:1; }
+  }
+  @keyframes s3-upd-badge {
+    0%,66%,97%,100% { opacity:0; }
+    69%,94%         { opacity:1; }
+  }
+  @keyframes s3-upd-row {
+    0%,72%,97%,100% { opacity:0; }
+    75%,94%         { opacity:1; }
+  }
+
+  #s3-ca-badge                      { animation: s3-ca-badge  18s ease-in-out infinite; }
+  #s3-ca-r1, #s3-ca-r2, #s3-ca-r4  { animation: s3-ca-row    18s ease-in-out infinite; }
+  #s3-tx-badge                      { animation: s3-tx-badge  18s ease-in-out infinite; }
+  #s3-tx-r3                         { animation: s3-tx-row    18s ease-in-out infinite; }
+  #s3-upd-badge                     { animation: s3-upd-badge 18s ease-in-out infinite; }
+  #s3-upd-r5                        { animation: s3-upd-row   18s ease-in-out infinite; }
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
@@ -357,92 +547,81 @@
   <text x="80" y="172" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Built for</text>
   <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Every State.</text>
   <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">The Blueprint ships with a shared baseline every state builds on.</text>
-  <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State rules layer on top — each state adds, never replaces.</text>
+  <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State rules layer on top. Baseline updates reach everyone.</text>
   <circle cx="88" cy="338" r="6" fill="#5650BE"/>
-  <text x="104" y="343" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State-specific eligibility rules, benefit lengths, work requirements</text>
-  <circle cx="88" cy="372" r="6" fill="#5650BE"/>
+  <text x="104" y="343" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">States add their own eligibility rules, program names, work requirements</text>
+  <circle cx="88" cy="372" r="6" fill="#FFB446"/>
   <text x="104" y="377" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Base updates reach every state automatically</text>
 
   <!-- Divider -->
   <line x1="620" y1="40" x2="620" y2="440" stroke="#E9CCBE" stroke-width="1"/>
 
-  <defs>
-    <!-- Drop shadow makes the overlay card read as elevated above the blueprint layer -->
-    <filter id="s3-shadow" x="-8%" y="-5%" width="120%" height="115%">
-      <feDropShadow dx="-6" dy="3" stdDeviation="5" flood-color="#2B1A78" flood-opacity="0.22"/>
-    </filter>
-  </defs>
-
-  <!-- Blueprint Baseline box — wide enough that the overlay card sits on top of its right half -->
-  <rect x="655" y="58" width="580" height="372" rx="8" fill="#2B1A78"/>
-  <text x="788" y="78" font-size="10" text-anchor="middle" font-weight="700" letter-spacing="2" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">BLUEPRINT BASELINE</text>
-  <line x1="663" y1="86" x2="918" y2="86" stroke="#5650BE" stroke-width="1" opacity="0.5"/>
-  <!-- 6 domain tiles in left visible portion (clear of the overlay card) -->
-  <rect x="663" y="92" width="250" height="42" rx="4" fill="white" opacity="0.9"/>
-  <text x="788" y="113" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Intake</text>
-  <rect x="663" y="142" width="250" height="42" rx="4" fill="white" opacity="0.9"/>
-  <text x="788" y="163" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Eligibility</text>
-  <rect x="663" y="192" width="250" height="42" rx="4" fill="white" opacity="0.9"/>
-  <text x="788" y="213" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Case Management</text>
-  <rect x="663" y="242" width="250" height="42" rx="4" fill="white" opacity="0.9"/>
-  <text x="788" y="263" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
-  <rect x="663" y="292" width="250" height="42" rx="4" fill="white" opacity="0.9"/>
-  <text x="788" y="313" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Communications</text>
-  <rect x="663" y="342" width="250" height="42" rx="4" fill="white" opacity="0.9"/>
-  <text x="788" y="363" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Reporting</text>
-
-  <!-- California Overlay — sits on top of the right portion of the blueprint box + extends beyond it -->
-  <g id="s3-ca" opacity="0">
-    <rect x="920" y="72" width="410" height="352" rx="8" fill="white" stroke="#A1B4EA" stroke-width="2" filter="url(#s3-shadow)"/>
-    <text x="1125" y="96" font-size="9" text-anchor="middle" font-weight="700" letter-spacing="1.5" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">STATE OVERLAY</text>
-    <text x="1125" y="117" font-size="17" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">California</text>
-    <line x1="932" y1="132" x2="1318" y2="132" stroke="#E6EBF9" stroke-width="1.5"/>
-    <circle cx="942" cy="163" r="5" fill="#5650BE"/>
-    <text x="956" y="167" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">CalFresh: 130% FPL income limit</text>
-    <circle cx="942" cy="208" r="5" fill="#5650BE"/>
-    <text x="956" y="212" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">CalWORKs: 60-month lifetime limit</text>
-    <circle cx="942" cy="253" r="5" fill="#5650BE"/>
-    <text x="956" y="257" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">IHSS scheduling integration</text>
-    <circle cx="942" cy="298" r="5" fill="#5650BE"/>
-    <text x="956" y="302" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Language access: 15+ languages</text>
-    <circle cx="942" cy="343" r="5" fill="#5650BE"/>
-    <text x="956" y="347" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Expedited SNAP: 72-hour processing</text>
+  <!-- State rules badge (floats above the document) -->
+  <g id="s3-ca-badge" opacity="0">
+    <rect x="938" y="30" width="134" height="24" rx="12" fill="#5650BE" stroke="#5650BE" stroke-width="1.5"/>
+    <text x="1005" y="46" font-size="9" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">California rules</text>
+  </g>
+  <g id="s3-tx-badge" opacity="0">
+    <rect x="950" y="30" width="110" height="24" rx="12" fill="#5650BE" stroke="#5650BE" stroke-width="1.5"/>
+    <text x="1005" y="46" font-size="9" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Texas rules</text>
+  </g>
+  <g id="s3-upd-badge" opacity="0">
+    <rect x="926" y="30" width="158" height="24" rx="12" fill="#FFB446"/>
+    <text x="1005" y="46" font-size="9" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">↓ Blueprint update</text>
   </g>
 
-  <!-- Texas Overlay — same position, different content -->
-  <g id="s3-tx" opacity="0">
-    <rect x="920" y="72" width="410" height="352" rx="8" fill="white" stroke="#A1B4EA" stroke-width="2" filter="url(#s3-shadow)"/>
-    <text x="1125" y="96" font-size="9" text-anchor="middle" font-weight="700" letter-spacing="1.5" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">STATE OVERLAY</text>
-    <text x="1125" y="117" font-size="17" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Texas</text>
-    <line x1="932" y1="132" x2="1318" y2="132" stroke="#E6EBF9" stroke-width="1.5"/>
-    <circle cx="942" cy="163" r="5" fill="#5650BE"/>
-    <text x="956" y="167" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP: 130% FPL + resource test</text>
-    <circle cx="942" cy="208" r="5" fill="#5650BE"/>
-    <text x="956" y="212" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Lone Star Card integration</text>
-    <circle cx="942" cy="253" r="5" fill="#5650BE"/>
-    <text x="956" y="257" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">CHIP eligibility: up to 201% FPL</text>
-    <circle cx="942" cy="298" r="5" fill="#5650BE"/>
-    <text x="956" y="302" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Work requirement: 30 hours/week</text>
-    <circle cx="942" cy="343" r="5" fill="#5650BE"/>
-    <text x="956" y="347" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">TANF: 5-year lifetime limit</text>
+  <!-- Blueprint baseline document -->
+  <rect x="652" y="52" width="706" height="382" rx="8" fill="#2B1A78" stroke="#5650BE" stroke-width="1.5"/>
+  <text x="1005" y="80" font-size="12" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Blueprint Baseline</text>
+  <text x="1005" y="96" font-size="8" text-anchor="middle" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">shared by every state</text>
+
+  <!-- Row 1: Program name -->
+  <rect x="670" y="108" width="670" height="60" rx="4" fill="#1E1260"/>
+  <text x="692" y="132" font-size="10" font-weight="600" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Program name</text>
+  <text x="692" y="150" font-size="8" fill="#C2C0E8" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP</text>
+  <g id="s3-ca-r1" opacity="0">
+    <rect x="670" y="108" width="670" height="60" rx="4" fill="#E6EBF9" stroke="#A1B4EA" stroke-width="1.5"/>
+    <text x="692" y="132" font-size="10" font-weight="600" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Program name</text>
+    <text x="692" y="150" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">CalFresh — California's name for SNAP  ✦ CA</text>
   </g>
 
-  <!-- Colorado Overlay — third in the cycle -->
-  <g id="s3-co" opacity="0">
-    <rect x="920" y="72" width="410" height="352" rx="8" fill="white" stroke="#A1B4EA" stroke-width="2" filter="url(#s3-shadow)"/>
-    <text x="1125" y="96" font-size="9" text-anchor="middle" font-weight="700" letter-spacing="1.5" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">STATE OVERLAY</text>
-    <text x="1125" y="117" font-size="17" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Colorado</text>
-    <line x1="932" y1="132" x2="1318" y2="132" stroke="#E6EBF9" stroke-width="1.5"/>
-    <circle cx="942" cy="163" r="5" fill="#5650BE"/>
-    <text x="956" y="167" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP: 200% FPL via categorical eligibility</text>
-    <circle cx="942" cy="208" r="5" fill="#5650BE"/>
-    <text x="956" y="212" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Colorado PEAK portal integration</text>
-    <circle cx="942" cy="253" r="5" fill="#5650BE"/>
-    <text x="956" y="257" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Medicaid expansion: adults up to 133% FPL</text>
-    <circle cx="942" cy="298" r="5" fill="#5650BE"/>
-    <text x="956" y="302" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP interview waiver eligible</text>
-    <circle cx="942" cy="343" r="5" fill="#5650BE"/>
-    <text x="956" y="347" font-size="11" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Metro-area outreach requirements</text>
+  <!-- Row 2: Asset test -->
+  <rect x="670" y="178" width="670" height="60" rx="4" fill="#1E1260"/>
+  <text x="692" y="202" font-size="10" font-weight="600" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Asset test</text>
+  <text x="692" y="220" font-size="8" fill="#C2C0E8" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Standard federal limits ($2,750 / $4,500 elderly)</text>
+  <g id="s3-ca-r2" opacity="0">
+    <rect x="670" y="178" width="670" height="60" rx="4" fill="#E6EBF9" stroke="#A1B4EA" stroke-width="1.5"/>
+    <text x="692" y="202" font-size="10" font-weight="600" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Asset test</text>
+    <text x="692" y="220" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">No asset test — broad-based categorical eligibility  ✦ CA</text>
+  </g>
+
+  <!-- Row 3: Income reporting -->
+  <rect x="670" y="248" width="670" height="60" rx="4" fill="#1E1260"/>
+  <text x="692" y="272" font-size="10" font-weight="600" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Income reporting</text>
+  <text x="692" y="290" font-size="8" fill="#C2C0E8" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Report changes within 10 days</text>
+  <g id="s3-tx-r3" opacity="0">
+    <rect x="670" y="248" width="670" height="60" rx="4" fill="#E6EBF9" stroke="#A1B4EA" stroke-width="1.5"/>
+    <text x="692" y="272" font-size="10" font-weight="600" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Income reporting</text>
+    <text x="692" y="290" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Semi-annual reporting — fewer touchpoints for clients  ✦ TX</text>
+  </g>
+
+  <!-- Row 5: Blueprint update — H.R.1 work requirements (planned/future state) -->
+  <rect x="670" y="385" width="670" height="42" rx="4" fill="#1E1260"/>
+  <text x="692" y="409" font-size="10" font-weight="600" fill="#C2C0E8" opacity="0.4" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">H.R.1 work requirements</text>
+  <g id="s3-upd-r5" opacity="0">
+    <rect x="670" y="385" width="670" height="42" rx="4" fill="#FFF3E0" stroke="#FFB446" stroke-width="1.5"/>
+    <text x="692" y="403" font-size="10" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">H.R.1 work requirements</text>
+    <text x="692" y="419" font-size="8" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Planned — coming to all states when added to the baseline  ✦ Future</text>
+  </g>
+
+  <!-- Row 4: Languages supported -->
+  <rect x="670" y="318" width="670" height="60" rx="4" fill="#1E1260"/>
+  <text x="692" y="342" font-size="10" font-weight="600" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Languages supported</text>
+  <text x="692" y="360" font-size="8" fill="#C2C0E8" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">English</text>
+  <g id="s3-ca-r4" opacity="0">
+    <rect x="670" y="318" width="670" height="60" rx="4" fill="#E6EBF9" stroke="#A1B4EA" stroke-width="1.5"/>
+    <text x="692" y="342" font-size="10" font-weight="600" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Languages supported</text>
+    <text x="692" y="360" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">English, Spanish, Chinese, Vietnamese, and 6 more  ✦ CA</text>
   </g>
 
 </svg>
@@ -460,42 +639,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
 <style>
   /*
-   * 8s cycle:
-   * 0–12%  (0–1.0s):  stable — apps and server shown, connections dim
-   * 12–55% (1.0–4.4s): State Portal connection highlights, "submit application →" label
-   * 42–90% (3.4–7.2s): receipt card fades in and holds
-   * 90–100% (7.2–8s):  reset
+   * 14s cycle — 3 beats:
+   * Beat 1 (0–4.5s): State Portal submits → receipt appears, status "Submitted"
+   * Beat 2 (4.5–8.5s): Mobile App uploads document → doc row appears in receipt
+   * Beat 3 (8.5–12s): Caseworker claims task → status changes to "Under Review"
+   * Hold 12–12.5s, reset 12.5–14s
    */
-  @keyframes s4-req {
-    0%,10%,100% { stroke:#C2C0E8; stroke-width:1.5; opacity:0.35; }
-    16%  { stroke:#00AD93; stroke-width:3; opacity:1; }
-    55%  { stroke:#00AD93; stroke-width:2.5; opacity:1; }
-    62%  { stroke:#C2C0E8; stroke-width:1.5; opacity:0.35; }
+  @keyframes s4-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes s4-portal-line {
+    0%,7%,37%,100%{stroke:#C2C0E8;opacity:0.2;stroke-width:1.5}
+    12%{stroke:#00AD93;opacity:1;stroke-width:3}
+    32%{stroke:#00AD93;opacity:1;stroke-width:2.5}
   }
-  @keyframes s4-req-label {
-    0%,8%,100% { opacity:0; }
-    13%  { opacity:1; }  55%  { opacity:1; }  62%  { opacity:0; }
+  @keyframes s4-case-line {
+    0%,58%,83%,100%{stroke:#C2C0E8;opacity:0.2;stroke-width:1.5}
+    63%{stroke:#00AD93;opacity:1;stroke-width:3}
+    78%{stroke:#00AD93;opacity:1;stroke-width:2.5}
   }
+  @keyframes s4-mobile-line {
+    0%,34%,57%,100%{stroke:#C2C0E8;opacity:0.2;stroke-width:1.5}
+    39%{stroke:#00AD93;opacity:1;stroke-width:3}
+    52%{stroke:#00AD93;opacity:1;stroke-width:2.5}
+  }
+  @keyframes s4-portal-label { 0%,9%,35%,100%{opacity:0} 13%{opacity:1} 31%{opacity:1} }
+  @keyframes s4-case-label   { 0%,60%,81%,100%{opacity:0} 64%{opacity:1} 77%{opacity:1} }
+  @keyframes s4-mobile-label { 0%,36%,55%,100%{opacity:0} 40%{opacity:1} 51%{opacity:1} }
   @keyframes s4-server {
-    0%,30%,100% { stroke:#5650BE; stroke-width:1.5; }
-    36%  { stroke:#00AD93; stroke-width:3; }
-    78%  { stroke:#00AD93; stroke-width:2; }
-    84%  { stroke:#5650BE; stroke-width:1.5; }
+    0%,7%,37%,100%{stroke:#5650BE;stroke-width:1.5}
+    12%{stroke:#00AD93;stroke-width:3}
+    32%{stroke:#00AD93;stroke-width:2}
   }
-  @keyframes s4-receipt {
-    0%,40%,100% { opacity:0; }
-    46%  { opacity:1; }  88%  { opacity:1; }  94%  { opacity:0; }
-  }
-  @keyframes s4-dot {
-    0%,100% { opacity:1; }
-    50%     { opacity:0.4; }
-  }
+  @keyframes s4-receipt    { 0%,16%,92%,100%{opacity:0} 21%{opacity:1} 88%{opacity:1} }
+  @keyframes s4-doc        { 0%,42%,92%,100%{opacity:0} 46%{opacity:1} 88%{opacity:1} }
+  @keyframes s4-status-sub { 0%,20%,64%,100%{opacity:0} 24%{opacity:1} 60%{opacity:1} }
+  @keyframes s4-status-rev { 0%,63%,92%,100%{opacity:0} 67%{opacity:1} 88%{opacity:1} }
 
-  #s4-req-line  { animation: s4-req       8s ease-in-out infinite; }
-  #s4-req-label { animation: s4-req-label 8s ease-in-out infinite; }
-  #s4-server    { animation: s4-server    8s ease-in-out infinite; }
-  #s4-receipt   { animation: s4-receipt   8s ease-in-out infinite; }
-  #s4-dot       { animation: s4-dot       1.6s ease-in-out infinite; }
+  #s4-dot          { animation: s4-dot          1.6s ease-in-out infinite; }
+  #s4-portal-line  { animation: s4-portal-line  14s ease-in-out infinite; }
+  #s4-case-line    { animation: s4-case-line    14s ease-in-out infinite; }
+  #s4-mobile-line  { animation: s4-mobile-line  14s ease-in-out infinite; }
+  #s4-portal-label { animation: s4-portal-label 14s ease-in-out infinite; }
+  #s4-case-label   { animation: s4-case-label   14s ease-in-out infinite; }
+  #s4-mobile-label { animation: s4-mobile-label 14s ease-in-out infinite; }
+  #s4-server       { animation: s4-server       14s ease-in-out infinite; }
+  #s4-receipt      { animation: s4-receipt      14s ease-in-out infinite; }
+  #s4-doc          { animation: s4-doc          14s ease-in-out infinite; }
+  #s4-status-sub   { animation: s4-status-sub   14s ease-in-out infinite; }
+  #s4-status-rev   { animation: s4-status-rev   14s ease-in-out infinite; }
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
@@ -505,60 +695,68 @@
   <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">GET STARTED</text>
   <text x="80" y="172" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">A Working Platform</text>
   <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">on Day One.</text>
-  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">The Blueprint ships with a mock server — a fully functional platform</text>
+  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">The Blueprint ships with a working sandbox — a fully functional platform</text>
   <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">you can explore, demo, and build against. No vendor needed to start.</text>
   <circle cx="88" cy="338" r="6" fill="#00AD93"/>
   <text x="104" y="343" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Start building apps before any implementation decision is made</text>
   <circle cx="88" cy="372" r="6" fill="#5650BE"/>
-  <text x="104" y="377" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Validate the design with real responses from day one</text>
+  <text x="104" y="377" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Validate the design with realistic results from day one</text>
 
   <!-- Divider -->
   <line x1="620" y1="40" x2="620" y2="440" stroke="#E9CCBE" stroke-width="1"/>
 
   <!-- Consumer app circles -->
-  <circle cx="710" cy="168" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
-  <text x="710" y="163" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State</text>
-  <text x="710" y="178" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Portal</text>
+  <circle cx="710" cy="158" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+  <text x="710" y="153" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State</text>
+  <text x="710" y="168" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Portal</text>
 
   <circle cx="710" cy="258" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
   <text x="710" y="253" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Caseworker</text>
   <text x="710" y="268" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">App</text>
 
-  <circle cx="710" cy="348" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
-  <text x="710" y="352" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Mobile App</text>
+  <circle cx="710" cy="358" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+  <text x="710" y="362" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Mobile App</text>
 
-  <!-- Connection lines (State Portal = animated; others = static dim) -->
-  <line id="s4-req-line" x1="744" y1="168" x2="914" y2="218" stroke="#C2C0E8" stroke-width="1.5" opacity="0.35"/>
-  <line x1="744" y1="258" x2="914" y2="248" stroke="#C2C0E8" stroke-width="1.5" opacity="0.2"/>
-  <line x1="744" y1="348" x2="914" y2="278" stroke="#C2C0E8" stroke-width="1.5" opacity="0.2"/>
+  <!-- Animated connection lines -->
+  <line id="s4-portal-line" x1="744" y1="158" x2="914" y2="220" stroke="#C2C0E8" stroke-width="1.5" opacity="0.2"/>
+  <line id="s4-case-line"   x1="744" y1="258" x2="914" y2="252" stroke="#C2C0E8" stroke-width="1.5" opacity="0.2"/>
+  <line id="s4-mobile-line" x1="744" y1="358" x2="914" y2="285" stroke="#C2C0E8" stroke-width="1.5" opacity="0.2"/>
 
-  <!-- "submit application →" label on active connection -->
-  <text id="s4-req-label" x="822" y="182" font-size="8" text-anchor="middle" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">submit application →</text>
+  <!-- Action labels on connections -->
+  <text id="s4-portal-label" x="829" y="182" font-size="8" text-anchor="middle" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" transform="rotate(20, 829, 189)">submit application →</text>
+  <text id="s4-case-label"   x="820" y="248" font-size="8" text-anchor="middle" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">claim task →</text>
+  <text id="s4-mobile-label" x="829" y="315" font-size="8" text-anchor="middle" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" transform="rotate(-23, 829, 322)">upload document →</text>
 
   <!-- Mock Server box -->
-  <rect id="s4-server" x="914" y="185" width="180" height="150" rx="8" fill="#2B1A78" stroke="#5650BE" stroke-width="1.5"/>
-  <text x="1004" y="247" font-size="13" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Blueprint</text>
-  <text x="1004" y="265" font-size="13" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Mock Server</text>
-  <!-- Running indicator -->
-  <circle id="s4-dot" cx="1074" cy="197" r="4" fill="#00AD93"/>
-  <text x="1074" y="211" font-size="7" text-anchor="middle" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">running</text>
+  <rect id="s4-server" x="914" y="192" width="180" height="130" rx="8" fill="#2B1A78" stroke="#5650BE" stroke-width="1.5"/>
+  <text x="1004" y="248" font-size="13" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Blueprint</text>
+  <text x="1004" y="266" font-size="13" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Sandbox</text>
+  <circle id="s4-dot" cx="1074" cy="204" r="4" fill="#00AD93"/>
+  <text x="1074" y="218" font-size="7" text-anchor="middle" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">running</text>
 
-  <!-- Connector from server to receipt card -->
-  <line x1="1094" y1="248" x2="1116" y2="248" stroke="#C2C0E8" stroke-width="1" opacity="0.4"/>
+  <!-- Static dim connector from server to receipt area -->
+  <line x1="1094" y1="257" x2="1118" y2="257" stroke="#C2C0E8" stroke-width="1" opacity="0.4"/>
 
-  <!-- Receipt card — fades in to show a real response -->
+  <!-- Receipt card — base appears on submit, holds through all beats -->
   <g id="s4-receipt" opacity="0">
-    <line x1="1094" y1="248" x2="1116" y2="248" stroke="#00AD93" stroke-width="1.5"/>
-    <rect x="1116" y="148" width="220" height="200" rx="8" fill="white" stroke="#00AD93" stroke-width="1.5"/>
-    <text x="1226" y="174" font-size="10" text-anchor="middle" font-weight="700" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">✓  Application received</text>
-    <line x1="1128" y1="184" x2="1324" y2="184" stroke="#E2F9F6" stroke-width="1.5"/>
-    <text x="1134" y="205" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Applicant</text>
-    <text x="1134" y="221" font-size="11" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Maria Garcia</text>
-    <text x="1134" y="245" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Programs</text>
-    <text x="1134" y="261" font-size="11" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP  ·  Medicaid</text>
-    <text x="1134" y="285" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Status</text>
-    <text x="1134" y="301" font-size="11" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Under Review</text>
-    <text x="1134" y="330" font-size="8" fill="#5650BE" opacity="0.7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">No vendor needed.</text>
+    <line x1="1094" y1="257" x2="1118" y2="257" stroke="#00AD93" stroke-width="1.5"/>
+    <rect x="1118" y="128" width="232" height="268" rx="8" fill="white" stroke="#00AD93" stroke-width="1.5"/>
+    <text x="1234" y="157" font-size="10" text-anchor="middle" font-weight="700" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">✓  Application received</text>
+    <line x1="1130" y1="167" x2="1338" y2="167" stroke="#E2F9F6" stroke-width="1.5"/>
+    <text x="1136" y="186" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Applicant</text>
+    <text x="1136" y="203" font-size="11" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Maria Garcia</text>
+    <text x="1136" y="223" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Programs</text>
+    <text x="1136" y="240" font-size="11" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP  ·  Medicaid</text>
+    <text x="1136" y="262" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Documents</text>
+    <!-- Document row: appears in beat 2 -->
+    <g id="s4-doc" opacity="0">
+      <text x="1136" y="279" font-size="11" font-weight="600" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">income_proof.pdf  ✓</text>
+    </g>
+    <text x="1136" y="302" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Status</text>
+    <!-- Status: Submitted (beat 1 only) -->
+    <text id="s4-status-sub" x="1136" y="320" font-size="11" font-weight="600" fill="#FFB446" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Submitted</text>
+    <!-- Status: Under Review (beat 3 onwards) -->
+    <text id="s4-status-rev" x="1136" y="320" font-size="11" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Under Review</text>
   </g>
 
 </svg>
@@ -574,31 +772,131 @@
        ═══════════════════════════════════════════════════════════════ -->
   <template id="tpl-s5">
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
+<style>
+  /*
+   * 14s loop — 10 tiles build in same order as slide 2 (left col → right col, top → bottom).
+   * Each tile: 3% rise window, 8% apart. All held 75–88%, reset 88–100%.
+   * t01=Intake, t02=Eligibility, t03=Case Management, t04=Workflow, t05=Document Management,
+   * t06=Client Management, t07=Scheduling, t08=Communications, t09=Reporting, t10=Data Exchange
+   */
+  @keyframes s5-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  @keyframes s5-t01 { 0%,3%,88%,100%{opacity:0} 6%,83%{opacity:1} }
+  @keyframes s5-t02 { 0%,11%,88%,100%{opacity:0} 14%,83%{opacity:1} }
+  @keyframes s5-t03 { 0%,19%,88%,100%{opacity:0} 22%,83%{opacity:1} }
+  @keyframes s5-t04 { 0%,27%,88%,100%{opacity:0} 30%,83%{opacity:1} }
+  @keyframes s5-t05 { 0%,35%,88%,100%{opacity:0} 38%,83%{opacity:1} }
+  @keyframes s5-t06 { 0%,43%,88%,100%{opacity:0} 46%,83%{opacity:1} }
+  @keyframes s5-t07 { 0%,51%,88%,100%{opacity:0} 54%,83%{opacity:1} }
+  @keyframes s5-t08 { 0%,59%,88%,100%{opacity:0} 62%,83%{opacity:1} }
+  @keyframes s5-t09 { 0%,67%,88%,100%{opacity:0} 70%,83%{opacity:1} }
+  @keyframes s5-t10 { 0%,75%,88%,100%{opacity:0} 78%,83%{opacity:1} }
+
+  /* Vendor swap on Eligibility tile — IBM Curam → Salesforce, fires at 75% */
+  @keyframes s5-v1a      { 0%,73%{opacity:1} 77%,100%{opacity:0} }
+  @keyframes s5-v1b      { 0%,73%,88%,100%{opacity:0} 77%{opacity:1} 82%{opacity:1} }
+  @keyframes s5-swap-rect { 0%,73%,88%,100%{stroke:none;stroke-width:0} 75%{stroke:#00AD93;stroke-width:2.5} 82%{stroke:#00AD93;stroke-width:2} 86%{stroke:none;stroke-width:0} }
+
+  #s5-dot       { animation: s5-dot       1.6s ease-in-out infinite; }
+  #s5-v1a       { animation: s5-v1a       14s  ease-in-out infinite; }
+  #s5-v1b       { animation: s5-v1b       14s  ease-in-out infinite; }
+  #s5-swap-rect { animation: s5-swap-rect 14s  ease-in-out infinite; }
+  #s5-t01 { animation: s5-t01 14s ease-in-out infinite; }
+  #s5-t02 { animation: s5-t02 14s ease-in-out infinite; }
+  #s5-t03 { animation: s5-t03 14s ease-in-out infinite; }
+  #s5-t04 { animation: s5-t04 14s ease-in-out infinite; }
+  #s5-t05 { animation: s5-t05 14s ease-in-out infinite; }
+  #s5-t06 { animation: s5-t06 14s ease-in-out infinite; }
+  #s5-t07 { animation: s5-t07 14s ease-in-out infinite; }
+  #s5-t08 { animation: s5-t08 14s ease-in-out infinite; }
+  #s5-t09 { animation: s5-t09 14s ease-in-out infinite; }
+  #s5-t10 { animation: s5-t10 14s ease-in-out infinite; }
+</style>
+
   <rect width="1400" height="480" fill="#F5F0ED"/>
   <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">5 / 5</text>
 
   <!-- LEFT: Text -->
   <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">ADOPTION</text>
   <text x="80" y="172" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Your Path.</text>
-  <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Your Stack.</text>
-  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">When you're ready for production, you have choices —</text>
-  <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">all built from the same contracts.</text>
-  <circle cx="88" cy="326" r="6" fill="#00AD93"/>
-  <text x="104" y="331" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Procure a vendor and build one adapter — your apps never change</text>
-  <circle cx="88" cy="358" r="6" fill="#5650BE"/>
-  <text x="104" y="363" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Traditional developer build — your team, your stack, your timeline</text>
-  <circle cx="88" cy="390" r="6" fill="#00AD93"/>
-  <text x="104" y="395" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI-assisted build — any language, AWS or Azure, production-ready fast</text>
+  <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Your Choice.</text>
+  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Procure a vendor, use your dev team, or accelerate with AI —</text>
+  <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">every approach builds on the same Blueprint contracts.</text>
+  <circle cx="88" cy="310" r="6" fill="#FFB446"/>
+  <text x="104" y="315" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Off-the-shelf vendor → write one adapter to connect</text>
+  <circle cx="88" cy="342" r="6" fill="#5650BE"/>
+  <text x="104" y="347" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Your team → Python, Java, Go, or whatever your developers know</text>
+  <circle cx="88" cy="374" r="6" fill="#00AD93"/>
+  <text x="104" y="379" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Your environment → on-premises, AWS, Azure, GCP — your choice</text>
+  <circle cx="88" cy="406" r="6" fill="#FFFFFF" stroke="#2B1A78" stroke-width="1.5"/>
+  <text x="104" y="411" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI tools → modules delivered in weeks, not years</text>
 
   <!-- Divider -->
   <line x1="620" y1="40" x2="620" y2="440" stroke="#E9CCBE" stroke-width="1"/>
 
-  <!-- Placeholder: three paths from Blueprint contracts -->
-  <rect x="640" y="52" width="720" height="376" rx="8" fill="#F7EDE8" stroke="#E9CCBE" stroke-width="1" stroke-dasharray="6,4"/>
-  <text x="1000" y="217" font-size="11" text-anchor="middle" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">[ Blueprint contracts box on left ]</text>
-  <text x="1000" y="237" font-size="11" text-anchor="middle" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">[ path A (top): contracts → vendor + adapter → production ]</text>
-  <text x="1000" y="257" font-size="11" text-anchor="middle" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">[ path B (middle): contracts → dev team build → production ]</text>
-  <text x="1000" y="277" font-size="11" text-anchor="middle" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">[ path C (bottom): contracts → AI tool → any stack → production ]</text>
+  <!-- Production Platform container -->
+  <rect x="638" y="52" width="726" height="382" rx="10" fill="#2B1A78"/>
+  <text x="1001" y="74" font-size="10" text-anchor="middle" font-weight="700" letter-spacing="1.5" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">PRODUCTION PLATFORM</text>
+  <line x1="646" y1="84" x2="1356" y2="84" stroke="#5650BE" stroke-width="1" opacity="0.5"/>
+
+  <!-- Running indicator -->
+  <circle id="s5-dot" cx="1338" cy="68" r="4" fill="#00AD93"/>
+  <text x="1338" y="81" font-size="7" text-anchor="middle" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">running</text>
+
+  <!-- Left col: Eligibility(vendor) → Case Mgmt(vendor) → Intake(team) → Workflow(team) → Document Management(AI) -->
+  <g id="s5-t01" opacity="0">
+    <rect id="s5-swap-rect" x="650" y="92" width="334" height="56" rx="4" fill="#FFF3E0"/>
+    <text x="670" y="115" font-size="11" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Eligibility</text>
+    <text id="s5-v1a" x="670" y="133" font-size="8" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">IBM Curam + adapter  ✦</text>
+    <text id="s5-v1b" x="670" y="133" font-size="8" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">↻ Salesforce + adapter · no code changes  ✦</text>
+  </g>
+  <g id="s5-t02" opacity="0">
+    <rect x="650" y="156" width="334" height="56" rx="4" fill="#FFF3E0"/>
+    <text x="670" y="179" font-size="11" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Case Management</text>
+    <text x="670" y="197" font-size="8" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor + adapter  ✦</text>
+  </g>
+  <g id="s5-t03" opacity="0">
+    <rect x="650" y="220" width="334" height="56" rx="4" fill="#E6EBF9"/>
+    <text x="670" y="243" font-size="11" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Intake</text>
+    <text x="670" y="261" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Python · Java · Go · TypeScript  ✦</text>
+  </g>
+  <g id="s5-t04" opacity="0">
+    <rect x="650" y="284" width="334" height="56" rx="4" fill="#E6EBF9"/>
+    <text x="670" y="307" font-size="11" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
+    <text x="670" y="325" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Python · Java · Go · TypeScript  ✦</text>
+  </g>
+  <g id="s5-t05" opacity="0">
+    <rect x="650" y="348" width="334" height="56" rx="4" fill="white" opacity="0.92"/>
+    <text x="670" y="371" font-size="11" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Document Management</text>
+    <text x="670" y="389" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI-generated  ✦</text>
+  </g>
+
+  <!-- Right col: Client Management → Scheduling → Communications → Reporting → Data Exchange (all AI) -->
+  <g id="s5-t06" opacity="0">
+    <rect x="996" y="92" width="334" height="56" rx="4" fill="white" opacity="0.92"/>
+    <text x="1016" y="115" font-size="11" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Client Management</text>
+    <text x="1016" y="133" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI-generated  ✦</text>
+  </g>
+  <g id="s5-t07" opacity="0">
+    <rect x="996" y="156" width="334" height="56" rx="4" fill="white" opacity="0.92"/>
+    <text x="1016" y="179" font-size="11" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Scheduling</text>
+    <text x="1016" y="197" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI-generated  ✦</text>
+  </g>
+  <g id="s5-t08" opacity="0">
+    <rect x="996" y="220" width="334" height="56" rx="4" fill="white" opacity="0.92"/>
+    <text x="1016" y="243" font-size="11" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Communications</text>
+    <text x="1016" y="261" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI-generated  ✦</text>
+  </g>
+  <g id="s5-t09" opacity="0">
+    <rect x="996" y="284" width="334" height="56" rx="4" fill="white" opacity="0.92"/>
+    <text x="1016" y="307" font-size="11" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Reporting</text>
+    <text x="1016" y="325" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI-generated  ✦</text>
+  </g>
+  <g id="s5-t10" opacity="0">
+    <rect x="996" y="348" width="334" height="56" rx="4" fill="white" opacity="0.92"/>
+    <text x="1016" y="371" font-size="11" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Data Exchange</text>
+    <text x="1016" y="389" font-size="8" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">AI-generated  ✦</text>
+  </g>
+
 </svg>
   </template>
 
