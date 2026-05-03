@@ -7,7 +7,7 @@
     "build": "node context-map/build.js && node service-blueprints/build.js",
     "build:context-map": "node context-map/build.js",
     "build:service-blueprints": "node service-blueprints/build.js",
-    "export:adoption-model": "node -e \"import('./adoption-model/src/export-png.js').then(m => m.exportPng())\""
+    "export:adoption-model": "node adoption-model/src/export-png.js"
   },
   "dependencies": {
     "ajv": "^8.17.1",
