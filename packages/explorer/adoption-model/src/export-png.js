@@ -17,8 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { existsSync, writeFileSync, mkdirSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir  = resolve(__dirname, '..', 'output');
-const distDir = resolve(__dirname, '..', 'dist');
+const outDir = resolve(__dirname, '..', 'output');
 
 // CSS injected after navigating to each slide to freeze everything at end state.
 // The global rule fast-forwards all animations; the s4 block force-shows looping
@@ -84,7 +83,7 @@ export async function exportPng() {
     return;
   }
 
-  mkdirSync(distDir, { recursive: true });
+  mkdirSync(outDir, { recursive: true });
 
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
@@ -116,7 +115,7 @@ export async function exportPng() {
     const buffer = await svgEl.screenshot({ type: 'png' });
     pngBuffers[png] = buffer;
 
-    const pngPath = resolve(distDir, png);
+    const pngPath = resolve(outDir, png);
     writeFileSync(pngPath, buffer);
     console.log(`Wrote ${pngPath}`);
   }
