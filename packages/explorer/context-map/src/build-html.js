@@ -56,7 +56,7 @@ const html = `<!DOCTYPE html>
   <title>Safety Net Blueprint \u2014 Context Map</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f8fafc; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; }
     #container { min-height: 100vh; padding: 24px 0; overflow-x: hidden; }
     #map-wrapper { background: white; box-shadow: 0 2px 16px rgba(0,0,0,0.10); overflow: hidden; width: 1400px; transform-origin: top left; }
 
@@ -83,7 +83,7 @@ ${contentEntries}
       'position:fixed', 'display:none', 'pointer-events:none',
       "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif",
       'font-size:8.5px', 'line-height:1.65', 'white-space:nowrap',
-      'z-index:9999', 'background:white', 'border:1px solid #e5e7eb',
+      'z-index:9999', 'background:white', 'border:1px solid #E9CCBE',
       'border-radius:5px', 'padding:5px 8px',
       'box-shadow:0 2px 8px rgba(0,0,0,0.12)'
     ].join(';');
