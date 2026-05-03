@@ -38,6 +38,7 @@
     <button data-view="s2">The Solution</button>
     <button data-view="s3">Make It Yours</button>
     <button data-view="s4">Day One</button>
+    <button data-view="s5">Path to Production</button>
   </nav>
 
   <div id="container">
@@ -80,7 +81,7 @@
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
-  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">1 / 4</text>
+  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">1 / 5</text>
 
   <!-- LEFT: Text column -->
   <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">THE PROBLEM</text>
@@ -221,9 +222,14 @@
   @keyframes s2-fadein { from{opacity:0} to{opacity:1} }
 
 </style>
+<defs>
+  <marker id="s2-arr" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto" markerUnits="userSpaceOnUse">
+    <path d="M 0 0 L 4 2.5 L 0 5 Z" fill="#2B1A78"/>
+  </marker>
+</defs>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
-  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">2 / 4</text>
+  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">2 / 5</text>
 
   <!-- LEFT: Text -->
   <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">THE BLUEPRINT</text>
@@ -239,11 +245,12 @@
   </g>
   <g id="s2-b2" opacity="0">
     <circle cx="88" cy="362" r="6" fill="#00AD93"/>
-    <text x="104" y="367" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Compliance built into every module — requirements have an owner</text>
+    <text x="104" y="367" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Compliance is built in, not bolted on — it's never an afterthought</text>
   </g>
   <g id="s2-b3" opacity="0">
     <circle cx="88" cy="392" r="6" fill="#FFB446"/>
-    <text x="104" y="397" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Buy from a vendor, build it in-house, or use AI — your choice. You own the contracts.</text>
+    <text x="104" y="397" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Buy from a vendor, build it in-house, or use AI — your choice.</text>
+    <text x="104" y="415" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Swap vendors at any time. You own the contracts.</text>
   </g>
 
   <!-- Divider -->
@@ -267,6 +274,8 @@
     <text id="s2-p01a" x="765" y="142" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">IBM Curam</text>
     <text id="s2-p01b" x="895" y="142" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">Salesforce</text>
     <g id="s2-a01a" opacity="0"><rect x="726" y="131" width="78" height="14" rx="7" fill="#FFD699"/><text x="765" y="142" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">IBM Curam</text></g>
+    <line id="s2-ln01a" x1="808" y1="138" x2="848" y2="138" stroke="#2B1A78" stroke-width="2" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40" opacity="0" marker-end="url(#s2-arr)"/>
+    <line id="s2-ln01b" x1="848" y1="138" x2="808" y2="138" stroke="#2B1A78" stroke-width="2" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40" opacity="0" marker-end="url(#s2-arr)"/>
     <g id="s2-a01b" opacity="0"><rect x="856" y="131" width="78" height="14" rx="7" fill="#FFD699"/><text x="895" y="142" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Salesforce</text></g>
   </g>
 
@@ -311,10 +320,12 @@
     <text id="s2-p05a" x="765" y="430" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">OnBase</text>
     <text id="s2-p05b" x="893" y="430" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">Box / S3</text>
     <g id="s2-a05a" opacity="0"><rect x="734" y="419" width="62" height="14" rx="7" fill="#FFD699"/><text x="765" y="430" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">OnBase</text></g>
+    <line id="s2-ln05a" x1="800" y1="426" x2="853" y2="426" stroke="#2B1A78" stroke-width="2" stroke-linecap="round" stroke-dasharray="53" stroke-dashoffset="53" opacity="0" marker-end="url(#s2-arr)"/>
+    <line id="s2-ln05b" x1="853" y1="426" x2="800" y2="426" stroke="#2B1A78" stroke-width="2" stroke-linecap="round" stroke-dasharray="53" stroke-dashoffset="53" opacity="0" marker-end="url(#s2-arr)"/>
     <g id="s2-a05b" opacity="0"><rect x="857" y="419" width="72" height="14" rx="7" fill="#FFD699"/><text x="893" y="430" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Box / S3</text></g>
   </g>
 
-  <!-- Right column: Client Management → Scheduling → Communications → Reporting → Data Exchange -->
+  <!-- Right column: Client Management → Scheduling → Communications → Benefits & Payments → Data Exchange -->
 
   <!-- Tile 06: Client Management (cx=1170) -->
   <g id="s2-t06" opacity="0">
@@ -346,18 +357,20 @@
     <text id="s2-p08a" x="1105" y="286" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">Twilio</text>
     <text id="s2-p08b" x="1235" y="286" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">Notify.gov</text>
     <g id="s2-a08a" opacity="0"><rect x="1074" y="275" width="62" height="14" rx="7" fill="#FFD699"/><text x="1105" y="286" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Twilio</text></g>
+    <line id="s2-ln08a" x1="1140" y1="282" x2="1192" y2="282" stroke="#2B1A78" stroke-width="2" stroke-linecap="round" stroke-dasharray="52" stroke-dashoffset="52" opacity="0" marker-end="url(#s2-arr)"/>
+    <line id="s2-ln08b" x1="1192" y1="282" x2="1140" y2="282" stroke="#2B1A78" stroke-width="2" stroke-linecap="round" stroke-dasharray="52" stroke-dashoffset="52" opacity="0" marker-end="url(#s2-arr)"/>
     <g id="s2-a08b" opacity="0"><rect x="1196" y="275" width="78" height="14" rx="7" fill="#FFD699"/><text x="1235" y="286" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Notify.gov</text></g>
   </g>
 
-  <!-- Tile 09: Reporting (cx=1170) -->
+  <!-- Tile 09: Benefits & Payments (cx=1170) -->
   <g id="s2-t09" opacity="0">
     <rect x="1012" y="306" width="316" height="64" rx="4" fill="white"/>
-    <text x="1170" y="326" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Reporting</text>
-    <text id="s2-c09" x="1170" y="342" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">ACF · PERM · federal data reporting</text>
-    <text id="s2-p09a" x="1105" y="358" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">State-built</text>
-    <text id="s2-p09b" x="1235" y="358" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">Vendor BI</text>
-    <g id="s2-a09a" opacity="0"><rect x="1066" y="347" width="78" height="14" rx="7" fill="#FFD699"/><text x="1105" y="358" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State-built</text></g>
-    <g id="s2-a09b" opacity="0"><rect x="1199" y="347" width="72" height="14" rx="7" fill="#FFD699"/><text x="1235" y="358" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor BI</text></g>
+    <text x="1170" y="326" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Benefits &amp; Payments</text>
+    <text id="s2-c09" x="1170" y="342" font-size="8.5" text-anchor="middle" font-weight="600" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">SNAP · Medicaid · SSI benefit issuance</text>
+    <text id="s2-p09a" x="1105" y="358" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">EBT system</text>
+    <text id="s2-p09b" x="1235" y="358" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" opacity="0">Disbursement vendor</text>
+    <g id="s2-a09a" opacity="0"><rect x="1066" y="347" width="78" height="14" rx="7" fill="#FFD699"/><text x="1105" y="358" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">EBT system</text></g>
+    <g id="s2-a09b" opacity="0"><rect x="1163" y="347" width="114" height="14" rx="7" fill="#FFD699"/><text x="1235" y="358" font-size="8.5" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Disbursement vendor</text></g>
   </g>
 
   <!-- Tile 10: Data Exchange (cx=1170) -->
@@ -426,7 +439,7 @@
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
-  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">3 / 4</text>
+  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">3 / 5</text>
 
   <!-- LEFT: Text -->
   <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">CUSTOMIZATION</text>
@@ -448,16 +461,16 @@
 
   <!-- State rules badge (floats above the document) -->
   <g id="s3-ca-badge" opacity="0">
-    <rect x="938" y="30" width="134" height="24" rx="12" fill="#E6EBF9" stroke="#5650BE" stroke-width="1.5"/>
-    <text x="1005" y="46" font-size="9" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">California rules</text>
+    <rect x="938" y="16" width="134" height="24" rx="12" fill="#E6EBF9" stroke="#5650BE" stroke-width="1.5"/>
+    <text x="1005" y="32" font-size="9" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">California rules</text>
   </g>
   <g id="s3-tx-badge" opacity="0">
-    <rect x="950" y="30" width="110" height="24" rx="12" fill="#E6EBF9" stroke="#5650BE" stroke-width="1.5"/>
-    <text x="1005" y="46" font-size="9" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Texas rules</text>
+    <rect x="950" y="16" width="110" height="24" rx="12" fill="#E6EBF9" stroke="#5650BE" stroke-width="1.5"/>
+    <text x="1005" y="32" font-size="9" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Texas rules</text>
   </g>
   <g id="s3-upd-badge" opacity="0">
-    <rect x="926" y="30" width="158" height="24" rx="12" fill="#FFB446"/>
-    <text x="1005" y="46" font-size="9" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">↓ Blueprint update</text>
+    <rect x="926" y="16" width="158" height="24" rx="12" fill="#FFB446"/>
+    <text x="1005" y="32" font-size="9" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">↓ Blueprint update</text>
   </g>
 
   <!-- Blueprint baseline document -->
@@ -527,127 +540,291 @@
        SLIDE 4 — Day One
        ═══════════════════════════════════════════════════════════════ -->
   <template id="tpl-s4">
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480" overflow="hidden">
 <style>
-  /*
-   * 14s cycle — 3 beats:
-   * Beat 1 (0–4.5s): State Portal submits → receipt appears, status "Submitted"
-   * Beat 2 (4.5–8.5s): Mobile App uploads document → doc row appears in receipt
-   * Beat 3 (8.5–12s): Caseworker claims task → status changes to "Under Review"
-   * Hold 12–12.5s, reset 12.5–14s
-   */
   @keyframes s4-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  @keyframes s4-portal-line {
-    0%,7%,37%,100%{stroke:#C2C0E8;opacity:0.2;stroke-width:1.5}
-    12%{stroke:#00AD93;opacity:1;stroke-width:3}
-    32%{stroke:#00AD93;opacity:1;stroke-width:2.5}
-  }
-  @keyframes s4-case-line {
-    0%,58%,83%,100%{stroke:#C2C0E8;opacity:0.2;stroke-width:1.5}
-    63%{stroke:#00AD93;opacity:1;stroke-width:3}
-    78%{stroke:#00AD93;opacity:1;stroke-width:2.5}
-  }
-  @keyframes s4-mobile-line {
-    0%,34%,57%,100%{stroke:#C2C0E8;opacity:0.2;stroke-width:1.5}
-    39%{stroke:#00AD93;opacity:1;stroke-width:3}
-    52%{stroke:#00AD93;opacity:1;stroke-width:2.5}
-  }
-  @keyframes s4-portal-label { 0%,9%,35%,100%{opacity:0} 13%{opacity:1} 31%{opacity:1} }
-  @keyframes s4-case-label   { 0%,60%,81%,100%{opacity:0} 64%{opacity:1} 77%{opacity:1} }
-  @keyframes s4-mobile-label { 0%,36%,55%,100%{opacity:0} 40%{opacity:1} 51%{opacity:1} }
-  @keyframes s4-server {
-    0%,7%,37%,100%{stroke:#5650BE;stroke-width:1.5}
-    12%{stroke:#00AD93;stroke-width:3}
-    32%{stroke:#00AD93;stroke-width:2}
-  }
-  @keyframes s4-receipt    { 0%,16%,92%,100%{opacity:0} 21%{opacity:1} 88%{opacity:1} }
-  @keyframes s4-doc        { 0%,42%,92%,100%{opacity:0} 46%{opacity:1} 88%{opacity:1} }
-  @keyframes s4-status-sub { 0%,20%,64%,100%{opacity:0} 24%{opacity:1} 60%{opacity:1} }
-  @keyframes s4-status-rev { 0%,63%,92%,100%{opacity:0} 67%{opacity:1} 88%{opacity:1} }
-
-  #s4-dot          { animation: s4-dot          1.6s ease-in-out infinite; }
-  #s4-portal-line  { animation: s4-portal-line  14s ease-in-out infinite; }
-  #s4-case-line    { animation: s4-case-line    14s ease-in-out infinite; }
-  #s4-mobile-line  { animation: s4-mobile-line  14s ease-in-out infinite; }
-  #s4-portal-label { animation: s4-portal-label 14s ease-in-out infinite; }
-  #s4-case-label   { animation: s4-case-label   14s ease-in-out infinite; }
-  #s4-mobile-label { animation: s4-mobile-label 14s ease-in-out infinite; }
-  #s4-server       { animation: s4-server       14s ease-in-out infinite; }
-  #s4-receipt      { animation: s4-receipt      14s ease-in-out infinite; }
-  #s4-doc          { animation: s4-doc          14s ease-in-out infinite; }
-  #s4-status-sub   { animation: s4-status-sub   14s ease-in-out infinite; }
-  #s4-status-rev   { animation: s4-status-rev   14s ease-in-out infinite; }
+  #s4-dot { animation: s4-dot 1.6s ease-in-out infinite; }
 </style>
 
   <rect width="1400" height="480" fill="#F5F0ED"/>
-  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">4 / 4</text>
+  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">4 / 5</text>
 
-  <!-- LEFT: Text -->
+  <!-- LEFT panel -->
   <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">GET STARTED</text>
   <text x="80" y="172" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">A Working Platform</text>
   <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">on Day One.</text>
   <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">The Blueprint ships with a working sandbox — a fully functional platform</text>
   <text x="80" y="288" font-size="13" fill="#000000" opacity="0.6" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">you can explore, demo, and build against. No vendor needed to start.</text>
-  <circle cx="88" cy="338" r="6" fill="#00AD93"/>
-  <text x="104" y="343" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Start building apps before any implementation decision is made</text>
-  <circle cx="88" cy="372" r="6" fill="#5650BE"/>
-  <text x="104" y="377" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Validate the design with realistic data from day one</text>
+  <g id="s4-b1" opacity="0">
+    <circle cx="88" cy="315" r="6" fill="#2B1A78"/>
+    <text x="104" y="320" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Working code automatically created from just the contracts</text>
+  </g>
+  <g id="s4-b2" opacity="0">
+    <circle cx="88" cy="351" r="6" fill="#00AD93"/>
+    <text x="104" y="356" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Start building apps before any implementation decision is made</text>
+  </g>
+  <g id="s4-b3" opacity="0">
+    <circle cx="88" cy="387" r="6" fill="#FFB446"/>
+    <text x="104" y="392" font-size="12" font-weight="600" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Validate the design with realistic data from day one</text>
+  </g>
 
   <!-- Divider -->
   <line x1="620" y1="40" x2="620" y2="440" stroke="#E9CCBE" stroke-width="1"/>
 
-  <!-- Consumer app circles -->
-  <circle cx="710" cy="158" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
-  <text x="710" y="153" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State</text>
-  <text x="710" y="168" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Portal</text>
+  <!-- ── Phase 1→end: Sandbox (behind curtain; revealed when curtain lifts) ── -->
+  <g id="s4-sandbox" opacity="0">
+    <rect x="914" y="192" width="180" height="130" rx="8" fill="#2B1A78" stroke="#5650BE" stroke-width="1.5"/>
+    <text x="1004" y="248" font-size="13" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Blueprint</text>
+    <text x="1004" y="266" font-size="13" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Sandbox</text>
+    <circle id="s4-dot" cx="1074" cy="204" r="4" fill="#00AD93"/>
+    <text x="1074" y="218" font-size="7" text-anchor="middle" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">running</text>
+  </g>
+  <rect id="s4-server-hl" x="914" y="192" width="180" height="130" rx="8" fill="none" stroke="#5650BE" stroke-width="1.5" opacity="0"/>
 
-  <circle cx="710" cy="258" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
-  <text x="710" y="253" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Caseworker</text>
-  <text x="710" y="268" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">App</text>
+  <!-- ── Phase 1: Contract stack (visible before curtain drops) ── -->
+  <g id="s4-stack" opacity="0">
+    <rect x="969" y="180" width="70" height="90" rx="3" fill="white" stroke="#C2C0E8" stroke-width="1.5" transform="rotate(6,1004,225)"/>
+    <rect x="969" y="180" width="70" height="90" rx="3" fill="white" stroke="#C2C0E8" stroke-width="1.5" transform="rotate(-4,1004,225)"/>
+    <rect x="969" y="180" width="70" height="90" rx="3" fill="white" stroke="#5650BE" stroke-width="1.5"/>
+    <line x1="981" y1="199" x2="1031" y2="199" stroke="#C2C0E8" stroke-width="1.5"/>
+    <line x1="981" y1="211" x2="1031" y2="211" stroke="#C2C0E8" stroke-width="1.5"/>
+    <line x1="981" y1="223" x2="1022" y2="223" stroke="#C2C0E8" stroke-width="1.5"/>
+    <line x1="981" y1="235" x2="1031" y2="235" stroke="#C2C0E8" stroke-width="1.5"/>
+    <line x1="981" y1="247" x2="1018" y2="247" stroke="#C2C0E8" stroke-width="1.5"/>
+    <text x="1004" y="285" font-size="8" text-anchor="middle" fill="#5650BE" font-weight="600" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">contracts</text>
+  </g>
 
-  <circle cx="710" cy="358" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
-  <text x="710" y="362" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Mobile App</text>
+  <!-- Phase 1: Curtain (y=0 so translateY(-100%) moves it completely above viewport) -->
+  <rect id="s4-curtain" x="814" y="0" width="380" height="360" rx="12" fill="#2B1A78" style="transform-box:fill-box; transform-origin: center top"/>
 
-  <!-- Animated connection lines -->
-  <line id="s4-portal-line" x1="744" y1="158" x2="914" y2="220" stroke="#C2C0E8" stroke-width="1.5" opacity="0.2"/>
-  <line id="s4-case-line"   x1="744" y1="258" x2="914" y2="252" stroke="#C2C0E8" stroke-width="1.5" opacity="0.2"/>
-  <line id="s4-mobile-line" x1="744" y1="358" x2="914" y2="285" stroke="#C2C0E8" stroke-width="1.5" opacity="0.2"/>
+  <!-- Countdown numbers and subtitle on curtain (centered horizontally in curtain) -->
+  <text id="s4-cnt5"    x="1004" y="210" font-size="96" text-anchor="middle" font-weight="700" fill="white"    opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">5</text>
+  <text id="s4-cnt4"    x="1004" y="210" font-size="96" text-anchor="middle" font-weight="700" fill="white"    opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">4</text>
+  <text id="s4-cnt3"    x="1004" y="210" font-size="96" text-anchor="middle" font-weight="700" fill="white"    opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">3</text>
+  <text id="s4-cnt2"    x="1004" y="210" font-size="96" text-anchor="middle" font-weight="700" fill="white"    opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">2</text>
+  <text id="s4-cnt1"    x="1004" y="210" font-size="96" text-anchor="middle" font-weight="700" fill="white"    opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">1</text>
+  <text id="s4-cnt-sub" x="1004" y="258" font-size="11"  text-anchor="middle" font-weight="400" fill="#C2C0E8" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">generating platform...</text>
 
-  <!-- Action labels on connections -->
-  <text id="s4-portal-label" x="829" y="182" font-size="8" text-anchor="middle" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" transform="rotate(20, 829, 189)">submit application →</text>
-  <text id="s4-case-label"   x="820" y="248" font-size="8" text-anchor="middle" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">claim task →</text>
-  <text id="s4-mobile-label" x="829" y="315" font-size="8" text-anchor="middle" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" transform="rotate(-23, 829, 322)">upload document →</text>
+  <!-- ── Phase 2: App circles (drop in from above, render after curtain) ── -->
+  <g id="s4-app1" opacity="0" style="transform-box:fill-box;transform-origin:center">
+    <circle cx="710" cy="158" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+    <text x="710" y="153" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State</text>
+    <text x="710" y="168" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Portal</text>
+  </g>
+  <g id="s4-app2" opacity="0" style="transform-box:fill-box;transform-origin:center">
+    <circle cx="710" cy="258" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+    <text x="710" y="253" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Caseworker</text>
+    <text x="710" y="268" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">App</text>
+  </g>
+  <g id="s4-app3" opacity="0" style="transform-box:fill-box;transform-origin:center">
+    <circle cx="710" cy="358" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+    <text x="710" y="362" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Mobile App</text>
+  </g>
 
-  <!-- Mock Server box -->
-  <rect id="s4-server" x="914" y="192" width="180" height="130" rx="8" fill="#2B1A78" stroke="#5650BE" stroke-width="1.5"/>
-  <text x="1004" y="248" font-size="13" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Blueprint</text>
-  <text x="1004" y="266" font-size="13" text-anchor="middle" font-weight="700" fill="white" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Sandbox</text>
-  <circle id="s4-dot" cx="1074" cy="204" r="4" fill="#00AD93"/>
-  <text x="1074" y="218" font-size="7" text-anchor="middle" fill="#00AD93" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">running</text>
+  <!-- Phase 2: Connection lines (draw via dashoffset; no text labels) -->
+  <line id="s4-ln1" x1="744" y1="158" x2="914" y2="220" stroke="#00AD93" stroke-width="1.5" stroke-dasharray="181" stroke-dashoffset="181" opacity="0"/>
+  <line id="s4-ln2" x1="744" y1="258" x2="914" y2="252" stroke="#00AD93" stroke-width="1.5" stroke-dasharray="170" stroke-dashoffset="170" opacity="0"/>
+  <line id="s4-ln3" x1="744" y1="358" x2="914" y2="285" stroke="#00AD93" stroke-width="1.5" stroke-dasharray="185" stroke-dashoffset="185" opacity="0"/>
 
-  <!-- Static dim connector from server to receipt area -->
-  <line x1="1094" y1="257" x2="1118" y2="257" stroke="#C2C0E8" stroke-width="1" opacity="0.4"/>
+  <!-- Phase 3: Action labels — centered on each line's midpoint, rotated to match line angle -->
+  <!-- Portal line midpoint (829,189), angle ≈ +20° -->
+  <g id="s4-portal-label" opacity="0" transform="rotate(20, 829, 189)">
+    <rect x="782" y="182" width="94" height="14" rx="7" fill="#FFB446"/>
+    <text x="829" y="193" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Submit application</text>
+  </g>
+  <!-- Case line midpoint (829,255), angle ≈ −2° -->
+  <g id="s4-case-label" opacity="0" transform="rotate(-2, 829, 255)">
+    <rect x="799" y="248" width="60" height="14" rx="7" fill="#FFB446"/>
+    <text x="829" y="259" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Claim task</text>
+  </g>
+  <!-- Mobile line midpoint (829,322), angle ≈ −23° -->
+  <g id="s4-mobile-label" opacity="0" transform="rotate(-23, 829, 322)">
+    <rect x="782" y="315" width="94" height="14" rx="7" fill="#FFB446"/>
+    <text x="829" y="326" font-size="8.5" text-anchor="middle" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Upload documents</text>
+  </g>
 
-  <!-- Receipt card — base appears on submit, holds through all beats -->
+  <!-- Phase 3: Application receipt card -->
   <g id="s4-receipt" opacity="0">
-    <line x1="1094" y1="257" x2="1118" y2="257" stroke="#00AD93" stroke-width="1.5"/>
-    <rect x="1118" y="128" width="232" height="268" rx="8" fill="white" stroke="#00AD93" stroke-width="1.5"/>
-    <text x="1234" y="157" font-size="10" text-anchor="middle" font-weight="700" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">✓  Application received</text>
+    <line x1="1094" y1="257" x2="1118" y2="257" stroke="#FFB446" stroke-width="1.5"/>
+    <rect x="1118" y="128" width="232" height="268" rx="8" fill="white" stroke="#FFB446" stroke-width="1.5"/>
+    <text x="1234" y="157" font-size="10" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Application</text>
     <line x1="1130" y1="167" x2="1338" y2="167" stroke="#E2F9F6" stroke-width="1.5"/>
     <text x="1136" y="186" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Applicant</text>
     <text x="1136" y="203" font-size="11" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Maria Garcia</text>
     <text x="1136" y="223" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Programs</text>
     <text x="1136" y="240" font-size="11" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">SNAP  ·  Medicaid</text>
     <text x="1136" y="262" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Documents</text>
-    <!-- Document row: appears in beat 2 -->
-    <g id="s4-doc" opacity="0">
-      <text x="1136" y="279" font-size="11" font-weight="600" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">income_proof.pdf  ✓</text>
+    <g id="s4-doc-row" opacity="0">
+      <text x="1136" y="279" font-size="11" font-weight="600" fill="#FFB446" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">income_proof.pdf  ✓</text>
     </g>
     <text x="1136" y="302" font-size="9" fill="#000000" opacity="0.55" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Status</text>
-    <!-- Status: Submitted (beat 1 only) -->
-    <text id="s4-status-sub" x="1136" y="320" font-size="11" font-weight="600" fill="#FFB446" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Submitted</text>
-    <!-- Status: Under Review (beat 3 onwards) -->
-    <text id="s4-status-rev" x="1136" y="320" font-size="11" font-weight="600" fill="#00AD93" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Under Review</text>
+    <text id="s4-status-sub" x="1136" y="320" font-size="11" font-weight="600" fill="#000000" opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Submitted</text>
+    <text id="s4-status-rev" x="1136" y="320" font-size="11" font-weight="600" fill="#FFB446"  opacity="0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Under Review</text>
+  </g>
+
+</svg>
+  </template>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SLIDE 5 — Path to Production
+       ═══════════════════════════════════════════════════════════════ -->
+  <template id="tpl-s5">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="480" viewBox="0 0 1400 480">
+<style>
+  @keyframes s5-fadein { from{opacity:0} to{opacity:1} }
+</style>
+
+  <rect width="1400" height="480" fill="#F5F0ED"/>
+  <text x="1370" y="22" font-size="9" text-anchor="end" fill="#E9CCBE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">5 / 5</text>
+
+  <!-- LEFT: Text column -->
+  <text x="80" y="120" font-size="10" font-weight="700" letter-spacing="2" fill="#5650BE" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">PATH TO PRODUCTION</text>
+  <text x="80" y="172" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Give Your Legacy Platform</text>
+  <text x="80" y="224" font-size="40" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">A Modern Refresh.</text>
+  <text x="80" y="268" font-size="13" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Incremental. Low risk. No big bang required.</text>
+  <g id="s5-b1" opacity="0">
+    <circle cx="88" cy="305" r="6" fill="#FFB446"/>
+    <text x="104" y="310" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Your existing systems keep running unchanged</text>
+  </g>
+  <g id="s5-b2" opacity="0">
+    <circle cx="88" cy="341" r="6" fill="#2B1A78"/>
+    <text x="104" y="346" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Wrapped by the Blueprint — adapters connect your vendors to the standard</text>
+  </g>
+  <g id="s5-b3" opacity="0">
+    <circle cx="88" cy="377" r="6" fill="#00AD93"/>
+    <text x="104" y="382" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">New apps are built on the standard — not wired directly to vendors</text>
+  </g>
+  <g id="s5-b4" opacity="0">
+    <circle cx="88" cy="413" r="6" fill="#A1B4EA"/>
+    <text x="104" y="418" font-size="12" font-weight="600" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">When a vendor contract ends, swap it out — your apps won't notice</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="620" y1="40" x2="620" y2="440" stroke="#E9CCBE" stroke-width="1"/>
+
+  <!-- ── Blueprint Platform box — rendered BEFORE vendor circles (lower z-order) ── -->
+  <g id="s5-blueprint" opacity="0">
+    <rect x="848" y="38" width="526" height="404" rx="8" fill="#2B1A78"/>
+    <text x="1111" y="57" font-size="10" text-anchor="middle" font-weight="700" letter-spacing="2" fill="#C2C0E8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">BLUEPRINT PLATFORM</text>
+    <line x1="868" y1="64" x2="1354" y2="64" stroke="#5650BE" stroke-width="1" opacity="0.5"/>
+    <line x1="970" y1="64" x2="970" y2="442" stroke="#5650BE" stroke-width="1" opacity="0.4"/>
+  </g>
+
+  <!-- ── Domain boxes (left strip, ordered to align with adapter targets) ── -->
+  <g id="s5-domains" opacity="0">
+    <rect x="854" y="66"  width="112" height="32" rx="3" fill="white"/><text x="910" y="87"  font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Eligibility</text>
+    <rect x="854" y="100" width="112" height="32" rx="3" fill="white"/><text x="910" y="121" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Benefits &amp; Payments</text>
+    <rect x="854" y="134" width="112" height="32" rx="3" fill="white"/><text x="910" y="155" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Intake</text>
+    <rect x="854" y="168" width="112" height="32" rx="3" fill="white"/><text x="910" y="189" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Case Management</text>
+    <rect x="854" y="202" width="112" height="32" rx="3" fill="white"/><text x="910" y="223" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
+    <rect x="854" y="236" width="112" height="32" rx="3" fill="white"/><text x="910" y="257" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Document Management</text>
+    <rect x="854" y="270" width="112" height="32" rx="3" fill="white"/><text x="910" y="291" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Client Management</text>
+    <rect x="854" y="304" width="112" height="32" rx="3" fill="white"/><text x="910" y="325" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Data Exchange</text>
+    <rect x="854" y="338" width="112" height="32" rx="3" fill="white"/><text x="910" y="359" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Communications</text>
+    <rect x="854" y="372" width="112" height="32" rx="3" fill="white"/><text x="910" y="393" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Scheduling</text>
+    <rect x="854" y="406" width="112" height="32" rx="3" fill="white"/><text x="910" y="427" font-size="9" font-weight="600" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Appeals &amp; Hearings</text>
+  </g>
+
+  <!-- ── Adapter lines (drawn after B2; endpoints at vendor circle left edges) ── -->
+  <!-- Eligibility (y_ctr=82) → V1 at y=145  -->
+  <line id="s5-a1" x1="966" y1="82"  x2="1039" y2="145" stroke="#5650BE" stroke-width="1.2" stroke-dasharray="100" stroke-dashoffset="100"/>
+  <!-- Benefits &amp; Payments (y_ctr=116) → V1 at y=167 -->
+  <line id="s5-a2" x1="966" y1="116" x2="1039" y2="167" stroke="#5650BE" stroke-width="1.2" stroke-dasharray="93"  stroke-dashoffset="93"/>
+  <!-- Workflow (y_ctr=218) → V2 at Workflow label height -->
+  <line id="s5-a3" x1="966" y1="218" x2="1120" y2="251" stroke="#5650BE" stroke-width="1.2" stroke-dasharray="165" stroke-dashoffset="165"/>
+  <!-- Communications (y_ctr=354) → Custom at y=354 -->
+  <line id="s5-a4" x1="966" y1="354" x2="1258" y2="354" stroke="#5650BE" stroke-width="1.2" stroke-dasharray="295" stroke-dashoffset="295"/>
+  <!-- Scheduling (y_ctr=388) → Custom at y=368 -->
+  <line id="s5-a5" x1="966" y1="388" x2="1266" y2="368" stroke="#5650BE" stroke-width="1.2" stroke-dasharray="302" stroke-dashoffset="302"/>
+  <!-- Case Management (y_ctr=184) → adapter hub (Y-fork stem) -->
+  <line id="s5-a6" x1="966" y1="184" x2="982" y2="184" stroke="#5650BE" stroke-width="1.2" stroke-dasharray="16" stroke-dashoffset="16"/>
+  <!-- V2 branch (Cases): hub right edge → V2 Cases; fades at B4 -->
+  <line id="s5-a6b" x1="1018" y1="184" x2="1118" y2="236" stroke="#5650BE" stroke-width="1.2" opacity="0"/>
+
+  <!-- ── App circles (staggered drop-in at B2+) ── -->
+  <g id="s5-app1" opacity="0" style="transform-box:fill-box;transform-origin:center">
+    <circle cx="710" cy="158" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+    <text x="710" y="153" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">State</text>
+    <text x="710" y="168" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Portal</text>
+  </g>
+  <g id="s5-app2" opacity="0" style="transform-box:fill-box;transform-origin:center">
+    <circle cx="710" cy="258" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+    <text x="710" y="253" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Caseworker</text>
+    <text x="710" y="268" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">App</text>
+  </g>
+  <g id="s5-app3" opacity="0" style="transform-box:fill-box;transform-origin:center">
+    <circle cx="710" cy="358" r="34" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+    <text x="710" y="362" font-size="10" text-anchor="middle" font-weight="600" fill="#006152" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Mobile App</text>
+  </g>
+
+  <!-- App→Blueprint connection lines -->
+  <line id="s5-ln1" x1="744" y1="158" x2="848" y2="158" stroke="#00AD93" stroke-width="1.5" stroke-dasharray="104" stroke-dashoffset="104" opacity="0"/>
+  <line id="s5-ln2" x1="744" y1="258" x2="848" y2="258" stroke="#00AD93" stroke-width="1.5" stroke-dasharray="104" stroke-dashoffset="104" opacity="0"/>
+  <line id="s5-ln3" x1="744" y1="358" x2="848" y2="358" stroke="#00AD93" stroke-width="1.5" stroke-dasharray="104" stroke-dashoffset="104" opacity="0"/>
+
+  <!-- ── Vendor circles — rendered LAST (on top of Blueprint box) ── -->
+
+  <!-- V1: Eligibility + Benefits & Payments + Cases (Cases also in V2 — overlap shown in both) -->
+  <g id="s5-v1" opacity="0">
+    <circle cx="1120" cy="155" r="82" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
+    <text x="1120" y="102" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor 1</text>
+    <text x="1120" y="117" font-size="12" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">System</text>
+    <line x1="1060" y1="124" x2="1180" y2="124" stroke="#FFB446" stroke-width="0.8" opacity="0.6"/>
+    <text x="1120" y="142" font-size="9" text-anchor="middle" fill="#000000" opacity="0.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Eligibility</text>
+    <text x="1120" y="158" font-size="8.5" text-anchor="middle" fill="#000000" opacity="0.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Benefits &amp; Payments</text>
+    <text x="1120" y="174" font-size="9" text-anchor="middle" fill="#000000" opacity="0.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Cases</text>
+  </g>
+
+  <!-- V2: Cases + Workflow — overlaps V1 lower-right; Cases above equator so a6b doesn't cross a3 -->
+  <g id="s5-v2" opacity="0">
+    <circle cx="1180" cy="240" r="62" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
+    <text x="1180" y="204" font-size="11" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Vendor 2</text>
+    <text x="1180" y="217" font-size="11" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">System</text>
+    <line x1="1128" y1="225" x2="1232" y2="225" stroke="#FFB446" stroke-width="0.8" opacity="0.6"/>
+    <text x="1180" y="236" font-size="9" text-anchor="middle" fill="#000000" opacity="0.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Cases</text>
+    <text x="1180" y="251" font-size="9" text-anchor="middle" fill="#000000" opacity="0.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
+  </g>
+
+  <!-- Custom App: Notifications (→ Communications) + Scheduling -->
+  <g id="s5-custom" opacity="0">
+    <line x1="1235" y1="280" x2="1265" y2="302" stroke="#FFB446" stroke-width="1" opacity="0.5"/>
+    <circle cx="1310" cy="340" r="52" fill="#FFD699" stroke="#FFB446" stroke-width="1.5"/>
+    <text x="1310" y="326" font-size="11" text-anchor="middle" font-weight="700" fill="#000000" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Custom App</text>
+    <line x1="1265" y1="333" x2="1355" y2="333" stroke="#FFB446" stroke-width="0.8" opacity="0.6"/>
+    <text x="1310" y="346" font-size="8.5" text-anchor="middle" fill="#000000" opacity="0.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Notifications</text>
+    <text x="1310" y="358" font-size="7.5" text-anchor="middle" fill="#5650BE" opacity="0.9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">&#x2192; Communications</text>
+    <text x="1310" y="372" font-size="8.5" text-anchor="middle" fill="#000000" opacity="0.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Scheduling</text>
+  </g>
+
+  <!-- ── Adapter nodes (appear when lines draw in) ── -->
+  <g id="s5-adapters" opacity="0">
+    <rect x="982" y="104" width="36" height="14" rx="3" fill="#5650BE"/><text x="1000" y="114" font-size="7" text-anchor="middle" fill="#FFFFFF" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">adapter</text>
+    <rect x="982" y="133" width="36" height="14" rx="3" fill="#5650BE"/><text x="1000" y="143" font-size="7" text-anchor="middle" fill="#FFFFFF" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">adapter</text>
+    <rect x="982" y="177" width="36" height="14" rx="3" fill="#5650BE"/><text x="1000" y="187" font-size="7" text-anchor="middle" fill="#FFFFFF" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">adapter</text>
+    <line x1="1018" y1="184" x2="1040" y2="174" stroke="#5650BE" stroke-width="1.2"/>
+    <rect x="982" y="216" width="36" height="14" rx="3" fill="#5650BE"/><text x="1000" y="226" font-size="7" text-anchor="middle" fill="#FFFFFF" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">adapter</text>
+    <rect x="982" y="347" width="36" height="14" rx="3" fill="#5650BE"/><text x="1000" y="357" font-size="7" text-anchor="middle" fill="#FFFFFF" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">adapter</text>
+    <rect x="982" y="379" width="36" height="14" rx="3" fill="#5650BE"/><text x="1000" y="389" font-size="7" text-anchor="middle" fill="#FFFFFF" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">adapter</text>
+  </g>
+
+  <!-- ── Swap adapter overlays (n3 Cases + n4 Workflow turn light blue at B4) ── -->
+  <g id="s5-adt-swap" opacity="0">
+    <rect x="982" y="177" width="36" height="14" rx="3" fill="#A1B4EA"/><text x="1000" y="187" font-size="7" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">adapter</text>
+    <rect x="982" y="216" width="36" height="14" rx="3" fill="#A1B4EA"/><text x="1000" y="226" font-size="7" text-anchor="middle" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">adapter</text>
+  </g>
+
+  <!-- ── Beat 4: swap V2 ── -->
+  <circle id="s5-v2-overlay" cx="1180" cy="240" r="62" fill="#2B1A78" opacity="0"/>
+  <g id="s5-new-vendor" opacity="0">
+    <circle cx="1180" cy="240" r="62" fill="#E6EBF9" stroke="#A1B4EA" stroke-width="2" stroke-dasharray="8 4"/>
+    <text x="1180" y="204" font-size="11" text-anchor="middle" font-weight="700" fill="#2B1A78" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">New Vendor</text>
+    <line x1="1128" y1="225" x2="1232" y2="225" stroke="#A1B4EA" stroke-width="0.8" opacity="0.6"/>
+    <text x="1180" y="236" font-size="9" text-anchor="middle" fill="#2B1A78" opacity="0.35" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Cases</text>
+    <text x="1180" y="251" font-size="9" text-anchor="middle" fill="#2B1A78" opacity="0.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">Workflow</text>
+  </g>
+  <!-- Cases crossed out — same position as V2 Cases, rendered on top -->
+  <g id="s5-v2-cases-x" opacity="0">
+    <line x1="1158" y1="232" x2="1202" y2="232" stroke="#AF121D" stroke-width="1.5"/>
   </g>
 
 </svg>
@@ -732,7 +909,7 @@
       B1:          1.5,   // bullet 1 first — "Every module has a defined place" → tiles follow
       B2:          9.5,   // bullet 2 after tiles done — "Compliance built in" → compliance labels follow
       COMP:        9.5,   // compliance labels appear with B2
-      B3:         13.0,   // bullet 3 last — "You own the contracts" → vendor swap follows
+      B3:         15.5,   // bullet 3 last — "You own the contracts" → vendor swap follows
       BULLET_FADE: 0.9,
 
       // Phase 2 — adapter badge cycling in tiles (starts when Phase 1 ends)
@@ -778,11 +955,17 @@
           const plainIds = Array.from({length:10}, (_,i) =>
             [`#s2-p${pad2(i+1)}a`, `#s2-p${pad2(i+1)}b`]
           ).flat().join(',');
+          // For arrow tiles (01, 05, 08) the 'a' arrow points RIGHT → destination is the 'b' pill.
+          // Swap phases so the destination pill highlights when the arrow draws TO it.
+          const arrowSwapIdx = new Set([0, 4, 7]);
           const pillRules = Array.from({length:10}, (_,i) => {
             const d = delays[i];
+            const swap = arrowSwapIdx.has(i);
+            const da = swap ? +(d + half).toFixed(2) : d;
+            const db = swap ? d : +(d + half).toFixed(2);
             return [
-              `#s2-a${pad2(i+1)}a { animation: s2-tile-cycle ${t.TC_DUR}s ease-out ${d}s infinite; }`,
-              `#s2-a${pad2(i+1)}b { animation: s2-tile-cycle ${t.TC_DUR}s ease-out ${+(d + half).toFixed(2)}s infinite; }`,
+              `#s2-a${pad2(i+1)}a { animation: s2-tile-cycle ${t.TC_DUR}s ease-out ${da}s infinite; }`,
+              `#s2-a${pad2(i+1)}b { animation: s2-tile-cycle ${t.TC_DUR}s ease-out ${db}s infinite; }`,
             ];
           }).flat();
           return [
@@ -797,6 +980,46 @@
               100%    { opacity:0; transform:scale(0.88) }
             }`,
             ...pillRules,
+            // Directional swap arrows: appear with the pill, draw quickly, hold for the full window
+            // → draws at pp1% (A pill pops in), holds through A's window, fades with pp4%
+            // ← same in the second half of the cycle
+            ...(() => {
+              const swapLines = [
+                { id: '01', idx: 0, len: 40 },
+                { id: '05', idx: 4, len: 53 },
+                { id: '08', idx: 7, len: 52 },
+              ];
+              const fwdDone = +(parseFloat(pp1) + 3).toFixed(1);   // drawing complete ~3% after pp1
+              const bwd1   = +(50 + parseFloat(pp1)).toFixed(1);
+              const bwdDone = +(bwd1 + 3).toFixed(1);
+              const bwd4   = +(50 + parseFloat(pp4)).toFixed(1);
+              return swapLines.flatMap(({ id, idx, len }) => {
+                const d = delays[idx];
+                return [
+                  `@keyframes s2-sw-fwd-${id} {
+                    0%          { opacity:0; stroke-dashoffset:${len} }
+                    ${pp1}%     { opacity:0; stroke-dashoffset:${len} }
+                    ${+(parseFloat(pp1)+0.5).toFixed(1)}% { opacity:1; stroke-dashoffset:${len} }
+                    ${fwdDone}% { opacity:1; stroke-dashoffset:0 }
+                    ${pp4}%     { opacity:1; stroke-dashoffset:0 }
+                    49.5%       { opacity:0; stroke-dashoffset:0 }
+                    50%         { opacity:0; stroke-dashoffset:${len} }
+                    100%        { opacity:0; stroke-dashoffset:${len} }
+                  }`,
+                  `@keyframes s2-sw-bwd-${id} {
+                    0%          { opacity:0; stroke-dashoffset:${len} }
+                    ${bwd1}%    { opacity:0; stroke-dashoffset:${len} }
+                    ${+(bwd1+0.5).toFixed(1)}% { opacity:1; stroke-dashoffset:${len} }
+                    ${bwdDone}% { opacity:1; stroke-dashoffset:0 }
+                    ${bwd4}%    { opacity:1; stroke-dashoffset:0 }
+                    99.5%       { opacity:0; stroke-dashoffset:0 }
+                    100%        { opacity:0; stroke-dashoffset:${len} }
+                  }`,
+                  `#s2-ln${id}a { animation: s2-sw-fwd-${id} ${t.TC_DUR}s linear ${d}s infinite both; }`,
+                  `#s2-ln${id}b { animation: s2-sw-bwd-${id} ${t.TC_DUR}s linear ${d}s infinite both; }`,
+                ];
+              });
+            })(),
           ];
         })(),
       ].join('\n  ');
@@ -811,11 +1034,341 @@
     }
     // ───────────────────────────────────────────────────────────────────────────
 
+    // ── S4 timing ──────────────────────────────────────────────────────────────
+    // Intro elements play ONCE (iteration-count:1, fill-mode:both → stay in final state).
+    // Action labels play once for the initial sequence, then loop via a separate
+    // L_PERIOD animation starting at L_START — the slide never resets.
+    const S4_T = {
+      // Phase 1: build
+      B1:            0.3,
+      STACK_IN:      0.5,
+      CURTAIN_DOWN:  1.5,
+      CURTAIN_FULL:  2.0,
+      CNT_START:     2.2,
+      CURTAIN_UP:    7.5,
+      CURTAIN_GONE:  8.1,
+      SANDBOX_IN:    7.5,
+      // Phase 2: apps
+      B2:            8.5,
+      APP_START:     9.0,
+      PAIR_STRIDE:   2.2,
+      LINE_AFTER:    0.9,
+      LINE_DUR:      0.8,
+      // Phase 3: initial interaction sequence
+      B3:           15.0,
+      P_HL1:        15.5,
+      RECEIPT_IN:   16.5,
+      SERVER_HL:    16.5,
+      M_HL1:        18.5,
+      DOC_ROW_IN:   19.5,
+      STATUS_SUB:   16.5,
+      CASE_HL1:     22.0,
+      STATUS_REV:   23.0,
+      // Phase 3: looping label cycle (portal → mobile → case, repeat forever)
+      L_START:      25.0,
+      L_PERIOD:     13.0,
+      L_WIN:         2.5,
+    };
+
+    function buildS4Css(t) {
+      // fi: element fades in at 'at', stays visible forever (1 iteration, fill:both)
+      const fi = (id, at, dur = 0.4) => {
+        const kf = 's4fi_' + id.replace(/-/g, '_');
+        return [
+          `@keyframes ${kf} { from{opacity:0} to{opacity:1} }`,
+          `#${id} { animation: ${kf} ${dur}s ease-in-out ${at}s 1 both; }`,
+        ];
+      };
+
+      // ── Phase 1: stack fades in, then out as curtain lifts ───────────────────
+      const stackDur = t.CURTAIN_UP - t.STACK_IN;
+      const stackCss = [
+        `@keyframes s4-stack {
+          0%   { opacity:0 }
+          ${+(0.4/stackDur*100).toFixed(1)}% { opacity:1 }
+          ${+((stackDur-0.8)/stackDur*100).toFixed(1)}% { opacity:1 }
+          100% { opacity:0 }
+        }`,
+        `#s4-stack { animation: s4-stack ${stackDur}s ease-in-out ${t.STACK_IN}s 1 both; }`,
+      ];
+
+      // ── Phase 1: curtain drops from off-screen, holds, lifts off-screen ──────
+      // y=0 means translateY(-100%) puts the element entirely above the viewport.
+      const curtainDur = t.CURTAIN_GONE - t.CURTAIN_DOWN;
+      const cp = s => ((s - t.CURTAIN_DOWN) / curtainDur * 100).toFixed(1);
+      const curtainCss = [
+        `@keyframes s4-curtain {
+          0%        { transform: translateY(-100%) }
+          ${cp(t.CURTAIN_FULL)}% { transform: translateY(0) }
+          ${cp(t.CURTAIN_UP)}%   { transform: translateY(0) }
+          100%      { transform: translateY(-100%) }
+        }`,
+        `#s4-curtain { animation: s4-curtain ${curtainDur}s ease-in-out ${t.CURTAIN_DOWN}s 1 both; }`,
+      ];
+
+      // ── Phase 1: countdown (one digit per second) ─────────────────────────
+      const cntCss = [5,4,3,2,1].flatMap((n, i) => [
+        `@keyframes s4cn${n} { 0%{opacity:0} 5%{opacity:1} 75%{opacity:1} 100%{opacity:0} }`,
+        `#s4-cnt${n} { animation: s4cn${n} 1s ease-in-out ${t.CNT_START + i}s 1 both; }`,
+      ]);
+
+      // ── Phase 1: subtitle on curtain ──────────────────────────────────────
+      const subDur = t.CURTAIN_UP - t.CNT_START;
+      const subCss = [
+        `@keyframes s4-cnt-sub { 0%{opacity:0} ${+(0.3/subDur*100).toFixed(1)}%{opacity:1} ${+((subDur-0.5)/subDur*100).toFixed(1)}%{opacity:1} 100%{opacity:0} }`,
+        `#s4-cnt-sub { animation: s4-cnt-sub ${subDur}s ease-in-out ${t.CNT_START}s 1 both; }`,
+      ];
+
+      // ── Phase 1→end: sandbox fades in and stays ───────────────────────────
+      const sandboxCss = fi('s4-sandbox', t.SANDBOX_IN);
+
+      // ── Phase 2: bullets fade in and stay ─────────────────────────────────
+      const bulletCss = [1,2,3].flatMap((n, i) => fi(`s4-b${n}`, [t.B1, t.B2, t.B3][i]));
+
+      // ── Phase 2: apps drop in and stay ────────────────────────────────────
+      const appCss = [1,2,3].flatMap((n, i) => {
+        const at = t.APP_START + i * t.PAIR_STRIDE;
+        return [
+          `@keyframes s4_app${n} { from{opacity:0;transform:translateY(-60px)} to{opacity:1;transform:translateY(0)} }`,
+          `#s4-app${n} { animation: s4_app${n} 0.7s ease-out ${at}s 1 both; }`,
+        ];
+      });
+
+      // ── Phase 2: lines draw and stay ──────────────────────────────────────
+      const lineLengths = [181, 170, 185];
+      const lineCss = [1,2,3].flatMap((n, i) => {
+        const at  = t.APP_START + i * t.PAIR_STRIDE + t.LINE_AFTER;
+        const len = lineLengths[i];
+        return [
+          `@keyframes s4_ln${n} { from{opacity:1;stroke-dashoffset:${len}} to{opacity:1;stroke-dashoffset:0} }`,
+          `#s4-ln${n} { animation: s4_ln${n} ${t.LINE_DUR}s ease-out ${at}s 1 both; }`,
+        ];
+      });
+
+      // ── Phase 3: once-and-stay elements ──────────────────────────────────
+      const p3Once = [
+        ...fi('s4-server-hl', t.SERVER_HL),
+      ];
+
+      // receipt: intro fades IN then OUT (ends at opacity:0 just as loop starts), then loops.
+      // The loop fades in each cycle and hides ~1.5s after the case window closes (~3s pause
+      // before the next cycle), giving the viewer a clear "reset" between each round.
+      const receiptIntroDur = t.L_START - t.RECEIPT_IN; // 8.5s — runs exactly until loop start
+      const receiptCss = [
+        `@keyframes s4_receipt_intro {
+          0%   { opacity:0 }
+          5%   { opacity:1 }
+          82%  { opacity:1 }
+          94%  { opacity:0 }
+          100% { opacity:0 }
+        }`,
+        `@keyframes s4-receipt-loop {
+          0%   { opacity:0 }
+          3%   { opacity:1 }
+          70%  { opacity:1 }
+          78%  { opacity:0 }
+          100% { opacity:0 }
+        }`,
+        `#s4-receipt { animation: s4_receipt_intro ${receiptIntroDur}s ease-in-out ${t.RECEIPT_IN}s 1 both, s4-receipt-loop ${t.L_PERIOD}s linear ${t.L_START}s infinite; }`,
+      ];
+
+      // doc-row: same pattern — intro fades out before loop, loop appears with mobile window
+      const docRowIntroDur = t.L_START - t.DOC_ROW_IN; // 5.5s
+      const docRowCss = [
+        `@keyframes s4_doc_row_intro {
+          0%   { opacity:0 }
+          7%   { opacity:1 }
+          73%  { opacity:1 }
+          91%  { opacity:0 }
+          100% { opacity:0 }
+        }`,
+        `@keyframes s4-doc-row-loop {
+          0%   { opacity:0 }
+          3%   { opacity:1 }
+          47%  { opacity:1 }
+          55%  { opacity:0 }
+          100% { opacity:0 }
+        }`,
+        `#s4-doc-row { animation: s4_doc_row_intro ${docRowIntroDur}s ease-in-out ${t.DOC_ROW_IN}s 1 both, s4-doc-row-loop ${t.L_PERIOD}s linear ${t.L_START + 3}s infinite; }`,
+      ];
+
+      // status-sub ("Submitted"): one-shot from RECEIPT_IN to STATUS_REV, then loops
+      // during portal (0s) and mobile (3s) windows — hidden during case window (6s)
+      const ssDur = t.STATUS_REV - t.RECEIPT_IN; // 6.5s
+      const statusSubCss = [
+        `@keyframes s4_ss_once {
+          0%   { opacity:0 }
+          6%   { opacity:1 }
+          88%  { opacity:1 }
+          95%  { opacity:0 }
+          100% { opacity:0 }
+        }`,
+        `@keyframes s4-status-sub-loop {
+          0%   { opacity:0 }
+          3%   { opacity:1 }
+          42%  { opacity:1 }
+          47%  { opacity:0 }
+          100% { opacity:0 }
+        }`,
+        `#s4-status-sub { animation: s4_ss_once ${ssDur}s ease-in-out ${t.RECEIPT_IN}s 1 both, s4-status-sub-loop ${t.L_PERIOD}s linear ${t.L_START}s infinite; }`,
+      ];
+
+      // status-rev ("Under Review"): one-shot from STATUS_REV to L_START, then loops
+      // only during the case window (6s offset) — hidden during portal and mobile windows
+      const srDur = t.L_START - t.STATUS_REV; // 2.0s
+      const statusRevCss = [
+        `@keyframes s4_sr_once {
+          0%   { opacity:0 }
+          15%  { opacity:1 }
+          70%  { opacity:1 }
+          90%  { opacity:0 }
+          100% { opacity:0 }
+        }`,
+        `@keyframes s4-status-rev-loop {
+          0%   { opacity:0 }
+          3%   { opacity:1 }
+          19%  { opacity:1 }
+          24%  { opacity:0 }
+          100% { opacity:0 }
+        }`,
+        `#s4-status-rev { animation: s4_sr_once ${srDur}s ease-in-out ${t.STATUS_REV}s 1 both, s4-status-rev-loop ${t.L_PERIOD}s linear ${t.L_START + 6}s infinite; }`,
+      ];
+
+      // ── Phase 3: action labels ─────────────────────────────────────────────
+      // Each label plays ONCE for the initial sequence, then a SEPARATE loop
+      // animation (same keyframe, different delay offsets) runs forever.
+      // CSS composites both: the loop animation (listed last) wins once it starts.
+      const LP = t.L_PERIOD;
+      const W  = t.L_WIN;
+      const sFrac = (W / LP * 100).toFixed(1);
+      const eFrac = ((W + 0.35) / LP * 100).toFixed(1);
+      const labelCss = [
+        `@keyframes s4-label-loop { 0%{opacity:0} 4%{opacity:1} ${sFrac}%{opacity:1} ${eFrac}%{opacity:0} 100%{opacity:0} }`,
+        ...[ { id: 's4-portal-label', initAt: t.P_HL1,    loopDelay: t.L_START },
+             { id: 's4-mobile-label', initAt: t.M_HL1,    loopDelay: t.L_START + 3 },
+             { id: 's4-case-label',   initAt: t.CASE_HL1, loopDelay: t.L_START + 6 },
+        ].flatMap(({ id, initAt, loopDelay }) => {
+          const kf = 's4_init_' + id.replace(/-/g, '_');
+          return [
+            `@keyframes ${kf} { 0%{opacity:0} 5%{opacity:1} 85%{opacity:1} 100%{opacity:0} }`,
+            `#${id} { animation: ${kf} ${W}s ease-in-out ${initAt}s 1 both, s4-label-loop ${LP}s linear ${loopDelay}s infinite; }`,
+          ];
+        }),
+      ];
+
+      return [
+        ...stackCss,
+        ...curtainCss,
+        ...cntCss,
+        ...subCss,
+        ...sandboxCss,
+        ...bulletCss,
+        ...appCss,
+        ...lineCss,
+        ...p3Once,
+        ...receiptCss,
+        ...docRowCss,
+        ...statusSubCss,
+        ...statusRevCss,
+        ...labelCss,
+      ].join('\n  ');
+    }
+
+    function setupS4() {
+      const svg = wrapper.querySelector('svg');
+      if (!svg) return;
+      const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+      style.textContent = buildS4Css(S4_T);
+      svg.appendChild(style);
+    }
+    // ───────────────────────────────────────────────────────────────────────────
+
+    // ── S5 timing ──────────────────────────────────────────────────────────────
+    const S5_T = {
+      BULLET:          0.8,
+      B1:              3,      // vendors appear
+      B2:              8,      // blueprint wraps + adapters
+      B3:             13,      // apps
+      B4:             19,      // swap
+      BOX_DUR:         1.0,
+      APP_START:      13.8,
+      APP_STRIDE:      0.35,
+      LN_START:       14.15,
+      LN_STRIDE:       0.35,
+      LINE_DUR:        0.6,
+      ADT_START:       9.6,
+      ADT_STRIDE:      0.3,
+      ADT_DUR:         0.7,
+      DIM_START:      19.5,
+      DIM_DUR:         1.0,
+      NEW_START:      20.2,
+      SWAP_ADT_START: 20.0,
+    };
+
+    function buildS5Css(t) {
+      const fi = (id, delay, dur = t.BULLET) =>
+        `#${id} { animation: s5-fadein ${dur}s ease-in-out ${delay}s both; }`;
+
+      const bulletCss = [1,2,3,4].map((n,i) => fi(`s5-b${n}`, [t.B1, t.B2, t.B3, t.B4][i]));
+      const vendorCss = ['v1','v2','custom'].map(v => fi(`s5-${v}`, t.B1, 0.8));
+      const boxCss    = [fi('s5-blueprint', t.B2, t.BOX_DUR), fi('s5-domains', t.B2, t.BOX_DUR)];
+
+      const appCss = [1,2,3].flatMap((n,i) => {
+        const at = +(t.APP_START + i * t.APP_STRIDE).toFixed(2);
+        return [
+          `@keyframes s5_app${n} { from{opacity:0;transform:translateY(-60px)} to{opacity:1;transform:translateY(0)} }`,
+          `#s5-app${n} { animation: s5_app${n} 0.7s ease-out ${at}s 1 both; }`,
+        ];
+      });
+
+      const lineCss = [1,2,3].flatMap((n,i) => {
+        const at = +(t.LN_START + i * t.LN_STRIDE).toFixed(2);
+        return [
+          `@keyframes s5_ln${n} { from{opacity:1;stroke-dashoffset:104} to{opacity:1;stroke-dashoffset:0} }`,
+          `#s5-ln${n} { animation: s5_ln${n} ${t.LINE_DUR}s ease-out ${at}s 1 both; }`,
+        ];
+      });
+
+      const ADT_LENGTHS = [100, 93, 165, 295, 302, 16];
+      const adtCss = [1,2,3,4,5,6].flatMap((n,i) => {
+        const at = +(t.ADT_START + i * t.ADT_STRIDE).toFixed(2);
+        const len = ADT_LENGTHS[i];
+        return [
+          `@keyframes s5_adt${n} { from{opacity:1;stroke-dashoffset:${len}} to{opacity:1;stroke-dashoffset:0} }`,
+          `#s5-a${n} { animation: s5_adt${n} ${t.ADT_DUR}s ease-out ${at}s 1 both; }`,
+        ];
+      });
+
+      const swapCss = [
+        fi('s5-adapters', t.ADT_START, 0.6),
+        // a6b branch (V2 Cases): fades in with adapters, fades nearly out when V2 swapped
+        `@keyframes s5-a6b-out { to{opacity:0.12} }`,
+        `#s5-a6b { animation: s5-fadein 0.6s ease-in-out ${t.ADT_START}s 1 both, s5-a6b-out ${t.DIM_DUR}s ease-in-out ${t.DIM_START}s 1 forwards; }`,
+        `@keyframes s5-dim { from{opacity:0} to{opacity:0.65} }`,
+        `#s5-v2-overlay { animation: s5-dim ${t.DIM_DUR}s ease-in-out ${t.DIM_START}s both; }`,
+        fi('s5-v2-cases-x', t.DIM_START, 0.3),
+        fi('s5-new-vendor', t.NEW_START, 0.8),
+        fi('s5-adt-swap', t.SWAP_ADT_START, 0.6),
+      ];
+
+      return [...bulletCss, ...vendorCss, ...boxCss, ...appCss, ...lineCss, ...adtCss, ...swapCss].join('\n  ');
+    }
+
+    function setupS5() {
+      const svg = wrapper.querySelector('svg');
+      if (!svg) return;
+      const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+      style.textContent = buildS5Css(S5_T);
+      svg.appendChild(style);
+    }
+    // ───────────────────────────────────────────────────────────────────────────
+
     const CONTENT = {
       s1: document.getElementById('tpl-s1').innerHTML.trim(),
       s2: document.getElementById('tpl-s2').innerHTML.trim(),
       s3: document.getElementById('tpl-s3').innerHTML.trim(),
       s4: document.getElementById('tpl-s4').innerHTML.trim(),
+      s5: document.getElementById('tpl-s5').innerHTML.trim(),
     };
 
     const wrapper = document.getElementById('map-wrapper');
@@ -836,6 +1389,8 @@
       });
       if (id === 's1') setupS1();
       if (id === 's2') setupS2();
+      if (id === 's4') setupS4();
+      if (id === 's5') setupS5();
       requestAnimationFrame(fitDiagram);
     }
 
