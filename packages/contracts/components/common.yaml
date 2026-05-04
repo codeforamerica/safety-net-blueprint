@@ -7,6 +7,19 @@
 #   identity.yaml — Name, SocialSecurityNumber
 #   auth.yaml     — BackendAuthContext, JwtClaims, Role, RoleType
 
+Domain:
+  type: string
+  description: >
+    Blueprint domain identifier. Used as the {domain} path parameter on
+    metadata mutation endpoints (PUT/DELETE /{resources}/{id}/metadata/{domain})
+    and as the value type for x-domain annotations on domain OpenAPI specs.
+  enum:
+    - data-exchange
+    - document-management
+    - eligibility
+    - intake
+    - workflow
+
 EmployerInfo:
   type: object
   description: Employer identification and contact information.
