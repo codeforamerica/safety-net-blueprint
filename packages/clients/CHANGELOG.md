@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-04
+
+### Changed
+
+- TypeScript client generator now skips OpenAPI specs marked `x-status: deprecated`. Deprecated specs were previously included in generated clients and Zod artifacts even when retired, producing unnecessary surface area for consumers.
+
 ## [1.1.1] - 2026-03-17
 
 ### Fixed

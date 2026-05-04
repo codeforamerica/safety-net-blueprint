@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-04
+
+### Added
+
+- **Intake domain** (`intake-openapi.yaml`, `intake-state-machine.yaml`, `intake-rules.yaml`): Application lifecycle (draft → submitted → under_review → withdrawn/closed), `complete-review` trigger emitting `application.review_completed`, sub-resource paths for `ApplicationDocument` (`/applications/{id}/documents`) and `Interview` (`/applications/{id}/interview`), and `intake-application-document-state-machine.yaml` (requested → verified)
+- **CloudEvents 1.0 envelope** for all domain events: `specversion`, `type`, `source`, `subject`, `time`, `datacontenttype`. Type derivation: `org.codeforamerica.safety-net-blueprint.{domain}.{object}.{action}`
+- **CloudEvents Auth Context extension**: `authid` and `authtype` envelope attributes for event actor provenance (required for FTI-governed events per IRS Pub. 1075)
+- **Distributed tracing contract**: `traceparent` propagation from inbound requests to all emitted events; documented in `inter-domain-communication.md` and `api-patterns.yaml`
+- **Cross-domain event wiring**: `on:` field on rule sets makes them event-triggered; new platform action types `createResource` and `triggerTransition` defined as named `$defs` in `rules-schema.yaml`
+- **Rules engine extensions**: `all-match` evaluation alongside `first-match-wins`; `forEach` action with `in`/`as`/`filter` for per-collection-item iteration; `appendToArray` action; collection context bindings; JSON Logic `{var: "..."}` form for context binding `from:` paths
+- **Context enrichment for rules**: per-ruleSet context bindings with `domain/resource` entity format, `this` alias for the calling resource, multi-hop chaining via `from`, `optional: true` flag for non-required bindings
+- **`workflow-config.yaml`**: queue catalog (`snap-intake`, `general-intake`) with stable UUIDs, schema-validated via `workflow-config-schema.yaml` extending generic `schemas/config-schema.yaml`. Config-managed resources get `source: system` and reject DELETE with 409 `CONFIG_MANAGED`
+- **Generic platform actions documented**: `ActionCreateResource`, `ActionTriggerTransition`, `ActionForEach`, `ActionAppendToArray` as reusable `$defs`
+- **`taskType` field** on Task schema (open string, used for routing rules and lifecycle branches)
+- **`evidence` array** on `ApplicationDocument` (populated when `document-management.document.verified` fires)
+- **`x-data-classification`** convention for marking PII/FTI/PHI fields
+- **`x-environments`** extension for filtering specs by deployment environment
+- **`x-domain`, `x-status`, `x-visibility`** required info-block fields documented in `required_info_fields` pattern
+- **`enum_extensibility` pattern**: domain values use enums with overlay extension, not open strings
+- **Sub-resource path patterns** in `api-patterns.yaml`: collection (`/parents/{id}/children`) and singleton (`/parents/{id}/child`) conventions
+- **`validate-rules.js`**: static cross-reference validator checking entity paths against discoverable API resources and `from` fields against calling-resource schemas; added to `npm run validate`
+- **Data Exchange domain design** (`docs/architecture/domains/data-exchange.md`): facade pattern, ExternalService catalog + ExternalServiceCall lifecycle, 13 design decisions; external service reference docs for IRS, SSA, USCIS SAVE, CMS FDSH, state wage records
+- **Identity & Access architecture record** (`docs/architecture/cross-cutting/identity-access.md`): three-layer auth model (IdP → User Service → Domain APIs), OAuth scope granularity, service-to-service auth, API security declarations
+- **`api:new` `--domain` flag** (defaults to `--name`) and required info-field scaffolding
+
+### Changed
+
+- **`api-patterns.yaml`**: added `auto_emit`, `traceparent`, `x_data_classification`, `enum_extensibility`, `required_info_fields`, `cloudevents_envelope`, `x_extensions` catalog, sub-resource path patterns, `config_managed_resources`
+- **Workflow state machine**: removed `type: event, action: created` from `onCreate` (now auto-emitted by create handler); added `data.assignedToId` to claim event
+- **`TaskCreatedEvent`**: now `$ref` Task schema (full snapshot in event payload)
+- **`TaskClaimedEvent`**: gained required `assignedToId` field
+- **Components events.yaml**: `DomainEvent` replaced with `FieldChange`, `ResourceUpdatedEvent`, `ResourceDeletedEvent` shared schemas (used by all domains)
+- **Workflow rules**: SNAP-only routing now requires `programs.length === 1` (multi-program apps fall through to general-intake)
+- **Rules schema**: `ruleType` is optional on event-triggered rule sets; `entity` is optional on context bindings (collection bindings); usage-example comment blocks before each `$def`
+- **Documentation reorganization**: `state-overlays.md` → `overlay-guide.md`, `state-setup-guide.md` → `setup-guide.md`; `creating-apis.md` rewritten and trimmed (-409 lines); resolver pipeline doc gains stages 5 (`x-environments` filtering) and 6 (placeholder substitution)
+
+### Removed
+
+- **`x-api-type`** extension (superseded by contract-driven architecture); removed from `applications`, `households`, `incomes`, `persons`, `users` specs
+- **`applications-openapi.yaml`** marked `x-status: deprecated`; excluded from mock, validator, and pattern checks (replaced by intake-openapi.yaml)
+- **`onCreate` event effect** from workflow state machine (events now auto-emitted from create handler)
+
+### Fixed
+
+- **Rule evaluation results not persisting on task create**: before-snapshot was captured after `processRuleEvaluations` mutated the resource, making the diff always empty; rule-driven fields (`priority`, `queueId`) are now persisted correctly
+- **`resolve.js`**: skips deprecated specs (`x-status: deprecated`) before parsing; type-guards `x-enum-source` to handle non-string values without crashing
+- **`export-contract-tables.js`**: handles JSON Logic `in` operator with `{var: "..."}` second argument (was crashing on `.map is not a function`)
+
 ## [1.2.0] - 2026-03-17
 
 ### Added
