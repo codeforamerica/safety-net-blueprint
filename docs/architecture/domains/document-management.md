@@ -45,7 +45,7 @@ Key fields:
 - `documentTypeId` — links to the DocumentType for this document; determines the retention period and which event starts the retention clock
 - `title` — human-readable label set by the uploading caller (e.g., "John Smith — Pay Stub March 2026"), distinct from the upload filename; standard across Salesforce ContentDocument, FileNet DocumentTitle, M-Files Name/Title, and SharePoint Title column
 - `documentDate` — optional ISO date representing the document's own date (e.g., the date printed on a pay stub or bank statement); set by the uploading caller; required when `DocumentType.retentionTrigger = document_date`; distinct from `DocumentVersion.createdAt`, which is the upload timestamp
-- `metadata` — a JSON object that callers use to pass correlation context (e.g., an application ID, a verification reference, an e-signature envelope ID); stored and echoed in events without interpretation, so downstream systems can correlate the document with their own records without querying this domain; keys can be added or removed after creation via key-level endpoints without affecting other callers' keys. See [Decision 2](#decision-2-context-pass-through-model) and [Decision 12](#decision-12-metadata-mutability-and-update-model).
+- `metadata` — a JSON object that callers use to pass correlation context (e.g., an application ID, a verification reference, an e-signature envelope ID); stored and echoed in events without interpretation, so downstream systems can correlate the document with their own records without querying this domain; structured as nested objects keyed by domain name (`{ "intake": { "verificationId": "..." } }`) so each caller manages its own namespace without overwriting another's context. See [Decision 2](#decision-2-context-pass-through-model) and [Decision 12](#decision-12-metadata-mutability-and-update-model).
 - `lifecycleState` — where the document is in its records management lifecycle; determines whether the document is accessible, whether retention rules apply, and whether it is eligible for disposition; required by DoD 5015.2. See [Document lifecycle](#document-lifecycle).
 - `legalHold` — true/false flag, independent of lifecycle state; prevents the document from advancing to disposition until the hold is lifted, regardless of where it is in the retention schedule; required by DoD 5015.2 and implemented the same way on all major compliant platforms. See [Decision 5](#decision-5-legal-hold-modeling).
 - `latestVersionId` — links to the most recent DocumentVersion; provides a single authoritative pointer to the current file so consumers do not need to sort version history to find it. See [Decision 1](#decision-1-two-level-document-model).
@@ -165,7 +165,7 @@ The document management domain emits events across four categories: document and
 | 9 | [Document creation model](#decision-9-document-creation-model) | Document and first version are created atomically; upload is the creation event. |
 | 10 | [Retention trigger evaluation model](#decision-10-retention-trigger-evaluation-model) | `retentionTrigger` stored as data on DocumentType; state machine evaluates it generically. |
 | 11 | [Destruction scope and metadata retention](#decision-11-destruction-scope-and-metadata-retention) | Document and DocumentVersion records retained in `destroyed` state after destruction; content inaccessible via API. |
-| 12 | [Metadata mutability and update model](#decision-12-metadata-mutability-and-update-model) | Metadata keys are mutable via key-level PUT/DELETE endpoints; no operation replaces all keys at once. |
+| 12 | [Metadata mutability and update model](#decision-12-metadata-mutability-and-update-model) | Metadata is mutable via namespace-level PUT/DELETE endpoints; each domain owns its sub-object; no operation touches another caller's namespace. |
 
 ---
 
@@ -198,10 +198,11 @@ The document management domain emits events across four categories: document and
 - Documents are submitted in the context of a verification obligation, a case task, or a direct caseworker upload. Document management should not need to know the business meaning of each context — typed FK fields for `verificationId`, `taskId`, etc. would create tight coupling to other domains and break when new contexts are added.
 - Box, Dropbox, and SharePoint all support opaque metadata bags on file objects; Documentum uses aspect metadata. None require the document management service itself to understand the business context of what is stored.
 - The correlation pass-through pattern is established in event-driven architectures: a service stores the context it was given and echoes it in events, allowing the originating domain to correlate without imposing semantic requirements on the storage layer.
+- Keys within `metadata` are structured as nested objects per domain namespace (`{ "intake": { "verificationId": "..." }, "workflow": { "taskId": "..." } }`) rather than flat dot-notation keys (`"intake.verificationId"`). Flat dot-notation keys are unreachable via the JSON Logic `var` operator, which uses dots for path traversal — `{"var": "metadata.intake.verificationId"}` traverses into a nested object, but would fail on a flat key named `"intake.verificationId"`. This also maps naturally to the namespace-level mutation endpoints in Decision 12.
 
 **Options:**
 - **(A)** Domain-aware — typed FK fields (`verificationId`, `taskId`) on Document
-- **(B)** ✓ Context pass-through — `metadata` is an opaque JSON object; callers provide correlation IDs; document management stores and echoes the current state of `metadata` in events without interpreting it. See [Decision 12](#decision-12-metadata-mutability-and-update-model) for how keys are managed after creation.
+- **(B)** ✓ Context pass-through — `metadata` is an opaque JSON object structured as nested objects per domain namespace; document management stores and echoes the current state of `metadata` in events without interpreting it. See [Decision 12](#decision-12-metadata-mutability-and-update-model) for how namespaces are managed after creation.
 
 ---
 
@@ -398,16 +399,17 @@ The document management domain emits events across four categories: document and
 
 **Considerations:**
 - Box, Google Drive, SharePoint, Salesforce, and IBM FileNet all make document metadata mutable after creation. Write-once is not an industry pattern.
-- Multiple systems may attach correlation context to the same document at different points — intake at upload time, a signing service when an e-signature workflow completes, workflow when it assigns a review task. All need to store their own key without knowing what other callers have set.
-- A PATCH that replaces the entire `metadata` JSON object risks overwriting another caller's key. Merge semantics (only update keys present in the request body) prevent this but cannot be enforced by the contract — they are a server convention a client can violate.
-- Key-level endpoints (`PUT /documents/{documentId}/metadata/{key}` and `DELETE /documents/{documentId}/metadata/{key}`) address one key per call. No operation replaces all keys at once, so the contract makes cross-caller overwrite structurally impossible. Box and Google Drive use this model for the same reason.
+- Multiple systems may attach correlation context to the same document at different points — intake at upload time, a signing service when an e-signature workflow completes, workflow when it assigns a review task. All need to store their own context without knowing what other callers have set.
+- A PATCH that replaces the entire `metadata` JSON object risks overwriting another caller's namespace. Merge semantics prevent this but cannot be enforced by the contract — they are a server convention a client can violate.
+- Because `metadata` is structured as nested objects per domain namespace (see Decision 2), the natural mutation unit is the namespace sub-object, not the individual key. Namespace-level endpoints (`PUT /documents/{documentId}/metadata/{domain}` and `DELETE /documents/{documentId}/metadata/{domain}`) replace or remove one caller's entire sub-object atomically. No operation touches another caller's namespace, so the contract makes cross-caller overwrite structurally impossible.
+- Using the domain name as the path parameter avoids URL encoding issues that arise with slash-separated or dot-notation flat keys. `{domain}` is an enum from the shared `Domain` component in `components/common.yaml`, providing a fixed set of valid namespace names. Box uses a similar `templateKey` path parameter for the same purpose.
 
 **Options:**
 - **(A)** Write-once at creation — `metadata` is set on POST and cannot be updated; prevents overwrite but rules out post-upload correlation context
-- **(B)** ✓ Mutable via key-level endpoints — `PUT /documents/{documentId}/metadata/{key}` adds or replaces a single key; `DELETE /documents/{documentId}/metadata/{key}` removes one key; `metadata` is not included in the Document PATCH schema
+- **(B)** ✓ Mutable via namespace-level endpoints — `PUT /documents/{documentId}/metadata/{domain}` replaces the caller's entire namespace sub-object; `DELETE /documents/{documentId}/metadata/{domain}` removes it; `{domain}` is an enum from the shared `Domain` component; `metadata` is not included in the Document PATCH schema
 - **(C)** Mutable via merge PATCH — PATCH body is a partial JSON object; server merges at key level; overwrite prevention depends on server implementation, not contract structure
 
-**Customization:** States that need key namespacing or per-key access controls can add those constraints via overlay on the metadata endpoints.
+**Customization:** States that need per-key access controls within a namespace can add those constraints via overlay on the metadata endpoints.
 
 ---
 
@@ -458,7 +460,7 @@ See [Decision 8](#decision-8-virus-scanning-model) for why the baseline chose sy
 
 States integrating a signing service (DocuSign, Adobe Sign, etc.) store the completed signed document as a new `DocumentVersion` upload. Two approaches for carrying signature metadata:
 
-- **Pass-through** — the signing integration adds the envelope ID, signed-at timestamp, and signer identity as individual keys on `Document.metadata` via the key-level metadata endpoints after the signed document is uploaded. The domain stores and echoes these without interpreting them.
+- **Pass-through** — the signing integration writes its correlation context (envelope ID, signed-at timestamp, signer identity) into `Document.metadata` under its own namespace via `PUT /documents/{documentId}/metadata/{domain}` after the signed document is uploaded. The domain stores and echoes this without interpreting it.
 - **Typed fields** — states that want signature state to be queryable within the domain can add fields to `DocumentVersion` via overlay — for example `signatureStatus` (`unsigned`, `pending`, `signed`, `rejected`), `signedAt`, and `signedById`.
 
 ### Chunked upload
@@ -494,7 +496,7 @@ Adjacent concerns a reader might assume this domain owns, but that are not docum
 | Version restore | Enterprise ECM (Documentum, FileNet) | **Not in scope** — core use case covered by uploading a new version; see [Customization — Version restore](#version-restore) for adding explicit restore semantics |
 | Bulk document import | Enterprise ECM (FileNet, OnBase, OpenText) for ongoing scanning workflows | **Planned** — see #260 |
 | Concurrent edit locking | Documentum, FileNet, OnBase | **Not in scope** — documents are immutable per upload; no in-place editing model |
-| Metadata key management (add/remove after creation) | Box (Metadata API), Google Drive (file properties) | **Planned** — key-level PUT/DELETE endpoints; see [Decision 12](#decision-12-metadata-mutability-and-update-model) |
+| Metadata namespace management (add/remove after creation) | Box (Metadata API), Google Drive (file properties) | **Planned** — namespace-level PUT/DELETE endpoints; see [Decision 12](#decision-12-metadata-mutability-and-update-model) |
 
 ### Cross-program reuse
 
