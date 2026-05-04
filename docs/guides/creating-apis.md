@@ -2,20 +2,35 @@
 
 > **Status: Draft**
 
-This guide provides instructions for creating new REST APIs that follow our established patterns. It can be used by developers or AI agents to generate consistent, validated API specifications.
+This guide provides instructions for creating new REST APIs that follow our established patterns. Use it to generate consistent, validated API specifications.
 
 ## Quick Start
 
-For simple cases, use the template generator:
+Each domain has one OpenAPI spec (e.g., `intake-openapi.yaml`). Most work involves adding resources to an existing domain spec.
+
+### Add a resource to an existing domain spec
 
 ```bash
-npm run api:new -- --name "benefits" --resource "Benefit"
+npm run api:update -- --name "intake" --resource "Household"
 ```
 
-This generates:
-- `{name}-openapi.yaml` - Main API spec with one inline example in `components/examples`
+This merges new paths, schemas, parameters, a tag, and an example into the existing spec.
 
-Then customize the generated files to match your domain requirements.
+### Create a spec for a new domain
+
+Use `api:new` only when the domain doesn't have a spec yet:
+
+```bash
+npm run api:new -- --name "intake" --resource "Application"
+```
+
+If the spec name differs from its domain (uncommon), pass `--domain` explicitly:
+
+```bash
+npm run api:new -- --name "households" --domain "intake" --resource "Household"
+```
+
+This generates `{name}-openapi.yaml` with full CRUD paths, schemas, an inline example, and all required `info` fields (`x-domain`, `x-status`, `x-visibility`).
 
 ---
 
@@ -25,9 +40,11 @@ If you need more control or are building a complex API, follow these steps.
 
 ### Step 1: Understand the File Structure
 
+Specs can live anywhere — the tooling takes a `--spec` argument pointing to any directory. The default is `packages/contracts/`. The `{domain}-openapi.yaml` naming pattern is what matters: validators and the resolve pipeline auto-discover files matching that suffix.
+
 ```
-packages/contracts/
-├── {domain}-openapi.yaml           # Main API specification (schemas + inline example)
+{your-spec-dir}/
+├── {domain}-openapi.yaml           # Main API specification
 └── components/
     ├── common.yaml                 # Shared schemas (Address, Name, etc.)
     ├── parameters.yaml             # Shared query parameters
@@ -35,282 +52,13 @@ packages/contracts/
     └── {resource}.yaml             # Resource-specific shared schemas
 ```
 
-### Step 2: Define the Resource Schema
+### Step 2: Create the API Specification
 
-Create `openapi/components/{resource-plural}.yaml`:
+Create `{domain}-openapi.yaml` in your spec directory. Use the output of `api:new` as your starting point, then customize the schemas.
 
-```yaml
-# {Resource} Schema
-{Resource}:
-  type: object
-  additionalProperties: false
-  required:
-    - id
-    - {required-fields}
-    - createdAt
-    - updatedAt
-  properties:
-    # Standard fields (required for all resources)
-    id:
-      type: string
-      format: uuid
-      readOnly: true
-      description: Unique identifier (server-generated).
-    createdAt:
-      type: string
-      format: date-time
-      readOnly: true
-      description: Timestamp when the resource was created.
-    updatedAt:
-      type: string
-      format: date-time
-      readOnly: true
-      description: Timestamp when the resource was last updated.
+> **x- extensions:** The `info` block requires `x-domain`, `x-status`, and `x-visibility`. Top-level `x-events` declares domain events. `x-relationship` annotates FK fields. See the [x-extensions reference](../architecture/x-extensions.md) for the full catalog.
 
-    # Resource-specific fields
-    {fieldName}:
-      type: string
-      minLength: 1
-      maxLength: 200
-      description: Description of the field.
-      example: "Example value"
-```
-
-### Step 3: Create the API Specification
-
-Create `openapi/{resource-plural}.yaml`:
-
-> **x- extensions:** The `info` block requires `x-domain`, `x-status`, and `x-visibility`. Top-level `x-events` declares domain events. `x-relationship` annotates FK fields. See [x-extensions reference](../architecture/x-extensions.md) for the full catalog.
-
-```yaml
-openapi: 3.1.0
-info:
-  title: {Resource} Service API
-  version: 1.0.0
-  x-domain: {domain}      # Required — business domain (e.g., workflow, intake)
-  x-status: alpha         # Required — lifecycle status
-  x-visibility: internal  # Required — access level
-  description: |
-    REST API for managing {resources}.
-  contact:
-    name: API Support
-    email: support@example.com
-
-servers:
-  - url: https://api.example.com
-    description: Production server
-  - url: http://localhost:8080
-    description: Local development server
-
-tags:
-  - name: {Resources}
-    description: Manage {resources}.
-
-paths:
-  "/{resources}":
-    get:
-      summary: List {resources}
-      description: Retrieve a paginated list of {resources}.
-      operationId: list{Resources}
-      tags:
-        - {Resources}
-      parameters:
-        - "$ref": "./components/common-parameters.yaml#/SearchQueryParam"
-        - "$ref": "./components/common-parameters.yaml#/LimitParam"
-        - "$ref": "./components/common-parameters.yaml#/OffsetParam"
-      responses:
-        '200':
-          description: A paginated collection of {resources}.
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/{Resource}List"
-        '400':
-          "$ref": "./components/common-responses.yaml#/BadRequest"
-        '500':
-          "$ref": "./components/common-responses.yaml#/InternalError"
-
-    post:
-      summary: Create a {resource}
-      description: Create a new {resource} record.
-      operationId: create{Resource}
-      tags:
-        - {Resources}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              "$ref": "#/components/schemas/{Resource}Create"
-      responses:
-        '201':
-          description: {Resource} created successfully.
-          headers:
-            Location:
-              description: URL of the newly created resource.
-              schema:
-                type: string
-                format: uri
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/{Resource}"
-        '400':
-          "$ref": "./components/common-responses.yaml#/BadRequest"
-        '422':
-          "$ref": "./components/common-responses.yaml#/UnprocessableEntity"
-        '500':
-          "$ref": "./components/common-responses.yaml#/InternalError"
-
-  "/{resources}/{resourceId}":
-    parameters:
-      - "$ref": "#/components/parameters/{Resource}IdParam"
-
-    get:
-      summary: Get a {resource}
-      description: Retrieve a single {resource} by identifier.
-      operationId: get{Resource}
-      tags:
-        - {Resources}
-      responses:
-        '200':
-          description: {Resource} retrieved successfully.
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/{Resource}"
-        '404':
-          "$ref": "./components/common-responses.yaml#/NotFound"
-        '500':
-          "$ref": "./components/common-responses.yaml#/InternalError"
-
-    patch:
-      summary: Update a {resource}
-      description: Apply partial updates to an existing {resource}.
-      operationId: update{Resource}
-      tags:
-        - {Resources}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              "$ref": "#/components/schemas/{Resource}Update"
-      responses:
-        '200':
-          description: {Resource} updated successfully.
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/{Resource}"
-        '400':
-          "$ref": "./components/common-responses.yaml#/BadRequest"
-        '404':
-          "$ref": "./components/common-responses.yaml#/NotFound"
-        '422':
-          "$ref": "./components/common-responses.yaml#/UnprocessableEntity"
-        '500':
-          "$ref": "./components/common-responses.yaml#/InternalError"
-
-    delete:
-      summary: Delete a {resource}
-      description: Permanently remove a {resource} record.
-      operationId: delete{Resource}
-      tags:
-        - {Resources}
-      responses:
-        '204':
-          description: {Resource} deleted successfully.
-        '404':
-          "$ref": "./components/common-responses.yaml#/NotFound"
-        '500':
-          "$ref": "./components/common-responses.yaml#/InternalError"
-
-components:
-  parameters:
-    {Resource}IdParam:
-      name: {resourceId}
-      in: path
-      required: true
-      description: Unique identifier of the {resource}.
-      schema:
-        type: string
-        format: uuid
-      example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
-
-  schemas:
-    {Resource}:
-      "$ref": "./components/{resource-plural}.yaml#{Resource}"
-
-    {Resource}Create:
-      allOf:
-        - "$ref": "./components/{resource-plural}.yaml#{Resource}"
-        - type: object
-          description: |
-            Payload to create a new {resource}.
-            Note: id, createdAt, updatedAt are server-generated.
-
-    {Resource}Update:
-      allOf:
-        - "$ref": "./components/{resource-plural}.yaml#{Resource}"
-        - type: object
-          description: |
-            Partial update payload. All fields optional.
-          minProperties: 1
-
-    {Resource}List:
-      type: object
-      additionalProperties: false
-      required:
-        - items
-        - total
-        - limit
-        - offset
-      properties:
-        items:
-          type: array
-          items:
-            "$ref": "#/components/schemas/{Resource}"
-        total:
-          type: integer
-          minimum: 0
-          description: Total number of {resources} available.
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Maximum number of items requested.
-        offset:
-          type: integer
-          minimum: 0
-          description: Number of items skipped.
-        hasNext:
-          type: boolean
-          description: Whether more results exist.
-```
-
-### Step 4: Add an Inline Example
-
-In the spec's `components` section, add a `components/examples` entry with one representative record. Reference it from the GET `/{id}` response:
-
-```yaml
-# In paths/{resourceId}/get/responses/200:
-              examples:
-                {Resource}Example1:
-                  $ref: "#/components/examples/{Resource}Example1"
-
-# In components:
-  examples:
-    {Resource}Example1:
-      summary: Brief description of this record
-      value:
-        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-        {fieldName}: "Example value"
-        createdAt: "2024-01-15T10:30:00Z"
-        updatedAt: "2024-01-15T10:30:00Z"
-```
-
-### Step 5: Validate
+### Step 3: Validate
 
 Run all validation layers:
 
@@ -337,133 +85,15 @@ This runs:
 | Schema names | PascalCase | `CaseWorker` |
 | Property names | camelCase | `firstName` |
 
+These are the baseline conventions for base specs. The resolve pipeline can transform output per-state deployment — see [Overlay Guide: Global Config Options](./overlay-guide.md#global-config-options).
+
 ---
 
 ## Common Field Patterns
 
 ### Standard Resource Fields (Required)
 
-Every resource must include:
-
-```yaml
-id:
-  type: string
-  format: uuid
-  readOnly: true
-  description: Unique identifier (server-generated).
-
-createdAt:
-  type: string
-  format: date-time
-  readOnly: true
-  description: Timestamp when created.
-
-updatedAt:
-  type: string
-  format: date-time
-  readOnly: true
-  description: Timestamp when last updated.
-```
-
-### String Fields
-
-```yaml
-name:
-  type: string
-  minLength: 1
-  maxLength: 200
-  description: Human-readable name.
-  example: "Example Name"
-```
-
-### Enum Fields
-
-```yaml
-status:
-  type: string
-  enum:
-    - active
-    - inactive
-    - pending
-  description: Current status.
-  example: "active"
-```
-
-### Date Fields
-
-```yaml
-dateOfBirth:
-  type: string
-  format: date
-  description: Date of birth (YYYY-MM-DD).
-  example: "1990-05-15"
-```
-
-### Monetary Fields
-
-```yaml
-amount:
-  type: number
-  minimum: 0
-  description: Monetary amount in dollars.
-  example: 1500.00
-```
-
-### Sensitive Fields
-
-```yaml
-socialSecurityNumber:
-  type: string
-  pattern: "^\\d{3}-\\d{2}-\\d{4}$"
-  description: SSN for identity verification.
-  example: "123-45-6789"
-```
-
-### Reusable Schemas
-
-Reference shared schemas from `./components/common.yaml`:
-
-```yaml
-# Address
-address:
-  "$ref": "./common.yaml#/Address"
-
-# Person's name
-name:
-  "$ref": "./common.yaml#/Name"
-
-# Email
-email:
-  "$ref": "./common.yaml#/Email"
-
-# Phone
-phone:
-  "$ref": "./common.yaml#/PhoneNumber"
-```
-
----
-
-## Search Query Syntax
-
-All list endpoints support the `q` query parameter with this syntax:
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `term` | Full-text search | `john` |
-| `field:value` | Exact match | `status:approved` |
-| `field:>value` | Greater than | `income:>1000` |
-| `field:>=value` | Greater or equal | `income:>=1000` |
-| `field:<value` | Less than | `income:<5000` |
-| `field:<=value` | Less or equal | `income:<=5000` |
-| `field:val1,val2` | Match any (OR) | `status:approved,pending` |
-| `-field:value` | Exclude/negate | `-status:denied` |
-| `field:*` | Field exists | `email:*` |
-| `field.nested:value` | Nested field | `address.state:CA` |
-
-Multiple conditions separated by spaces are ANDed:
-```
-status:active income:>1000 address.state:CA
-```
+Every resource must include `id` (uuid, readOnly), `createdAt` (date-time, readOnly), and `updatedAt` (date-time, readOnly). The generator scaffolds these automatically. See `packages/contracts/patterns/api-patterns.yaml#schema_patterns.resource_base_fields` for the canonical definitions and `components/common.yaml` for reusable schemas (Address, Name, Email, PhoneNumber).
 
 ---
 
@@ -497,9 +127,7 @@ status:active income:>1000 address.state:CA
 
 Before submitting a new API:
 
-- [ ] Resource schema in `openapi/components/{name}.yaml`
-- [ ] Main spec in `openapi/{name}.yaml`
-- [ ] One inline example in `components/examples/{Resource}Example1`, referenced from GET `/{id}` response
+- [ ] Main spec named `{domain}-openapi.yaml` in your spec directory
 - [ ] All required fields have `id`, `createdAt`, `updatedAt`
 - [ ] List endpoint has search and pagination parameters
 - [ ] List response has `items`, `total`, `limit`, `offset`, `hasNext`
@@ -514,9 +142,9 @@ Before submitting a new API:
 
 ## Reference
 
-- **Pattern configuration**: `openapi/patterns/api-patterns.yaml`
-- **Shared parameters**: `openapi/components/common-parameters.yaml`
-- **Shared responses**: `openapi/components/common-responses.yaml`
-- **Shared schemas**: `openapi/components/common.yaml`
+- **Pattern configuration**: `packages/contracts/patterns/api-patterns.yaml`
+- **Shared parameters**: `packages/contracts/components/parameters.yaml`
+- **Shared responses**: `packages/contracts/components/responses.yaml`
+- **Shared schemas**: `packages/contracts/components/common.yaml`
 - [Validation Guide](./validation.md)
 - [Search Patterns](../decisions/search-patterns.md)

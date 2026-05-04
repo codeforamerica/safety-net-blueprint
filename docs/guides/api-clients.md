@@ -26,7 +26,7 @@ This generates a complete npm package in `packages/clients/dist-packages/<your-s
 
 ### In a state repository
 
-States install `@codeforamerica/safety-net-blueprint-clients` and generate clients from their resolved specs. See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup.
+States install `@codeforamerica/safety-net-blueprint-clients` and generate clients from their resolved specs. See the [Setup Guide](../guides/setup-guide.md) for the full setup.
 
 ## Package Structure
 
@@ -375,7 +375,7 @@ Each generated package includes state-specific schema fields defined by that sta
 - Eligibility flags for state programs
 - State-specific income source types
 
-Check your state's overlay file (in this repo: `packages/contracts/overlays/<your-state>/modifications.yaml`, or in a state repo: `overlays/modifications.yaml`) to see what customizations are applied. See [State Overlays](../guides/state-overlays.md) for overlay syntax.
+Check your state's overlay files to see what customizations are applied. In this repo, overlays are under `packages/contracts/overlays/`. In a state repo, they live wherever the `--overlay` argument points. See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax.
 
 ## Updating Clients
 
@@ -386,7 +386,7 @@ When the base specs (`@codeforamerica/safety-net-blueprint-contracts`) are updat
 3. Regenerate clients from the updated resolved specs
 4. Check the changelog for breaking changes to schema fields or API endpoints
 
-See [State Setup Guide — Updating base specs](../guides/state-setup-guide.md#updating-base-specs) for the full update workflow.
+See [Setup Guide — Updating base specs](../guides/setup-guide.md#updating-base-specs) for the full update workflow.
 
 ## Troubleshooting
 

@@ -145,7 +145,7 @@ npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica
 
 | File | Purpose | Regenerate |
 |------|---------|------------|
-| `packages/contracts/resolved/*.yaml` | State-resolved specs | `npm run overlay:resolve` |
+| `packages/contracts/resolved/*.yaml` | State-resolved specs | `npm run resolve` |
 | `packages/clients/dist-packages/{state}/` | State npm packages | `node packages/clients/scripts/build-state-package.js` |
 | `packages/mock-server/data/*.db` | SQLite databases | `npm run mock:reset` |
 
@@ -165,7 +165,7 @@ npm run api:new -- --name "benefits" --resource "Benefit"
 
 1. Create overlay directory and file: `packages/contracts/overlays/{state}/modifications.yaml`
 2. Define actions for state-specific changes
-3. Validate: `STATE={state} npm run overlay:resolve`
+3. Validate: `npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>`
 
 ## Testing
 

@@ -30,6 +30,7 @@ function parseArgs() {
   const options = {
     name: null,
     resource: null,
+    domain: null,
     out: null,
     ref: null,
     help: false
@@ -46,6 +47,10 @@ function parseArgs() {
       case '--resource':
       case '-r':
         options.resource = args[++i];
+        break;
+      case '--domain':
+      case '-d':
+        options.domain = args[++i];
         break;
       case '--out':
       case '-o':
@@ -89,6 +94,7 @@ Usage:
 Options:
   -n, --name <name>        API name in kebab-case (e.g., "benefits", "case-workers")
   -r, --resource <name>    Resource name in PascalCase (e.g., "Benefit", "CaseWorker")
+  -d, --domain <domain>    Business domain for x-domain (default: same as --name)
   -o, --out <dir>          Output directory (default: packages/contracts/)
       --ref <dir>          Path to shared components directory (for correct $ref paths
                            when --out is outside the contracts package)
@@ -97,7 +103,7 @@ Options:
 Examples:
   npm run api:new -- --name benefits --resource Benefit
   npm run api:new -- benefits Benefit
-  npm run api:new -- benefits Benefit --out /tmp
+  npm run api:new -- --name households --domain intake --resource Household
 
 Generated files:
   - {name}-openapi.yaml              Main API specification (schemas + inline example)
@@ -142,7 +148,7 @@ function pluralize(str) {
 // Template Generators
 // =============================================================================
 
-function generateApiSpec(name, resource, componentsPrefix = './components') {
+function generateApiSpec(name, resource, componentsPrefix = './components', domain = null) {
   const kebabName = toKebabCase(name);
   const resourcePlural = pluralize(resource);
   const resourcePluralLower = resourcePlural.toLowerCase();
@@ -150,12 +156,15 @@ function generateApiSpec(name, resource, componentsPrefix = './components') {
 
   const resourceLower = resource.toLowerCase();
   const resourceKebab = toKebabCase(resource);
-  const domain = toKebabCase(name);
+  const xDomain = domain ? toKebabCase(domain) : toKebabCase(name);
 
   return `openapi: 3.1.0
 info:
   title: ${resource} API
   version: 1.0.0
+  x-domain: ${xDomain}
+  x-status: alpha
+  x-visibility: internal
   description: |
     REST API for managing ${resourcePluralLower}. The specification defines CRUD operations
     for creating, reading, updating, and deleting ${resourcePluralLower}.
@@ -172,17 +181,17 @@ tags:
   description: Manage ${resourcePluralLower}.
 x-events:
   ${resourceKebab}.created:
-    type: org.codeforamerica.safety-net-blueprint.${domain}.${resourceKebab}.created
+    type: org.codeforamerica.safety-net-blueprint.${xDomain}.${resourceKebab}.created
     summary: Emitted when a ${resourceLower} is created
     payload:
       $ref: "#/components/schemas/${resource}CreatedEvent"
   ${resourceKebab}.updated:
-    type: org.codeforamerica.safety-net-blueprint.${domain}.${resourceKebab}.updated
+    type: org.codeforamerica.safety-net-blueprint.${xDomain}.${resourceKebab}.updated
     summary: Emitted when a ${resourceLower} is updated via PATCH
     payload:
       $ref: "#/components/schemas/${resource}UpdatedEvent"
   ${resourceKebab}.deleted:
-    type: org.codeforamerica.safety-net-blueprint.${domain}.${resourceKebab}.deleted
+    type: org.codeforamerica.safety-net-blueprint.${xDomain}.${resourceKebab}.deleted
     summary: Emitted when a ${resourceLower} is deleted
     payload:
       $ref: "#/components/schemas/${resource}DeletedEvent"
@@ -446,9 +455,11 @@ async function main() {
 
   const name = toKebabCase(options.name);
   const resource = toPascalCase(options.resource);
+  const domain = options.domain ? toKebabCase(options.domain) : name;
 
   console.log(`\n🚀 Generating API: ${name}`);
   console.log(`   Resource: ${resource}`);
+  console.log(`   Domain:   ${domain}`);
   console.log('');
 
   // Output to --out dir, or packages/contracts/ by default
@@ -477,7 +488,7 @@ async function main() {
   // Generate files
   console.log('📝 Generating files...\n');
 
-  await writeFile(specPath, generateApiSpec(name, resource, componentsPrefix));
+  await writeFile(specPath, generateApiSpec(name, resource, componentsPrefix, domain));
   console.log(`   ✅ ${specPath}`);
 
   console.log(`

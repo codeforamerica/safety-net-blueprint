@@ -209,9 +209,9 @@ npm install
 
 ```bash
 # Resolve overlay
-node safety-net-apis/packages/contracts/scripts/resolve-overlay.js \
-  --base=./safety-net-apis/packages/contracts \
-  --overlays=./overlays \
+safety-net-resolve \
+  --spec=./node_modules/@codeforamerica/safety-net-blueprint-contracts \
+  --overlay=./overlays \
   --out=./resolved
 
 # Regenerate clients

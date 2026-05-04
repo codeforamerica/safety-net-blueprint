@@ -20,9 +20,11 @@ This repository contains the base contract artifacts, tooling, and documentation
 - **Client generation** — typed TypeScript SDK and Zod schemas from resolved specs
 - **State overlays** — states customize contracts without forking the base files
 
-States create their own repositories, install the base packages (`@codeforamerica/safety-net-blueprint-contracts`, `@codeforamerica/safety-net-blueprint-mock-server`, `@codeforamerica/safety-net-blueprint-clients`), and apply overlays. See the [State Setup Guide](./docs/guides/state-setup-guide.md).
-
 The architecture is being proven through [steel thread prototypes](./docs/architecture/roadmap.md) that exercise the most complex parts of the design before domains are built out at scale.
+
+## Adopting the Blueprint
+
+To adopt the blueprint, create a repository, install the base packages, apply overlays to customize the contracts for your context, and point the CLIs at the resolved output. See the [Setup Guide](./docs/guides/setup-guide.md) for the full walkthrough and the [Overlay Guide](./docs/guides/overlay-guide.md) for overlay authoring.
 
 ## Getting Started
 
@@ -40,9 +42,6 @@ Choose your path based on your role:
 ```bash
 npm install
 
-# Set your state
-export STATE=<your-state>
-
 # Start mock server + Swagger UI
 npm run mock:start:all
 ```
@@ -56,7 +55,7 @@ Visit `http://localhost:3000` for interactive API docs.
 | `npm start` | Start mock server |
 | `npm run mock:start:all` | Start mock server + Swagger UI |
 | `npm run validate` | Validate OpenAPI specs |
-| `npm run overlay:resolve` | Resolve state overlay (requires STATE) |
+| `npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>` | Resolve overlays against base specs |
 | `npm run api:new` | Scaffold a new API spec |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
@@ -77,9 +76,9 @@ Visit `http://localhost:3000` for interactive API docs.
 - [Application Review Prototype](./docs/prototypes/application-review-prototype.md) — Field metadata contracts and context-dependent review
 
 ### Guides
-- [State Setup Guide](./docs/guides/state-setup-guide.md) — Set up a state repository with overlays and CI
+- [Setup Guide](./docs/guides/setup-guide.md) — Set up a repository with overlays and CI
+- [Overlay Guide](./docs/guides/overlay-guide.md) — Customize contracts with overlays
 - [Creating APIs](./docs/guides/creating-apis.md) — Design new API specifications
-- [State Overlays](./docs/guides/state-overlays.md) — Customize contracts for state-specific needs
 - [Validation](./docs/guides/validation.md) — Validate specs and fix errors
 - [Mock Server](./docs/guides/mock-server.md) — Run and query the mock server
 - [Search Patterns](./docs/guides/search-patterns.md) — Search and filter syntax

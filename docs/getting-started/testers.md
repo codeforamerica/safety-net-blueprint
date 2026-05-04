@@ -61,7 +61,7 @@ A Postman collection is generated automatically during integration tests. To gen
 npm run postman:generate
 
 # Or generate from resolved specs (with overlay applied)
-npm run overlay:resolve
+npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 node packages/contracts/scripts/generate-postman.js --spec=packages/resolved
 ```
 

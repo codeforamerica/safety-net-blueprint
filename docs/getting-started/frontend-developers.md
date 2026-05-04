@@ -32,7 +32,7 @@ The toolkit provides base specs, scripts, and a mock server. States create their
 npm install @codeforamerica/safety-net-blueprint-contracts @codeforamerica/safety-net-blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
 ```
 
-See the [State Setup Guide](../guides/state-setup-guide.md) for the full setup process, including overlays and resolved specs.
+See the [Setup Guide](../guides/setup-guide.md) for the full setup process, including overlays and resolved specs.
 
 For development within this repository:
 
@@ -191,7 +191,7 @@ See [Contract-Driven Architecture — Development to production](../architecture
 
 ## Next Steps
 
-- [State Setup Guide](../guides/state-setup-guide.md) — Setting up a state repository with overlays
+- [Setup Guide](../guides/setup-guide.md) — Setting up a state repository with overlays
 - [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) — How contracts define the API surface
 - [Workflow Prototype](../prototypes/workflow-prototype.md) — Example of behavioral contracts in action (state machine, rules, metrics)
 - [Application Review Prototype](../prototypes/application-review-prototype.md) — Example of field metadata contracts in action
