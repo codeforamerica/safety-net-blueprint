@@ -287,6 +287,23 @@ function renderFlowPage(flow) {
   const flatSteps = flattenSteps(flow.steps || []);
   const nSteps    = flatSteps.length;
   const fragments = collectFragments(flow.steps || []);
+
+  // When a nested fragment starts or ends at the same row as its parent, both
+  // boxes compute to the same top/bottom y — making the child appear to overflow.
+  // Expand the parent upward and/or downward so the child sits visually inside it.
+  for (const frag of fragments) {
+    const firstStep = flatSteps[frag.startIdx];
+    if (
+      fragments.some(f => f.depth > frag.depth && f.startIdx === frag.startIdx) ||
+      (firstStep && firstStep.ref)
+    ) {
+      frag.extraTopPad = STEP_H * 0.4;
+    }
+    if (fragments.some(f => f.depth > frag.depth && f.endIdx === frag.endIdx)) {
+      frag.extraBottomPad = 10;
+    }
+  }
+
   const H = Math.max(500, FIRST_Y + nSteps * STEP_H + FOOTER_H);
 
   const colX   = participants.map((_, i) => ML + i * (COL_W + COL_GAP) + COL_W / 2);
@@ -336,8 +353,9 @@ function renderFlowPage(flow) {
     const inset = frag.depth * 12;
     const fx    = ML - FRAG_PAD + inset;
     const fw    = (W - ML - MR) + FRAG_PAD * 2 - inset * 2;
-    const fy    = (FIRST_Y + frag.startIdx * STEP_H - STEP_H * 0.4).toFixed(1);
-    const fh    = (STEP_H * (frag.endIdx - frag.startIdx + 0.95)).toFixed(1);
+    const extraTop = frag.extraTopPad || 0;
+    const fy    = (FIRST_Y + frag.startIdx * STEP_H - STEP_H * 0.4 - extraTop).toFixed(1);
+    const fh    = (STEP_H * (frag.endIdx - frag.startIdx + 0.95) + extraTop + (frag.extraBottomPad || 0)).toFixed(1);
 
     svgParts.push(
       `  <rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" ` +
@@ -442,22 +460,22 @@ function renderFlowPage(flow) {
       );
       const labelX         = (sx + dx + (goLeft ? -6 : 6)).toFixed(1);
       const labelTransform = goLeft ? 'transform:translate(-100%,0);text-align:right;' : '';
-      labelDivs.push(
-        `<div style="position:absolute;left:${labelX}px;top:${(y - 9).toFixed(1)}px;` +
-        `${labelTransform}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
-        `color:${color};white-space:nowrap;z-index:3;">${prefix}${step.label || ''}</div>`
-      );
       if (isGap && step.gap_description) {
-        const id      = `g${gapIdx++}`;
-        const hitLeft = goLeft ? sx + dx - 6 : sx;
+        const id = `g${gapIdx++}`;
         labelDivs.push(
-          `<div class="int-hit" data-int-id="${id}" style="position:absolute;` +
-          `left:${hitLeft}px;top:${(y - 5)}px;width:${SELF_W + 6}px;height:${SELF_H + 14}px;` +
-          `background:transparent;cursor:help;z-index:4;"></div>` +
+          `<div class="int-hit" data-int-id="${id}" style="position:absolute;left:${labelX}px;top:${(y - 9).toFixed(1)}px;` +
+          `${labelTransform}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
+          `color:${color};white-space:nowrap;z-index:4;cursor:help;">${prefix}${step.label || ''}</div>` +
           `<div class="int-content" data-int-id="${id}" style="display:none;">` +
           `<div style="font-size:7.5px;font-weight:700;color:${GAP_COLOR};">\u26a0\ufe0f Gap</div>` +
           `<div style="font-size:8px;color:#374151;">${step.gap_description}</div>` +
           `</div>`
+        );
+      } else {
+        labelDivs.push(
+          `<div style="position:absolute;left:${labelX}px;top:${(y - 9).toFixed(1)}px;` +
+          `${labelTransform}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
+          `color:${color};white-space:nowrap;z-index:3;">${prefix}${step.label || ''}</div>`
         );
       }
       return;
@@ -499,10 +517,11 @@ function renderFlowPage(flow) {
       `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;">${above}</div>`
     );
     if (step.note) {
+      const noteHtml = step.note.replace(/^(\[.+?\])\s*/, '$1<br>');
       labelDivs.push(
         `<div style="position:absolute;left:${midX}px;top:${belowY}px;transform:translate(-50%,0);` +
         `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;` +
-        `color:#6b7280;max-width:220px;white-space:normal;z-index:3;">${step.note}</div>`
+        `color:#6b7280;max-width:220px;white-space:normal;z-index:3;">${noteHtml}</div>`
       );
     }
     if (step.regulatory && step.regulatory.length) {
@@ -771,7 +790,7 @@ function renderDetail(domainId) {
 
     // Hex shape — navigable unless not-started
     const isNav = partner.status !== 'not-started';
-    if (isNav) parts.push(`<g data-navigate="${pid}" cursor="pointer">`);
+    if (isNav) parts.push(`<g data-navigate="domain_${pid}" cursor="pointer">`);
     parts.push(hexPoly(px, py, PR, partner.status));
 
     // Label, description, entities inside hex

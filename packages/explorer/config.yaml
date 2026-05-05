@@ -67,8 +67,8 @@ domains:
   - id: data_exchange
     label: Data Exchange
     status: partial
-    description: External service facade (IRS, SSA, SAVE)
-    entities: [ExternalServiceCall, IncomeVerification, IdentityVerification, ImmigrationStatus, EligibilityHub]
+    description: External service facade — FDSH, IEVS, SAVE, SSA
+    entities: [ExternalService, ExternalServiceCall]
 
   - id: scheduling
     label: Scheduling
@@ -155,15 +155,18 @@ events:
     subscribers:
       - intake
 
-  # Medicaid real-time eligibility result in response to application.submitted;
-  # intake creates an RTE verification record with the Medicaid eligibility outcome
+  # Medicaid RTE result per person per program — emitted after eligibility processes
+  # call.completed from fdsh_fti and enrollment_check; intake subscribes to surface
+  # results to caseworkers and record per-person eligibility status
   - name: eligibility.rte_completed
     publisher: eligibility
     status: planned
     subscribers:
       - intake
 
-  # closes the application and triggers case creation
+  # final eligibility determination — per person for Medicaid, per program (household)
+  # for SNAP; fires on auto-determination (conclusive RTE) or after caseworker review;
+  # intake subscribes to record outcome and close application when all programs resolved
   - name: determination_complete
     publisher: eligibility
     status: planned
@@ -422,29 +425,31 @@ events:
 # status: implemented | planned
 apis:
 
-  - call: immigration status (SAVE)
+  - call: FDSH services (fdsh_ssa, fdsh_vlp, fdsh_fti, fdsh_medicare, fdsh_vci)
     domain: data_exchange
     status: planned
     callers:
       - eligibility
       - intake
-      - workflow
 
-  - call: income verification (IRS)
+  - call: IEVS sources (ssa_ievs, irs_ievs, swica, uib)
     domain: data_exchange
     status: planned
     callers:
       - eligibility
       - intake
-      - workflow
 
-  - call: identity verification (SSA)
+  - call: immigration status — USCIS SAVE (save)
     domain: data_exchange
     status: planned
     callers:
       - eligibility
-      - intake
-      - workflow
+
+  - call: enrollment & incarceration checks
+    domain: data_exchange
+    status: planned
+    callers:
+      - eligibility
 
 # Event flows (ordered sequences of events for key business processes)
 #
@@ -466,7 +471,7 @@ flows:
     label: Application Submission
     domain: intake
     description: Events triggered when an application is submitted
-    participants: [applicant, intake, workflow, eligibility, data_exchange, client_management, document_management]
+    participants: [applicant, intake, workflow, eligibility, data_exchange, client_management, document_management, communications]
     steps:
       - fragment: submission
         steps:
@@ -483,30 +488,19 @@ flows:
               - citation: "42 CFR § 435.912"
                 summary: "Medicaid: 45-day clock starts"
                 detail: "90 days if disability determination needed"
-      - fragment: verification-items
-        steps:
           - self: intake
-            label: Verification items and baseline document requirements created
-      - fragment: federal-verification
-        steps:
-          - label: Initiates federal verification checks
-            from: intake
-            to: data_exchange
-            note: "Direct API calls — FDSH, IEVS, SAVE, SSA (not event-driven)"
-          - self: data_exchange
-            label: Federal checks initiated
-            note: "FDSH, IEVS, SAVE, SSA"
-          - event: call.completed
-            from: data_exchange
-            to: intake
-            note: One per service; results arrive asynchronously and in any order
-          - self: intake
-            label: Update verification records with federal check results
-            gap: true
-            gap_description: Intake handler for call.completed updating verifications not yet designed
+            label: Verifications created per program and household member
+            note: Income, identity, residency for SNAP; citizenship and immigration for Medicaid (per member)
+            regulatory:
+              - citation: "7 CFR § 273.2(f)"
+                summary: "SNAP: income, identity, and residency must be verified at application"
+              - citation: "42 CFR § 435.940"
+                summary: "Medicaid: electronic verification required before requesting paper documents"
+              - citation: "42 CFR § 435.911"
+                summary: "Ex parte rule: electronic verification must be attempted first"
       - fragment: applicant-document-upload
         type: opt
-        label: "if applicant submits supporting documents"
+        label: "if applicant submits supporting documents at application"
         steps:
           - label: Store documents
             from: intake
@@ -515,6 +509,67 @@ flows:
             gap_description: Document storage API not yet designed
           - self: intake
             label: Documents linked to verification items
+      - fragment: snap-processing
+        type: opt
+        label: if SNAP applied
+        steps:
+          - label: identity Verification (fdsh_ssa)
+            from: intake
+            to: data_exchange
+            note: If Medicaid also applied, result also satisfies citizenship Verification
+            regulatory:
+              - citation: "42 U.S.C. § 1320b-7"
+                summary: "Federal verification of identity and citizenship required"
+          - label: income Verification (ssa_ievs, irs_ievs, swica, uib)
+            from: intake
+            to: data_exchange
+            regulatory:
+              - citation: "7 CFR § 272.8"
+                summary: "IEVS: must query SSA, IRS, state wage records, and unemployment insurance separately"
+      - fragment: medicaid-processing
+        type: opt
+        label: if Medicaid applied
+        steps:
+          - label: citizenship Verification (fdsh_ssa)
+            from: intake
+            to: data_exchange
+            note: "[if SNAP not applied] fdsh_ssa result shared with identity Verification when both programs applied"
+            regulatory:
+              - citation: "42 CFR § 435.956(b)"
+                summary: "Citizenship verified electronically via FDSH before requesting paper documents"
+          - label: immigration Verification (fdsh_vlp)
+            from: intake
+            to: data_exchange
+            regulatory:
+              - citation: "42 CFR § 435.956(c)"
+                summary: "Immigration status verified electronically via FDSH VLP"
+              - citation: "8 U.S.C. § 1611"
+                summary: "Federal benefits eligibility tied to immigration status"
+          - label: immigration Verification (save)
+            from: intake
+            to: data_exchange
+            note: "[if VLP inconclusive or document number unavailable]"
+      - event: call.completed
+        from: data_exchange
+        to: intake
+        note: One per service call; results arrive asynchronously and in any order
+      - self: intake
+        label: Verification status updated; electronic evidence appended
+      - fragment: inconclusive-result
+        type: opt
+        label: "if inconclusive"
+        steps:
+          - self: intake
+            label: Document request created on Verification
+          - event: verification.failed
+            from: intake
+            to: communications
+            gap: true
+            gap_description: "Communications needs verification category and program on the event payload to select the right notice template; template catalog not yet designed"
+          - self: communications
+            label: Document request notice sent to applicant
+            gap: true
+            gap_description: Notice template catalog not yet designed; blocked on verification.failed carrying category and program
       - fragment: submission-fanout
         type: par
         operands:
@@ -553,15 +608,41 @@ flows:
                 type: opt
                 label: "if Medicaid applied"
                 steps:
+                  - label: MAGI income check (fdsh_fti)
+                    from: eligibility
+                    to: data_exchange
+                    regulatory:
+                      - citation: "42 CFR § 435.911"
+                        summary: "Ex parte rule: use available electronic data before requesting information from applicant"
+                  - label: existing enrollment check (enrollment_check)
+                    from: eligibility
+                    to: data_exchange
+                    regulatory:
+                      - citation: "42 CFR § 435.916"
+                        summary: "Check existing enrollment before requesting new information"
+                  - event: call.completed
+                    from: data_exchange
+                    to: eligibility
+                    note: One per call; results arrive asynchronously
                   - self: eligibility
-                    label: Medicaid real-time eligibility (RTE) check initiated
+                    label: RTE result evaluated per Medicaid applicant
                   - event: eligibility.rte_completed
                     from: eligibility
                     to: intake
+                    note: Per person per program; includes outcome and any flags
                   - self: intake
-                    label: Create RTE verification record with Medicaid eligibility outcome
+                    label: RTE result recorded per person; visible to caseworker
                     gap: true
-                    gap_description: rte verification type not yet defined in intake contracts
+                    gap_description: Intake has no per-person per-program status entity yet; design question open in #248
+                  - fragment: rte-auto-determination
+                    type: opt
+                    label: "if conclusive positive for this person (income compatible, not already enrolled)"
+                    steps:
+                      - event: determination_complete
+                        from: eligibility
+                        to: intake
+                        note: Per person; Medicaid approved
+                      - ref: determination
           - label: Match to Existing Client Record
             steps:
               - event: application.submitted
@@ -585,7 +666,7 @@ flows:
     label: Caseworker Review
     domain: intake
     description: From task claim through interview to verification complete
-    participants: [caseworker, supervisor, intake, workflow, scheduling, document_management, communications]
+    participants: [caseworker, supervisor, intake, workflow, scheduling, document_management, communications, data_exchange]
     steps:
       - ref: application_submission
         label: Application Submission
@@ -645,12 +726,17 @@ flows:
                 detail: "Applies to citizenship (FDSH), immigration status (SAVE), and income (IEVS)"
           - fragment: verification-failed
             type: opt
-            label: "if verification failed"
+            label: "if verification inconclusive"
             steps:
               - event: verification.failed
                 from: intake
                 to: communications
-                note: Communications sends document request notice to applicant
+                gap: true
+                gap_description: "Communications needs verification category and program on the event payload to select the right notice template; template catalog not yet designed"
+              - self: communications
+                label: Document request notice sent to applicant
+                gap: true
+                gap_description: Notice template catalog not yet designed; blocked on verification.failed carrying category and program
               - label: Uploads supporting document; attaches to verification item
                 from: caseworker
                 to: intake
@@ -661,6 +747,35 @@ flows:
                 gap_description: Document storage API not yet designed
               - self: intake
                 label: Document linked to verification item as evidence
+          - fragment: service-call-retry
+            type: opt
+            label: "if service call failed or timed out"
+            steps:
+              - label: Reviews failure; determines if retriable
+                from: caseworker
+                to: intake
+                note: Failure reason visible on Verification; retriable vs non-retriable per Decision 10 (data exchange)
+              - fragment: retriable
+                type: opt
+                label: "if retriable"
+                steps:
+                  - label: Initiates retry
+                    from: caseworker
+                    to: intake
+                  - label: New service call submitted
+                    from: intake
+                    to: data_exchange
+                  - event: call.completed
+                    from: data_exchange
+                    to: intake
+                  - self: intake
+                    label: Verification updated with new result
+              - fragment: non-retriable
+                type: opt
+                label: "if non-retriable"
+                steps:
+                  - self: intake
+                    label: Verification marked cannot_verify; caseworker decides next step
 
       # ── Interview ─────────────────────────────────────────────────────────────
       - fragment: interview
@@ -727,38 +842,45 @@ flows:
   - id: determination
     label: Eligibility Determination
     domain: intake
-    description: From caseworker submission through case creation
+    description: Covers both auto-determination (determination_complete arrives from eligibility at submission) and caseworker-initiated determination
     participants: [caseworker, supervisor, intake, eligibility, communications, workflow, case_management]
     steps:
-      - ref: caseworker_review
-        label: Caseworker Review
-      - fragment: submit-for-determination
+      - fragment: caseworker-initiated
+        type: opt
+        label: "if caseworker-initiated (not auto-determined at submission)"
         steps:
-          - label: Submits case for determination
-            from: caseworker
-            to: intake
-            note: Available when all verification items are resolved
-          - self: intake
-            label: Status updated to pending determination
-          - event: application.review_completed
-            from: intake
-            to: eligibility
-      - fragment: eligibility-calculation
-        steps:
+          - ref: caseworker_review
+            label: Caseworker Review
+          - fragment: submit-for-determination
+            steps:
+              - label: Submits case for determination
+                from: caseworker
+                to: intake
+                note: Available when all verification items are resolved
+              - self: intake
+                label: Status updated to pending determination
+              - event: application.review_completed
+                from: intake
+                to: eligibility
           - self: eligibility
-            label: Calculates eligibility
-            note: Income and expense calculations against household data, per program
-          - event: determination_complete
-            from: eligibility
-            to: intake
-          - self: intake
-            label: Records determination outcome
+            label: Calculates eligibility per program and per person
+            note: Uses verification evidence from intake and RTE results; income and expense calculations against household data
+      - event: determination_complete
+        from: eligibility
+        to: intake
+        note: Per person for Medicaid; per program (household) for SNAP; triggered by auto-determination or caseworker-initiated calculation
+      - self: intake
+        label: Determination recorded per person per program
+        gap: true
+        gap_description: Intake has no per-person per-program status entity yet; design question open in #248
+      - fragment: caseworker-review-results
+        type: opt
+        label: "if caseworker-initiated"
+        steps:
           - label: Reviews determination results
             from: caseworker
             to: intake
             note: Exception review only — not approving a calculation they triggered
-      - fragment: determination-decision
-        steps:
           - label: Records determination and rationale
             from: caseworker
             to: intake
@@ -796,12 +918,28 @@ flows:
                 from: supervisor
                 to: intake
                 note: If rejected, intake flags for revision and workflow reassigns caseworker task
-          - event: determination.recorded
+      - event: determination.recorded
+        from: intake
+        to: communications
+      - self: communications
+        label: Sends Notice of Action
+        note: Generated from determination outcome; delivered to applicant
+        gap: true
+        gap_description: Notice template catalog not yet designed; blocked on verification.failed carrying category and program
+      - self: intake
+        label: "If all programs and members resolved → application closed"
+        gap: true
+        gap_description: Intake has no per-person per-program status entity yet; design question open in #248
+      - fragment: all-resolved
+        type: opt
+        label: "if all programs and members determined"
+        steps:
+          - label: Cancel intake task
             from: intake
-            to: communications
-          - self: communications
-            label: Sends Notice of Action
-            note: Generated from determination outcome; delivered to applicant
+            to: workflow
+            note: "[if auto-determined at submission] intake task never routed to caseworker queue"
+            gap: true
+            gap_description: No API designed yet for intake to cancel a workflow task; requires workflow contract addition. See #248 Q4.
           - event: application.closed
             from: intake
             to: case_management
