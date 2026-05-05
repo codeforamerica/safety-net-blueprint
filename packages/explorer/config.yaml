@@ -147,27 +147,39 @@ events:
 
   # ── Eligibility ───────────────────────────────────────────────────────────────
 
-  # expedited screening result in response to application.submitted;
-  # intake sets isExpedited: true and assigns the expedited SLA track
+  # expedited screening result — intake sets isExpedited: true on the application;
+  # workflow subscribes directly to assign the expedited SLA track (no re-publish needed)
+  # CONTRACT NOTE: workflow rules need a subscription to this event; intake-rules.yaml
+  # flag-expedited transition and application.expedited_flagged event can be removed
   - name: eligibility.application.expedited
     publisher: eligibility
     status: planned
     subscribers:
       - intake
+      - workflow
 
-  # Medicaid RTE result per person per program — emitted after eligibility processes
-  # call.completed from fdsh_fti and enrollment_check; intake subscribes to surface
-  # results to caseworkers and record per-person eligibility status
-  - name: eligibility.rte_completed
+  # pre-screening result per program — fires at submission and re-fires when material
+  # verification results arrive; caseworkers see alongside verification obligations;
+  # workflow uses for queue routing; not a legal determination
+  - name: eligibility.application.prescreened
+    publisher: eligibility
+    status: planned
+    subscribers:
+      - intake
+      - workflow
+
+  # legally binding determination per person per program — fires on auto-determination
+  # at submission (Medicaid, all checks conclusive, 45 CFR § 435.911) or after
+  # application.review_completed; intake records outcome per person per program
+  - name: eligibility.application.determination_completed
     publisher: eligibility
     status: planned
     subscribers:
       - intake
 
-  # final eligibility determination — per person for Medicaid, per program (household)
-  # for SNAP; fires on auto-determination (conclusive RTE) or after caseworker review;
-  # intake subscribes to record outcome and close application when all programs resolved
-  - name: determination_complete
+  # fires once all program+member combinations on the application are determined;
+  # triggers intake to update final status and close the application
+  - name: eligibility.application.all_determined
     publisher: eligibility
     status: planned
     subscribers:
@@ -184,13 +196,8 @@ events:
 
   # ── Intake ───────────────────────────────────────────────────────────────────
 
-  # emitted when a verification item becomes inconclusive or fails electronic check;
-  # communications subscribes to send a document request notice to the applicant
-  - name: verification.failed
-    publisher: intake
-    status: planned
-    subscribers:
-      - communications
+  # intake calls communications directly when a document request is created on a verification item;
+  # no event — intake knows exactly what it needs and who to call
 
   # emitted after caseworker records (and supervisor approves) determination;
   # communications subscribes to generate and send the Notice of Action
@@ -209,12 +216,13 @@ events:
       - workflow
 
 
-  # triggers case creation when disposition is approved
+  # triggers case creation and workflow task cleanup on close
   - name: application.closed
     publisher: intake
     status: implemented
     subscribers:
       - case_management
+      - workflow
 
   - name: application.expedited_flagged
     publisher: intake
@@ -471,7 +479,7 @@ flows:
     label: Application Submission
     domain: intake
     description: Events triggered when an application is submitted
-    participants: [applicant, intake, workflow, eligibility, data_exchange, client_management, document_management, communications]
+    participants: [applicant, intake, workflow, eligibility, data_exchange, document_management, communications, client_management]
     steps:
       - fragment: submission
         steps:
@@ -557,19 +565,17 @@ flows:
         label: Verification status updated; electronic evidence appended
       - fragment: inconclusive-result
         type: opt
-        label: "if inconclusive"
+        label: "if electronic verification inconclusive or failed"
         steps:
-          - self: intake
-            label: Document request created on Verification
-          - event: verification.failed
+          - label: Send document request notice
             from: intake
             to: communications
             gap: true
-            gap_description: "Communications needs verification category and program on the event payload to select the right notice template; template catalog not yet designed"
+            gap_description: "Communications needs verification category and program on the payload to select the right notice template; template catalog not yet designed"
           - self: communications
             label: Document request notice sent to applicant
             gap: true
-            gap_description: Notice template catalog not yet designed; blocked on verification.failed carrying category and program
+            gap_description: Notice template catalog not yet designed
       - fragment: submission-fanout
         type: par
         operands:
@@ -592,19 +598,27 @@ flows:
                 type: opt
                 label: "if expedited criteria met"
                 steps:
-                  - event: eligibility.application.expedited
-                    from: eligibility
-                    to: intake
-                  - self: intake
-                    label: Set isExpedited = true on application
-                  - event: application.expedited_flagged
-                    from: intake
-                    to: workflow
-                  - self: workflow
-                    label: Assign expedited SLA track
-                    gap: true
-                    gap_description: Expedited SLA type and workflow task switching not yet designed
-              - fragment: medicaid-rte
+                  - fragment: expedited-fanout
+                    type: par
+                    operands:
+                      - label: Intake
+                        steps:
+                          - event: eligibility.application.expedited
+                            from: eligibility
+                            to: intake
+                          - self: intake
+                            label: Set isExpedited = true on application
+                      - label: Workflow
+                        steps:
+                          - event: eligibility.application.expedited
+                            from: eligibility
+                            to: workflow
+                            note: Direct subscription — no intake relay
+                          - self: workflow
+                            label: Assign expedited SLA track
+                            gap: true
+                            gap_description: Expedited SLA type and workflow task switching not yet designed
+              - fragment: medicaid-prescreening
                 type: opt
                 label: "if Medicaid applied"
                 steps:
@@ -614,7 +628,7 @@ flows:
                     regulatory:
                       - citation: "42 CFR § 435.911"
                         summary: "Ex parte rule: use available electronic data before requesting information from applicant"
-                  - label: existing enrollment check (enrollment_check)
+                  - label: existing coverage check (fdsh_medicare, fdsh_vci)
                     from: eligibility
                     to: data_exchange
                     regulatory:
@@ -625,24 +639,17 @@ flows:
                     to: eligibility
                     note: One per call; results arrive asynchronously
                   - self: eligibility
-                    label: RTE result evaluated per Medicaid applicant
-                  - event: eligibility.rte_completed
+                    label: Pre-screening result evaluated per Medicaid applicant
+                  - event: eligibility.application.prescreened
                     from: eligibility
                     to: intake
-                    note: Per person per program; includes outcome and any flags
-                  - self: intake
-                    label: RTE result recorded per person; visible to caseworker
-                    gap: true
-                    gap_description: Intake has no per-person per-program status entity yet; design question open in #248
-                  - fragment: rte-auto-determination
+                    note: Per-program indicators (likely_eligible | needs_review | likely_ineligible); caseworkers can see alongside verification obligations
+                  - fragment: medicaid-auto-determination
                     type: opt
-                    label: "if conclusive positive for this person (income compatible, not already enrolled)"
+                    label: "if eligibility determines all checks conclusive — Medicaid auto-determined (45 CFR § 435.911)"
                     steps:
-                      - event: determination_complete
-                        from: eligibility
-                        to: intake
-                        note: Per person; Medicaid approved
                       - ref: determination
+                        label: Eligibility Determination (Path A — auto)
           - label: Match to Existing Client Record
             steps:
               - event: application.submitted
@@ -666,7 +673,7 @@ flows:
     label: Caseworker Review
     domain: intake
     description: From task claim through interview to verification complete
-    participants: [caseworker, supervisor, intake, workflow, scheduling, document_management, communications, data_exchange]
+    participants: [caseworker, supervisor, intake, workflow, data_exchange, scheduling, document_management, communications]
     steps:
       - ref: application_submission
         label: Application Submission
@@ -724,19 +731,19 @@ flows:
               - citation: "42 CFR § 435.911"
                 summary: "Ex parte rule: paper documents may only be requested after electronic verification returns inconclusive"
                 detail: "Applies to citizenship (FDSH), immigration status (SAVE), and income (IEVS)"
-          - fragment: verification-failed
+          - fragment: verification-inconclusive
             type: opt
-            label: "if verification inconclusive"
+            label: "if electronic verification inconclusive or failed"
             steps:
-              - event: verification.failed
+              - label: Send document request notice
                 from: intake
                 to: communications
                 gap: true
-                gap_description: "Communications needs verification category and program on the event payload to select the right notice template; template catalog not yet designed"
+                gap_description: "Communications needs verification category and program on the payload to select the right notice template; template catalog not yet designed"
               - self: communications
                 label: Document request notice sent to applicant
                 gap: true
-                gap_description: Notice template catalog not yet designed; blocked on verification.failed carrying category and program
+                gap_description: Notice template catalog not yet designed
               - label: Uploads supporting document; attaches to verification item
                 from: caseworker
                 to: intake
@@ -842,41 +849,42 @@ flows:
   - id: determination
     label: Eligibility Determination
     domain: intake
-    description: Covers both auto-determination (determination_complete arrives from eligibility at submission) and caseworker-initiated determination
-    participants: [caseworker, supervisor, intake, eligibility, communications, workflow, case_management]
+    description: "Two paths to determination: (A) auto — Medicaid only, eligibility proceeds directly from conclusive pre-screening at submission, no caseworker involvement (45 CFR § 435.911); (B) manual — caseworker completes review, intake fires application.review_completed, eligibility runs rules engine for all undetermined program+member combinations. Both paths converge at eligibility.application.all_determined."
+    participants: [caseworker, supervisor, intake, workflow, eligibility, communications, case_management]
     steps:
-      - fragment: caseworker-initiated
+      - fragment: auto-determination
         type: opt
-        label: "if caseworker-initiated (not auto-determined at submission)"
+        label: "Path A: auto-determination (Medicaid, all pre-screening checks conclusive at submission)"
+        steps:
+          - ref: application_submission
+            label: Application Submission
+
+      - fragment: manual-determination
+        type: opt
+        label: "Path B: manual determination (SNAP always; Medicaid when checks inconclusive)"
         steps:
           - ref: caseworker_review
             label: Caseworker Review
-          - fragment: submit-for-determination
-            steps:
-              - label: Submits case for determination
-                from: caseworker
-                to: intake
-                note: Available when all verification items are resolved
-              - self: intake
-                label: Status updated to pending determination
-              - event: application.review_completed
-                from: intake
-                to: eligibility
+          - label: Submits case for determination
+            from: caseworker
+            to: intake
+            note: Available when all verification items are resolved
+          - self: intake
+            label: Status updated to pending determination
+          - event: application.review_completed
+            from: intake
+            to: eligibility
           - self: eligibility
-            label: Calculates eligibility per program and per person
-            note: Uses verification evidence from intake and RTE results; income and expense calculations against household data
-      - event: determination_complete
-        from: eligibility
-        to: intake
-        note: Per person for Medicaid; per program (household) for SNAP; triggered by auto-determination or caseworker-initiated calculation
-      - self: intake
-        label: Determination recorded per person per program
-        gap: true
-        gap_description: Intake has no per-person per-program status entity yet; design question open in #248
-      - fragment: caseworker-review-results
-        type: opt
-        label: "if caseworker-initiated"
-        steps:
+            label: Runs rules engine for all undetermined program+member combinations
+            note: Skips any already auto-determined at submission; uses verification evidence and household data
+          - event: eligibility.application.determination_completed
+            from: eligibility
+            to: intake
+            note: Per person per program; may fire multiple times as each resolves
+          - self: intake
+            label: Determination recorded per person per program
+            gap: true
+            gap_description: Intake has no per-person per-program status entity yet; design question open in #248
           - label: Reviews determination results
             from: caseworker
             to: intake
@@ -892,10 +900,8 @@ flows:
                 summary: "Medicaid: determination within 45 days"
           - fragment: supervisor-approval
             type: opt
-            condition: if supervisor approval required
+            label: "if supervisor approval required"
             steps:
-              - self: intake
-                label: Evaluates if supervisor approval required
               - event: determination.approval_needed
                 from: intake
                 to: workflow
@@ -918,31 +924,25 @@ flows:
                 from: supervisor
                 to: intake
                 note: If rejected, intake flags for revision and workflow reassigns caseworker task
-      - event: determination.recorded
+
+      # ── Shared convergence (both paths arrive here) ────────────────────────
+      - event: eligibility.application.all_determined
+        from: eligibility
+        to: intake
+        note: Fires once all program+member combinations are determined; auto path fires at submission, manual path fires after review_completed
+      - self: intake
+        label: Application status updated to determined
+
+      # ── Shared close ───────────────────────────────────────────────────────
+      - label: Send Notice of Action
         from: intake
         to: communications
-      - self: communications
-        label: Sends Notice of Action
-        note: Generated from determination outcome; delivered to applicant
         gap: true
-        gap_description: Notice template catalog not yet designed; blocked on verification.failed carrying category and program
-      - self: intake
-        label: "If all programs and members resolved → application closed"
-        gap: true
-        gap_description: Intake has no per-person per-program status entity yet; design question open in #248
-      - fragment: all-resolved
-        type: opt
-        label: "if all programs and members determined"
-        steps:
-          - label: Cancel intake task
-            from: intake
-            to: workflow
-            note: "[if auto-determined at submission] intake task never routed to caseworker queue"
-            gap: true
-            gap_description: No API designed yet for intake to cancel a workflow task; requires workflow contract addition. See #248 Q4.
-          - event: application.closed
-            from: intake
-            to: case_management
-          - self: case_management
-            label: Creates case
+        gap_description: Notice template catalog not yet designed
+      - event: application.closed
+        from: intake
+        to: case_management
+        note: workflow also subscribes — cancels any open intake task for this applicationId
+      - self: case_management
+        label: Creates case
 
