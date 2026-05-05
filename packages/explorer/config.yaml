@@ -460,8 +460,8 @@ flows:
 
   # ── Intake flows ──────────────────────────────────────────────────────────────
 
-  # Triggered by submission; fans out in parallel to four domains.
-  # Eligibility and client_management respond async — not a strict sequence.
+  # Triggered by submission; fans out in parallel to three domains.
+  # Federal verification checks (data_exchange) are direct API calls, not event-driven.
   - id: application_submission
     label: Application Submission
     domain: intake
@@ -487,6 +487,23 @@ flows:
         steps:
           - self: intake
             label: Verification items and baseline document requirements created
+      - fragment: federal-verification
+        steps:
+          - label: Initiates federal verification checks
+            from: intake
+            to: data_exchange
+            note: "Direct API calls — FDSH, IEVS, SAVE, SSA (not event-driven)"
+          - self: data_exchange
+            label: Federal checks initiated
+            note: "FDSH, IEVS, SAVE, SSA"
+          - event: call.completed
+            from: data_exchange
+            to: intake
+            note: One per service; results arrive asynchronously and in any order
+          - self: intake
+            label: Update verification records with federal check results
+            gap: true
+            gap_description: Intake handler for call.completed updating verifications not yet designed
       - fragment: applicant-document-upload
         type: opt
         label: "if applicant submits supporting documents"
@@ -500,15 +517,16 @@ flows:
             label: Documents linked to verification items
       - fragment: submission-fanout
         type: par
-        label: "Triggered concurrently — responses may arrive in any order"
         operands:
-          - steps:
+          - label: Queue Intake Task & Assign SLA
+            steps:
               - event: application.submitted
                 from: intake
                 to: workflow
               - self: workflow
                 label: Task created in intake queue; SLA and queue routing assigned
-          - steps:
+          - label: Run Expedited & Medicaid Screening
+            steps:
               - event: application.submitted
                 from: intake
                 to: eligibility
@@ -544,23 +562,8 @@ flows:
                     label: Create RTE verification record with Medicaid eligibility outcome
                     gap: true
                     gap_description: rte verification type not yet defined in intake contracts
-          - steps:
-              - label: Initiates federal verification checks
-                from: intake
-                to: data_exchange
-                note: "Direct API calls — FDSH, IEVS, SAVE, SSA (not event-driven)"
-              - self: data_exchange
-                label: Federal checks initiated
-                note: "FDSH, IEVS, SAVE, SSA"
-              - event: call.completed
-                from: data_exchange
-                to: intake
-                note: One per service; results arrive asynchronously and in any order
-              - self: intake
-                label: Update verification records with federal check results
-                gap: true
-                gap_description: Intake handler for call.completed updating verifications not yet designed
-          - steps:
+          - label: Match to Existing Client Record
+            steps:
               - event: application.submitted
                 from: intake
                 to: client_management

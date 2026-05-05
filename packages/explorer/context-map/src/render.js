@@ -44,21 +44,21 @@ mkdirSync(OUT_DIR, { recursive: true });
 const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 const STATUS_STYLE = {
-  partial:           { fill: '#eff6ff', stroke: '#2563eb', sw: 2,   dash: false },
-  'not-started':     { fill: '#f9fafb', stroke: '#9ca3af', sw: 1.5, dash: true  },
-  'design-complete': { fill: '#f0fdf4', stroke: '#16a34a', sw: 2,   dash: false },
+  partial:           { fill: '#E6EBF9', stroke: '#5650BE', sw: 2,   dash: false },
+  'not-started':     { fill: '#F3F3F3', stroke: '#E9CCBE', sw: 1.5, dash: true  },
+  'design-complete': { fill: '#E2F9F6', stroke: '#00AD93', sw: 2,   dash: false },
 };
 
 // Per-status color for individual event/API labels
 const EVENT_STATUS_COLOR = {
-  implemented: '#16a34a',
-  planned:     '#2563eb',
-  partial:     '#2563eb',
-  api:         '#0369a1',
+  implemented: '#00AD93',
+  planned:     '#5650BE',
+  partial:     '#5650BE',
+  api:         '#2B1A78',
 };
 
 // Flow sequence diagram constants
-const GAP_COLOR = '#f97316';
+const GAP_COLOR = '#AF121D';
 
 // ── Hex geometry helpers ───────────────────────────────────────────────────
 
@@ -136,12 +136,12 @@ function textBlock(cx, startY, lines, lh, size, fill, weight = 'normal') {
  */
 function headerBarParts(W, leftParts = [], centerLabel = null) {
   const parts = [
-    `<rect x="0" y="0" width="${W}" height="44" fill="#f9fafb"/>`,
-    `<line x1="0" y1="44" x2="${W}" y2="44" stroke="#e5e7eb" stroke-width="1"/>`,
+    `<rect x="0" y="0" width="${W}" height="44" fill="#F3F3F3"/>`,
+    `<line x1="0" y1="44" x2="${W}" y2="44" stroke="#E9CCBE" stroke-width="1"/>`,
     ...leftParts,
   ];
   if (centerLabel) {
-    parts.push(svgText(centerLabel, 700, 27, { anchor: 'middle', size: 13, weight: 700, fill: '#111827' }));
+    parts.push(svgText(centerLabel, 700, 27, { anchor: 'middle', size: 13, weight: 700, fill: '#000000' }));
   }
   // Legend (right side)
   const legItems = [
@@ -154,7 +154,7 @@ function headerBarParts(W, leftParts = [], centerLabel = null) {
     const st   = STATUS_STYLE[item.status];
     const dash = st.dash ? ' stroke-dasharray="4 3"' : '';
     parts.push(`<polygon points="${hexPtsStr(lx + 6, 23, 6)}" fill="${st.fill}" stroke="${st.stroke}" stroke-width="1.5"${dash}/>`);
-    parts.push(svgText(item.label, lx + 17, 27, { size: 9, fill: '#374151' }));
+    parts.push(svgText(item.label, lx + 17, 27, { size: 9, fill: '#000000' }));
     lx += 104;
   }
   return parts;
@@ -198,8 +198,8 @@ function groupIntoFlows(cfg) {
 // ── Flow sequence diagram helpers ──────────────────────────────────────────
 
 const FRAGMENT_STYLES = {
-  par: { stroke: '#7c3aed', fill: 'rgba(124,58,237,0.03)', label: 'par' },
-  opt: { stroke: '#2563eb', fill: 'rgba(37,99,235,0.04)',  label: 'opt' },
+  par: { stroke: '#2B1A78', fill: 'rgba(43,26,120,0.03)',  label: 'par' },
+  opt: { stroke: '#5650BE', fill: 'rgba(86,80,190,0.04)',  label: 'opt' },
 };
 
 function flattenSteps(steps) {
@@ -227,8 +227,10 @@ function collectFragments(steps) {
       if (step.fragment !== undefined) {
         const startIdx = flatIdx;
         const separators = [];
+        const operandStarts = [];
         if (step.operands) {
           for (let i = 0; i < step.operands.length; i++) {
+            operandStarts.push({ idx: flatIdx, label: step.operands[i].label });
             walk(step.operands[i].steps || [], depth + 1);
             if (i < step.operands.length - 1) separators.push(flatIdx - 1);
           }
@@ -239,7 +241,7 @@ function collectFragments(steps) {
         // Only collect fragments that have a visual type (opt/par).
         // Named sections (fragment with no type) are transparent — steps render as if at top level.
         if (endIdx >= startIdx && step.type) {
-          fragments.push({ type: step.type, label: step.label, depth, startIdx, endIdx, separators });
+          fragments.push({ type: step.type, label: step.label, depth, startIdx, endIdx, separators, operandStarts });
         }
       } else {
         flatIdx++;
@@ -297,12 +299,12 @@ function renderFlowPage(flow) {
     if (p.type === 'actor') {
       const st = ['position:absolute', `left:${left}px`, `top:${HEADER_TOP}px`,
         `width:${COL_W}px`, `height:${HEADER_H}px`,
-        'background:#eef2ff', 'border:1.5px solid #4f46e5', 'border-radius:8px',
+        'background:#E6EBF9', 'border:1.5px solid #2B1A78', 'border-radius:8px',
         'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
         'box-sizing:border-box', 'z-index:2'].join(';');
       return `<div style="${st}">` +
-        `<div style="font-size:9px;color:#4338ca;margin-bottom:2px;">&#128100;</div>` +
-        `<div style="font-size:12px;font-weight:700;color:#3730a3;">${p.label}</div></div>`;
+        `<div style="font-size:9px;color:#2B1A78;margin-bottom:2px;">&#128100;</div>` +
+        `<div style="font-size:12px;font-weight:700;color:#2B1A78;">${p.label}</div></div>`;
     }
     const s      = STATUS_STYLE[p.status] || STATUS_STYLE['not-started'];
     const border = s.dash ? `1.5px dashed ${s.stroke}` : `1.5px solid ${s.stroke}`;
@@ -312,17 +314,20 @@ function renderFlowPage(flow) {
       'display:flex', 'align-items:center', 'justify-content:center',
       'text-align:center', 'box-sizing:border-box', 'z-index:2', 'padding:4px 6px'].join(';');
     return `<div style="${st}">` +
-      `<div style="font-size:12px;font-weight:700;color:#111827;">${p.label}</div></div>`;
+      `<div style="font-size:12px;font-weight:700;color:#000000;">${p.label}</div></div>`;
   }).join('\n');
 
   // ── SVG: lifelines + arrows ───────────────────────────────────────────────
 
   const svgParts = [`  <defs>
-    <marker id="sq-gray"   markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#9ca3af" fill="none" stroke-width="1.5"/></marker>
-    <marker id="sq-green"  markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#16a34a" fill="none" stroke-width="1.5"/></marker>
-    <marker id="sq-indigo" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#4f46e5" fill="none" stroke-width="1.5"/></marker>
-    <marker id="sq-orange" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#f97316" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-gray"      markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#9ca3af" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-blue"      markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#5650BE" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-green"     markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#00AD93" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-dark-blue" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#2B1A78" fill="none" stroke-width="1.5"/></marker>
+    <marker id="sq-red"       markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1.5 L8,4.5 L0,7.5" stroke="#AF121D" fill="none" stroke-width="1.5"/></marker>
   </defs>`];
+
+  const labelDivs = [];
 
   // Fragment rectangles (drawn before lifelines so they sit behind everything)
   const FRAG_PAD = 10;
@@ -358,8 +363,23 @@ function renderFlowPage(flow) {
       );
     }
 
+    // Collect per-operand labels for rendering as HTML divs (above the SVG/lifelines).
+    for (const { idx, label } of (frag.operandStarts || [])) {
+      if (!label) continue;
+      const opIdx = frag.operandStarts.findIndex(o => o.idx === idx);
+      const isFirst = idx === frag.startIdx;
+      const topPx = isFirst
+        ? ly + lh - 12
+        : FIRST_Y + (frag.separators[opIdx - 1] + 0.7) * STEP_H + 11;
+      labelDivs.push(
+        `<div style="position:absolute;left:${(lx + lw + 14).toFixed(1)}px;top:${topPx.toFixed(1)}px;` +
+        `font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
+        `color:${style.stroke};white-space:nowrap;z-index:3;">${label}</div>`
+      );
+    }
+
     for (const sepIdx of (frag.separators || [])) {
-      const sy = (FIRST_Y + (sepIdx + 0.5) * STEP_H).toFixed(1);
+      const sy = (FIRST_Y + (sepIdx + 0.7) * STEP_H).toFixed(1);
       svgParts.push(
         `  <line x1="${fx}" y1="${sy}" x2="${fx + fw}" y2="${sy}" ` +
         `stroke="${style.stroke}" stroke-width="1" stroke-dasharray="4,2"/>`
@@ -371,12 +391,11 @@ function renderFlowPage(flow) {
   for (let i = 0; i < N; i++) {
     svgParts.push(
       `  <line x1="${colX[i]}" y1="${LIFELINE_Y}" x2="${colX[i]}" y2="${H - FOOTER_H}" ` +
-      `stroke="${participants[i].type === 'actor' ? '#fde68a' : '#e5e7eb'}" stroke-width="1.5" stroke-dasharray="5,4"/>`
+      `stroke="#E9CCBE" stroke-width="1.5" stroke-dasharray="5,4"/>`
     );
   }
 
   // Steps
-  const labelDivs = [];
   let gapIdx = 0, regIdx = 0;
   flatSteps.forEach((step, idx) => {
     const y = FIRST_Y + idx * STEP_H;
@@ -391,12 +410,12 @@ function renderFlowPage(flow) {
       const boxH2 = 36, boxY = y - boxH2 / 2;
       labelDivs.push(
         `<div data-navigate="flow_${refFlow?.domain}_${step.ref}" style="position:absolute;left:${ML}px;top:${boxY}px;` +
-        `width:${W - ML - MR}px;height:${boxH2}px;border:1.5px solid #93c5fd;border-radius:4px;` +
-        `background:#eff6ff;display:flex;align-items:center;justify-content:center;` +
+        `width:${W - ML - MR}px;height:${boxH2}px;border:1.5px solid #A1B4EA;border-radius:4px;` +
+        `background:#E6EBF9;display:flex;align-items:center;justify-content:center;` +
         `cursor:pointer;z-index:3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">` +
-        `<span style="position:absolute;top:3px;left:6px;font-size:7px;font-weight:700;color:#2563eb;` +
-        `border:1px solid #93c5fd;border-radius:2px;padding:0 3px;background:white;">ref</span>` +
-        `<span style="font-size:10px;color:#2563eb;font-weight:600;">${refText}</span>` +
+        `<span style="position:absolute;top:3px;left:6px;font-size:7px;font-weight:700;color:#5650BE;` +
+        `border:1px solid #A1B4EA;border-radius:2px;padding:0 3px;background:white;">ref</span>` +
+        `<span style="font-size:10px;color:#5650BE;font-weight:600;">${refText}</span>` +
         `</div>`
       );
       return;
@@ -409,7 +428,7 @@ function renderFlowPage(flow) {
       const isGap  = !!step.gap;
       const color  = isGap ? GAP_COLOR : '#6b7280';
       const dash   = isGap ? ' stroke-dasharray="5,3"' : '';
-      const marker = isGap ? 'sq-orange' : 'sq-gray';
+      const marker = isGap ? 'sq-red' : 'sq-gray';
       const prefix = isGap ? '\u26a0\ufe0f\u202f' : '';
       // Right-side columns go left so the label doesn't overflow the fragment box.
       const goLeft = sx > W / 2;
@@ -451,10 +470,10 @@ function renderFlowPage(flow) {
     const isActor  = participants[fi].type === 'actor';
     const evStatus = step.event ? (eventMap[step.event]?.status || 'planned') : null;
     let color, markerId;
-    if      (step.gap)                   { color = GAP_COLOR;  markerId = 'sq-orange'; }
-    else if (isActor)                    { color = '#4f46e5';  markerId = 'sq-indigo'; }
-    else if (evStatus === 'implemented') { color = '#16a34a';  markerId = 'sq-green';  }
-    else                                 { color = '#9ca3af';  markerId = 'sq-gray';   }
+    if      (step.gap)                   { color = GAP_COLOR;  markerId = 'sq-red';       }
+    else if (isActor)                    { color = '#2B1A78';  markerId = 'sq-dark-blue'; }
+    else if (evStatus === 'implemented') { color = '#00AD93';  markerId = 'sq-green';     }
+    else                                 { color = '#5650BE';  markerId = 'sq-blue';      }
 
     const dir  = tx > fx ? 1 : -1;
     const x2   = tx - dir * 8;
@@ -473,7 +492,7 @@ function renderFlowPage(flow) {
     const mainText = step.event || step.label || '';
 
     let above = `<div style="font-size:9px;font-weight:600;color:${color};white-space:nowrap;">${gapPrefix}${icon}${mainText}</div>`;
-    if (step.condition) above += `<div style="font-size:8px;color:#2563eb;font-style:italic;white-space:nowrap;">[${step.condition}]</div>`;
+    if (step.condition) above += `<div style="font-size:8px;color:#5650BE;font-style:italic;white-space:nowrap;">[${step.condition}]</div>`;
 
     labelDivs.push(
       `<div style="position:absolute;left:${midX}px;top:${aboveY}px;transform:translate(-50%,0);` +
@@ -491,7 +510,7 @@ function renderFlowPage(flow) {
       const tipX = (parseFloat(midX) + Math.abs(tx - fx) * 0.3 + 4).toFixed(1);
       const tipRows = step.regulatory.map((r, i) =>
         (i > 0 ? `<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>` : '') +
-        `<div style="font-size:7.5px;font-weight:700;color:#4f46e5;">${r.citation}</div>` +
+        `<div style="font-size:7.5px;font-weight:700;color:#2B1A78;">${r.citation}</div>` +
         `<div style="font-size:8px;color:#374151;">${r.summary}</div>` +
         (r.detail ? `<div style="font-size:7.5px;color:#6b7280;font-style:italic;">${r.detail}</div>` : '')
       ).join('');
@@ -499,9 +518,9 @@ function renderFlowPage(flow) {
         `<div class="int-hit" data-int-id="${id}" style="position:absolute;` +
         `left:${tipX}px;top:${(y - 7)}px;width:14px;height:14px;` +
         `display:flex;align-items:center;justify-content:center;` +
-        `background:#f0f4ff;border:1px solid #c7d2fe;border-radius:3px;` +
+        `background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;` +
         `cursor:help;z-index:4;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;` +
-        `font-size:8px;color:#6366f1;">&#9878;</div>` +
+        `font-size:8px;color:#5650BE;">&#9878;</div>` +
         `<div class="int-content" data-int-id="${id}" style="display:none;">${tipRows}</div>`
       );
     }
@@ -530,20 +549,20 @@ function renderFlowPage(flow) {
   const domainLabel = domainMap[flow.domain]?.label || flow.domain;
 
   const flowHeader =
-    `<div style="position:absolute;top:0;left:0;right:0;height:44px;background:#f9fafb;` +
-    `border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 20px;` +
+    `<div style="position:absolute;top:0;left:0;right:0;height:44px;background:#F3F3F3;` +
+    `border-bottom:1px solid #E9CCBE;display:flex;align-items:center;padding:0 20px;` +
     `z-index:10;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">` +
     `<div class="slide-nav" style="font-size:12px;">` +
-    `<span data-navigate="domains" style="color:#2563eb;cursor:pointer;">&#8592; Context Map</span>` +
+    `<span data-navigate="domains" style="color:#5650BE;cursor:pointer;">&#8592; Context Map</span>` +
     `<span style="color:#6b7280;"> / </span>` +
-    `<span data-navigate="domain_${flow.domain}" style="color:#2563eb;cursor:pointer;">${domainLabel}</span>` +
+    `<span data-navigate="domain_${flow.domain}" style="color:#5650BE;cursor:pointer;">${domainLabel}</span>` +
     `<span style="color:#6b7280;"> / ${flow.label}</span>` +
     `</div>` +
     `<div style="position:absolute;right:20px;top:0;height:44px;display:flex;align-items:center;gap:14px;font-size:9px;">` +
-    `<span>${mkArrow('#16a34a', false)}&thinsp;Implemented</span>` +
-    `<span>${mkArrow('#9ca3af', false)}&thinsp;Planned</span>` +
-    `<span>${mkArrow('#4f46e5', false)}&thinsp;Human action</span>` +
-    `<span>${mkArrow('#f97316', true)}&thinsp;Gap</span>` +
+    `<span>${mkArrow('#00AD93', false)}&thinsp;Implemented</span>` +
+    `<span>${mkArrow('#5650BE', false)}&thinsp;Planned</span>` +
+    `<span>${mkArrow('#2B1A78', false)}&thinsp;Human action</span>` +
+    `<span>${mkArrow('#AF121D', true)}&thinsp;Gap</span>` +
     `</div>` +
     `</div>`;
 
@@ -585,7 +604,7 @@ function renderOverview() {
   const parts = [
     `<rect x="0" y="0" width="${W}" height="${H}" fill="white"/>`,
     ...headerBarParts(W, [
-      svgText(config.title || 'Context Map', 700, 27, { anchor: 'middle', size: 13, weight: 700, fill: '#111827' }),
+      svgText(config.title || 'Context Map', 700, 27, { anchor: 'middle', size: 13, weight: 700, fill: '#000000' }),
     ]),
     `<g class="slide-nav">${svgText('Click a domain to explore', 12, 27, { anchor: 'start', size: 9, fill: '#9ca3af', italic: true })}</g>`,
   ];
@@ -593,9 +612,9 @@ function renderOverview() {
   // Cross-cutting banner
   const cc = (config.cross_cutting || []).join(' \u00b7 ');
   parts.push(
-    `<rect x="40" y="55" width="${W - 80}" height="46" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/>`,
-    svgText('CROSS-CUTTING CONCERNS', 700, 73, { anchor: 'middle', size: 9, weight: 700, fill: '#15803d' }),
-    svgText(cc, 700, 90, { anchor: 'middle', size: 12, fill: '#166534' }),
+    `<rect x="40" y="55" width="${W - 80}" height="46" rx="6" fill="#E2F9F6" stroke="#00AD93" stroke-width="1"/>`,
+    svgText('CROSS-CUTTING CONCERNS', 700, 73, { anchor: 'middle', size: 9, weight: 700, fill: '#006152' }),
+    svgText(cc, 700, 90, { anchor: 'middle', size: 12, fill: '#00AD93' }),
   );
 
   // Domain hexagons
@@ -606,9 +625,9 @@ function renderOverview() {
   for (const d of sortedDomains) {
     const { cx, cy } = d;
 
-    const isNav   = d.status !== 'not-started';
-    const navAttr = isNav ? `data-navigate="domain_${d.id}" cursor="pointer"` : '';
-    parts.push(hexPoly(cx, cy, R_OV, d.status, navAttr));
+    const isNav = d.status !== 'not-started';
+    if (isNav) parts.push(`<g data-navigate="domain_${d.id}" cursor="pointer">`);
+    parts.push(hexPoly(cx, cy, R_OV, d.status));
 
     const labelLines = wrapLines(d.label, LABEL_W, 13);
     const descLines  = wrapLines(d.description || '', DESC_W, 9);
@@ -617,9 +636,10 @@ function renderOverview() {
     const totalH = labelLines.length*LLH + GAP + descLines.length*DLH;
     let ty = cy - totalH/2 + LLH * 0.8;
 
-    parts.push(...textBlock(cx, ty, labelLines, LLH, 13, '#111827', 700));
+    parts.push(...textBlock(cx, ty, labelLines, LLH, 13, '#000000', 700));
     ty += labelLines.length*LLH + GAP;
     parts.push(...textBlock(cx, ty, descLines, DLH, 9, '#6b7280'));
+    if (isNav) parts.push(`</g>`);
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="display:block">\n${parts.join('\n')}\n</svg>`;
@@ -688,16 +708,16 @@ function renderDetail(domainId) {
   parts.push(
     ...headerBarParts(W, [
       `<g class="slide-nav" data-navigate="domains" cursor="pointer">`,
-      `  <text x="20" y="27" font-size="12" fill="#2563eb" font-family="${FONT}">&#8592; Context Map</text>`,
+      `  <text x="20" y="27" font-size="12" fill="#5650BE" font-family="${FONT}">&#8592; Context Map</text>`,
       `</g>`,
     ], center.label),
     // Event status legend — right-to-left from right edge so it never clips
     // Icons match the diagram: ⚡ for events, ⇄ for API calls
     ...(() => {
       const items = [
-        { color: '#0369a1', icon: '\u21c4', label: 'API call', italic: true },
-        { color: '#2563eb', icon: '\u26a1', label: 'Planned' },
-        { color: '#16a34a', icon: '\u26a1', label: 'Implemented' },
+        { color: '#2B1A78', icon: '\u21c4', label: 'API call', italic: true },
+        { color: '#5650BE', icon: '\u26a1', label: 'Planned' },
+        { color: '#00AD93', icon: '\u26a1', label: 'Implemented' },
       ];
       const out = [];
       let rx = W - 20;
@@ -715,9 +735,9 @@ function renderDetail(domainId) {
   if (hasFlows) {
     parts.push(`<g class="slide-nav">`);
     parts.push(
-      `<rect x="0" y="44" width="${W}" height="32" fill="#f0f9ff"/>`,
-      `<line x1="0" y1="76" x2="${W}" y2="76" stroke="#bae6fd" stroke-width="1"/>`,
-      svgText('Flows', 20, 64, { size: 9, weight: 600, fill: '#0369a1' }),
+      `<rect x="0" y="44" width="${W}" height="32" fill="#E6EBF9"/>`,
+      `<line x1="0" y1="76" x2="${W}" y2="76" stroke="#A1B4EA" stroke-width="1"/>`,
+      svgText('Flows', 20, 64, { size: 9, weight: 600, fill: '#2B1A78' }),
     );
     let fx = 76;
     for (const flow of domainFlows) {
@@ -725,8 +745,8 @@ function renderDetail(domainId) {
       const tw = Math.ceil(label.length * 6.5 + 20);
       parts.push(
         `<g data-navigate="flow_${flow.domain}_${flow.id}" cursor="pointer">`,
-        `  <rect x="${fx}" y="50" width="${tw}" height="19" rx="4" fill="white" stroke="#bae6fd"/>`,
-        `  ${svgText(label, fx + tw / 2, 63.5, { anchor: 'middle', size: 9, fill: '#0284c7' })}`,
+        `  <rect x="${fx}" y="50" width="${tw}" height="19" rx="4" fill="white" stroke="#A1B4EA"/>`,
+        `  ${svgText(label, fx + tw / 2, 63.5, { anchor: 'middle', size: 9, fill: '#5650BE' })}`,
         `</g>`,
       );
       fx += tw + 8;
@@ -738,7 +758,7 @@ function renderDetail(domainId) {
   for (const { px, py, angleDeg } of Object.values(partnerData)) {
     const [x1, y1] = hexFacePt(CX, CY, CR, angleDeg,       3);
     const [x2, y2] = hexFacePt(px, py, PR, angleDeg + 180, 3);
-    parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#e2e8f0" stroke-width="2"/>`);
+    parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#E9CCBE" stroke-width="2"/>`);
   }
 
   // ── Partner hexagons + event label blocks ─────────────────────────────────
@@ -750,9 +770,9 @@ function renderDetail(domainId) {
     const MAX_W = inrP * 1.5;
 
     // Hex shape — navigable unless not-started
-    const isNav   = partner.status !== 'not-started';
-    const navAttr = isNav ? `data-navigate="${pid}" cursor="pointer"` : '';
-    parts.push(hexPoly(px, py, PR, partner.status, navAttr));
+    const isNav = partner.status !== 'not-started';
+    if (isNav) parts.push(`<g data-navigate="${pid}" cursor="pointer">`);
+    parts.push(hexPoly(px, py, PR, partner.status));
 
     // Label, description, entities inside hex
     const labelLines = wrapLines(partner.label, MAX_W, 12);
@@ -765,11 +785,12 @@ function renderDetail(domainId) {
     const totalH = labelLines.length*LLH + GAP + descLines.length*DLH + GAP + entLines.length*ELH;
     let ty = py - totalH/2 + LLH * 0.8;
 
-    parts.push(...textBlock(px, ty, labelLines, LLH, 12, '#111827', 700));
+    parts.push(...textBlock(px, ty, labelLines, LLH, 12, '#000000', 700));
     ty += labelLines.length*LLH + GAP;
     parts.push(...textBlock(px, ty, descLines, DLH, 8.5, '#6b7280'));
     ty += descLines.length*DLH + GAP;
     parts.push(...textBlock(px, ty, entLines, ELH, 7.5, '#9ca3af'));
+    if (isNav) parts.push(`</g>`);
 
     // ── Event label block ──────────────────────────────────────────────────
     const partnerFlows = flowsByPartner[pid] || [];
@@ -804,7 +825,7 @@ function renderDetail(domainId) {
 
     // Horizontal tick from flat hex face to label
     const tickX2 = facePtX + (labelDir === 0 ? TICK_W - 2 : -(TICK_W - 2));
-    parts.push(`<line x1="${facePtX.toFixed(1)}" y1="${facePtY.toFixed(1)}" x2="${tickX2.toFixed(1)}" y2="${facePtY.toFixed(1)}" stroke="#cbd5e1" stroke-width="1"/>`);
+    parts.push(`<line x1="${facePtX.toFixed(1)}" y1="${facePtY.toFixed(1)}" x2="${tickX2.toFixed(1)}" y2="${facePtY.toFixed(1)}" stroke="#E9CCBE" stroke-width="1"/>`);
 
     for (const [si, sec] of sections.entries()) {
       if (si > 0) ey += SECGAP;
@@ -835,7 +856,7 @@ function renderDetail(domainId) {
   const cTotalH = cLabelLns.length*C_LLH + C_GAP + cDescLns.length*C_DLH + C_GAP + cEntLns.length*C_ELH;
   let cty = CY - cTotalH/2 + C_LLH * 0.8;
 
-  parts.push(...textBlock(CX, cty, cLabelLns, C_LLH, 17, '#111827', 700));
+  parts.push(...textBlock(CX, cty, cLabelLns, C_LLH, 17, '#000000', 700));
   cty += cLabelLns.length*C_LLH + C_GAP;
   parts.push(...textBlock(CX, cty, cDescLns, C_DLH, 9.5, '#6b7280'));
   cty += cDescLns.length*C_DLH + C_GAP;
