@@ -199,14 +199,6 @@ events:
   # intake calls communications directly when a document request is created on a verification item;
   # no event — intake knows exactly what it needs and who to call
 
-  # emitted after caseworker records (and supervisor approves) determination;
-  # communications subscribes to generate and send the Notice of Action
-  - name: determination.recorded
-    publisher: intake
-    status: planned
-    subscribers:
-      - communications
-
   # emitted when a determination requires supervisor sign-off before the NOA is sent;
   # workflow subscribes to create a supervisor approval task
   - name: determination.approval_needed
@@ -283,14 +275,12 @@ events:
   - name: appointment.scheduled
     publisher: scheduling
     status: planned
-    subscribers:
-      - intake
+    subscribers: []
 
   - name: appointment.completed
     publisher: scheduling
     status: planned
-    subscribers:
-      - intake
+    subscribers: []
 
   # ── Workflow ─────────────────────────────────────────────────────────────────
 
@@ -298,8 +288,7 @@ events:
   - name: task.claimed
     publisher: workflow
     status: implemented
-    subscribers:
-      - intake
+    subscribers: []
 
   # emitted on task creation (onCreate hook)
   - name: task.created
@@ -338,8 +327,7 @@ events:
   - name: task.escalated
     publisher: workflow
     status: implemented
-    subscribers:
-      - intake
+    subscribers: []
 
   - name: task.de-escalated
     publisher: workflow
@@ -689,9 +677,6 @@ flows:
             from: intake
             to: workflow
             note: API call to workflow
-          - event: task.claimed
-            from: workflow
-            to: intake
           - self: intake
             label: Application status → under_review
 
@@ -706,9 +691,6 @@ flows:
             from: intake
             to: scheduling
             note: API call to scheduling
-          - event: appointment.scheduled
-            from: scheduling
-            to: intake
           - self: intake
             label: Interview record created and linked to application
 
@@ -805,10 +787,6 @@ flows:
             from: intake
             to: scheduling
             note: API call; may repeat for multi-session interviews
-          - event: appointment.completed
-            from: scheduling
-            to: intake
-            note: One per appointment; may repeat for multi-session interviews
           - self: intake
             label: Interview record updated
 
@@ -824,9 +802,6 @@ flows:
             from: intake
             to: workflow
             note: API call to workflow
-          - event: task.escalated
-            from: workflow
-            to: intake
           - label: Claims escalated task
             from: supervisor
             to: intake
@@ -834,9 +809,6 @@ flows:
             from: intake
             to: workflow
             note: API call to workflow
-          - event: task.claimed
-            from: workflow
-            to: intake
           - self: intake
             label: Application status → under supervisor review
           - label: Reviews escalation; provides guidance or takes over resolution
@@ -915,9 +887,6 @@ flows:
                 from: intake
                 to: workflow
                 note: API call to workflow
-              - event: task.claimed
-                from: workflow
-                to: intake
               - self: intake
                 label: Determination status → pending approval
               - label: Reviews and approves determination
