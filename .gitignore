@@ -26,6 +26,6 @@ packages/*/README.md
 cursor/
 
 # Claude Code local settings
-.claude/
+.claude
 CLAUDE.md
 Agents.md
