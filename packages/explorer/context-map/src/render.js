@@ -402,6 +402,15 @@ function renderFlowPage(flow) {
 
   const H = Math.max(500, totalH + FOOTER_H);
 
+  // Map from step index → max depth of containing fragment (-1 if none).
+  // Used to inset ref boxes so they visually sit inside their container.
+  const stepDepth = new Array(nSteps).fill(-1);
+  for (const frag of fragments) {
+    for (let i = frag.startIdx; i <= frag.endIdx; i++) {
+      stepDepth[i] = Math.max(stepDepth[i], frag.depth);
+    }
+  }
+
   const colX   = participants.map((_, i) => ML + i * (COL_W + COL_GAP) + COL_W / 2);
   const colIdx = Object.fromEntries(participants.map((p, i) => [p.id, i]));
 
@@ -525,7 +534,7 @@ function renderFlowPage(flow) {
   }
 
   // Steps
-  let gapIdx = 0, regIdx = 0;
+  let gapIdx = 0, regIdx = 0, ovIdx = 0;
   flatSteps.forEach((step, idx) => {
     const y = arrowY[idx];
 
@@ -540,10 +549,13 @@ function renderFlowPage(flow) {
       // arrow: badge(16) + gap(4) + label(13) + margin(7). The ref box (BOX_H2=36) centered
       // at y extends 18px above the arrow — well within the 40px badge-safe zone.
       // No shift needed.
+      const refInset  = stepDepth[idx] >= 0 ? (stepDepth[idx] + 1) * 12 + 10 : 0;
+      const refLeft   = ML + refInset;
+      const refWidth  = W - ML - MR - refInset * 2;
       const boxY = y - BOX_H2 / 2;
       labelDivs.push(
-        `<div data-navigate="flow_${refFlow?.domain}_${step.ref}" style="position:absolute;left:${ML}px;top:${boxY}px;` +
-        `width:${W - ML - MR}px;height:${BOX_H2}px;border:1.5px solid #A1B4EA;border-radius:4px;` +
+        `<div data-navigate="flow_${refFlow?.domain}_${step.ref}" style="position:absolute;left:${refLeft}px;top:${boxY}px;` +
+        `width:${refWidth}px;height:${BOX_H2}px;border:1.5px solid #A1B4EA;border-radius:4px;` +
         `background:#E6EBF9;display:flex;align-items:center;justify-content:center;` +
         `cursor:pointer;z-index:3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">` +
         `<span style="position:absolute;top:3px;left:6px;font-size:7px;font-weight:700;color:#5650BE;` +
@@ -575,16 +587,39 @@ function renderFlowPage(flow) {
       );
       const labelX         = (sx + dx + (goLeft ? -6 : 6)).toFixed(1);
       const labelTransform = goLeft ? 'transform:translate(-100%,0);text-align:right;' : '';
-      if (isGap && step.gap_description) {
-        const id = `g${gapIdx++}`;
+      const hasGap     = isGap && !!step.gap_description;
+      const hasOverlay = !!(step.overlay && step.overlay.length);
+      const ovBadge    = hasOverlay
+        ? `<span style="display:inline-block;margin-left:4px;width:12px;height:12px;` +
+          `line-height:12px;text-align:center;vertical-align:middle;` +
+          `background:#FEF3C7;border:1px solid #D97706;border-radius:2px;` +
+          `font-size:8px;color:#D97706;">&#8853;</span>`
+        : '';
+      if (hasGap || hasOverlay) {
+        const id = hasGap ? `g${gapIdx++}` : `ov${ovIdx++}`;
+        const tipParts = [];
+        if (hasGap) {
+          tipParts.push(
+            `<div style="font-size:7.5px;font-weight:700;color:${GAP_COLOR};">\u26a0\ufe0f Gap</div>` +
+            `<div style="font-size:8px;color:#374151;">${step.gap_description}</div>`
+          );
+        }
+        if (hasOverlay) {
+          if (hasGap) tipParts.push(`<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>`);
+          for (const [i, o] of step.overlay.entries()) {
+            if (i > 0) tipParts.push(`<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>`);
+            tipParts.push(
+              `<div style="font-size:7.5px;font-weight:700;color:#D97706;">&#8853; State overlay point</div>` +
+              `<div style="font-size:8px;color:#374151;">${o.note}</div>` +
+              (o.mechanism ? `<div style="font-size:7.5px;color:#6b7280;font-style:italic;">${o.mechanism}</div>` : '')
+            );
+          }
+        }
         labelDivs.push(
           `<div class="int-hit" data-int-id="${id}" style="position:absolute;left:${labelX}px;top:${(y - 9).toFixed(1)}px;` +
           `${labelTransform}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
-          `color:${color};white-space:nowrap;z-index:4;cursor:help;">${prefix}${step.label || ''}</div>` +
-          `<div class="int-content" data-int-id="${id}" style="display:none;">` +
-          `<div style="font-size:7.5px;font-weight:700;color:${GAP_COLOR};">\u26a0\ufe0f Gap</div>` +
-          `<div style="font-size:8px;color:#374151;">${step.gap_description}</div>` +
-          `</div>`
+          `color:${color};white-space:nowrap;z-index:4;cursor:help;">${prefix}${step.label || ''}${ovBadge}</div>` +
+          `<div class="int-content" data-int-id="${id}" style="display:none;">${tipParts.join('')}</div>`
         );
       } else {
         labelDivs.push(
@@ -675,6 +710,26 @@ function renderFlowPage(flow) {
         `</div>`
       );
     }
+    if (step.overlay && step.overlay.length) {
+      const id      = `ov${ovIdx++}`;
+      const hasReg  = !!(step.regulatory && step.regulatory.length);
+      const tipX    = (parseFloat(midX) + Math.abs(tx - fx) * 0.3 + (hasReg ? 22 : 4)).toFixed(1);
+      const tipRows = step.overlay.map((o, i) =>
+        (i > 0 ? `<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>` : '') +
+        `<div style="font-size:7.5px;font-weight:700;color:#D97706;">&#8853; State overlay point</div>` +
+        `<div style="font-size:8px;color:#374151;">${o.note}</div>` +
+        (o.mechanism ? `<div style="font-size:7.5px;color:#6b7280;font-style:italic;">${o.mechanism}</div>` : '')
+      ).join('');
+      labelDivs.push(
+        `<div class="int-hit" data-int-id="${id}" style="position:absolute;` +
+        `left:${tipX}px;top:${(y - 7)}px;width:14px;height:14px;` +
+        `display:flex;align-items:center;justify-content:center;` +
+        `background:#FEF3C7;border:1px solid #D97706;border-radius:3px;` +
+        `cursor:help;z-index:4;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;` +
+        `font-size:9px;color:#D97706;">&#8853;</div>` +
+        `<div class="int-content" data-int-id="${id}" style="display:none;">${tipRows}</div>`
+      );
+    }
   });
 
   // ── Header bar ────────────────────────────────────────────────────────────
@@ -701,6 +756,9 @@ function renderFlowPage(flow) {
     `<span>${mkArrow('#5650BE', false)}&thinsp;Planned</span>` +
     `<span>${mkArrow('#2B1A78', false)}&thinsp;Human action</span>` +
     `<span>${mkArrow('#AF121D', true)}&thinsp;Gap</span>` +
+    `<span><span style="display:inline-block;width:12px;height:12px;line-height:12px;` +
+    `text-align:center;vertical-align:middle;background:#FEF3C7;border:1px solid #D97706;` +
+    `border-radius:2px;font-size:8px;color:#D97706;">&#8853;</span>&thinsp;State overlay point</span>` +
     `</div>` +
     `</div>`;
 

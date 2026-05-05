@@ -601,11 +601,13 @@ flows:
                           - event: eligibility.application.expedited
                             from: eligibility
                             to: workflow
-                            note: Direct subscription — no intake relay
                           - self: workflow
                             label: Assign expedited SLA track
                             gap: true
                             gap_description: Expedited SLA type and workflow task switching not yet designed
+                            overlay:
+                              - note: "States configure expedited SLA duration and queue routing rules"
+                                mechanism: "sla-types config"
               - fragment: medicaid-prescreening
                 type: opt
                 label: "if Medicaid applied"
@@ -634,7 +636,7 @@ flows:
                     note: Per-program indicators (likely_eligible | needs_review | likely_ineligible); caseworkers can see alongside verification obligations
                   - fragment: medicaid-auto-determination
                     type: opt
-                    label: "if eligibility determines all checks conclusive — Medicaid auto-determined (45 CFR § 435.911)"
+                    label: "if Medicaid-only application and all pre-screening checks conclusive at submission (45 CFR § 435.911)"
                     steps:
                       - ref: determination
                         label: Eligibility Determination (Path A — auto)
@@ -773,6 +775,9 @@ flows:
             from: caseworker
             to: intake
             note: May require multiple appointments
+            overlay:
+              - note: "SNAP interview may be waived by state policy; states configure waiver criteria"
+                mechanism: "rules config"
             regulatory:
               - citation: "7 CFR § 273.2(e)"
                 summary: "SNAP: interview required before determination"
@@ -821,19 +826,19 @@ flows:
   - id: determination
     label: Eligibility Determination
     domain: intake
-    description: "Two paths to determination: (A) auto — Medicaid only, eligibility proceeds directly from conclusive pre-screening at submission, no caseworker involvement (45 CFR § 435.911); (B) manual — caseworker completes review, intake fires application.review_completed, eligibility runs rules engine for all undetermined program+member combinations. Both paths converge at eligibility.application.all_determined."
+    description: "Two paths to determination: (A) auto — Medicaid-only, eligibility proceeds directly from conclusive pre-screening at submission, no caseworker involvement (45 CFR § 435.911); (B) manual — caseworker completes review, intake fires application.review_completed, eligibility runs rules engine for all undetermined program+member combinations. Both paths converge at eligibility.application.all_determined."
     participants: [caseworker, supervisor, intake, workflow, eligibility, communications, case_management]
     steps:
       - fragment: auto-determination
         type: opt
-        label: "Path A: auto-determination (Medicaid, all pre-screening checks conclusive at submission)"
+        label: "Path A: auto (Medicaid-only; all pre-screening checks conclusive at submission)"
         steps:
           - ref: application_submission
             label: Application Submission
 
       - fragment: manual-determination
         type: opt
-        label: "Path B: manual determination (SNAP always; Medicaid when checks inconclusive)"
+        label: "Path B: manual (SNAP always; Medicaid when any check inconclusive)"
         steps:
           - ref: caseworker_review
             label: Caseworker Review
@@ -857,14 +862,32 @@ flows:
             label: Determination recorded per person per program
             gap: true
             gap_description: Intake has no per-person per-program status entity yet; design question open in #248
-          - label: Reviews determination results
+
+      # ── Shared convergence (both paths arrive here) ────────────────────────
+      - event: eligibility.application.all_determined
+        from: eligibility
+        to: intake
+        note: Fires once all program+member combinations are determined
+      - self: intake
+        label: Application status updated to determined
+
+      # ── Caseworker review of results (manual path only) ───────────────────
+      - fragment: caseworker-reviews-determination
+        type: opt
+        label: "Path B: caseworker reviews complete determination picture"
+        steps:
+          - label: Reviews all determination results
             from: caseworker
             to: intake
-            note: Exception review only — not approving a calculation they triggered
+            overlay:
+              - note: "States may automate caseworker review of determination results; federal regulations require documentation of the outcome, not manual review of the calculation"
+                mechanism: "rules config"
+            regulatory:
+              - citation: "Workflow convention"
+                summary: "Federal regulations require documentation of the determination, not review of the calculation; states may automate this step"
           - label: Records determination and rationale
             from: caseworker
             to: intake
-            note: Eligibility outcome, date, and reasoning recorded per program
             regulatory:
               - citation: "7 CFR § 273.2(g)"
                 summary: "SNAP: determination within 30 days (7 if expedited)"
@@ -872,8 +895,16 @@ flows:
                 summary: "Medicaid: determination within 45 days"
           - fragment: supervisor-approval
             type: opt
-            label: "if supervisor approval required"
+            label: "if policy rule requires supervisor approval"
             steps:
+              - self: intake
+                label: Evaluates determination against supervisor approval thresholds
+                overlay:
+                  - note: "States configure supervisor approval threshold rules (benefit amount, denial type, exception flags)"
+                    mechanism: "rules config"
+                regulatory:
+                  - citation: "State policy"
+                    summary: "No federal mandate; states configure thresholds (benefit amount, denial type, exception flags)"
               - event: determination.approval_needed
                 from: intake
                 to: workflow
@@ -894,24 +925,29 @@ flows:
                 to: intake
                 note: If rejected, intake flags for revision and workflow reassigns caseworker task
 
-      # ── Shared convergence (both paths arrive here) ────────────────────────
-      - event: eligibility.application.all_determined
-        from: eligibility
-        to: intake
-        note: Fires once all program+member combinations are determined; auto path fires at submission, manual path fires after review_completed
-      - self: intake
-        label: Application status updated to determined
-
       # ── Shared close ───────────────────────────────────────────────────────
       - label: Send Notice of Action
         from: intake
         to: communications
+        regulatory:
+          - citation: "7 CFR § 273.2(h)"
+            summary: "SNAP: written notice of eligibility or denial must be sent to each applicant household"
+          - citation: "42 CFR § 435.917"
+            summary: "Medicaid: written notice of eligibility, denial, or termination required"
         gap: true
         gap_description: Notice template catalog not yet designed
       - event: application.closed
         from: intake
         to: case_management
-        note: workflow also subscribes — cancels any open intake task for this applicationId
       - self: case_management
         label: Creates case
+      - fragment: workflow-task-cancel
+        type: opt
+        label: "Path A: cancel open intake task (never claimed — auto-determined at submission)"
+        steps:
+          - event: application.closed
+            from: intake
+            to: workflow
+          - self: workflow
+            label: Cancels open intake task for this application
 

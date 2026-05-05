@@ -146,26 +146,15 @@
         },
         {
           "type": "domain-event",
-          "text": "application.expedited_flagged",
-          "domain": "intake"
-        },
-        {
-          "type": "domain-event",
           "text": "call.completed",
           "domain": "data_exchange",
           "subtext": "One per call; results arrive asynchronously"
         },
         {
           "type": "domain-event",
-          "text": "eligibility.rte_completed",
+          "text": "eligibility.application.prescreened",
           "domain": "eligibility",
-          "subtext": "Per person per program; includes outcome and any flags"
-        },
-        {
-          "type": "domain-event",
-          "text": "determination_complete",
-          "domain": "eligibility",
-          "subtext": "Per person; Medicaid approved"
+          "subtext": "Per-program indicators (likely_eligible | needs_review | likely_ineligible); caseworkers can see alongside verification obligations"
         },
         {
           "type": "domain-event",
@@ -205,14 +194,8 @@
         {
           "type": "system",
           "domain": "eligibility",
-          "text": "RTE result evaluated per Medicaid applicant",
+          "text": "Pre-screening result evaluated per Medicaid applicant",
           "subtext": "In response to event call.completed"
-        },
-        {
-          "type": "note",
-          "domain": "intake",
-          "text": "⚠ RTE result recorded per person; visible to caseworker",
-          "subtext": "Intake has no per-person per-program status entity yet; design question open in"
         },
         {
           "type": "system",
@@ -247,36 +230,18 @@
       ]
     },
     {
-      "laneId": "data",
-      "subPhaseId": "under-review",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "task.claimed",
-          "domain": "workflow"
-        },
-        {
-          "type": "domain-event",
-          "text": "appointment.scheduled",
-          "domain": "scheduling"
-        }
-      ]
-    },
-    {
       "laneId": "system",
       "subPhaseId": "under-review",
       "cards": [
         {
           "type": "system",
           "domain": "intake",
-          "text": "Application status → under_review",
-          "subtext": "In response to event task.claimed"
+          "text": "Application status → under_review"
         },
         {
           "type": "system",
           "domain": "intake",
-          "text": "Interview record created and linked to application",
-          "subtext": "In response to event appointment.scheduled"
+          "text": "Interview record created and linked to application"
         }
       ]
     },
@@ -336,7 +301,7 @@
           "type": "note",
           "domain": "communications",
           "text": "⚠ Document request notice sent to applicant",
-          "subtext": "Notice template catalog not yet designed; blocked on verification.failed carrying category and program"
+          "subtext": "Notice template catalog not yet designed"
         },
         {
           "type": "system",
@@ -361,11 +326,6 @@
       "laneId": "data",
       "subPhaseId": "active-review",
       "cards": [
-        {
-          "type": "domain-event",
-          "text": "verification.failed",
-          "domain": "intake"
-        },
         {
           "type": "domain-event",
           "text": "call.completed",
@@ -407,26 +367,13 @@
       ]
     },
     {
-      "laneId": "data",
-      "subPhaseId": "interview",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "appointment.completed",
-          "domain": "scheduling",
-          "subtext": "One per appointment; may repeat for multi-session interviews"
-        }
-      ]
-    },
-    {
       "laneId": "system",
       "subPhaseId": "interview",
       "cards": [
         {
           "type": "system",
           "domain": "intake",
-          "text": "Interview record updated",
-          "subtext": "In response to event appointment.completed"
+          "text": "Interview record updated"
         }
       ]
     },
@@ -452,64 +399,13 @@
       ]
     },
     {
-      "laneId": "data",
-      "subPhaseId": "escalation",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "task.escalated",
-          "domain": "workflow"
-        },
-        {
-          "type": "domain-event",
-          "text": "task.claimed",
-          "domain": "workflow"
-        }
-      ]
-    },
-    {
       "laneId": "system",
       "subPhaseId": "escalation",
       "cards": [
         {
           "type": "system",
           "domain": "intake",
-          "text": "Application status → under supervisor review",
-          "subtext": "In response to event task.claimed"
-        }
-      ]
-    },
-    {
-      "laneId": "caseworker",
-      "subPhaseId": "submit-for-determination",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Submits case for determination",
-          "subtext": "Available when all verification items are resolved"
-        }
-      ]
-    },
-    {
-      "laneId": "system",
-      "subPhaseId": "submit-for-determination",
-      "cards": [
-        {
-          "type": "system",
-          "domain": "intake",
-          "text": "Status updated to pending determination"
-        }
-      ]
-    },
-    {
-      "laneId": "data",
-      "subPhaseId": "submit-for-determination",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "application.review_completed",
-          "domain": "intake"
+          "text": "Application status → under supervisor review"
         }
       ]
     },

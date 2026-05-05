@@ -11,6 +11,11 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "actors": {
+      "description": "Human actors used as swimlane participants in flow sequence diagrams.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/Actor" }
+    },
     "domains": {
       "description": "Bounded contexts in the system.",
       "type": "array",
@@ -67,15 +72,12 @@
             "enum": ["implemented", "planned"]
           },
           "subscribers": {
-            "description": "One or more domain IDs that consume the event. Each must match a domain id in the domains list.",
+            "description": "One or more domain IDs that consume the event. Each must match a domain id in the domains list. Empty array is valid for events with no current cross-domain consumers.",
             "oneOf": [
-              {
-                "type": "string"
-              },
+              { "type": "string" },
               {
                 "type": "array",
-                "items": { "type": "string" },
-                "minItems": 1
+                "items": { "type": "string" }
               }
             ]
           }
@@ -114,6 +116,339 @@
               }
             ]
           }
+        }
+      }
+    },
+    "flows": {
+      "description": "Ordered sequences of steps for key business processes. Used to generate sequence diagrams in the context map.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/Flow" }
+    }
+  },
+  "definitions": {
+    "Actor": {
+      "description": "A human participant in a flow diagram, rendered as a named swimlane.",
+      "type": "object",
+      "required": ["id", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Unique identifier. Must be snake_case. Used in participants lists and in step from/to fields.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "description": "Display name shown in the swimlane header.",
+          "type": "string"
+        }
+      }
+    },
+    "Flow": {
+      "description": "A named sequence of steps representing a key business process.",
+      "type": "object",
+      "required": ["id", "label", "domain", "participants", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Unique identifier. Must be snake_case. Used as the navigation target for ref steps.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "description": "Display name shown in the flow diagram header.",
+          "type": "string"
+        },
+        "domain": {
+          "description": "Primary domain this flow belongs to. Determines which domain detail page hosts this diagram. Must match a domain id in the domains list.",
+          "type": "string"
+        },
+        "description": {
+          "description": "One or two sentences describing what this flow covers.",
+          "type": "string"
+        },
+        "participants": {
+          "description": "Domain and actor IDs in left-to-right swimlane order. Each must match an id in the domains or actors lists.",
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "steps": {
+          "description": "Ordered steps in the sequence diagram.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/Step" },
+          "minItems": 1
+        }
+      }
+    },
+    "Step": {
+      "description": "One step in a sequence flow. Must be exactly one of: arrow (from/to), self-loop, event, plain fragment, opt fragment, par fragment, or ref.",
+      "oneOf": [
+        { "$ref": "#/definitions/ArrowStep" },
+        { "$ref": "#/definitions/SelfStep" },
+        { "$ref": "#/definitions/EventStep" },
+        { "$ref": "#/definitions/PlainFragment" },
+        { "$ref": "#/definitions/OptFragment" },
+        { "$ref": "#/definitions/ParFragment" },
+        { "$ref": "#/definitions/RefStep" }
+      ]
+    },
+    "RegulatoryItem": {
+      "description": "A regulatory citation or policy source associated with a step. Displayed as a blue badge with a hover tooltip.",
+      "type": "object",
+      "required": ["citation", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "citation": {
+          "description": "Regulatory citation or policy source (e.g. '7 CFR § 273.2(g)', 'State policy', 'Workflow convention').",
+          "type": "string"
+        },
+        "summary": {
+          "description": "One-sentence summary of the requirement as it applies to this step.",
+          "type": "string"
+        },
+        "detail": {
+          "description": "Optional clarifying detail shown in the tooltip on hover.",
+          "type": "string"
+        }
+      }
+    },
+    "OverlayItem": {
+      "description": "A state-overridable policy point on a step. Displayed as an amber ⊕ badge with a hover tooltip.",
+      "type": "object",
+      "required": ["note"],
+      "additionalProperties": false,
+      "properties": {
+        "note": {
+          "description": "Description of what states can configure or replace at this point.",
+          "type": "string"
+        },
+        "mechanism": {
+          "description": "The overlay artifact a state would edit (e.g. 'rules config', 'state-machine', 'sla-types config').",
+          "type": "string"
+        }
+      }
+    },
+    "ArrowStep": {
+      "description": "A directed action or API call from one participant to another, drawn as a labeled arrow.",
+      "type": "object",
+      "required": ["label", "from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "description": "Short label shown on the arrow.",
+          "type": "string"
+        },
+        "from": {
+          "description": "Sending participant ID (domain or actor). Must appear in the flow's participants list.",
+          "type": "string"
+        },
+        "to": {
+          "description": "Receiving participant ID (domain or actor). Must appear in the flow's participants list.",
+          "type": "string"
+        },
+        "note": {
+          "description": "Annotation shown beneath the arrow in the diagram.",
+          "type": "string"
+        },
+        "condition": {
+          "description": "Guard condition shown in [brackets] on the arrow.",
+          "type": "string"
+        },
+        "regulatory": {
+          "description": "Regulatory citations or policy sources that apply to this step.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/RegulatoryItem" },
+          "minItems": 1
+        },
+        "gap": {
+          "description": "Marks this step as a known design gap. Displays a red dashed indicator.",
+          "type": "boolean"
+        },
+        "gap_description": {
+          "description": "Explanation of the gap shown in the hover tooltip. Only meaningful when gap is true.",
+          "type": "string"
+        },
+        "overlay": {
+          "description": "State override points at this step. Each entry describes one configurable policy area. Displayed as an amber ⊕ badge.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/OverlayItem" },
+          "minItems": 1
+        }
+      }
+    },
+    "SelfStep": {
+      "description": "An internal action taken by a single participant, drawn as a self-loop or inline note in its swimlane.",
+      "type": "object",
+      "required": ["self", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "self": {
+          "description": "Participant ID performing the internal action. Must appear in the flow's participants list.",
+          "type": "string"
+        },
+        "label": {
+          "description": "Short label describing the internal action.",
+          "type": "string"
+        },
+        "note": {
+          "description": "Annotation shown beneath the label in the diagram.",
+          "type": "string"
+        },
+        "regulatory": {
+          "description": "Regulatory citations or policy sources that apply to this step.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/RegulatoryItem" },
+          "minItems": 1
+        },
+        "gap": {
+          "description": "Marks this step as a known design gap.",
+          "type": "boolean"
+        },
+        "gap_description": {
+          "description": "Explanation of the gap. Only meaningful when gap is true.",
+          "type": "string"
+        },
+        "overlay": {
+          "description": "State override points at this step. Each entry describes one configurable policy area. Displayed as an amber ⊕ badge.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/OverlayItem" },
+          "minItems": 1
+        }
+      }
+    },
+    "EventStep": {
+      "description": "An asynchronous domain event emitted by one participant and received by another, drawn as a dashed arrow.",
+      "type": "object",
+      "required": ["event", "from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "description": "Event name, matching an entry in the events registry.",
+          "type": "string"
+        },
+        "from": {
+          "description": "Publishing participant ID. Must appear in the flow's participants list.",
+          "type": "string"
+        },
+        "to": {
+          "description": "Subscribing participant ID. Must appear in the flow's participants list.",
+          "type": "string"
+        },
+        "note": {
+          "description": "Annotation shown beneath the arrow in the diagram.",
+          "type": "string"
+        },
+        "gap": {
+          "description": "Marks this step as a known design gap.",
+          "type": "boolean"
+        },
+        "gap_description": {
+          "description": "Explanation of the gap. Only meaningful when gap is true.",
+          "type": "string"
+        }
+      }
+    },
+    "PlainFragment": {
+      "description": "A visual grouping box with no conditional semantics. Groups related steps under an implicit label derived from the fragment identifier.",
+      "type": "object",
+      "required": ["fragment", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "fragment": {
+          "description": "Unique identifier for this fragment within the flow. Used as the implicit label in the diagram.",
+          "type": "string"
+        },
+        "steps": {
+          "description": "Steps contained in this group.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/Step" },
+          "minItems": 1
+        }
+      }
+    },
+    "OptFragment": {
+      "description": "A conditional block ('opt' in UML sequence diagram notation). The labeled condition is shown in the fragment header; steps inside execute only when the condition is met.",
+      "type": "object",
+      "required": ["fragment", "type", "label", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "fragment": {
+          "description": "Unique identifier for this fragment within the flow.",
+          "type": "string"
+        },
+        "type": {
+          "description": "Fragment type discriminator.",
+          "const": "opt"
+        },
+        "label": {
+          "description": "Condition label shown in the fragment header (e.g. 'if SNAP applied').",
+          "type": "string"
+        },
+        "steps": {
+          "description": "Steps that execute when the condition is met.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/Step" },
+          "minItems": 1
+        }
+      }
+    },
+    "ParFragment": {
+      "description": "A parallel block ('par' in UML sequence diagram notation). Operands represent independently triggered branches that occur concurrently.",
+      "type": "object",
+      "required": ["fragment", "type", "label", "operands"],
+      "additionalProperties": false,
+      "properties": {
+        "fragment": {
+          "description": "Unique identifier for this fragment within the flow.",
+          "type": "string"
+        },
+        "type": {
+          "description": "Fragment type discriminator.",
+          "const": "par"
+        },
+        "label": {
+          "description": "Label shown in the fragment header.",
+          "type": "string"
+        },
+        "operands": {
+          "description": "Independent parallel branches. Each operand is a named branch with its own steps.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/Operand" },
+          "minItems": 2
+        }
+      }
+    },
+    "Operand": {
+      "description": "A named parallel branch inside a par fragment.",
+      "type": "object",
+      "required": ["label", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "description": "Branch label shown in the par fragment header.",
+          "type": "string"
+        },
+        "steps": {
+          "description": "Steps in this parallel branch.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/Step" },
+          "minItems": 1
+        }
+      }
+    },
+    "RefStep": {
+      "description": "A clickable navigation box that links to another flow. Shows where the referenced flow fits in context without duplicating its content.",
+      "type": "object",
+      "required": ["ref"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "description": "The id of the flow this step links to. Must match a flow id in the flows list.",
+          "type": "string"
+        },
+        "label": {
+          "description": "Display label for the navigation box. Defaults to the referenced flow's label if omitted.",
+          "type": "string"
         }
       }
     }
