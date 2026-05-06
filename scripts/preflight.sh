@@ -69,15 +69,6 @@ else
   fail "Postman collection generation failed"
 fi
 
-step "Checking design reference is up to date"
-cp docs/schema-reference.html /tmp/design-ref-before.html 2>/dev/null || true
-npm run design:reference 2>&1 || true
-if diff -q docs/schema-reference.html /tmp/design-ref-before.html >/dev/null 2>&1; then
-  pass "Design reference is up to date"
-else
-  fail "Design reference was out of date — it has been regenerated. Stage the updated file and re-run preflight."
-fi
-rm -f /tmp/design-ref-before.html
 
 step "Checking contract tables are up to date"
 cp -r docs/contract-tables /tmp/contract-tables-before 2>/dev/null || true

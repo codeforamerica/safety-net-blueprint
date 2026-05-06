@@ -37,13 +37,10 @@
     "test:integration": "node packages/mock-server/tests/run-all-tests.js --integration",
     "test:all": "node packages/mock-server/tests/run-all-tests.js --all",
     "preflight": "bash scripts/preflight.sh",
-    "docs:slides": "marp docs/presentation/safety-net-openapi-overview.md -o docs/presentation/safety-net-openapi-overview.html",
-    "design:reference": "node packages/contracts/scripts/export-design-reference.js --spec=packages/contracts --out=docs",
     "contract-tables:export": "node packages/contracts/scripts/export-contract-tables.js",
     "contract-tables:import": "node packages/contracts/scripts/import-contract-tables.js"
   },
   "devDependencies": {
-    "@marp-team/marp-cli": "^4.2.3",
     "jszip": "^3.10.1",
     "puppeteer": "^24.0.0"
   }
