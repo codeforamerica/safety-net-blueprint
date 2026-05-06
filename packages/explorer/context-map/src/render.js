@@ -202,6 +202,73 @@ const FRAGMENT_STYLES = {
   opt: { stroke: '#5650BE', fill: 'rgba(86,80,190,0.04)',  label: 'opt' },
 };
 
+// ── Adaptive step height ───────────────────────────────────────────────────
+//
+// The layout uses slot-based positioning. Each step owns a rectangular slot.
+// Within the slot, the arrow is positioned at slot_top + ABOVE, where ABOVE
+// varies based on whether the step opens a fragment.
+//
+// Fragment-starting steps need extra above-arrow space so the badge label fits
+// between the preceding slot bottom and the arrow without overlap:
+//
+//   ABOVE_NORMAL (16px): regular steps — just enough for arrow label text
+//   ABOVE_FRAG   (40px): first step of a fragment — badge(16) + gap(4) + label(13) + margin(7)
+//
+// Fragment box top = slot top of its first step (no extra constant needed).
+// Fragment box bottom = arrow_y of last step + content below + FRAG_PAD_BOT.
+//
+// When two fragments start at the same step (nested), the outer fragment is
+// pulled up by FRAG_NEST_PAD so the two badges don't collide.
+
+const SEQ_SELF_H    = 20;  // self-loop arc height (px below arrow)
+const SEQ_SELF_W    = 36;  // self-loop width
+const NOTE_LH       = 12;  // note text line height
+const NOTE_WPL      = 5;   // words per line (wrap estimate)
+const ABOVE_NORMAL  = 16;  // above-arrow space for a plain step
+const ABOVE_FRAG    = 40;  // above-arrow space when the step opens a fragment
+//                          = badge(16) + gap(4) + label(13) + margin(7)
+const MIN_BELOW     = 28;  // minimum below-arrow clearance
+const BADGE_H       = 16;  // fragment badge strip height
+const BOX_H2        = 36;  // ref-step box height
+const MIN_GAP       = 4;   // minimum visual gap
+const FRAG_PAD_BOT  = 14;  // breathing room below the last step in a fragment
+const FRAG_NEST_PAD = 20;  // extra top extension for outer badge when two fragments share a start
+
+/**
+ * Pixels of content extending below the arrow center.
+ * "Base" version — does not include fragment layout bonuses.
+ * Used for: (a) fragment bottom calculation, (b) separator positions.
+ */
+function stepBelowBase(step) {
+  if (step.ref)  return Math.max(MIN_BELOW, BOX_H2 / 2 + MIN_GAP);
+  let b = MIN_BELOW;
+  if (step.self) b = Math.max(b, SEQ_SELF_H + 8);
+  if (step.note) {
+    const words = (step.note || '').split(/\s+/).filter(Boolean).length;
+    const lines = Math.max(1, Math.ceil(words / NOTE_WPL));
+    b = Math.max(b, 6 + lines * NOTE_LH);
+  }
+  return b;
+}
+
+/**
+ * Total slot height for a step.
+ *
+ * Slots are contiguous — their total covers the full diagram height.
+ * Fragment boxes are drawn within slot boundaries so adjacent fragments never overlap.
+ *
+ * Layout bonuses added to below-arrow space:
+ *   - FRAG_PAD_BOT  if this step is the last step of a fragment (creates gap to next fragment)
+ *   - FRAG_NEST_PAD if the NEXT step opens multiple nested fragments (room for outer badge)
+ */
+function stepSlotHeight(step, stepIdx, aboveFragSet, fragEndSet, fragStartCounts) {
+  const above = aboveFragSet.has(stepIdx) ? ABOVE_FRAG : ABOVE_NORMAL;
+  let below = stepBelowBase(step);
+  if (fragEndSet.has(stepIdx))                           below += FRAG_PAD_BOT;
+  if ((fragStartCounts.get(stepIdx + 1) || 0) > 1)      below += FRAG_NEST_PAD;
+  return above + below;
+}
+
 function flattenSteps(steps) {
   const result = [];
   for (const step of steps) {
@@ -279,15 +346,70 @@ function renderFlowPage(flow) {
   const HEADER_TOP = 52, HEADER_H = 62;
   const LIFELINE_Y = HEADER_TOP + HEADER_H + 14;
   const FIRST_Y    = LIFELINE_Y + 38;
-  const STEP_H     = 64;
   const FOOTER_H   = 80;
-  const SELF_W     = 36;
-  const SELF_H     = 20;
+  const SELF_W     = SEQ_SELF_W;
+  const SELF_H     = SEQ_SELF_H;
 
   const flatSteps = flattenSteps(flow.steps || []);
   const nSteps    = flatSteps.length;
   const fragments = collectFragments(flow.steps || []);
-  const H = Math.max(500, FIRST_Y + nSteps * STEP_H + FOOTER_H);
+
+  // Pre-compute fragment index sets needed for slot height bonuses.
+  // fragStartSet    — steps that open ≥1 fragment (for ABOVE_FRAG and nesting calc)
+  // fragEndSet      — steps that close ≥1 fragment (FRAG_PAD_BOT bonus below-arrow)
+  // fragStartCounts — how many fragments open at each step (>1 = nested badges at same row)
+  const fragStartSet    = new Set(fragments.map(f => f.startIdx));
+  const fragEndSet      = new Set(fragments.map(f => f.endIdx));
+  const fragStartCounts = new Map();
+  for (const frag of fragments) {
+    fragStartCounts.set(frag.startIdx, (fragStartCounts.get(frag.startIdx) || 0) + 1);
+  }
+
+  // aboveFragSet: steps that need ABOVE_FRAG above-arrow space.
+  // Includes fragment-starting steps AND the first step of each non-first operand in a par —
+  // both need room for a badge/label above the arrow.
+  const aboveFragSet = new Set(fragStartSet);
+  for (const frag of fragments) {
+    for (const { idx } of (frag.operandStarts || [])) {
+      if (idx !== frag.startIdx) aboveFragSet.add(idx);
+    }
+  }
+
+  // Build per-step positions.
+  //   stepTop[i]  = Y of the slot top (= fragment box top when step opens a fragment)
+  //   arrowY[i]   = Y of the arrow itself (stepTop + ABOVE_FRAG or ABOVE_NORMAL)
+  const stepHts  = flatSteps.map((step, idx) => stepSlotHeight(step, idx, aboveFragSet, fragEndSet, fragStartCounts));
+  const stepTop  = [];
+  const arrowY   = [];
+  { let y = FIRST_Y; for (let i = 0; i < nSteps; i++) {
+    stepTop[i]  = y;
+    arrowY[i]   = y + (aboveFragSet.has(i) ? ABOVE_FRAG : ABOVE_NORMAL);
+    y += stepHts[i];
+  } }
+  const totalH = nSteps > 0 ? (stepTop[nSteps - 1] + stepHts[nSteps - 1]) : FIRST_Y;
+
+  // Fragment nesting: when two fragments share a startIdx (outer + inner at same step),
+  // pull the outer fragment up by FRAG_NEST_PAD so the badges don't collide.
+  // When they share an endIdx, extend the parent below the child.
+  for (const frag of fragments) {
+    if (fragments.some(f => f.depth > frag.depth && f.startIdx === frag.startIdx)) {
+      frag.extraTopPad = FRAG_NEST_PAD;
+    }
+    if (fragments.some(f => f.depth > frag.depth && f.endIdx === frag.endIdx)) {
+      frag.extraBottomPad = SELF_H / 2;
+    }
+  }
+
+  const H = Math.max(500, totalH + FOOTER_H);
+
+  // Map from step index → max depth of containing fragment (-1 if none).
+  // Used to inset ref boxes so they visually sit inside their container.
+  const stepDepth = new Array(nSteps).fill(-1);
+  for (const frag of fragments) {
+    for (let i = frag.startIdx; i <= frag.endIdx; i++) {
+      stepDepth[i] = Math.max(stepDepth[i], frag.depth);
+    }
+  }
 
   const colX   = participants.map((_, i) => ML + i * (COL_W + COL_GAP) + COL_W / 2);
   const colIdx = Object.fromEntries(participants.map((p, i) => [p.id, i]));
@@ -332,19 +454,28 @@ function renderFlowPage(flow) {
   // Fragment rectangles (drawn before lifelines so they sit behind everything)
   const FRAG_PAD = 10;
   for (const frag of fragments) {
-    const style = FRAGMENT_STYLES[frag.type] || FRAGMENT_STYLES['opt'];
-    const inset = frag.depth * 12;
-    const fx    = ML - FRAG_PAD + inset;
-    const fw    = (W - ML - MR) + FRAG_PAD * 2 - inset * 2;
-    const fy    = (FIRST_Y + frag.startIdx * STEP_H - STEP_H * 0.4).toFixed(1);
-    const fh    = (STEP_H * (frag.endIdx - frag.startIdx + 0.95)).toFixed(1);
+    const style    = FRAGMENT_STYLES[frag.type] || FRAGMENT_STYLES['opt'];
+    const inset    = frag.depth * 12;
+    const fx       = ML - FRAG_PAD + inset;
+    const fw       = (W - ML - MR) + FRAG_PAD * 2 - inset * 2;
+    const extraTop = frag.extraTopPad  || 0;
+    const extraBot = frag.extraBottomPad || 0;
+
+    // Top: slot top of the first step (already has ABOVE_FRAG space for the badge),
+    //      pulled up further when a nested fragment shares the same startIdx.
+    const fy    = stepTop[frag.startIdx] - extraTop;
+    // Bottom: after the last step's content. FRAG_PAD_BOT is already baked into the slot
+    // height of fragment-end steps, so adding it here would double-count. Use only extraBot
+    // (for parent-contains-child visual extension) plus the base below-content.
+    const fyEnd = arrowY[frag.endIdx] + stepBelowBase(flatSteps[frag.endIdx]) + extraBot;
+    const fh    = fyEnd - fy;
 
     svgParts.push(
-      `  <rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" ` +
+      `  <rect x="${fx}" y="${fy.toFixed(1)}" width="${fw}" height="${fh.toFixed(1)}" ` +
       `rx="3" fill="${style.fill}" stroke="${style.stroke}" stroke-width="1" stroke-dasharray="5,3"/>`
     );
 
-    const lw = 28, lh = 16, lx = fx, ly = parseFloat(fy);
+    const lw = 28, lh = BADGE_H, lx = fx, ly = fy;
     svgParts.push(
       `  <polygon points="${lx},${ly} ${lx+lw},${ly} ${lx+lw+8},${ly+lh/2} ${lx+lw},${ly+lh} ${lx},${ly+lh}" ` +
       `fill="${style.stroke}" fill-opacity="0.18" stroke="${style.stroke}" stroke-width="1"/>`
@@ -363,14 +494,18 @@ function renderFlowPage(flow) {
       );
     }
 
-    // Collect per-operand labels for rendering as HTML divs (above the SVG/lifelines).
+    // Per-operand labels rendered as HTML divs.
     for (const { idx, label } of (frag.operandStarts || [])) {
       if (!label) continue;
-      const opIdx = frag.operandStarts.findIndex(o => o.idx === idx);
+      const opIdx   = frag.operandStarts.findIndex(o => o.idx === idx);
       const isFirst = idx === frag.startIdx;
+      // First operand: label sits just below the fragment badge strip.
+      // Later operands: label sits just below the separator line (which is at stepTop of the
+      // next operand's first step — both share the same slot boundary).
+      const nextOpFirstIdx = frag.separators[opIdx - 1] + 1;
       const topPx = isFirst
-        ? ly + lh - 12
-        : FIRST_Y + (frag.separators[opIdx - 1] + 0.7) * STEP_H + 11;
+        ? fy + lh + MIN_GAP
+        : (stepTop[nextOpFirstIdx] ?? 0) + MIN_GAP;
       labelDivs.push(
         `<div style="position:absolute;left:${(lx + lw + 14).toFixed(1)}px;top:${topPx.toFixed(1)}px;` +
         `font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
@@ -379,7 +514,10 @@ function renderFlowPage(flow) {
     }
 
     for (const sepIdx of (frag.separators || [])) {
-      const sy = (FIRST_Y + (sepIdx + 0.7) * STEP_H).toFixed(1);
+      // Separator drawn exactly at the slot boundary between operands.
+      // stepTop[sepIdx + 1] is the top of the next operand's first step slot,
+      // which is guaranteed to be below all content of sepIdx's step.
+      const sy = (stepTop[sepIdx + 1] ?? (arrowY[sepIdx] + stepBelowBase(flatSteps[sepIdx]))).toFixed(1);
       svgParts.push(
         `  <line x1="${fx}" y1="${sy}" x2="${fx + fw}" y2="${sy}" ` +
         `stroke="${style.stroke}" stroke-width="1" stroke-dasharray="4,2"/>`
@@ -396,9 +534,9 @@ function renderFlowPage(flow) {
   }
 
   // Steps
-  let gapIdx = 0, regIdx = 0;
+  let gapIdx = 0, regIdx = 0, ovIdx = 0;
   flatSteps.forEach((step, idx) => {
-    const y = FIRST_Y + idx * STEP_H;
+    const y = arrowY[idx];
 
     if (step.ref) {
       const refFlow  = (config.flows || []).find(f => f.id === step.ref);
@@ -407,10 +545,17 @@ function renderFlowPage(flow) {
       const isBack   = flowIds.indexOf(step.ref) < flowIds.indexOf(flow.id);
       const arrow    = isBack ? '&#8592;' : '&#8594;';
       const refText  = isBack ? `${arrow} ${refLabel}` : `${refLabel} ${arrow}`;
-      const boxH2 = 36, boxY = y - boxH2 / 2;
+      // The slot for a fragment-starting step already reserves ABOVE_FRAG = 40px above the
+      // arrow: badge(16) + gap(4) + label(13) + margin(7). The ref box (BOX_H2=36) centered
+      // at y extends 18px above the arrow — well within the 40px badge-safe zone.
+      // No shift needed.
+      const refInset  = stepDepth[idx] >= 0 ? (stepDepth[idx] + 1) * 12 + 10 : 0;
+      const refLeft   = ML + refInset;
+      const refWidth  = W - ML - MR - refInset * 2;
+      const boxY = y - BOX_H2 / 2;
       labelDivs.push(
-        `<div data-navigate="flow_${refFlow?.domain}_${step.ref}" style="position:absolute;left:${ML}px;top:${boxY}px;` +
-        `width:${W - ML - MR}px;height:${boxH2}px;border:1.5px solid #A1B4EA;border-radius:4px;` +
+        `<div data-navigate="flow_${refFlow?.domain}_${step.ref}" style="position:absolute;left:${refLeft}px;top:${boxY}px;` +
+        `width:${refWidth}px;height:${BOX_H2}px;border:1.5px solid #A1B4EA;border-radius:4px;` +
         `background:#E6EBF9;display:flex;align-items:center;justify-content:center;` +
         `cursor:pointer;z-index:3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">` +
         `<span style="position:absolute;top:3px;left:6px;font-size:7px;font-weight:700;color:#5650BE;` +
@@ -442,22 +587,45 @@ function renderFlowPage(flow) {
       );
       const labelX         = (sx + dx + (goLeft ? -6 : 6)).toFixed(1);
       const labelTransform = goLeft ? 'transform:translate(-100%,0);text-align:right;' : '';
-      labelDivs.push(
-        `<div style="position:absolute;left:${labelX}px;top:${(y - 9).toFixed(1)}px;` +
-        `${labelTransform}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
-        `color:${color};white-space:nowrap;z-index:3;">${prefix}${step.label || ''}</div>`
-      );
-      if (isGap && step.gap_description) {
-        const id      = `g${gapIdx++}`;
-        const hitLeft = goLeft ? sx + dx - 6 : sx;
+      const hasGap     = isGap && !!step.gap_description;
+      const hasOverlay = !!(step.overlay && step.overlay.length);
+      const ovBadge    = hasOverlay
+        ? `<span style="display:inline-block;margin-left:4px;width:12px;height:12px;` +
+          `line-height:12px;text-align:center;vertical-align:middle;` +
+          `background:#FEF3C7;border:1px solid #D97706;border-radius:2px;` +
+          `font-size:8px;color:#D97706;">&#8853;</span>`
+        : '';
+      if (hasGap || hasOverlay) {
+        const id = hasGap ? `g${gapIdx++}` : `ov${ovIdx++}`;
+        const tipParts = [];
+        if (hasGap) {
+          tipParts.push(
+            `<div style="font-size:7.5px;font-weight:700;color:${GAP_COLOR};">\u26a0\ufe0f Gap</div>` +
+            `<div style="font-size:8px;color:#374151;">${step.gap_description}</div>`
+          );
+        }
+        if (hasOverlay) {
+          if (hasGap) tipParts.push(`<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>`);
+          for (const [i, o] of step.overlay.entries()) {
+            if (i > 0) tipParts.push(`<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>`);
+            tipParts.push(
+              `<div style="font-size:7.5px;font-weight:700;color:#D97706;">&#8853; State overlay point</div>` +
+              `<div style="font-size:8px;color:#374151;">${o.note}</div>` +
+              (o.mechanism ? `<div style="font-size:7.5px;color:#6b7280;font-style:italic;">${o.mechanism}</div>` : '')
+            );
+          }
+        }
         labelDivs.push(
-          `<div class="int-hit" data-int-id="${id}" style="position:absolute;` +
-          `left:${hitLeft}px;top:${(y - 5)}px;width:${SELF_W + 6}px;height:${SELF_H + 14}px;` +
-          `background:transparent;cursor:help;z-index:4;"></div>` +
-          `<div class="int-content" data-int-id="${id}" style="display:none;">` +
-          `<div style="font-size:7.5px;font-weight:700;color:${GAP_COLOR};">\u26a0\ufe0f Gap</div>` +
-          `<div style="font-size:8px;color:#374151;">${step.gap_description}</div>` +
-          `</div>`
+          `<div class="int-hit" data-int-id="${id}" style="position:absolute;left:${labelX}px;top:${(y - 9).toFixed(1)}px;` +
+          `${labelTransform}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
+          `color:${color};white-space:nowrap;z-index:4;cursor:help;">${prefix}${step.label || ''}${ovBadge}</div>` +
+          `<div class="int-content" data-int-id="${id}" style="display:none;">${tipParts.join('')}</div>`
+        );
+      } else {
+        labelDivs.push(
+          `<div style="position:absolute;left:${labelX}px;top:${(y - 9).toFixed(1)}px;` +
+          `${labelTransform}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;font-weight:600;` +
+          `color:${color};white-space:nowrap;z-index:3;">${prefix}${step.label || ''}</div>`
         );
       }
       return;
@@ -489,7 +657,11 @@ function renderFlowPage(flow) {
     const belowY = (y + 4 + (step.condition ? 12 : 0)).toFixed(1);
     const gapPrefix = step.gap ? '\u26a0\ufe0f\u202f' : '';
     const icon = !isActor && step.event ? '\u26a1\u202f' : '';
-    const mainText = step.event || step.label || '';
+    const fromDomain = participants[fi]?.id;
+    const rawLabel = step.event || step.label || '';
+    const mainText = (step.event && fromDomain && rawLabel.startsWith(fromDomain + '.'))
+      ? rawLabel.slice(fromDomain.length + 1)
+      : rawLabel;
 
     let above = `<div style="font-size:9px;font-weight:600;color:${color};white-space:nowrap;">${gapPrefix}${icon}${mainText}</div>`;
     if (step.condition) above += `<div style="font-size:8px;color:#5650BE;font-style:italic;white-space:nowrap;">[${step.condition}]</div>`;
@@ -499,10 +671,11 @@ function renderFlowPage(flow) {
       `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;">${above}</div>`
     );
     if (step.note) {
+      const noteHtml = step.note.replace(/^(\[.+?\])\s*/, '$1<br>');
       labelDivs.push(
         `<div style="position:absolute;left:${midX}px;top:${belowY}px;transform:translate(-50%,0);` +
         `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;` +
-        `color:#6b7280;max-width:220px;white-space:normal;z-index:3;">${step.note}</div>`
+        `color:#6b7280;max-width:220px;white-space:normal;z-index:3;">${noteHtml}</div>`
       );
     }
     if (step.regulatory && step.regulatory.length) {
@@ -537,6 +710,26 @@ function renderFlowPage(flow) {
         `</div>`
       );
     }
+    if (step.overlay && step.overlay.length) {
+      const id      = `ov${ovIdx++}`;
+      const hasReg  = !!(step.regulatory && step.regulatory.length);
+      const tipX    = (parseFloat(midX) + Math.abs(tx - fx) * 0.3 + (hasReg ? 22 : 4)).toFixed(1);
+      const tipRows = step.overlay.map((o, i) =>
+        (i > 0 ? `<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>` : '') +
+        `<div style="font-size:7.5px;font-weight:700;color:#D97706;">&#8853; State overlay point</div>` +
+        `<div style="font-size:8px;color:#374151;">${o.note}</div>` +
+        (o.mechanism ? `<div style="font-size:7.5px;color:#6b7280;font-style:italic;">${o.mechanism}</div>` : '')
+      ).join('');
+      labelDivs.push(
+        `<div class="int-hit" data-int-id="${id}" style="position:absolute;` +
+        `left:${tipX}px;top:${(y - 7)}px;width:14px;height:14px;` +
+        `display:flex;align-items:center;justify-content:center;` +
+        `background:#FEF3C7;border:1px solid #D97706;border-radius:3px;` +
+        `cursor:help;z-index:4;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;` +
+        `font-size:9px;color:#D97706;">&#8853;</div>` +
+        `<div class="int-content" data-int-id="${id}" style="display:none;">${tipRows}</div>`
+      );
+    }
   });
 
   // ── Header bar ────────────────────────────────────────────────────────────
@@ -563,6 +756,9 @@ function renderFlowPage(flow) {
     `<span>${mkArrow('#5650BE', false)}&thinsp;Planned</span>` +
     `<span>${mkArrow('#2B1A78', false)}&thinsp;Human action</span>` +
     `<span>${mkArrow('#AF121D', true)}&thinsp;Gap</span>` +
+    `<span><span style="display:inline-block;width:12px;height:12px;line-height:12px;` +
+    `text-align:center;vertical-align:middle;background:#FEF3C7;border:1px solid #D97706;` +
+    `border-radius:2px;font-size:8px;color:#D97706;">&#8853;</span>&thinsp;State overlay point</span>` +
     `</div>` +
     `</div>`;
 
@@ -771,7 +967,7 @@ function renderDetail(domainId) {
 
     // Hex shape — navigable unless not-started
     const isNav = partner.status !== 'not-started';
-    if (isNav) parts.push(`<g data-navigate="${pid}" cursor="pointer">`);
+    if (isNav) parts.push(`<g data-navigate="domain_${pid}" cursor="pointer">`);
     parts.push(hexPoly(px, py, PR, partner.status));
 
     // Label, description, entities inside hex

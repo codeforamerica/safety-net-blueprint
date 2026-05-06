@@ -27,7 +27,13 @@ The Data Exchange domain acts as a facade for all external service interactions.
 
 ### Standard data exchange sources
 
-IRS (income), SSA (income, disability, identity), USCIS SAVE (immigration status), state wage record databases, state new hire registries, and inter-state enrollment hubs (for duplicate benefit checks).
+Federal data exchange services fall into two categories:
+
+**CMS Federal Data Services Hub (FDSH)** — a CMS-operated routing layer that connects state eligibility systems to multiple federal data sources through a single interface. FDSH exposes discrete named services that can be called selectively; it is not a single bundled call. States configure which FDSH services to invoke based on the eligibility factor being verified. See [Decision 7](#decision-7-service-type-model).
+
+**Income and Eligibility Verification System (IEVS)** — a federal mandate (7 CFR § 272.8, 45 CFR § 205.51) requiring states to query SSA, IRS, state wage records, and unemployment insurance. IEVS is a regulatory framework, not a single service — the underlying systems are separate with distinct interfaces, response schemas, and query cycles. See [Decision 17](#decision-17-ievs-as-regulatory-framework).
+
+Other federal services: USCIS SAVE (immigration status), inter-state enrollment hubs (duplicate benefit checks), and SSA correctional facility data (incarceration status).
 
 ## Entity model
 
@@ -38,7 +44,7 @@ The catalog of available external data sources. Each entry describes a type of e
 Key fields:
 - `id` — unique identifier
 - `name` — human-readable name (e.g., "SSA Death Master File")
-- `serviceType` — category: `income_verification`, `identity_verification`, `immigration_status`, `enrollment_check`, `eligibility_hub`, `incarceration_check`
+- `serviceType` — the specific federal service interface this entry represents: `fdsh_ssa`, `fdsh_vlp`, `fdsh_fti`, `fdsh_medicare`, `fdsh_vci`, `ssa_ievs`, `irs_ievs`, `swica`, `uib`, `save`, `enrollment_check`, `incarceration_check`. See [Decision 7](#decision-7-service-type-model) for the full service type reference.
 - `defaultCallMode` — `sync` or `async`
 - `programs` — which programs use this service (`snap`, `medicaid`, `tanf`, or `all`)
 - `requestingResourceType` — the resource type adapters fetch when executing the call (e.g., `intake/applications/members`); adapters look this up from the catalog rather than callers passing it per-call. See [Decision 14](#decision-14-resource-type-in-service-config).
@@ -112,11 +118,11 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 | 4 | [VerificationSource superseded](#decision-4-verificationsource-superseded) | Workflow's planned VerificationSource is replaced by ExternalService/ExternalServiceCall |
 | 5 | [Events as audit trail; ExternalServiceCall for lifecycle](#decision-5-events-as-audit-trail-externalservicecall-for-lifecycle) | CloudEvents log is the immutable audit record; ExternalServiceCall governs the call lifecycle and serves as the correlation handle |
 | 6 | [Calling domains own subscription logic](#decision-6-calling-domains-own-subscription-logic) | The rules that determine when to call an external service live in the calling domain, not in Data Exchange |
-| 7 | [Result payload schemas per service type](#decision-7-result-payload-schemas-per-service-type) | Each service type defines its own result schema; composite service types reuse component schemas |
+| 7 | [Service type model](#decision-7-service-type-model) | Twelve discrete service types reflecting actual federal service interfaces; FDSH services prefixed `fdsh_`; IEVS sources as separate types |
 | 8 | [Idempotency via requestingResourceId + serviceId](#decision-8-idempotency-via-requestingresourceid--serviceid) | Duplicate submissions are detected by checking for an existing pending call on the same resource and service |
 | 9 | [Credentials not in config](#decision-9-credentials-not-in-config) | `data-exchange-config.yaml` holds connection parameters only; credentials are injected at deploy time |
 | 10 | [Failure classification via failureReason](#decision-10-failure-classification-via-failurereason) | `call.failed` event carries a `failureReason` field so calling domains can distinguish retriable from non-retriable failures |
-| 11 | [Partial results for composite calls](#decision-11-partial-results-for-composite-calls) | Composite calls resolve to `completed` with `matchStatus: partial`; consumers evaluate sufficiency |
+| 11 | [Partial results for multi-component service calls](#decision-11-partial-results-for-multi-component-service-calls) | Calls with selectable sub-components resolve to `completed` with `matchStatus: partial`; consumers evaluate sufficiency |
 | 12 | [Event delivery and audit separation](#decision-12-event-delivery-and-audit-separation) | `/events` delivers results to subscribers; event store is the audit record; `/audit` endpoint deferred |
 | 13 | [No PII in request payload](#decision-13-no-pii-in-request-payload) | ExternalServiceCall carries no PII; adapters use system credentials to fetch sensitive fields from the source domain |
 | 14 | [Resource type in service config](#decision-14-resource-type-in-service-config) | Resource type declared in the ExternalService catalog entry; callers pass only `serviceId` and `requestingResourceId` |
@@ -230,33 +236,50 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 
 ---
 
-### Decision 7: Result payload schemas per service type
+### Decision 7: Service type model
 
-**What's being decided:** How the result payload of a completed external service call is structured and made extensible for states.
+**What's being decided:** Whether to model federal service types at a functional abstraction level (grouping services by purpose) or at the level of individual federal service interfaces.
 
 **Considerations:**
-- Calling domains must be able to consume results without knowing which specific external service was called — the schema must be defined at the service type level, not per service ID.
-- Composite API responses (such as CMS FDSH, which bundles income, citizenship, immigration, Medicare, and incarceration results in a single call) warrant their own service type rather than being broken into separate calls.
-- States may receive additional fields from their specific external service endpoints that the blueprint schema does not capture — result schemas must be extensible via overlay.
-- Composite service types should reuse component schemas from standalone service types via `$ref` rather than duplicating them.
+- CMS FDSH is a routing layer, not a single service. It exposes discrete named services — SSA Composite, Verify Lawful Presence (VLP), IRS/FTI, Medicare, Verify Current Income (VCI) — each with its own endpoint, inputs, and return schema. Grouping them into a single type obscures what a call returns and makes result schema validation impossible.
+- IEVS (7 CFR § 272.8) is a regulatory mandate requiring states to query four separate sources: SSA, IRS, state wage records (SWICA), and unemployment insurance (UIB). Each has incompatible response structures and update cycles. A single `income_verification` type cannot represent them accurately.
+- States need to know exactly what each service returns in order to build their adapters. Service type names should reflect the actual federal service interface.
+- VLP requires both an A-Number and an immigration document number to run. When only an A-Number is available, or when VLP returns "Institute Additional Verification," SAVE is the appropriate follow-up. The calling domain's rules implement this tier logic (consistent with Decision 6); `fdsh_vlp` and `save` are separate service types with different inputs and result schemas.
 
 **Blueprint-defined service types:**
 
-| Service type | Primary external source |
-|---|---|
-| `income_verification` | IRS, SSA, state wage records |
-| `identity_verification` | SSA |
-| `immigration_status` | USCIS SAVE |
-| `enrollment_check` | Inter-state enrollment hub |
-| `eligibility_hub` | CMS FDSH (composite — reuses component schemas) |
-| `incarceration_check` | SSA Prison Verification System |
+**FDSH services** — routed through the CMS Federal Data Services Hub. Field-level specs in CMS FDSH Business Service Definitions (see References).
+
+| Service type | FDSH service | Adapter needs | What it returns | Mode |
+|---|---|---|---|---|
+| `fdsh_ssa` | SSA Composite | SSN, name, DOB; sub-components to request via `data` field (SSN verification, citizenship, Title II, incarceration — selectable) | SSN validity; U.S.-born citizenship status; Title II (RSDI/SSDI) benefit amount and status; incarceration status. See [Decision 11](#decision-11-partial-results-for-multi-component-service-calls) for partial result handling. | Real-time |
+| `fdsh_vlp` | Verify Lawful Presence | A-Number + immigration document number + document type | Class of Admission code; grant date; date of entry; Five Year Bar Met indicator; country of birth; country of citizenship at entry; SEVIS ID; sponsor indicator | Real-time |
+| `fdsh_fti` | IRS / Federal Tax Information | SSN; tax year via `data` field (defaults to prior year) | MAGI income compatibility result (compatible or not); filing status; household size. Returns a flag, not raw figures. | Real-time |
+| `fdsh_medicare` | Medicare | SSN or Medicare Beneficiary Identifier (MBI) | Medicare Part A enrollment status; Medicare Part B enrollment status | Real-time |
+| `fdsh_vci` | Verify Current Income (Equifax) | SSN | Current employer-reported wages; employment status. Raw income figures, not a compatibility flag. Commercial service billed separately; optional. | Near real-time |
+
+**IEVS sources** — 7 CFR § 272.8 requires states to query all four for SNAP; each is a separate system. Field-level specs in SSA data exchange manuals (see References).
+
+| Service type | Source | Adapter needs | What it returns | Mode |
+|---|---|---|---|---|
+| `ssa_ievs` | SSA SVES / SOLQ | SSN; response record types to request via `data` field (Title II, Title XVI, 40-quarter work history — selectable) | SSN validation; Title II (RSDI/SSDI) benefit data; Title XVI (SSI) benefit data; 40-quarter work history | Batch or real-time |
+| `irs_ievs` | IRS (direct IEVS batch) | SSN; tax year via `data` field | Prior-year unearned income — interest, dividends, capital gains. Raw figures, unlike `fdsh_fti`. | Batch |
+| `swica` | State Wage Information Collection Agency | SSN (batch file) | Quarterly employer-reported wages by employer | Batch (quarterly) |
+| `uib` | State unemployment system | SSN | UI claim status; weekly benefit amount; claim dates | Batch or real-time |
+
+**Other federal services:**
+
+| Service type | Source | Adapter needs | What it returns | Mode |
+|---|---|---|---|---|
+| `save` | USCIS SAVE (direct) | A-Number or document number + document type. Step 2 is initiated by USCIS response, not the caller. Field-level specs in USCIS SAVE documentation (see References). | Step 1: USCIS status code; Class of Admission; country of birth; employment authorization indicator. Step 2 (if inconclusive): DHS narrative; expiration date; DHS comments. Used as fallback when `fdsh_vlp` cannot resolve. | Real-time |
+| `enrollment_check` | Inter-state enrollment hub | SSN, state, program (varies by hub) | Duplicate enrollment indicator across states and programs | Batch or real-time |
+| `incarceration_check` | SSA Prison Verification System (PUPS) | SSN (batch file) | Confinement status matched against SSA beneficiary records | Batch |
 
 **Options:**
-- **(A)** Generic envelope — a single untyped result payload that adapters populate freely. Calling domains cannot rely on a consistent schema.
-- **(B)** Per service ID — schemas defined for each specific external service entry. Too granular; couples calling domain logic to state-specific service configuration.
-- **(C) ✓** Per service type — each service type defines a result schema in the OpenAPI spec; adapters produce results conforming to the schema for that type; states extend via overlay.
+- **(A)** Functional abstraction — group services by purpose (`income_verification`, `immigration_status`). Simpler type list but hides incompatible schemas; adapters cannot know what a call returns.
+- **(B) ✓** Discrete service types per federal interface — each named service gets its own type; schemas are accurate; FDSH services prefixed `fdsh_` to make the routing layer visible.
 
-**Customization:** States extend service type result schemas via overlay to capture additional fields returned by their specific external service endpoints.
+**Customization:** States extend per-service-type result schemas via OpenAPI overlay to capture additional fields returned by their specific external service endpoints. States that do not use a particular service simply do not configure an ExternalService entry for that type.
 
 ---
 
@@ -307,23 +330,24 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 
 ---
 
-### Decision 11: Partial results for composite calls
+### Decision 11: Partial results for multi-component service calls
 
-**What's being decided:** How `eligibility_hub` calls resolve when FDSH returns some sub-results but not others.
+**What's being decided:** How service calls with selectable sub-components resolve when some sub-components are unavailable or return no match.
+
+**Background:** `fdsh_ssa` is the primary case — callers select which sub-components to request (SSN validation, citizenship, Title II benefits, incarceration), and any of those sub-components may be unavailable if an upstream SSA source does not respond. `ssa_ievs` has a similar structure, with selectable response record types.
 
 **Considerations:**
-- FDSH can return partial results — if one upstream source is unavailable, other sub-results may still be returned.
-- Treating partial responses as `failed` discards useful data and forces the calling domain to retry the entire composite call.
-- Adding a new `partial` lifecycle state complicates the state machine and every consumer that subscribes to result events.
-- The calling domain is best positioned to decide whether the returned sub-results are sufficient to proceed.
-- `inconclusive` and `unavailable` are meaningfully different for sub-results: `inconclusive` means data was returned but a match could not be determined (may need manual review); `unavailable` means the source system did not respond (may warrant retry). Conflating them forces calling domains to treat retriable failures the same as data quality issues.
+- Treating any unavailable sub-component as a full call failure discards useful data from the sub-components that did respond and forces a full retry.
+- Adding a new `partial` lifecycle state complicates the state machine and every consumer.
+- The calling domain is best positioned to decide whether the returned sub-components are sufficient to proceed — for example, a citizenship result may be sufficient to continue even if the Title II benefit amount is unavailable.
+- `inconclusive` and `unavailable` are meaningfully different: `inconclusive` means data was returned but a match could not be determined (may need manual review); `unavailable` means the source did not respond (may warrant retry).
 
 **Options:**
-- **(A)** `failed` — any missing sub-result fails the whole call; useful data discarded
-- **(B)** New `partial` lifecycle state — adds complexity to the state machine and all consumers
-- **(C) ✓** `completed` with `matchStatus: partial` — call resolves as completed; unavailable sub-results carry `matchStatus: unavailable`; sub-results that returned data but could not be matched carry `matchStatus: inconclusive`; consumer evaluates sufficiency
+- **(A)** `failed` — any unavailable sub-component fails the whole call; useful sub-results discarded.
+- **(B)** New `partial` lifecycle state — adds complexity to the state machine and all consumers.
+- **(C) ✓** `completed` with `matchStatus: partial` — call resolves as completed; unavailable sub-components carry `matchStatus: unavailable`; sub-components that returned data but could not be matched carry `matchStatus: inconclusive`; consumer evaluates sufficiency.
 
-**Sub-result structure:** Absent sub-results appear as objects with `matchStatus: unavailable` rather than being omitted. Named properties per sub-result type (e.g., `incomeResult`, `immigrationResult`) allow each to carry its own typed schema via `$ref`.
+**Sub-result structure:** Absent sub-results appear as objects with `matchStatus: unavailable` rather than being omitted. Named properties per sub-component (e.g., `citizenshipResult`, `titleIIResult`) allow each to carry its own typed schema.
 
 ---
 
@@ -394,7 +418,7 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 **Options:**
 - **(A)** Open `data` object only — callers pass any fields in a freeform object; no schema validation. Adapters discover what fields are available without a contract.
 - **(B)** Per-service `inputSchema` in service config — documented alongside deployment config in `data-exchange-config.yaml`. Input schemas are not discoverable via the OpenAPI spec; tooling cannot validate them.
-- **(C) ✓** Per-service-type input schemas as OpenAPI components — ExternalServiceCall has a `data` field whose schema is polymorphic on `serviceType`, with per-service-type input schema components (e.g., `EligibilityHubInputData`, `IncomeVerificationInputData`) defined in the OpenAPI spec. Callers read the component for their service type to know what fields are valid. Mirrors Decision 7 for result schemas and the existing polymorphic field pattern.
+- **(C) ✓** Per-service-type input schemas as OpenAPI components — ExternalServiceCall has a `data` field whose schema is polymorphic on `serviceType`, with per-service-type input schema components (e.g., `FdshSsaInputData` to specify which sub-components to request, `SsaIevsInputData` to specify which response record types to include) defined in the OpenAPI spec. Callers read the component for their service type to know what fields are valid. Mirrors Decision 7 for result schemas and the existing polymorphic field pattern.
 
 **Customization:** States extend per-service-type input schemas via OpenAPI overlay to add state-specific non-PII input fields their adapters accept.
 
@@ -409,13 +433,13 @@ States customize the Data Exchange domain primarily through `data-exchange-confi
 | External service endpoint URLs | Overlay `data-exchange-config.yaml` — blueprint defines federal service entries with placeholder config; states fill in their endpoint URLs |
 | Default call mode per service | Set `defaultCallMode` on any ExternalService entry in `data-exchange-config.yaml`; can be overridden per call by the calling domain |
 | State-specific services | Add entries to `data-exchange-config.yaml` following the same schema as the blueprint-defined federal entries |
-| Result schema extensions | Overlay result schemas to capture additional fields returned by state-specific external service endpoints (see Decision 7) |
+| Result schema extensions | Overlay per-service-type result schemas in the OpenAPI spec to capture additional fields returned by state-specific external service endpoints (see [Decision 7](#decision-7-service-type-model)) |
 | When external service calls are triggered | Overlay the calling domain's rules YAML — Data Exchange is a pure execution layer; trigger logic stays in Eligibility, Workflow, or Client Management (see Decision 6) |
 
 ## Known gaps
 
 - **Retry logic** — no defined mechanism for automatic retries on retriable failures (`connection_error`, `service_error`). States will need to implement retry orchestration in their calling domain rules or adapter layer.
-- **Batch calls** — some federal sources (IEVS) support batch queries for efficiency; the current model is one ExternalServiceCall per resource. Batch support would require a different lifecycle model.
+- **Batch calls** — several service types (`irs_ievs`, `swica`, and quarterly `ssa_ievs`) are inherently batch-only: they operate on files submitted periodically rather than per-member requests. The current model creates one ExternalServiceCall per resource, which does not fit a batch submission pattern. Batch support would require a different lifecycle model — likely a parent-level batch submission record with child call records per member result.
 - **Result caching and reuse** — no defined policy for reusing a recent result rather than making a new call. States performing repeated determinations on the same household may need to implement caching in their adapter layer.
 - **Manual review resolution** — when a call result carries `matchStatus: pending_manual_review`, there is no defined mechanism for a caseworker to adjudicate and resolve the pending status. This likely belongs in the Workflow domain (a task type) but is not yet designed.
 - **Audit endpoint** — deferred in Decision 12; access control and data retention requirements (#216) must be defined before this can be specified.
@@ -427,3 +451,14 @@ States customize the Data Exchange domain primarily through `data-exchange-confi
 - Regulatory: 7 CFR § 272.8, 42 CFR § 435.940–965, 5 U.S.C. § 552a
 - Standards: MITA 3.0 Business Architecture, CloudEvents
 - Related docs: [Domain Design Overview](../domain-design.md), [Contract-Driven Architecture](../contract-driven-architecture.md), [Workflow Domain](workflow.md)
+
+### Federal service specifications
+
+Use these sources when designing OpenAPI result and input schemas for each service type (Decision 7).
+
+- **CMS FDSH** — [FDSH Business Service Definitions](https://www.medicaid.gov/state-resource-center/mac-learning-collaboratives/downloads/acct-trnsfr-bsns-serv-def.pdf) — field-level specs for `fdsh_ssa`, `fdsh_vlp`, `fdsh_fti`, `fdsh_medicare`, `fdsh_vci`
+- **SSA data exchange index** — [ssa.gov/dataexchange/applications.html](https://www.ssa.gov/dataexchange/applications.html) — index of all SSA data exchange applications
+- **SSA SVES/SOLQ** — [SVES/SOLQ Manual](https://www.ssa.gov/dataexchange/documents/sves_solq_manual.pdf) and [SVES Record Layout](https://www.ssa.gov/dataexchange/documents/SVES%20record_July_2017.pdf) — field-level specs for `ssa_ievs`
+- **SSA BENDEX** — [BENDEX Manual](https://www.ssa.gov/dataexchange/documents/BENDEXMANUAL2022.pdf) — Title II benefit and earnings data (overlaps with `ssa_ievs` Title II response)
+- **SSA SDX** — [SDX Record Data Elements](https://www.ssa.gov/dataexchange/documents/SDX%20record.pdf) — Title XVI SSI data (overlaps with `ssa_ievs` Title XVI response)
+- **USCIS SAVE** — [SAVE Verification Process](https://www.uscis.gov/save/about-save/save-verification-process) and [SAVE Tutorial](https://www.uscis.gov/sites/default/files/document/flyers/SAVETutorial%20-%20April%202025%20Updates.pdf) — field-level specs for `save`

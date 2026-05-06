@@ -120,7 +120,46 @@
         {
           "type": "system",
           "domain": "intake",
+          "text": "Verifications created per program and household member",
+          "subtext": "Income, identity, residency for SNAP; citizenship and immigration for Medicaid (per member)"
+        },
+        {
+          "type": "system",
+          "domain": "intake",
           "text": "Documents linked to verification items"
+        }
+      ]
+    },
+    {
+      "laneId": "data",
+      "subPhaseId": "automated-screening",
+      "cards": [
+        {
+          "type": "domain-event",
+          "text": "application.submitted",
+          "domain": "intake"
+        },
+        {
+          "type": "domain-event",
+          "text": "eligibility.application.expedited",
+          "domain": "eligibility"
+        },
+        {
+          "type": "domain-event",
+          "text": "call.completed",
+          "domain": "data_exchange",
+          "subtext": "One per call; results arrive asynchronously"
+        },
+        {
+          "type": "domain-event",
+          "text": "eligibility.application.prescreened",
+          "domain": "eligibility",
+          "subtext": "Per-program indicators (likely_eligible | needs_review | likely_ineligible); caseworkers can see alongside verification obligations"
+        },
+        {
+          "type": "domain-event",
+          "text": "person.match_resolved",
+          "domain": "client_management"
         }
       ]
     },
@@ -128,11 +167,6 @@
       "laneId": "system",
       "subPhaseId": "automated-screening",
       "cards": [
-        {
-          "type": "system",
-          "domain": "intake",
-          "text": "Verification items and baseline document requirements created"
-        },
         {
           "type": "system",
           "domain": "workflow",
@@ -160,26 +194,8 @@
         {
           "type": "system",
           "domain": "eligibility",
-          "text": "Medicaid real-time eligibility (RTE) check initiated",
-          "subtext": "In response to event application.submitted"
-        },
-        {
-          "type": "note",
-          "domain": "intake",
-          "text": "⚠ Create RTE verification record with Medicaid eligibility outcome",
-          "subtext": "rte verification type not yet defined in intake contracts"
-        },
-        {
-          "type": "system",
-          "domain": "data_exchange",
-          "text": "Federal checks initiated",
-          "subtext": "FDSH, IEVS, SAVE, SSA"
-        },
-        {
-          "type": "note",
-          "domain": "intake",
-          "text": "⚠ Update verification records with federal check results",
-          "subtext": "Intake handler for call.completed updating verifications not yet designed"
+          "text": "Pre-screening result evaluated per Medicaid applicant",
+          "subtext": "In response to event call.completed"
         },
         {
           "type": "system",
@@ -192,43 +208,6 @@
           "domain": "intake",
           "text": "⚠ Auto-confirm exact matches; queue fuzzy matches for caseworker review",
           "subtext": "Person match auto-confirmation behavior not yet designed in intake"
-        }
-      ]
-    },
-    {
-      "laneId": "data",
-      "subPhaseId": "automated-screening",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "application.submitted",
-          "domain": "intake"
-        },
-        {
-          "type": "domain-event",
-          "text": "eligibility.application.expedited",
-          "domain": "eligibility"
-        },
-        {
-          "type": "domain-event",
-          "text": "application.expedited_flagged",
-          "domain": "intake"
-        },
-        {
-          "type": "domain-event",
-          "text": "eligibility.rte_completed",
-          "domain": "eligibility"
-        },
-        {
-          "type": "domain-event",
-          "text": "call.completed",
-          "domain": "data_exchange",
-          "subtext": "One per service; results arrive asynchronously and in any order"
-        },
-        {
-          "type": "domain-event",
-          "text": "person.match_resolved",
-          "domain": "client_management"
         }
       ]
     },
@@ -251,36 +230,18 @@
       ]
     },
     {
-      "laneId": "data",
-      "subPhaseId": "under-review",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "task.claimed",
-          "domain": "workflow"
-        },
-        {
-          "type": "domain-event",
-          "text": "appointment.scheduled",
-          "domain": "scheduling"
-        }
-      ]
-    },
-    {
       "laneId": "system",
       "subPhaseId": "under-review",
       "cards": [
         {
           "type": "system",
           "domain": "intake",
-          "text": "Application status → under_review",
-          "subtext": "In response to event task.claimed"
+          "text": "Application status → under_review"
         },
         {
           "type": "system",
           "domain": "intake",
-          "text": "Interview record created and linked to application",
-          "subtext": "In response to event appointment.scheduled"
+          "text": "Interview record created and linked to application"
         }
       ]
     },
@@ -297,6 +258,17 @@
           "type": "person-action",
           "actor": "caseworker",
           "text": "Uploads supporting document; attaches to verification item"
+        },
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Reviews failure; determines if retriable",
+          "subtext": "Failure reason visible on Verification; retriable vs non-retriable per Decision 10 (data exchange)"
+        },
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Initiates retry"
         }
       ]
     },
@@ -326,9 +298,27 @@
           "text": "Verification item status updated"
         },
         {
+          "type": "note",
+          "domain": "communications",
+          "text": "⚠ Document request notice sent to applicant",
+          "subtext": "Notice template catalog not yet designed"
+        },
+        {
           "type": "system",
           "domain": "intake",
           "text": "Document linked to verification item as evidence"
+        },
+        {
+          "type": "system",
+          "domain": "intake",
+          "text": "Verification updated with new result",
+          "subtext": "In response to event call.completed"
+        },
+        {
+          "type": "system",
+          "domain": "intake",
+          "text": "Verification marked cannot_verify; caseworker decides next step",
+          "subtext": "In response to event call.completed"
         }
       ]
     },
@@ -338,9 +328,8 @@
       "cards": [
         {
           "type": "domain-event",
-          "text": "verification.failed",
-          "domain": "intake",
-          "subtext": "Communications sends document request notice to applicant"
+          "text": "call.completed",
+          "domain": "data_exchange"
         }
       ]
     },
@@ -378,26 +367,13 @@
       ]
     },
     {
-      "laneId": "data",
-      "subPhaseId": "interview",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "appointment.completed",
-          "domain": "scheduling",
-          "subtext": "One per appointment; may repeat for multi-session interviews"
-        }
-      ]
-    },
-    {
       "laneId": "system",
       "subPhaseId": "interview",
       "cards": [
         {
           "type": "system",
           "domain": "intake",
-          "text": "Interview record updated",
-          "subtext": "In response to event appointment.completed"
+          "text": "Interview record updated"
         }
       ]
     },
@@ -423,129 +399,13 @@
       ]
     },
     {
-      "laneId": "data",
-      "subPhaseId": "escalation",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "task.escalated",
-          "domain": "workflow"
-        },
-        {
-          "type": "domain-event",
-          "text": "task.claimed",
-          "domain": "workflow"
-        }
-      ]
-    },
-    {
       "laneId": "system",
       "subPhaseId": "escalation",
       "cards": [
         {
           "type": "system",
           "domain": "intake",
-          "text": "Application status → under supervisor review",
-          "subtext": "In response to event task.claimed"
-        }
-      ]
-    },
-    {
-      "laneId": "caseworker",
-      "subPhaseId": "submit-for-determination",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Submits case for determination",
-          "subtext": "Available when all verification items are resolved"
-        }
-      ]
-    },
-    {
-      "laneId": "system",
-      "subPhaseId": "submit-for-determination",
-      "cards": [
-        {
-          "type": "system",
-          "domain": "intake",
-          "text": "Status updated to pending determination"
-        }
-      ]
-    },
-    {
-      "laneId": "data",
-      "subPhaseId": "submit-for-determination",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "application.review_completed",
-          "domain": "intake"
-        }
-      ]
-    },
-    {
-      "laneId": "system",
-      "subPhaseId": "benefits-calculation",
-      "cards": [
-        {
-          "type": "system",
-          "domain": "eligibility",
-          "text": "Calculates eligibility",
-          "subtext": "Income and expense calculations against household data, per program"
-        },
-        {
-          "type": "system",
-          "domain": "intake",
-          "text": "Records determination outcome",
-          "subtext": "In response to event determination_complete"
-        }
-      ]
-    },
-    {
-      "laneId": "data",
-      "subPhaseId": "benefits-calculation",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "determination_complete",
-          "domain": "eligibility"
-        }
-      ]
-    },
-    {
-      "laneId": "caseworker",
-      "subPhaseId": "benefits-calculation",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Reviews determination results",
-          "subtext": "Exception review only — not approving a calculation they triggered"
-        }
-      ]
-    },
-    {
-      "laneId": "caseworker",
-      "subPhaseId": "decision",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Records determination and rationale",
-          "subtext": "Eligibility outcome, date, and reasoning recorded per program"
-        },
-        {
-          "type": "person-action",
-          "actor": "supervisor",
-          "text": "Claims task from queue",
-          "subtext": "Supervisor selects from supervisor review queue"
-        },
-        {
-          "type": "person-action",
-          "actor": "supervisor",
-          "text": "Reviews and approves determination",
-          "subtext": "If rejected, intake flags for revision and workflow reassigns caseworker task"
+          "text": "Application status → under supervisor review"
         }
       ]
     },
@@ -555,79 +415,8 @@
       "cards": [
         {
           "type": "policy",
-          "text": "SNAP: determination within 30 days (7 if expedited)",
-          "subtext": "7 CFR § 273.2(g)"
-        },
-        {
-          "type": "policy",
-          "text": "Medicaid: determination within 45 days",
-          "subtext": "42 CFR § 435.912"
-        },
-        {
-          "type": "policy",
           "text": "Notice of Action required",
           "subtext": "Adverse action notice required for denials and closures"
-        }
-      ]
-    },
-    {
-      "laneId": "system",
-      "subPhaseId": "decision",
-      "cards": [
-        {
-          "type": "system",
-          "domain": "intake",
-          "text": "Evaluates if supervisor approval required"
-        },
-        {
-          "type": "system",
-          "domain": "workflow",
-          "text": "Task created in supervisor review queue; SLA assigned",
-          "subtext": "In response to event determination.approval_needed"
-        },
-        {
-          "type": "system",
-          "domain": "intake",
-          "text": "Determination status → pending approval",
-          "subtext": "In response to event task.claimed"
-        },
-        {
-          "type": "system",
-          "domain": "communications",
-          "text": "Sends Notice of Action",
-          "subtext": "Generated from determination outcome; delivered to applicant"
-        },
-        {
-          "type": "system",
-          "domain": "case_management",
-          "text": "Creates case",
-          "subtext": "In response to event application.closed"
-        }
-      ]
-    },
-    {
-      "laneId": "data",
-      "subPhaseId": "decision",
-      "cards": [
-        {
-          "type": "domain-event",
-          "text": "determination.approval_needed",
-          "domain": "intake"
-        },
-        {
-          "type": "domain-event",
-          "text": "task.claimed",
-          "domain": "workflow"
-        },
-        {
-          "type": "domain-event",
-          "text": "determination.recorded",
-          "domain": "intake"
-        },
-        {
-          "type": "domain-event",
-          "text": "application.closed",
-          "domain": "intake"
         }
       ]
     }
