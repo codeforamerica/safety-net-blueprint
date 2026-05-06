@@ -1,194 +1,62 @@
 # Roadmap
 
-> **Status: Work in progress**
+> **Status: Active development**
 
 See also: [Contract-Driven Architecture](contract-driven-architecture.md) | [Domain Design](domain-design.md) | [API Architecture](api-architecture.md) | [Design Rationale](design-rationale.md)
 
 ---
 
-## Context: H.R. 1 (One Big Beautiful Bill Act)
-
-H.R. 1, signed into law in mid-2025, introduces significant changes to safety net programs that directly affect the domains this project is designing. These changes increase the urgency of having portable, contract-driven systems that states can adapt quickly.
-
-**SNAP changes (effective 2025):**
-- Work requirements expanded to ages 18–65 (previously 18–49 for ABAWDs), requiring 80 hours/month of work, volunteering, or training
-- Noncitizen eligibility narrowed to LPRs, Cuban-Haitian entrants, and COFA migrants
-- State cost-sharing starting 2028 for states with payment error rates above 6%
-
-**Medicaid changes (effective December 31, 2026):**
-- Work/community engagement requirements for enrollees ages 19–64 (80 hours/month), with exemptions for parents of dependents under 13, pregnant/postpartum women, and medically frail individuals
-- Eligibility redetermination every 6 months (from 12) for expansion population adults without disabilities
-- Noncitizen eligibility narrowed (effective October 2026)
-
-**Impact on state systems:**
-- States must update integrated eligibility and enrollment (IEE) systems before compliance dates
-- Significant IT system changes needed — some states estimating hundreds of new positions for more frequent redeterminations
-- States are deprioritizing previously planned enhancements to focus on H.R. 1 compliance
-
-**Relevance to this project:**
-- Work requirement tracking affects Workflow (new task types), Eligibility (new verification requirements), and Case Management (more frequent reviews)
-- More frequent redeterminations increase the volume and complexity of Eligibility and Intake workflows
-- Narrowed immigrant eligibility adds verification complexity to Intake and Eligibility
-- The contract-driven approach — where adding a requirement is a table change, not a code change — is exactly what states need to respond to these kinds of policy shifts without rebuilding their systems
-
----
-
-## Approach
-
-The architecture is being proven through **steel thread prototypes** — the thinnest end-to-end slices that exercise the most complex and risky parts of the [contract-driven architecture](contract-driven-architecture.md). The goal is to validate that:
-
-1. **Behavioral contracts work** — State machines, rules, and metrics can be defined declaratively and interpreted by a mock server, generating RPC endpoints from transitions without hand-written orchestration code.
-2. **The authoring pipeline works** — Business users and developers can author contracts in tables (spreadsheets), and conversion scripts generate valid YAML. The tables-to-YAML-to-mock-server chain works end to end.
-3. **Business users can work with the artifacts** — The table-based authoring format is accessible to program managers, policy analysts, and business analysts — not just developers. If business users can't read and modify state transition tables, decision tables, and field metadata tables, the architecture fails regardless of technical correctness.
-4. **Field metadata drives context-dependent UI** — The backend serves field-level metadata (annotations, permissions, labels) that frontends consume to render multi-program forms without hardcoding domain-specific logic.
-
-Two prototypes cover every contract artifact type between them:
-
-| Prototype | What it proves | Key artifacts |
-|-----------|---------------|---------------|
-| [Workflow Prototype](../prototypes/workflow-prototype.md) | Behavioral contracts — state machine, rules, metrics, audit | OpenAPI schemas, state machine YAML, rules YAML, metrics YAML |
-| [Application Review Prototype](../prototypes/application-review-prototype.md) | Field metadata — program-driven annotations, record creation | OpenAPI schemas, field metadata YAML |
-
-They can be done in either order. Together they prove the full artifact set before any domain is built out at scale.
-
----
-
 ## Phases
 
-### Phase 1: Prove the architecture (current)
+### Phase 1: Overlay system (complete)
 
-Build and validate the two steel thread prototypes. This is where the highest-risk design questions get answered.
+Proved that states can customize the base contracts without forking. States apply overlay files that add, replace, or extend base definitions — the resolve pipeline merges overlays at build time and produces state-specific resolved specs. All downstream tooling (mock server, client generation, Postman) runs against the resolved output.
 
-#### Tooling priorities
+**What this proves:** A single base contract can serve multiple states with different program names, field requirements, and business rules — without duplicating or diverging the base.
 
-The prototypes require new tooling and updates to existing tooling. This is the foundation — the prototypes can't run without it.
+### Phase 2: Behavioral contracts (complete)
 
-**Conversion scripts (new)** — translate from the table-based authoring format to YAML contract definitions:
-- State machine tables → state machine YAML (states, transitions, guards, effects)
-- Decision tables → rules YAML (routing, assignment, priority)
-- Metrics tables → metrics YAML (metric names, source linkage, targets)
-- Field metadata tables → field metadata YAML (annotations, permissions, labels, program requirements)
+Proved that system behaviors can be defined declaratively in contract artifacts and interpreted at runtime without hand-written orchestration code. The workflow domain — state machine, decision rules, metrics, and SLA types — drives the mock server's behavioral engine: transitions enforce guards, effects fire automatically, and RPC endpoints are generated from state machine triggers.
 
-**Validation scripts (update existing + new)** — extend `npm run validate` to check cross-artifact consistency:
-- State machine states match OpenAPI status enums
-- Effect targets reference schemas that exist
-- Rule context variables resolve to real fields
-- Field metadata source paths resolve to OpenAPI schema fields
-- Transitions include required audit effects
-- Metric sources reference states/transitions that exist
+**What this proves:** State machines, rules, and metrics authored in YAML tables are sufficient to define and run complex task lifecycle behavior. Business users can read and modify the artifacts without developer involvement.
 
-**Mock server (update)** — add a behavioral engine that interprets contract YAML alongside the existing CRUD engine:
-- Load state machine YAML and auto-generate RPC endpoints from triggers
-- Enforce state transitions and evaluate guards on RPC calls
-- Execute effects (set fields, create records, lookup references, evaluate rules, emit events)
-- Evaluate decision rules for routing, assignment, and priority
-- Track metrics linked to states and transitions
-- Serve field metadata and create work item records from program requirements
+### Phase 3: Intake steel thread — Application Submission (current)
 
-#### Prototype deliverables
+Build out the Application Submission flow end to end, following the flow defined in the [context map](../../packages/explorer/context-map/output/context-map.html). Every domain the flow touches gets the contract surface needed to support it.
 
-**Workflow prototype:**
-- Conversion scripts generate state machine, rules, and metrics YAML from authored tables
-- Validation script catches cross-artifact inconsistencies
-- Mock server runs the full workflow walkthrough (create → route → claim → complete) without hand-written endpoint code
-- Minimal frontend exercises every API type (REST reads, RPC actions, SSE events)
-- Business users review the authoring tables for clarity and usability
+**What this proves:** Event-driven architecture across domain boundaries (submission fans out in parallel to workflow, eligibility, and client management) and the data exchange architecture (async verification calls to FDSH, IEVS, SAVE, SSA with results returned as events).
 
-**Application review prototype:**
-- Conversion scripts generate field metadata YAML from authored tables
-- Validation script catches internal inconsistencies (field source paths → OpenAPI schemas, program requirements reference valid fields)
-- Mock server serves field metadata and creates SectionReview records from program requirements on submission
-- Frontend consumes field metadata to render context-dependent field annotations (form rendering handled by [safety-net-harness](https://github.com/codeforamerica/safety-net-harness))
-- Business users review program requirements and field annotation tables
+**Scope:**
+- Verification entity — per-program, per-member verification tracking with electronic evidence (#248)
+- Data Exchange contract surface — service call lifecycle for federal verification services
+- Eligibility pre-screening surface — expedited screening and Medicaid RTE
+- Client Management — person matching API surface (#249)
 
-**What success looks like:**
-- Conversion scripts generate valid YAML from authored tables
-- Validation catches structural inconsistencies (missing states, dangling references, unresolvable field paths)
-- Mock server runs the full walkthrough for both prototypes without hand-written endpoint code
-- Business stakeholders can read the tables, understand what they mean, and propose changes
-- Form rendering and layout validated separately in [safety-net-harness](https://github.com/codeforamerica/safety-net-harness)
+### Phase 4: Intake steel thread — Caseworker Review
 
-### Phase 2: Expand proven domains
+Build out the Caseworker Review flow: task claim through interview to all verifications resolved.
 
-With the architecture validated, expand the domains that were started in the prototypes.
+**What this proves:** Field annotations and permissions as contract artifacts driving context-dependent UI (what the caseworker sees on a verification item depends on its program, status, and evidence); the application object model under active caseworker work.
 
-- **Workflow** — Add remaining states and transitions (escalate, reassign, cancel, awaiting states), verification workflow, cross-domain rule context, notification effects, full SLA configuration
-- **Intake** — Add additional field metadata (assets, expenses, employment), additional programs (TANF, WIC, CHIP), conditional requirements, field-level permissions and labels
-- **Case Management** — Define contract artifacts (OpenAPI spec, case lifecycle state machine, assignment rules)
-- **Communication** — Define contract artifacts (notice lifecycle state machine, delivery tracking)
+**Scope:**
+- Application model updates — annotations and possible field-level annotations driven by program and verification context
+- Scheduling integration — appointment scheduling and interview tracking linked to the application
+- Document management surface — evidence attachment to verification items
+- Verification resolution and retry — caseworker review, document upload, retriable failure handling
 
-### Phase 3: Remaining domains
+### Phase 5: Intake steel thread — Eligibility Determination
 
-- **Eligibility** — Domain design and contract artifacts (eligibility request lifecycle, determination, verification requirements)
-- **Client Management** — OpenAPI spec for persistent client identity and relationships
-- **Scheduling** — Appointments and interviews
-- **Document Management** — Files and uploads
+Build out the Eligibility Determination flow: both auto (Medicaid-only, conclusive at submission) and manual (SNAP, and Medicaid when checks are inconclusive) paths through determination, notice, and case creation.
 
----
+**What this proves:** Eligibility contract surface for receiving determination results and closing the application; supervisor review and escalation of tasks before a determination is finalized.
 
-## Future Considerations
+**Scope:**
+- Eligibility determination rules surface — receiving and recording per-person, per-program results
+- Communications surface — Notice of Action on determination
+- Case creation — application closure triggering case management
 
-Potential domains and functionality not included in the current design, for future evaluation.
+### Phase 6+: Remaining domains
 
-### High Priority
+Design and implement remaining domains based on priorities at that time. Domains not yet started include: client management (full build-out), document management, communications, appeals and hearings, benefits and payments.
 
-**Benefits/Issuance**
-- Benefit amounts and calculations, EBT card issuance, payment tracking, benefit history
-- Core to safety net programs — what happens after eligibility is determined
-
-**Appeals**
-- Appeal requests, fair hearing scheduling, hearing outcomes
-- Required by law for all programs, with distinct workflow, timelines, and participants
-
-### Medium Priority
-
-**Change Reporting**
-- Mid-certification changes reported by clients, impact assessment on current benefits
-- Common client interaction between certifications, related to but distinct from Intake
-
-**Programs**
-- Program definitions, eligibility rules, income/asset limits, deduction rules
-- Reference data needed across all domains — could be configuration vs. a domain
-
-### Low Priority
-
-**Fraud/Integrity** — Investigations, overpayment tracking, recovery, IPVs, disqualification periods
-
-**Referrals** — Referrals to other services, partner agency connections, community resource linking
-
-**Provider Management** — Healthcare providers (Medicaid), SNAP retailers, TANF service providers
-
-**Quality Assurance** — Case reviews, error tracking, corrective action plans, federal reporting metrics
-
-**Staffing Forecasting** — Project task volume, calculate required staff hours, identify staffing gaps
-
----
-
-## Documentation Gaps
-
-### Needs architecture documentation
-
-**Data Retention & Archival**
-
-| Data Type | Active Retention | Archive | Purge |
-|-----------|------------------|---------|-------|
-| Applications | 7 years after closure | Cold storage | Per state policy |
-| Audit logs | 7 years | Immutable archive | Never (compliance) |
-| PII | Per program requirements | Encrypted archive | On request + retention period |
-| Session/tokens | 24 hours | N/A | Immediate |
-
-Compliance cross-references: SNAP (7 CFR 272.1), Medicaid (42 CFR 431.17), TANF (45 CFR 265.2), HIPAA, FERPA. See also [API Architecture - Compliance](api-architecture.md#compliance).
-
-**Event-Driven Architecture**
-
-Events published to a message broker for external system integration. Event payload schemas are defined as contract artifacts (e.g., `TaskClaimedEvent` in the workflow prototype). Webhook subscriptions, delivery guarantees, and event versioning need further design.
-
-**Integration Patterns**
-
-How legacy systems and external services connect — API gateway, adapter pattern, anti-corruption layer, event bridge, batch file exchange. The [contract-driven architecture](contract-driven-architecture.md) defines the adapter pattern; other integration patterns need further documentation.
-
-### Separate documents (future)
-
-**Testing Strategy** — Contract testing, mock server usage patterns, integration test data management, performance testing approach
-
-**State Security Implementation Guide** — Identity provider setup, role mapping, break-glass procedures, compliance documentation (FedRAMP, StateRAMP)
+H.R. 1 compliance deadlines (SNAP work requirement changes effective 2025, Medicaid community engagement requirements effective December 2026) are likely to influence sequencing — states need portable, table-driven contract changes to respond to policy shifts without rebuilding their systems.
