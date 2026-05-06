@@ -1,12 +1,12 @@
 # Safety Net Blueprint
 
-> **Status: Work in progress** — The system is being designed incrementally, domain by domain, and proven through [steel thread prototypes](./docs/architecture/roadmap.md).
+> **Status: Active development** — See the [roadmap](./docs/architecture/roadmap.md).
 
 A systems integration blueprint for safety net benefits programs. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and field metadata — define the full API surface for backend development. States adopt the blueprint, customize it with overlays, and build adapters to their vendor systems. Frontends develop against a mock server without waiting for a production backend.
 
 > **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness).
 
-**New here?** Start with the [Executive Summary](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/executive-summary.html) for a one-page overview, the [Blueprint Overview](https://codeforamerica.github.io/safety-net-blueprint/docs/presentation/safety-net-openapi-overview.html) presentation for a detailed walkthrough, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-blueprint/docs/schema-reference.html) to browse the data model.
+**New here?** Start with the [Adoption Model](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/adoption-model/output/adoption-model.html) for a non-technical overview, the [Context Map](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/context-map/output/context-map.html) for a visual map of the system landscape, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/data-explorer/data-explorer.html) to browse the data model.
 
 ## About This Repository
 
@@ -70,10 +70,6 @@ Visit `http://localhost:3000` for interactive API docs.
 - [Domain Design](./docs/architecture/domain-design.md) — Domain organization, entities, data flow
 - [API Architecture](./docs/architecture/api-architecture.md) — API organization, operational concerns
 - [Roadmap](./docs/architecture/roadmap.md) — Phases, prototypes, future considerations
-
-### Prototypes
-- [Workflow Prototype](./docs/prototypes/workflow-prototype.md) — Behavioral contracts (state machine, rules, metrics)
-- [Application Review Prototype](./docs/prototypes/application-review-prototype.md) — Field metadata contracts and context-dependent review
 
 ### Guides
 - [Setup Guide](./docs/guides/setup-guide.md) — Set up a repository with overlays and CI
