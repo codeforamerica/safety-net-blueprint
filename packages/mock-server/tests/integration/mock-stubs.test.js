@@ -6,11 +6,16 @@
  * fallback behavior when no stub is registered.
  *
  * Run with: npm run test:integration
- * (requires mock server running on port 1080)
  */
 
 import http from 'http';
 import { URL } from 'url';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const contractsDir = resolve(__dirname, '..', '..', '..', 'contracts');
 
 const BASE_URL = 'http://localhost:1080';
 const PREFIX = 'org.codeforamerica.safety-net-blueprint.';
@@ -263,13 +268,12 @@ async function run() {
   console.log('Mock Stubs Integration Tests');
   console.log('='.repeat(70));
 
-  // Verify server is running
-  try {
-    const health = await fetch(`${BASE_URL}/health`);
-    if (!health.ok) throw new Error('health check failed');
-  } catch {
-    console.error('  Mock server is not running. Start it with: npm run mock:start');
-    process.exit(1);
+  // Start the mock server if not already running
+  const alreadyRunning = await isServerRunning();
+  if (!alreadyRunning) {
+    console.log('\n  Starting mock server...');
+    await startMockServer([contractsDir]);
+    console.log('  ✓ Mock server started');
   }
 
   const suites = [
@@ -293,8 +297,11 @@ async function run() {
     }
   }
 
-  // Clean up
+  // Clean up stubs and stop the server if we started it
   await clearStubs();
+  if (!alreadyRunning) {
+    await stopServer(false);
+  }
 
   console.log('\n' + '='.repeat(70));
   console.log(`Mock Stubs: ${passed} passed, ${failed} failed`);
