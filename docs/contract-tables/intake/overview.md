@@ -109,11 +109,24 @@ Evaluation strategy: **first-match-wins**
 
 ### application-submitted-data-exchange
 
+Evaluation strategy: **all-match**
+
+| # | Condition | Action | Fallback |
+|---|-----------|--------|----------|
+| 1 | "snap" in application.programs or "medicaid" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"fdsh_ssa","requestedAt":{"var":"this.time"}}} | — |
+| 2 | "snap" in application.programs or "medicaid" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"ssa_ievs","requestedAt":{"var":"this.time"}}} | — |
+| 3 | "snap" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"irs_ievs","requestedAt":{"var":"this.time"}}} | — |
+| 4 | "snap" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"swica","requestedAt":{"var":"this.time"}}} | — |
+| 5 | "snap" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"uib","requestedAt":{"var":"this.time"}}} | — |
+| 6 | "medicaid" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"fdsh_vlp","requestedAt":{"var":"this.time"}}} | — |
+
+### vlp-inconclusive-initiate-save
+
 Evaluation strategy: **first-match-wins**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | true | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"requestedAt":{"var":"this.time"}}} | — |
+| 1 | this.data.serviceType = "fdsh_vlp" and this.data.result = "inconclusive" | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"this.data.applicationId"},"memberId":{"var":"this.data.memberId"},"serviceType":"save","requestedAt":{"var":"this.time"}}} | — |
 
 ### application-submitted-document-checklist
 

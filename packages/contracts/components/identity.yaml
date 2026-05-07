@@ -5,7 +5,6 @@
 ImmigrationInfo:
   type: object
   description: Immigration document information for a non-citizen.
-  additionalProperties: false
   properties:
     status:
       type: string

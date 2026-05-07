@@ -61,28 +61,150 @@ ruleSets:
         description: Create an Interview record when a caseworker claims an application_review task; the Interview tracks the SNAP regulatory obligation and will accumulate appointment IDs as they are scheduled
   - id: application-submitted-data-exchange
     "on": intake.application.submitted
-    evaluation: first-match-wins
+    evaluation: all-match
     context:
       - as: application
         entity: intake/applications
         from:
           var: subject
     rules:
-      - id: initiate-verification-for-submitted-application
+      - id: fdsh-ssa
         order: 1
-        condition: true
+        condition:
+          or:
+            - in:
+                - snap
+                - var: application.programs
+            - in:
+                - medicaid
+                - var: application.programs
         action:
           createResource:
             entity: data-exchange/service-calls
             fields:
               applicationId:
                 var: application.id
+              serviceType: fdsh_ssa
               requestedAt:
                 var: this.time
         description: |
-          Initiate electronic verification when an application is submitted (Decision 18).
-          Forward subscription — the data exchange domain fans out per-member checks internally
-          (FDSH, IEVS, SAVE, SSA) and emits data_exchange.call.completed per result.
+          SSA Composite via FDSH for SNAP or Medicaid applicants. Verifies SSN, US-born citizenship, RSDI/SSDI benefit amounts, and incarceration status.
+      - id: ssa-ievs
+        order: 2
+        condition:
+          or:
+            - in:
+                - snap
+                - var: application.programs
+            - in:
+                - medicaid
+                - var: application.programs
+        action:
+          createResource:
+            entity: data-exchange/service-calls
+            fields:
+              applicationId:
+                var: application.id
+              serviceType: ssa_ievs
+              requestedAt:
+                var: this.time
+        description: |
+          SSA SVES/SOLQ via IEVS for SNAP or Medicaid applicants. Returns Title II and Title XVI benefit data and 40-quarter work history (7 CFR § 272.8).
+      - id: irs-ievs
+        order: 3
+        condition:
+          in:
+            - snap
+            - var: application.programs
+        action:
+          createResource:
+            entity: data-exchange/service-calls
+            fields:
+              applicationId:
+                var: application.id
+              serviceType: irs_ievs
+              requestedAt:
+                var: this.time
+        description: |
+          IRS unearned income via IEVS for SNAP applicants. Returns prior-year unearned income (interest, dividends, capital gains) (7 CFR § 272.8).
+      - id: swica
+        order: 4
+        condition:
+          in:
+            - snap
+            - var: application.programs
+        action:
+          createResource:
+            entity: data-exchange/service-calls
+            fields:
+              applicationId:
+                var: application.id
+              serviceType: swica
+              requestedAt:
+                var: this.time
+        description: |
+          State Wage Information (SWICA) for SNAP applicants. Returns quarterly employer-reported wages (7 CFR § 272.8).
+      - id: uib
+        order: 5
+        condition:
+          in:
+            - snap
+            - var: application.programs
+        action:
+          createResource:
+            entity: data-exchange/service-calls
+            fields:
+              applicationId:
+                var: application.id
+              serviceType: uib
+              requestedAt:
+                var: this.time
+        description: |
+          Unemployment Insurance Benefits for SNAP applicants. Returns UI claim status and weekly benefit amount (7 CFR § 272.8).
+      - id: fdsh-vlp
+        order: 6
+        condition:
+          in:
+            - medicaid
+            - var: application.programs
+        action:
+          createResource:
+            entity: data-exchange/service-calls
+            fields:
+              applicationId:
+                var: application.id
+              serviceType: fdsh_vlp
+              requestedAt:
+                var: this.time
+        description: |
+          Verify Lawful Presence via FDSH for Medicaid applicants (45 CFR § 435.956). Data exchange fans out per non-citizen member and routes to SAVE for members whose immigrationInfo carries no document number.
+  - id: vlp-inconclusive-initiate-save
+    "on": data_exchange.call.completed
+    evaluation: first-match-wins
+    rules:
+      - id: save-on-vlp-inconclusive
+        order: 1
+        condition:
+          and:
+            - "==":
+                - var: this.data.serviceType
+                - fdsh_vlp
+            - "==":
+                - var: this.data.result
+                - inconclusive
+        action:
+          createResource:
+            entity: data-exchange/service-calls
+            fields:
+              applicationId:
+                var: this.data.applicationId
+              memberId:
+                var: this.data.memberId
+              serviceType: save
+              requestedAt:
+                var: this.time
+        description: |
+          Initiate USCIS SAVE when FDSH VLP returns inconclusive for a member (45 CFR § 435.956(b)(2)). VLP is the primary check; SAVE is the fallback.
   - id: application-submitted-document-checklist
     "on": intake.application.submitted
     evaluation: all-match
