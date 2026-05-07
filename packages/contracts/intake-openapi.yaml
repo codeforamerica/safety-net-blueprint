@@ -29,6 +29,8 @@ tags:
     description: Application document requirements and verification tracking.
   - name: Interviews
     description: SNAP interview obligation tracking.
+  - name: Members
+    description: Household members included in an application.
 
 x-events:
   application.created:
@@ -377,6 +379,136 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
+  /applications/{applicationId}/members:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: List application members
+      description: Retrieve all household members linked to this application.
+      operationId: listApplicationMembers
+      tags:
+        - Members
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A paginated list of application members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationMemberList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Add a member
+      description: Add a household member to this application.
+      operationId: createApplicationMember
+      tags:
+        - Members
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationMemberCreate"
+      responses:
+        "201":
+          description: Member added successfully.
+          headers:
+            Location:
+              description: URL of the newly created member resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationMember"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+
+    get:
+      summary: Get a member
+      description: Retrieve a single household member by identifier.
+      operationId: getApplicationMember
+      tags:
+        - Members
+      responses:
+        "200":
+          description: Member retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationMember"
+              examples:
+                MemberExample1:
+                  $ref: "#/components/examples/MemberExample1"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update a member
+      description: Apply partial updates to a household member record.
+      operationId: updateApplicationMember
+      tags:
+        - Members
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationMemberUpdate"
+      responses:
+        "200":
+          description: Member updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationMember"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Remove a member
+      description: Remove a household member from this application.
+      operationId: deleteApplicationMember
+      tags:
+        - Members
+      responses:
+        "204":
+          description: Member removed successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
 components:
   parameters:
     ApplicationIdParam:
@@ -393,6 +525,15 @@ components:
       in: path
       required: true
       description: Unique identifier of the application document.
+      schema:
+        type: string
+        format: uuid
+
+    MemberIdParam:
+      name: memberId
+      in: path
+      required: true
+      description: Unique identifier of the application member.
       schema:
         type: string
         format: uuid
@@ -504,6 +645,102 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Application"
+
+    # ---------------------------------------------------------------------------
+    # ApplicationMember
+    # ---------------------------------------------------------------------------
+
+    ApplicationMemberWritable:
+      type: object
+      description: Client-writable fields for an application member.
+      properties:
+        roles:
+          type: array
+          description: Roles this person plays in the application.
+          items:
+            type: string
+            enum:
+              - primary_applicant
+              - household_member
+              - non_applying_member
+              - authorized_representative
+              - absent_parent
+        programsApplyingFor:
+          type: array
+          description: Programs this member is applying for. Subset of the application's programs.
+          items:
+            type: string
+            enum:
+              - snap
+              - medicaid
+              - tanf
+        citizenshipStatus:
+          type: string
+          description: Citizenship or immigration status for this member.
+          enum:
+            - citizen
+            - permanent_resident
+            - qualified_non_citizen
+            - undocumented
+            - other
+        immigrationInfo:
+          $ref: "./components/identity.yaml#/ImmigrationInfo"
+          description: Immigration document details. Required when citizenshipStatus is not citizen and the member is applying for Medicaid.
+
+    ApplicationMember:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - roles
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    ApplicationMemberCreate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - type: object
+          required:
+            - roles
+
+    ApplicationMemberUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - type: object
+          minProperties: 1
+
+    ApplicationMemberList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApplicationMember"
 
     # ---------------------------------------------------------------------------
     # ApplicationDocument
@@ -795,6 +1032,19 @@ components:
           description: Why the application was withdrawn.
 
   examples:
+    MemberExample1:
+      value:
+        id: 00000004-0000-4000-8000-000000000010
+        applicationId: 00000004-0000-4000-8000-000000000001
+        roles:
+          - primary_applicant
+        programsApplyingFor:
+          - snap
+          - medicaid
+        citizenshipStatus: citizen
+        createdAt: "2026-04-01T09:00:00Z"
+        updatedAt: "2026-04-01T09:00:00Z"
+
     ApplicationExample1:
       value:
         id: 00000004-0000-4000-8000-000000000001

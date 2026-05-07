@@ -1,6 +1,68 @@
 # Identity shared schemas
 #
-# Schemas: Name, SocialSecurityNumber
+# Schemas: ImmigrationInfo, Name, SocialSecurityNumber
+
+ImmigrationInfo:
+  type: object
+  description: Immigration document information for a non-citizen.
+  additionalProperties: false
+  properties:
+    status:
+      type: string
+      description: >
+        Immigration status category per 8 U.S.C. § 1641 (PRWORA qualified alien categories).
+        Drives eligibility determination and benefit waiting-period rules.
+      # Source: 8 U.S.C. § 1641 — Definitions of "qualified alien"
+      # https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title8-section1641
+      # temporary_protected_status is not a PRWORA qualified alien category but is tracked
+      # by states because TPS holders may be eligible under state-funded programs.
+      enum:
+        - lawful_permanent_resident  # INA § 101(a)(20)
+        - refugee                    # INA § 207
+        - asylee                     # INA § 208
+        - deportation_withheld       # INA § 241(b)(3) / former § 243(h)
+        - parolee                    # INA § 212(d)(5), paroled for at least 1 year
+        - conditional_entrant        # INA § 203(a)(7), pre-1980 refugee program
+        - cuban_haitian_entrant      # RHCA § 501(e)
+        - amerasian                  # Immigration Act of 1990, Pub. L. 101-649 § 124
+        - battered_non_citizen       # 8 U.S.C. § 1641(c), VAWA
+        - trafficking_victim         # TVPA § 107(b)(1), 22 U.S.C. § 7105
+        - temporary_protected_status # INA § 244; not a qualified alien but tracked by states
+        - other
+    documentType:
+      type: string
+      description: >
+        Type of immigration document presented. Determines which fields FDSH VLP requires
+        to initiate a verification check.
+      # Source: CMS FDSH Verify Lawful Presence (VLP) accepted document types
+      # https://www.medicaid.gov/medicaid/eligibility/downloads/fdsh-vlp-companion-guide.pdf
+      enum:
+        - i_551                       # Permanent Resident Card (Green Card)
+        - i_766                       # Employment Authorization Document
+        - i_94                        # Arrival/Departure Record
+        - i_327                       # Reentry Permit
+        - i_571                       # Refugee Travel Document
+        - foreign_passport            # Foreign passport with valid US visa stamp
+        - machine_readable_immigrant_visa  # MRIV with temporary I-551 stamp
+        - other
+    documentNumber:
+      type: string
+      description: Document number used to verify immigration status via FDSH VLP or USCIS SAVE.
+      maxLength: 100
+    alienOrI94Number:
+      type: string
+      description: Alien registration number or I-94 admission number.
+      maxLength: 100
+    documentExpirationDate:
+      type: string
+      format: date
+      description: Expiration date of the immigration document.
+    countryOfIssuance:
+      type: string
+      description: ISO 3166-1 alpha-2 country code of the country that issued the immigration document.
+      minLength: 2
+      maxLength: 2
+      pattern: "^[A-Z]{2}$"
 
 Name:
   type: object
