@@ -553,7 +553,8 @@ flows:
         label: Verification status updated; electronic evidence appended
       - fragment: inconclusive-result
         type: opt
-        label: "if electronic verification inconclusive or failed"
+        label: "if electronic verification inconclusive or failed; or residency (document-only)"
+        note: "Residency has no electronic check — a document request is sent immediately on verification creation rather than waiting for an inconclusive result"
         steps:
           - label: Send document request notice
             from: intake
