@@ -19,6 +19,7 @@ import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
 import { registerStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
+import { findById } from '../src/database-manager.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -197,7 +198,23 @@ async function startMockServer(specDirs = null, seedDir = null) {
     console.log('  DELETE /mock/stubs - Clear all stubs');
 
     // Register event subscriptions (event-triggered rule sets)
-    registerEventSubscriptions(allRules, allStateMachines, allSlaTypes);
+    registerEventSubscriptions(allRules, allStateMachines, allSlaTypes, apiSpecs);
+
+    // Enrich service call creation with catalog-derived fields (after schema validation).
+    // Copies serviceType and callMode from the referenced ExternalService, sets status to pending.
+    // Uses req.enrichmentData so these fields bypass ExternalServiceCallCreate validation
+    // (they're server-derived, not client-provided) but are stored in the resource.
+    app.post('/data-exchange/service-calls', (req, res, next) => {
+      const service = req.body?.serviceId ? findById('services', req.body.serviceId) : null;
+      if (service) {
+        req.enrichmentData = {
+          serviceType: service.serviceType,
+          callMode: req.body.callMode ?? service.defaultCallMode,
+          status: 'pending',
+        };
+      }
+      next();
+    });
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;

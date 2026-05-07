@@ -133,6 +133,18 @@ export function extractMetadata(spec, resourceName) {
       metadata.schemas[schemaName] = schema;
     }
   }
+
+  // Extract event schemas: map full event type → resolved payload schema.
+  // The spec is already dereferenced by $RefParser, so payload is the inline schema object.
+  metadata.eventSchemas = {};
+  if (spec['x-events']) {
+    for (const eventDef of Object.values(spec['x-events'])) {
+      const fullType = eventDef.type;
+      const schema = eventDef.payload;
+      if (!fullType || !schema || typeof schema !== 'object') continue;
+      metadata.eventSchemas[fullType] = schema;
+    }
+  }
   
   // Extract error responses
   if (spec.components?.responses) {

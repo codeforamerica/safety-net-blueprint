@@ -340,21 +340,62 @@ function applyStub(actionValue, resource, deps) {
       return v;
     };
 
-    const { type, subject, source, data } = stub.respond;
+    const { type, subject, source, data: stubData } = stub.respond;
     const fullType = type.startsWith(CLOUDEVENTS_TYPE_PREFIX) ? type : CLOUDEVENTS_TYPE_PREFIX + type;
 
-    let resolvedData = null;
-    if (data !== null && data !== undefined && typeof data === 'object' && !Array.isArray(data)) {
-      resolvedData = {};
-      for (const [k, v] of Object.entries(data)) {
-        resolvedData[k] = resolveValue(v);
+    // Subject: use stub's explicit value, or echo trigger's subject.
+    const resolvedSubject = subject !== undefined ? resolveValue(subject) : resource.subject;
+
+    // Build response data using the payload schema for the response event type.
+    // For each schema field: match by name from trigger data, or derive from
+    // the trigger event's entity name for *Id fields (e.g. serviceCallId → subject).
+    // Stub's explicit data fields override anything derived from the schema.
+    const schema = deps.eventSchemas?.[fullType];
+    const triggerData = (resource.data && typeof resource.data === 'object') ? resource.data : {};
+    const resolvedStubData = {};
+    if (stubData && typeof stubData === 'object' && !Array.isArray(stubData)) {
+      for (const [k, v] of Object.entries(stubData)) {
+        resolvedStubData[k] = resolveValue(v);
       }
+    }
+
+    let resolvedData = null;
+    if (schema?.properties) {
+      // Derive entity name from trigger event type for *Id field resolution.
+      // "org...data_exchange.service_call.created" → "service_call" → "serviceCall"
+      const shortType = resource.type?.startsWith(CLOUDEVENTS_TYPE_PREFIX)
+        ? resource.type.slice(CLOUDEVENTS_TYPE_PREFIX.length)
+        : (resource.type || '');
+      const parts = shortType.split('.');
+      const entitySnake = parts.length >= 2 ? parts[parts.length - 2] : '';
+      const entityCamel = entitySnake.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      const entityIdField = entityCamel ? entityCamel + 'Id' : null;
+
+      resolvedData = {};
+      for (const field of Object.keys(schema.properties)) {
+        if (field in resolvedStubData) {
+          resolvedData[field] = resolvedStubData[field];
+        } else if (field in triggerData) {
+          resolvedData[field] = triggerData[field];
+        } else if (entityIdField && field === entityIdField) {
+          // e.g. serviceCallId → trigger subject (the resource's own ID)
+          resolvedData[field] = triggerData.id ?? resource.subject;
+        }
+        // Fields not derivable are omitted; stub must specify them explicitly.
+      }
+      // Include any stub-specified fields not in the schema (extra context, overrides).
+      for (const [k, v] of Object.entries(resolvedStubData)) {
+        if (!(k in resolvedData)) resolvedData[k] = v;
+      }
+    } else {
+      // No schema available — fall back to stub data only.
+      resolvedData = Object.keys(resolvedStubData).length > 0 ? resolvedStubData : null;
     }
 
     emitEventEnvelope({
       type: fullType,
       source: source ? resolveValue(source) : '/system',
-      subject: subject !== undefined ? resolveValue(subject) : null,
+      subject: resolvedSubject,
       data: resolvedData
     });
 

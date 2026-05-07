@@ -14,7 +14,7 @@ import { discoverMetrics } from './metrics-loader.js';
 import { discoverConfigs } from './config-loader.js';
 import { insertResource } from './database-manager.js';
 import { registerConfigManaged } from './config-registry.js';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);

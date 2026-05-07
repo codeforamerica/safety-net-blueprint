@@ -142,25 +142,143 @@ test('applyStub — consumes matched stub (FIFO)', () => {
   assert.strictEqual(events()[0].data.result, 'conclusive');
 });
 
-test('applyStub — resolves JSON Logic in respond data fields against event envelope', () => {
+// Schema used in schema-driven tests — mirrors CallCompletedEvent required fields.
+const callCompletedSchema = {
+  properties: {
+    serviceCallId: { type: 'string' },
+    serviceType: { type: 'string' },
+    requestingResourceId: { type: 'string' },
+    result: { type: 'string' }
+  },
+  required: ['serviceCallId', 'serviceType', 'requestingResourceId', 'result']
+};
+const completedType = PREFIX + 'data_exchange.call.completed';
+const eventSchemas = { [completedType]: callCompletedSchema };
+
+test('applyStub — echoes trigger subject by default', () => {
+  const fullType = PREFIX + 'data_exchange.service_call.created';
+  registerStub({
+    on: 'data_exchange.service_call.created',
+    respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+  });
+
+  const envelope = makeEnvelope(fullType, { serviceType: 'fdsh_ssa', requestingResourceId: 'r-1', id: 'sc-1' });
+  envelope.subject = 'sc-1';
+
+  applyStub({}, envelope, { context: { this: envelope }, eventSchemas });
+
+  const [evt] = events();
+  assert.strictEqual(evt.subject, 'sc-1');
+});
+
+test('applyStub — schema-driven: populates same-named fields from trigger data', () => {
+  const fullType = PREFIX + 'data_exchange.service_call.created';
+  registerStub({
+    on: 'data_exchange.service_call.created',
+    respond: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } }
+  });
+
+  const envelope = makeEnvelope(fullType, { serviceType: 'fdsh_ssa', requestingResourceId: 'app-1', id: 'sc-1' });
+  envelope.subject = 'sc-1';
+
+  applyStub({}, envelope, { context: { this: envelope }, eventSchemas });
+
+  const [evt] = events();
+  assert.strictEqual(evt.data.serviceType, 'fdsh_ssa');
+  assert.strictEqual(evt.data.requestingResourceId, 'app-1');
+  assert.strictEqual(evt.data.result, 'inconclusive');
+});
+
+test('applyStub — schema-driven: derives serviceCallId from trigger entity name + subject', () => {
+  const fullType = PREFIX + 'data_exchange.service_call.created';
+  registerStub({
+    on: 'data_exchange.service_call.created',
+    respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+  });
+
+  const envelope = makeEnvelope(fullType, { serviceType: 'fdsh_ssa', requestingResourceId: 'r-1', id: 'sc-abc' });
+  envelope.subject = 'sc-abc';
+
+  applyStub({}, envelope, { context: { this: envelope }, eventSchemas });
+
+  const [evt] = events();
+  assert.strictEqual(evt.data.serviceCallId, 'sc-abc');
+});
+
+test('applyStub — schema-driven: only includes schema-defined fields (no extras)', () => {
+  const fullType = PREFIX + 'data_exchange.service_call.created';
+  registerStub({
+    on: 'data_exchange.service_call.created',
+    respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+  });
+
+  const envelope = makeEnvelope(fullType, {
+    serviceType: 'fdsh_ssa', requestingResourceId: 'r-1', id: 'sc-1',
+    callMode: 'async', status: 'pending', createdAt: '2026-01-01T00:00:00Z'
+  });
+  envelope.subject = 'sc-1';
+
+  applyStub({}, envelope, { context: { this: envelope }, eventSchemas });
+
+  const [evt] = events();
+  const keys = Object.keys(evt.data);
+  assert.ok(!keys.includes('callMode'), 'callMode should not appear in response');
+  assert.ok(!keys.includes('status'), 'status should not appear in response');
+  assert.ok(!keys.includes('createdAt'), 'createdAt should not appear in response');
+  assert.ok(!keys.includes('id'), 'id should not appear in response');
+});
+
+test('applyStub — stub data fields override schema-derived values', () => {
   const fullType = PREFIX + 'data_exchange.service_call.created';
   registerStub({
     on: 'data_exchange.service_call.created',
     respond: {
       type: 'data_exchange.call.completed',
-      subject: { var: 'this.subject' },
-      data: { serviceCallId: { var: 'this.subject' } }
+      data: { result: 'conclusive', serviceType: 'overridden' }
     }
   });
 
-  const envelope = makeEnvelope(fullType);
-  envelope.subject = 'call-xyz';
+  const envelope = makeEnvelope(fullType, { serviceType: 'fdsh_ssa', requestingResourceId: 'r-1', id: 'sc-1' });
+  envelope.subject = 'sc-1';
 
+  applyStub({}, envelope, { context: { this: envelope }, eventSchemas });
+
+  const [evt] = events();
+  assert.strictEqual(evt.data.serviceType, 'overridden');
+  assert.strictEqual(evt.data.result, 'conclusive');
+});
+
+test('applyStub — explicit respond.subject overrides trigger subject', () => {
+  const fullType = PREFIX + 'data_exchange.service_call.created';
+  registerStub({
+    on: 'data_exchange.service_call.created',
+    respond: { type: 'data_exchange.call.completed', subject: 'explicit-subject', data: { result: 'conclusive' } }
+  });
+
+  const envelope = makeEnvelope(fullType, { serviceType: 'fdsh_ssa', requestingResourceId: 'r-1', id: 'sc-1' });
+  envelope.subject = 'trigger-subject';
+
+  applyStub({}, envelope, { context: { this: envelope }, eventSchemas });
+
+  const [evt] = events();
+  assert.strictEqual(evt.subject, 'explicit-subject');
+});
+
+test('applyStub — falls back to stub data only when no schema available', () => {
+  const fullType = PREFIX + 'data_exchange.service_call.created';
+  registerStub({
+    on: 'data_exchange.service_call.created',
+    respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+  });
+
+  const envelope = makeEnvelope(fullType, { serviceType: 'fdsh_ssa' });
+
+  // No eventSchemas passed → falls back to stub data
   applyStub({}, envelope, { context: { this: envelope } });
 
   const [evt] = events();
-  assert.strictEqual(evt.subject, 'call-xyz');
-  assert.strictEqual(evt.data.serviceCallId, 'call-xyz');
+  assert.strictEqual(evt.data.result, 'conclusive');
+  assert.ok(!('serviceType' in evt.data), 'no schema → no field derivation');
 });
 
 // =============================================================================

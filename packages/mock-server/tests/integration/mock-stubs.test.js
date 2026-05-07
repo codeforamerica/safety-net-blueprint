@@ -141,15 +141,15 @@ async function testStubConsumedOnEvent() {
   console.log('\n--- Stub consumed by trigger event ---');
   await clearStubs();
 
-  // Register stub for the trigger event
+  // Register stub — only the delta from the trigger event is needed.
+  // subject and trigger data fields are echoed automatically.
   await fetch(`${BASE_URL}/mock/stubs`, {
     method: 'POST',
     body: {
       on: 'data_exchange.service_call.created',
       respond: {
         type: 'data_exchange.call.completed',
-        subject: { var: 'this.subject' },
-        data: { result: 'inconclusive', serviceType: 'fdsh_ssa' }
+        data: { result: 'inconclusive' }
       }
     }
   });

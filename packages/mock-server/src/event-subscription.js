@@ -60,7 +60,12 @@ function findStateMachineForEntity(entity, allStateMachines) {
  * Build rich deps for platform actions (createResource, triggerTransition).
  * These actions need access to the full server context: DB, state machines, rules.
  */
-function buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes) {
+function buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes, apiSpecs = []) {
+  // Build a combined map of full event type → payload schema from all loaded specs
+  const eventSchemas = {};
+  for (const spec of apiSpecs) {
+    if (spec.eventSchemas) Object.assign(eventSchemas, spec.eventSchemas);
+  }
   return {
     // For assignToQueue / setPriority (existing on-demand deps)
     findByField(collection, field, value) {
@@ -93,6 +98,9 @@ function buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes)
       }
     },
 
+    // For applyStub — schema-aware response construction
+    eventSchemas,
+
     // For triggerTransition / appendToArray
     resolvePath,
     dbFindById: findById,
@@ -108,7 +116,7 @@ function buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes)
  * @param {Array} allStateMachines - from discoverStateMachines()
  * @param {Array} [allSlaTypes]    - from discoverSlaTypes()
  */
-export function registerEventSubscriptions(allRules, allStateMachines, allSlaTypes = []) {
+export function registerEventSubscriptions(allRules, allStateMachines, allSlaTypes = [], apiSpecs = []) {
   // Collect all event-triggered rule sets across all rule files
   const subscriptions = [];
   for (const ruleFile of allRules) {
@@ -139,7 +147,7 @@ export function registerEventSubscriptions(allRules, allStateMachines, allSlaTyp
         const ruleContext = buildRuleContext(event, resolvedEntities);
 
         // Build rich deps for platform actions (needed for both evaluation paths)
-        const deps = buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes);
+        const deps = buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes, apiSpecs);
 
         if (ruleSet.evaluation === 'all-match') {
           // Execute every matching rule's action in order

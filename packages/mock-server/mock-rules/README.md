@@ -36,3 +36,32 @@ The mock server calls `discoverRules()` twice at startup: once for
 `packages/contracts/` (production rules) and once for this directory (mock rules).
 Both are merged and registered as event subscriptions. Production rules are never
 aware of the mock rules alongside them.
+
+## Mock stub registry
+
+Stubs let you pre-program specific outcomes before triggering a flow. Register a
+stub before creating the service call; when the `service_call.created` event fires,
+the stub is consumed and its result event fires instead of the default fallback.
+
+The response event is built from the contract: the `x-events` payload schema for
+the response type drives field population. Fields with matching names are copied
+from the trigger event's data; `serviceCallId` is derived from the trigger's
+`subject`. Only specify what changes:
+
+```bash
+# Pre-program an inconclusive result for fdsh_ssa calls
+curl -s -X POST http://localhost:1080/mock/stubs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "on": "data_exchange.service_call.created",
+    "match": { "data.serviceType": "fdsh_ssa" },
+    "respond": {
+      "type": "data_exchange.call.completed",
+      "data": { "result": "inconclusive" }
+    }
+  }'
+```
+
+The `match` field is optional — omit it to match any service call regardless of type.
+
+When multiple stubs match the same event, they are consumed in registration order (FIFO). Register stubs in the order you expect events to arrive.
