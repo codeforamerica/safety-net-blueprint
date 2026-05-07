@@ -20,5 +20,4 @@ properties:
     description: Schema version for change tracking.
 
   domain:
-    type: string
-    description: Domain namespace (e.g., workflow, data-exchange).
+    $ref: "common.yaml#/$defs/Domain"

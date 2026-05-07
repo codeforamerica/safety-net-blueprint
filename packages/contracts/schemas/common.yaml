@@ -1,0 +1,97 @@
+# Shared type definitions referenced by both OpenAPI components and JSON Schema
+# config validators. Extracting shared types here avoids duplication between
+# components/common.yaml (OpenAPI) and schemas/*-schema.yaml (JSON Schema).
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Shared Common Types
+
+$defs:
+  Domain:
+    type: string
+    description: >
+      Blueprint domain identifier. Used as the {domain} path parameter on
+      metadata mutation endpoints (PUT/DELETE /{resources}/{id}/metadata/{domain})
+      and as the value type for x-domain annotations on domain OpenAPI specs.
+    enum:
+      - data-exchange
+      - document-management
+      - eligibility
+      - intake
+      - workflow
+
+  Endpoint:
+    type: object
+    description: >
+      Connection parameters for an external service. States overlay their
+      domain config files (e.g., data-exchange-config.yaml) to fill in these
+      fields for each service. No credentials live here — secrets are injected
+      at deploy time via environment variables or a state-configured secrets
+      manager, and referenced by name in the endpoint block.
+    additionalProperties: true
+    required:
+      - url
+    properties:
+      url:
+        type: string
+        format: uri
+        description: Base URL for the external service endpoint.
+        example: https://hub.cms.gov/fdsh/ssa
+      timeoutMs:
+        type: integer
+        description: Request timeout in milliseconds. Defaults to adapter implementation default if omitted.
+        minimum: 0
+        example: 30000
+      apiVersion:
+        type: string
+        description: Service API version, if the external service requires explicit versioning.
+        example: "2.0"
+    # Credential configuration — add these fields in your state overlay.
+    # Do NOT store credential values here; store only the reference name.
+    # Your adapter reads whichever field you configure and resolves the value
+    # from the environment or secrets manager at runtime. Examples:
+    #
+    #   credentialEnvVar: MY_SERVICE_CERT_PATH    # env var holding a cert file path
+    #   credentialSecretPath: secrets/my-service  # secrets manager path (Vault, AWS, etc.)
+    #
+    # Services that use API keys instead of certificates:
+    #
+    #   apiKeyHeader: X-API-Key                   # HTTP header the adapter puts the key in
+    #   credentialEnvVar: MY_SERVICE_API_KEY       # env var holding the key value
+    #
+    # See the domain config file (e.g., data-exchange-config.yaml) for
+    # service-specific credential guidance.
+
+  Program:
+    type: string
+    description: >
+      Federal public assistance program. Uses federal program names — states
+      display their own program branding (e.g., "Medical Assistance",
+      "Medi-Cal") in the UI layer.
+    enum:
+      - snap
+      - medicaid
+      - tanf
+      - all
+
+  ServiceType:
+    type: string
+    description: >
+      The specific federal service interface being called. Each type has a
+      distinct adapter interface, input schema, and result schema.
+
+      FDSH services are prefixed fdsh_ — they route through the CMS Federal
+      Data Services Hub. IEVS sources are separate systems with distinct
+      interfaces. See the Data Exchange architecture doc for the full reference.
+    enum:
+      - fdsh_ssa
+      - fdsh_vlp
+      - fdsh_fti
+      - fdsh_medicare
+      - fdsh_vci
+      - ssa_ievs
+      - irs_ievs
+      - swica
+      - uib
+      - save
+      - enrollment_check
+      - incarceration_check

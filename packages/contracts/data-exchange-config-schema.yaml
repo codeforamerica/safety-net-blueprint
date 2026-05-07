@@ -1,0 +1,82 @@
+# JSON Schema for data-exchange-config.yaml
+# Extends the generic config envelope (schemas/config-schema.yaml)
+# with ExternalService catalog entry validation.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Data Exchange Config
+description: Schema for data-exchange-config.yaml. Validates the ExternalService catalog.
+
+allOf:
+  - $ref: "schemas/config-schema.yaml"
+
+type: object
+required:
+  - services
+
+properties:
+  domain:
+    const: data-exchange
+    description: Must be "data-exchange".
+
+  services:
+    type: array
+    description: >
+      ExternalService catalog. Defines the external data sources available across
+      all deployments. All entries in a config file are config-managed: they are
+      seeded by the mock server on startup with source "system" and cannot be
+      deleted via the API. States overlay this file to add endpoint configuration
+      and state-specific services.
+    minItems: 1
+    items:
+      $ref: "#/$defs/ExternalServiceConfig"
+
+unevaluatedProperties: false
+
+$defs:
+  ExternalServiceConfig:
+    type: object
+    description: An external service catalog entry.
+    required:
+      - id
+      - name
+      - serviceType
+      - defaultCallMode
+      - programs
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        format: uuid
+        description: >
+          Stable identifier. Referenced by ExternalServiceCall submissions (serviceId)
+          and by calling domain rules. Use a fixed UUID so overlay authors and rules
+          can reference specific services portably across deployments.
+      name:
+        type: string
+        minLength: 1
+        maxLength: 200
+        description: Human-readable name (e.g., "SSA Composite via FDSH").
+      serviceType:
+        $ref: "schemas/common.yaml#/$defs/ServiceType"
+      defaultCallMode:
+        type: string
+        description: Default call mode for submissions against this service. Can be overridden per call.
+        enum:
+          - async
+          - sync
+      programs:
+        type: array
+        description: Programs that use this service.
+        minItems: 1
+        items:
+          $ref: "schemas/common.yaml#/$defs/Program"
+      endpoint:
+        $ref: "schemas/common.yaml#/$defs/Endpoint"
+        description: >
+          Connection parameters for this service. States fill in this object
+          via overlay. Omit in the blueprint baseline — adapters will fail to
+          call external services until a state provides endpoint configuration.
+      description:
+        type: string
+        maxLength: 2000
+        description: Human-readable description of what this service returns and when it is used.
