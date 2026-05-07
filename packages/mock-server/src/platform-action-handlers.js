@@ -6,6 +6,8 @@
 
 import jsonLogic from 'json-logic-js';
 import { deriveCollectionName } from './collection-utils.js';
+import { emitEventEnvelope, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
+import { matchAndPop } from './mock-stub-engine.js';
 
 /**
  * Create a new resource in the specified domain/collection.
@@ -252,9 +254,127 @@ function forEach(actionValue, resource, deps) {
   }
 }
 
+/**
+ * Fire an arbitrary outbound event from a rule action.
+ * Allows rules to emit domain events directly without requiring a state machine
+ * transition as intermediary — needed for cross-domain fanout.
+ *
+ * Field values in `data` may be literals or JSON Logic expressions resolved
+ * against the current rule context. `subject` and `source` follow the same pattern.
+ *
+ * @param {Object} actionValue - {
+ *   type: string,              // short event type suffix (e.g., "data_exchange.call.completed")
+ *   subject?: literal|logic,   // CloudEvents subject (resource ID)
+ *   source?: literal|logic,    // CloudEvents source (defaults to "/system")
+ *   data?: { key: literal|logic, ... }  // event payload; each value resolved individually
+ * }
+ * @param {Object} resource - The current "this" context
+ * @param {Object} deps     - { context }
+ */
+function fireEvent(actionValue, resource, deps) {
+  const { type, subject, source, data } = actionValue || {};
+  if (!type) {
+    console.error('fireEvent: missing required field "type"');
+    return;
+  }
+
+  const ctx = deps.context || {};
+
+  const resolveValue = (v) => {
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+      return jsonLogic.apply(v, ctx);
+    }
+    return v;
+  };
+
+  const resolvedSubject = subject !== undefined ? resolveValue(subject) : null;
+  const resolvedSource = source !== undefined ? resolveValue(source) : null;
+
+  let resolvedData = null;
+  if (data !== null && data !== undefined && typeof data === 'object' && !Array.isArray(data)) {
+    resolvedData = {};
+    for (const [k, v] of Object.entries(data)) {
+      resolvedData[k] = resolveValue(v);
+    }
+  }
+
+  const fullType = type.startsWith(CLOUDEVENTS_TYPE_PREFIX) ? type : CLOUDEVENTS_TYPE_PREFIX + type;
+
+  emitEventEnvelope({
+    type: fullType,
+    source: resolvedSource || '/system',
+    subject: resolvedSubject,
+    data: resolvedData
+  });
+}
+
+/**
+ * Check the stub registry for a pre-programmed response to the current event.
+ * If a matching stub is found it is popped (consumed) and its respond event is
+ * fired. If no stub matches, the `fallback` action (typically a fireEvent) is
+ * executed instead.
+ *
+ * Only meaningful in event-triggered rule sets — `resource` is the event
+ * envelope, which provides both the type for stub matching and the context for
+ * JSON Logic resolution in respond field values.
+ *
+ * @param {Object} actionValue - { fallback?: { fireEvent: {...} } }
+ * @param {Object} resource    - The current event envelope ("this" context)
+ * @param {Object} deps        - { context }
+ */
+function applyStub(actionValue, resource, deps) {
+  const eventType = resource?.type;
+  if (!eventType) {
+    console.warn('applyStub: no event type on resource — skipping stub lookup');
+    return;
+  }
+
+  const stub = matchAndPop(eventType, resource);
+
+  if (stub) {
+    const ctx = deps.context || {};
+    const resolveValue = (v) => {
+      if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+        return jsonLogic.apply(v, ctx);
+      }
+      return v;
+    };
+
+    const { type, subject, source, data } = stub.respond;
+    const fullType = type.startsWith(CLOUDEVENTS_TYPE_PREFIX) ? type : CLOUDEVENTS_TYPE_PREFIX + type;
+
+    let resolvedData = null;
+    if (data !== null && data !== undefined && typeof data === 'object' && !Array.isArray(data)) {
+      resolvedData = {};
+      for (const [k, v] of Object.entries(data)) {
+        resolvedData[k] = resolveValue(v);
+      }
+    }
+
+    emitEventEnvelope({
+      type: fullType,
+      source: source ? resolveValue(source) : '/system',
+      subject: subject !== undefined ? resolveValue(subject) : null,
+      data: resolvedData
+    });
+
+    console.log(`[stub] matched ${stub.id} → fired ${fullType}`);
+  } else {
+    // No stub matched — execute the fallback action if provided
+    const { fallback } = actionValue || {};
+    if (fallback?.fireEvent) {
+      fireEvent(fallback.fireEvent, resource, deps);
+    } else if (fallback) {
+      console.warn('applyStub: fallback action type not supported — only fireEvent is currently implemented');
+    }
+  }
+}
+
 export const platformActionRegistry = new Map([
-  ['createResource', createResource],
-  ['triggerTransition', triggerTransition],
+  ['applyStub', applyStub],
   ['appendToArray', appendToArray],
-  ['forEach', forEach]
+  ['createResource', createResource],
+  ['fireEvent', fireEvent],
+  ['forEach', forEach],
+  ['triggerTransition', triggerTransition],
 ]);

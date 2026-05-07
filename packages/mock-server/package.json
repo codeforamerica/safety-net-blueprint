@@ -20,6 +20,7 @@
     "validate:seed": "node scripts/validate-seed.js --spec=../contracts --seed=./seed",
     "setup": "node scripts/setup.js --spec=../contracts",
     "reset": "node scripts/reset.js --spec=../contracts",
+    "validate": "node ../contracts/scripts/validate-schemas.js --spec=mock-rules",
     "test": "node tests/run-all-tests.js --unit",
     "test:unit": "node tests/run-all-tests.js --unit",
     "test:integration": "node tests/run-all-tests.js --integration",

@@ -90,10 +90,13 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     stateMachines.forEach(sm => console.log(`  - ${sm.domain}/${sm.object}`));
   }
 
-  // Discover rule contracts
-  const rules = discoverRules(specsDir);
+  // Discover rule contracts (production) and mock simulation rules (development-only)
+  const productionRules = discoverRules(specsDir);
+  const mockRulesDir = join(__dirname, '..', 'mock-rules');
+  const mockRules = discoverRules(mockRulesDir);
+  const rules = [...productionRules, ...mockRules];
   if (verbose && rules.length > 0) {
-    console.log(`\n✓ Discovered ${rules.length} rule set(s):`);
+    console.log(`\n✓ Discovered ${productionRules.length} production rule file(s) + ${mockRules.length} mock simulation rule file(s):`);
     rules.forEach(r => console.log(`  - ${r.domain} (${r.ruleSets.length} ruleSet(s))`));
   }
 

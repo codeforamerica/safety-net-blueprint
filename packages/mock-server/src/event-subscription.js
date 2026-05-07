@@ -19,10 +19,8 @@ import { executeActions } from './action-handlers.js';
 import { executeTransition } from './state-machine-runner.js';
 import { applyEffects } from './state-machine-engine.js';
 import { processRuleEvaluations } from './handlers/rule-evaluation.js';
-import { emitEvent } from './emit-event.js';
+import { emitEvent, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
 import { deriveCollectionName } from './collection-utils.js';
-
-const FULL_TYPE_PREFIX = 'org.codeforamerica.safety-net-blueprint.';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
@@ -35,7 +33,7 @@ function eventTypeMatches(eventType, onValue) {
   if (!onValue || !eventType) return false;
   if (eventType === onValue) return true;
   // Short form: accept if the event type ends with the declared suffix
-  return eventType === FULL_TYPE_PREFIX + onValue;
+  return eventType === CLOUDEVENTS_TYPE_PREFIX + onValue;
 }
 
 /**
