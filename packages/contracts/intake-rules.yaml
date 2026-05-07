@@ -82,7 +82,7 @@ ruleSets:
         description: |
           Initiate electronic verification when an application is submitted (Decision 18).
           Forward subscription — the data exchange domain fans out per-member checks internally
-          (FDSH, IEVS, SAVE, SSA) and emits data-exchange.service-call.completed per result.
+          (FDSH, IEVS, SAVE, SSA) and emits data_exchange.call.completed per result.
   - id: application-submitted-document-checklist
     "on": intake.application.submitted
     evaluation: all-match
@@ -149,7 +149,7 @@ ruleSets:
               category: identity
         description: Request identity documentation for Medicaid applicants (Decision 16).
   - id: verification-result-write-back
-    "on": data-exchange.service-call.completed
+    "on": data_exchange.call.completed
     evaluation: first-match-wins
     rules:
       - id: append-verification-to-member
@@ -171,7 +171,7 @@ ruleSets:
                 var: this.time
         description: Write electronic verification result back to ApplicationMember.verifications (Decision 17)
   - id: fdsh-inconclusive-citizenship-document
-    "on": data-exchange.service-call.completed
+    "on": data_exchange.call.completed
     evaluation: first-match-wins
     rules:
       - id: create-citizenship-document-on-fdsh-inconclusive
@@ -218,7 +218,7 @@ ruleSets:
           Only fires when the appointment's subjectType is "interview", ensuring non-interview
           appointments scheduled via the shared scheduling domain are ignored.
   - id: document-verified-write-back
-    "on": document-management.document.verified
+    "on": document_management.document.verified
     evaluation: first-match-wins
     context:
       - as: applicationDocument

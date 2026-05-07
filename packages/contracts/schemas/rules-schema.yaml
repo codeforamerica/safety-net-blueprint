@@ -39,6 +39,50 @@ properties:
 
 $defs:
   # ---------------------------------------------------------------------------
+  # ActionFireEvent — emit an arbitrary outbound event from a rule action
+  #
+  # Emit a data exchange completion event from an intake rule:
+  # action:
+  #   fireEvent:
+  #     type: data_exchange.call.completed
+  #     subject: {var: "this.subject"}
+  #     data:
+  #       serviceCallId: {var: "this.data.serviceCallId"}
+  #       result: conclusive
+  # ---------------------------------------------------------------------------
+  ActionFireEvent:
+    type: object
+    description: >
+      Emits an arbitrary outbound CloudEvent from a rule action. Allows rules
+      to publish domain events directly without requiring a state machine
+      transition as intermediary — needed for cross-domain fanout.
+      Field values in `data`, `subject`, and `source` may be literals or JSON
+      Logic expressions resolved against the current rule context.
+    required: [type]
+    properties:
+      type:
+        type: string
+        description: >
+          CloudEvents type suffix (e.g., "data_exchange.call.completed"). The
+          platform prefix (org.codeforamerica.safety-net-blueprint.) is prepended
+          automatically if not already present.
+      subject:
+        description: >
+          CloudEvents subject (typically a resource ID). May be a literal or a
+          JSON Logic expression resolved against the current rule context.
+      source:
+        description: >
+          CloudEvents source. Defaults to "/system" if omitted. May be a literal
+          or a JSON Logic expression.
+      data:
+        type: object
+        description: >
+          Event payload. Each top-level value may be a literal or a JSON Logic
+          expression resolved against the current rule context.
+        additionalProperties: true
+    additionalProperties: false
+
+  # ---------------------------------------------------------------------------
   # ActionForEach — iterate a collection, execute an inner action per item
   #
   # Create an income verification task for each SNAP-enrolled member:
@@ -383,10 +427,12 @@ $defs:
             $ref: "#/$defs/ActionCreateResource"
           appendToArray:
             $ref: "#/$defs/ActionAppendToArray"
-          triggerTransition:
-            $ref: "#/$defs/ActionTriggerTransition"
+          fireEvent:
+            $ref: "#/$defs/ActionFireEvent"
           forEach:
             $ref: "#/$defs/ActionForEach"
+          triggerTransition:
+            $ref: "#/$defs/ActionTriggerTransition"
         additionalProperties: true
       fallbackAction:
         type: object
@@ -401,6 +447,8 @@ $defs:
             $ref: "#/$defs/ActionCreateResource"
           appendToArray:
             $ref: "#/$defs/ActionAppendToArray"
+          fireEvent:
+            $ref: "#/$defs/ActionFireEvent"
           triggerTransition:
             $ref: "#/$defs/ActionTriggerTransition"
         additionalProperties: true

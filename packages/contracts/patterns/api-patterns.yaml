@@ -49,6 +49,15 @@ naming:
   # Example: user-profiles.yaml, common-parameters.yaml
   files: kebab-case
 
+  # CloudEvents type segments: snake_case (underscores for multi-word segments)
+  # Full format: org.codeforamerica.safety-net-blueprint.{domain}.{object}.{action}
+  # Example: org.codeforamerica.safety-net-blueprint.data_exchange.service_call.created
+  # Rule: URL paths use hyphens (kebab-case); CloudEvents type segments use underscores (snake_case).
+  # Never mix conventions — data-exchange in a path becomes data_exchange in an event type.
+  # The `on:` field in rules files uses the short suffix form (omit the platform prefix) but
+  # must still use underscores: on: data_exchange.call.completed, not data-exchange.call.completed.
+  event_type_segments: snake_case
+
 # =============================================================================
 # Spec Authoring Style
 # =============================================================================
