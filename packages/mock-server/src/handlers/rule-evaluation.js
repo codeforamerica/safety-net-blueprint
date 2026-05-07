@@ -58,7 +58,7 @@ export function resolveContextEntities(contextBindings, resource) {
 
     if (binding.entity) {
       // Entity binding — fromValue is an ID; fetch the entity by that ID
-      const collectionName = binding.entity.split('/').pop();
+      const collectionName = deriveCollectionName(binding.entity, binding.entity.split('/')[0]);
 
       if (!fromValue) {
         if (binding.optional) {

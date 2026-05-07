@@ -25,8 +25,8 @@ servers:
 tags:
   - name: Applications
     description: Manage public assistance applications.
-  - name: Documents
-    description: Application document requirements and verification tracking.
+  - name: Verifications
+    description: Application verification obligations — electronic check results and document evidence.
   - name: Interviews
     description: SNAP interview obligation tracking.
 
@@ -200,27 +200,27 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  /applications/{applicationId}/documents:
+  /applications/{applicationId}/verifications:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
 
     get:
-      summary: List application documents
-      description: Retrieve document requirements for a specific application.
-      operationId: listApplicationDocuments
+      summary: List application verifications
+      description: Retrieve all verification obligations for a specific application.
+      operationId: listApplicationVerifications
       tags:
-        - Documents
+        - Verifications
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
       responses:
         "200":
-          description: A paginated list of application documents.
+          description: A paginated list of application verifications.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApplicationDocumentList"
+                $ref: "#/components/schemas/VerificationList"
         "400":
           $ref: "./components/responses.yaml#/BadRequest"
         "404":
@@ -229,30 +229,30 @@ paths:
           $ref: "./components/responses.yaml#/InternalError"
 
     post:
-      summary: Create an application document
-      description: Create a document requirement scoped to this application. Under normal circumstances documents are created by the rules engine; this endpoint supports caseworker-initiated requests.
-      operationId: createApplicationDocument
+      summary: Create a verification obligation
+      description: Create a verification obligation scoped to this application. Under normal circumstances verifications are created by the rules engine at submission; this endpoint supports caseworker-initiated obligations.
+      operationId: createApplicationVerification
       tags:
-        - Documents
+        - Verifications
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApplicationDocumentCreate"
+              $ref: "#/components/schemas/VerificationCreate"
       responses:
         "201":
-          description: Application document created successfully.
+          description: Verification created successfully.
           headers:
             Location:
-              description: URL of the newly created document resource.
+              description: URL of the newly created verification resource.
               schema:
                 type: string
                 format: uri
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApplicationDocument"
+                $ref: "#/components/schemas/Verification"
         "400":
           $ref: "./components/responses.yaml#/BadRequest"
         "404":
@@ -262,48 +262,48 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  /applications/{applicationId}/documents/{documentId}:
+  /applications/{applicationId}/verifications/{verificationId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
-      - $ref: "#/components/parameters/DocumentIdParam"
+      - $ref: "#/components/parameters/VerificationIdParam"
 
     get:
-      summary: Get an application document
-      description: Retrieve a single document requirement by identifier.
-      operationId: getApplicationDocument
+      summary: Get a verification obligation
+      description: Retrieve a single verification obligation by identifier.
+      operationId: getApplicationVerification
       tags:
-        - Documents
+        - Verifications
       responses:
         "200":
-          description: Application document retrieved successfully.
+          description: Verification retrieved successfully.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApplicationDocument"
+                $ref: "#/components/schemas/Verification"
         "404":
           $ref: "./components/responses.yaml#/NotFound"
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
     patch:
-      summary: Update an application document
-      description: Apply partial updates to an application document.
-      operationId: updateApplicationDocument
+      summary: Update a verification obligation
+      description: Apply partial updates to a verification obligation.
+      operationId: updateApplicationVerification
       tags:
-        - Documents
+        - Verifications
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApplicationDocumentUpdate"
+              $ref: "#/components/schemas/VerificationUpdate"
       responses:
         "200":
-          description: Application document updated successfully.
+          description: Verification updated successfully.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApplicationDocument"
+                $ref: "#/components/schemas/Verification"
         "400":
           $ref: "./components/responses.yaml#/BadRequest"
         "404":
@@ -314,14 +314,14 @@ paths:
           $ref: "./components/responses.yaml#/InternalError"
 
     delete:
-      summary: Delete an application document
-      description: Remove a document requirement from this application.
-      operationId: deleteApplicationDocument
+      summary: Delete a verification obligation
+      description: Remove a verification obligation from this application.
+      operationId: deleteApplicationVerification
       tags:
-        - Documents
+        - Verifications
       responses:
         "204":
-          description: Application document deleted successfully.
+          description: Verification deleted successfully.
         "404":
           $ref: "./components/responses.yaml#/NotFound"
         "500":
@@ -388,11 +388,11 @@ components:
         type: string
         format: uuid
 
-    DocumentIdParam:
-      name: documentId
+    VerificationIdParam:
+      name: verificationId
       in: path
       required: true
-      description: Unique identifier of the application document.
+      description: Unique identifier of the verification obligation.
       schema:
         type: string
         format: uuid
@@ -506,38 +506,41 @@ components:
                 $ref: "#/components/schemas/Application"
 
     # ---------------------------------------------------------------------------
-    # ApplicationDocument
+    # Verification
     # ---------------------------------------------------------------------------
 
-    ApplicationDocumentWritable:
+    VerificationWritable:
       type: object
-      description: Client-writable fields for an application document requirement.
+      description: Client-writable fields for a verification obligation record.
       properties:
         memberId:
           type: string
           format: uuid
-          description: Member this document is required for. Null for household-level requirements (e.g., proof of residency).
+          description: Member this obligation is for. Null for household-level obligations (e.g., proof of residency).
           nullable: true
           x-relationship:
             resource: ApplicationMember
         category:
           type: string
-          description: Type of documentation required.
+          description: Verification obligation category.
           enum:
-            - income
-            - identity
-            - residency
             - citizenship
+            - identity
+            - immigration
+            - income
+            - residency
 
-    ApplicationDocument:
+    Verification:
       allOf:
-        - $ref: "#/components/schemas/ApplicationDocumentWritable"
+        - $ref: "#/components/schemas/VerificationWritable"
         - type: object
           required:
             - id
             - applicationId
             - category
             - status
+            - evidence
+            - documentRequests
             - createdAt
             - updatedAt
           properties:
@@ -553,11 +556,26 @@ components:
                 resource: Application
             status:
               type: string
-              description: Current verification status of the document requirement.
+              description: Current status of the verification obligation.
               readOnly: true
               enum:
-                - requested
-                - verified
+                - pending
+                - inconclusive
+                - satisfied
+                - waived
+                - cannot_verify
+            evidence:
+              type: array
+              description: Electronic and document evidence items accumulated against this obligation.
+              readOnly: true
+              items:
+                $ref: "#/components/schemas/VerificationEvidenceItem"
+            documentRequests:
+              type: array
+              description: Outbound document request notices sent to the applicant for this obligation.
+              readOnly: true
+              items:
+                $ref: "#/components/schemas/VerificationDocumentRequest"
             createdAt:
               type: string
               format: date-time
@@ -566,31 +584,21 @@ components:
               type: string
               format: date-time
               readOnly: true
-            evidence:
-              type: array
-              description: >
-                IDs of documents in document-management that satisfy this checklist item.
-                Populated by the document-verified-write-back rule when a verified document
-                carries subjectType "application-document" and subjectId matching this record.
-              readOnly: true
-              items:
-                type: string
-                format: uuid
 
-    ApplicationDocumentCreate:
+    VerificationCreate:
       allOf:
-        - $ref: "#/components/schemas/ApplicationDocumentWritable"
+        - $ref: "#/components/schemas/VerificationWritable"
         - type: object
           required:
             - category
 
-    ApplicationDocumentUpdate:
+    VerificationUpdate:
       allOf:
-        - $ref: "#/components/schemas/ApplicationDocumentWritable"
+        - $ref: "#/components/schemas/VerificationWritable"
         - type: object
           minProperties: 1
 
-    ApplicationDocumentList:
+    VerificationList:
       allOf:
         - $ref: "./components/pagination.yaml#/Pagination"
         - type: object
@@ -600,7 +608,7 @@ components:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/ApplicationDocument"
+                $ref: "#/components/schemas/Verification"
 
     # ---------------------------------------------------------------------------
     # Interview
@@ -793,6 +801,121 @@ components:
         reason:
           type: string
           description: Why the application was withdrawn.
+
+    VerificationDocumentEvidence:
+      type: object
+      description: A document submitted as evidence against a verification obligation.
+      required:
+        - type
+        - documentId
+        - receivedAt
+      properties:
+        type:
+          type: string
+          enum:
+            - document
+        documentId:
+          type: string
+          format: uuid
+          description: ID of the verified document in the document-management domain.
+          x-relationship:
+            resource: External
+        receivedAt:
+          type: string
+          format: date-time
+          description: When the document was received.
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When a caseworker reviewed the document.
+        reviewedBy:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID of the caseworker who reviewed the document.
+
+    VerificationDocumentRequest:
+      type: object
+      description: An outbound notice requesting documents from an applicant for a verification obligation.
+      required:
+        - noticeId
+        - sentAt
+      properties:
+        noticeId:
+          type: string
+          format: uuid
+          description: ID of the notice in the communication domain.
+          x-relationship:
+            resource: External
+        sentAt:
+          type: string
+          format: date-time
+          description: When the notice was sent.
+        dueAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Deadline by which the applicant must respond.
+        channel:
+          type: string
+          nullable: true
+          description: Channel through which the notice was sent.
+          enum:
+            - email
+            - in_person
+            - mail
+            - portal
+
+    VerificationElectronicEvidence:
+      type: object
+      description: An electronic service check result recorded as evidence against a verification obligation.
+      required:
+        - type
+        - source
+        - result
+        - receivedAt
+      properties:
+        type:
+          type: string
+          enum:
+            - electronic
+        source:
+          type: string
+          description: The external service that produced this result.
+          enum:
+            - fdsh_fti
+            - fdsh_ssa
+            - fdsh_vlp
+            - save
+            - ssa_ievs
+        result:
+          type: string
+          description: Whether the service check confirmed the obligation.
+          enum:
+            - conclusive
+            - inconclusive
+        serviceCallId:
+          type: string
+          format: uuid
+          description: ID of the data-exchange service call that produced this result.
+          x-relationship:
+            resource: External
+        receivedAt:
+          type: string
+          format: date-time
+          description: When the result was received.
+
+    VerificationEvidenceItem:
+      description: An electronic or document evidence item accumulated against a verification obligation.
+      oneOf:
+        - $ref: "#/components/schemas/VerificationElectronicEvidence"
+        - $ref: "#/components/schemas/VerificationDocumentEvidence"
+      discriminator:
+        propertyName: type
+        mapping:
+          electronic: "#/components/schemas/VerificationElectronicEvidence"
+          document: "#/components/schemas/VerificationDocumentEvidence"
 
   examples:
     ApplicationExample1:

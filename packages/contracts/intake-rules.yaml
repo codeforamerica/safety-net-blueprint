@@ -100,11 +100,14 @@ ruleSets:
             - var: application.programs
         action:
           createResource:
-            entity: intake/applications/documents
+            entity: intake/applications/verifications
             fields:
               applicationId:
                 var: application.id
+              memberId: null
               category: income
+              evidence: []
+              documentRequests: []
         description: Request income documentation for SNAP applicants (Decision 16).
       - id: snap-identity-document
         order: 2
@@ -114,11 +117,14 @@ ruleSets:
             - var: application.programs
         action:
           createResource:
-            entity: intake/applications/documents
+            entity: intake/applications/verifications
             fields:
               applicationId:
                 var: application.id
+              memberId: null
               category: identity
+              evidence: []
+              documentRequests: []
         description: Request identity documentation for SNAP applicants (Decision 16).
       - id: snap-residency-document
         order: 3
@@ -128,11 +134,14 @@ ruleSets:
             - var: application.programs
         action:
           createResource:
-            entity: intake/applications/documents
+            entity: intake/applications/verifications
             fields:
               applicationId:
                 var: application.id
+              memberId: null
               category: residency
+              evidence: []
+              documentRequests: []
         description: Request residency documentation for SNAP applicants (Decision 16).
       - id: medicaid-identity-document
         order: 4
@@ -142,34 +151,112 @@ ruleSets:
             - var: application.programs
         action:
           createResource:
-            entity: intake/applications/documents
+            entity: intake/applications/verifications
             fields:
               applicationId:
                 var: application.id
+              memberId: null
               category: identity
+              evidence: []
+              documentRequests: []
         description: Request identity documentation for Medicaid applicants (Decision 16).
   - id: verification-result-write-back
     "on": data-exchange.service-call.completed
-    evaluation: first-match-wins
+    evaluation: all-match
+    context:
+      - as: verification
+        entity: intake/applications/verifications
+        from:
+          var: data.metadata.intake.verificationId
+        optional: true
     rules:
-      - id: append-verification-to-member
+      - id: satisfy-conclusive-verification
         order: 1
-        condition: true
+        condition:
+          and:
+            - "!=":
+                - var: verification.id
+                - null
+            - "==":
+                - var: this.data.result
+                - conclusive
         action:
+          triggerTransition:
+            entity: intake/applications/verifications
+            idFrom: verification.id
+            transition: satisfy
           appendToArray:
-            entity: intake/applications/members
-            idFrom: this.data.memberId
-            field: verifications
+            entity: intake/applications/verifications
+            idFrom: verification.id
+            field: evidence
             value:
-              type:
-                var: this.data.verificationType
-              status:
-                var: this.data.result
+              type: electronic
               source:
                 var: this.data.serviceType
-              checkedAt:
+              result:
+                var: this.data.result
+              serviceCallId:
+                var: this.subject
+              receivedAt:
                 var: this.time
-        description: Write electronic verification result back to ApplicationMember.verifications (Decision 17)
+        description: |
+          When a data exchange service call completes conclusively and carries an intake.verificationId
+          in metadata, satisfy the pre-created Verification and append the electronic evidence item.
+      - id: mark-inconclusive-verification
+        order: 2
+        condition:
+          and:
+            - "!=":
+                - var: verification.id
+                - null
+            - "==":
+                - var: this.data.result
+                - inconclusive
+        action:
+          triggerTransition:
+            entity: intake/applications/verifications
+            idFrom: verification.id
+            transition: mark_inconclusive
+          appendToArray:
+            entity: intake/applications/verifications
+            idFrom: verification.id
+            field: evidence
+            value:
+              type: electronic
+              source:
+                var: this.data.serviceType
+              result:
+                var: this.data.result
+              serviceCallId:
+                var: this.subject
+              receivedAt:
+                var: this.time
+        description: |
+          When a data exchange service call completes inconclusively and carries an intake.verificationId
+          in metadata, mark the pre-created Verification inconclusive and append the electronic evidence item.
+      - id: append-document-request-on-inconclusive
+        order: 3
+        condition:
+          and:
+            - "!=":
+                - var: verification.id
+                - null
+            - "==":
+                - var: this.data.result
+                - inconclusive
+        action:
+          appendToArray:
+            entity: intake/applications/verifications
+            idFrom: verification.id
+            field: documentRequests
+            value:
+              sentAt:
+                var: this.time
+              dueAt: null
+              channel: mail
+        description: |
+          When a data exchange check is inconclusive, append a document request to the Verification
+          so the caseworker knows a notice was sent and can track the response.
   - id: fdsh-inconclusive-citizenship-document
     "on": data-exchange.service-call.completed
     evaluation: first-match-wins
@@ -184,18 +271,25 @@ ruleSets:
             - "==":
                 - var: this.data.result
                 - inconclusive
+            - "==":
+                - var: this.data.metadata.intake.verificationId
+                - null
         action:
           createResource:
-            entity: intake/applications/documents
+            entity: intake/applications/verifications
             fields:
               applicationId:
                 var: this.data.applicationId
               memberId:
                 var: this.data.memberId
               category: citizenship
+              evidence: []
+              documentRequests: []
         description: |
-          Request citizenship documentation when FDSH returns an inconclusive result (Decision 14).
-          Ex parte verification failed; caseworker must collect paper documentation.
+          Fallback: create a citizenship Verification when FDSH returns inconclusive and no
+          pre-existing verificationId was passed in metadata. Once the data exchange contract
+          carries intake.verificationId (context pass-through pattern), this rule becomes inactive
+          because the pre-created verification is updated by verification-result-write-back instead.
   - id: appointment-scheduled-link-to-interview
     "on": scheduling.appointment.scheduled
     evaluation: first-match-wins
@@ -221,36 +315,37 @@ ruleSets:
     "on": document-management.document.verified
     evaluation: first-match-wins
     context:
-      - as: applicationDocument
-        entity: intake/applications/documents
+      - as: verification
+        entity: intake/applications/verifications
         from:
           var: data.subjectId
         optional: true
     rules:
-      - id: verify-application-document
+      - id: satisfy-verification-on-document-verified
         order: 1
         condition:
           "==":
             - var: this.data.subjectType
-            - application-document
+            - verification
         action:
           triggerTransition:
-            entity: intake/applications/documents
-            idFrom: applicationDocument.id
-            transition: verify
+            entity: intake/applications/verifications
+            idFrom: verification.id
+            transition: satisfy
           appendToArray:
-            entity: intake/applications/documents
-            idFrom: applicationDocument.id
+            entity: intake/applications/verifications
+            idFrom: verification.id
             field: evidence
             value:
-              var: this.subject
+              type: document
+              documentId:
+                var: this.subject
+              receivedAt:
+                var: this.time
         description: |
-          Transition the ApplicationDocument to verified and record the document ID in its
-          evidence list when document-management reports successful verification (Decision 15).
-          Only fires when the document's subjectType is "application-document", ensuring
-          documents uploaded in document-management without linking to an ApplicationDocument
-          (via subjectType/subjectId) are silently ignored — analogous to an appointment
-          scheduled without linking to an interview.
+          Satisfy the Verification and record the document ID as evidence when document-management
+          reports successful verification (Decision 15). Only fires when the document's subjectType
+          is "verification", ensuring documents not linked to a Verification are silently ignored.
   - id: eligibility-determination-write-back
     "on": eligibility.determination.completed
     evaluation: first-match-wins
