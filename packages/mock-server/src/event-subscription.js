@@ -47,11 +47,12 @@ function findStateMachineForEntity(entity, allStateMachines) {
   const collectionName = deriveCollectionName(entity, domainName);
   const match = allStateMachines.find(sm => {
     if (sm.domain !== domainName) return false;
-    // Convert PascalCase object name to kebab-plural: ApplicationDocument → application-documents
+    // Convert PascalCase object name to kebab-plural. Also accepts suffix match so single-word
+    // objects (e.g., "Verification") correctly match sub-resource collections like "application-verifications".
     const kebabPlural = sm.object
       .replace(/([a-z])([A-Z])/g, '$1-$2')
       .toLowerCase() + 's';
-    return kebabPlural === collectionName;
+    return collectionName === kebabPlural || collectionName.endsWith('-' + kebabPlural);
   });
   return match?.stateMachine || null;
 }

@@ -57,8 +57,9 @@ function createResource(actionValue, resource, deps) {
   // Apply state machine onCreate pipeline if one exists for this entity
   const stateMachine = deps.findStateMachine?.(entity);
   if (stateMachine) {
-    // Apply initial state
-    if (stateMachine.initialState) {
+    // Apply initial state only if the caller did not supply an explicit status in the fields.
+    // This allows rules to create resources with a non-initial status (e.g., satisfied) directly.
+    if (stateMachine.initialState && !resolvedFields.status) {
       created.status = stateMachine.initialState;
       deps.dbUpdate(collectionName, created.id, { status: stateMachine.initialState });
     }
@@ -182,9 +183,24 @@ function appendToArray(actionValue, resource, deps) {
     return;
   }
 
-  const resolvedValue = (value !== null && typeof value === 'object' && !Array.isArray(value))
-    ? jsonLogic.apply(value, deps.context || {})
-    : value;
+  // Single-key objects are JSON Logic expressions; resolve with jsonLogic.apply.
+  // Multi-key objects are structured data templates; resolve each field individually.
+  let resolvedValue;
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const ctx = deps.context || {};
+    if (jsonLogic.is_logic(value)) {
+      resolvedValue = jsonLogic.apply(value, ctx);
+    } else {
+      resolvedValue = {};
+      for (const [k, v] of Object.entries(value)) {
+        resolvedValue[k] = (v !== null && typeof v === 'object' && !Array.isArray(v))
+          ? jsonLogic.apply(v, ctx)
+          : v;
+      }
+    }
+  } else {
+    resolvedValue = value;
+  }
 
   const currentArray = Array.isArray(existing[field]) ? existing[field] : [];
   deps.dbUpdate(collectionName, entityId, { [field]: [...currentArray, resolvedValue] });
