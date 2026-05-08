@@ -121,18 +121,20 @@ Evaluation strategy: **all-match**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | "snap" in application.programs | createResource: {"entity":"intake/applications/documents","fields":{"applicationId":{"var":"application.id"},"category":"income"}} | — |
-| 2 | "snap" in application.programs | createResource: {"entity":"intake/applications/documents","fields":{"applicationId":{"var":"application.id"},"category":"identity"}} | — |
-| 3 | "snap" in application.programs | createResource: {"entity":"intake/applications/documents","fields":{"applicationId":{"var":"application.id"},"category":"residency"}} | — |
-| 4 | "medicaid" in application.programs | createResource: {"entity":"intake/applications/documents","fields":{"applicationId":{"var":"application.id"},"category":"identity"}} | — |
+| 1 | "snap" in application.programs | createResource: {"entity":"intake/applications/verifications","fields":{"applicationId":{"var":"application.id"},"memberId":null,"category":"income","evidence":[],"documentRequests":[]}} | — |
+| 2 | "snap" in application.programs | createResource: {"entity":"intake/applications/verifications","fields":{"applicationId":{"var":"application.id"},"memberId":null,"category":"identity","evidence":[],"documentRequests":[]}} | — |
+| 3 | "snap" in application.programs | createResource: {"entity":"intake/applications/verifications","fields":{"applicationId":{"var":"application.id"},"memberId":null,"category":"residency","evidence":[],"documentRequests":[]}} | — |
+| 4 | "medicaid" in application.programs | createResource: {"entity":"intake/applications/verifications","fields":{"applicationId":{"var":"application.id"},"memberId":null,"category":"identity","evidence":[],"documentRequests":[]}} | — |
 
 ### verification-result-write-back
 
-Evaluation strategy: **first-match-wins**
+Evaluation strategy: **all-match**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | true | appendToArray: {"entity":"intake/applications/members","idFrom":"this.data.memberId","field":"verifications","value":{"type":{"var":"this.data.verificationType"},"status":{"var":"this.data.result"},"source":{"var":"this.data.serviceType"},"checkedAt":{"var":"this.time"}}} | — |
+| 1 | verification.id != null and this.data.result = "conclusive" | triggerTransition: {"entity":"intake/applications/verifications","idFrom":"verification.id","transition":"satisfy"} | — |
+| 2 | verification.id != null and this.data.result = "inconclusive" | triggerTransition: {"entity":"intake/applications/verifications","idFrom":"verification.id","transition":"mark_inconclusive"} | — |
+| 3 | verification.id != null and this.data.result = "inconclusive" | appendToArray: {"entity":"intake/applications/verifications","idFrom":"verification.id","field":"documentRequests","value":{"sentAt":{"var":"this.time"},"dueAt":null,"channel":"mail"}} | — |
 
 ### fdsh-inconclusive-citizenship-document
 
@@ -140,7 +142,7 @@ Evaluation strategy: **first-match-wins**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | this.data.serviceType = "fdsh" and this.data.result = "inconclusive" | createResource: {"entity":"intake/applications/documents","fields":{"applicationId":{"var":"this.data.applicationId"},"memberId":{"var":"this.data.memberId"},"category":"citizenship"}} | — |
+| 1 | this.data.serviceType = "fdsh" and this.data.result = "inconclusive" and this.data.metadata.intake.verificationId = null | createResource: {"entity":"intake/applications/verifications","fields":{"applicationId":{"var":"this.data.applicationId"},"memberId":{"var":"this.data.memberId"},"category":"citizenship","evidence":[],"documentRequests":[]}} | — |
 
 ### appointment-scheduled-link-to-interview
 
@@ -156,7 +158,7 @@ Evaluation strategy: **first-match-wins**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | this.data.subjectType = "application-document" | triggerTransition: {"entity":"intake/applications/documents","idFrom":"applicationDocument.id","transition":"verify"} | — |
+| 1 | this.data.subjectType = "verification" | triggerTransition: {"entity":"intake/applications/verifications","idFrom":"verification.id","transition":"satisfy"} | — |
 
 ### eligibility-determination-write-back
 

@@ -1,8 +1,5 @@
 Order,Condition,Action,Fallback,Description
-1,"{""=="":[{""var"":""this.data.subjectType""},""application-document""]}","{""triggerTransition"":{""entity"":""intake/applications/documents"",""idFrom"":""applicationDocument.id"",""transition"":""verify""},""appendToArray"":{""entity"":""intake/applications/documents"",""idFrom"":""applicationDocument.id"",""field"":""evidence"",""value"":{""var"":""this.subject""}}}",,"Transition the ApplicationDocument to verified and record the document ID in its
-evidence list when document-management reports successful verification (Decision 15).
-Only fires when the document's subjectType is ""application-document"", ensuring
-documents uploaded in document-management without linking to an ApplicationDocument
-(via subjectType/subjectId) are silently ignored — analogous to an appointment
-scheduled without linking to an interview.
+1,"{""=="":[{""var"":""this.data.subjectType""},""verification""]}","{""triggerTransition"":{""entity"":""intake/applications/verifications"",""idFrom"":""verification.id"",""transition"":""satisfy""},""appendToArray"":{""entity"":""intake/applications/verifications"",""idFrom"":""verification.id"",""field"":""evidence"",""value"":{""type"":""document"",""documentId"":{""var"":""this.subject""},""receivedAt"":{""var"":""this.time""}}}}",,"Satisfy the Verification and record the document ID as evidence when document-management
+reports successful verification (Decision 15). Only fires when the document's subjectType
+is ""verification"", ensuring documents not linked to a Verification are silently ignored.
 "
