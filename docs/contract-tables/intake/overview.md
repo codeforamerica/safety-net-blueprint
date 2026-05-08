@@ -150,14 +150,6 @@ Evaluation strategy: **first-match-wins**
 |---|-----------|--------|----------|
 | 1 | this.data.subjectType = "interview" | appendToArray: {"entity":"intake/applications/interview","idFrom":"this.data.subjectId","field":"appointments","value":{"var":"this.subject"}} | — |
 
-### document-verified-write-back
-
-Evaluation strategy: **first-match-wins**
-
-| # | Condition | Action | Fallback |
-|---|-----------|--------|----------|
-| 1 | this.data.subjectType = "application-document" | triggerTransition: {"entity":"intake/applications/documents","idFrom":"applicationDocument.id","transition":"verify"} | — |
-
 ### eligibility-determination-write-back
 
 Evaluation strategy: **first-match-wins**
@@ -173,3 +165,11 @@ Evaluation strategy: **first-match-wins**
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
 | 1 | application.id != null and task.taskType = "application_review" and application.status = "submitted" | triggerTransition: {"entity":"intake/applications","idFrom":"application.id","transition":"open"} | — |
+
+### document-verified-write-back
+
+Evaluation strategy: **first-match-wins**
+
+| # | Condition | Action | Fallback |
+|---|-----------|--------|----------|
+| 1 | this.data.subjectType = "application-document" | triggerTransition: {"entity":"intake/applications/documents","idFrom":"applicationDocument.id","transition":"verify"} | — |

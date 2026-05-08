@@ -11,14 +11,14 @@ allOf:
 
 type: object
 required:
-  - documentTypes
+  - document-types
 
 properties:
   domain:
     const: document-management
     description: Must be "document-management".
 
-  documentTypes:
+  document-types:
     type: array
     description: >
       Document type catalog. Defines the baseline types available across all deployments.

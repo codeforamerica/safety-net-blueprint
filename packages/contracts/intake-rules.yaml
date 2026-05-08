@@ -217,40 +217,6 @@ ruleSets:
           Add the scheduled appointment ID to the linked Interview's appointments list (Decision 15).
           Only fires when the appointment's subjectType is "interview", ensuring non-interview
           appointments scheduled via the shared scheduling domain are ignored.
-  - id: document-verified-write-back
-    "on": document_management.document.verified
-    evaluation: first-match-wins
-    context:
-      - as: applicationDocument
-        entity: intake/applications/documents
-        from:
-          var: data.subjectId
-        optional: true
-    rules:
-      - id: verify-application-document
-        order: 1
-        condition:
-          "==":
-            - var: this.data.subjectType
-            - application-document
-        action:
-          triggerTransition:
-            entity: intake/applications/documents
-            idFrom: applicationDocument.id
-            transition: verify
-          appendToArray:
-            entity: intake/applications/documents
-            idFrom: applicationDocument.id
-            field: evidence
-            value:
-              var: this.subject
-        description: |
-          Transition the ApplicationDocument to verified and record the document ID in its
-          evidence list when document-management reports successful verification (Decision 15).
-          Only fires when the document's subjectType is "application-document", ensuring
-          documents uploaded in document-management without linking to an ApplicationDocument
-          (via subjectType/subjectId) are silently ignored — analogous to an appointment
-          scheduled without linking to an interview.
   - id: eligibility-determination-write-back
     "on": eligibility.determination.completed
     evaluation: first-match-wins
@@ -297,3 +263,30 @@ ruleSets:
             transition: open
         description: |
           When a caseworker claims an application_review task, transition the linked application from submitted to under_review. Guards on the intake open transition enforce that only system-role callers can execute this.
+  - id: document-verified-write-back
+    evaluation: first-match-wins
+    rules:
+      - id: rule-1
+        order: 1
+        condition:
+          "==":
+            - var: this.data.subjectType
+            - application-document
+        action:
+          triggerTransition:
+            entity: intake/applications/documents
+            idFrom: applicationDocument.id
+            transition: verify
+          appendToArray:
+            entity: intake/applications/documents
+            idFrom: applicationDocument.id
+            field: evidence
+            value:
+              var: this.subject
+        description: |
+          Transition the ApplicationDocument to verified and record the document ID in its
+          evidence list when document-management reports successful verification (Decision 15).
+          Only fires when the document's subjectType is "application-document", ensuring
+          documents uploaded in document-management without linking to an ApplicationDocument
+          (via subjectType/subjectId) are silently ignored — analogous to an appointment
+          scheduled without linking to an interview.

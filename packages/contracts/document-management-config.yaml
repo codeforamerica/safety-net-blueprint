@@ -5,7 +5,7 @@ domain: document-management
 # Document type catalog — all entries are config-managed and cannot be deleted via API.
 # States may add program-specific types via overlay or at runtime via POST /document-types.
 # Retention periods follow 7 CFR § 272.1(f) (SNAP: 3 years after close of federal fiscal year).
-documentTypes:
+document-types:
 
   # ---------------------------------------------------------------------------
   # Identity
