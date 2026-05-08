@@ -1,0 +1,113 @@
+$schema: ./document-management-config-schema.yaml
+version: "1.0"
+domain: document-management
+
+# Document type catalog — all entries are config-managed and cannot be deleted via API.
+# States may add program-specific types via overlay or at runtime via POST /document-types.
+# Retention periods follow 7 CFR § 272.1(f) (SNAP: 3 years after close of federal fiscal year).
+documentTypes:
+
+  # ---------------------------------------------------------------------------
+  # Identity
+  # ---------------------------------------------------------------------------
+
+  - id: a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5
+    name: birth_certificate
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Official birth record. Used for identity and U.S. citizenship verification for SNAP and Medicaid.
+
+  - id: b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6
+    name: state_id
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: State-issued photo ID or driver's license. Used for identity verification.
+
+  - id: c3d4e5f6-a7b8-4c9d-0e1f-a2b3c4d5e6f7
+    name: social_security_card
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Social Security card. Used to verify SSN for SNAP and Medicaid applicants.
+
+  # ---------------------------------------------------------------------------
+  # Citizenship and immigration
+  # ---------------------------------------------------------------------------
+
+  - id: d4e5f6a7-b8c9-4d0e-1f2a-b3c4d5e6f7a8
+    name: citizenship_certificate
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Certificate of U.S. Citizenship (Form N-560). Used to verify citizenship status for non-U.S.-born applicants.
+
+  - id: e5f6a7b8-c9d0-4e1f-2a3b-c4d5e6f7a8b9
+    name: naturalization_certificate
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Certificate of Naturalization (Form N-550). Used to verify citizenship status for naturalized citizens.
+
+  - id: f6a7b8c9-d0e1-4f2a-3b4c-d5e6f7a8b9c0
+    name: immigration_document
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: >
+      Immigration document (e.g., Permanent Resident Card, Employment Authorization Document,
+      I-94). Used to verify qualified alien status for Medicaid applicants. Specific document
+      type is recorded in document metadata.
+
+  # ---------------------------------------------------------------------------
+  # Income
+  # ---------------------------------------------------------------------------
+
+  - id: a7b8c9d0-e1f2-4a3b-4c5d-e6f7a8b9c0d1
+    name: pay_stub
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Employer-issued pay stub. Used to verify earned income. Caseworkers typically request the two most recent stubs.
+
+  - id: b8c9d0e1-f2a3-4b4c-5d6e-f7a8b9c0d1e2
+    name: benefit_award_letter
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Award letter from SSA (SSDI, SSI) or state unemployment agency. Used to verify unearned income amounts.
+
+  - id: c9d0e1f2-a3b4-4c5d-6e7f-a8b9c0d1e2f3
+    name: self_employment_statement
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Self-employment income statement or most recent federal tax return. Used to verify income for self-employed applicants.
+
+  # ---------------------------------------------------------------------------
+  # Residency
+  # ---------------------------------------------------------------------------
+
+  - id: d0e1f2a3-b4c5-4d6e-7f8a-b9c0d1e2f3a4
+    name: utility_bill
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Recent utility bill (gas, electric, water). Used to verify current address for SNAP residency requirement.
+
+  - id: e1f2a3b4-c5d6-4e7f-8a9b-c0d1e2f3a4b5
+    name: lease_agreement
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Current lease or rental agreement. Used to verify residency and housing costs.
+
+  # ---------------------------------------------------------------------------
+  # Assets
+  # ---------------------------------------------------------------------------
+
+  - id: f2a3b4c5-d6e7-4f8a-9b0c-d1e2f3a4b5c6
+    name: bank_statement
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Bank account statement. Used to verify liquid assets for SNAP resource test.
+
+  # ---------------------------------------------------------------------------
+  # Medical expenses (SNAP deductions)
+  # ---------------------------------------------------------------------------
+
+  - id: a3b4c5d6-e7f8-4a9b-0c1d-e2f3a4b5c6d7
+    name: medical_bill
+    retentionYears: 3
+    retentionTrigger: case_closure
+    description: Medical or dental bill. Used to verify medical expense deductions for elderly or disabled SNAP households (7 CFR § 273.9(d)(3)).

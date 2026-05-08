@@ -1,0 +1,68 @@
+# JSON Schema for document-management-config.yaml
+# Extends the generic config envelope (schemas/config-schema.yaml)
+# with document-type catalog validation.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Document Management Config
+description: Schema for document-management-config.yaml. Validates document type catalog entries.
+
+allOf:
+  - $ref: "schemas/config-schema.yaml"
+
+type: object
+required:
+  - documentTypes
+
+properties:
+  domain:
+    const: document-management
+    description: Must be "document-management".
+
+  documentTypes:
+    type: array
+    description: >
+      Document type catalog. Defines the baseline types available across all deployments.
+      All entries in a config file are config-managed: they are seeded by the mock
+      server on startup (source: "system") and cannot be deleted via the API.
+    minItems: 1
+    items:
+      $ref: "#/$defs/DocumentTypeConfig"
+
+unevaluatedProperties: false
+
+$defs:
+  DocumentTypeConfig:
+    type: object
+    description: A document type definition.
+    required:
+      - id
+      - name
+      - retentionYears
+      - retentionTrigger
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        format: uuid
+        description: >
+          Stable identifier. Referenced by documents (documentTypeId) and API responses.
+          Use a fixed UUID so overlay authors can target specific document types.
+      name:
+        type: string
+        minLength: 1
+        maxLength: 100
+        description: Machine-readable name (e.g., pay_stub).
+      retentionYears:
+        type: integer
+        minimum: 1
+        description: >
+          How many years documents of this type must be retained after the retention
+          trigger fires. SNAP minimum is 3 years (7 CFR § 272.1(f)).
+      retentionTrigger:
+        type: string
+        enum: [case_closure, application_denial, document_date, submission_date]
+        description: The event that starts the retention clock for this document type.
+      description:
+        type: string
+        maxLength: 2000
+        description: Human-readable description of the document type's purpose.
