@@ -42,9 +42,9 @@ domains:
 
   - id: eligibility
     label: Eligibility
-    status: not-started
+    status: design-complete
     description: Program eligibility determination
-    entities: [EligibilityRequest, EligibilityUnit, Determination, VerificationRequirement]
+    entities: [Determination, Decision]
 
   - id: case_management
     label: Case Management
@@ -158,20 +158,10 @@ events:
       - intake
       - workflow
 
-  # pre-screening result per program — fires at submission and re-fires when material
-  # verification results arrive; caseworkers see alongside verification obligations;
-  # workflow uses for queue routing; not a legal determination
-  - name: eligibility.application.prescreened
-    publisher: eligibility
-    status: planned
-    subscribers:
-      - intake
-      - workflow
-
-  # legally binding determination per person per program — fires on auto-determination
-  # at submission (Medicaid, all checks conclusive, 45 CFR § 435.911) or after
-  # application.review_completed; intake records outcome per person per program
-  - name: eligibility.application.determination_completed
+  # per-person per-program decision outcome — fires on auto-determination at submission
+  # (Medicaid, all checks conclusive, 45 CFR § 435.911) or after application.review_completed;
+  # may fire multiple times as individual Decisions resolve
+  - name: eligibility.application.decision_completed
     publisher: eligibility
     status: planned
     subscribers:
@@ -179,7 +169,7 @@ events:
 
   # fires once all program+member combinations on the application are determined;
   # triggers intake to update final status and close the application
-  - name: eligibility.application.all_determined
+  - name: eligibility.application.determination_completed
     publisher: eligibility
     status: planned
     subscribers:
@@ -243,6 +233,7 @@ events:
     status: implemented
     subscribers:
       - workflow
+      - eligibility
 
   # emitted on POST (resource creation) — no cross-domain subscribers yet
   - name: application.created
@@ -630,15 +621,15 @@ flows:
                     to: eligibility
                     note: One per call; results arrive asynchronously
                   - self: eligibility
-                    label: Pre-screening result evaluated per Medicaid applicant
-                  - event: eligibility.application.prescreened
-                    from: eligibility
-                    to: intake
-                    note: Per-program indicators (likely_eligible | needs_review | likely_ineligible); caseworkers can see alongside verification obligations
+                    label: Electronic checks evaluated per Medicaid applicant
                   - fragment: medicaid-auto-determination
                     type: opt
-                    label: "if Medicaid-only application and all pre-screening checks conclusive at submission (45 CFR § 435.911)"
+                    label: "if all Medicaid electronic checks conclusive at submission (45 CFR § 435.911)"
                     steps:
+                      - event: eligibility.application.decision_completed
+                        from: eligibility
+                        to: intake
+                        note: One per auto-resolved Medicaid Decision; Decision.submissionChecks records the electronic check results
                       - ref: determination
                         label: Eligibility Determination (Path A — auto)
           - label: Match to Existing Client Record
@@ -827,12 +818,12 @@ flows:
   - id: determination
     label: Eligibility Determination
     domain: intake
-    description: "Two paths to determination: (A) auto — Medicaid-only, eligibility proceeds directly from conclusive pre-screening at submission, no caseworker involvement (45 CFR § 435.911); (B) manual — caseworker completes review, intake fires application.review_completed, eligibility runs rules engine for all undetermined program+member combinations. Both paths converge at eligibility.application.all_determined."
+    description: "Two paths to determination: (A) auto — Medicaid-only; eligibility runs electronic checks at submission and records formal Decisions immediately when data is conclusive (45 CFR § 435.911); (B) manual — caseworker completes review, intake fires application.review_completed, eligibility runs rules engine for all pending Decisions. Both paths converge at eligibility.application.determination_completed."
     participants: [caseworker, supervisor, intake, workflow, eligibility, communications, case_management]
     steps:
       - fragment: auto-determination
         type: opt
-        label: "Path A: auto (Medicaid-only; all pre-screening checks conclusive at submission)"
+        label: "Path A: auto (Medicaid-only; all electronic checks conclusive at submission)"
         steps:
           - ref: application_submission
             label: Application Submission
@@ -855,17 +846,17 @@ flows:
           - self: eligibility
             label: Runs rules engine for all undetermined program+member combinations
             note: Skips any already auto-determined at submission; uses verification evidence and household data
-          - event: eligibility.application.determination_completed
+          - event: eligibility.application.decision_completed
             from: eligibility
             to: intake
             note: Per person per program; may fire multiple times as each resolves
           - self: intake
-            label: Determination recorded per person per program
+            label: Decision recorded per person per program
             gap: true
             gap_description: Intake has no per-person per-program status entity yet; design question open in #248
 
       # ── Shared convergence (both paths arrive here) ────────────────────────
-      - event: eligibility.application.all_determined
+      - event: eligibility.application.determination_completed
         from: eligibility
         to: intake
         note: Fires once all program+member combinations are determined
