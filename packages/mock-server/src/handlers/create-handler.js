@@ -44,8 +44,10 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         }
       }
 
-      // Create resource in database
-      const resource = create(endpoint.collectionName, req.body);
+      // Create resource in database — merge any enrichment data set by pre-create middleware
+      // (e.g. catalog-derived fields that aren't in the create schema)
+      const createData = req.enrichmentData ? { ...req.body, ...req.enrichmentData } : req.body;
+      const resource = create(endpoint.collectionName, createData);
 
       // Mark runtime-created resources as user-sourced when the collection
       // also has config-managed (system) entries, so consumers can distinguish them

@@ -276,7 +276,8 @@ async function testApi(api, examples) {
   }
 
   // Test 6: POST - Validation error (422)
-  const hasPostEndpoint = api.endpoints.some(e => e.method === 'POST');
+  // Only test if this specific collection path has a POST endpoint (not just any endpoint in the API).
+  const hasPostEndpoint = api.endpoints.some(e => e.method === 'POST' && e.path === apiPath);
   if (hasPostEndpoint) {
     try {
       console.log(`\n  6. POST ${apiPath} - validation error`);
@@ -1004,7 +1005,7 @@ async function runTests() {
       const response = await fetch(`${BASE_URL}${taskPath}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-2' },
-        body: JSON.stringify({ name: 'Medical Assistance task', status: 'pending', programType: 'medical_assistance', isExpedited: false })
+        body: JSON.stringify({ name: 'Medical Assistance task', status: 'pending', programType: 'medicaid', isExpedited: false })
       });
 
       if (response.status === 201) {

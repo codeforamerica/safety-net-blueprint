@@ -12,6 +12,8 @@ import { randomUUID } from 'crypto';
 import { create, insertResource } from './database-manager.js';
 import { eventBus } from './event-bus.js';
 
+export const CLOUDEVENTS_TYPE_PREFIX = 'org.codeforamerica.safety-net-blueprint.';
+
 /**
  * Emit a pre-built CloudEvents 1.0 envelope directly to the event bus.
  * Used by POST /platform/events to inject externally-sourced domain events
@@ -54,7 +56,9 @@ export function emitEventEnvelope(envelope) {
  */
 export function emitEvent({ domain, object, action, resourceId, source, data = null, callerId = null, traceparent = null, now = null }) {
   const timestamp = now || new Date().toISOString();
-  const type = `org.codeforamerica.safety-net-blueprint.${domain}.${object}.${action}`;
+  const normalizedDomain = domain.replace(/-/g, '_');
+  const normalizedObject = object.replace(/-/g, '_');
+  const type = `${CLOUDEVENTS_TYPE_PREFIX}${normalizedDomain}.${normalizedObject}.${action}`;
 
   const envelope = {
     specversion: '1.0',

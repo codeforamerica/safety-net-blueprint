@@ -7,6 +7,9 @@
 #   identity.yaml — Name, SocialSecurityNumber
 #   auth.yaml     — BackendAuthContext, JwtClaims, Role, RoleType
 
+Domain:
+  $ref: "../schemas/common.yaml#/$defs/Domain"
+
 EmployerInfo:
   type: object
   description: Employer identification and contact information.
@@ -33,13 +36,7 @@ Language:
   pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
 
 Program:
-  type: string
-  description: Public assistance program type.
-  enum:
-    - snap
-    - tanf
-    - adult_financial
-    - medical_assistance
+  $ref: "../schemas/common.yaml#/$defs/Program"
 
 Signature:
   type: object

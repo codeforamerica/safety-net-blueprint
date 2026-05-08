@@ -16,15 +16,16 @@ import { readdirSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Discover all test files in unit/ directory
+// Discover all test files in unit/ and integration/ directories
 const unitDir = join(__dirname, 'unit');
 const unitTestFiles = readdirSync(unitDir)
   .filter(file => file.endsWith('.test.js'))
   .map(file => join('unit', file));
 
-const integrationTestFiles = [
-  join('integration', 'integration.test.js')
-];
+const integrationDir = join(__dirname, 'integration');
+const integrationTestFiles = readdirSync(integrationDir)
+  .filter(file => file.endsWith('.test.js'))
+  .map(file => join('integration', file));
 
 const args = process.argv.slice(2);
 const runUnit = args.includes('--unit') || args.includes('--all') || args.length === 0;

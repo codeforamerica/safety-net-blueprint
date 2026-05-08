@@ -1,0 +1,554 @@
+openapi: 3.1.0
+info:
+  title: Data Exchange API
+  version: 0.1.0
+  x-domain: data-exchange
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    REST API for the Data Exchange domain — the facade for all interactions
+    between the blueprint and external agencies and data sources (IRS, SSA,
+    USCIS SAVE, state wage databases, and others).
+
+    Calling domains initiate service calls by POSTing to `/service-calls`.
+    The request carries no PII — adapters retrieve sensitive fields from the
+    source domain using `requestingResourceId` and the resource type declared
+    in the ExternalService catalog. Results are delivered via the
+    `data_exchange.call.completed` event and queryable via the event log.
+
+    Context passthrough: calling domains attach namespace-keyed metadata to
+    a service call (e.g., `PUT /service-calls/{id}/metadata/intake`) before
+    or at submission. That metadata is echoed back in the result event so
+    the calling domain's rules can route the result to the right record.
+
+    > **Status: Alpha** — Breaking changes expected.
+
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/data-exchange
+    description: Production server
+  - url: http://localhost:1080/data-exchange
+    description: Local development server
+
+tags:
+  - name: Services
+    description: ExternalService catalog — the configured external data sources available in this deployment.
+  - name: ServiceCalls
+    description: External service call lifecycle — submission through resolution.
+
+x-events:
+  call.submitted:
+    type: org.codeforamerica.safety-net-blueprint.data_exchange.call.submitted
+    summary: Emitted when an async service call is submitted and enters the pending state
+    payload:
+      $ref: "#/components/schemas/CallSubmittedEvent"
+  call.completed:
+    type: org.codeforamerica.safety-net-blueprint.data_exchange.call.completed
+    summary: Emitted when an external service responds successfully; carries the full result payload
+    payload:
+      $ref: "#/components/schemas/CallCompletedEvent"
+  call.failed:
+    type: org.codeforamerica.safety-net-blueprint.data_exchange.call.failed
+    summary: Emitted when an external service returns an error or rejection
+    payload:
+      $ref: "#/components/schemas/CallFailedEvent"
+  call.timed_out:
+    type: org.codeforamerica.safety-net-blueprint.data_exchange.call.timed_out
+    summary: Emitted when no response is received within the configured window
+    payload:
+      $ref: "#/components/schemas/CallTimedOutEvent"
+
+paths:
+  /services:
+    get:
+      summary: List external services
+      description: |
+        Retrieve the catalog of external services available in this deployment.
+        All entries are config-managed — defined in `data-exchange-config.yaml`
+        and seeded at startup. States add entries via overlay; no write endpoints
+        are provided.
+      operationId: listServices
+      tags:
+        - Services
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: serviceType
+          in: query
+          description: Filter by service type.
+          schema:
+            $ref: "#/components/schemas/ServiceType"
+        - name: program
+          in: query
+          description: Filter by program (returns services that apply to this program or all programs).
+          schema:
+            $ref: "./components/common.yaml#/Program"
+      responses:
+        "200":
+          description: A paginated list of external services.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalServiceList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /services/{serviceId}:
+    parameters:
+      - $ref: "#/components/parameters/ServiceIdParam"
+
+    get:
+      summary: Get an external service
+      description: Retrieve a single external service catalog entry by identifier.
+      operationId: getService
+      tags:
+        - Services
+      responses:
+        "200":
+          description: External service retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalService"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /service-calls:
+    get:
+      summary: List service calls
+      description: Retrieve a paginated list of external service calls.
+      operationId: listServiceCalls
+      tags:
+        - ServiceCalls
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: requestingResourceId
+          in: query
+          description: Filter by the requesting resource ID.
+          schema:
+            type: string
+            format: uuid
+        - name: serviceType
+          in: query
+          description: Filter by service type (e.g., `fdsh_ssa`, `ssa_ievs`).
+          schema:
+            $ref: "#/components/schemas/ServiceType"
+        - name: status
+          in: query
+          description: Filter by call status.
+          schema:
+            $ref: "#/components/schemas/ExternalServiceCallStatus"
+      responses:
+        "200":
+          description: A paginated list of service calls.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalServiceCallList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Submit a service call
+      description: |
+        Submit a request to call an external service. The request body carries
+        no PII — adapters retrieve sensitive fields from the source domain using
+        `requestingResourceId` and the resource type declared in the ExternalService
+        catalog entry.
+
+        Submissions are deduplicated by `requestingResourceId` + `serviceId`. If a
+        `pending` call already exists for the same pair, the server returns the
+        existing call record rather than submitting a duplicate.
+      operationId: createServiceCall
+      tags:
+        - ServiceCalls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExternalServiceCallCreate"
+      responses:
+        "201":
+          description: Service call submitted successfully.
+          headers:
+            Location:
+              description: URL of the newly created service call resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalServiceCall"
+        "200":
+          description: Duplicate submission — an equivalent pending call already exists. Returns the existing call record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalServiceCall"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /service-calls/{serviceCallId}:
+    parameters:
+      - $ref: "#/components/parameters/ServiceCallIdParam"
+
+    get:
+      summary: Get a service call
+      description: Retrieve a single service call by identifier.
+      operationId: getServiceCall
+      tags:
+        - ServiceCalls
+      responses:
+        "200":
+          description: Service call retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalServiceCall"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /service-calls/{serviceCallId}/metadata/{domain}:
+    parameters:
+      - $ref: "#/components/parameters/ServiceCallIdParam"
+      - name: domain
+        in: path
+        required: true
+        description: The calling domain attaching its metadata namespace.
+        schema:
+          $ref: "./components/common.yaml#/Domain"
+
+    put:
+      summary: Set domain metadata on a service call
+      description: |
+        Attach namespace-keyed metadata from the calling domain to a service call.
+        Used for context passthrough — the calling domain stores identifiers it
+        needs to resume when a result arrives (e.g., the verification ID to update).
+        The metadata object is echoed back verbatim in the result event under
+        `event.data.metadata.{domain}`.
+
+        Replaces any existing metadata for the given domain namespace. Other
+        domains' namespaces are unaffected.
+      operationId: setServiceCallMetadata
+      tags:
+        - ServiceCalls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Arbitrary domain-defined key-value pairs. Must be a flat or nested object — no arrays at the top level.
+              additionalProperties: true
+              example:
+                verificationId: ver-abc-123
+      responses:
+        "200":
+          description: Metadata set successfully. Returns the updated service call.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalServiceCall"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Remove domain metadata from a service call
+      description: Remove the calling domain's entire metadata namespace from a service call.
+      operationId: deleteServiceCallMetadata
+      tags:
+        - ServiceCalls
+      responses:
+        "204":
+          description: Metadata removed successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+components:
+  parameters:
+    ServiceCallIdParam:
+      name: serviceCallId
+      in: path
+      required: true
+      description: Unique identifier of the service call.
+      schema:
+        type: string
+        format: uuid
+
+    ServiceIdParam:
+      name: serviceId
+      in: path
+      required: true
+      description: Unique identifier of the external service catalog entry.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ExternalService:
+      type: object
+      description: |
+        A configured external data source available in this deployment. Entries
+        are defined in `data-exchange-config.yaml` at deployment time — not
+        created via API. The blueprint defines entries for known federal services;
+        states overlay to add endpoint configuration and any state-specific services.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - serviceType
+        - defaultCallMode
+        - programs
+        - source
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Stable identifier. Referenced by ExternalServiceCall submissions.
+        name:
+          type: string
+          description: Human-readable name (e.g., "SSA Composite via FDSH").
+        serviceType:
+          $ref: "#/components/schemas/ServiceType"
+          description: The federal service interface this entry represents.
+        defaultCallMode:
+          $ref: "#/components/schemas/CallMode"
+          description: Default call mode for submissions against this service. Can be overridden per call.
+        programs:
+          type: array
+          description: Programs that use this service.
+          items:
+            $ref: "./components/common.yaml#/Program"
+        source:
+          type: string
+          description: '"system" entries are defined in data-exchange-config.yaml and cannot be deleted via the API. "user" entries are added by states at runtime.'
+          enum:
+            - system
+            - user
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ExternalServiceList:
+      type: object
+      description: A paginated list of external service catalog entries.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+        - hasNext
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalService"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+
+    ExternalServiceCall:
+      type: object
+      description: |
+        A single external service call from submission through resolution.
+        Governs the call lifecycle and serves as the correlation handle adapters
+        use when calling back with a result.
+      additionalProperties: false
+      required:
+        - id
+        - serviceId
+        - serviceType
+        - requestingResourceId
+        - callMode
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier.
+        serviceId:
+          type: string
+          format: uuid
+          description: ID of the ExternalService catalog entry being called.
+          x-relationship:
+            resource: ExternalService
+        serviceType:
+          $ref: "#/components/schemas/ServiceType"
+          description: Service type copied from the catalog entry at submission time; present for direct querying without a catalog join.
+        requestingResourceId:
+          type: string
+          format: uuid
+          description: ID of the resource that triggered the call (e.g., an ApplicationMember ID). Combined with `serviceId`, forms the idempotency key.
+          x-relationship:
+            resource: Polymorphic
+        requestingResourceType:
+          type: string
+          description: Resource type of the requesting resource, copied from the ExternalService catalog entry at submission time. Together with `requestingResourceId`, tells adapters where to fetch sensitive input fields.
+          example: intake/applications/members
+        callMode:
+          $ref: "#/components/schemas/CallMode"
+          description: Whether this call is synchronous or asynchronous.
+        status:
+          $ref: "#/components/schemas/ExternalServiceCallStatus"
+          description: Current state in the call lifecycle.
+        data:
+          type: object
+          description: Optional per-call non-PII context (e.g., which FDSH sub-components to request). Polymorphic on `serviceType`.
+          additionalProperties: true
+          nullable: true
+        metadata:
+          type: object
+          description: Namespace-keyed metadata attached by calling domains for context passthrough. Keys are domain names; values are arbitrary objects.
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: When the call was submitted.
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the call status last changed.
+
+    ExternalServiceCallCreate:
+      type: object
+      description: Fields required to submit a new external service call.
+      additionalProperties: false
+      required:
+        - serviceId
+        - requestingResourceId
+      properties:
+        serviceId:
+          type: string
+          format: uuid
+          description: ID of the ExternalService catalog entry to call.
+          x-relationship:
+            resource: ExternalService
+        requestingResourceId:
+          type: string
+          format: uuid
+          description: ID of the resource triggering the call. Adapters use this to fetch required input data from the source domain.
+          x-relationship:
+            resource: Polymorphic
+        callMode:
+          $ref: "#/components/schemas/CallMode"
+          description: Override the ExternalService default call mode for this submission. If omitted, the catalog default is used.
+        data:
+          type: object
+          description: Optional per-call non-PII context. Polymorphic on the `serviceType` of the referenced ExternalService.
+          additionalProperties: true
+          nullable: true
+        metadata:
+          type: object
+          description: Initial domain-keyed metadata to attach at submission time. Equivalent to calling PUT /metadata/{domain} immediately after creation.
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          nullable: true
+
+    ExternalServiceCallList:
+      type: object
+      description: A paginated list of external service calls.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+        - hasNext
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalServiceCall"
+        total:
+          type: integer
+          description: Total number of matching records.
+        limit:
+          type: integer
+          description: Maximum number of records per page.
+        offset:
+          type: integer
+          description: Zero-based offset of the first returned record.
+        hasNext:
+          type: boolean
+          description: Whether additional records exist beyond this page.
+
+    # --- Enums ---
+
+    CallMode:
+      type: string
+      description: Whether the call blocks until a result is returned (sync) or enters an async waiting state (async).
+      enum:
+        - async
+        - sync
+
+    ExternalServiceCallStatus:
+      type: string
+      description: Lifecycle state of an external service call.
+      enum:
+        - pending
+        - completed
+        - failed
+        - timed_out
+
+    ServiceType:
+      $ref: "./schemas/common.yaml#/$defs/ServiceType"
+
+    # --- Events ---
+    # Payload schemas live in schemas/data-exchange-events.yaml for reuse across
+    # OpenAPI and future AsyncAPI specs. These are passthroughs.
+
+    CallCompletedEvent:
+      $ref: "./schemas/data-exchange-events.yaml#/$defs/CallCompletedEvent"
+
+    CallFailedEvent:
+      $ref: "./schemas/data-exchange-events.yaml#/$defs/CallFailedEvent"
+
+    CallSubmittedEvent:
+      $ref: "./schemas/data-exchange-events.yaml#/$defs/CallSubmittedEvent"
+
+    CallTimedOutEvent:
+      $ref: "./schemas/data-exchange-events.yaml#/$defs/CallTimedOutEvent"

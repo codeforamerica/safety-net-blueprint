@@ -1,0 +1,148 @@
+# Event payload schemas for the Data Exchange domain.
+# Referenced by data-exchange-openapi.yaml (x-events and components/schemas passthroughs)
+# and available for future AsyncAPI consumption.
+#
+# All schemas use JSON Schema draft 2020-12 so they can be used standalone
+# (e.g., in AsyncAPI message validation) without an OpenAPI resolver.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Data Exchange Event Schemas
+
+$defs:
+  CallCompletedEvent:
+    type: object
+    description: |
+      Payload for the data_exchange.call.completed event. Carries the full
+      result from the external service. The `result` field is polymorphic
+      on `serviceType`. Calling domains subscribe to this event and use
+      `metadata.{domain}` fields to route the result to the correct record.
+    additionalProperties: false
+    required:
+      - serviceCallId
+      - serviceType
+      - requestingResourceId
+      - result
+    properties:
+      serviceCallId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: ExternalServiceCall
+      serviceType:
+        $ref: "./common.yaml#/$defs/ServiceType"
+      requestingResourceId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Polymorphic
+      result:
+        type: string
+        description: High-level outcome of the service call.
+        enum:
+          - conclusive
+          - inconclusive
+          - partial
+      metadata:
+        type: object
+        description: Domain-keyed metadata echoed back from the service call record. Enables calling domains to resume without querying the service call.
+        additionalProperties:
+          type: object
+          additionalProperties: true
+        nullable: true
+      serviceResult:
+        type: object
+        description: Service-type-specific result payload. Polymorphic on `serviceType`.
+        additionalProperties: true
+        nullable: true
+
+  CallFailedEvent:
+    type: object
+    description: Payload for the data_exchange.call.failed event.
+    additionalProperties: false
+    required:
+      - serviceCallId
+      - serviceType
+      - requestingResourceId
+      - failureReason
+    properties:
+      serviceCallId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: ExternalServiceCall
+      serviceType:
+        $ref: "./common.yaml#/$defs/ServiceType"
+      requestingResourceId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Polymorphic
+      failureReason:
+        type: string
+        description: Classification of the failure to help calling domains decide whether to retry, escalate, or proceed without the data.
+        enum:
+          - connection_error
+          - service_error
+          - authentication_error
+      metadata:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: true
+        nullable: true
+
+  CallSubmittedEvent:
+    type: object
+    description: Payload for the data_exchange.call.submitted event.
+    additionalProperties: false
+    required:
+      - serviceCallId
+      - serviceType
+      - requestingResourceId
+    properties:
+      serviceCallId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: ExternalServiceCall
+      serviceType:
+        $ref: "./common.yaml#/$defs/ServiceType"
+      requestingResourceId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Polymorphic
+      metadata:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: true
+        nullable: true
+
+  CallTimedOutEvent:
+    type: object
+    description: Payload for the data_exchange.call.timed_out event.
+    additionalProperties: false
+    required:
+      - serviceCallId
+      - serviceType
+      - requestingResourceId
+    properties:
+      serviceCallId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: ExternalServiceCall
+      serviceType:
+        $ref: "./common.yaml#/$defs/ServiceType"
+      requestingResourceId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Polymorphic
+      metadata:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: true
+        nullable: true
