@@ -113,12 +113,12 @@ Evaluation strategy: **all-match**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | "snap" in application.programs or "medicaid" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"fdsh_ssa","requestedAt":{"var":"this.time"}}} | — |
-| 2 | "snap" in application.programs or "medicaid" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"ssa_ievs","requestedAt":{"var":"this.time"}}} | — |
-| 3 | "snap" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"irs_ievs","requestedAt":{"var":"this.time"}}} | — |
-| 4 | "snap" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"swica","requestedAt":{"var":"this.time"}}} | — |
-| 5 | "snap" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"uib","requestedAt":{"var":"this.time"}}} | — |
-| 6 | "medicaid" in application.programs | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"serviceType":"fdsh_vlp","requestedAt":{"var":"this.time"}}} | — |
+| 1 | "snap" in application.programs or "medicaid" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"fdsh_ssa","requestedAt":{"var":"this.time"}}}} | — |
+| 2 | "snap" in application.programs or "medicaid" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"ssa_ievs","requestedAt":{"var":"this.time"}}}} | — |
+| 3 | "snap" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"irs_ievs","requestedAt":{"var":"this.time"}}}} | — |
+| 4 | "snap" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"swica","requestedAt":{"var":"this.time"}}}} | — |
+| 5 | "snap" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"uib","requestedAt":{"var":"this.time"}}}} | — |
+| 6 | "medicaid" in application.programs | forEach: {"in":{"var":"members"},"as":"member","filter":{"!=":[{"var":"member.citizenshipStatus"},"citizen"]},"createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"fdsh_vlp","requestedAt":{"var":"this.time"}}}} | — |
 
 ### vlp-inconclusive-initiate-save
 

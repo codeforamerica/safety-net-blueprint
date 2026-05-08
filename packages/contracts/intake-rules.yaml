@@ -67,6 +67,12 @@ ruleSets:
         entity: intake/applications
         from:
           var: subject
+      - as: members
+        entity: intake/application-members
+        where:
+          "==":
+            - var: applicationId
+            - var: application.id
     rules:
       - id: fdsh-ssa
         order: 1
@@ -79,14 +85,20 @@ ruleSets:
                 - medicaid
                 - var: application.programs
         action:
-          createResource:
-            entity: data-exchange/service-calls
-            fields:
-              applicationId:
-                var: application.id
-              serviceType: fdsh_ssa
-              requestedAt:
-                var: this.time
+          forEach:
+            in:
+              var: members
+            as: member
+            createResource:
+              entity: data-exchange/service-calls
+              fields:
+                applicationId:
+                  var: application.id
+                memberId:
+                  var: member.id
+                serviceType: fdsh_ssa
+                requestedAt:
+                  var: this.time
         description: |
           SSA Composite via FDSH for SNAP or Medicaid applicants. Verifies SSN, US-born citizenship, RSDI/SSDI benefit amounts, and incarceration status.
       - id: ssa-ievs
@@ -100,14 +112,20 @@ ruleSets:
                 - medicaid
                 - var: application.programs
         action:
-          createResource:
-            entity: data-exchange/service-calls
-            fields:
-              applicationId:
-                var: application.id
-              serviceType: ssa_ievs
-              requestedAt:
-                var: this.time
+          forEach:
+            in:
+              var: members
+            as: member
+            createResource:
+              entity: data-exchange/service-calls
+              fields:
+                applicationId:
+                  var: application.id
+                memberId:
+                  var: member.id
+                serviceType: ssa_ievs
+                requestedAt:
+                  var: this.time
         description: |
           SSA SVES/SOLQ via IEVS for SNAP or Medicaid applicants. Returns Title II and Title XVI benefit data and 40-quarter work history (7 CFR § 272.8).
       - id: irs-ievs
@@ -117,14 +135,20 @@ ruleSets:
             - snap
             - var: application.programs
         action:
-          createResource:
-            entity: data-exchange/service-calls
-            fields:
-              applicationId:
-                var: application.id
-              serviceType: irs_ievs
-              requestedAt:
-                var: this.time
+          forEach:
+            in:
+              var: members
+            as: member
+            createResource:
+              entity: data-exchange/service-calls
+              fields:
+                applicationId:
+                  var: application.id
+                memberId:
+                  var: member.id
+                serviceType: irs_ievs
+                requestedAt:
+                  var: this.time
         description: |
           IRS unearned income via IEVS for SNAP applicants. Returns prior-year unearned income (interest, dividends, capital gains) (7 CFR § 272.8).
       - id: swica
@@ -134,14 +158,20 @@ ruleSets:
             - snap
             - var: application.programs
         action:
-          createResource:
-            entity: data-exchange/service-calls
-            fields:
-              applicationId:
-                var: application.id
-              serviceType: swica
-              requestedAt:
-                var: this.time
+          forEach:
+            in:
+              var: members
+            as: member
+            createResource:
+              entity: data-exchange/service-calls
+              fields:
+                applicationId:
+                  var: application.id
+                memberId:
+                  var: member.id
+                serviceType: swica
+                requestedAt:
+                  var: this.time
         description: |
           State Wage Information (SWICA) for SNAP applicants. Returns quarterly employer-reported wages (7 CFR § 272.8).
       - id: uib
@@ -151,14 +181,20 @@ ruleSets:
             - snap
             - var: application.programs
         action:
-          createResource:
-            entity: data-exchange/service-calls
-            fields:
-              applicationId:
-                var: application.id
-              serviceType: uib
-              requestedAt:
-                var: this.time
+          forEach:
+            in:
+              var: members
+            as: member
+            createResource:
+              entity: data-exchange/service-calls
+              fields:
+                applicationId:
+                  var: application.id
+                memberId:
+                  var: member.id
+                serviceType: uib
+                requestedAt:
+                  var: this.time
         description: |
           Unemployment Insurance Benefits for SNAP applicants. Returns UI claim status and weekly benefit amount (7 CFR § 272.8).
       - id: fdsh-vlp
@@ -168,16 +204,26 @@ ruleSets:
             - medicaid
             - var: application.programs
         action:
-          createResource:
-            entity: data-exchange/service-calls
-            fields:
-              applicationId:
-                var: application.id
-              serviceType: fdsh_vlp
-              requestedAt:
-                var: this.time
+          forEach:
+            in:
+              var: members
+            as: member
+            filter:
+              "!=":
+                - var: member.citizenshipStatus
+                - citizen
+            createResource:
+              entity: data-exchange/service-calls
+              fields:
+                applicationId:
+                  var: application.id
+                memberId:
+                  var: member.id
+                serviceType: fdsh_vlp
+                requestedAt:
+                  var: this.time
         description: |
-          Verify Lawful Presence via FDSH for Medicaid applicants (45 CFR § 435.956). Data exchange fans out per non-citizen member and routes to SAVE for members whose immigrationInfo carries no document number.
+          Verify Lawful Presence via FDSH for Medicaid applicants (45 CFR § 435.956). Fans out per non-citizen member (citizenshipStatus != citizen). Routes to SAVE for members whose immigrationInfo carries no document number.
   - id: vlp-inconclusive-initiate-save
     "on": data_exchange.call.completed
     evaluation: first-match-wins

@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { insertResource, clearAll } from '../../src/database-manager.js';
-import { processRuleEvaluations } from '../../src/handlers/rule-evaluation.js';
+import { processRuleEvaluations, resolveContextEntities } from '../../src/handlers/rule-evaluation.js';
 
 // =============================================================================
 // Helpers
@@ -276,6 +276,85 @@ test('processRuleEvaluations — collection binding binds array value without en
 
   processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
   assert.strictEqual(task.queueId, 'q-snap');
+});
+
+// =============================================================================
+// Collection query binding — where clause fetches and filters collection
+// =============================================================================
+
+test('resolveContextEntities — where binding fetches entities matching JSON Logic filter', () => {
+  clearAll('application-members');
+
+  insertResource('application-members', { id: 'm-1', applicationId: 'app-1' });
+  insertResource('application-members', { id: 'm-2', applicationId: 'app-1' });
+  insertResource('application-members', { id: 'm-3', applicationId: 'app-99' }); // different app — excluded
+
+  // application.id is in the resource so the where expression can reference it
+  const resource = { application: { id: 'app-1' } };
+
+  const bindings = [
+    {
+      as: 'members',
+      entity: 'intake/application-members',
+      where: { '==': [{ var: 'applicationId' }, { var: 'application.id' }] }
+    }
+  ];
+
+  const result = resolveContextEntities(bindings, resource);
+  assert.ok(result !== null);
+  assert.strictEqual(result.members.length, 2);
+  assert.ok(result.members.some(m => m.id === 'm-1'));
+  assert.ok(result.members.some(m => m.id === 'm-2'));
+  assert.ok(!result.members.some(m => m.id === 'm-3'));
+});
+
+test('resolveContextEntities — where binding returns empty array when no entities match', () => {
+  clearAll('application-members');
+  // No members for app-1
+
+  const resource = { application: { id: 'app-1' } };
+
+  const bindings = [
+    {
+      as: 'members',
+      entity: 'intake/application-members',
+      where: { '==': [{ var: 'applicationId' }, { var: 'application.id' }] }
+    }
+  ];
+
+  const result = resolveContextEntities(bindings, resource);
+  assert.ok(result !== null); // empty result is not an error
+  assert.deepStrictEqual(result.members, []);
+});
+
+test('resolveContextEntities — where binding filter uses compound JSON Logic expression', () => {
+  clearAll('application-members');
+
+  insertResource('application-members', { id: 'm-1', applicationId: 'app-1', citizenshipStatus: 'citizen' });
+  insertResource('application-members', { id: 'm-2', applicationId: 'app-1', citizenshipStatus: 'permanent_resident' });
+  insertResource('application-members', { id: 'm-3', applicationId: 'app-1', citizenshipStatus: 'undocumented' });
+
+  const resource = { application: { id: 'app-1' } };
+
+  const bindings = [
+    {
+      as: 'nonCitizens',
+      entity: 'intake/application-members',
+      where: {
+        and: [
+          { '==': [{ var: 'applicationId' }, { var: 'application.id' }] },
+          { '!=': [{ var: 'citizenshipStatus' }, 'citizen'] }
+        ]
+      }
+    }
+  ];
+
+  const result = resolveContextEntities(bindings, resource);
+  assert.ok(result !== null);
+  assert.strictEqual(result.nonCitizens.length, 2);
+  assert.ok(result.nonCitizens.every(m => m.citizenshipStatus !== 'citizen'));
+  assert.ok(result.nonCitizens.some(m => m.id === 'm-2'));
+  assert.ok(result.nonCitizens.some(m => m.id === 'm-3'));
 });
 
 // =============================================================================
