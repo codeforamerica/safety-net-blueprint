@@ -222,6 +222,12 @@ ruleSets:
                 serviceType: fdsh_vlp
                 requestedAt:
                   var: this.time
+                metadata:
+                  intake:
+                    applicationId:
+                      var: application.id
+                    memberId:
+                      var: member.id
         description: |
           Verify Lawful Presence via FDSH for Medicaid applicants (45 CFR § 435.956). Fans out per non-citizen member (citizenshipStatus != citizen). Routes to SAVE for members whose immigrationInfo carries no document number.
   - id: vlp-inconclusive-initiate-save
@@ -243,9 +249,9 @@ ruleSets:
             entity: data-exchange/service-calls
             fields:
               applicationId:
-                var: this.data.applicationId
+                var: this.data.metadata.intake.applicationId
               memberId:
-                var: this.data.memberId
+                var: this.data.metadata.intake.memberId
               serviceType: save
               requestedAt:
                 var: this.time
@@ -326,7 +332,7 @@ ruleSets:
         action:
           appendToArray:
             entity: intake/applications/members
-            idFrom: this.data.memberId
+            idFrom: this.data.metadata.intake.memberId
             field: verifications
             value:
               type:
@@ -357,9 +363,9 @@ ruleSets:
             entity: intake/applications/documents
             fields:
               applicationId:
-                var: this.data.applicationId
+                var: this.data.metadata.intake.applicationId
               memberId:
-                var: this.data.memberId
+                var: this.data.metadata.intake.memberId
               category: citizenship
         description: |
           Request citizenship documentation when FDSH returns an inconclusive result (Decision 14).

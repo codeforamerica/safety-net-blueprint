@@ -284,7 +284,16 @@ const vlpChainRuleSet = {
       id: 'save-on-vlp-inconclusive',
       order: 1,
       condition: { and: [{ '==': [{ var: 'this.data.serviceType' }, 'fdsh_vlp'] }, { '==': [{ var: 'this.data.result' }, 'inconclusive'] }] },
-      action: { createResource: { entity: 'data-exchange/service-calls', fields: { serviceType: 'save' } } }
+      action: {
+        createResource: {
+          entity: 'data-exchange/service-calls',
+          fields: {
+            applicationId: { var: 'this.data.metadata.intake.applicationId' },
+            memberId:       { var: 'this.data.metadata.intake.memberId' },
+            serviceType: 'save'
+          }
+        }
+      }
     }
   ]
 };
@@ -306,6 +315,15 @@ test('VLP→SAVE chain — does not fire for other service types even when resul
   const context = buildRuleContext({ data: { serviceType: 'fdsh_ssa', result: 'inconclusive' } });
   const result = evaluateRuleSet(vlpChainRuleSet, context);
   assert.strictEqual(result.matched, false);
+});
+
+test('VLP→SAVE chain — action reads applicationId and memberId from metadata.intake', () => {
+  const result = evaluateRuleSet(vlpChainRuleSet, buildRuleContext({
+    data: { serviceType: 'fdsh_vlp', result: 'inconclusive', metadata: { intake: { applicationId: 'app-1', memberId: 'mem-1' } } }
+  }));
+  assert.strictEqual(result.matched, true);
+  assert.deepStrictEqual(result.action.createResource.fields.applicationId, { var: 'this.data.metadata.intake.applicationId' });
+  assert.deepStrictEqual(result.action.createResource.fields.memberId, { var: 'this.data.metadata.intake.memberId' });
 });
 
 // =============================================================================

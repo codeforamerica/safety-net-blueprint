@@ -31,6 +31,37 @@ import { matchAndPop } from './mock-stub-engine.js';
  *   emitCreatedEvent   // function(domain, collectionName, resource, callerId)
  * }
  */
+/**
+ * Resolve a single field value against a JSON Logic context.
+ * - Primitives and arrays pass through as literals.
+ * - Objects are checked: if they contain a JSON Logic operator key they are
+ *   evaluated as JSON Logic; otherwise they are treated as plain nested objects
+ *   and their values are resolved recursively. This lets rules build nested
+ *   structures like `metadata: { intake: { applicationId: { var: "application.id" } } }`
+ *   without requiring a special DSL syntax.
+ */
+const JSON_LOGIC_OPS = new Set([
+  'var', 'if', '?:', '==', '===', '!=', '!==', '!', '!!', 'or', 'and',
+  '<', '>', '<=', '>=', 'max', 'min', '+', '-', '*', '/', '%',
+  'map', 'filter', 'reduce', 'all', 'none', 'some', 'merge',
+  'in', 'cat', 'substr', 'log', 'missing', 'missing_some', 'preserve'
+]);
+
+function resolveFieldValue(value, ctx) {
+  if (value === null || value === undefined || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+  if (Object.keys(value).some(k => JSON_LOGIC_OPS.has(k))) {
+    return jsonLogic.apply(value, ctx);
+  }
+  // Plain nested object — recursively resolve each property
+  const result = {};
+  for (const [k, v] of Object.entries(value)) {
+    result[k] = resolveFieldValue(v, ctx);
+  }
+  return result;
+}
+
 function createResource(actionValue, resource, deps) {
   const { entity, fields } = actionValue || {};
   if (!entity || !fields) {
@@ -41,15 +72,12 @@ function createResource(actionValue, resource, deps) {
   const domainName = entity.split('/')[0];
   const collectionName = deriveCollectionName(entity, domainName);
 
-  // Resolve field values — literals pass through; objects are JSON Logic expressions
+  // Resolve field values — literals pass through; JSON Logic expressions are evaluated;
+  // plain nested objects are resolved recursively (enables metadata construction)
   const resolvedFields = {};
   const ctx = deps.context || {};
   for (const [key, value] of Object.entries(fields)) {
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      resolvedFields[key] = jsonLogic.apply(value, ctx);
-    } else {
-      resolvedFields[key] = value;
-    }
+    resolvedFields[key] = resolveFieldValue(value, ctx);
   }
 
   const created = deps.dbCreate(collectionName, resolvedFields);
