@@ -1,10 +1,30 @@
 # Inter-Domain Communication
 
-The Safety Net Blueprint uses a pub/sub, event-driven model for cross-domain coordination. Domains are loosely coupled — each domain publishes events when its state changes; other domains subscribe and react independently. No domain needs to know who is consuming its events, and adding a new consumer requires no change to the producer.
+The Safety Net Blueprint uses two distinct patterns for cross-domain communication: **commands** and **domain events**. Choosing the right pattern is a contract decision — it determines coupling, testability, and what consumers can rely on.
+
+## Choosing a pattern
+
+**Use a command when the calling domain needs a result to continue its own operation.**
+
+A command is a direct synchronous API call. The caller sends a request and uses the response before proceeding. The relationship is explicit: the caller depends on the target domain's API contract. Commands are appropriate when the result must be known in the same request — uploading a document and receiving the document ID to attach to a verification record is a command.
+
+**Use a domain event when notifying that something happened.**
+
+A domain event is an async signal. The producing domain has no knowledge of who consumes it or what they do. Consumers subscribe and react independently; adding a new consumer requires no change to the producer. Domain events are appropriate when the producing domain's operation is already complete and others may optionally react — an application being submitted is a domain event.
+
+**The async command variant**
+
+Some interactions combine both patterns: a command initiates a long-running operation, and an async domain event delivers the result when it is ready. Data exchange verification calls use this variant — intake creates a service call (command), the external service responds asynchronously, and a domain event delivers the result when it arrives. The context passthrough pattern (see `api-patterns.yaml`) is used to correlate the result event back to the originating record.
+
+**Decision rule**
+
+> Does the calling domain need a result from the other domain to complete its current operation? → Command. Is the calling domain notifying that its own state changed? → Domain event.
+
+If neither fits cleanly, the interaction may be a candidate for the async command variant.
 
 ---
 
-## Event Model
+## Domain Events
 
 ### CloudEvents envelope
 
