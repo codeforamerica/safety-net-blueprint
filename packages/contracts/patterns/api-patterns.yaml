@@ -1308,6 +1308,11 @@ x_extensions:
     type: object
     fields:
       resource: Name of the related schema (PascalCase, e.g., Queue)
+      domain: >
+        Optional. The blueprint domain that owns the related resource (e.g., intake,
+        workflow). Required when the referenced resource lives in a different domain
+        than the spec declaring the relationship. Omit for same-domain references.
+        Values must be a valid Domain enum value (see schemas/common/enums.yaml).
       style: >
         Optional. "expand" causes the mock server to replace the Id field with
         an inline object of the related resource. Default: reference by ID only.
@@ -1317,6 +1322,14 @@ x_extensions:
         format: uuid
         x-relationship:
           resource: Queue
+
+      # Cross-domain reference
+      applicationId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Application
+          domain: intake
 
   x-status:
     description: >
