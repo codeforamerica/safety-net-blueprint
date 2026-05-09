@@ -1,0 +1,45 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/household.yaml"
+title: HouseholdData
+description: >
+  Household-level data relevant to benefit program evaluation. Captures
+  group-level facts that belong to the household as a whole rather than
+  any individual member. Used in expedited SNAP screening (7 CFR § 273.2(i))
+  and as context for the rules engine adapter.
+
+type: object
+required:
+  - size
+
+properties:
+  size:
+    type: integer
+    minimum: 1
+    description: >
+      Total number of people in the household. Used directly in SNAP benefit
+      calculations and to determine applicable income thresholds.
+  housingCosts:
+    type: number
+    format: float
+    minimum: 0
+    description: >
+      Monthly rent or mortgage payment. Used in SNAP expedited screening:
+      households whose combined gross income and liquid resources fall below
+      monthly housing + utility costs qualify for expedited processing
+      (7 CFR § 273.2(i)).
+  utilityCosts:
+    type: number
+    format: float
+    minimum: 0
+    description: >
+      Monthly utility costs. Used together with housingCosts in SNAP
+      expedited screening (7 CFR § 273.2(i)).
+  isMigrantOrSeasonalFarmWorker:
+    type: boolean
+    description: >
+      Whether any member of the household is a migrant or seasonal farm worker.
+      Households with a migrant or seasonal farm worker member and liquid
+      resources at or below $100 qualify for expedited SNAP processing
+      regardless of income (7 CFR § 273.2(i)).
+
+additionalProperties: true
