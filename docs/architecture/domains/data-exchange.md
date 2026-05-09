@@ -6,6 +6,18 @@ The Data Exchange domain defines the contract surface for all interactions betwe
 
 The Data Exchange domain acts as a facade for all external service interactions. Calling domains (Eligibility, Workflow, Client Management) initiate requests — directly via Data Exchange endpoints or via rules in their own domain that trigger a submission when a relevant event occurs. Data Exchange executes the call, tracks the lifecycle, and emits result events that calling domains subscribe to in order to resume. It owns the catalog of available external services and the lifecycle of every external call made. It does not own the policy decisions that determine whether external data is needed, when to request it, or what to do with the result — those stay in the calling domain.
 
+### How the pattern works
+
+Three actors collaborate on every external service call:
+
+**Calling domain** (e.g., Intake) submits a service call with two fields: the configured service to run (`serviceId`) and the ID of the record that triggered the call (`requestingResourceId`). No PII — no SSN, name, or date of birth — travels through the Data Exchange API surface. The calling domain also attaches any context it needs to resume when the result arrives (e.g., which verification obligation to update) as metadata on the service call.
+
+**Adapter** (state-implemented code behind the Data Exchange endpoints) receives the submission, looks up the resource type for that service from the ExternalService catalog (`data-exchange-config.yaml`), fetches the sensitive input fields it needs directly from the source domain using system credentials, and calls the external service. The adapter is the only actor that ever touches PII.
+
+**ExternalService catalog** (`data-exchange-config.yaml`) declares the resource path adapters fetch for each service type (e.g., `fdsh_ssa` → `intake/applications/members`), the default call mode, and the programs each service supports. States overlay this file to add their endpoint URLs. No credentials live here.
+
+When the external service responds, the adapter posts the result back, a `call.completed` event fires, and the calling domain's rules resume — reading the metadata it attached earlier to route the result to the right record.
+
 ## What happens during a data exchange request
 
 1. A caseworker or automated process determines that external data is needed — to verify income, confirm identity, check immigration status, or confirm no duplicate enrollment exists across programs or states. (7 CFR § 272.8, 42 CFR § 435.940)

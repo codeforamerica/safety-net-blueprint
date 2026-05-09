@@ -1,0 +1,154 @@
+$schema: ./data-exchange-config-schema.yaml
+version: "1.0"
+domain: data-exchange
+
+# ExternalService catalog — all entries are config-managed and cannot be deleted via API.
+# States overlay this file to add their endpoint URLs and any state-specific services.
+# Blueprint entries cover known federal services used across all deployments.
+services:
+  # FDSH services — routed through the CMS Federal Data Services Hub
+
+  # States overlay this file to add endpoint configuration for each service.
+  # Example overlay entry for an FDSH service (FDSH uses mutual TLS — client
+  # certificates, not API keys):
+  #
+  #   - id: 65b5d4d9-3578-4a58-a4bd-c404ca380e08
+  #     endpoint:
+  #       url: https://hub.cms.gov/fdsh/ssa
+  #       timeoutMs: 30000
+  #       apiVersion: "2.0"
+  #       credentialEnvVar: FDSH_CLIENT_CERT_PATH   # path to your state's client cert
+  #
+  # See schemas/common.yaml Endpoint definition for full credential guidance.
+
+  - id: 65b5d4d9-3578-4a58-a4bd-c404ca380e08
+    name: SSA Composite via FDSH
+    serviceType: fdsh_ssa
+    defaultCallMode: async
+    programs:
+      - snap
+      - medicaid
+    description: >
+      SSA Composite query via the CMS Federal Data Services Hub. Verifies SSN
+      validity, U.S.-born citizenship status, Title II (RSDI/SSDI) benefit amounts,
+      and incarceration status. Callers select sub-components via the data field.
+      Satisfies identity and citizenship verification obligations for both SNAP
+      and Medicaid.
+
+  - id: 4ecf1b2f-3559-4956-9c74-184588905f7a
+    name: Verify Lawful Presence via FDSH
+    serviceType: fdsh_vlp
+    defaultCallMode: async
+    programs:
+      - medicaid
+    description: >
+      Verify Lawful Presence (VLP) query via FDSH. Checks immigration status
+      for non-citizen Medicaid applicants. Requires A-Number and immigration
+      document number. Use save as fallback when VLP cannot resolve.
+
+  - id: 17a43588-336e-475b-bec9-fb676b581053
+    name: IRS Federal Tax Information via FDSH
+    serviceType: fdsh_fti
+    defaultCallMode: async
+    programs:
+      - medicaid
+    description: >
+      IRS / Federal Tax Information (FTI) query via FDSH. Returns a MAGI income
+      compatibility result (compatible or not), filing status, and household size.
+      Returns a flag, not raw income figures.
+
+  - id: 72bcaca1-270e-4329-9910-d01086f05cde
+    name: Medicare Enrollment via FDSH
+    serviceType: fdsh_medicare
+    defaultCallMode: async
+    programs:
+      - medicaid
+    description: >
+      Medicare enrollment status query via FDSH. Returns Part A and Part B
+      enrollment status.
+
+  # IEVS sources — 7 CFR § 272.8 requires states to query all four for SNAP
+
+  - id: e248ab46-b470-40cb-95a9-472288d3a06b
+    name: SSA SVES/SOLQ via IEVS
+    serviceType: ssa_ievs
+    defaultCallMode: async
+    programs:
+      - snap
+      - medicaid
+    description: >
+      SSA SVES/SOLQ query via the IEVS framework. Validates SSN; returns Title II
+      (RSDI/SSDI) and Title XVI (SSI) benefit data and 40-quarter work history.
+      Callers select response record types via the data field.
+
+  - id: 8960e213-b9d0-4efb-a65e-7df4a65bb26c
+    name: IRS Unearned Income via IEVS
+    serviceType: irs_ievs
+    defaultCallMode: async
+    programs:
+      - snap
+    description: >
+      IRS direct IEVS batch query. Returns prior-year unearned income — interest,
+      dividends, and capital gains. Raw figures, unlike fdsh_fti.
+
+  - id: 6b2b03b0-dc9b-4122-a9de-138960bb610f
+    name: State Wage Information (SWICA)
+    serviceType: swica
+    defaultCallMode: async
+    programs:
+      - snap
+    description: >
+      State Wage Information Collection Agency query. Returns quarterly
+      employer-reported wages by employer.
+
+  - id: 4d29b8b1-8b5d-4bf5-b98c-2a88fb6bdc69
+    name: Unemployment Insurance Benefits
+    serviceType: uib
+    defaultCallMode: async
+    programs:
+      - snap
+    description: >
+      State unemployment system query. Returns UI claim status, weekly benefit
+      amount, and claim dates.
+
+  # Other federal services
+
+  # USCIS SAVE uses a different auth model from FDSH — states authenticate via
+  # SAVE Web Services credentials (username/password or API key depending on
+  # the access tier). Example overlay:
+  #
+  #   - id: 9efdf5fd-b335-41a5-9393-4c91979a3e9f
+  #     endpoint:
+  #       url: https://save.uscis.gov/webservices
+  #       apiKeyHeader: Authorization
+  #       credentialEnvVar: SAVE_API_CREDENTIALS
+  - id: 9efdf5fd-b335-41a5-9393-4c91979a3e9f
+    name: USCIS SAVE
+    serviceType: save
+    defaultCallMode: async
+    programs:
+      - medicaid
+    description: >
+      USCIS Systematic Alien Verification for Entitlements (SAVE) direct query.
+      Used as fallback when fdsh_vlp cannot resolve immigration status. Step 2
+      is initiated by USCIS response, not the caller.
+
+  - id: 23b2df6a-193c-4a1b-b59a-703919912918
+    name: Interstate Enrollment Check
+    serviceType: enrollment_check
+    defaultCallMode: async
+    programs:
+      - all
+    description: >
+      Inter-state enrollment hub query. Checks for duplicate enrollment across
+      states and programs.
+
+  - id: ab22559a-3c58-4468-9d36-dbfc72cb23f7
+    name: SSA Incarceration Check
+    serviceType: incarceration_check
+    defaultCallMode: async
+    programs:
+      - all
+    description: >
+      SSA Prison Verification System (PUPS) batch query. Returns confinement
+      status matched against SSA beneficiary records.

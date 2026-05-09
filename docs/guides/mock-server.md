@@ -117,6 +117,86 @@ The override affects:
 
 **Simulating pause/resume scenarios:** Pause duration is computed as the difference between the `X-Mock-Now` value at resume and the `X-Mock-Now` value at pause. Both steps must use the same clock — if you pause without `X-Mock-Now` and resume with it (or vice versa), the duration will be wrong. To simulate a 3-day pause: set `X-Mock-Now` at the pause step, then set it to 3 days later at the resume step. To test breach after resuming, send a third request with `X-Mock-Now` set past the extended deadline (returned in the resume response).
 
+## Domain Events
+
+### SSE Event Stream
+
+Subscribe to live domain events as they fire:
+
+```bash
+curl -N http://localhost:1080/platform/events/stream
+```
+
+Each event is a Server-Sent Events message with the full CloudEvents 1.0 envelope as JSON.
+
+### Injecting External Events
+
+To simulate an event from another domain (e.g., a data exchange result arriving):
+
+```bash
+curl -X POST http://localhost:1080/platform/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "specversion": "1.0",
+    "type": "org.codeforamerica.safety-net-blueprint.data_exchange.call.completed",
+    "source": "/data-exchange",
+    "subject": "<service-call-id>",
+    "data": { "result": "conclusive", "serviceType": "fdsh_ssa" }
+  }'
+```
+
+This fires the event to the event bus, triggering any subscribed rule sets exactly as if it came from a real adapter.
+
+### Mock Stub Registry
+
+For event-driven flows where the mock server itself needs to respond to events (e.g., simulating an external service responding to a service call), use the stub registry to pre-program responses before triggering the flow.
+
+**How it works:** Mock simulation rules subscribe to domain events and call `applyStub`. When `applyStub` fires, it checks the stub registry for a matching pre-registered response, pops it (FIFO), and fires the response event. If no stub matches, the rule's `fallback` fires instead. See [`packages/mock-server/mock-rules/README.md`](../../packages/mock-server/mock-rules/README.md) for how mock simulation rules are written and loaded.
+
+**Register a stub:**
+
+```bash
+curl -X POST http://localhost:1080/mock/stubs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "on": "data_exchange.service_call.created",
+    "match": { "data.serviceType": "fdsh_ssa" },
+    "respond": {
+      "type": "data_exchange.call.completed",
+      "subject": { "var": "this.subject" },
+      "data": {
+        "serviceCallId": { "var": "this.subject" },
+        "serviceType": "fdsh_ssa",
+        "requestingResourceId": { "var": "this.data.requestingResourceId" },
+        "result": "inconclusive"
+      }
+    }
+  }'
+```
+
+- `on` — the CloudEvents type suffix to match (underscores, no platform prefix)
+- `match` — optional dot-path field matchers against the event envelope; all must match
+- `respond` — the event to fire when matched; field values may be JSON Logic expressions resolved against the triggering event envelope
+
+**Stubs are consumed in order (FIFO).** Register multiple stubs to script a sequence — the first matching stub is popped each time a matching event fires.
+
+**Stub IDs** are human-readable: `service_call.created-1`, `service_call.created-2`, etc.
+
+**Other stub endpoints:**
+
+```bash
+# List active stubs
+curl http://localhost:1080/mock/stubs
+
+# Remove a specific stub
+curl -X DELETE http://localhost:1080/mock/stubs/service_call.created-1
+
+# Clear all stubs
+curl -X DELETE http://localhost:1080/mock/stubs
+```
+
+**Without stubs:** If no stub matches, each mock simulation rule defines its own `fallback` — typically a default fixture response so flows work out of the box. Stubs are only needed when you want to test specific outcomes. Check the relevant rule file in `packages/mock-server/mock-rules/` to see what the fallback returns.
+
 ## Search Query Syntax
 
 Use the `q` parameter for filtering. See [Search Patterns](../decisions/search-patterns.md) for full syntax reference.

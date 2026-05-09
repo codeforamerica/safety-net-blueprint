@@ -18,6 +18,8 @@ import { closeAll } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
+import { registerStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
+import { findById } from '../src/database-manager.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -167,8 +169,52 @@ async function startMockServer(specDirs = null, seedDir = null) {
     });
     console.log('  POST   /platform/events - Inject external domain event (testing)');
 
+    // Mock stub registry endpoints — for pre-programming event responses in tests.
+    // See packages/mock-server/mock-rules/README.md for full usage documentation.
+    app.post('/mock/stubs', (req, res) => {
+      try {
+        const stub = registerStub(req.body);
+        res.status(201).json(stub);
+      } catch (err) {
+        res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
+      }
+    });
+    app.get('/mock/stubs', (req, res) => {
+      const items = listStubs();
+      res.json({ items, total: items.length });
+    });
+    app.delete('/mock/stubs', (req, res) => {
+      clearStubs();
+      res.status(204).end();
+    });
+    app.delete('/mock/stubs/:id', (req, res) => {
+      const removed = removeStub(req.params.id);
+      if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Stub "${req.params.id}" not found` });
+      res.status(204).end();
+    });
+    console.log('  POST   /mock/stubs - Register a stub response');
+    console.log('  GET    /mock/stubs - List active stubs');
+    console.log('  DELETE /mock/stubs/:id - Remove a stub');
+    console.log('  DELETE /mock/stubs - Clear all stubs');
+
     // Register event subscriptions (event-triggered rule sets)
-    registerEventSubscriptions(allRules, allStateMachines, allSlaTypes);
+    registerEventSubscriptions(allRules, allStateMachines, allSlaTypes, apiSpecs);
+
+    // Enrich service call creation with catalog-derived fields (after schema validation).
+    // Copies serviceType and callMode from the referenced ExternalService, sets status to pending.
+    // Uses req.enrichmentData so these fields bypass ExternalServiceCallCreate validation
+    // (they're server-derived, not client-provided) but are stored in the resource.
+    app.post('/data-exchange/service-calls', (req, res, next) => {
+      const service = req.body?.serviceId ? findById('services', req.body.serviceId) : null;
+      if (service) {
+        req.enrichmentData = {
+          serviceType: service.serviceType,
+          callMode: req.body.callMode ?? service.defaultCallMode,
+          status: 'pending',
+        };
+      }
+      next();
+    });
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;

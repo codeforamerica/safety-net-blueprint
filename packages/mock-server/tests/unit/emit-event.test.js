@@ -55,6 +55,22 @@ test('emitEvent', async (t) => {
     console.log('  ✓ Derives type from domain + object + action');
   });
 
+  await t.test('normalizes hyphenated domain to underscores in event type', () => {
+    clearAll('events');
+    const stored = emitEvent({
+      domain: 'data-exchange',
+      object: 'service-call',
+      action: 'created',
+      resourceId: 'sc-1',
+      source: '/data-exchange',
+      data: null,
+      now: '2024-01-01T00:00:00.000Z',
+    });
+
+    assert.strictEqual(stored.type, 'org.codeforamerica.safety-net-blueprint.data_exchange.service_call.created');
+    console.log('  ✓ Normalizes hyphenated domain/object to underscores');
+  });
+
   await t.test('generates a unique id for each event', () => {
     clearAll('events');
     const e1 = emitEvent({ domain: 'x', object: 'y', action: 'z', resourceId: '1', source: '/x', data: null, now: '2024-01-01T00:00:00.000Z' });
