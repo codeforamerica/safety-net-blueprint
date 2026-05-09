@@ -1,0 +1,272 @@
+$schema: ./schemas/state-machine-schema.yaml
+version: "1.0"
+domain: eligibility
+apiSpec: eligibility-openapi.yaml
+machines:
+  - object: Determination
+    states:
+      - id: pending
+        slaClock: running
+      - id: in_progress
+        slaClock: running
+      - id: completed
+        slaClock: stopped
+      - id: withdrawn
+        slaClock: stopped
+    initialState: pending
+    guards:
+      - id: callerIsSystem
+        field: $caller.roles
+        operator: contains_any
+        value:
+          - system
+    transitions:
+      - trigger: flag-expedited
+        from: pending
+        actors:
+          - system
+        guards:
+          - callerIsSystem
+        effects:
+          - type: set
+            field: expeditedFlagged
+            value: true
+            description: Record that the household qualifies for expedited SNAP processing
+          - type: event
+            action: expedited
+            data:
+              flaggedAt: $now
+              applicationId: $object.applicationId
+              determinationId: $object.id
+            description: |
+              Emit eligibility.application.expedited — Intake stores the flag on the Application for caseworker display; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))
+      - trigger: begin-evaluation
+        from: pending
+        to: in_progress
+        actors:
+          - system
+        guards:
+          - callerIsSystem
+        effects:
+          - type: evaluate-rules
+            ruleTypes:
+              - medicaid-ex-parte
+            description: |
+              Initiate Medicaid electronic eligibility checks for members applying for Medicaid. Results are stored on each Decision and may resolve them automatically if all checks return conclusive data (42 CFR § 435.911)
+      - trigger: evaluate-final
+        from: in_progress
+        actors:
+          - system
+        guards:
+          - callerIsSystem
+        effects:
+          - type: evaluate-rules
+            ruleTypes:
+              - final-determination
+            description: >
+              Run final eligibility determination for all remaining pending Decisions
+              after caseworker review is complete. Called when
+              intake.application.review_completed fires (42 CFR § 435.912)
+
+      - trigger: complete
+        from: in_progress
+        to: completed
+        actors:
+          - system
+        guards:
+          - callerIsSystem
+        effects:
+          - type: set
+            field: completedAt
+            value: $now
+            description: Record when all Decisions were resolved
+          - type: event
+            action: determination_completed
+            data:
+              completedAt: $now
+              applicationId: $object.applicationId
+              determinationId: $object.id
+            description: |
+              Emit eligibility.application.determination_completed — signals all person-program Decisions are resolved; Intake subscribes to close the application and trigger case creation
+      - trigger: withdraw
+        from:
+          - pending
+          - in_progress
+        to: withdrawn
+        actors:
+          - system
+        guards:
+          - callerIsSystem
+        effects:
+          - type: set
+            field: withdrawnAt
+            value: $now
+            description: |
+              Record when the withdrawal occurred; already-resolved Decisions are preserved as the audit record
+    requestBodies:
+      - trigger: flag-expedited
+      - trigger: begin-evaluation
+      - trigger: evaluate-final
+      - trigger: complete
+      - trigger: withdraw
+  - object: Decision
+    states:
+      - id: pending
+        slaClock: running
+      - id: approved
+        slaClock: stopped
+      - id: denied
+        slaClock: stopped
+      - id: ineligible
+        slaClock: stopped
+    initialState: pending
+    guards:
+      - id: callerIsSystem
+        field: $caller.roles
+        operator: contains_any
+        value:
+          - system
+    transitions:
+      - trigger: approve
+        from: pending
+        to: approved
+        actors:
+          - system
+        guards:
+          - callerIsSystem
+        effects:
+          - type: set
+            field: decidedAt
+            value: $now
+            description: Record when the Decision was finalized
+          - type: set
+            field: path
+            value: $request.path
+            description: Record whether the Decision was reached automatically or by a caseworker
+          - type: event
+            action: decision_completed
+            data:
+              decidedAt: $now
+              applicationId: $object.applicationId
+              determinationId: $object.determinationId
+              decisionId: $object.id
+              memberId: $object.memberId
+              program: $object.program
+              status: approved
+              path: $request.path
+            description: |
+              Emit eligibility.application.decision_completed — Intake subscribes to record the outcome per member per program; may fire at submission for Medicaid Decisions auto-resolved via ex parte evaluation
+      - trigger: deny
+        from: pending
+        to: denied
+        actors:
+          - system
+        guards:
+          - callerIsSystem
+        effects:
+          - type: set
+            field: decidedAt
+            value: $now
+            description: Record when the Decision was finalized
+          - type: set
+            field: path
+            value: $request.path
+            description: Record whether the Decision was reached automatically or by a caseworker
+          - type: set
+            field: denialReasonCode
+            value: $request.denialReasonCode
+            description: |
+              Store the machine-readable denial reason; required for the Notice of Action and as the basis for any appeal (7 CFR § 273.2(h), 42 CFR § 435.917)
+          - type: event
+            action: decision_completed
+            data:
+              decidedAt: $now
+              applicationId: $object.applicationId
+              determinationId: $object.determinationId
+              decisionId: $object.id
+              memberId: $object.memberId
+              program: $object.program
+              status: denied
+              path: $request.path
+              denialReasonCode: $request.denialReasonCode
+            description: |
+              Emit eligibility.application.decision_completed — Intake subscribes to record the outcome per member per program
+      - trigger: mark-ineligible
+        from: pending
+        to: ineligible
+        actors:
+          - system
+        guards:
+          - callerIsSystem
+        effects:
+          - type: set
+            field: decidedAt
+            value: $now
+            description: Record when the Decision was finalized
+          - type: set
+            field: path
+            value: $request.path
+            description: Record whether the Decision was reached automatically or by a caseworker
+          - type: set
+            field: denialReasonCode
+            value: $request.denialReasonCode
+            description: |
+              Store the categorical ineligibility reason code (e.g., citizenship bar for SNAP, age limit for TANF)
+          - type: event
+            action: decision_completed
+            data:
+              decidedAt: $now
+              applicationId: $object.applicationId
+              determinationId: $object.determinationId
+              decisionId: $object.id
+              memberId: $object.memberId
+              program: $object.program
+              status: ineligible
+              path: $request.path
+              denialReasonCode: $request.denialReasonCode
+            description: |
+              Emit eligibility.application.decision_completed — Intake subscribes to record the outcome per member per program
+    requestBodies:
+      - trigger: approve
+        type: object
+        required:
+          - path
+        properties:
+          path:
+            type: string
+            enum:
+              - auto
+              - manual
+            description: Whether the Decision was reached automatically or by a caseworker
+      - trigger: deny
+        type: object
+        required:
+          - path
+          - denialReasonCode
+        properties:
+          path:
+            type: string
+            enum:
+              - auto
+              - manual
+            description: Whether the Decision was reached automatically or by a caseworker
+          denialReasonCode:
+            type: string
+            description: |
+              Machine-readable denial reason code. Program-specific — defined at implementation from FNS code sets (SNAP) or CMS code sets (Medicaid)
+      - trigger: mark-ineligible
+        type: object
+        required:
+          - path
+          - denialReasonCode
+        properties:
+          path:
+            type: string
+            enum:
+              - auto
+              - manual
+            description: Whether the Decision was reached automatically or by a caseworker
+          denialReasonCode:
+            type: string
+            description: |
+              Machine-readable categorical ineligibility code (e.g., citizenship bar, age limit). Program-specific — defined at implementation

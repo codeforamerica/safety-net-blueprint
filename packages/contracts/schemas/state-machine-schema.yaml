@@ -8,22 +8,14 @@ description: Schema for behavioral contract state machine YAML files.
 type: object
 required:
   - version
-  - object
   - domain
   - apiSpec
-  - states
-  - initialState
-  - transitions
 additionalProperties: false
 
 properties:
   version:
     type: string
     description: Schema version for change tracking.
-
-  object:
-    type: string
-    description: The governed entity type (e.g., Task).
 
   domain:
     type: string
@@ -32,6 +24,20 @@ properties:
   apiSpec:
     type: string
     description: Filename of the associated OpenAPI spec.
+
+  machines:
+    type: array
+    description: >
+      State machines for this domain. Use when a domain governs multiple entity
+      types (e.g., Determination and Decision). Each entry is a complete machine
+      for one entity type.
+    minItems: 1
+    items:
+      $ref: "#/$defs/Machine"
+
+  object:
+    type: string
+    description: The governed entity type (e.g., Task). Used for single-machine files.
 
   states:
     type: array
@@ -73,6 +79,47 @@ properties:
     $ref: "#/$defs/Audit"
 
 $defs:
+  Machine:
+    type: object
+    description: A state machine for one governed entity type within a domain.
+    required:
+      - object
+      - states
+      - initialState
+      - transitions
+    additionalProperties: false
+    properties:
+      object:
+        type: string
+        description: The governed entity type (e.g., Determination).
+      states:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/State"
+      initialState:
+        type: string
+        description: The state an object starts in after creation.
+      guards:
+        type: array
+        items:
+          $ref: "#/$defs/Guard"
+      onCreate:
+        $ref: "#/$defs/OnCreate"
+      onUpdate:
+        $ref: "#/$defs/OnUpdate"
+      transitions:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/Transition"
+      requestBodies:
+        type: array
+        items:
+          $ref: "#/$defs/RequestBody"
+      audit:
+        $ref: "#/$defs/Audit"
+
   State:
     type: object
     description: Configuration for a single state.

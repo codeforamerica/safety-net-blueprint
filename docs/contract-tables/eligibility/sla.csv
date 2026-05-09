@@ -1,0 +1,9 @@
+Object,State,SLA Clock
+Determination,pending,running
+Determination,in_progress,running
+Determination,completed,stopped
+Determination,withdrawn,stopped
+Decision,pending,running
+Decision,approved,stopped
+Decision,denied,stopped
+Decision,ineligible,stopped
