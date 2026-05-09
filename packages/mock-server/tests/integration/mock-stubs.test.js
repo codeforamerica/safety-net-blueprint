@@ -258,6 +258,60 @@ async function testMatchFilter() {
 // =============================================================================
 // Test runner
 // =============================================================================
+// HTTP stubs — CRUD and listing
+// =============================================================================
+
+async function testHttpStubCrud() {
+  console.log('\n--- HTTP stub CRUD ---');
+  await clearStubs();
+
+  // POST — register an HTTP stub
+  const postRes = await fetch(`${BASE_URL}/mock/stubs`, {
+    method: 'POST',
+    body: {
+      type: 'http',
+      match: { method: 'POST', url: '/evaluate/expedited-screening' },
+      response: { body: { expedited: true } }
+    }
+  });
+  assert(postRes.status === 201, `POST /mock/stubs (http) → expected 201, got ${postRes.status}`);
+  const stub = await postRes.json();
+  assert(stub.id, 'HTTP stub should have an id');
+  assert(stub.id.startsWith('http.'), `expected http. prefix, got: ${stub.id}`);
+  assert(stub.type === 'http', `expected type: http, got: ${stub.type}`);
+  console.log('  ✓ POST /mock/stubs registers HTTP stub with http. prefixed ID');
+
+  // GET — HTTP stub appears in listing
+  const getRes = await fetch(`${BASE_URL}/mock/stubs`);
+  const list = await getRes.json();
+  assert(list.total === 1, `expected 1 stub, got ${list.total}`);
+  assert(list.items[0].type === 'http', 'listed stub should have type: http');
+  console.log('  ✓ GET /mock/stubs includes HTTP stub');
+
+  // DELETE/:id — remove HTTP stub by ID
+  const delRes = await fetch(`${BASE_URL}/mock/stubs/${stub.id}`, { method: 'DELETE' });
+  assert(delRes.status === 204, `DELETE /mock/stubs/:id → expected 204, got ${delRes.status}`);
+  const afterDel = await (await fetch(`${BASE_URL}/mock/stubs`)).json();
+  assert(afterDel.total === 0, 'stub should be removed');
+  console.log('  ✓ DELETE /mock/stubs/:id removes HTTP stub');
+
+  // 422 — missing match.url
+  const badRes = await fetch(`${BASE_URL}/mock/stubs`, {
+    method: 'POST',
+    body: { type: 'http', match: { method: 'POST' } }
+  });
+  assert(badRes.status === 422, `expected 422 for missing match.url, got ${badRes.status}`);
+  console.log('  ✓ POST /mock/stubs returns 422 when match.url is missing');
+
+  // DELETE all — clears HTTP stubs
+  await fetch(`${BASE_URL}/mock/stubs`, { method: 'POST', body: { type: 'http', match: { url: '/evaluate/determination' } } });
+  await fetch(`${BASE_URL}/mock/stubs`, { method: 'DELETE' });
+  const afterClear = await (await fetch(`${BASE_URL}/mock/stubs`)).json();
+  assert(afterClear.total === 0, 'all stubs should be cleared');
+  console.log('  ✓ DELETE /mock/stubs clears HTTP stubs');
+}
+
+// =============================================================================
 
 function assert(condition, message) {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
@@ -281,7 +335,8 @@ async function run() {
     testStubConsumedOnEvent,
     testStubFifo,
     testFallbackNoStub,
-    testMatchFilter
+    testMatchFilter,
+    testHttpStubCrud,
   ];
 
   let passed = 0;

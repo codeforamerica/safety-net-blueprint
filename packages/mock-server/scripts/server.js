@@ -18,7 +18,7 @@ import { closeAll } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
-import { registerStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
+import { registerStub, registerHttpStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
 import { findById } from '../src/database-manager.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
@@ -173,7 +173,9 @@ async function startMockServer(specDirs = null, seedDir = null) {
     // See packages/mock-server/mock-rules/README.md for full usage documentation.
     app.post('/mock/stubs', (req, res) => {
       try {
-        const stub = registerStub(req.body);
+        const stub = req.body?.type === 'http'
+          ? registerHttpStub(req.body)
+          : registerStub(req.body);
         res.status(201).json(stub);
       } catch (err) {
         res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });

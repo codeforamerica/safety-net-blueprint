@@ -65,3 +65,29 @@ curl -s -X POST http://localhost:1080/mock/stubs \
 The `match` field is optional — omit it to match any service call regardless of type.
 
 When multiple stubs match the same event, they are consumed in registration order (FIFO). Register stubs in the order you expect events to arrive.
+
+## HTTP stubs
+
+HTTP stubs intercept outbound HTTP calls made by event handlers — for example, calls to the eligibility rules engine adapter. Register an HTTP stub before triggering the flow that will make the call; when the handler calls the matching URL, the stub response is returned instead of reaching the real endpoint.
+
+```bash
+# Pre-program a response for the eligibility adapter's expedited screening endpoint
+curl -s -X POST http://localhost:1080/mock/stubs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "http",
+    "match": {
+      "method": "POST",
+      "url": "/evaluate/expedited-screening"
+    },
+    "response": {
+      "body": { "expedited": true }
+    }
+  }'
+```
+
+The `match.method` field is optional — omit it to match any HTTP method. The `response.status` field defaults to `200`.
+
+HTTP stubs appear alongside event stubs in `GET /mock/stubs` and are removed by the same `DELETE /mock/stubs` and `DELETE /mock/stubs/:id` endpoints. Like event stubs, HTTP stubs are consumed (removed) on first match and follow FIFO ordering.
+
+If no stub is registered when a handler makes an outbound HTTP call, the call returns a `501 Not Implemented` error. This is intentional — the mock server does not make real outbound calls. Register a stub before triggering any flow that makes an adapter call.
