@@ -1,0 +1,404 @@
+openapi: 3.1.0
+info:
+  title: Eligibility Service API
+  version: 1.0.0
+  x-domain: eligibility
+  x-status: stable
+  x-visibility: internal
+  description: |
+    REST API for querying eligibility determinations and decisions. Determinations
+    and Decisions are created and updated by internal event handlers — this API
+    is read-only for external consumers.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: https://api.example.com/eligibility
+    description: Production server
+  - url: http://localhost:1080/eligibility
+    description: Local development server
+tags:
+  - name: Determinations
+    description: Query eligibility determinations and their decisions.
+x-events:
+  application.expedited:
+    type: org.codeforamerica.safety-net-blueprint.eligibility.application.expedited
+    summary: Emitted when an application qualifies for expedited SNAP processing
+    payload:
+      $ref: "#/components/schemas/ApplicationExpeditedEvent"
+  application.decision_completed:
+    type: org.codeforamerica.safety-net-blueprint.eligibility.application.decision_completed
+    summary: Emitted when a single Decision reaches a terminal state
+    payload:
+      $ref: "#/components/schemas/ApplicationDecisionCompletedEvent"
+  application.determination_completed:
+    type: org.codeforamerica.safety-net-blueprint.eligibility.application.determination_completed
+    summary: Emitted when all Decisions for a Determination are resolved
+    payload:
+      $ref: "#/components/schemas/ApplicationDeterminationCompletedEvent"
+
+paths:
+  /determinations:
+    get:
+      summary: List determinations
+      description: Retrieve a paginated list of determinations. Filter by applicationId to get the determination for a specific application.
+      operationId: listDeterminations
+      tags:
+        - Determinations
+      parameters:
+        - name: applicationId
+          in: query
+          required: false
+          description: Filter by application identifier.
+          schema:
+            type: string
+            format: uuid
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        '200':
+          description: A paginated list of determinations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeterminationList"
+        '400':
+          $ref: "./components/responses.yaml#/BadRequest"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /determinations/{determinationId}:
+    parameters:
+      - name: determinationId
+        in: path
+        required: true
+        description: Unique identifier of the determination.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get determination
+      description: Retrieve a single determination by identifier.
+      operationId: getDetermination
+      tags:
+        - Determinations
+      responses:
+        '200':
+          description: Determination retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Determination"
+        '404':
+          $ref: "./components/responses.yaml#/NotFound"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /determinations/{determinationId}/decisions:
+    parameters:
+      - name: determinationId
+        in: path
+        required: true
+        description: Unique identifier of the determination.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List decisions
+      description: Retrieve all decisions for a determination.
+      operationId: listDecisions
+      tags:
+        - Determinations
+      parameters:
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        '200':
+          description: A paginated list of decisions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionList"
+        '404':
+          $ref: "./components/responses.yaml#/NotFound"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /determinations/{determinationId}/decisions/{decisionId}:
+    parameters:
+      - name: determinationId
+        in: path
+        required: true
+        description: Unique identifier of the determination.
+        schema:
+          type: string
+          format: uuid
+      - name: decisionId
+        in: path
+        required: true
+        description: Unique identifier of the decision.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get decision
+      description: Retrieve a single decision by identifier.
+      operationId: getDecision
+      tags:
+        - Determinations
+      responses:
+        '200':
+          description: Decision retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+        '404':
+          $ref: "./components/responses.yaml#/NotFound"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+components:
+  schemas:
+    Determination:
+      type: object
+      description: >
+        The eligibility determination record for an application. One Determination
+        is created per application at submission. Its status reflects the overall
+        progress of evaluating all household members across all applied programs.
+      required:
+        - applicationId
+        - status
+        - expeditedFlagged
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier for the determination.
+        applicationId:
+          type: string
+          format: uuid
+          description: The application this determination belongs to.
+          x-relationship:
+            resource: Application
+            domain: intake
+        status:
+          $ref: "#/components/schemas/DeterminationStatus"
+        expeditedFlagged:
+          type: boolean
+          description: >
+            Whether the application was flagged for expedited SNAP processing
+            (7 CFR § 273.2(i)). Set at submission based on the rules engine
+            expedited screening call.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When the determination record was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When the determination record was last updated.
+
+    Decision:
+      type: object
+      description: >
+        A single program eligibility decision for one household member. One Decision
+        is created per member per applied program at submission. Decisions are resolved
+        automatically (via electronic checks and rules engine) or manually by a caseworker.
+      required:
+        - determinationId
+        - memberId
+        - program
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier for the decision.
+        determinationId:
+          type: string
+          format: uuid
+          description: The determination this decision belongs to.
+          x-relationship:
+            resource: Determination
+        memberId:
+          type: string
+          format: uuid
+          description: The household member this decision applies to.
+          x-relationship:
+            resource: ApplicationMember
+            domain: intake
+        program:
+          $ref: "./components/common.yaml#/Program"
+          description: The program this decision covers.
+        status:
+          $ref: "#/components/schemas/DecisionStatus"
+        path:
+          $ref: "#/components/schemas/DecisionPath"
+          description: Whether the decision was made automatically or by a caseworker.
+        decidedAt:
+          type: string
+          format: date-time
+          description: When the decision reached a terminal state.
+        denialReasonCode:
+          type: string
+          description: Machine-readable reason code when status is denied or ineligible.
+        electronicChecks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ElectronicCheckSummary"
+          description: Summary of electronic checks that informed this decision.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When the decision record was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When the decision record was last updated.
+
+    DeterminationList:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Determination"
+
+    DecisionList:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Decision"
+
+    DeterminationStatus:
+      type: string
+      enum:
+        - pending
+        - in_progress
+        - completed
+        - withdrawn
+      description: >
+        Lifecycle status of the determination. `pending` — created at submission,
+        awaiting processing. `in_progress` — at least one Decision has been resolved.
+        `completed` — all Decisions have reached a terminal state. `withdrawn` —
+        the application was withdrawn before determination completed.
+
+    DecisionStatus:
+      $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionStatus"
+
+    DecisionPath:
+      $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionPath"
+
+    ElectronicCheckSummary:
+      type: object
+      description: Summary of a single electronic data check that informed a decision.
+      additionalProperties: true
+      properties:
+        serviceType:
+          type: string
+          description: The data exchange service that performed the check.
+        result:
+          type: string
+          description: The outcome of the check (e.g., conclusive, inconclusive).
+        checkedAt:
+          type: string
+          format: date-time
+          description: When the check result was received.
+
+    ApplicationExpeditedEvent:
+      type: object
+      description: Payload for eligibility.application.expedited.
+      required:
+        - applicationId
+        - determinationId
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Application
+            domain: intake
+        determinationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Determination
+
+    ApplicationDecisionCompletedEvent:
+      type: object
+      description: Payload for eligibility.application.decision_completed.
+      required:
+        - applicationId
+        - determinationId
+        - decisionId
+        - memberId
+        - program
+        - status
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Application
+            domain: intake
+        determinationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Determination
+        decisionId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Decision
+        memberId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: ApplicationMember
+            domain: intake
+        program:
+          $ref: "./components/common.yaml#/Program"
+        status:
+          $ref: "#/components/schemas/DecisionStatus"
+        path:
+          $ref: "#/components/schemas/DecisionPath"
+
+    ApplicationDeterminationCompletedEvent:
+      type: object
+      description: Payload for eligibility.application.determination_completed.
+      required:
+        - applicationId
+        - determinationId
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Application
+            domain: intake
+        determinationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Determination

@@ -1,0 +1,304 @@
+openapi: 3.1.0
+info:
+  title: Eligibility Adapter API
+  version: 1.0.0
+  x-domain: eligibility
+  x-status: stable
+  x-visibility: external
+  description: |
+    Contracted interface for the state-provided eligibility rules engine adapter.
+    The blueprint calls these endpoints to perform program eligibility evaluations.
+    States implement this interface; the blueprint treats it as a black box.
+
+    Request bodies use open-ended schemas (additionalProperties: true) so states
+    can pass additional context to their rules engine without requiring contract
+    changes. The response shapes are fixed — the blueprint depends on them to
+    update Decision records and emit events.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: https://adapter.example.com
+    description: State-configured adapter server
+  - url: http://localhost:9090
+    description: Local stub server
+tags:
+  - name: Evaluate
+    description: Rules engine evaluation endpoints.
+x-events: {}
+
+paths:
+  /evaluate/expedited-screening:
+    post:
+      summary: Evaluate expedited screening
+      description: |
+        Determines whether an application qualifies for expedited SNAP processing
+        (7 CFR § 273.2(i)). Called at submission before caseworker assignment.
+      operationId: evaluateExpeditedScreening
+      tags:
+        - Evaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpeditedScreeningRequest"
+      responses:
+        '200':
+          description: Expedited screening result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpeditedScreeningResponse"
+        '400':
+          $ref: "./components/responses.yaml#/BadRequest"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /evaluate/medicaid-ex-parte:
+    post:
+      summary: Evaluate Medicaid ex parte
+      description: |
+        Determines Medicaid eligibility using electronic data exchange results,
+        without requiring applicant-provided documentation. Called after all
+        Medicaid electronic checks for a Determination are complete.
+        Applications that can be fully determined ex parte are closed automatically
+        without caseworker intervention (42 CFR § 435.916).
+      operationId: evaluateMedicaidExParte
+      tags:
+        - Evaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedicaidExParteRequest"
+      responses:
+        '200':
+          description: Medicaid ex parte evaluation result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationResponse"
+        '400':
+          $ref: "./components/responses.yaml#/BadRequest"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /evaluate/determination:
+    post:
+      summary: Evaluate final determination
+      description: |
+        Runs final eligibility determination logic after a caseworker signals
+        review is complete. Called for all Decisions that remain pending after
+        ex parte and after intake.application.review_completed fires.
+      operationId: evaluateDetermination
+      tags:
+        - Evaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeterminationRequest"
+      responses:
+        '200':
+          description: Final determination result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationResponse"
+        '400':
+          $ref: "./components/responses.yaml#/BadRequest"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+components:
+  schemas:
+    MemberContext:
+      description: >
+        A household member with their demographic data and associated income,
+        expenses, and assets. Used as the evaluation payload passed to the
+        rules engine for each member.
+      allOf:
+        - $ref: "./schemas/common/member.yaml"
+        - type: object
+          properties:
+            metadata:
+              type: object
+              additionalProperties: true
+              description: >
+                Opaque correlation context set by the blueprint and echoed back
+                in each AdapterDecision response. The blueprint uses this to map
+                decisions back to internal records without exposing resource
+                identities to the adapter.
+            income:
+              type: array
+              items:
+                $ref: "./schemas/common/income.yaml"
+              description: Income records for this member.
+            expenses:
+              type: array
+              items:
+                $ref: "./schemas/common/expenses.yaml"
+              description: Expense records for this member.
+            assets:
+              type: array
+              items:
+                $ref: "./schemas/common/assets.yaml"
+              description: Asset records for this member.
+
+    ElectronicCheckResult:
+      $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceCallResult"
+
+    VerificationSummary:
+      description: >
+        A verification summary as passed by the intake domain. Extends the common
+        shape with the member identifier from the intake domain.
+      allOf:
+        - $ref: "./schemas/common/intake-common.yaml#/$defs/VerificationSummary"
+        - type: object
+          properties:
+            memberId:
+              type: string
+              format: uuid
+              description: >
+                Identifier of the intake domain member this verification applies to.
+                Passed through from intake for correlation — the adapter does not
+                resolve this identifier.
+              x-relationship:
+                resource: External
+
+    AdapterDecision:
+      type: object
+      description: A single program eligibility decision returned by the rules engine.
+      required:
+        - program
+        - status
+      properties:
+        metadata:
+          type: object
+          additionalProperties: true
+          description: >
+            Echoed back from the corresponding MemberContext. The blueprint reads
+            this to correlate the decision to the correct internal record.
+        program:
+          $ref: "./components/common.yaml#/Program"
+          description: The program being evaluated.
+        status:
+          $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionStatus"
+          description: The eligibility outcome for this member and program.
+        path:
+          $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionPath"
+          description: How the decision was reached.
+        denialReasonCode:
+          type: string
+          description: Machine-readable reason code when status is denied or ineligible.
+
+    ExpeditedScreeningRequest:
+      type: object
+      description: Request payload for expedited screening evaluation.
+      additionalProperties: true
+      required:
+        - applicationId
+        - household
+        - members
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          description: The application being screened.
+          x-relationship:
+            resource: External
+        household:
+          $ref: "./schemas/common/household.yaml"
+          description: Household-level data used in SNAP expedited screening criteria.
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberContext"
+          description: Household members with their income and asset data.
+
+    ExpeditedScreeningResponse:
+      type: object
+      description: Response from expedited screening evaluation.
+      required:
+        - expedited
+      properties:
+        expedited:
+          type: boolean
+          description: Whether the application qualifies for expedited SNAP processing.
+
+    MedicaidExParteRequest:
+      type: object
+      description: Request payload for Medicaid ex parte evaluation.
+      additionalProperties: true
+      required:
+        - applicationId
+        - determinationId
+        - members
+        - electronicChecks
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: External
+        determinationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: External
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberContext"
+          description: Household members applying for Medicaid.
+        electronicChecks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ElectronicCheckResult"
+          description: Results from FDSH FTI, FDSH Medicare/VCI, and other Medicaid data exchange calls.
+
+    DeterminationRequest:
+      type: object
+      description: Request payload for final determination evaluation.
+      additionalProperties: true
+      required:
+        - applicationId
+        - determinationId
+        - members
+        - verificationSummary
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: External
+        determinationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: External
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberContext"
+          description: Household members with pending decisions.
+        verificationSummary:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationSummary"
+          description: Status of all verification obligations for this application.
+
+    EvaluationResponse:
+      type: object
+      description: Response shape shared by Medicaid ex parte and final determination calls.
+      required:
+        - decisions
+      properties:
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdapterDecision"
+          description: One decision per member per program evaluated.

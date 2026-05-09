@@ -1,0 +1,134 @@
+openapi: 3.1.0
+info:
+  title: Data Exchange Adapter API
+  version: 0.1.0
+  x-domain: data-exchange
+  x-status: alpha
+  x-visibility: external
+  description: |
+    Contracted interface for data exchange adapters — state-implemented components
+    that call external agencies and data sources on behalf of the blueprint.
+
+    This spec documents the result payload schemas adapters must return for each
+    service type. The blueprint emits a `data_exchange.call.completed` event
+    carrying a `ServiceCallResult` whose `serviceResult` field conforms to the
+    schema for the corresponding service type defined here.
+
+    > **Status: Alpha** — Result schemas are stubs. States should define the full
+    > shape based on the CMS FDSH technical documentation and their adapter
+    > implementation.
+  contact:
+    name: API Support
+    email: support@example.com
+
+paths: {}
+
+components:
+  schemas:
+
+    # -------------------------------------------------------------------------
+    # FDSH services
+    # Each schema corresponds to a serviceType enum value and defines the
+    # expected shape of ServiceCallResult.serviceResult for that service.
+    # Replace additionalProperties: true with explicit fields once the
+    # shape is known from your adapter implementation and the CMS FDSH spec.
+    # -------------------------------------------------------------------------
+
+    FdshSsaResult:
+      type: object
+      additionalProperties: true
+      description: |
+        SSA Composite query result via FDSH. Covers SSA verification of
+        citizenship/identity and income (Title II/XVI). See CMS FDSH SSA Hub spec.
+
+    FdshVlpResult:
+      type: object
+      additionalProperties: true
+      description: |
+        USCIS Verification of Lawful Presence result via FDSH. Used for
+        immigration status verification. See CMS FDSH VLP spec.
+
+    FdshFtiResult:
+      type: object
+      additionalProperties: true
+      description: |
+        IRS Federal Tax Information result via FDSH. Used for income verification
+        via tax records. See CMS FDSH FTI spec.
+
+    FdshMedicareResult:
+      type: object
+      additionalProperties: true
+      description: |
+        Medicare enrollment status result via FDSH. Used for Medicaid
+        third-party liability checks. See CMS FDSH Medicare spec.
+
+    FdshVciResult:
+      type: object
+      additionalProperties: true
+      description: |
+        Veteran status and coverage result via FDSH VCI. Used for third-party
+        coverage discovery. See CMS FDSH VCI spec.
+
+    # -------------------------------------------------------------------------
+    # IEVS sources
+    # -------------------------------------------------------------------------
+
+    SsaIevsResult:
+      type: object
+      additionalProperties: true
+      description: |
+        SSA Income and Eligibility Verification System result. Covers SSA
+        benefit and wage data via the IEVS interface (distinct from FDSH SSA).
+
+    IrsIevsResult:
+      type: object
+      additionalProperties: true
+      description: |
+        IRS Income and Eligibility Verification System result. Covers unearned
+        income data via the IEVS interface.
+
+    # -------------------------------------------------------------------------
+    # State wage and unemployment sources
+    # -------------------------------------------------------------------------
+
+    SwicaResult:
+      type: object
+      additionalProperties: true
+      description: |
+        State Wage Information Collection Agency result. Returns state wage
+        records for income verification. Interface varies by state.
+
+    UibResult:
+      type: object
+      additionalProperties: true
+      description: |
+        Unemployment Insurance Benefit result. Returns current UI benefit
+        amounts for income verification. Interface varies by state.
+
+    # -------------------------------------------------------------------------
+    # Other federal and state sources
+    # -------------------------------------------------------------------------
+
+    SaveResult:
+      type: object
+      additionalProperties: true
+      description: |
+        USCIS SAVE (Systematic Alien Verification for Entitlements) result.
+        Used for immigration status verification outside of FDSH VLP. See
+        USCIS SAVE technical documentation.
+
+    EnrollmentCheckResult:
+      type: object
+      additionalProperties: true
+      description: |
+        Health coverage enrollment check result. Used to detect existing
+        coverage that may affect Medicaid eligibility. Source and interface
+        vary by state.
+
+    IncarcerationCheckResult:
+      type: object
+      additionalProperties: true
+      description: |
+        Incarceration status check result. Used to detect active incarceration
+        that disqualifies applicants from certain programs. Source and interface
+        vary by state.
