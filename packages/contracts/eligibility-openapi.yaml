@@ -211,7 +211,6 @@ components:
         automatically (via electronic checks and rules engine) or manually by a caseworker.
       required:
         - determinationId
-        - memberId
         - program
         - status
       properties:
@@ -226,13 +225,6 @@ components:
           description: The determination this decision belongs to.
           x-relationship:
             resource: Determination
-        memberId:
-          type: string
-          format: uuid
-          description: The household member this decision applies to.
-          x-relationship:
-            resource: ApplicationMember
-            domain: intake
         program:
           $ref: "./components/common.yaml#/Program"
           description: The program this decision covers.
@@ -351,7 +343,6 @@ components:
         - applicationId
         - determinationId
         - decisionId
-        - memberId
         - program
         - status
       properties:
@@ -371,12 +362,6 @@ components:
           format: uuid
           x-relationship:
             resource: Decision
-        memberId:
-          type: string
-          format: uuid
-          x-relationship:
-            resource: ApplicationMember
-            domain: intake
         program:
           $ref: "./components/common.yaml#/Program"
         status:
