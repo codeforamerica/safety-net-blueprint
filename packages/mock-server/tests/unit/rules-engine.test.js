@@ -235,6 +235,101 @@ test('evaluateAllMatchRuleSet — catch-all with condition: true matches alongsi
 // evaluateRuleSet — boolean equality with isExpedited via "this"
 // =============================================================================
 
+// =============================================================================
+// application-submitted-data-exchange — individual service calls per program
+// =============================================================================
+
+// Mirrors the all-match rule set in intake-rules.yaml. Tests verify that each
+// service type fires for the correct program combination.
+const dataExchangeRuleSet = {
+  evaluation: 'all-match',
+  rules: [
+    { id: 'fdsh-ssa',  order: 1, condition: { or:  [{ in: ['snap',     { var: 'application.programs' }] }, { in: ['medicaid', { var: 'application.programs' }] }] }, action: { createResource: { entity: 'data-exchange/service-calls', fields: { serviceType: 'fdsh_ssa'  } } } },
+    { id: 'ssa-ievs',  order: 2, condition: { or:  [{ in: ['snap',     { var: 'application.programs' }] }, { in: ['medicaid', { var: 'application.programs' }] }] }, action: { createResource: { entity: 'data-exchange/service-calls', fields: { serviceType: 'ssa_ievs'  } } } },
+    { id: 'irs-ievs',  order: 3, condition: { in:   ['snap',     { var: 'application.programs' }] },                                                                  action: { createResource: { entity: 'data-exchange/service-calls', fields: { serviceType: 'irs_ievs'  } } } },
+    { id: 'swica',     order: 4, condition: { in:   ['snap',     { var: 'application.programs' }] },                                                                  action: { createResource: { entity: 'data-exchange/service-calls', fields: { serviceType: 'swica'     } } } },
+    { id: 'uib',       order: 5, condition: { in:   ['snap',     { var: 'application.programs' }] },                                                                  action: { createResource: { entity: 'data-exchange/service-calls', fields: { serviceType: 'uib'       } } } },
+    { id: 'fdsh-vlp',  order: 6, condition: { in:   ['medicaid', { var: 'application.programs' }] },                                                                  action: { createResource: { entity: 'data-exchange/service-calls', fields: { serviceType: 'fdsh_vlp'  } } } },
+  ]
+};
+
+test('data-exchange rules — SNAP+Medicaid fires fdsh_ssa, ssa_ievs, irs_ievs, swica, uib, fdsh_vlp', () => {
+  const context = buildRuleContext({}, { application: { programs: ['snap', 'medicaid'] } });
+  const results = evaluateAllMatchRuleSet(dataExchangeRuleSet, context);
+  assert.deepStrictEqual(results.map(r => r.ruleId), ['fdsh-ssa', 'ssa-ievs', 'irs-ievs', 'swica', 'uib', 'fdsh-vlp']);
+});
+
+test('data-exchange rules — SNAP-only fires fdsh_ssa, ssa_ievs, irs_ievs, swica, uib; not fdsh_vlp', () => {
+  const context = buildRuleContext({}, { application: { programs: ['snap'] } });
+  const results = evaluateAllMatchRuleSet(dataExchangeRuleSet, context);
+  assert.deepStrictEqual(results.map(r => r.ruleId), ['fdsh-ssa', 'ssa-ievs', 'irs-ievs', 'swica', 'uib']);
+});
+
+test('data-exchange rules — Medicaid-only fires fdsh_ssa, ssa_ievs, fdsh_vlp; not SNAP-only services', () => {
+  const context = buildRuleContext({}, { application: { programs: ['medicaid'] } });
+  const results = evaluateAllMatchRuleSet(dataExchangeRuleSet, context);
+  assert.deepStrictEqual(results.map(r => r.ruleId), ['fdsh-ssa', 'ssa-ievs', 'fdsh-vlp']);
+});
+
+// =============================================================================
+// vlp-inconclusive-initiate-save — VLP→SAVE chain
+// =============================================================================
+
+// Mirrors the first-match-wins rule set in intake-rules.yaml triggered by
+// data_exchange.call.completed when fdsh_vlp returns inconclusive.
+const vlpChainRuleSet = {
+  evaluation: 'first-match-wins',
+  rules: [
+    {
+      id: 'save-on-vlp-inconclusive',
+      order: 1,
+      condition: { and: [{ '==': [{ var: 'this.data.serviceType' }, 'fdsh_vlp'] }, { '==': [{ var: 'this.data.result' }, 'inconclusive'] }] },
+      action: {
+        createResource: {
+          entity: 'data-exchange/service-calls',
+          fields: {
+            applicationId: { var: 'this.data.metadata.intake.applicationId' },
+            memberId:       { var: 'this.data.metadata.intake.memberId' },
+            serviceType: 'save'
+          }
+        }
+      }
+    }
+  ]
+};
+
+test('VLP→SAVE chain — fires SAVE when fdsh_vlp returns inconclusive', () => {
+  const context = buildRuleContext({ data: { serviceType: 'fdsh_vlp', result: 'inconclusive' } });
+  const result = evaluateRuleSet(vlpChainRuleSet, context);
+  assert.strictEqual(result.matched, true);
+  assert.strictEqual(result.ruleId, 'save-on-vlp-inconclusive');
+});
+
+test('VLP→SAVE chain — does not fire when fdsh_vlp result is not inconclusive', () => {
+  const context = buildRuleContext({ data: { serviceType: 'fdsh_vlp', result: 'verified' } });
+  const result = evaluateRuleSet(vlpChainRuleSet, context);
+  assert.strictEqual(result.matched, false);
+});
+
+test('VLP→SAVE chain — does not fire for other service types even when result is inconclusive', () => {
+  const context = buildRuleContext({ data: { serviceType: 'fdsh_ssa', result: 'inconclusive' } });
+  const result = evaluateRuleSet(vlpChainRuleSet, context);
+  assert.strictEqual(result.matched, false);
+});
+
+test('VLP→SAVE chain — action reads applicationId and memberId from metadata.intake', () => {
+  const result = evaluateRuleSet(vlpChainRuleSet, buildRuleContext({
+    data: { serviceType: 'fdsh_vlp', result: 'inconclusive', metadata: { intake: { applicationId: 'app-1', memberId: 'mem-1' } } }
+  }));
+  assert.strictEqual(result.matched, true);
+  assert.deepStrictEqual(result.action.createResource.fields.applicationId, { var: 'this.data.metadata.intake.applicationId' });
+  assert.deepStrictEqual(result.action.createResource.fields.memberId, { var: 'this.data.metadata.intake.memberId' });
+});
+
+// =============================================================================
+// evaluateRuleSet — boolean equality with isExpedited via "this"
+// =============================================================================
+
 test('evaluateRuleSet — boolean equality with isExpedited via "this"', () => {
   const ruleSet = {
     rules: [

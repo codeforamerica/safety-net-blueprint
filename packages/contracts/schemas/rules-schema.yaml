@@ -239,15 +239,23 @@ $defs:
     type: object
     description: >
       Declares a related entity or collection to resolve before rule evaluation.
-      When `entity` is present, the value resolved by `from` is treated as an ID and
-      the entity is fetched by that ID — made available under the alias for use in
-      rule conditions. When `entity` is absent, the value resolved by `from` is bound
-      directly as the alias (collection binding — used when `from` resolves to an array,
-      e.g., `{var: "application.members"}`).
+      Three forms are supported:
+
+      1. Entity binding (`entity` + `from`, no `where`): `from` resolves to an ID; the
+         entity is fetched by that ID and bound under the alias.
+
+      2. Collection query binding (`entity` + `where`, no `from`): all entities in the
+         collection are fetched and the `where` JSON Logic expression is evaluated per
+         entity (with entity fields and outer context both available). Matching entities
+         are bound as an array under the alias.
+
+      3. Direct binding (no `entity`, no `where`): `from` resolves to a value (typically
+         an array) that is bound directly as the alias.
+
       The calling resource is always available as "this" — no binding needed.
       For event-triggered rule sets, "this" is the event envelope; from-paths resolve
       against envelope fields (subject, type, source, data, time).
-    required: [as, from]
+    required: [as]
     properties:
       as:
         type: string
@@ -259,17 +267,17 @@ $defs:
         pattern: "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)+$"
         description: >
           Source entity in domain/resource format (e.g., intake/applications).
-          When present, `from` must resolve to an ID used to fetch this entity.
-          When absent, `from` resolves directly to the bound value (collection binding).
+          When used with `from` (no `where`), `from` must resolve to an ID.
+          When used with `where` (no `from`), all entities are fetched and filtered.
           Must match an API resource path discoverable in the contracts directory.
           Validated by validate-rules.js.
       from:
         description: >
           Dot-path on "this" (or a previously resolved entity) whose value is the ID
-          to look up. For event-triggered rule sets, resolves against the event envelope
-          (e.g., "subject" resolves to the event's subject field).
-          For on-demand rule sets, resolves against the calling resource schema.
-          Validated against the resource schema by validate-rules.js for on-demand sets.
+          to look up (entity binding) or the direct value to bind (direct binding).
+          Required when `where` is absent. For event-triggered rule sets, resolves
+          against the event envelope (e.g., "subject" resolves to the event's subject
+          field). Validated against the resource schema by validate-rules.js.
           Accepts a bare dot-path string (e.g., "subject") or a JSON Logic var expression
           (e.g., { var: "subject" }) — both forms are equivalent (Decision 21).
         oneOf:
@@ -280,6 +288,13 @@ $defs:
               var:
                 type: string
             additionalProperties: false
+      where:
+        description: >
+          JSON Logic expression evaluated per candidate entity to filter a collection.
+          When present (along with `entity`), all entities in the collection are fetched
+          and filtered — those for which this expression returns truthy are bound as an
+          array under the alias. Entity fields and all previously resolved context aliases
+          are available to the expression. Use instead of `from` for collection queries.
       optional:
         type: boolean
         description: >

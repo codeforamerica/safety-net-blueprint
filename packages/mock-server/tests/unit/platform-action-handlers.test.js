@@ -10,12 +10,13 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { platformActionRegistry } from '../../src/platform-action-handlers.js';
 import { registerStub, clearStubs, listStubs } from '../../src/mock-stub-engine.js';
-import { clearAll, findAll } from '../../src/database-manager.js';
+import { clearAll, findAll, insertResource, create } from '../../src/database-manager.js';
 
 const PREFIX = 'org.codeforamerica.safety-net-blueprint.';
 
 const fireEvent = platformActionRegistry.get('fireEvent');
 const applyStub = platformActionRegistry.get('applyStub');
+const forEach = platformActionRegistry.get('forEach');
 
 function events() {
   return findAll('events', {}).items;
@@ -310,6 +311,125 @@ test('applyStub — skips stub lookup and warns when resource has no type', () =
   applyStub({}, {}, { context: {} });
   assert.strictEqual(listStubs().length, 1); // stub not consumed
   assert.strictEqual(events().length, 0);
+});
+
+// =============================================================================
+// forEach
+// =============================================================================
+
+function makeForEachDeps(context, created = []) {
+  return {
+    context,
+    dbCreate: (collection, fields) => {
+      const item = { id: `item-${created.length}`, ...fields };
+      created.push({ collection, ...fields });
+      return item;
+    },
+    dbUpdate: () => {},
+    findStateMachine: () => null,
+    emitCreatedEvent: () => {}
+  };
+}
+
+test('forEach — iterates over all items and executes createResource for each', () => {
+  const members = [
+    { id: 'm-1', applicationId: 'app-1' },
+    { id: 'm-2', applicationId: 'app-1' }
+  ];
+  const created = [];
+  const deps = makeForEachDeps({ application: { id: 'app-1' }, members }, created);
+
+  forEach(
+    {
+      in: { var: 'members' },
+      as: 'member',
+      createResource: {
+        entity: 'data-exchange/service-calls',
+        fields: {
+          applicationId: { var: 'application.id' },
+          memberId: { var: 'member.id' },
+          serviceType: 'fdsh_ssa'
+        }
+      }
+    },
+    {},
+    deps
+  );
+
+  assert.strictEqual(created.length, 2);
+  assert.strictEqual(created[0].memberId, 'm-1');
+  assert.strictEqual(created[0].applicationId, 'app-1');
+  assert.strictEqual(created[0].serviceType, 'fdsh_ssa');
+  assert.strictEqual(created[1].memberId, 'm-2');
+});
+
+test('forEach — filter skips items that do not match condition', () => {
+  const members = [
+    { id: 'm-1', citizenshipStatus: 'citizen' },
+    { id: 'm-2', citizenshipStatus: 'permanent_resident' },
+    { id: 'm-3', citizenshipStatus: 'undocumented' }
+  ];
+  const created = [];
+  const deps = makeForEachDeps({ members }, created);
+
+  forEach(
+    {
+      in: { var: 'members' },
+      as: 'member',
+      filter: { '!=': [{ var: 'member.citizenshipStatus' }, 'citizen'] },
+      createResource: {
+        entity: 'data-exchange/service-calls',
+        fields: { memberId: { var: 'member.id' }, serviceType: 'fdsh_vlp' }
+      }
+    },
+    {},
+    deps
+  );
+
+  // Only non-citizen members pass the filter
+  assert.strictEqual(created.length, 2);
+  assert.strictEqual(created[0].memberId, 'm-2');
+  assert.strictEqual(created[1].memberId, 'm-3');
+});
+
+test('forEach — no-op when collection is empty', () => {
+  const created = [];
+  const deps = makeForEachDeps({ members: [] }, created);
+
+  forEach(
+    {
+      in: { var: 'members' },
+      as: 'member',
+      createResource: {
+        entity: 'data-exchange/service-calls',
+        fields: { memberId: { var: 'member.id' } }
+      }
+    },
+    {},
+    deps
+  );
+
+  assert.strictEqual(created.length, 0);
+});
+
+test('forEach — warns and skips when "in" resolves to non-array', () => {
+  const created = [];
+  const deps = makeForEachDeps({ members: 'not-an-array' }, created);
+
+  forEach(
+    {
+      in: { var: 'members' },
+      as: 'member',
+      createResource: {
+        entity: 'data-exchange/service-calls',
+        fields: { memberId: { var: 'member.id' } }
+      }
+    },
+    {},
+    deps
+  );
+
+  assert.strictEqual(created.length, 0);
 });
 
 console.log('\n✓ All platform-action-handlers tests passed\n');

@@ -3,6 +3,7 @@
  * Used by both the transition handler and create handler.
  */
 
+import jsonLogic from 'json-logic-js';
 import { findAll, findById } from '../database-manager.js';
 import { findRuleSet } from '../rules-loader.js';
 import { buildRuleContext, evaluateRuleSet, evaluateAllMatchRuleSet, resolvePath } from '../rules-engine.js';
@@ -40,7 +41,35 @@ export function resolveContextEntities(contextBindings, resource) {
   const resolved = {};
 
   for (const binding of contextBindings || []) {
-    if (typeof binding !== 'object' || !binding.as || !binding.from) continue;
+    if (typeof binding !== 'object' || !binding.as) continue;
+
+    if (binding.where) {
+      // Collection query binding — fetch all entities and filter with JSON Logic.
+      // The where expression is evaluated per candidate entity with entity fields
+      // merged into the outer context, so both entity fields and resolved aliases are accessible.
+      if (!binding.entity) {
+        console.warn(`Context binding "${binding.as}": "where" requires "entity" — skipping binding`);
+        continue;
+      }
+
+      const collectionName = binding.entity.split('/').pop();
+      const { items } = findAll(collectionName, {});
+      const outerCtx = { ...resource, ...resolved };
+
+      const matching = items.filter(item => {
+        try {
+          return jsonLogic.apply(binding.where, { ...outerCtx, ...item });
+        } catch (err) {
+          console.warn(`Context binding "${binding.as}": where filter failed — ${err.message}`);
+          return false;
+        }
+      });
+
+      resolved[binding.as] = matching;
+      continue;
+    }
+
+    if (!binding.from) continue;
 
     // Extract dot-path from from field (string or JSON Logic {var: "path"} form)
     const fromPath = typeof binding.from === 'string'

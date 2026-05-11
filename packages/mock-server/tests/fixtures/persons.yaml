@@ -39,7 +39,9 @@ PersonExample2:
   citizenshipInfo:
     status: permanent_resident
     immigrationInfo:
-      status: permanent_resident
+      status: lawful_permanent_resident
+      documentType: i_551
+      documentNumber: A123456789
   createdAt: "2024-01-01T00:00:00Z"
   updatedAt: "2024-01-01T00:00:00Z"
 

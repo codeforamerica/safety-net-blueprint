@@ -109,11 +109,24 @@ Evaluation strategy: **first-match-wins**
 
 ### application-submitted-data-exchange
 
+Evaluation strategy: **all-match**
+
+| # | Condition | Action | Fallback |
+|---|-----------|--------|----------|
+| 1 | "snap" in application.programs or "medicaid" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"fdsh_ssa","requestedAt":{"var":"this.time"}}}} | — |
+| 2 | "snap" in application.programs or "medicaid" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"ssa_ievs","requestedAt":{"var":"this.time"}}}} | — |
+| 3 | "snap" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"irs_ievs","requestedAt":{"var":"this.time"}}}} | — |
+| 4 | "snap" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"swica","requestedAt":{"var":"this.time"}}}} | — |
+| 5 | "snap" in application.programs | forEach: {"in":{"var":"members"},"as":"member","createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"uib","requestedAt":{"var":"this.time"}}}} | — |
+| 6 | "medicaid" in application.programs | forEach: {"in":{"var":"members"},"as":"member","filter":{"!=":[{"var":"member.citizenshipStatus"},"citizen"]},"createResource":{"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"},"serviceType":"fdsh_vlp","requestedAt":{"var":"this.time"},"metadata":{"intake":{"applicationId":{"var":"application.id"},"memberId":{"var":"member.id"}}}}}} | — |
+
+### vlp-inconclusive-initiate-save
+
 Evaluation strategy: **first-match-wins**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | true | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"application.id"},"requestedAt":{"var":"this.time"}}} | — |
+| 1 | this.data.serviceType = "fdsh_vlp" and this.data.result = "inconclusive" | createResource: {"entity":"data-exchange/service-calls","fields":{"applicationId":{"var":"this.data.metadata.intake.applicationId"},"memberId":{"var":"this.data.metadata.intake.memberId"},"serviceType":"save","requestedAt":{"var":"this.time"}}} | — |
 
 ### application-submitted-document-checklist
 
@@ -132,7 +145,7 @@ Evaluation strategy: **first-match-wins**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | true | appendToArray: {"entity":"intake/applications/members","idFrom":"this.data.memberId","field":"verifications","value":{"type":{"var":"this.data.verificationType"},"status":{"var":"this.data.result"},"source":{"var":"this.data.serviceType"},"checkedAt":{"var":"this.time"}}} | — |
+| 1 | true | appendToArray: {"entity":"intake/applications/members","idFrom":"this.data.metadata.intake.memberId","field":"verifications","value":{"type":{"var":"this.data.verificationType"},"status":{"var":"this.data.result"},"source":{"var":"this.data.serviceType"},"checkedAt":{"var":"this.time"}}} | — |
 
 ### fdsh-inconclusive-citizenship-document
 
@@ -140,7 +153,7 @@ Evaluation strategy: **first-match-wins**
 
 | # | Condition | Action | Fallback |
 |---|-----------|--------|----------|
-| 1 | this.data.serviceType = "fdsh" and this.data.result = "inconclusive" | createResource: {"entity":"intake/applications/documents","fields":{"applicationId":{"var":"this.data.applicationId"},"memberId":{"var":"this.data.memberId"},"category":"citizenship"}} | — |
+| 1 | this.data.serviceType = "fdsh" and this.data.result = "inconclusive" | createResource: {"entity":"intake/applications/documents","fields":{"applicationId":{"var":"this.data.metadata.intake.applicationId"},"memberId":{"var":"this.data.metadata.intake.memberId"},"category":"citizenship"}} | — |
 
 ### appointment-scheduled-link-to-interview
 

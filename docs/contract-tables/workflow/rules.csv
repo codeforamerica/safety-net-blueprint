@@ -1,0 +1,6 @@
+Rule Set,Order,Condition,Action,Fallback,Description
+task-creation,1,true,"{""createResource"":{""entity"":""workflow/tasks"",""fields"":{""taskType"":""application_review"",""name"":""Application review"",""status"":""pending"",""subjectType"":""application"",""subjectId"":{""var"":""this.subject""}}}}",,Create an intake review task when an application is submitted.
+assignment,1,"{""and"":[{""=="":[{""var"":""application.programs.length""},1]},{""in"":[""snap"",{""var"":""application.programs""}]}]}","{""assignToQueue"":""snap-intake""}","{""assignToQueue"":""general-intake""}",Route tasks linked to a SNAP-only application to the SNAP intake queue. Multi-program applications fall through to general intake.
+assignment,2,true,"{""assignToQueue"":""general-intake""}",,Route all other tasks to the general intake queue.
+priority,1,"{""=="":[{""var"":""this.isExpedited""},true]}","{""setPriority"":""expedited""}",,Set expedited priority when the task is flagged as expedited.
+priority,2,true,"{""setPriority"":""normal""}",,Set normal priority for all other tasks.
