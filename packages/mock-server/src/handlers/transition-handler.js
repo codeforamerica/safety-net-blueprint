@@ -14,7 +14,7 @@ import { executeTransition } from '../state-machine-runner.js';
  * @param {Array} [slaTypes] - SLA types from discoverSlaTypes()
  * @returns {Function} Express handler
  */
-export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, rules, slaTypes = []) {
+export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, rules, slaTypes = [], machine = null) {
   return (req, res) => {
     try {
       const resourceId = req.params[paramName];
@@ -31,7 +31,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
         ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
         : [];
 
-      const now = req.headers['x-mock-now'] || new Date().toISOString();
+      const now = new Date().toISOString();
       const traceparent = req.headers['traceparent'] || null;
 
       const { success, result, status, error } = executeTransition({
@@ -42,6 +42,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
         callerRoles,
         now,
         stateMachine,
+        machine,
         rules,
         slaTypes,
         requestBody: req.body || {},

@@ -19,6 +19,7 @@ import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
 import { registerStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
+import { registerTimerStub, listTimerStubs, removeTimerStub, clearTimerStubs, fireNextTimer } from '../src/timer-stub-engine.js';
 import { findById } from '../src/database-manager.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
@@ -128,7 +129,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
     app.use(cors({
       origin: '*',
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Caller-Id', 'X-Caller-Role', 'X-Mock-Now'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Caller-Id', 'X-Caller-Roles', 'X-Mock-Now', 'traceparent'],
       credentials: true
     }));
 
@@ -169,9 +170,9 @@ async function startMockServer(specDirs = null, seedDir = null) {
     });
     console.log('  POST   /platform/events - Inject external domain event (testing)');
 
-    // Mock stub registry endpoints — for pre-programming event responses in tests.
+    // Event stub registry — pre-program event responses for integration tests.
     // See packages/mock-server/mock-rules/README.md for full usage documentation.
-    app.post('/mock/stubs', (req, res) => {
+    app.post('/mock/stubs/events', (req, res) => {
       try {
         const stub = registerStub(req.body);
         res.status(201).json(stub);
@@ -179,23 +180,59 @@ async function startMockServer(specDirs = null, seedDir = null) {
         res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
       }
     });
-    app.get('/mock/stubs', (req, res) => {
+    app.get('/mock/stubs/events', (req, res) => {
       const items = listStubs();
       res.json({ items, total: items.length });
     });
-    app.delete('/mock/stubs', (req, res) => {
+    app.delete('/mock/stubs/events', (req, res) => {
       clearStubs();
       res.status(204).end();
     });
-    app.delete('/mock/stubs/:id', (req, res) => {
+    app.delete('/mock/stubs/events/:id', (req, res) => {
       const removed = removeStub(req.params.id);
       if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Stub "${req.params.id}" not found` });
       res.status(204).end();
     });
-    console.log('  POST   /mock/stubs - Register a stub response');
-    console.log('  GET    /mock/stubs - List active stubs');
-    console.log('  DELETE /mock/stubs/:id - Remove a stub');
-    console.log('  DELETE /mock/stubs - Clear all stubs');
+    console.log('  POST   /mock/stubs/events - Register an event stub');
+    console.log('  GET    /mock/stubs/events - List active event stubs');
+    console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
+    console.log('  DELETE /mock/stubs/events - Clear all event stubs');
+
+    // Timer stub registry — pre-program mock timestamps for onTimer testing.
+    app.post('/mock/stubs/timers', (req, res) => {
+      try {
+        const stub = registerTimerStub(req.body);
+        res.status(201).json(stub);
+      } catch (err) {
+        res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
+      }
+    });
+    app.get('/mock/stubs/timers', (req, res) => {
+      const items = listTimerStubs();
+      res.json({ items, total: items.length });
+    });
+    app.delete('/mock/stubs/timers', (req, res) => {
+      clearTimerStubs();
+      res.status(204).end();
+    });
+    app.delete('/mock/stubs/timers/:id', (req, res) => {
+      const removed = removeTimerStub(req.params.id);
+      if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Timer stub "${req.params.id}" not found` });
+      res.status(204).end();
+    });
+    // Fire the next timer stub — sweeps all resources for due onTimer entries
+    app.post('/mock/timers/fire', (req, res) => {
+      const result = fireNextTimer(allStateMachines, allRules, allSlaTypes);
+      if (!result) {
+        return res.status(422).json({ code: 'NO_TIMER_STUBS', message: 'No timer stubs registered. Use POST /mock/stubs/timers to register one.' });
+      }
+      res.json(result);
+    });
+    console.log('  POST   /mock/stubs/timers - Register a timer stub');
+    console.log('  GET    /mock/stubs/timers - List active timer stubs');
+    console.log('  DELETE /mock/stubs/timers/:id - Remove a timer stub');
+    console.log('  DELETE /mock/stubs/timers - Clear all timer stubs');
+    console.log('  POST   /mock/timers/fire - Fire next timer stub, sweep all resources');
 
     // Register event subscriptions (event-triggered rule sets)
     registerEventSubscriptions(allRules, allStateMachines, allSlaTypes, apiSpecs);

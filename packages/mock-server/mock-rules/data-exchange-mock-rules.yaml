@@ -28,6 +28,6 @@ ruleSets:
                   result: conclusive
                   metadata: {var: "this.data.metadata"}
         description: |
-          Check stub registry for a pre-programmed response (POST /mock/stubs before
+          Check stub registry for a pre-programmed response (POST /mock/stubs/events before
           triggering the flow). Falls back to a generic conclusive result if no stub
           matches, so scenarios work out of the box without pre-registration.

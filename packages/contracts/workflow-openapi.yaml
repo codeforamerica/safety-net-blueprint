@@ -783,12 +783,12 @@ components:
         - $ref: "#/components/schemas/TaskWritable"
         - type: object
           description: |
-            Payload to create a new task. At minimum, name and status are required.
+            Payload to create a new task. name is required; status is set by the state machine and
+            defaults to the initialState (pending) when omitted.
 
             Note: id, createdAt, and updatedAt are server-generated and will be returned in the response.
           required:
             - name
-            - status
           properties:
             slaInfo:
               type: array

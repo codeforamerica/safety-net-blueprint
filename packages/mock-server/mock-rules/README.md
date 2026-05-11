@@ -50,7 +50,7 @@ from the trigger event's data; `serviceCallId` is derived from the trigger's
 
 ```bash
 # Pre-program an inconclusive result for fdsh_ssa calls
-curl -s -X POST http://localhost:1080/mock/stubs \
+curl -s -X POST http://localhost:1080/mock/stubs/events \
   -H "Content-Type: application/json" \
   -d '{
     "on": "data_exchange.service_call.created",

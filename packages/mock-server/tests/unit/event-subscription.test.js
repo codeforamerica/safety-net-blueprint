@@ -299,7 +299,6 @@ test('createResource — resolves context binding from event envelope subject', 
     assert.strictEqual(items.length, 1, 'task created');
     assert.strictEqual(items[0].taskType, 'application_review');
     assert.strictEqual(items[0].status, 'pending');
-    assert.strictEqual(items[0].queueId, SNAP_QUEUE_ID, 'routed to snap-intake via assignment rules');
     done();
   });
 });

@@ -1,0 +1,9 @@
+Machine,Trigger Type,Name / Event,From,To,After,Relative To,Calendar,Guards,Steps
+Task,onCreate,,,pending,,,,,Evaluate `assignment-rule`; Evaluate `priority-rule`
+Task,onUpdate,"fields: isExpedited, programType, queueId",,,,,,,Evaluate `priority-rule`; Evaluate `assignment-rule`
+Task,onEvent,intake.application.submitted,,,,,,,POST `workflow/tasks`
+Task,onTimer,,pending,escalated,72h,createdAt,business,,Evaluate `priority-rule`; Emit `auto_escalated` event
+Task,onTimer,,in_progress,escalated,-48h,slaDeadline,calendar,,Evaluate `priority-rule`; Emit `auto_escalated` event
+Task,onTimer,,pending | in_progress | escalated,escalated,0h,slaDeadline,calendar,,Evaluate `priority-rule`; Emit `sla_breached` event
+Task,onTimer,,awaiting_client,cancelled,30d,blockedAt,calendar,,Set `cancelledAt` → current time; Emit `auto_cancelled` event
+Task,onTimer,,awaiting_verification,in_progress,7d,blockedAt,calendar,,Set `blockedAt` → nothing *(clears field)*; Emit `auto_resumed` event

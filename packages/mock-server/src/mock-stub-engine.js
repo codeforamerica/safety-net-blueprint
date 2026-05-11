@@ -6,7 +6,7 @@
  * (FIFO) and pops the first one whose `on` and `match` criteria fit the event.
  * If no stub matches, the caller falls back to its default behavior.
  *
- * Stubs are ephemeral — cleared on server restart or via DELETE /mock/stubs.
+ * Stubs are ephemeral — cleared on server restart or via DELETE /mock/stubs/events.
  *
  * See packages/mock-server/mock-rules/README.md for usage patterns.
  */

@@ -129,6 +129,14 @@ function parseCsv(text) {
 }
 
 // ---------------------------------------------------------------------------
+// Format detection
+// ---------------------------------------------------------------------------
+
+function isMachinesFormat(doc) {
+  return Array.isArray(doc.machines);
+}
+
+// ---------------------------------------------------------------------------
 // YAML file discovery
 // ---------------------------------------------------------------------------
 
@@ -335,6 +343,30 @@ function importGuards(csvData, existingDoc) {
 
 function importSla(csvData, existingDoc) {
   const doc = { ...existingDoc };
+
+  // New format: Machine | State | SLA Clock (3 columns with Machine header)
+  const hasNewFormat = csvData.headers.length >= 3 && csvData.headers[0] === 'Machine';
+  if (hasNewFormat && isMachinesFormat(doc)) {
+    const byMachine = new Map();
+    for (const row of csvData.data) {
+      const [machine, state, slaClock] = row;
+      if (!byMachine.has(machine)) byMachine.set(machine, []);
+      byMachine.get(machine).push({ state, slaClock });
+    }
+    doc.machines = (doc.machines || []).map(m => {
+      const rows = byMachine.get(m.object) || [];
+      if (rows.length === 0) return m;
+      const slaMap = new Map(rows.map(r => [r.state, r.slaClock]));
+      const states = (m.states || []).map(s => {
+        const slaClock = slaMap.get(s.id);
+        return slaClock ? { ...s, slaClock } : s;
+      });
+      return { ...m, states };
+    });
+    return doc;
+  }
+
+  // Old format: State | SLA Clock (2 columns)
   const existingStates = existingDoc.states || [];
   const states = [];
   for (const row of csvData.data) {
@@ -541,14 +573,263 @@ function importSlaTypes(csvData, existingDoc) {
   return doc;
 }
 
+/**
+ * Merge trigger metadata from triggers.csv back into machines[].triggers.
+ * Step bodies are preserved from the existing YAML — the CSV captures only a summary.
+ *
+ * Columns: Machine | Trigger Type | Name / Event | From | To | After | Relative To | Calendar | Guards | Steps
+ */
+function importTriggers(csvData, existingDoc) {
+  if (!isMachinesFormat(existingDoc)) {
+    console.warn('  triggers.csv found but YAML is not in machines format — skipping');
+    return existingDoc;
+  }
+  const doc = { ...existingDoc };
+  const I = { machine: 0, type: 1, nameEvent: 2, from: 3, to: 4, after: 5, relativeTo: 6, calendar: 7, guards: 8 };
+
+  const parseActors = val => val ? val.split('; ').map(a => a.trim()).filter(Boolean) : null;
+  const parseConditions = val => val ? val.split('; ').map(parseGuardItem).filter(Boolean) : null;
+
+  doc.machines = (doc.machines || []).map(machine => {
+    const rows = csvData.data.filter(r => r[I.machine] === machine.object);
+    if (rows.length === 0) return machine;
+
+    const triggers = { ...(machine.triggers || {}) };
+
+    // onCreate — update actors from Guards column
+    const onCreateRow = rows.find(r => r[I.type] === 'onCreate');
+    if (triggers.onCreate && onCreateRow) {
+      const actors = parseActors(onCreateRow[I.guards]);
+      if (actors !== null) triggers.onCreate = { ...triggers.onCreate, actors };
+    }
+
+    // onEvent — match by event name, update transition and guards.conditions
+    const onEventRows = rows.filter(r => r[I.type] === 'onEvent');
+    if (triggers.onEvent && onEventRows.length > 0) {
+      triggers.onEvent = triggers.onEvent.map(evt => {
+        const row = onEventRows.find(r => r[I.nameEvent] === evt.name);
+        if (!row) return evt;
+
+        const updated = { ...evt };
+        const conditions = parseConditions(row[I.guards]);
+        if (conditions !== null) {
+          updated.guards = { ...(evt.guards || {}), conditions };
+        }
+        if (row[I.from] || row[I.to]) {
+          updated.transition = { ...(evt.transition || {}) };
+          if (row[I.from]) updated.transition.from = parseFrom(row[I.from]);
+          if (row[I.to]) updated.transition.to = row[I.to];
+        }
+        return updated;
+      });
+    }
+
+    // onTimer — match by after + relativeTo, update transition and calendarType
+    const onTimerRows = rows.filter(r => r[I.type] === 'onTimer');
+    if (triggers.onTimer && onTimerRows.length > 0) {
+      triggers.onTimer = triggers.onTimer.map(timer => {
+        const row = onTimerRows.find(r =>
+          r[I.after] === String(timer.after) && r[I.relativeTo] === timer.relativeTo
+        );
+        if (!row) return timer;
+
+        const updated = { ...timer };
+        if (row[I.from] || row[I.to]) {
+          updated.transition = { ...(timer.transition || {}) };
+          if (row[I.from]) updated.transition.from = parseFrom(row[I.from]);
+          if (row[I.to]) updated.transition.to = row[I.to];
+        }
+        if (row[I.calendar]) updated.calendarType = row[I.calendar];
+        return updated;
+      });
+    }
+
+    return { ...machine, triggers };
+  });
+
+  return doc;
+}
+
+/**
+ * Merge operation metadata (guards, transition from/to) from operations.csv
+ * back into machines[].operations. Step bodies are preserved from the existing YAML.
+ *
+ * Columns: Machine | Name | From | To | Actors | Conditions | Steps
+ */
+function importOperations(csvData, existingDoc) {
+  if (!isMachinesFormat(existingDoc)) {
+    console.warn('  operations.csv found but YAML is not in machines format — skipping');
+    return existingDoc;
+  }
+  const doc = { ...existingDoc };
+  const I = { machine: 0, name: 1, from: 2, to: 3, actors: 4, conditions: 5 };
+
+  const parseActors = val => val ? val.split('; ').map(a => a.trim()).filter(Boolean) : null;
+  const parseConditions = val => val ? val.split('; ').map(parseGuardItem).filter(Boolean) : null;
+
+  doc.machines = (doc.machines || []).map(machine => {
+    const rows = csvData.data.filter(r => r[I.machine] === machine.object);
+    if (rows.length === 0) return machine;
+
+    const operations = (machine.operations || []).map(op => {
+      const existingFrom = Array.isArray(op.transition?.from)
+        ? op.transition.from.join(' | ')
+        : (op.transition?.from || '');
+      const row = rows.find(r =>
+        r[I.name] === op.name && (r[I.from] || '') === existingFrom
+      ) || rows.find(r => r[I.name] === op.name);
+      if (!row) return op;
+
+      const updated = { ...op };
+      const actors = parseActors(row[I.actors]);
+      const conditions = parseConditions(row[I.conditions]);
+      if (actors !== null || conditions !== null) {
+        updated.guards = { ...(op.guards || {}) };
+        if (actors !== null) updated.guards.actors = actors;
+        if (conditions !== null) updated.guards.conditions = conditions;
+      }
+      if (row[I.from] || row[I.to]) {
+        updated.transition = { ...(op.transition || {}) };
+        if (row[I.from]) updated.transition.from = parseFrom(row[I.from]);
+        if (row[I.to]) updated.transition.to = row[I.to];
+      }
+      return updated;
+    });
+
+    return { ...machine, operations };
+  });
+
+  return doc;
+}
+
+/**
+ * Merge rule evaluation strategy from rules.csv into doc.rules[].
+ * Condition bodies are preserved from the existing YAML since the CSV is a lossy summary.
+ *
+ * Columns: Rule ID | Evaluation | Conditions
+ */
+function importSmRules(csvData, existingDoc) {
+  if (!isMachinesFormat(existingDoc)) {
+    console.warn('  rules.csv found but YAML is not in machines format — skipping');
+    return existingDoc;
+  }
+  const doc = { ...existingDoc };
+  const rowById = new Map(csvData.data.map(r => [r[0], r]));
+
+  doc.rules = (doc.rules || []).map(rule => {
+    const row = rowById.get(rule.id);
+    if (!row) return rule;
+    const [, evaluation] = row;
+    const updated = { ...rule };
+    if (evaluation && ['first-match-wins', 'all-match'].includes(evaluation)) {
+      updated.evaluation = evaluation;
+    }
+    return updated;
+  });
+
+  return doc;
+}
+
+/**
+ * Merge handler metadata (legacy format) from handlers.csv back into machines[].handlers.
+ * Kept for backward compatibility with exports from the old vocabulary.
+ */
+function importHandlers(csvData, existingDoc) {
+  if (!isMachinesFormat(existingDoc)) {
+    console.warn('  handlers.csv found but YAML is not in machines format — skipping');
+    return existingDoc;
+  }
+  const doc = { ...existingDoc };
+  const I = { machine: 0, type: 1, nameEvent: 2, from: 3, to: 4, after: 5, relativeTo: 6, calendar: 7, actors: 8, conditions: 9 };
+
+  const parseActors = val => val ? val.split('; ').map(a => a.trim()).filter(Boolean) : null;
+  const parseConditions = val => val ? val.split('; ').map(parseGuardItem).filter(Boolean) : null;
+
+  doc.machines = (doc.machines || []).map(machine => {
+    const rows = csvData.data.filter(r => r[I.machine] === machine.object);
+    if (rows.length === 0) return machine;
+    const handlers = { ...(machine.handlers || {}) };
+
+    const onEventRows = rows.filter(r => r[I.type] === 'onEvent');
+    if (handlers.onEvent && onEventRows.length > 0) {
+      handlers.onEvent = handlers.onEvent.map(h => {
+        const row = onEventRows.find(r => r[I.nameEvent] === (h.event || h.name));
+        if (!row) return h;
+        const updated = { ...h };
+        const actors = parseActors(row[I.actors]);
+        const conditions = parseConditions(row[I.conditions]);
+        if (actors !== null || conditions !== null) {
+          updated.guards = { ...(h.guards || {}) };
+          if (actors !== null) updated.guards.actors = actors;
+          if (conditions !== null) updated.guards.conditions = conditions;
+        }
+        return updated;
+      });
+    }
+
+    const onTimerRows = rows.filter(r => r[I.type] === 'onTimer');
+    if (handlers.onTimer && onTimerRows.length > 0) {
+      handlers.onTimer = handlers.onTimer.map(h => {
+        const row = onTimerRows.find(r =>
+          r[I.after] === String(h.after) && r[I.relativeTo] === h.relativeTo
+        );
+        if (!row) return h;
+        const updated = { ...h };
+        if (row[I.from] || row[I.to]) {
+          updated.transition = { ...(h.transition || {}) };
+          if (row[I.from]) updated.transition.from = parseFrom(row[I.from]);
+          if (row[I.to]) updated.transition.to = row[I.to];
+        }
+        if (row[I.calendar]) updated.calendarType = row[I.calendar];
+        return updated;
+      });
+    }
+
+    return { ...machine, handlers };
+  });
+
+  return doc;
+}
+
+/**
+ * Merge action evaluation strategy (legacy format) from actions.csv into doc.actions[].
+ * Kept for backward compatibility with exports from the old vocabulary.
+ */
+function importActions(csvData, existingDoc) {
+  if (!isMachinesFormat(existingDoc)) {
+    console.warn('  actions.csv found but YAML is not in machines format — skipping');
+    return existingDoc;
+  }
+  const doc = { ...existingDoc };
+  const rowById = new Map(csvData.data.map(r => [r[0], r]));
+
+  doc.actions = (doc.actions || []).map(action => {
+    const row = rowById.get(action.id);
+    if (!row) return action;
+    const [, evaluation] = row;
+    const updated = { ...action };
+    if (evaluation && ['first-match-wins', 'all-match'].includes(evaluation)) {
+      updated.evaluation = evaluation;
+    }
+    return updated;
+  });
+
+  return doc;
+}
+
 // ---------------------------------------------------------------------------
 // Determine what CSV file maps to which contract type and section
 // ---------------------------------------------------------------------------
 
 function classifyCsvFile(csvFilename) {
   if (csvFilename === 'transitions.csv') return { schemaKey: 'state-machine-schema', section: 'transitions' };
+  if (csvFilename === 'triggers.csv') return { schemaKey: 'state-machine-schema', section: 'triggers' };
+  if (csvFilename === 'operations.csv') return { schemaKey: 'state-machine-schema', section: 'operations' };
+  if (csvFilename === 'handlers.csv') return { schemaKey: 'state-machine-schema', section: 'handlers' };
   if (csvFilename === 'guards.csv') return { schemaKey: 'state-machine-schema', section: 'guards' };
   if (csvFilename === 'sla.csv') return { schemaKey: 'state-machine-schema', section: 'sla' };
+  if (csvFilename === 'rules.csv') return { schemaKey: 'state-machine-schema', section: 'sm-rules' };
+  if (csvFilename === 'actions.csv') return { schemaKey: 'state-machine-schema', section: 'actions' };
   if (csvFilename === 'request-bodies.csv') return { schemaKey: 'state-machine-schema', section: 'request-bodies' };
   if (csvFilename.startsWith('rules-') && csvFilename.endsWith('.csv')) return { schemaKey: 'rules-schema', section: 'rules', ruleType: csvFilename.slice(6, -4) };
   if (csvFilename === 'metrics.csv') return { schemaKey: 'metrics-schema', section: 'metrics' };
@@ -758,11 +1039,26 @@ function main() {
         case 'transitions':
           doc = importTransitions(parsed, doc);
           break;
+        case 'triggers':
+          doc = importTriggers(parsed, doc);
+          break;
+        case 'operations':
+          doc = importOperations(parsed, doc);
+          break;
+        case 'handlers':
+          doc = importHandlers(parsed, doc);
+          break;
         case 'guards':
           doc = importGuards(parsed, doc);
           break;
         case 'sla':
           doc = importSla(parsed, doc);
+          break;
+        case 'sm-rules':
+          doc = importSmRules(parsed, doc);
+          break;
+        case 'actions':
+          doc = importActions(parsed, doc);
           break;
         case 'request-bodies':
           doc = importRequestBodies(parsed, doc);

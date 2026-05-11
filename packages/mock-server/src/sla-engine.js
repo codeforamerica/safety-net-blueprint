@@ -180,10 +180,6 @@ export function updateSlaInfo(resource, slaTypes, now, states = {}, resolvedEnti
       // Currently active or warning
       if (shouldPause) {
         entry.status = 'paused';
-        // _pausedSince uses the same clock as now (real or X-Mock-Now).
-        // To simulate a pause of N days, set X-Mock-Now at the pause step and
-        // again at resume (N days later) — both timestamps must come from the
-        // same clock so the duration calculation is correct.
         entry._pausedSince = now;
         continue;
       }
