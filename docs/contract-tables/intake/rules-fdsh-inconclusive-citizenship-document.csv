@@ -1,6 +1,0 @@
-Order,Condition,Action,Fallback,Description
-1,"{""and"":[{""=="":[{""var"":""this.data.serviceType""},""fdsh""]},{""=="":[{""var"":""this.data.result""},""inconclusive""]},{""=="":[{""var"":""this.data.metadata.intake.verificationId""},null]}]}","{""createResource"":{""entity"":""intake/applications/verifications"",""fields"":{""applicationId"":{""var"":""this.data.applicationId""},""memberId"":{""var"":""this.data.memberId""},""category"":""citizenship"",""evidence"":[],""documentRequests"":[]}}}",,"Fallback: create a citizenship Verification when FDSH returns inconclusive and no
-pre-existing verificationId was passed in metadata. Once the data exchange contract
-carries intake.verificationId (context pass-through pattern), this rule becomes inactive
-because the pre-created verification is updated by verification-result-write-back instead.
-"

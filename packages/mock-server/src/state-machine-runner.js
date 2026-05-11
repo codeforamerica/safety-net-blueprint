@@ -5,7 +5,7 @@
  */
 
 import { findById, update, create } from './database-manager.js';
-import { findTransition, evaluateGuards, applyEffects } from './state-machine-engine.js';
+import { findTransition, findOperation, evaluateGuards, applyEffects, applySteps } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { processRuleEvaluations } from './handlers/rule-evaluation.js';
 import { emitEvent } from './emit-event.js';
@@ -35,6 +35,7 @@ export function executeTransition({
   callerRoles,
   now,
   stateMachine,
+  machine = null,
   rules,
   slaTypes = [],
   requestBody = {},
@@ -47,17 +48,39 @@ export function executeTransition({
     return { success: false, status: 404, error: `Resource not found: ${resourceId}` };
   }
 
-  const { transition, error } = findTransition(stateMachine, trigger, resource);
-  if (!transition) {
-    return { success: false, status: 409, error };
+  // New format: machine entry has operations; old format: stateMachine has transitions
+  const isNewFormat = machine && Array.isArray(machine.operations);
+
+  let actors, guardConditions, steps, transitionTo;
+
+  if (isNewFormat) {
+    const { operation, error } = findOperation(machine, trigger, resource);
+    if (!operation) {
+      return { success: false, status: 409, error };
+    }
+    actors = operation.guards?.actors || [];
+    guardConditions = operation.guards?.conditions || [];
+    steps = operation.then || [];
+    transitionTo = operation.transition?.to ?? null;
+  } else {
+    const { transition, error } = findTransition(stateMachine, trigger, resource);
+    if (!transition) {
+      return { success: false, status: 409, error };
+    }
+    actors = transition.actors || [];
+    guardConditions = transition.guards || [];
+    steps = null;
+    transitionTo = transition.to ?? null;
+    // store for applyEffects below
+    var legacyEffects = transition.effects;
   }
 
-  if (transition.actors?.length > 0) {
-    if (!callerRoles.some(r => transition.actors.includes(r))) {
+  if (actors.length > 0) {
+    if (!callerRoles.some(r => actors.includes(r))) {
       return {
         success: false,
         status: 403,
-        error: `Transition "${trigger}" requires one of: ${transition.actors.join(', ')}`
+        error: `Transition "${trigger}" requires one of: ${actors.join(', ')}`
       };
     }
   }
@@ -70,7 +93,7 @@ export function executeTransition({
   };
 
   const guardsMap = Object.fromEntries((stateMachine.guards || []).map(g => [g.id, g]));
-  const guardResult = evaluateGuards(transition.guards, guardsMap, resource, context);
+  const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
   if (!guardResult.pass) {
     return {
       success: false,
@@ -82,21 +105,19 @@ export function executeTransition({
   const updated = { ...resource };
   if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
 
-  const { pendingCreates, pendingRuleEvaluations, pendingEvents } = applyEffects(
-    transition.effects,
-    updated,
-    context
-  );
+  const { pendingCreates, pendingOperations, pendingAppends, pendingRuleEvaluations, pendingEvents } = isNewFormat
+    ? applySteps(steps, updated, context)
+    : { ...applyEffects(legacyEffects, updated, context), pendingOperations: [], pendingAppends: [] };
 
-  if (transition.to != null && transition.to !== '') {
-    updated.status = transition.to;
+  if (transitionTo != null && transitionTo !== '') {
+    updated.status = transitionTo;
   }
 
   if (slaTypes.length > 0 && updated.slaInfo?.length > 0) {
     updateSlaInfo(updated, slaTypes, timestamp, stateMachine.states || {});
   }
 
-  processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine.domain);
+  processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine.domain, stateMachine.rules, context);
 
   const diff = {};
   for (const [key, value] of Object.entries(updated)) {
@@ -110,7 +131,7 @@ export function executeTransition({
   }
 
   const domain = stateMachine.domain;
-  const object = stateMachine.object.toLowerCase();
+  const object = (machine?.object || stateMachine.object).toLowerCase();
   for (const event of pendingEvents) {
     try {
       emitEvent({

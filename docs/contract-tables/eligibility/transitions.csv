@@ -1,9 +1,0 @@
-Object,From,To,Trigger,On,After,RelativeTo,CalendarType,Actors,Guards,Effects
-Determination,pending,,flag-expedited,,,,,system,callerIsSystem,set expeditedFlagged = true; event
-Determination,pending,in_progress,begin-evaluation,,,,,system,callerIsSystem,evaluate-rules
-Determination,in_progress,,evaluate-final,,,,,system,callerIsSystem,evaluate-rules
-Determination,in_progress,completed,complete,,,,,system,callerIsSystem,set completedAt = $now; event
-Determination,pending | in_progress,withdrawn,withdraw,,,,,system,callerIsSystem,set withdrawnAt = $now
-Decision,pending,approved,approve,,,,,system,callerIsSystem,set decidedAt = $now; set path = $request.path; event
-Decision,pending,denied,deny,,,,,system,callerIsSystem,set decidedAt = $now; set path = $request.path; set denialReasonCode = $request.denialReasonCode; event
-Decision,pending,ineligible,mark-ineligible,,,,,system,callerIsSystem,set decidedAt = $now; set path = $request.path; set denialReasonCode = $request.denialReasonCode; event

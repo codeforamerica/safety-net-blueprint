@@ -1,9 +1,0 @@
-State,SLA Clock
-pending,running
-in_progress,running
-completed,stopped
-escalated,running
-cancelled,stopped
-awaiting_client,paused
-awaiting_verification,paused
-pending_review,running

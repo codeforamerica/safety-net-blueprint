@@ -1,0 +1,8 @@
+Machine,State,SLA Clock
+Application,draft,stopped
+Application,submitted,running
+Application,under_review,running
+Application,withdrawn,stopped
+Application,closed,stopped
+ApplicationDocument,requested,stopped
+ApplicationDocument,verified,stopped

@@ -1,6 +1,5 @@
 /**
- * Unit tests for rule-evaluation — specifically the context enrichment path
- * (resolveContextEntities + processRuleEvaluations with per-ruleSet context bindings).
+ * Unit tests for rule-evaluation — context binding and inline rule evaluation.
  */
 
 import { test } from 'node:test';
@@ -12,24 +11,17 @@ import { processRuleEvaluations } from '../../src/handlers/rule-evaluation.js';
 // Helpers
 // =============================================================================
 
-function makeRules(contextBindings, condition, action) {
-  return [
-    {
-      domain: 'workflow',
-      ruleSets: [
-        {
-          id: 'test-ruleset',
-          ruleType: 'assignment',
-          evaluation: 'first-match-wins',
-          context: contextBindings,
-          rules: [
-            { id: 'rule-1', order: 1, condition, action },
-            { id: 'catch-all', order: 2, condition: true, action: { assignToQueue: 'general-intake' } }
-          ]
-        }
-      ]
-    }
-  ];
+function makeContext(resource) {
+  return {
+    caller: { id: 'system', roles: ['system'] },
+    object: { ...resource },
+    request: {},
+    now: new Date().toISOString()
+  };
+}
+
+function makeInlineRule({ id = 'test-rule', evaluation = 'first-match-wins', context: ctx = [], conditions }) {
+  return [{ id, evaluation, context: ctx, conditions }];
 }
 
 function seedQueues() {
@@ -45,19 +37,24 @@ function seedQueues() {
 
 test('processRuleEvaluations — context binding resolves entity and makes fields available', () => {
   clearAll('applications');
-  clearAll('tasks');
   seedQueues();
 
   insertResource('applications', { id: 'app-1', programs: ['snap'] });
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
-  const rules = makeRules(
-    [{ as: 'application', entity: 'intake/applications', from: 'subjectId' }],
-    { in: ['snap', { var: 'application.programs' }] },
-    { assignToQueue: 'snap-intake' }
-  );
+  const inlineRules = makeInlineRule({
+    context: [
+      { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } },
+      { snapQueue: { from: 'workflow/queues', where: { name: 'snap-intake' }, optional: true } }
+    ],
+    conditions: [{
+      id: 'snap-rule', order: 1,
+      condition: { in: ['snap', { var: '$application.programs' }] },
+      then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
+    }]
+  });
 
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
   assert.strictEqual(task.queueId, 'q-snap');
 });
 
@@ -67,43 +64,48 @@ test('processRuleEvaluations — context binding resolves entity and makes field
 
 test('processRuleEvaluations — entity not found skips rule set entirely', () => {
   clearAll('applications');
-  clearAll('tasks');
   seedQueues();
 
-  // Application with this ID does not exist in the DB
   const task = { id: 'task-1', subjectId: 'nonexistent', queueId: null };
 
-  const rules = makeRules(
-    [{ as: 'application', entity: 'intake/applications', from: 'subjectId' }],
-    { in: ['snap', { var: 'application.programs' }] },
-    { assignToQueue: 'snap-intake' }
-  );
+  const inlineRules = makeInlineRule({
+    context: [
+      { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } }
+    ],
+    conditions: [{
+      id: 'snap-rule', order: 1,
+      condition: { in: ['snap', { var: '$application.programs' }] },
+      then: [{ set: { field: 'queueId', value: 'q-snap' } }]
+    }]
+  });
 
-  // Rule set skipped — queueId stays null (no fallback fires)
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
-  assert.strictEqual(task.queueId, null);
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  assert.strictEqual(task.queueId, null); // required binding failed — rule skipped
 });
 
 // =============================================================================
-// Context binding — warning: from field missing → skip binding, rule set continues
+// Context binding — warning: from field missing → required binding fails, skip rule
 // =============================================================================
 
 test('processRuleEvaluations — missing from field value skips rule set entirely', () => {
   clearAll('applications');
-  clearAll('tasks');
   seedQueues();
 
   const task = { id: 'task-1', queueId: null }; // no subjectId
 
-  const rules = makeRules(
-    [{ as: 'application', entity: 'intake/applications', from: 'subjectId' }],
-    { in: ['snap', { var: 'application.programs' }] },
-    { assignToQueue: 'snap-intake' }
-  );
+  const inlineRules = makeInlineRule({
+    context: [
+      { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } }
+    ],
+    conditions: [{
+      id: 'snap-rule', order: 1,
+      condition: { in: ['snap', { var: '$application.programs' }] },
+      then: [{ set: { field: 'queueId', value: 'q-snap' } }]
+    }]
+  });
 
-  // from path resolves to no value — error — rule set skipped — queueId stays null
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
-  assert.strictEqual(task.queueId, null);
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  assert.strictEqual(task.queueId, null); // required binding failed — rule skipped
 });
 
 // =============================================================================
@@ -112,229 +114,178 @@ test('processRuleEvaluations — missing from field value skips rule set entirel
 
 test('processRuleEvaluations — optional binding skipped when from field missing, rule set continues', () => {
   clearAll('applications');
-  clearAll('tasks');
   seedQueues();
 
   const task = { id: 'task-1', queueId: null }; // no subjectId
 
-  const rules = makeRules(
-    [{ as: 'application', entity: 'intake/applications', from: 'subjectId', optional: true }],
-    { in: ['snap', { var: 'application.programs' }] },
-    { assignToQueue: 'snap-intake' }
-  );
+  const inlineRules = makeInlineRule({
+    context: [
+      { application: { from: 'intake/applications', where: { id: '$object.subjectId' }, optional: true } }
+    ],
+    conditions: [
+      {
+        id: 'snap-rule', order: 1,
+        condition: { in: ['snap', { var: '$application.programs' }] },
+        then: [{ set: { field: 'queueId', value: 'q-snap' } }]
+      },
+      {
+        id: 'catch-all', order: 2,
+        condition: true,
+        then: [{ set: { field: 'queueId', value: 'q-general' } }]
+      }
+    ]
+  });
 
-  // binding skipped (optional) — snap condition fails (no application) — catch-all fires
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
+  // binding skipped (optional) — snap condition fails (application null) — catch-all fires
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
   assert.strictEqual(task.queueId, 'q-general');
 });
 
 test('processRuleEvaluations — optional binding skipped when entity not found, rule set continues', () => {
   clearAll('applications');
-  clearAll('tasks');
   seedQueues();
 
   const task = { id: 'task-1', subjectId: 'nonexistent', queueId: null };
 
-  const rules = makeRules(
-    [{ as: 'application', entity: 'intake/applications', from: 'subjectId', optional: true }],
-    { in: ['snap', { var: 'application.programs' }] },
-    { assignToQueue: 'snap-intake' }
-  );
+  const inlineRules = makeInlineRule({
+    context: [
+      { application: { from: 'intake/applications', where: { id: '$object.subjectId' }, optional: true } }
+    ],
+    conditions: [
+      {
+        id: 'snap-rule', order: 1,
+        condition: { in: ['snap', { var: '$application.programs' }] },
+        then: [{ set: { field: 'queueId', value: 'q-snap' } }]
+      },
+      {
+        id: 'catch-all', order: 2,
+        condition: true,
+        then: [{ set: { field: 'queueId', value: 'q-general' } }]
+      }
+    ]
+  });
 
-  // binding skipped (optional) — snap condition fails (no application) — catch-all fires
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
+  // binding skipped (optional) — snap condition fails (application null) — catch-all fires
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
   assert.strictEqual(task.queueId, 'q-general');
 });
 
 // =============================================================================
-// Chaining — from path references a previously resolved entity
+// Chaining — where clause references a previously resolved entity field
 // =============================================================================
 
 test('processRuleEvaluations — chained binding resolves entity via prior resolved entity field', () => {
   clearAll('applications');
   clearAll('cases');
-  clearAll('tasks');
   seedQueues();
 
   insertResource('applications', { id: 'app-1', programs: ['snap'], caseId: 'case-99' });
   insertResource('cases', { id: 'case-99', county: 'alameda' });
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
-  const rules = makeRules(
-    [
-      { as: 'application', entity: 'intake/applications', from: 'subjectId' },
-      { as: 'case', entity: 'case-management/cases', from: 'application.caseId' }
+  const inlineRules = makeInlineRule({
+    context: [
+      { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } },
+      { linkedCase: { from: 'case-management/cases', where: { id: '$application.caseId' } } }
     ],
-    { '==': [{ var: 'case.county' }, 'alameda'] },
-    { assignToQueue: 'alameda-intake' }
-  );
+    conditions: [{
+      id: 'alameda-rule', order: 1,
+      condition: { '==': [{ var: '$linkedCase.county' }, 'alameda'] },
+      then: [{ set: { field: 'queueId', value: 'q-alameda' } }]
+    }]
+  });
 
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
   assert.strictEqual(task.queueId, 'q-alameda');
 });
 
 // =============================================================================
-// "this" alias — calling resource fields accessible via this.*
+// $object alias — calling resource fields accessible via $object.* in conditions
 // =============================================================================
 
-test('processRuleEvaluations — calling resource fields accessible as "this.*" in conditions', () => {
-  clearAll('tasks');
-  seedQueues();
-
+test('processRuleEvaluations — calling resource fields accessible as "$object.*" in conditions', () => {
   const task = { id: 'task-1', isExpedited: false, queueId: null };
 
-  const rules = [
-    {
-      domain: 'workflow',
-      ruleSets: [
-        {
-          id: 'test-priority',
-          ruleType: 'assignment',
-          evaluation: 'first-match-wins',
-          rules: [
-            {
-              id: 'expedited',
-              order: 1,
-              condition: { '==': [{ var: 'this.isExpedited' }, true] },
-              action: { assignToQueue: 'snap-intake' }
-            },
-            { id: 'catch-all', order: 2, condition: true, action: { assignToQueue: 'general-intake' } }
-          ]
-        }
-      ]
-    }
-  ];
+  const inlineRules = makeInlineRule({
+    conditions: [
+      {
+        id: 'expedited', order: 1,
+        condition: { '==': [{ var: '$object.isExpedited' }, true] },
+        then: [{ set: { field: 'queueId', value: 'q-snap' } }]
+      },
+      {
+        id: 'catch-all', order: 2,
+        condition: true,
+        then: [{ set: { field: 'queueId', value: 'q-general' } }]
+      }
+    ]
+  });
 
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
   assert.strictEqual(task.queueId, 'q-general'); // isExpedited false → catch-all
 
   task.isExpedited = true;
   task.queueId = null;
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
-  assert.strictEqual(task.queueId, 'q-snap'); // isExpedited true → snap-intake
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  assert.strictEqual(task.queueId, 'q-snap'); // isExpedited true → matches first condition
 });
 
 // =============================================================================
-// JSON Logic from: form — {var: "path"} accepted alongside bare string
+// Non-id where clause — entity looked up by arbitrary field
 // =============================================================================
 
-test('processRuleEvaluations — JSON Logic {var: "..."} from: resolves entity correctly', () => {
-  clearAll('applications');
-  clearAll('tasks');
+test('processRuleEvaluations — non-id where clause resolves entity by named field', () => {
   seedQueues();
 
-  insertResource('applications', { id: 'app-1', programs: ['snap'] });
-  const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
+  const task = { id: 'task-1', queueId: null };
 
-  const rules = makeRules(
-    [{ as: 'application', entity: 'intake/applications', from: { var: 'subjectId' } }],
-    { in: ['snap', { var: 'application.programs' }] },
-    { assignToQueue: 'snap-intake' }
-  );
+  const inlineRules = makeInlineRule({
+    context: [
+      { snapQueue: { from: 'workflow/queues', where: { name: 'snap-intake' }, optional: true } }
+    ],
+    conditions: [{
+      id: 'set-queue', order: 1,
+      condition: true,
+      then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
+    }]
+  });
 
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
   assert.strictEqual(task.queueId, 'q-snap');
 });
 
 // =============================================================================
-// Collection binding — entity absent, from resolves to a value bound directly
+// all-match evaluation — all matching conditions fire
 // =============================================================================
 
-test('processRuleEvaluations — collection binding binds array value without entity lookup', () => {
-  clearAll('tasks');
-  seedQueues();
-
-  // members is an embedded array on the task — no separate entity to fetch
-  const task = {
-    id: 'task-1',
-    members: [{ id: 'm-1', programs: ['snap'] }, { id: 'm-2', programs: ['medicaid'] }],
-    queueId: null
-  };
-
-  const rules = [
-    {
-      domain: 'workflow',
-      ruleSets: [
-        {
-          id: 'test-collection-binding',
-          ruleType: 'assignment',
-          evaluation: 'first-match-wins',
-          context: [{ as: 'members', from: { var: 'members' } }],
-          rules: [
-            {
-              id: 'has-snap-member',
-              order: 1,
-              condition: { some: [{ var: 'members' }, { in: ['snap', { var: 'programs' }] }] },
-              action: { assignToQueue: 'snap-intake' }
-            },
-            { id: 'catch-all', order: 2, condition: true, action: { assignToQueue: 'general-intake' } }
-          ]
-        }
-      ]
-    }
-  ];
-
-  processRuleEvaluations([{ ruleType: 'assignment' }], task, rules, 'workflow');
-  assert.strictEqual(task.queueId, 'q-snap');
-});
-
-// =============================================================================
-// all-match evaluation — all matching rules fire
-// =============================================================================
-
-test('processRuleEvaluations — all-match fires all matching rules', () => {
-  clearAll('tasks');
-
-  // Both snap and medicaid rules match. With all-match, both fire in order —
-  // rule 2 overwrites rule 1 so final priority is 'high'.
+test('processRuleEvaluations — all-match fires all matching conditions', () => {
   const task = { id: 'task-1', programs: ['snap', 'medicaid'], priority: null };
 
-  const rules = [
-    {
-      domain: 'workflow',
-      ruleSets: [
-        {
-          id: 'test-all-match',
-          ruleType: 'priority',
-          evaluation: 'all-match',
-          rules: [
-            { id: 'snap-rule', order: 1, condition: { in: ['snap', { var: 'this.programs' }] }, action: { setPriority: 'expedited' } },
-            { id: 'medicaid-rule', order: 2, condition: { in: ['medicaid', { var: 'this.programs' }] }, action: { setPriority: 'high' } }
-          ]
-        }
-      ]
-    }
-  ];
+  const inlineRules = makeInlineRule({
+    evaluation: 'all-match',
+    conditions: [
+      { id: 'snap-rule', order: 1, condition: { in: ['snap', { var: '$object.programs' }] }, then: [{ set: { field: 'priority', value: 'expedited' } }] },
+      { id: 'medicaid-rule', order: 2, condition: { in: ['medicaid', { var: '$object.programs' }] }, then: [{ set: { field: 'priority', value: 'high' } }] }
+    ]
+  });
 
-  processRuleEvaluations([{ ruleType: 'priority' }], task, rules, 'workflow');
-  // Both rules fired: expedited then high → final value is 'high'
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  // Both conditions fired: expedited then high → final value is 'high'
   assert.strictEqual(task.priority, 'high');
 });
 
-test('processRuleEvaluations — first-match-wins stops at first matching rule', () => {
-  clearAll('tasks');
-
-  // Same rules as above, but first-match-wins: only rule 1 fires → 'expedited'
+test('processRuleEvaluations — first-match-wins stops at first matching condition', () => {
   const task = { id: 'task-1', programs: ['snap', 'medicaid'], priority: null };
 
-  const rules = [
-    {
-      domain: 'workflow',
-      ruleSets: [
-        {
-          id: 'test-first-match',
-          ruleType: 'priority',
-          evaluation: 'first-match-wins',
-          rules: [
-            { id: 'snap-rule', order: 1, condition: { in: ['snap', { var: 'this.programs' }] }, action: { setPriority: 'expedited' } },
-            { id: 'medicaid-rule', order: 2, condition: { in: ['medicaid', { var: 'this.programs' }] }, action: { setPriority: 'high' } }
-          ]
-        }
-      ]
-    }
-  ];
+  const inlineRules = makeInlineRule({
+    evaluation: 'first-match-wins',
+    conditions: [
+      { id: 'snap-rule', order: 1, condition: { in: ['snap', { var: '$object.programs' }] }, then: [{ set: { field: 'priority', value: 'expedited' } }] },
+      { id: 'medicaid-rule', order: 2, condition: { in: ['medicaid', { var: '$object.programs' }] }, then: [{ set: { field: 'priority', value: 'high' } }] }
+    ]
+  });
 
-  processRuleEvaluations([{ ruleType: 'priority' }], task, rules, 'workflow');
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
   // Only snap-rule fired → 'expedited'
   assert.strictEqual(task.priority, 'expedited');
 });

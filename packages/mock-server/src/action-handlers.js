@@ -1,25 +1,20 @@
 /**
- * Action handlers — merged registry of all platform and domain-specific actions.
+ * Action handlers — platform action registry.
  *
- * Platform actions (createResource, triggerTransition) are generic and available
- * to all domain rule sets. Domain-specific actions (assignToQueue, setPriority)
- * are co-located here since all domains share the same rule evaluation pipeline.
- *
- * To add domain-specific actions: create a <domain>-action-handlers.js file,
- * export a Map, and merge it into actionRegistry below.
+ * Platform actions (createResource, triggerTransition, forEach, applyStub) are generic
+ * and available to all domain rule sets. Domain-specific behavior is now expressed
+ * via `set:` steps in inline state machine rules rather than custom action handlers.
  */
 
 import { platformActionRegistry } from './platform-action-handlers.js';
-import { workflowActionRegistry } from './workflow-action-handlers.js';
 
 const actionRegistry = new Map([
   ...platformActionRegistry,
-  ...workflowActionRegistry
 ]);
 
 /**
  * Execute all actions in an action object against a resource.
- * @param {Object} action - Action object (e.g., { assignToQueue: "snap-intake", setPriority: "high" })
+ * @param {Object} action - Action object (e.g., { createResource: { ... } })
  * @param {Object} resource - Resource to mutate
  * @param {Object} deps - Dependencies for handlers that need lookups or creation
  * @param {Object|null} fallbackAction - Fallback action if primary fails

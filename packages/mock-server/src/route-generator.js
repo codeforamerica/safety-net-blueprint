@@ -217,8 +217,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, rules, 
           obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === collectionName;
       });
       const smForEndpoint = smEntry?.stateMachine || null;
+      const machineForEndpoint = smEntry?.machine || null;
       const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
-      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, rules, domainSlaTypes);
+      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, rules, domainSlaTypes, machineForEndpoint);
       description = 'Create resource';
     } else if (isSubResourceEndpoint(endpoint.path)) {
       // Sub-resource endpoint: /resources/{parentId}/sub or /resources/{parentId}/sub/{subId}
@@ -304,7 +305,8 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, rules, 
           obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === collectionName;
       });
       const smForEndpoint = smEntry?.stateMachine || null;
-      handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, rules);
+      const machineForEndpoint = smEntry?.machine || null;
+      handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, rules, [], machineForEndpoint);
       description = 'Update resource';
     } else if (method === 'delete' && isItemEndpoint(endpoint.path)) {
       // DELETE /resources/{id} - Delete
@@ -416,18 +418,41 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules =
 
     console.log(`  Registering state machine routes for ${sm.domain}/${sm.object}...`);
 
-    for (const transition of sm.stateMachine.transitions) {
-      const rpcPath = `${basePath}/${transition.trigger}`;
+    // New format: operations on the machine entry; old format: transitions on stateMachine
+    const isNewFormat = sm.machine && Array.isArray(sm.machine.operations);
+    const entries = isNewFormat
+      ? sm.machine.operations.map(op => ({
+          name: op.name,
+          from: op.transition?.from,
+          to: op.transition?.to
+        }))
+      : (sm.stateMachine.transitions || []).map(t => ({
+          name: t.trigger,
+          from: t.from,
+          to: t.to
+        }));
+
+    // Deduplicate by name — same operation name may appear with different from-states
+    // (e.g., escalate from pending vs in_progress). Register the route once; the runner
+    // iterates all matching operations to find the right one for the current state.
+    const seenNames = new Set();
+
+    for (const entry of entries) {
+      if (seenNames.has(entry.name)) continue;
+      seenNames.add(entry.name);
+
+      const rpcPath = `${basePath}/${entry.name}`;
       const expressPath = convertPathFormat(rpcPath);
 
       const domainSlaTypes = findSlaTypes(slaTypes, sm.domain);
       const handler = createTransitionHandler(
         collectionName,
         sm.stateMachine,
-        transition.trigger,
+        entry.name,
         paramName,
         rules,
-        domainSlaTypes
+        domainSlaTypes,
+        isNewFormat ? sm.machine : null
       );
 
       app.post(expressPath, handler);
@@ -436,11 +461,11 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules =
         method: 'POST',
         path: rpcPath,
         expressPath,
-        description: `${transition.trigger}: ${transition.from} → ${transition.to}`,
-        trigger: transition.trigger
+        description: `${entry.name}: ${entry.from} → ${entry.to ?? '(in-place)'}`,
+        trigger: entry.name
       });
 
-      console.log(`    POST   ${expressPath} - ${transition.trigger}: ${transition.from} → ${transition.to}`);
+      console.log(`    POST   ${expressPath} - ${entry.name}: ${entry.from} → ${entry.to ?? '(in-place)'}`);
     }
   }
 

@@ -4,22 +4,29 @@
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 title: State Machine
-description: Schema for behavioral contract state machine YAML files.
+description: >
+  Schema for behavioral contract state machine YAML files.
+  Each file covers one domain and may contain one or more machines.
+  Domain-level guards and rules are shared across all machines in the file.
 type: object
 required:
   - version
   - domain
   - apiSpec
+  - machines
 additionalProperties: false
 
 properties:
+  $schema:
+    type: string
+
   version:
     type: string
     description: Schema version for change tracking.
 
   domain:
     type: string
-    description: Domain namespace (e.g., workflow).
+    description: Domain namespace (e.g., workflow, eligibility).
 
   apiSpec:
     type: string
@@ -27,71 +34,42 @@ properties:
 
   machines:
     type: array
-    description: >
-      State machines for this domain. Use when a domain governs multiple entity
-      types (e.g., Determination and Decision). Each entry is a complete machine
-      for one entity type.
+    description: State machines for this domain, one per governed entity type.
     minItems: 1
     items:
       $ref: "#/$defs/Machine"
 
-  object:
-    type: string
-    description: The governed entity type (e.g., Task). Used for single-machine files.
-
-  states:
-    type: array
-    description: List of states with their configuration.
-    minItems: 1
-    items:
-      $ref: "#/$defs/State"
-
-  initialState:
-    type: string
-    description: The state an object starts in after creation.
-
   guards:
     type: array
-    description: Guard definitions, referenced by id in transitions.
+    description: >
+      Named boolean conditions shared across all machines in the domain.
+      Referenced by id in guards.conditions lists.
     items:
       $ref: "#/$defs/Guard"
 
-  onCreate:
-    $ref: "#/$defs/OnCreate"
-
-  onUpdate:
-    $ref: "#/$defs/OnUpdate"
-
-  transitions:
+  rules:
     type: array
-    description: Ordered list of valid state transitions.
-    minItems: 1
+    description: >
+      Named condition-to-consequence procedures shared across triggers and operations.
+      Called with evaluate: rule-id when logic touches multiple resources or applies
+      in several places. Rules that rename the governed entity as context can apply
+      to different object types.
     items:
-      $ref: "#/$defs/Transition"
-
-  requestBodies:
-    type: array
-    description: Request body schemas, one per trigger.
-    items:
-      $ref: "#/$defs/RequestBody"
-
-  audit:
-    $ref: "#/$defs/Audit"
+      $ref: "#/$defs/Rule"
 
 $defs:
   Machine:
     type: object
-    description: A state machine for one governed entity type within a domain.
+    description: A state machine for one governed entity type.
     required:
       - object
       - states
       - initialState
-      - transitions
     additionalProperties: false
     properties:
       object:
         type: string
-        description: The governed entity type (e.g., Determination).
+        description: The governed entity type (e.g., Task, Determination).
       states:
         type: array
         minItems: 1
@@ -100,25 +78,13 @@ $defs:
       initialState:
         type: string
         description: The state an object starts in after creation.
-      guards:
+      triggers:
+        $ref: "#/$defs/Triggers"
+      operations:
         type: array
+        description: Actor- or system-triggered operations. Each becomes a POST /{resource}/{id}/{name} endpoint.
         items:
-          $ref: "#/$defs/Guard"
-      onCreate:
-        $ref: "#/$defs/OnCreate"
-      onUpdate:
-        $ref: "#/$defs/OnUpdate"
-      transitions:
-        type: array
-        minItems: 1
-        items:
-          $ref: "#/$defs/Transition"
-      requestBodies:
-        type: array
-        items:
-          $ref: "#/$defs/RequestBody"
-      audit:
-        $ref: "#/$defs/Audit"
+          $ref: "#/$defs/Operation"
 
   State:
     type: object
@@ -126,6 +92,7 @@ $defs:
     required:
       - id
       - slaClock
+    additionalProperties: true
     properties:
       id:
         type: string
@@ -136,83 +103,156 @@ $defs:
           - running
           - stopped
           - paused
-        description: SLA clock behavior while in this state.
-    additionalProperties: true
+        description: SLA clock behavior while the object is in this state.
 
-  Guard:
+  Triggers:
     type: object
-    description: A named condition that must be true for a transition to fire.
-    required:
-      - id
-      - field
-      - operator
-    properties:
-      id:
-        type: string
-        description: Guard identifier, referenced by name in transitions.
-      field:
-        type: string
-        description: Field or variable reference to evaluate.
-      operator:
-        type: string
-        enum:
-          - is_null
-          - is_not_null
-          - equals
-          - not_equals
-          - contains_all
-          - contains_any
-        description: Comparison operator.
-      value:
-        description: Value to compare against (omit for is_null/is_not_null).
+    description: Automatic reactions to lifecycle events — object creation, field changes, domain events, and timers.
     additionalProperties: false
+    properties:
+      onCreate:
+        $ref: "#/$defs/OnCreate"
+      onUpdate:
+        $ref: "#/$defs/OnUpdate"
+      onEvent:
+        type: array
+        description: >
+          Reactions to external domain events arriving on a subscription.
+          When transition.from is present, an existing instance is required.
+          When absent, the handler may bootstrap a new instance.
+        items:
+          $ref: "#/$defs/OnEvent"
+      onTimer:
+        type: array
+        description: Automatic steps that fire after a duration elapses.
+        items:
+          $ref: "#/$defs/OnTimer"
 
   OnCreate:
     type: object
-    description: Effects that run when the object is created (no "from" state).
+    description: Steps that run when the object is created.
     required:
-      - effects
+      - then
+    additionalProperties: false
     properties:
       actors:
         type: array
         items:
           type: string
-        description: Who can create the object.
-      effects:
+        description: Roles authorized to create this object.
+      then:
         type: array
-        items:
-          $ref: "#/$defs/Effect"
         minItems: 1
-    additionalProperties: false
+        items:
+          $ref: "#/$defs/StepItem"
 
   OnUpdate:
     type: object
-    description: Effects that run when the object's fields are updated outside of a transition.
+    description: Steps that run when watched fields change outside of an operation.
     required:
-      - effects
+      - then
+    additionalProperties: false
     properties:
       fields:
         type: array
         items:
           type: string
         description: Only fire when one of these fields changes. Omit to fire on any update.
-      effects:
+      then:
         type: array
-        items:
-          $ref: "#/$defs/Effect"
         minItems: 1
-    additionalProperties: false
+        items:
+          $ref: "#/$defs/StepItem"
 
-  Transition:
+  OnEvent:
     type: object
-    description: A valid state change with guards and effects.
+    description: A reaction to an external domain event arriving on a subscription.
     required:
-      - trigger
-      - from
+      - name
+      - then
+    additionalProperties: false
     properties:
-      trigger:
+      name:
         type: string
-        description: Action name — becomes the RPC endpoint.
+        description: Fully qualified event name (e.g., intake.application.submitted).
+      transition:
+        $ref: "#/$defs/TransitionBlock"
+      guards:
+        $ref: "#/$defs/Guards"
+      then:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/StepItem"
+
+  OnTimer:
+    type: object
+    description: Automatic steps that fire after a duration elapses.
+    required:
+      - after
+      - relativeTo
+      - then
+    additionalProperties: false
+    properties:
+      after:
+        type: string
+        description: >
+          Duration string (e.g., 72h, 7d, -48h). A negative value fires before
+          the reference point (e.g., -48h = 48 hours before slaDeadline).
+      relativeTo:
+        type: string
+        description: >
+          Reference timestamp. Object fields (createdAt, blockedAt, escalatedAt)
+          measure elapsed time. slaDeadline measures time remaining before expiry.
+      calendarType:
+        type: string
+        enum:
+          - calendar
+          - business
+        default: calendar
+        description: Whether duration is measured in calendar time or business hours/days.
+      transition:
+        $ref: "#/$defs/TransitionBlock"
+      guards:
+        $ref: "#/$defs/Guards"
+      then:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/StepItem"
+
+  Operation:
+    type: object
+    description: An actor- or system-triggered operation. Becomes a POST /{resource}/{id}/{name} endpoint.
+    required:
+      - name
+      - then
+    additionalProperties: false
+    properties:
+      name:
+        type: string
+        description: Operation name — becomes the URL path segment.
+      transition:
+        $ref: "#/$defs/TransitionBlock"
+      guards:
+        $ref: "#/$defs/Guards"
+      requestBody:
+        type: object
+        description: OpenAPI-style schema for the request body.
+        additionalProperties: true
+      then:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/StepItem"
+
+  TransitionBlock:
+    type: object
+    description: >
+      Groups state change information for a handler. Presence means an existing instance
+      is required. to absent means in-place (state does not change).
+    additionalProperties: false
+    properties:
       from:
         oneOf:
           - type: string
@@ -221,46 +261,33 @@ $defs:
             items:
               type: string
             minItems: 2
-            description: Multiple source states (transition fires from any of them).
-        description: Source state(s).
+            description: Multiple source states — handler fires from any of them.
       to:
         type: string
-        description: >
-          Target state. Omit for in-place transitions (e.g., assign, set-priority)
-          where the operation updates fields and emits events without changing state.
-      on:
-        type: string
-        enum:
-          - timer
-        description: When present, transition fires automatically rather than via actor request.
-      after:
-        type: string
-        description: Duration string (e.g., 72h, 7d, -48h). Required when on=timer.
-      relativeTo:
-        type: string
-        description: >
-          Reference point for the duration. Task timestamp fields (createdAt, blockedAt,
-          escalatedAt, startedAt) measure elapsed time since that moment. The special value
-          slaDeadline measures time remaining before the SLA deadline — use a negative
-          duration (e.g., -48h) to fire N hours before expiry. Required when on=timer.
-      calendarType:
-        type: string
-        enum:
-          - calendar
-          - business
-        default: calendar
-        description: Whether the duration is measured in calendar time or business hours/days. Defaults to calendar.
+        description: Target state. Omit for in-place operations.
+
+  Guards:
+    type: object
+    description: Pre-conditions that must pass for a handler to fire.
+    additionalProperties: false
+    properties:
       actors:
         type: array
         items:
           type: string
-        description: Roles that can trigger this transition.
-      guards:
+        description: >
+          Roles authorized to trigger this handler. Checked before conditions.
+          Omit to allow any authenticated caller (guards.conditions still apply).
+      conditions:
         type: array
+        description: >
+          Guard conditions that must pass. Strings are named guard ids (must all pass — AND).
+          Objects support composition: any: [...] passes if at least one named guard passes (OR);
+          all: [...] passes if all named guards pass (AND, redundant with plain strings but explicit).
         items:
           oneOf:
             - type: string
-              description: Named guard reference — must pass.
+              description: Named guard id — must pass.
             - type: object
               description: Composition — any or all of the listed guards must pass.
               properties:
@@ -277,112 +304,136 @@ $defs:
                   minItems: 2
                   description: All of these named guards must pass (AND).
               additionalProperties: false
-        description: Guards that must pass for the transition to fire.
-      effects:
-        type: array
-        items:
-          $ref: "#/$defs/Effect"
-        description: Side effects that occur when the transition fires.
-    additionalProperties: false
 
-  Effect:
+  StepItem:
     type: object
-    description: A side effect that occurs during a transition or onCreate.
+    description: >
+      A single step in a then: list. Recognized step types:
+        set: { field, value }       — update a field on the governed object
+        emit: { event, data? }      — emit a domain event
+        evaluate: rule-id           — evaluate a named rule
+        invoke: entity/path         — POST to create a resource (add body:),
+                                      POST to trigger a transition (path ends with operation name),
+                                      or PATCH to append to a field (add append: { field, value })
+      All items may include:
+        when: <JSON Logic>          — only run this step when condition is true
+        description: string         — human-readable explanation
+    additionalProperties: true
+    minProperties: 1
+
+  Guard:
+    type: object
+    description: A named boolean condition evaluated against the object or caller context.
     required:
-      - type
+      - id
+      - field
+      - operator
+    additionalProperties: false
     properties:
-      type:
+      id:
         type: string
-        enum:
-          - set
-          - create
-          - lookup
-          - evaluate-rules
-          - event
-        description: Effect type discriminator.
+        description: Guard identifier, referenced by name in guards.conditions.
       field:
         type: string
-        description: Target field (for set effects).
-      value:
-        description: Value to set, or payload template.
-      entity:
-        type: string
-        description: Target entity (for create/lookup effects).
-      fields:
-        type: object
-        description: Field values for created records.
-        additionalProperties: true
-      lookupField:
-        type: string
-        description: Field to look up by (for lookup effects).
-      bindTo:
-        type: string
-        description: Variable to bind lookup results to.
-      relativeTo:
-        type: string
-        description: Reference point for relative values (e.g., $now).
-      action:
-        type: string
-        description: Event action name (for event effects, e.g. "claimed", "completed").
-      data:
-        type: object
-        description: Transition-specific data to include in the event payload.
-        additionalProperties: true
-      ruleType:
-        type: string
-        description: Single rule type to evaluate (for evaluate-rules effects).
-      ruleTypes:
-        type: array
-        items:
-          type: string
-        description: Rule types to evaluate (for evaluate-rules effects).
-      when:
-        description: JSON Logic condition — effect only fires when true.
-      description:
-        type: string
-        description: Human-readable description of what this effect does.
-    additionalProperties: false
-
-  RequestBody:
-    description: OpenAPI-style schema for a trigger's request body.
-    type: object
-    required:
-      - trigger
-    properties:
-      trigger:
-        type: string
-        description: Transition trigger name this body applies to.
-      type:
-        type: string
-      properties:
-        type: object
-        additionalProperties: true
-      required:
-        type: array
-        items:
-          type: string
-    additionalProperties: true
-
-  Audit:
-    type: object
-    description: Declarative audit requirements for validation.
-    required:
-      - entity
-      - scope
-      - requiredFields
-    properties:
-      entity:
-        type: string
-        description: The audit record entity type.
-      scope:
+        description: Field path or variable reference to evaluate (e.g., assignedToId, $caller.roles).
+      operator:
         type: string
         enum:
-          - all
-          - transitions-only
-        description: Whether audit covers all transitions + onCreate, or transitions only.
-      requiredFields:
-        type: array
-        items:
-          type: string
-        description: Fields that must be present on every audit record.
+          - is_null
+          - is_not_null
+          - equals
+          - not_equals
+          - contains_all
+          - contains_any
+        description: Comparison operator.
+      value:
+        description: Value to compare against. Omit for is_null and is_not_null.
+
+  Rule:
+    type: object
+    description: >
+      A named condition-to-consequence procedure called with evaluate: rule-id.
+      Handles logic that touches resources outside the governed object, or that
+      applies in multiple places. Evaluated as a list of condition → then pairs.
+    required:
+      - id
+      - conditions
     additionalProperties: false
+    properties:
+      id:
+        type: string
+        description: "Rule identifier, used in evaluate: rule-id calls. Convention: end with -rule."
+      evaluation:
+        type: string
+        enum:
+          - first-match-wins
+          - all-match
+        default: first-match-wins
+        description: >
+          first-match-wins — stop at the first condition that matches.
+          all-match — run every condition whose condition expression is true.
+      context:
+        type: array
+        description: Data lookups available to this rule's conditions.
+        items:
+          $ref: "#/$defs/ContextBinding"
+      conditions:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/RuleCondition"
+
+  ContextBinding:
+    type: object
+    description: >
+      A data lookup that makes entity records available inside a rule.
+      The key is the variable name ($varname in step bodies and { var: "$varname" } in conditions).
+      The value defines where to look and how to filter.
+    minProperties: 1
+    maxProperties: 1
+    additionalProperties:
+      type: object
+      required:
+        - from
+      additionalProperties: false
+      properties:
+        from:
+          type: string
+          description: Entity path to query (e.g., intake/applications, workflow/tasks).
+        where:
+          type: object
+          description: "Filter conditions as field-value pairs (e.g., { id: \"$this.subject\" })."
+          additionalProperties: true
+        optional:
+          type: boolean
+          description: >
+            When true, the rule proceeds even if no record is found. The variable
+            will be null. Use when the linked entity may not exist.
+
+  RuleCondition:
+    type: object
+    description: >
+      A condition → consequence pair inside a rule. The then: steps run when
+      the condition expression is true (or when condition is omitted / true).
+    required:
+      - then
+    additionalProperties: true
+    properties:
+      id:
+        type: string
+        description: Condition identifier for documentation and debugging.
+      order:
+        type: integer
+        description: Evaluation order within the rule.
+      condition:
+        description: >
+          JSON Logic expression or the literal true. When true, always runs
+          (useful in all-match evaluation for unconditional steps).
+      then:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/StepItem"
+        description: Steps to execute when the condition matches.
+      description:
+        type: string

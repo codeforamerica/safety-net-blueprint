@@ -60,7 +60,7 @@ $defs:
       If a matching stub is found it is consumed (FIFO) and its respond event is fired.
       If no stub matches, the `fallback` action is executed instead.
       Only meaningful in event-triggered rule sets — `resource` is the event envelope.
-      Stubs are registered via POST /mock/stubs before triggering the flow.
+      Stubs are registered via POST /mock/stubs/events before triggering the flow.
     properties:
       fallback:
         type: object
