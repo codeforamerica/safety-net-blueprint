@@ -2205,3 +2205,59 @@ config_managed_resources:
     config_seeding: Config entries are inserted with source set to "system".
     runtime_create: POST handler sets source to "user" for collections that have config entries.
     delete_guard: DELETE returns 409 CONFIG_MANAGED for any resource with a config-managed ID.
+
+# =============================================================================
+# Cross-Domain Communication
+# =============================================================================
+# Two patterns govern how domains interact. Choosing the wrong one creates
+# hidden coupling — see docs/architecture/inter-domain-communication.md for
+# the full decision rule.
+cross_domain_communication:
+  patterns:
+    command:
+      description: >
+        A direct synchronous API call from one domain to another. Use when the
+        calling domain needs a result to continue its own operation.
+      when_to_use: >
+        The caller cannot complete its current operation without a result from
+        the target domain. Examples: uploading a document and receiving the
+        document ID to attach to a verification record; resolving a person
+        identity match before continuing an application submission.
+      contract_surface: >
+        The calling domain depends on the target domain's OpenAPI contract.
+        The dependency is explicit and versioned.
+
+    domain_event:
+      description: >
+        An async signal emitted when a domain's own state changes. Other domains
+        subscribe and react independently. Use when notifying that something
+        happened — not when expecting a result.
+      when_to_use: >
+        The producing domain's operation is already complete and other domains
+        may optionally react. The producer has no knowledge of its consumers.
+        Examples: application submitted, task claimed, determination completed.
+      contract_surface: >
+        Declared in the producing domain's x-events section. Payload schema is
+        the contract; adding a new consumer requires no change to the producer.
+
+    async_command:
+      description: >
+        A command that initiates a long-running operation, with a domain event
+        delivering the result when it is ready. Use when a synchronous result
+        is not available within a single request.
+      when_to_use: >
+        The operation crosses a system boundary or takes time (e.g. an external
+        agency call). The calling domain initiates via a command, then reacts to
+        the result event. Use the context_passthrough pattern to correlate the
+        result back to the originating record.
+      example: >
+        Intake creates a data-exchange service call (command). The external
+        service responds asynchronously. A domain event delivers the result.
+        Intake reads metadata.intake.verificationId from the event payload and
+        transitions the correct verification record.
+
+  decision_rule: >
+    Does the calling domain need a result from the other domain to complete its
+    current operation? → command. Is the calling domain notifying that its own
+    state changed? → domain_event. If neither fits cleanly, consider the
+    async_command variant.

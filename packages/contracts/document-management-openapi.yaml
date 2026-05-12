@@ -1,0 +1,1050 @@
+openapi: 3.1.0
+info:
+  title: Document Management API
+  version: 0.1.0
+  x-domain: document-management
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    REST API for the Document Management domain — the central store for uploaded
+    files and their metadata across all safety net programs.
+
+    **Upload model:** A document and its first version are created atomically via
+    `POST /documents` (multipart/form-data). Subsequent versions are uploaded via
+    `POST /documents/{documentId}/document-versions`. File content is delivered via
+    `GET /document-versions/{documentVersionId}/content` (proxy by default; states
+    may overlay to redirect).
+
+    **Context passthrough:** Callers attach correlation context to a document via
+    `metadata` at creation or via `PUT /documents/{documentId}/metadata/{domain}`
+    after the fact. Metadata is echoed in events so downstream consumers can
+    correlate without additional lookups. Keys are structured as nested objects
+    per domain namespace — `{ "intake": { "verificationId": "..." } }`.
+
+    **Document types:** Baseline types are seeded from `document-management-config.yaml`.
+    States add program-specific types at runtime via `POST /document-types`.
+
+    > **Status: Alpha** — Breaking changes expected.
+
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/document-management
+    description: Production server
+  - url: http://localhost:1080/document-management
+    description: Local development server
+
+tags:
+  - name: Documents
+    description: Document records and file upload.
+  - name: DocumentVersions
+    description: Immutable version history for documents.
+  - name: DocumentTypes
+    description: Document type catalog — retention rules and classification.
+  - name: DocumentLinks
+    description: Associations between documents and program records (applications, cases, etc.).
+
+x-events:
+  document.created:
+    type: org.codeforamerica.safety-net-blueprint.document_management.document.created
+    summary: Emitted when a document and its first version are created atomically via POST /documents
+    payload:
+      $ref: "#/components/schemas/DocumentCreatedEvent"
+  document_version.uploaded:
+    type: org.codeforamerica.safety-net-blueprint.document_management.document_version.uploaded
+    summary: Emitted when a subsequent version is uploaded via POST /documents/{documentId}/document-versions
+    payload:
+      $ref: "#/components/schemas/DocumentVersionUploadedEvent"
+
+paths:
+
+  # ---------------------------------------------------------------------------
+  # Documents
+  # ---------------------------------------------------------------------------
+
+  /documents:
+    get:
+      summary: List documents
+      description: Retrieve a paginated list of documents. Filter by document type or subject via document links.
+      operationId: listDocuments
+      tags:
+        - Documents
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: documentTypeId
+          in: query
+          description: Filter by document type.
+          schema:
+            type: string
+            format: uuid
+        - name: lifecycleState
+          in: query
+          description: Filter by lifecycle state.
+          schema:
+            $ref: "#/components/schemas/DocumentLifecycleState"
+      responses:
+        "200":
+          description: A paginated list of documents.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Upload a document
+      description: |
+        Create a document and its first version atomically. The document is
+        immediately active. Accepts multipart/form-data with the file bytes
+        and document metadata in a single request.
+
+        If the adapter's virus scanner rejects the file, returns `422` with
+        error code `file_rejected_by_virus_scan` and no document is created.
+
+        Pass `metadata` as a JSON string in the multipart body to attach
+        correlation context at creation time (e.g. `{ "intake": { "verificationId": "ver-abc" } }`).
+      operationId: uploadDocument
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - documentTypeId
+                - title
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to upload.
+                documentTypeId:
+                  type: string
+                  format: uuid
+                  description: Document type — determines retention rules and classification.
+                title:
+                  type: string
+                  maxLength: 200
+                  description: >
+                    Human-readable label for the document (e.g. "John Smith — Pay Stub March 2026").
+                    Distinct from the upload filename.
+                documentDate:
+                  type: string
+                  format: date
+                  description: >
+                    The date printed on or associated with the document (e.g. the date on a pay stub).
+                    Required when the document type's retentionTrigger is document_date.
+                metadata:
+                  type: string
+                  description: >
+                    JSON string. Correlation context structured as nested objects per domain namespace.
+                    Example: {"intake":{"verificationId":"ver-abc-123"}}
+      responses:
+        "201":
+          description: Document and first version created successfully.
+          headers:
+            Location:
+              description: URL of the newly created document.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /documents/{documentId}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentIdParam"
+
+    get:
+      summary: Get a document
+      description: Retrieve a single document by identifier. Documents in `destroyed` state are returned with their metadata intact but file content is no longer accessible.
+      operationId: getDocument
+      tags:
+        - Documents
+      responses:
+        "200":
+          description: Document retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update a document
+      description: Update mutable document fields. Metadata is not patchable here — use the namespace-level metadata endpoints instead.
+      operationId: updateDocument
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdate"
+      responses:
+        "200":
+          description: Document updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /documents/{documentId}/metadata/{domain}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentIdParam"
+      - name: domain
+        in: path
+        required: true
+        description: The calling domain's namespace to set or remove.
+        schema:
+          $ref: "./components/common.yaml#/Domain"
+
+    put:
+      summary: Set domain metadata on a document
+      description: |
+        Replace the calling domain's entire metadata namespace on a document.
+        Other domains' namespaces are unaffected. Used for context passthrough
+        when metadata is not known at upload time.
+      operationId: setDocumentMetadata
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Domain-defined key-value pairs for this namespace.
+              example:
+                verificationId: ver-abc-123
+      responses:
+        "200":
+          description: Metadata set successfully. Returns the updated document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Remove domain metadata from a document
+      description: Remove the calling domain's entire metadata namespace from a document.
+      operationId: deleteDocumentMetadata
+      tags:
+        - Documents
+      responses:
+        "204":
+          description: Metadata removed successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  # ---------------------------------------------------------------------------
+  # Document Versions
+  # ---------------------------------------------------------------------------
+
+  /documents/{documentId}/document-versions:
+    parameters:
+      - $ref: "#/components/parameters/DocumentIdParam"
+
+    post:
+      summary: Upload a new version
+      description: |
+        Upload a subsequent version of an existing document. Creates an immutable
+        DocumentVersion record and updates Document.latestVersionId. Each upload
+        preserves prior versions so the file that was current at any point in time
+        is recoverable (required by 7 CFR § 272.1 and 45 CFR § 164.312).
+
+        If the adapter's virus scanner rejects the file, returns `422` with error
+        code `file_rejected_by_virus_scan` and no version is created.
+      operationId: uploadDocumentVersion
+      tags:
+        - DocumentVersions
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The replacement file to upload.
+      responses:
+        "201":
+          description: Version created successfully.
+          headers:
+            Location:
+              description: URL of the newly created document version.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentVersion"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /document-versions/{documentVersionId}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentVersionIdParam"
+
+    get:
+      summary: Get a document version
+      description: Retrieve metadata for a specific document version. Does not return file bytes — use the content endpoint for that.
+      operationId: getDocumentVersion
+      tags:
+        - DocumentVersions
+      responses:
+        "200":
+          description: Document version retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentVersion"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /document-versions/{documentVersionId}/content:
+    parameters:
+      - $ref: "#/components/parameters/DocumentVersionIdParam"
+
+    get:
+      summary: Get file content
+      description: |
+        Retrieve the file bytes for a document version. Emits a
+        `document_version.accessed` audit event on every call (required by
+        HIPAA 45 CFR § 164.312).
+
+        The baseline response is `200` with the file streamed as
+        `application/octet-stream` (proxy delivery). States that prefer
+        redirect delivery add `x-content-delivery: redirect` via overlay —
+        the response then returns `302` to a time-limited signed storage URL.
+        Both response shapes are documented here so clients handle either.
+      operationId: getDocumentVersionContent
+      tags:
+        - DocumentVersions
+      responses:
+        "200":
+          description: File content (proxy delivery).
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "302":
+          description: Redirect to signed storage URL (redirect delivery — opt-in via overlay).
+          headers:
+            Location:
+              description: Time-limited signed URL pointing directly to the file in storage.
+              schema:
+                type: string
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "410":
+          description: File content is no longer accessible — document has been destroyed.
+          content:
+            application/json:
+              schema:
+                $ref: "./components/responses.yaml#/Error"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  # ---------------------------------------------------------------------------
+  # Document Types
+  # ---------------------------------------------------------------------------
+
+  /document-types:
+    get:
+      summary: List document types
+      description: Retrieve the catalog of document types. Includes both config-seeded (system) and runtime-created (user) types.
+      operationId: listDocumentTypes
+      tags:
+        - DocumentTypes
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A paginated list of document types.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTypeList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create a document type
+      description: >
+        Create a state-defined document type. Runtime-created types are marked
+        `source: user` and can be deleted via the API. Config-seeded types cannot be deleted.
+      operationId: createDocumentType
+      tags:
+        - DocumentTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentTypeCreate"
+      responses:
+        "201":
+          description: Document type created successfully.
+          headers:
+            Location:
+              description: URL of the newly created document type.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentType"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /document-types/{documentTypeId}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentTypeIdParam"
+
+    get:
+      summary: Get a document type
+      description: Retrieve a single document type by identifier.
+      operationId: getDocumentType
+      tags:
+        - DocumentTypes
+      responses:
+        "200":
+          description: Document type retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentType"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Delete a document type
+      description: >
+        Delete a user-created document type. Returns `409` if the type is
+        config-seeded (`source: system`) or if documents of this type exist.
+      operationId: deleteDocumentType
+      tags:
+        - DocumentTypes
+      responses:
+        "204":
+          description: Document type deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "409":
+          $ref: "./components/responses.yaml#/Conflict"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  # ---------------------------------------------------------------------------
+  # Document Links
+  # ---------------------------------------------------------------------------
+
+  /document-links:
+    get:
+      summary: List document links
+      description: Retrieve document-subject associations. Filter by documentId or subjectId to find all documents for a subject or all subjects for a document.
+      operationId: listDocumentLinks
+      tags:
+        - DocumentLinks
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: documentId
+          in: query
+          description: Filter by document.
+          schema:
+            type: string
+            format: uuid
+        - name: subjectId
+          in: query
+          description: Filter by subject (application, case, etc.).
+          schema:
+            type: string
+            format: uuid
+        - name: subjectType
+          in: query
+          description: Filter by subject type.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A paginated list of document links.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentLinkList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Link a document to a subject
+      description: |
+        Associate a document with a program record (application, case, etc.).
+        Enables cross-program reuse — the same document can satisfy obligations
+        for multiple programs without duplication.
+      operationId: createDocumentLink
+      tags:
+        - DocumentLinks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentLinkCreate"
+      responses:
+        "201":
+          description: Document link created successfully.
+          headers:
+            Location:
+              description: URL of the newly created document link.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentLink"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /document-links/{documentLinkId}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentLinkIdParam"
+
+    get:
+      summary: Get a document link
+      description: Retrieve a single document-subject association by identifier.
+      operationId: getDocumentLink
+      tags:
+        - DocumentLinks
+      responses:
+        "200":
+          description: Document link retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentLink"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+components:
+  parameters:
+    DocumentIdParam:
+      name: documentId
+      in: path
+      required: true
+      description: Unique identifier of the document.
+      schema:
+        type: string
+        format: uuid
+
+    DocumentVersionIdParam:
+      name: documentVersionId
+      in: path
+      required: true
+      description: Unique identifier of the document version.
+      schema:
+        type: string
+        format: uuid
+
+    DocumentTypeIdParam:
+      name: documentTypeId
+      in: path
+      required: true
+      description: Unique identifier of the document type.
+      schema:
+        type: string
+        format: uuid
+
+    DocumentLinkIdParam:
+      name: documentLinkId
+      in: path
+      required: true
+      description: Unique identifier of the document link.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+
+    # -------------------------------------------------------------------------
+    # Document
+    # -------------------------------------------------------------------------
+
+    Document:
+      type: object
+      description: A document record spanning all its versions. Holds identity, type, and correlation context; file bytes live in DocumentVersion records.
+      additionalProperties: false
+      required:
+        - id
+        - documentTypeId
+        - title
+        - lifecycleState
+        - legalHold
+        - latestVersionId
+        - metadata
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        documentTypeId:
+          type: string
+          format: uuid
+          description: Links to the DocumentType governing retention rules for this document.
+          x-relationship:
+            resource: document-management/document-types
+            field: id
+        title:
+          type: string
+          maxLength: 200
+          description: Human-readable label (e.g. "Jane Smith — Pay Stub March 2026"). Distinct from the upload filename.
+        documentDate:
+          type: string
+          format: date
+          nullable: true
+          description: The date on the document's face (e.g. a pay stub date). Required when the document type's retentionTrigger is document_date.
+        lifecycleState:
+          $ref: "#/components/schemas/DocumentLifecycleState"
+        legalHold:
+          type: boolean
+          description: When true, the document cannot advance to pending_disposition regardless of retention schedule.
+        latestVersionId:
+          type: string
+          format: uuid
+          description: ID of the most recent DocumentVersion. Single authoritative pointer to the current file.
+          x-relationship:
+            resource: document-management/document-versions
+            field: id
+        retentionDeadline:
+          type: string
+          format: date
+          nullable: true
+          description: The date when the retention period ends. Null until the document enters retained state.
+        metadata:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          description: >
+            Opaque correlation context structured as nested objects per domain namespace.
+            Example: {"intake":{"verificationId":"ver-abc-123"},"workflow":{"taskId":"tsk-xyz-456"}}
+        dispositionApprovedBy:
+          type: string
+          nullable: true
+          description: Identity of the records manager who authorized destruction. Null until destroyed state.
+        dispositionApprovedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When destruction was authorized. Null until destroyed state.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DocumentUpdate:
+      type: object
+      description: Mutable fields on a document. Metadata is managed via the namespace-level endpoints.
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        documentDate:
+          type: string
+          format: date
+          nullable: true
+
+    DocumentList:
+      type: object
+      required: [items, total, limit, offset, hasNext]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+
+    DocumentLifecycleState:
+      type: string
+      description: Where the document is in its records management lifecycle.
+      enum:
+        - active
+        - retained
+        - pending_disposition
+        - destroyed
+
+    # -------------------------------------------------------------------------
+    # DocumentVersion
+    # -------------------------------------------------------------------------
+
+    DocumentVersion:
+      type: object
+      description: An immutable record of a specific file upload. Each upload creates a new version; prior versions are preserved.
+      additionalProperties: false
+      required:
+        - id
+        - documentId
+        - versionNumber
+        - fileName
+        - mimeType
+        - sizeBytes
+        - contentHash
+        - uploadedById
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        documentId:
+          type: string
+          format: uuid
+          description: Links to the parent Document.
+          x-relationship:
+            resource: document-management/documents
+            field: id
+        versionNumber:
+          type: integer
+          description: Sequential version number. 1 for the first version.
+        fileName:
+          type: string
+          description: Original filename as uploaded.
+        mimeType:
+          type: string
+          description: MIME type of the uploaded file.
+        sizeBytes:
+          type: integer
+          description: File size in bytes.
+        contentHash:
+          type: string
+          description: SHA-256 hash of the file bytes. Stored for duplicate detection; baseline enforces nothing.
+        uploadedById:
+          type: string
+          description: Identity of the uploader. Required for HIPAA chain-of-custody (45 CFR § 164.312).
+          x-data-classification: pii
+        createdAt:
+          type: string
+          format: date-time
+          description: Authoritative upload timestamp.
+
+    # -------------------------------------------------------------------------
+    # DocumentType
+    # -------------------------------------------------------------------------
+
+    DocumentType:
+      type: object
+      description: Defines the category and retention rules for a class of documents. Baseline types are seeded from document-management-config.yaml.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - retentionYears
+        - retentionTrigger
+        - source
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 100
+        retentionYears:
+          type: integer
+          description: How many years documents of this type must be retained after the retention trigger fires.
+        retentionTrigger:
+          $ref: "#/components/schemas/RetentionTrigger"
+        source:
+          type: string
+          enum: [system, user]
+          readOnly: true
+          description: '"system" types are seeded from config and cannot be deleted. "user" types are created at runtime and can be deleted.'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DocumentTypeCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - retentionYears
+        - retentionTrigger
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        retentionYears:
+          type: integer
+        retentionTrigger:
+          $ref: "#/components/schemas/RetentionTrigger"
+
+    DocumentTypeList:
+      type: object
+      required: [items, total, limit, offset, hasNext]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentType"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+
+    RetentionTrigger:
+      type: string
+      description: The event that starts the retention clock for this document type.
+      enum:
+        - case_closure
+        - application_denial
+        - document_date
+        - submission_date
+
+    # -------------------------------------------------------------------------
+    # DocumentLink
+    # -------------------------------------------------------------------------
+
+    DocumentLink:
+      type: object
+      description: Associates a document with a program record (application, case, etc.) for cross-program reuse and retention tracking.
+      additionalProperties: false
+      required:
+        - id
+        - documentId
+        - subjectType
+        - subjectId
+        - linkedBy
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        documentId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: document-management/documents
+            field: id
+        subjectType:
+          type: string
+          description: The kind of record this document is linked to (e.g. application, case). States add values via overlay.
+          enum:
+            - application
+            - case
+        subjectId:
+          type: string
+          format: uuid
+          description: ID of the linked record.
+          x-relationship:
+            resource: Polymorphic
+        linkedBy:
+          type: string
+          description: Identity of who created the link. Required for HIPAA chain-of-custody (45 CFR § 164.312).
+          x-data-classification: pii
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set when the subject closes. Used as the retention trigger timestamp for case_closure and application_denial retention types.
+        createdAt:
+          type: string
+          format: date-time
+
+    DocumentLinkCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - documentId
+        - subjectType
+        - subjectId
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: document-management/documents
+            field: id
+        subjectType:
+          type: string
+          enum:
+            - application
+            - case
+        subjectId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Polymorphic
+
+    DocumentLinkList:
+      type: object
+      required: [items, total, limit, offset, hasNext]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentLink"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+
+    # -------------------------------------------------------------------------
+    # Events
+    # -------------------------------------------------------------------------
+
+    DocumentCreatedEvent:
+      type: object
+      description: Payload for document_management.document.created — emitted when a document and its first version are created atomically.
+      additionalProperties: false
+      required:
+        - documentId
+        - documentTypeId
+        - title
+        - latestVersionId
+        - metadata
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: document-management/documents
+            field: id
+        documentTypeId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: document-management/document-types
+            field: id
+        title:
+          type: string
+        latestVersionId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: document-management/document-versions
+            field: id
+        metadata:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          description: Echoed verbatim from Document.metadata so consumers can correlate without additional lookups.
+
+    DocumentVersionUploadedEvent:
+      type: object
+      description: Payload for document_management.document_version.uploaded — emitted when a subsequent version is uploaded.
+      additionalProperties: false
+      required:
+        - documentId
+        - documentVersionId
+        - versionNumber
+        - metadata
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: document-management/documents
+            field: id
+        documentVersionId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: document-management/document-versions
+            field: id
+        versionNumber:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          description: Echoed verbatim from Document.metadata.
