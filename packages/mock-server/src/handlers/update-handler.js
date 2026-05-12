@@ -5,7 +5,8 @@
 import { findById, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
-import { processRuleEvaluations } from './rule-evaluation.js';
+import { processRuleEvaluations, resolveContextLayers } from './rule-evaluation.js';
+import { mergeByPrecedence } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 
 /**
@@ -137,7 +138,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           const callerRoles = req.headers['x-caller-roles']
             ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
             : [];
-          const context = {
+          const baseContext = {
             caller: {
               id: req.headers['x-caller-id'],
               roles: callerRoles
@@ -147,13 +148,24 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
             now: new Date().toISOString(),
           };
 
+          const entities = resolveContextLayers(
+            [stateMachine?.context, machine?.context, newOnUpdate?.context ?? oldOnUpdate?.context],
+            updated,
+            baseContext
+          );
+          if (entities === null) {
+            console.error('onUpdate: required context binding failed — skipping trigger');
+          }
+          const context = entities !== null ? { ...baseContext, entities } : baseContext;
+
           let pendingRuleEvaluations;
           if (newOnUpdate?.then?.length > 0) {
             ({ pendingRuleEvaluations } = applySteps(newOnUpdate.then, updated, context));
           } else {
             ({ pendingRuleEvaluations } = applyEffects(oldOnUpdate.effects, updated, context));
           }
-          processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine?.domain, stateMachine?.rules, context);
+          const inlineRules = mergeByPrecedence(stateMachine?.rules, machine?.rules);
+          processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine?.domain, inlineRules, context);
 
           // Persist any rule-driven mutations (e.g. priority, queueId) back to DB
           const onUpdateDiff = {};

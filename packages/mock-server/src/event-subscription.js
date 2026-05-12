@@ -17,10 +17,10 @@ import { buildRuleContext, evaluateRuleSet, evaluateAllMatchRuleSet, resolvePath
 import { resolveContextEntities } from './handlers/rule-evaluation.js';
 import { executeActions } from './action-handlers.js';
 import { executeTransition } from './state-machine-runner.js';
-import { applyEffects, applySteps } from './state-machine-engine.js';
-import { processRuleEvaluations } from './handlers/rule-evaluation.js';
+import { applyEffects, applySteps, evaluateGuards } from './state-machine-engine.js';
+import { processRuleEvaluations, resolveContextLayers } from './handlers/rule-evaluation.js';
 import { emitEvent, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
-import { deriveCollectionName } from './collection-utils.js';
+import { deriveCollectionName, mergeByPrecedence } from './collection-utils.js';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
@@ -256,17 +256,77 @@ export function registerEventSubscriptions(allRules, allStateMachines, allSlaTyp
       try {
         const now = new Date().toISOString();
         const caller = { id: 'system', roles: ['system'] };
-        const context = {
+
+        // When transition: is present, the event targets an existing resource
+        // (identified by event.subject). Look it up and enforce the from state guard.
+        let resource = {};
+        let targetCollection = null;
+        if (entry.transition) {
+          targetCollection = smEntry.machine.object
+            .replace(/([a-z])([A-Z])/g, '$1-$2')
+            .toLowerCase() + 's';
+          const found = findById(targetCollection, event.subject);
+          if (!found) {
+            console.error(`Machine onEvent "${entry.name}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
+            continue;
+          }
+          const from = entry.transition.from;
+          if (from) {
+            const fromArr = Array.isArray(from) ? from : [from];
+            if (!fromArr.includes(found.status)) continue;
+          }
+          resource = { ...found };
+        }
+
+        const baseContext = {
           caller,
-          object: {},
+          object: { ...resource },
           request: {},
-          this: event,   // $this.subject, $this.data, etc.
+          this: event,
           now,
         };
 
-        const resource = {};
+        const entities = resolveContextLayers(
+          [smEntry.stateMachine?.context, smEntry.machine?.context, entry.context],
+          resource,
+          baseContext
+        );
+        if (entities === null) {
+          console.error(`Machine onEvent "${entry.name}": required context binding failed — skipping`);
+          continue;
+        }
+        const context = { ...baseContext, entities };
+
+        // Evaluate guards if defined on this onEvent entry
+        const guardConditions = entry.guards?.conditions || [];
+        if (guardConditions.length > 0) {
+          const guardsMap = Object.fromEntries(
+            mergeByPrecedence(smEntry.stateMachine?.guards || [], smEntry.machine?.guards || [])
+              .map(g => [g.id, g])
+          );
+          const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
+          if (!guardResult.pass) continue;
+        }
+
         const { pendingCreates, pendingOperations, pendingAppends, pendingRuleEvaluations } =
           applySteps(entry.then, resource, context);
+
+        // Persist resource mutations and state transition when transition: is present
+        if (entry.transition && targetCollection) {
+          if (entry.transition.to) {
+            resource.status = entry.transition.to;
+          }
+          const original = findById(targetCollection, event.subject);
+          const diff = {};
+          for (const [key, value] of Object.entries(resource)) {
+            if (original[key] !== value && key !== 'id' && key !== 'createdAt') {
+              diff[key] = value;
+            }
+          }
+          if (Object.keys(diff).length > 0) {
+            update(targetCollection, event.subject, diff);
+          }
+        }
 
         // Handle collection creates
         for (const { entity, data } of pendingCreates) {

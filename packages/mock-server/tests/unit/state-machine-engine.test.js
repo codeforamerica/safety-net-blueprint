@@ -12,8 +12,10 @@ import {
   findTransition,
   applySetEffect,
   applyCreateEffect,
-  applyEffects
+  applyEffects,
+  applySteps
 } from '../../src/state-machine-engine.js';
+import { insertResource, clearAll } from '../../src/database-manager.js';
 
 // =============================================================================
 // resolveValue
@@ -549,4 +551,324 @@ test('applyEffects — returns empty pendingRuleEvaluations when no evaluate-rul
   ];
   const { pendingRuleEvaluations } = applyEffects(effects, resource, {});
   assert.deepStrictEqual(pendingRuleEvaluations, []);
+});
+
+// =============================================================================
+// evaluateGuard — is_not_null
+// =============================================================================
+
+test('evaluateGuard — is_not_null passes when field has a value', () => {
+  const guard = { field: 'assignedToId', operator: 'is_not_null' };
+  const result = evaluateGuard(guard, { assignedToId: 'worker-1' }, {});
+  assert.strictEqual(result.pass, true);
+  assert.strictEqual(result.reason, null);
+});
+
+test('evaluateGuard — is_not_null fails when field is null', () => {
+  const guard = { field: 'assignedToId', operator: 'is_not_null' };
+  const result = evaluateGuard(guard, { assignedToId: null }, {});
+  assert.strictEqual(result.pass, false);
+  assert.ok(result.reason.includes('assignedToId'));
+});
+
+test('evaluateGuard — is_not_null fails when field is undefined', () => {
+  const guard = { field: 'assignedToId', operator: 'is_not_null' };
+  const result = evaluateGuard(guard, {}, {});
+  assert.strictEqual(result.pass, false);
+});
+
+// =============================================================================
+// evaluateGuard — not_equals
+// =============================================================================
+
+test('evaluateGuard — not_equals passes when values differ', () => {
+  const guard = { field: 'status', operator: 'not_equals', value: 'cancelled' };
+  const result = evaluateGuard(guard, { status: 'pending' }, {});
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuard — not_equals fails when values are equal', () => {
+  const guard = { field: 'status', operator: 'not_equals', value: 'cancelled' };
+  const result = evaluateGuard(guard, { status: 'cancelled' }, {});
+  assert.strictEqual(result.pass, false);
+  assert.ok(result.reason.includes('status'));
+});
+
+test('evaluateGuard — not_equals resolves $caller.id for comparison', () => {
+  const guard = { field: 'assignedToId', operator: 'not_equals', value: '$caller.id' };
+  const context = { caller: { id: 'worker-2' } };
+  const result = evaluateGuard(guard, { assignedToId: 'worker-1' }, context);
+  assert.strictEqual(result.pass, true);
+});
+
+// =============================================================================
+// resolveValue — additional expressions
+// =============================================================================
+
+test('resolveValue — $request.field resolves from context', () => {
+  const context = { request: { reason: 'urgent' } };
+  assert.strictEqual(resolveValue('$request.reason', context), 'urgent');
+});
+
+test('resolveValue — $request.field returns null when missing', () => {
+  assert.strictEqual(resolveValue('$request.missing', { request: {} }), null);
+});
+
+test('resolveValue — $this.field resolves from context.this', () => {
+  const context = { this: { subject: 'app-123', data: { program: 'snap' } } };
+  assert.strictEqual(resolveValue('$this.subject', context), 'app-123');
+});
+
+test('resolveValue — $this.nested.field resolves dot path', () => {
+  const context = { this: { data: { program: 'snap' } } };
+  assert.strictEqual(resolveValue('$this.data.program', context), 'snap');
+});
+
+test('resolveValue — $alias.field resolves from context.entities', () => {
+  const context = { entities: { application: { id: 'app-1', status: 'submitted' } } };
+  assert.strictEqual(resolveValue('$application.status', context), 'submitted');
+});
+
+test('resolveValue — bare $alias resolves whole entity from context.entities', () => {
+  const entity = { id: 'q-1', name: 'snap-intake' };
+  const context = { entities: { snapQueue: entity } };
+  assert.deepStrictEqual(resolveValue('$snapQueue', context), entity);
+});
+
+test('resolveValue — $alias.field returns null when alias not in entities', () => {
+  assert.strictEqual(resolveValue('$unknown.field', { entities: {} }), null);
+});
+
+// =============================================================================
+// applySteps — set
+// =============================================================================
+
+test('applySteps — set step mutates resource field', () => {
+  const resource = { status: 'pending', assignedToId: null };
+  const context = { caller: { id: 'worker-1' }, object: resource, request: {}, now: '2025-01-01T00:00:00Z' };
+  applySteps([{ set: { field: 'assignedToId', value: '$caller.id' } }], resource, context);
+  assert.strictEqual(resource.assignedToId, 'worker-1');
+});
+
+test('applySteps — set step with literal value', () => {
+  const resource = { status: 'pending' };
+  applySteps([{ set: { field: 'status', value: 'active' } }], resource, {});
+  assert.strictEqual(resource.status, 'active');
+});
+
+// =============================================================================
+// applySteps — emit
+// =============================================================================
+
+test('applySteps — emit step queues pendingEvent with resolved data', () => {
+  const resource = { id: 'app-1' };
+  const context = { object: resource, request: {}, now: '2025-01-01T00:00:00Z' };
+  const { pendingEvents } = applySteps([{
+    emit: { event: 'submitted', data: { submittedAt: '$now', appId: '$object.id' } }
+  }], resource, context);
+  assert.strictEqual(pendingEvents.length, 1);
+  assert.strictEqual(pendingEvents[0].action, 'submitted');
+  assert.strictEqual(pendingEvents[0].data.submittedAt, '2025-01-01T00:00:00Z');
+  assert.strictEqual(pendingEvents[0].data.appId, 'app-1');
+});
+
+// =============================================================================
+// applySteps — evaluate
+// =============================================================================
+
+test('applySteps — evaluate step queues ruleId in pendingRuleEvaluations', () => {
+  const { pendingRuleEvaluations } = applySteps([{ evaluate: 'assign-queue-rule' }], {}, {});
+  assert.deepStrictEqual(pendingRuleEvaluations, [{ ruleId: 'assign-queue-rule' }]);
+});
+
+// =============================================================================
+// applySteps — invoke POST (collection create)
+// =============================================================================
+
+test('applySteps — invoke POST to collection queues pendingCreate', () => {
+  const context = { object: { id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
+  const { pendingCreates } = applySteps([{
+    invoke: { POST: 'intake/application-documents', body: { applicationId: '$object.id', category: 'income' } }
+  }], {}, context);
+  assert.strictEqual(pendingCreates.length, 1);
+  assert.strictEqual(pendingCreates[0].entity, 'application-documents');
+  assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
+  assert.strictEqual(pendingCreates[0].data.category, 'income');
+});
+
+// =============================================================================
+// applySteps — invoke POST (operation trigger)
+// =============================================================================
+
+test('applySteps — invoke POST to operation path queues pendingOperation', () => {
+  const context = { entities: { application: { id: 'app-99' } }, object: {}, request: {} };
+  const { pendingOperations } = applySteps([{
+    invoke: { POST: 'intake/applications/{application.id}/open' }
+  }], {}, context);
+  assert.strictEqual(pendingOperations.length, 1);
+  assert.strictEqual(pendingOperations[0].path, 'intake/applications/app-99/open');
+});
+
+// =============================================================================
+// applySteps — invoke PATCH ($push)
+// =============================================================================
+
+test('applySteps — invoke PATCH queues pendingAppend with resolved $push body', () => {
+  const context = {
+    entities: { member: { id: 'mem-1' } },
+    this: { data: { verificationType: 'income', result: 'verified' } },
+    object: {}, request: {}
+  };
+  const { pendingAppends } = applySteps([{
+    invoke: {
+      PATCH: 'intake/application-members/{member.id}',
+      body: { verifications: { $push: { type: '$this.data.verificationType', status: '$this.data.result' } } }
+    }
+  }], {}, context);
+  assert.strictEqual(pendingAppends.length, 1);
+  assert.strictEqual(pendingAppends[0].path, 'intake/application-members/mem-1');
+  assert.deepStrictEqual(pendingAppends[0].body.verifications.$push, { type: 'income', status: 'verified' });
+});
+
+// =============================================================================
+// applySteps — when:
+// =============================================================================
+
+test('applySteps — when: false skips step', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { isExpedited: false }, request: {} };
+  applySteps([{
+    when: { '==': [{ var: 'object.isExpedited' }, true] },
+    set: { field: 'status', value: 'expedited' }
+  }], resource, context);
+  assert.strictEqual(resource.status, 'pending');
+});
+
+test('applySteps — when: true executes step', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { isExpedited: true }, request: {} };
+  applySteps([{
+    when: { '==': [{ var: 'object.isExpedited' }, true] },
+    set: { field: 'status', value: 'expedited' }
+  }], resource, context);
+  assert.strictEqual(resource.status, 'expedited');
+});
+
+test('applySteps — when: exposes $this fields', () => {
+  const resource = { status: 'pending' };
+  const context = { this: { data: { program: 'snap' } }, object: {}, request: {} };
+  applySteps([{
+    when: { '==': [{ var: 'this.data.program' }, 'snap'] },
+    set: { field: 'status', value: 'snap-routed' }
+  }], resource, context);
+  assert.strictEqual(resource.status, 'snap-routed');
+});
+
+test('applySteps — when: exposes entity aliases', () => {
+  const resource = { status: 'pending' };
+  const context = { entities: { queue: { type: 'expedited' } }, object: {}, request: {} };
+  applySteps([{
+    when: { '==': [{ var: 'queue.type' }, 'expedited'] },
+    set: { field: 'status', value: 'expedited' }
+  }], resource, context);
+  assert.strictEqual(resource.status, 'expedited');
+});
+
+// =============================================================================
+// applySteps — forEach (field-value where)
+// =============================================================================
+
+test('applySteps — forEach runs then: once per matching record (field-value where)', () => {
+  clearAll('application-members');
+  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
+  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
+  insertResource('application-members', { id: 'mem-3', applicationId: 'app-2' });
+
+  const created = [];
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: {
+      from: 'intake/application-members',
+      where: { applicationId: '$object.id' },
+      as: 'member',
+      then: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+    }
+  }], {}, context);
+
+  assert.strictEqual(pendingCreates.length, 2);
+  const memberIds = pendingCreates.map(c => c.data.memberId).sort();
+  assert.deepStrictEqual(memberIds, ['mem-1', 'mem-2']);
+});
+
+test('applySteps — forEach skips non-matching records', () => {
+  clearAll('application-members');
+  insertResource('application-members', { id: 'mem-x', applicationId: 'app-99' });
+
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: {
+      from: 'intake/application-members',
+      where: { applicationId: '$object.id' },
+      as: 'member',
+      then: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+    }
+  }], {}, context);
+
+  assert.strictEqual(pendingCreates.length, 0);
+});
+
+// =============================================================================
+// applySteps — forEach (JSON Logic where)
+// =============================================================================
+
+test('applySteps — forEach with JSON Logic where filters records', () => {
+  clearAll('application-members');
+  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1', citizenshipStatus: 'citizen' });
+  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1', citizenshipStatus: 'non-citizen' });
+
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: {
+      from: 'intake/application-members',
+      where: { '==': [{ var: 'citizenshipStatus' }, 'non-citizen'] },
+      as: 'member',
+      then: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+    }
+  }], {}, context);
+
+  assert.strictEqual(pendingCreates.length, 1);
+  assert.strictEqual(pendingCreates[0].data.memberId, 'mem-2');
+});
+
+// =============================================================================
+// applySteps — nested forEach
+// =============================================================================
+
+test('applySteps — nested forEach iterates inner collection for each outer item', () => {
+  clearAll('application-members');
+  clearAll('service-types');
+  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
+  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
+  insertResource('service-types', { id: 'svc-snap', name: 'snap' });
+  insertResource('service-types', { id: 'svc-mcd', name: 'medicaid' });
+
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: {
+      from: 'intake/application-members',
+      where: { applicationId: '$object.id' },
+      as: 'member',
+      then: [{
+        forEach: {
+          from: 'data-exchange/service-types',
+          where: { '!=': [{ var: 'id' }, 'none'] },
+          as: 'svcType',
+          then: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id', serviceTypeId: '$svcType.id' } } }]
+        }
+      }]
+    }
+  }], {}, context);
+
+  // 2 members × 2 service types = 4 creates
+  assert.strictEqual(pendingCreates.length, 4);
 });

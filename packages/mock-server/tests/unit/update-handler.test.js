@@ -1,11 +1,12 @@
 /**
  * Unit tests for update handler utilities
- * Tests deepEqual and buildChanges — the building blocks for the updated event's changes array.
+ * Tests deepEqual, buildChanges, and onUpdate trigger behavior.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { deepEqual, buildChanges } from '../../src/handlers/update-handler.js';
+import { deepEqual, buildChanges, createUpdateHandler } from '../../src/handlers/update-handler.js';
+import { insertResource, clearAll, findById } from '../../src/database-manager.js';
 
 // =============================================================================
 // deepEqual
@@ -123,4 +124,91 @@ test('buildChanges — empty when nothing changed (excluding system fields)', ()
   const after  = { id: '1', createdAt: 'x', updatedAt: 'z', status: 'pending' };
   const changes = buildChanges(before, after);
   assert.strictEqual(changes.length, 0);
+});
+
+// =============================================================================
+// createUpdateHandler — onUpdate trigger
+// =============================================================================
+
+function makeReqRes(params, body, headers = {}) {
+  const req = { params, body, headers, path: '/testresources' };
+  const res = {
+    _code: 200,
+    _data: null,
+    status(code) { this._code = code; return this; },
+    json(data) { this._data = data; return this; },
+    header() { return this; }
+  };
+  return { req, res };
+}
+
+const apiMetadata = { serverBasePath: '/test' };
+const endpoint = { collectionName: 'testresources', path: '/testresources/{id}', requestSchema: null };
+
+test('createUpdateHandler — onUpdate fires when watched field is patched', () => {
+  clearAll('testresources');
+  insertResource('testresources', { id: 'res-1', isExpedited: false, priority: 'normal' });
+
+  const machine = {
+    object: 'testresource',
+    triggers: {
+      onUpdate: {
+        fields: ['isExpedited'],
+        then: [{ set: { field: 'priority', value: 'expedited' } }]
+      }
+    }
+  };
+
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], [], machine);
+  const { req, res } = makeReqRes({ id: 'res-1' }, { isExpedited: true });
+  handler(req, res);
+
+  assert.strictEqual(res._code, 200);
+  const saved = findById('testresources', 'res-1');
+  assert.strictEqual(saved.priority, 'expedited');
+});
+
+test('createUpdateHandler — onUpdate does not fire when non-watched field is patched', () => {
+  clearAll('testresources');
+  insertResource('testresources', { id: 'res-2', isExpedited: false, priority: 'normal', notes: '' });
+
+  const machine = {
+    object: 'testresource',
+    triggers: {
+      onUpdate: {
+        fields: ['isExpedited'],
+        then: [{ set: { field: 'priority', value: 'expedited' } }]
+      }
+    }
+  };
+
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], [], machine);
+  const { req, res } = makeReqRes({ id: 'res-2' }, { notes: 'updated' });
+  handler(req, res);
+
+  assert.strictEqual(res._code, 200);
+  const saved = findById('testresources', 'res-2');
+  assert.strictEqual(saved.priority, 'normal'); // onUpdate did not fire
+});
+
+test('createUpdateHandler — onUpdate fires for all fields when no watchedFields defined', () => {
+  clearAll('testresources');
+  insertResource('testresources', { id: 'res-3', notes: '', priority: 'normal' });
+
+  const machine = {
+    object: 'testresource',
+    triggers: {
+      onUpdate: {
+        // no fields: — fires on any patch
+        then: [{ set: { field: 'priority', value: 'high' } }]
+      }
+    }
+  };
+
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], [], machine);
+  const { req, res } = makeReqRes({ id: 'res-3' }, { notes: 'anything' });
+  handler(req, res);
+
+  const saved = findById('testresources', 'res-3');
+  assert.strictEqual(saved.priority, 'high');
 });

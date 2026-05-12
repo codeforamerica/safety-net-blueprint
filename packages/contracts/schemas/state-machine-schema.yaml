@@ -7,7 +7,25 @@ title: State Machine
 description: >
   Schema for behavioral contract state machine YAML files.
   Each file covers one domain and may contain one or more machines.
-  Domain-level guards and rules are shared across all machines in the file.
+
+
+  Top-level structure:
+    machines  — one per governed entity type; each machine defines states,
+                triggers (automatic reactions to events and timers), and
+                operations (actor- or system-triggered actions). Triggers
+                and operations are machine-level — they are bound to a
+                specific entity's lifecycle and cannot be shared across
+                machines.
+    guards    — named boolean conditions available to all machines in the
+                domain. Can also be defined at the machine level when a
+                condition only applies to one entity type; machine-level
+                guards take precedence over domain-level guards with the
+                same id.
+    rules     — named condition-to-consequence procedures available to all
+                machines in the domain; called with evaluate: rule-id. Can
+                also be defined at the machine level when logic only applies
+                to one entity type; machine-level rules take precedence over
+                domain-level rules with the same id.
 type: object
 required:
   - version
@@ -50,17 +68,33 @@ properties:
   rules:
     type: array
     description: >
-      Named condition-to-consequence procedures shared across triggers and operations.
-      Called with evaluate: rule-id when logic touches multiple resources or applies
-      in several places. Rules that rename the governed entity as context can apply
-      to different object types.
+      Named condition-to-consequence procedures called with evaluate: rule-id.
+      Shared across all machines in the domain.
     items:
       $ref: "#/$defs/Rule"
 
 $defs:
+
   Machine:
     type: object
-    description: A state machine for one governed entity type.
+    description: >
+      A state machine for one governed entity type.
+
+
+      Machine structure:
+        object       — the entity type this machine governs (e.g., Task, Application).
+        states       — the valid lifecycle states for this entity type.
+        initialState — the state assigned on creation.
+        context      — stable data available to all triggers, operations, and rules
+                       in this machine (e.g., named queues, config records).
+        guards       — named conditions scoped to this machine; take precedence over
+                       domain-level guards with the same id.
+        rules        — named procedures scoped to this machine; take precedence over
+                       domain-level rules with the same id.
+        triggers     — automatic reactions to creation, field changes, domain events,
+                       and timers.
+        operations   — actor- or system-triggered actions; each becomes a
+                       POST /{resource}/{id}/{name} endpoint.
     required:
       - object
       - states
@@ -78,6 +112,22 @@ $defs:
       initialState:
         type: string
         description: The state an object starts in after creation.
+      context:
+        $ref: "#/$defs/ContextProperty"
+      guards:
+        type: array
+        description: >
+          Named boolean conditions scoped to this machine. Take precedence over
+          any domain-level guard with the same id.
+        items:
+          $ref: "#/$defs/Guard"
+      rules:
+        type: array
+        description: >
+          Named condition-to-consequence procedures scoped to this machine.
+          Take precedence over any domain-level rule with the same id.
+        items:
+          $ref: "#/$defs/Rule"
       triggers:
         $ref: "#/$defs/Triggers"
       operations:
@@ -107,7 +157,17 @@ $defs:
 
   Triggers:
     type: object
-    description: Automatic reactions to lifecycle events — object creation, field changes, domain events, and timers.
+    description: >
+      Automatic reactions to lifecycle events.
+
+
+      Trigger types:
+        onCreate  — steps that run when the object is first created.
+        onUpdate  — steps that run when watched fields change outside of an operation.
+        onEvent   — reactions to external domain events arriving on a subscription.
+                    Array — one entry per subscribed event name.
+        onTimer   — steps that fire automatically after a duration elapses.
+                    Array — one entry per timer.
     additionalProperties: false
     properties:
       onCreate:
@@ -116,21 +176,42 @@ $defs:
         $ref: "#/$defs/OnUpdate"
       onEvent:
         type: array
-        description: >
-          Reactions to external domain events arriving on a subscription.
-          When transition.from is present, an existing instance is required.
-          When absent, the handler may bootstrap a new instance.
         items:
           $ref: "#/$defs/OnEvent"
       onTimer:
         type: array
-        description: Automatic steps that fire after a duration elapses.
         items:
           $ref: "#/$defs/OnTimer"
 
+  # ---------------------------------------------------------------------------
+  # OnCreate
+  # ---------------------------------------------------------------------------
+  # Steps and rules inherit all context already bound at the machine level.
+  # Define context: here only for lookups that depend on the newly created
+  # object's fields — e.g., the subject entity a task was created for.
+  #
+  # Example:
+  #   triggers:
+  #     onCreate:
+  #       context:
+  #         - application:
+  #             from: intake/applications
+  #             where:
+  #               id: $object.subjectId
+  #             optional: true
+  #       then:
+  #         - evaluate: assignment-rule
+  # ---------------------------------------------------------------------------
   OnCreate:
     type: object
-    description: Steps that run when the object is created.
+    description: >
+      Steps that run when the object is created.
+
+
+      onCreate structure:
+        actors   — roles authorized to create this object.
+        context  — data available to all steps; inherits machine context.
+        then     — steps to execute.
     required:
       - then
     additionalProperties: false
@@ -140,15 +221,30 @@ $defs:
         items:
           type: string
         description: Roles authorized to create this object.
+      context:
+        $ref: "#/$defs/ContextProperty"
       then:
         type: array
         minItems: 1
         items:
           $ref: "#/$defs/StepItem"
 
+  # ---------------------------------------------------------------------------
+  # OnUpdate
+  # ---------------------------------------------------------------------------
+  # Use fields: to limit firing to specific field changes. Without it, any
+  # PATCH to the resource triggers the handler — use with care.
+  # ---------------------------------------------------------------------------
   OnUpdate:
     type: object
-    description: Steps that run when watched fields change outside of an operation.
+    description: >
+      Steps that run when watched fields change outside of an operation.
+
+
+      onUpdate structure:
+        fields   — field names to watch; omit to fire on any update.
+        context  — data available to all steps; inherits machine context.
+        then     — steps to execute.
     required:
       - then
     additionalProperties: false
@@ -158,15 +254,51 @@ $defs:
         items:
           type: string
         description: Only fire when one of these fields changes. Omit to fire on any update.
+      context:
+        $ref: "#/$defs/ContextProperty"
       then:
         type: array
         minItems: 1
         items:
           $ref: "#/$defs/StepItem"
 
+  # ---------------------------------------------------------------------------
+  # OnEvent
+  # ---------------------------------------------------------------------------
+  # The event payload is available as $this without any binding:
+  #   $this.subject  — the primary id referenced by the event
+  #   $this.data.*   — event data fields
+  #   $this.time     — event timestamp
+  #
+  # Steps and rules inherit all context already bound at the machine level.
+  # Define context: here only for lookups specific to this event — typically
+  # the entities referenced by the event payload. Rules called from this
+  # handler inherit those bindings automatically.
+  #
+  # Example:
+  #   triggers:
+  #     onEvent:
+  #       - name: workflow.task.claimed
+  #         context:
+  #           - reviewTask:
+  #               from: workflow/tasks
+  #               where:
+  #                 id: $this.subject
+  #         then:
+  #           - evaluate: open-application-rule
+  # ---------------------------------------------------------------------------
   OnEvent:
     type: object
-    description: A reaction to an external domain event arriving on a subscription.
+    description: >
+      A reaction to an external domain event arriving on a subscription.
+
+
+      onEvent structure:
+        name        — fully qualified event name (e.g., intake.application.submitted).
+        transition  — if present, requires an existing instance; from limits source states.
+        guards      — conditions that must pass before steps run.
+        context     — data available to all steps; inherits machine context.
+        then        — steps to execute.
     required:
       - name
       - then
@@ -179,15 +311,48 @@ $defs:
         $ref: "#/$defs/TransitionBlock"
       guards:
         $ref: "#/$defs/Guards"
+      context:
+        $ref: "#/$defs/ContextProperty"
       then:
         type: array
         minItems: 1
         items:
           $ref: "#/$defs/StepItem"
 
+  # ---------------------------------------------------------------------------
+  # OnTimer
+  # ---------------------------------------------------------------------------
+  # Steps and rules inherit all context already bound at the machine level.
+  # Use relativeTo: createdAt / blockedAt / escalatedAt to measure elapsed time
+  # from a past event. Use relativeTo: slaDeadline with a negative after: to
+  # fire before a deadline (e.g., after: "-48h" fires 48 hours before expiry).
+  #
+  # Example — escalate after 72 business hours pending:
+  #   triggers:
+  #     onTimer:
+  #       - after: 72h
+  #         relativeTo: createdAt
+  #         calendarType: business
+  #         transition:
+  #           from: pending
+  #           to: escalated
+  #         then:
+  #           - evaluate: priority-rule
+  # ---------------------------------------------------------------------------
   OnTimer:
     type: object
-    description: Automatic steps that fire after a duration elapses.
+    description: >
+      Automatic steps that fire after a duration elapses.
+
+
+      onTimer structure:
+        after        — duration string (e.g., 72h, 7d, -48h); negative fires before the reference point.
+        relativeTo   — reference timestamp field on the object, or slaDeadline.
+        calendarType — calendar (default) or business hours.
+        transition   — optional state change to apply when the timer fires.
+        guards       — conditions that must pass before steps run.
+        context      — data available to all steps; inherits machine context.
+        then         — steps to execute.
     required:
       - after
       - relativeTo
@@ -202,7 +367,7 @@ $defs:
       relativeTo:
         type: string
         description: >
-          Reference timestamp. Object fields (createdAt, blockedAt, escalatedAt)
+          Reference timestamp field. Object fields (createdAt, blockedAt, escalatedAt)
           measure elapsed time. slaDeadline measures time remaining before expiry.
       calendarType:
         type: string
@@ -215,15 +380,53 @@ $defs:
         $ref: "#/$defs/TransitionBlock"
       guards:
         $ref: "#/$defs/Guards"
+      context:
+        $ref: "#/$defs/ContextProperty"
       then:
         type: array
         minItems: 1
         items:
           $ref: "#/$defs/StepItem"
 
+  # ---------------------------------------------------------------------------
+  # Operation
+  # ---------------------------------------------------------------------------
+  # Steps and rules inherit all context already bound at the machine level.
+  # Define context: here only for lookups specific to this operation.
+  # Omit transition: for in-place operations that don't change state.
+  # Use guards.actors: to restrict which roles can call the operation.
+  # Use requestBody: to define and validate the POST body; fields are
+  # accessible in steps as $request.field.
+  #
+  # Example:
+  #   operations:
+  #     - name: claim
+  #       transition:
+  #         from: pending
+  #         to: in_progress
+  #       guards:
+  #         actors:
+  #           - caseworker
+  #         conditions:
+  #           - taskIsUnassigned
+  #       then:
+  #         - set:
+  #             field: assignedToId
+  #             value: $caller.id
+  # ---------------------------------------------------------------------------
   Operation:
     type: object
-    description: An actor- or system-triggered operation. Becomes a POST /{resource}/{id}/{name} endpoint.
+    description: >
+      An actor- or system-triggered operation. Becomes a POST /{resource}/{id}/{name} endpoint.
+
+
+      Operation structure:
+        name        — URL path segment for this operation.
+        transition  — source and target states; omit for in-place operations.
+        guards      — actor roles and conditions that must pass before steps run.
+        requestBody — schema for the request body; fields available as $request.field.
+        context     — data available to all steps; inherits machine context.
+        then        — steps to execute.
     required:
       - name
       - then
@@ -240,6 +443,8 @@ $defs:
         type: object
         description: OpenAPI-style schema for the request body.
         additionalProperties: true
+      context:
+        $ref: "#/$defs/ContextProperty"
       then:
         type: array
         minItems: 1
@@ -305,21 +510,120 @@ $defs:
                   description: All of these named guards must pass (AND).
               additionalProperties: false
 
+  # ---------------------------------------------------------------------------
+  # StepItem — step vocabulary and value expressions
+  # ---------------------------------------------------------------------------
+  # VALUE EXPRESSIONS
+  # Anywhere a step accepts a value (set: value:, emit: data:, invoke: body:,
+  # forEach: body:), you write a value expression — a short $-prefixed string
+  # that the engine resolves at runtime to a concrete value. Expressions let
+  # steps reference the current object, the caller, the request body, the
+  # event payload, and any context-bound entity without hardcoding data.
+  #
+  #   $now              Current timestamp (ISO 8601)
+  #   $caller.field     Field on the authenticated caller
+  #   $object.field     Field on the governed object
+  #   $request.field    Field from the operation request body
+  #   $this.field       Field on the triggering event payload
+  #   $alias.field      Field on a context-bound entity
+  #   $alias            The whole context-bound entity (bare alias)
+  #   literal           Any non-$ string is treated as a literal value
+  #
+  # In path slots (invoke: path strings), use {alias.field} without the $:
+  #   POST: intake/applications/{application.id}/open
+  #
+  # STEP TYPES
+  # Steps are the actions executed in a then: list. The following step types
+  # are supported:
+  #
+  # SET
+  #   Set a field on the governed object.
+  #     - set:
+  #         field: assignedToId
+  #         value: $caller.id
+  #
+  # EMIT
+  #   Emit a domain event. The platform prefixes the full CloudEvents type
+  #   automatically from the domain and object.
+  #     - emit:
+  #         event: submitted
+  #         data:
+  #           submittedAt: $now
+  #           programs: $object.programs
+  #
+  # INVOKE
+  #   POST to a collection path — creates a new resource:
+  #     - invoke:
+  #         POST: intake/applications/documents
+  #         body:
+  #           applicationId: $application.id
+  #           category: income
+  #
+  #   POST to an operation path — triggers a state machine operation on an
+  #   existing resource (path ends with the operation name):
+  #     - invoke:
+  #         POST: intake/applications/{application.id}/open
+  #
+  #   PATCH to a resource path — appends to an array field using $push:
+  #     - invoke:
+  #         PATCH: intake/application-members/{member.id}
+  #         body:
+  #           verifications:
+  #             $push:
+  #               type: $this.data.verificationType
+  #               status: $this.data.result
+  #
+  #   Path slots use {alias.field} syntax (no $ prefix in the path string).
+  #   Body values use $alias.field expression syntax (with $ prefix).
+  #
+  # FOREACH
+  #   Query a collection and execute then: steps once per matching record.
+  #   Use when you need to create or update one resource per item in a set.
+  #
+  #   forEach uses the same from:/where: syntax as ContextBinding. The
+  #   difference is that forEach iterates over ALL matching records, while
+  #   ContextBinding returns only the first match.
+  #
+  #   Example:
+  #     - forEach:
+  #         from: intake/application-members
+  #         where:
+  #           applicationId: $application.id
+  #         as: member
+  #         then:
+  #           - invoke:
+  #               POST: data-exchange/service-calls
+  #               body:
+  #                 applicationId: $application.id
+  #                 requestingResourceId: $member.id
+  #
+  #   Nested forEach is supported for multi-level iteration.
+  #   Use a JSON Logic where: to filter on more than equality (see ContextBinding).
+  #
+  # ---------------------------------------------------------------------------
   StepItem:
     type: object
     description: >
-      A single step in a then: list. Recognized step types:
-        set: { field, value }       — update a field on the governed object
-        emit: { event, data? }      — emit a domain event
-        evaluate: rule-id           — evaluate a named rule
-        invoke: entity/path         — POST to create a resource (add body:),
-                                      POST to trigger a transition (path ends with operation name),
-                                      or PATCH to append to a field (add append: { field, value })
-      All items may include:
-        when: <JSON Logic>          — only run this step when condition is true
-        description: string         — human-readable explanation
+      A single step in a then: list.
+      Step types:
+        set      — set a field on the governed object.
+        emit     — emit a domain event.
+        evaluate — evaluate a named rule (inherits current scope).
+        invoke   — POST to create a resource or trigger an operation; PATCH to append to an array field.
+        forEach  — query a collection and run then: steps once per matching record.
+      All step types accept when: (JSON Logic condition) and description:.
     additionalProperties: true
     minProperties: 1
+    properties:
+      description:
+        type: string
+        description: Human-readable explanation of what this step does and why.
+      when:
+        description: >
+          JSON Logic expression. When present, the step is skipped unless the
+          condition evaluates to true. Use { var: "object.field" },
+          { var: "request.field" }, { var: "this.field" }, or
+          { var: "alias.field" } to reference context values.
 
   Guard:
     type: object
@@ -335,7 +639,10 @@ $defs:
         description: Guard identifier, referenced by name in guards.conditions.
       field:
         type: string
-        description: Field path or variable reference to evaluate (e.g., assignedToId, $caller.roles).
+        description: >
+          Field path or variable reference to evaluate. Use plain field names
+          for object fields (e.g., assignedToId) or $caller.roles for caller
+          attributes.
       operator:
         type: string
         enum:
@@ -349,12 +656,38 @@ $defs:
       value:
         description: Value to compare against. Omit for is_null and is_not_null.
 
+  # ---------------------------------------------------------------------------
+  # Rule
+  # ---------------------------------------------------------------------------
+  # Example — local context adds a binding the caller's scope doesn't provide:
+  #   rules:
+  #     - id: write-back-verification-rule
+  #       context:
+  #         - member:
+  #             from: intake/application-members
+  #             where:
+  #               id: $this.data.memberId
+  #       conditions:
+  #         - condition: true
+  #           then:
+  #             - invoke:
+  #                 PATCH: intake/application-members/{member.id}
+  #                 body:
+  #                   verifications:
+  #                     $push:
+  #                       type: $this.data.verificationType
+  #                       status: $this.data.result
+  # ---------------------------------------------------------------------------
   Rule:
     type: object
     description: >
       A named condition-to-consequence procedure called with evaluate: rule-id.
-      Handles logic that touches resources outside the governed object, or that
-      applies in multiple places. Evaluated as a list of condition → then pairs.
+      Inherits all context in scope at the call site (machine + trigger/operation).
+      Rule structure:
+        id                    — identifier used in evaluate: rule-id calls; convention: end with -rule.
+        evaluation (optional) — first-match-wins (default) or all-match.
+        context    (optional) — bindings not already provided by the caller's scope.
+        conditions            — list of condition → then pairs.
     required:
       - id
       - conditions
@@ -362,7 +695,7 @@ $defs:
     properties:
       id:
         type: string
-        description: "Rule identifier, used in evaluate: rule-id calls. Convention: end with -rule."
+        description: "Rule identifier used in evaluate: rule-id calls. Convention: end with -rule."
       evaluation:
         type: string
         enum:
@@ -370,25 +703,136 @@ $defs:
           - all-match
         default: first-match-wins
         description: >
-          first-match-wins — stop at the first condition that matches.
+          first-match-wins — stop at the first condition that matches (default).
           all-match — run every condition whose condition expression is true.
       context:
-        type: array
-        description: Data lookups available to this rule's conditions.
-        items:
-          $ref: "#/$defs/ContextBinding"
+        $ref: "#/$defs/ContextProperty"
       conditions:
         type: array
         minItems: 1
         items:
           $ref: "#/$defs/RuleCondition"
 
+  # ---------------------------------------------------------------------------
+  # ContextProperty / ContextBinding — scoped context
+  # ---------------------------------------------------------------------------
+  # context: is a list of ContextBinding objects. Each binding is a single
+  # key-value pair where the key is the alias name and the value specifies the
+  # lookup (from: + where:). The alias then becomes $alias in step value
+  # expressions and { var: "alias.field" } in JSON Logic conditions.
+  #
+  # Example:
+  #   context:
+  #     - snapIntake:           # alias name
+  #         from: workflow/queues
+  #         where:
+  #           id: snap-intake-queue
+  #     - application:          # alias name — referenced as $application.field
+  #         from: intake/applications
+  #         where:
+  #           id: $this.subject
+  #
+  # Context bindings fetch related data and make it available to steps and
+  # conditions as named aliases ($alias, $alias.field). They work like lexical
+  # scoping in JavaScript — inner scope wins when the same alias appears at
+  # multiple levels, and rules inherit everything already in scope at the call
+  # site without any redeclaration.
+  #
+  # Context can be defined at four levels:
+  #
+  #   domain          Stable configuration shared across all machines in the
+  #                   file — e.g. a config record that every machine needs.
+  #                   Resolved once per file load.
+  #
+  #   machine         Stable configuration shared by all triggers, operations,
+  #                   and rules in one machine — e.g. named queues, config
+  #                   records specific to that machine. Resolved once per
+  #                   machine invocation.
+  #
+  #   trigger /       Dynamic data specific to the event being handled — e.g.
+  #   operation       the task or application referenced in an event payload.
+  #                   Resolved fresh on every invocation.
+  #
+  #   rule            Optional overrides or additions for a specific rule. Most
+  #                   rules need no local context because the data they need is
+  #                   already in scope from the machine or trigger level. Add
+  #                   local context only when the rule needs something the
+  #                   caller's scope doesn't provide.
+  #
+  # The triggering event payload is always available as "this" without any
+  # binding. $this.subject is the event subject id; $this.data holds event data
+  # fields; $this.time is the event timestamp.
+  #
+  # Bindings are resolved in declaration order within each level. A binding may
+  # reference any alias already resolved above it — earlier in the same context
+  # block, or from any outer scope level (chaining).
+  #
+  # Best practices:
+  #   - Put config shared across all machines at the domain level. Put
+  #     machine-specific stable config (queues, config records) on the machine.
+  #     Put event-specific lookups on the trigger/operation. Put rule-specific
+  #     additions only where the caller's scope doesn't already provide them.
+  #   - Name aliases by purpose, not type. Use "snapIntake" not "snapQueue";
+  #     "reviewTask" not "task".
+  #   - Don't add optional: true to required config — let missing config fail
+  #     loudly rather than passing null into conditions.
+  #   - Don't add optional: true and then null-guard the same alias in a
+  #     condition. If null is legitimate, handle it in the condition. If not,
+  #     remove optional: true.
+  # ---------------------------------------------------------------------------
+  ContextProperty:
+    type: array
+    description: >
+      List of ContextBinding objects. Each item is a single-key object where
+      the key is the alias name and the value is a lookup (from: + where:).
+      See the comment block above for a concrete example and the four scope levels.
+      See ContextBinding for where: syntax options.
+    items:
+      $ref: "#/$defs/ContextBinding"
+
+  # ---------------------------------------------------------------------------
+  # ContextBinding
+  # ---------------------------------------------------------------------------
+  # A single data lookup. The key is the alias name. Always returns a single
+  # entity (or null when optional: true and not found). To work with multiple
+  # records, use forEach: — same from:/where: syntax but iterates all matches.
+  #
+  # WHERE SYNTAX — two forms:
+  #
+  #   (1) Field-value equality pairs. Values can be $this.field, $alias.field,
+  #       $object.field, or a literal string:
+  #
+  #       context:
+  #         - application:
+  #             from: intake/applications
+  #             where:
+  #               id: $this.subject
+  #
+  #   (2) JSON Logic — use when you need inequality, AND/OR, or computed
+  #       conditions. { var: "fieldName" } references the candidate record;
+  #       { var: "this.field" } the event; { var: "alias.field" } a prior binding:
+  #
+  #       context:
+  #         - member:
+  #             from: intake/application-members
+  #             where:
+  #               and:
+  #                 - { "==": [{ var: "applicationId" }, { var: "application.id" }] }
+  #                 - { "!=": [{ var: "citizenshipStatus" }, "citizen"] }
+  #
+  # CHAINING
+  #   Bindings resolve in declaration order. A binding may reference any alias
+  #   already resolved above it in the same block, or from any outer scope level.
+  # ---------------------------------------------------------------------------
   ContextBinding:
     type: object
     description: >
-      A data lookup that makes entity records available inside a rule.
-      The key is the variable name ($varname in step bodies and { var: "$varname" } in conditions).
-      The value defines where to look and how to filter.
+      A single data lookup keyed by alias name. The alias becomes $alias in step
+      expressions and { var: "alias.field" } in JSON Logic conditions.
+      ContextBinding properties:
+        from              — collection path to query (required).
+        where  (optional) — filter condition; field-value pairs or JSON Logic.
+        optional (optional) — when true, resolves to null if no record matches.
     minProperties: 1
     maxProperties: 1
     additionalProperties:
@@ -399,22 +843,63 @@ $defs:
       properties:
         from:
           type: string
-          description: Entity path to query (e.g., intake/applications, workflow/tasks).
+          description: >
+            Collection path to query (e.g., intake/applications,
+            intake/application-members, workflow/tasks).
         where:
-          type: object
-          description: "Filter conditions as field-value pairs (e.g., { id: \"$this.subject\" })."
-          additionalProperties: true
+          description: >
+            Filter condition — field-value equality pairs or a JSON Logic
+            expression. See ContextBinding comment block for full syntax.
+            Always returns the first matching record. Use forEach: to iterate
+            over all matches.
+          oneOf:
+            - type: object
+              description: Field-value equality pairs or JSON Logic expression.
+              additionalProperties: true
         optional:
           type: boolean
           description: >
-            When true, the rule proceeds even if no record is found. The variable
-            will be null. Use when the linked entity may not exist.
+            When true, the binding resolves to null when no record is found and
+            processing continues normally. When false (default), a missing
+            record causes the rule or trigger to be skipped. Use optional: true
+            only when null is a legitimate outcome — not for required config
+            records that must exist for the system to function.
 
+  # ---------------------------------------------------------------------------
+  # RuleCondition
+  # ---------------------------------------------------------------------------
+  # RuleCondition is the item type of Rule.conditions. A rule is a list of
+  # condition → then pairs evaluated in order according to the rule's
+  # evaluation mode (first-match-wins or all-match).
+  #
+  # Example — two-branch rule, first match wins:
+  #   rules:
+  #     - id: assign-queue-rule
+  #       conditions:
+  #         - condition: { "==": [{ var: "object.program" }, "snap"] }
+  #           then:
+  #             - set:
+  #                 field: queueId
+  #                 value: $snapIntake.id
+  #         - condition: true          # fallback — always matches
+  #           then:
+  #             - set:
+  #                 field: queueId
+  #                 value: $generalIntake.id
+  # ---------------------------------------------------------------------------
   RuleCondition:
     type: object
     description: >
       A condition → consequence pair inside a rule. The then: steps run when
-      the condition expression is true (or when condition is omitted / true).
+      the condition matches. Conditions are evaluated in order according to the
+      rule's evaluation mode.
+      RuleCondition properties:
+        condition  (optional) — JSON Logic expression or the literal true.
+                                Omitting condition is equivalent to true.
+        then                  — steps to execute when the condition matches.
+        order      (optional) — evaluation order; lower numbers run first.
+        id         (optional) — identifier for documentation and debugging.
+        description (optional) — human-readable explanation.
     required:
       - then
     additionalProperties: true
@@ -424,11 +909,12 @@ $defs:
         description: Condition identifier for documentation and debugging.
       order:
         type: integer
-        description: Evaluation order within the rule.
+        description: Evaluation order within the rule. Lower numbers run first.
       condition:
         description: >
-          JSON Logic expression or the literal true. When true, always runs
-          (useful in all-match evaluation for unconditional steps).
+          JSON Logic expression or the literal true. When omitted, the condition
+          always matches — equivalent to condition: true. Variable references:
+          { var: "object.field" }, { var: "this.field" }, { var: "alias.field" }.
       then:
         type: array
         minItems: 1
@@ -437,3 +923,4 @@ $defs:
         description: Steps to execute when the condition matches.
       description:
         type: string
+        description: Human-readable explanation of what this condition checks and what it does.

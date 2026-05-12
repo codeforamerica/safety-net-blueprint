@@ -289,3 +289,114 @@ test('processRuleEvaluations — first-match-wins stops at first matching condit
   // Only snap-rule fired → 'expedited'
   assert.strictEqual(task.priority, 'expedited');
 });
+
+// =============================================================================
+// RuleCondition.order — conditions evaluated in order, lower first
+// =============================================================================
+
+test('processRuleEvaluations — conditions evaluated in declaration order without explicit order field', () => {
+  const task = { id: 'task-1', queueId: null };
+
+  const inlineRules = makeInlineRule({
+    conditions: [
+      { id: 'first', condition: true, then: [{ set: { field: 'queueId', value: 'q-first' } }] },
+      { id: 'second', condition: true, then: [{ set: { field: 'queueId', value: 'q-second' } }] }
+    ]
+  });
+
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  assert.strictEqual(task.queueId, 'q-first'); // first-match-wins stops after first match
+});
+
+test('processRuleEvaluations — order field overrides declaration order', () => {
+  const task = { id: 'task-1', queueId: null };
+
+  const inlineRules = makeInlineRule({
+    conditions: [
+      { id: 'declared-first', order: 2, condition: true, then: [{ set: { field: 'queueId', value: 'q-second' } }] },
+      { id: 'declared-second', order: 1, condition: true, then: [{ set: { field: 'queueId', value: 'q-first' } }] }
+    ]
+  });
+
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  assert.strictEqual(task.queueId, 'q-first'); // order:1 runs first despite being declared second
+});
+
+// =============================================================================
+// Context binding — JSON Logic where
+// =============================================================================
+
+test('processRuleEvaluations — JSON Logic where in context binding returns first match', () => {
+  clearAll('queues');
+  insertResource('queues', { id: 'q-snap', name: 'snap-intake', priority: 1 });
+  insertResource('queues', { id: 'q-general', name: 'general-intake', priority: 2 });
+
+  const task = { id: 'task-1', queueId: null };
+
+  const inlineRules = makeInlineRule({
+    context: [{
+      snapQueue: {
+        from: 'workflow/queues',
+        where: { '==': [{ var: 'name' }, 'snap-intake'] }
+      }
+    }],
+    conditions: [{
+      condition: true,
+      then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
+    }]
+  });
+
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  assert.strictEqual(task.queueId, 'q-snap');
+});
+
+// =============================================================================
+// Rule-level context — local additions inherit call-site scope
+// =============================================================================
+
+test('processRuleEvaluations — rule-level context adds bindings not in caller scope', () => {
+  clearAll('applications');
+  clearAll('queues');
+  insertResource('applications', { id: 'app-1', programs: ['snap'] });
+  insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+
+  // Rule has its own context: (application binding) not provided by caller
+  const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
+  const inlineRules = makeInlineRule({
+    context: [{
+      application: { from: 'intake/applications', where: { id: '$object.subjectId' } }
+    }],
+    conditions: [{
+      condition: { in: ['snap', { var: '$application.programs' }] },
+      then: [{ set: { field: 'queueId', value: 'q-snap' } }]
+    }]
+  });
+
+  // Call-site context has no entities — the rule resolves its own
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  assert.strictEqual(task.queueId, 'q-snap');
+});
+
+test('processRuleEvaluations — rule-level context can chain from caller-scope entities', () => {
+  clearAll('applications');
+  clearAll('queues');
+  insertResource('applications', { id: 'app-1', programs: ['snap'], countyQueueName: 'snap-intake' });
+  insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+
+  const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
+
+  // Rule context: queue binding uses application (provided by call-site scope) to resolve name
+  const inlineRules = makeInlineRule({
+    context: [
+      { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } },
+      { targetQueue: { from: 'workflow/queues', where: { name: '$application.countyQueueName' } } }
+    ],
+    conditions: [{
+      condition: true,
+      then: [{ set: { field: 'queueId', value: '$targetQueue.id' } }]
+    }]
+  });
+
+  processRuleEvaluations([{ ruleId: 'test-rule' }], task, [], 'workflow', inlineRules, makeContext(task));
+  assert.strictEqual(task.queueId, 'q-snap');
+});

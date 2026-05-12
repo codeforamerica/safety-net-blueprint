@@ -19,7 +19,7 @@ import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
 import { registerStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
-import { registerTimerStub, listTimerStubs, removeTimerStub, clearTimerStubs, fireNextTimer } from '../src/timer-stub-engine.js';
+import { registerTimerStub, listTimerStubs, removeTimerStub, clearTimerStubs, fireNextTimer, fireWithNow } from '../src/timer-stub-engine.js';
 import { findById } from '../src/database-manager.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
@@ -220,11 +220,22 @@ async function startMockServer(specDirs = null, seedDir = null) {
       if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Timer stub "${req.params.id}" not found` });
       res.status(204).end();
     });
-    // Fire the next timer stub — sweeps all resources for due onTimer entries
+    // Fire timers — sweeps all resources for due onTimer entries.
+    // Inline: POST /mock/timers/fire { "now": "+72h" }  — no pre-registration needed.
+    // Queued: POST /mock/timers/fire (no body)          — pops next registered stub.
     app.post('/mock/timers/fire', (req, res) => {
+      const inlineNow = req.body?.now;
+      if (inlineNow) {
+        try {
+          const result = fireWithNow(inlineNow, allStateMachines, allRules, allSlaTypes);
+          return res.json(result);
+        } catch (err) {
+          return res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
+        }
+      }
       const result = fireNextTimer(allStateMachines, allRules, allSlaTypes);
       if (!result) {
-        return res.status(422).json({ code: 'NO_TIMER_STUBS', message: 'No timer stubs registered. Use POST /mock/stubs/timers to register one.' });
+        return res.status(422).json({ code: 'NO_TIMER_STUBS', message: 'No timer stubs registered. Use POST /mock/stubs/timers to register one, or pass { "now": "+72h" } in the request body.' });
       }
       res.json(result);
     });

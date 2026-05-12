@@ -7,7 +7,8 @@ import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { initializeSlaInfo } from '../sla-engine.js';
-import { processRuleEvaluations } from './rule-evaluation.js';
+import { processRuleEvaluations, resolveContextLayers } from './rule-evaluation.js';
+import { mergeByPrecedence } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 
 /**
@@ -94,19 +95,31 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         // Snapshot before any steps/effects mutate resource (for DB diff later)
         const original = JSON.parse(JSON.stringify(resource));
 
-        const context = {
+        const baseContext = {
           caller: { id: callerId, roles: callerRoles },
           object: { ...resource },
           request: req.body || {},
           now
         };
 
+        const entities = resolveContextLayers(
+          [stateMachine?.context, machine?.context, onCreate?.context],
+          resource,
+          baseContext
+        );
+        if (entities === null) {
+          console.error('onCreate: required context binding failed — skipping trigger');
+          return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Context binding failed' });
+        }
+        const context = { ...baseContext, entities };
+
         const { pendingCreates, pendingRuleEvaluations } = isNewFormat
           ? applySteps(onCreate.then || [], resource, context)
           : applyEffects(onCreate.effects || [], resource, context);
 
         // Process rule evaluations (sets queueId, priority, etc.)
-        processRuleEvaluations(pendingRuleEvaluations, resource, rules, stateMachine?.domain, stateMachine?.rules, context);
+        const inlineRules = mergeByPrecedence(stateMachine?.rules, machine?.rules);
+        processRuleEvaluations(pendingRuleEvaluations, resource, rules, stateMachine?.domain, inlineRules, context);
 
         // Execute pending creates
         for (const { entity, data } of pendingCreates) {

@@ -6,6 +6,7 @@
 
 import jsonLogic from 'json-logic-js';
 import { deriveCollectionName } from './collection-utils.js';
+import { findAll, findById } from './database-manager.js';
 
 /**
  * Resolve a value expression against a context.
@@ -55,8 +56,19 @@ export function resolveValue(value, context) {
       const dot = value.indexOf('.');
       const alias = value.slice(1, dot);
       const field = value.slice(dot + 1);
-      if (context.entities !== undefined && alias in context.entities) {
-        return resolveDotPath(context.entities[alias], field) ?? null;
+      if (context.entities !== undefined) {
+        if (alias in context.entities) {
+          return resolveDotPath(context.entities[alias], field) ?? null;
+        }
+        return null; // entities map is defined but alias not found
+      }
+    }
+
+    // Bare alias: $alias with no field — returns the whole entity.
+    if (value.startsWith('$') && !value.includes('.')) {
+      const alias = value.slice(1);
+      if (context.entities !== undefined) {
+        return context.entities[alias] ?? null;
       }
     }
   }
@@ -153,12 +165,26 @@ export function evaluateGuard(guard, resource, context) {
       }
       return { pass: false, reason: `${guard.field} is not null` };
 
+    case 'is_not_null':
+      if (fieldValue !== null && fieldValue !== undefined) {
+        return { pass: true, reason: null };
+      }
+      return { pass: false, reason: `${guard.field} is null` };
+
     case 'equals': {
       const expected = resolveValue(guard.value, context);
       if (fieldValue === expected) {
         return { pass: true, reason: null };
       }
       return { pass: false, reason: `${guard.field} does not match expected value` };
+    }
+
+    case 'not_equals': {
+      const expected = resolveValue(guard.value, context);
+      if (fieldValue !== expected) {
+        return { pass: true, reason: null };
+      }
+      return { pass: false, reason: `${guard.field} equals the excluded value` };
     }
 
     case 'contains_any': {
@@ -310,11 +336,69 @@ export function applySteps(steps, resource, context) {
 
   for (const step of steps) {
     if (step.when !== undefined) {
-      const logicData = { request: context.request || {}, object: context.object || {} };
+      const logicData = {
+        request: context.request || {},
+        object: context.object || {},
+        this: context.this || {},
+        ...Object.fromEntries(Object.entries(context.entities ?? {})),
+      };
       if (!jsonLogic.apply(step.when, logicData)) continue;
     }
 
-    if (step.set) {
+    if (step.forEach) {
+      const { from: collectionPath, where, as: itemAlias, then: forEachSteps } = step.forEach;
+      if (!collectionPath || !where || !itemAlias) {
+        console.warn('forEach: missing required from:, where:, or as: — skipping');
+        continue;
+      }
+
+      const collection = deriveCollectionName(collectionPath, collectionPath.split('/')[0]);
+      const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
+      const isJsonLogic = Object.keys(where).some(k => logicOperators.has(k));
+
+      let items;
+      if (isJsonLogic) {
+        const { items: allItems } = findAll(collection, {});
+        const logicData = {
+          this: context.this ?? {},
+          object: context.object ?? {},
+          ...Object.fromEntries(Object.entries(context.entities ?? {}))
+        };
+        items = allItems.filter(item => {
+          try {
+            return jsonLogic.apply(where, { ...logicData, ...item });
+          } catch (e) {
+            console.warn(`forEach: JSON Logic where filter error — ${e.message}`);
+            return false;
+          }
+        });
+      } else {
+        // Field-value equality pairs: resolve each value expression then query
+        const query = {};
+        for (const [field, val] of Object.entries(where)) {
+          query[field] = resolveValue(val, context);
+        }
+        const hasUndefined = Object.values(query).some(v => v === undefined);
+        if (hasUndefined) {
+          console.warn('forEach: where clause resolved to undefined — skipping');
+          continue;
+        }
+        ({ items } = findAll(collection, query));
+      }
+
+      for (const item of items) {
+        const itemContext = {
+          ...context,
+          entities: { ...(context.entities ?? {}), [itemAlias]: item },
+        };
+        const nested = applySteps(forEachSteps || [], resource, itemContext);
+        pendingCreates.push(...nested.pendingCreates);
+        pendingOperations.push(...nested.pendingOperations);
+        pendingAppends.push(...nested.pendingAppends);
+        pendingRuleEvaluations.push(...nested.pendingRuleEvaluations);
+        pendingEvents.push(...nested.pendingEvents);
+      }
+    } else if (step.set) {
       resource[step.set.field] = resolveValue(step.set.value, context);
     } else if (step.emit) {
       const data = {};

@@ -119,29 +119,59 @@ export function resolveContextEntities(contextBindings, resource) {
 }
 
 /**
- * Resolve context bindings from a state machine inline rule's `context:` array.
- * Each item is { alias: { from, where, optional } }.
- *
- * Supports where clauses that query by any field — not just id:
- *   where: { name: snap-intake }  → findAll by name (first match)
- *   where: { id: $object.subjectId } → findById
- *
- * Where clause values support expressions:
- *   $object.field  → resource[field]
- *   $this.field    → context.this[field] (nested dot paths supported)
- *   $alias.field   → previously resolved entities[alias][field]
- *   plain string   → literal value
- *
- * Returns a map of alias → entity (WITHOUT $ prefix).
- * Optional bindings that fail resolve as null (included in map for condition checks).
- * Required bindings that fail cause null to be returned (caller skips rule).
- *
- * @param {Array} contextBindings - Array of single-key objects
- * @param {Object} resource - The primary resource for $object.field resolution
- * @param {Object} [context] - Step context for $this.field and previously resolved alias resolution
- * @returns {Object|null} Map of alias → entity (or null), or null if a required binding fails
+ * Resolve a where clause value expression against the current resolution context.
+ * Supports: $object.field, $this.field, $alias.field, literal strings.
  */
-function resolveInlineRuleContext(contextBindings, resource, context) {
+function resolveWhereValue(val, resource, context, resolved) {
+  if (typeof val !== 'string') return val;
+  if (val.startsWith('$object.')) return resource[val.slice('$object.'.length)];
+  if (val.startsWith('$this.')) return resolveDotPath(context?.this, val.slice('$this.'.length));
+  if (val.startsWith('$') && val.includes('.')) {
+    const dot = val.indexOf('.');
+    return resolveDotPath(resolved[val.slice(1, dot)], val.slice(dot + 1));
+  }
+  return val;
+}
+
+/**
+ * Resolve context bindings from a state machine inline rule's `context:` array.
+ * Each item is { alias: { from, where?, optional? } }.
+ *
+ * RETURN TYPE — single entity vs. array:
+ *   where: { id: <value> }           → single entity (findById); null if not found
+ *   where: { otherField: <value> }   → array of all matching records (may be empty)
+ *   JSON Logic where:                → array of all records passing the condition
+ *   (no where)                       → not valid; binding is skipped with a warning
+ *
+ * WHERE CLAUSE — two supported forms:
+ *
+ *   (1) Field-value equality pairs. Values may be:
+ *         $object.field  → field on the primary resource being evaluated
+ *         $this.field    → field on the triggering event/context (nested dot paths ok)
+ *         $alias.field   → field on a previously resolved binding (chaining)
+ *         literal string → exact match value
+ *
+ *       { id: $this.subject }              → single entity lookup
+ *       { applicationId: $application.id } → all members for this application → array
+ *       { name: snap-intake }              → first queue with that name → single (id field absent)
+ *
+ *   (2) JSON Logic expression — use when you need inequality, AND/OR, or computed
+ *       conditions. Evaluated per-candidate record; matching records are collected
+ *       into an array. Variable references:
+ *         { var: "fieldName" }        → field on the candidate record
+ *         { var: "this.field" }       → field on the triggering event/context
+ *         { var: "alias.field" }      → field on a previously resolved binding
+ *
+ * Bindings are resolved in order; each binding may reference previously resolved aliases.
+ * Required bindings that cannot be resolved cause null to be returned (rule is skipped).
+ * Optional bindings that fail resolve to null or [] and are included in the map.
+ *
+ * @param {Array} contextBindings - Array of single-key objects { alias: { from, where, optional } }
+ * @param {Object} resource - Primary resource for $object.field resolution
+ * @param {Object} [context] - Step context for $this.field and previously resolved alias resolution
+ * @returns {Object|null} Map of alias → entity|array|null, or null if a required binding fails
+ */
+export function resolveInlineRuleContext(contextBindings, resource, context) {
   const resolved = {};
 
   for (const binding of contextBindings || []) {
@@ -150,58 +180,107 @@ function resolveInlineRuleContext(contextBindings, resource, context) {
     if (!config || !config.from) continue;
 
     const collection = deriveCollectionName(config.from, config.from.split('/')[0]);
-    const where = config.where || {};
+    const where = config.where;
 
-    // Resolve where clause values — supports $object.field, $this.field, $alias.field, literals
-    const query = {};
-    for (const [field, val] of Object.entries(where)) {
-      if (typeof val === 'string') {
-        if (val.startsWith('$object.')) {
-          query[field] = resource[val.slice('$object.'.length)];
-        } else if (val.startsWith('$this.')) {
-          query[field] = resolveDotPath(context?.this, val.slice('$this.'.length));
-        } else if (val.startsWith('$') && val.includes('.')) {
-          const dot = val.indexOf('.');
-          const refAlias = val.slice(1, dot);
-          const refField = val.slice(dot + 1);
-          query[field] = resolveDotPath(resolved[refAlias], refField);
-        } else {
-          query[field] = val;
-        }
-      } else {
-        query[field] = val;
-      }
+    if (!where) {
+      console.warn(`Context binding "${alias}": no where clause — skipping binding`);
+      if (config.optional) { resolved[alias] = null; continue; }
+      return null;
     }
 
-    // If any where-clause value resolved to undefined, the source field doesn't exist
-    // on the resource — the entity can't be found (don't fall through to an unfiltered query).
+    // Detect where form: JSON Logic if top-level keys include logic operators;
+    // otherwise treat as field-value equality pairs.
+    const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
+    const isJsonLogic = Object.keys(where).some(k => logicOperators.has(k));
+
+    if (isJsonLogic) {
+      // JSON Logic where: fetch all records and return the first match.
+      // ContextBinding always returns a single entity. Use forEach: to iterate over all matches.
+      const { items: allItems } = findAll(collection, {});
+      const logicData = {
+        this: context?.this ?? {},
+        object: resource,
+        ...Object.fromEntries(Object.entries(resolved))
+      };
+      const entity = allItems.find(item => {
+        try {
+          return jsonLogic.apply(where, { ...logicData, ...item });
+        } catch (e) {
+          console.warn(`Context binding "${alias}": JSON Logic where filter error — ${e.message}`);
+          return false;
+        }
+      }) ?? null;
+
+      if (!entity) {
+        if (config.optional) { resolved[alias] = null; continue; }
+        console.error(`Context binding "${alias}": JSON Logic where matched no records — skipping rule`);
+        return null;
+      }
+      resolved[alias] = entity;
+      continue;
+    }
+
+    // Field-value equality pairs: resolve each value expression
+    const query = {};
+    for (const [field, val] of Object.entries(where)) {
+      query[field] = resolveWhereValue(val, resource, context, resolved);
+    }
+
+    // If any where-clause value resolved to undefined, the source field doesn't exist —
+    // the entity can't be found (don't fall through to an unfiltered query).
     const hasUndefinedValue = Object.values(query).some(v => v === undefined);
     if (hasUndefinedValue) {
       if (config.optional) { resolved[alias] = null; continue; }
       return null;
     }
 
-    // Fetch entity — by id (findById) or by other field (findAll first match)
-    let entity = null;
     if (query.id) {
-      entity = findById(collection, query.id);
-    } else {
-      const { items } = findAll(collection, query, { limit: 1 });
-      entity = items.length > 0 ? items[0] : null;
-    }
-
-    if (!entity) {
-      if (config.optional) {
-        resolved[alias] = null; // present as null so condition checks can test for it
-        continue;
+      // id lookup → single entity
+      const entity = findById(collection, query.id);
+      if (!entity) {
+        if (config.optional) { resolved[alias] = null; continue; }
+        return null;
       }
-      return null; // required binding failed — skip rule
+      resolved[alias] = entity;
+    } else {
+      // Non-id lookup → first match (single entity).
+      // Use forEach: to iterate over all matching records.
+      const { items } = findAll(collection, query, { limit: 1 });
+      const entity = items.length > 0 ? items[0] : null;
+      if (!entity) {
+        if (config.optional) { resolved[alias] = null; continue; }
+        return null;
+      }
+      resolved[alias] = entity;
     }
-
-    resolved[alias] = entity;
   }
 
   return resolved;
+}
+
+/**
+ * Resolve context bindings across multiple scope levels in declaration order.
+ * Domain → machine → trigger/operation. Each layer can reference aliases resolved
+ * by prior layers (chaining across levels). Inner scope wins on name conflict.
+ *
+ * Returns null if any required binding in any layer fails — the caller should
+ * skip the trigger or operation.
+ *
+ * @param {Array<Array|null|undefined>} layers - Binding arrays in scope order (outermost first)
+ * @param {Object} resource - Primary resource for $object.* resolution
+ * @param {Object} baseContext - Base step context (caller, this, now, existing entities)
+ * @returns {Object|null} Merged entities map, or null if a required binding failed
+ */
+export function resolveContextLayers(layers, resource, baseContext) {
+  let entities = { ...(baseContext.entities || {}) };
+  for (const bindings of layers) {
+    if (!bindings || bindings.length === 0) continue;
+    const layerContext = { ...baseContext, entities };
+    const resolved = resolveInlineRuleContext(bindings, resource, layerContext);
+    if (resolved === null) return null;
+    Object.assign(entities, resolved);
+  }
+  return entities;
 }
 
 /**

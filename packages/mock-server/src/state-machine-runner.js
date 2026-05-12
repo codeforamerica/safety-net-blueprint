@@ -7,8 +7,10 @@
 import { findById, update, create } from './database-manager.js';
 import { findTransition, findOperation, evaluateGuards, applyEffects, applySteps } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
-import { processRuleEvaluations } from './handlers/rule-evaluation.js';
+import { processRuleEvaluations, resolveContextLayers } from './handlers/rule-evaluation.js';
 import { emitEvent } from './emit-event.js';
+import { mergeByPrecedence } from './collection-utils.js';
+import { validate } from './validator.js';
 
 /**
  * Execute a state machine transition programmatically.
@@ -62,6 +64,13 @@ export function executeTransition({
     guardConditions = operation.guards?.conditions || [];
     steps = operation.then || [];
     transitionTo = operation.transition?.to ?? null;
+
+    if (operation.requestBody) {
+      const { valid, errors } = validate(requestBody, operation.requestBody, `operation-${trigger}`);
+      if (!valid) {
+        return { success: false, status: 422, error: 'Request body validation failed', details: errors };
+      }
+    }
   } else {
     const { transition, error } = findTransition(stateMachine, trigger, resource);
     if (!transition) {
@@ -85,14 +94,30 @@ export function executeTransition({
     }
   }
 
-  const context = {
+  const baseContext = {
     caller: { id: callerId, roles: callerRoles },
     object: { ...resource },
     request: requestBody,
     now: timestamp
   };
 
-  const guardsMap = Object.fromEntries((stateMachine.guards || []).map(g => [g.id, g]));
+  const operationContext = isNewFormat
+    ? (machine.operations || []).find(op => op.name === trigger)?.context
+    : null;
+
+  const entities = resolveContextLayers(
+    [stateMachine.context, machine?.context, operationContext],
+    resource,
+    baseContext
+  );
+  if (entities === null) {
+    return { success: false, status: 409, error: `Context binding failed for operation "${trigger}"` };
+  }
+  const context = { ...baseContext, entities };
+
+  const guardsMap = Object.fromEntries(
+    [...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
+  );
   const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
   if (!guardResult.pass) {
     return {
@@ -117,7 +142,8 @@ export function executeTransition({
     updateSlaInfo(updated, slaTypes, timestamp, stateMachine.states || {});
   }
 
-  processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine.domain, stateMachine.rules, context);
+  const inlineRules = mergeByPrecedence(stateMachine.rules, machine?.rules);
+  processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine.domain, inlineRules, context);
 
   const diff = {};
   for (const [key, value] of Object.entries(updated)) {
