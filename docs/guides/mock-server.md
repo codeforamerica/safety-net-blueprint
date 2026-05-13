@@ -227,6 +227,36 @@ Response:
 }
 ```
 
+## Sorting (`?sort=`)
+
+List endpoints that declare an `x-sortable` extension accept the `sort` query parameter. The syntax is comma-separated fields, with a `-` prefix for descending order:
+
+```bash
+curl "http://localhost:1080/workflow/tasks?sort=-priority,dueDate"
+```
+
+The mock server honors the configuration declared on each operation:
+
+| Field | Behavior |
+|---|---|
+| `fields` | Whitelist of allowable sort fields. Requests referencing any other field are rejected with `400 FIELD_NOT_SORTABLE` (field exists on the schema but isn't allowed) or `400 INVALID_SORT_FIELD` (field doesn't exist on the schema). |
+| `default` | Applied when the client omits `?sort=`. If absent, no client-driven sort is applied — only the tie-breaker. |
+| `tieBreaker` | Always appended to guarantee stable pagination. Defaults to `id`. |
+| `maxFields` | When omitted from the spec, the mock server applies an implicit ceiling of 5 to prevent unbounded queries. |
+
+Endpoints that do not declare `x-sortable` reject any `?sort=` parameter with `400 INVALID_SORT_FIELD` — the parameter is not silently ignored.
+
+### Implementing `x-sortable` in your own adapter
+
+If you're building a production adapter against the blueprint contracts rather than running the mock server, these are the contract-driven invariants you must honor:
+
+1. **Lexical validation.** Every entry in `x-sortable.fields`, `x-sortable.default`, and `x-sortable.tieBreaker` matches `^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$`. The pattern validator enforces this at lint time, but adapters MUST re-validate at runtime as defense in depth — field names are typically interpolated into raw SQL identifiers, which most databases don't parameterize.
+2. **`maxFields` floor.** When the spec omits `maxFields`, adapters MUST apply an implicit ceiling (recommended: 5) to bound query cost.
+3. **Information disclosure.** Sort order is an oracle — a field's ordering can leak information about records even when the field itself isn't projected (binary-search via pagination). Adapters SHOULD warn at deploy time if `x-sortable.fields` contains fields tagged `x-pii: true` or matching obvious sensitive patterns (`ssn`, `dateOfBirth`, internal risk scores). The pattern validator surfaces this as a Spectral warning.
+4. **Failed-parse logging.** Adapters SHOULD log failed sort parses at info level with the offending field name (not the raw query string, which may carry PII from other params).
+
+See [`api-patterns.yaml#sorting`](../../packages/contracts/patterns/api-patterns.yaml) and [`x-extensions.md#x-sortable`](../architecture/x-extensions.md#x-sortable) for the full specification.
+
 ## Configuration
 
 ```bash
