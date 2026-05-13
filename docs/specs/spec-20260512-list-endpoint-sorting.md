@@ -133,10 +133,14 @@ A list endpoint MAY ship without `x-sortable.fields` (signaling that sorting is 
 `validate-patterns.js` MUST verify, for every list endpoint that declares `x-sortable.fields`:
 
 1. Each field name in `x-sortable.fields` exists on the resource's response schema (top-level or nested, following `$ref`, `allOf`, and `oneOf` branches).
-2. The endpoint also declares `x-sortable.default`, and every field referenced in `x-sortable.default` appears in `x-sortable.fields`.
-3. The endpoint includes the `SortParam` component reference in its parameters list.
+2. Each field name in `x-sortable.fields`, `x-sortable.default`, and `x-sortable.tieBreaker` matches the lexical identifier regex (security boundary — see `## Edge cases`).
+3. If `x-sortable.default` is declared, every field it references appears in `x-sortable.fields`.
+4. If `x-sortable.tieBreaker` is declared (defaults to `id` when omitted), the field exists on the resource's response schema.
+5. The endpoint includes the `SortParam` component reference in its parameters list.
 
-Failing any of these MUST produce a validation error that names the endpoint, the field, and the missing declaration.
+The validator MUST also emit a warning (non-blocking) when any field in `x-sortable.fields` is tagged `x-pii: true` or matches a common sensitive-field name (`ssn`, `dateOfBirth`, etc.) — sort order is an information-disclosure oracle.
+
+Failing any of the MUST rules above produces a validation error that names the endpoint, the field, and the violated rule.
 
 ### Generated TypeScript clients
 
@@ -146,9 +150,9 @@ This is a deliberate trade-off: clients can construct any string they want, but 
 
 ### Migration of existing list endpoints
 
-All existing list endpoints across `workflow`, `intake`, `data-exchange`, `client-management`, `scheduling`, `document-management`, and `identity-access` SHOULD declare `x-sortable.fields` and `x-sortable.default` as part of this work. Endpoints that genuinely have no useful sort use case (e.g., singleton sub-resources) MAY omit the declaration; they will continue to work without sort support.
+All existing list endpoints across `workflow`, `intake`, `data-exchange`, `client-management`, `scheduling`, `document-management`, and `identity-access` SHOULD declare `x-sortable.fields` as part of this work. Endpoints that genuinely have no useful sort use case (e.g., singleton sub-resources) MAY omit the declaration; they will continue to work without sort support.
 
-`x-sortable.default` SHOULD match the current de facto behavior (`-createdAt`) on most endpoints, with deliberate overrides where a different default is more useful (e.g., workflow tasks: `-priority,dueDate`).
+Endpoints that want a stable default ordering when `?sort=` is omitted SHOULD also declare `x-sortable.default`. On most endpoints this matches the current de facto behavior (`-createdAt`), with deliberate overrides where a different default is more useful (e.g., workflow tasks: `-priority,dueDate`). Endpoints that omit `default` return rows in whatever order the database produces (with the tie-breaker still applied).
 
 ## Non-goals
 

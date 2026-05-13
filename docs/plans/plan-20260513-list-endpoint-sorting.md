@@ -90,12 +90,12 @@ Land the contract-side foundation so specs can start declaring `x-sortable` and 
 
 The linter enforces the `x-sortable` shape and cross-references. CI fails on a misdeclared spec before any code runs.
 
-- [ ] Write a unit test in `packages/contracts/tests/unit/` (e.g., `validate-patterns-sortable.test.js`) asserting that a spec with valid `x-sortable` passes, and that each invalid case produces a clear error: missing `fields`, field not on response schema, `default` references a field absent from `fields`, `tieBreaker` not on response schema, `SortParam` not referenced when `x-sortable` is present
-- [ ] Write parameterized negative tests asserting that field names containing any of these are rejected at lint time: SQL metacharacters (`;`, `'`, `"`, backtick), JSON-path metacharacters (`[`, `]`, `\`), whitespace, control characters, non-ASCII, and Unicode RTL / zero-width characters — applies to entries in `fields`, `default`, and `tieBreaker` (A03:2025, A05:2025)
-- [ ] Extend `packages/contracts/src/validation/pattern-validator.js` to detect `x-sortable` on list operations and run the validations from the test, including the lexical identifier regex `^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$` on every field name (A03:2025)
-- [ ] Add a Spectral rule (or a check in pattern-validator) that warns when any field tagged `x-pii: true` or matching common sensitive-field name patterns (`ssn`, `dateOfBirth`, `riskScore`, etc.) appears in `x-sortable.fields` — sort order is an information-disclosure oracle (A01:2025)
-- [ ] Add a parameterized test covering nested-field dot-notation (`name.lastName`, `citizenshipInfo.status`) against the corresponding schemas; verify `$ref`/`allOf` traversal works
-- [ ] Wire the new validator into `scripts/validate-patterns.js` (it's already imported via `validateSpec` — confirm no script-side change is needed)
+- [x] Write a unit test in `packages/contracts/tests/unit/` (e.g., `validate-patterns-sortable.test.js`) asserting that a spec with valid `x-sortable` passes, and that each invalid case produces a clear error: missing `fields`, field not on response schema, `default` references a field absent from `fields`, `tieBreaker` not on response schema, `SortParam` not referenced when `x-sortable` is present
+- [x] Write parameterized negative tests asserting that field names containing any of these are rejected at lint time: SQL metacharacters (`;`, `'`, `"`, backtick), JSON-path metacharacters (`[`, `]`, `\`), whitespace, control characters, non-ASCII, and Unicode RTL / zero-width characters — applies to entries in `fields`, `default`, and `tieBreaker` (A03:2025, A05:2025)
+- [x] Extend `packages/contracts/src/validation/pattern-validator.js` to detect `x-sortable` on list operations and run the validations from the test, including the lexical identifier regex `^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$` on every field name (A03:2025)
+- [x] Add a Spectral rule (or a check in pattern-validator) that warns when any field tagged `x-pii: true` or matching common sensitive-field name patterns (`ssn`, `dateOfBirth`, `riskScore`, etc.) appears in `x-sortable.fields` — sort order is an information-disclosure oracle (A01:2025)
+- [x] Add a parameterized test covering nested-field dot-notation (`name.lastName`, `citizenshipInfo.status`) against the corresponding schemas; verify `$ref`/`allOf` traversal works
+- [x] Wire the new validator into `scripts/validate-patterns.js` (it's already imported via `validateSpec` — confirm no script-side change is needed)
 
 ### Phase 3: Sort parser (pure module)
 
