@@ -119,14 +119,26 @@ Scenario: List endpoint with no x-sortable.fields declaration
   Then the response status is 400
   And the response body code is "INVALID_SORT_FIELD"
 
-Scenario: List endpoint with no x-sortable.fields, no sort param
+Scenario: List endpoint with no x-sortable.fields, no sort param (post-migration)
   Given a list endpoint does NOT declare x-sortable.fields
+  And the legacy transitional fallback has been removed
   When a client requests the endpoint without ?sort=
   Then the response status is 200
   And items are returned in whatever order the database produced
+
+Scenario: List endpoint with no x-sortable.fields, no sort param (transitional)
+  Given a list endpoint does NOT declare x-sortable.fields
+  And the legacy transitional fallback is still in place
+  When a client requests the endpoint without ?sort=
+  Then the response status is 200
+  And items are returned ordered by createdAt descending (legacy default)
 ```
 
 A list endpoint MAY ship without `x-sortable.fields` (signaling that sorting is not yet supported on that endpoint). When that's the case, any client-supplied `sort` parameter is rejected, but the endpoint continues to work for unsorted queries.
+
+#### Transitional fallback during migration
+
+Before this work, the mock server applied a hardcoded `ORDER BY createdAt DESC` to every list endpoint. Removing that ordering all at once would change the response order on every unmigrated endpoint simultaneously, breaking tests across the project that assume deterministic results. So during Phase 5 migration the mock server retains the legacy `createdAt DESC` fallback for endpoints that have not yet declared `x-sortable.fields`. Once every list endpoint has declared `x-sortable.fields` (end of Phase 5), the fallback is removed in a cleanup commit and the post-migration scenario above takes effect. Conforming production adapters MAY follow the same migration pattern or remove the fallback up front — the contract requires only the post-migration behavior.
 
 ### Spec linting
 

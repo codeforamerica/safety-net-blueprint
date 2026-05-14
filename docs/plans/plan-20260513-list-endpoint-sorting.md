@@ -112,11 +112,11 @@ The parser is the only piece that decides what's well-formed at runtime. Keep it
 
 Plug the parser into `executeSearch` and propagate `sortConfig` from endpoint metadata through the list-handler.
 
-- [ ] Write an integration test in `packages/mock-server/tests/integration/` (or extend `integration.test.js`) for a list endpoint with `x-sortable` declared: single-field sort, multi-field sort, default applied when sort omitted, stable pagination across pages
-- [ ] Extend `executeSearch(db, queryParams, searchableFields, paginationDefaults, sortConfig)` in `search-engine.js` to honor `sortConfig` and replace the hardcoded `ORDER BY createdAt DESC` path
-- [ ] Update `handlers/list-handler.js` to pass `sortConfig` (extracted from the endpoint's `x-sortable` extension at route registration) into `executeSearch`, and translate parser errors into 400 responses with the documented error codes
-- [ ] Update `route-generator.js` to read `x-sortable` from each list operation and stash it on the endpoint metadata alongside `searchableFields`
-- [ ] Write a test confirming that a `?sort=` parameter sent to an endpoint without `x-sortable` returns 400 `INVALID_SORT_FIELD` (not silently ignored)
+- [x] Write an integration test in `packages/mock-server/tests/integration/` (or extend `integration.test.js`) for a list endpoint with `x-sortable` declared: single-field sort, multi-field sort, default applied when sort omitted, stable pagination across pages
+- [x] Extend `executeSearch(db, queryParams, searchableFields, paginationDefaults, sortConfig)` in `search-engine.js` to honor `sortConfig` and replace the hardcoded `ORDER BY createdAt DESC` path
+- [x] Update `handlers/list-handler.js` to pass `sortConfig` (extracted from the endpoint's `x-sortable` extension at route registration) into `executeSearch`, and translate parser errors into 400 responses with the documented error codes
+- [x] Update `route-generator.js` to read `x-sortable` from each list operation and stash it on the endpoint metadata alongside `searchableFields` *(landed in `openapi-loader.js` — the endpoint object is constructed there and consumed by `route-generator.js` unchanged)*
+- [x] Write a test confirming that a `?sort=` parameter sent to an endpoint without `x-sortable` returns 400 `INVALID_SORT_FIELD` (not silently ignored)
 
 Tasks in this phase can be parallelized cautiously — the integration test author needs the route-generator change to land first, but the `executeSearch` and `list-handler` updates can proceed against the test fixture in parallel.
 

@@ -182,6 +182,10 @@ export function extractMetadata(spec, resourceName) {
         operationId: operation.operationId,
         summary: operation.summary,
         parameters: allParameters,
+        // Sort configuration from the operation's x-sortable extension (if
+        // declared). Undefined when the operation does not opt into sorting;
+        // the list handler / executeSearch reject ?sort= for such endpoints.
+        sortable: operation['x-sortable'],
         requestSchema: null,
         responseSchema: null,
         errorSchemas: {}

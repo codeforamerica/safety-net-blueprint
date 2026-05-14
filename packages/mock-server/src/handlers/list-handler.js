@@ -63,13 +63,30 @@ export function createListHandler(apiMetadata, endpoint) {
         offsetDefault: 0
       };
 
-      // Execute search with filters and pagination
+      // Execute search with filters, pagination, and sort
       const result = executeSearch(
         db,
         queryParams,
         searchableFields,
-        paginationDefaults
+        paginationDefaults,
+        endpoint.sortable
       );
+
+      // Sort parser failure → 400 with the documented error code.
+      // Match the codebase-wide error shape used by create-handler,
+      // update-handler, delete-handler, etc.: {code, message, details[]}
+      // so clients can branch on `code` and surface `details[].message`
+      // uniformly regardless of which endpoint emitted the error.
+      if (result.error) {
+        const details = result.error.field !== undefined
+          ? [{ field: result.error.field, message: result.error.message }]
+          : [];
+        return res.status(400).json({
+          code: result.error.code,
+          message: result.error.message,
+          details
+        });
+      }
 
       // Ensure result has all required fields
       const safeResult = {
