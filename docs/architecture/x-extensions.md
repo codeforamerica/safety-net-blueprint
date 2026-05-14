@@ -154,11 +154,11 @@ paths:
 | Field | Required | Description |
 |---|---|---|
 | `fields` | Yes | Array of field names a client may include in `?sort=`. Dot-notation for nested fields (e.g., `name.lastName`). Every entry must reference a real property on the resource's response schema. |
-| `default` | No | Comma-separated sort applied when the client omits `?sort=`. Same syntax as the query parameter. Every field referenced here must appear in `fields`. If absent, no client-driven sort is applied when `?sort=` is omitted — only the tie-breaker. |
+| `default` | No | Sort expression applied when the client omits `?sort=`. Uses the same comma-separated, `-`-for-descending syntax as the query parameter. Every field referenced here must also appear in `fields`. If absent, no client-driven sort is applied when `?sort=` is omitted — only the tie-breaker. |
 | `tieBreaker` | No | Single field name appended to every effective sort for stable pagination. Defaults to `id`. Explicit `null` disables it (not recommended). |
 | `maxFields` | No | Hard cap on the number of fields a client may include in `?sort=`. If absent, adapters apply an implicit ceiling (5 in the reference implementation). |
 
-**Field name lexical rule:** every entry in `fields`, `default`, and `tieBreaker` must match `^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$`. This is a security boundary — field names are interpolated into raw SQL, which SQLite does not parameterize. The pattern validator enforces this at lint time; the runtime parser enforces it again as defense in depth.
+**Field name lexical rule:** every entry in `fields`, `default`, and `tieBreaker` must match `^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$`. This is a security boundary — adapters typically interpolate sort field names into SQL identifiers, GraphQL field paths, or other expression languages that don't parameterize identifiers. The pattern validator enforces this at lint time; adapters MUST re-validate at runtime as defense in depth.
 
 **Sort order is an oracle:** fields whose ordering would leak information (SSN, dateOfBirth, internal risk scores, sensitive flags) MUST NOT appear in `x-sortable.fields` even if they're technically sortable. The pattern validator emits a warning when fields tagged `x-pii: true` or matching common sensitive name patterns appear in `x-sortable.fields`.
 
