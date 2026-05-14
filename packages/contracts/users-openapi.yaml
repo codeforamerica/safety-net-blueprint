@@ -53,9 +53,8 @@ paths:
       operationId: listUsers
       tags: [Users]
       x-sortable:
-        # email omitted intentionally — sort order leaks email-domain
-        # groupings even without projection (A01:2025). idpSubject likewise
-        # leaks IdP-side identifier patterns.
+        # email and idpSubject excluded — sort order leaks domain groupings
+        # and IdP identifier patterns even without projection (A01:2025).
         fields: [createdAt, updatedAt, status]
         default: -updatedAt
         tieBreaker: id

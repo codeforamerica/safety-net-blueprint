@@ -271,15 +271,8 @@ paths:
         - Tasks
       x-sortable:
         fields: [createdAt, updatedAt, priority, status, startedAt]
-        # Newest first. We considered defaulting to (status, createdAt) so
-        # open work would surface first, but string-sorting "cancelled"
-        # alphabetically would put closed work first — the opposite of what
-        # operators expect. Callers needing open-tasks-first should filter
-        # with `?q=status:pending,in_progress&sort=createdAt` rather than
-        # rely on a tricky default. A denormalized statusOrdinal field is
-        # the right answer if we want a state-aware default; that's a
-        # separate spec change (Phase 2 spec linter forbids sort on
-        # computed/non-stored fields).
+        # Newest first. State-aware default would need a denormalized
+        # statusOrdinal — out of scope. Callers filter via `?q=status:...`.
         default: -createdAt
         tieBreaker: id
       parameters:

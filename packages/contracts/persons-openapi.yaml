@@ -30,10 +30,8 @@ paths:
       tags:
       - Persons
       x-sortable:
-        # lastName/firstName are PII but unavoidably needed for caseworker
-        # alphabetical browsing. ssn, dateOfBirth, phoneNumber, email, and
-        # address fields are intentionally excluded — sort order leaks them
-        # via pagination even when not projected (A01:2025).
+        # name.* needed for alphabetical browse; ssn, dateOfBirth, contact, and
+        # address fields excluded — sort order leaks them via pagination (A01:2025).
         fields: [createdAt, updatedAt, name.lastName, name.firstName]
         default: name.lastName,name.firstName
         tieBreaker: id

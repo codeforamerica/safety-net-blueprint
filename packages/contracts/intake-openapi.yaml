@@ -88,12 +88,8 @@ paths:
       tags:
         - Applications
       x-sortable:
-        # submittedAt is a user-meaningful event timestamp (not bookkeeping)
-        # and could theoretically leak "did person X submit during window Y"
-        # via pagination + a known applicationId. Included anyway because
-        # caseworker queue triage by recency is the dominant operational
-        # need; the threat model assumes collection-read implies record-read
-        # for callers with listApplications scope (A01:2025).
+        # submittedAt is user-meaningful but caseworker recency triage needs it;
+        # threat model assumes listApplications scope implies record-read (A01:2025).
         fields: [createdAt, updatedAt, submittedAt, status]
         default: -submittedAt
         tieBreaker: id
@@ -225,8 +221,7 @@ paths:
         - Documents
       x-sortable:
         fields: [createdAt, updatedAt, category, status]
-        # category groups identity / income / residency etc.; secondary by
-        # creation order so a caseworker sees the oldest open request first.
+        # Group by category, oldest request first within each.
         default: category,createdAt
         tieBreaker: id
       parameters:
@@ -408,10 +403,8 @@ paths:
       tags:
         - Members
       x-sortable:
-        # name.lastName/firstName are PII but unavoidably needed for caseworker
-        # alphabetical browsing; auditable per Phase 5 sensitive-field audit.
-        # ssn and dateOfBirth deliberately excluded — sort order is an oracle
-        # that leaks those fields even when not projected (A01:2025).
+        # name.* needed for alphabetical browse; ssn/dateOfBirth excluded —
+        # sort order is an oracle even when fields aren't projected (A01:2025).
         fields: [createdAt, updatedAt, name.lastName, name.firstName]
         default: name.lastName,name.firstName
         tieBreaker: id

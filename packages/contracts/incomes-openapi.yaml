@@ -30,9 +30,7 @@ paths:
       tags:
       - Income
       x-sortable:
-        # `amount` deliberately excluded — sort order on income amount
-        # would let a caller binary-search a person's wages even without
-        # the value projected (A01:2025).
+        # `amount` excluded — sort order would binary-search a person's wages (A01:2025).
         fields: [reportedOn, startDate, endDate, type, frequency]
         default: -reportedOn
         tieBreaker: id

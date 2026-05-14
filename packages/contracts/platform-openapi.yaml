@@ -47,9 +47,8 @@ paths:
       tags:
         - Events
       x-sortable:
-        # Matches the documented "ascending time order" default in the
-        # operation description above — required for cursor-based polling.
-        # Clients can override (e.g., sort=-time for newest-first dashboards).
+        # Ascending time matches the operation's cursor-based polling contract.
+        # Clients override with sort=-time for newest-first dashboards.
         fields: [time, type, source]
         default: time
         tieBreaker: id

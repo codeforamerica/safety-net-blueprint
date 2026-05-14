@@ -30,8 +30,7 @@ paths:
       tags:
       - Households
       x-sortable:
-        # Address and member identity fields excluded — sort order would
-        # leak addresses and member PII via pagination (A01:2025).
+        # Address and member identity fields excluded — sort-order oracle (A01:2025).
         fields: [createdAt, updatedAt]
         default: -updatedAt
         tieBreaker: id
