@@ -131,6 +131,20 @@ test('executeSearch — sort handling', async (t) => {
     assert.strictEqual(result.items.length, 4);
     console.log('  ✓ tieBreaker: null still returns rows');
   });
+
+  await t.test('sort parameter is reserved — not treated as a field filter (regression)', () => {
+    // Bug: prior to this guard, buildSearchConditions would iterate
+    // queryParams and treat `sort` as an exact-match field filter,
+    // adding `WHERE json_extract(data, '$.sort') = 'createdAt'` which
+    // matches zero rows. The reserved-param list in buildSearchConditions
+    // must include `sort` alongside limit/offset/q/search/page.
+    const db = makeDb(tasks);
+    const result = executeSearch(db, { sort: 'createdAt' }, [], {}, sortConfig);
+    assert.ok(!result.error, JSON.stringify(result));
+    assert.strictEqual(result.items.length, 4,
+      'sort param must not act as a WHERE filter');
+    console.log('  ✓ sort is reserved (not field-filtered)');
+  });
 });
 
 console.log('\n✓ All executeSearch sort tests passed\n');

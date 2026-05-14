@@ -55,7 +55,11 @@ export function buildSearchConditions(queryParams = {}, searchableFields = []) {
   if (!queryParams.q) {
     for (const [key, value] of Object.entries(queryParams)) {
       // Skip special parameters
-      if (['search', 'q', 'limit', 'offset', 'page'].includes(key)) {
+      // Reserved query parameters — handled elsewhere, not field filters.
+      // `sort` is consumed by resolveOrderByClause; treating it as a
+      // field filter would emit `WHERE json_extract(data, '$.sort') = ?`
+      // and return zero rows.
+      if (['search', 'q', 'limit', 'offset', 'page', 'sort'].includes(key)) {
         continue;
       }
 
