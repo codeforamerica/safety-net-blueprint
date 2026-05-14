@@ -4,8 +4,9 @@
 
 import { findById, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
-import { applyEffects } from '../state-machine-engine.js';
-import { processRuleEvaluations } from './rule-evaluation.js';
+import { applyEffects, applySteps } from '../state-machine-engine.js';
+import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
+import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 
 /**
@@ -61,10 +62,9 @@ export function buildChanges(before, after) {
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
  * @param {Object|null} stateMachine - State machine contract (for onUpdate effects)
- * @param {Array} rules - Rules for rule evaluation effects
  * @returns {Function} Express handler
  */
-export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, rules = [], slaTypes = []) {
+export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null) {
   const paramName = extractPathParam(endpoint.path);
   return (req, res) => {
     try {
@@ -120,11 +120,15 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       // Update in database (database manager handles deep merge and updatedAt timestamp)
       const updated = update(endpoint.collectionName, resourceId, req.body);
 
-      // Fire onUpdate effects if any watched fields changed.
+      // Fire onUpdate steps/effects if any watched fields changed.
       // Must run before emitting so rule-driven mutations (e.g. priority re-scored
       // because isExpedited changed) are included in the event's changes array.
-      if (stateMachine?.onUpdate?.effects?.length > 0) {
-        const watchedFields = stateMachine.onUpdate.fields;
+      const newOnUpdate = machine?.triggers?.onUpdate;
+      const oldOnUpdate = stateMachine?.onUpdate;
+      const hasOnUpdate = newOnUpdate?.steps?.length > 0 || oldOnUpdate?.effects?.length > 0;
+
+      if (hasOnUpdate) {
+        const watchedFields = newOnUpdate?.fields ?? oldOnUpdate?.fields;
         const patchedFields = Object.keys(req.body);
         const shouldFire = !watchedFields || watchedFields.length === 0
           || patchedFields.some(f => watchedFields.includes(f));
@@ -133,7 +137,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           const callerRoles = req.headers['x-caller-roles']
             ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
             : [];
-          const context = {
+          const baseContext = {
             caller: {
               id: req.headers['x-caller-id'],
               roles: callerRoles
@@ -142,8 +146,37 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
             request: req.body,
             now: new Date().toISOString(),
           };
-          const { pendingRuleEvaluations } = applyEffects(stateMachine.onUpdate.effects, updated, context);
-          processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine.domain);
+
+          const entities = resolveContextLayers(
+            [stateMachine?.context, machine?.context, newOnUpdate?.context ?? oldOnUpdate?.context],
+            updated,
+            baseContext
+          );
+          if (entities === null) {
+            console.error('onUpdate: required context binding failed — skipping trigger');
+          }
+          const context = entities !== null ? { ...baseContext, entities } : baseContext;
+
+          let pendingProcedures;
+          if (newOnUpdate?.steps?.length > 0) {
+            ({ pendingProcedures } = applySteps(newOnUpdate.steps, updated, context));
+          } else {
+            ({ pendingProcedures } = applyEffects(oldOnUpdate.effects, updated, context));
+          }
+          const inlineRules = buildInlineRules(stateMachine, machine);
+          executeProcedures(pendingProcedures, updated, inlineRules, context);
+
+          // Persist any rule-driven mutations (e.g. priority, queueId) back to DB
+          const onUpdateDiff = {};
+          for (const [key, value] of Object.entries(updated)) {
+            if (existingSnapshot[key] !== value && !req.body.hasOwnProperty(key)
+                && key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
+              onUpdateDiff[key] = value;
+            }
+          }
+          if (Object.keys(onUpdateDiff).length > 0) {
+            update(endpoint.collectionName, resourceId, onUpdateDiff);
+          }
         }
       }
 

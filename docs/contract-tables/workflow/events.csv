@@ -1,0 +1,9 @@
+Machine,Event,Steps
+Task,workflow.task.created,Call `assignToQueue`; Call `setPriority`; Call `scheduleCreationDeadline`
+Task,workflow.task.updated,"If ($this.data.changes.exists(c, c.field == ""isExpedited"" || c.field == ""programType"")): Call `setPriority`; If ($this.data.changes.exists(c, c.field == ""programType"" || c.field == ""queueId"")): Call `assignToQueue`; If ($this.data.changes.exists(c, c.field == ""slaDeadline"") && $object.slaDeadline != null): Call `scheduleSlaWarning`; Call `scheduleSlaBreachTimer`"
+Task,workflow.creation_deadline,POST `workflow/tasks/$this.subject/system-escalate`
+Task,workflow.sla_warning,POST `workflow/tasks/$this.subject/system-escalate`
+Task,workflow.sla_breach,POST `workflow/tasks/$this.subject/system-escalate`
+Task,workflow.client_timeout,POST `workflow/tasks/$this.subject/system-auto-cancel`
+Task,workflow.verification_timeout,POST `workflow/tasks/$this.subject/system-resume`
+Task,intake.application.submitted,POST `workflow/tasks`

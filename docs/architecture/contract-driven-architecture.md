@@ -58,11 +58,10 @@ RPC APIs are harder to make portable because the value is in orchestration and e
 A generic CRUD adapter loses most of this value. The adapter pattern still applies, but the contract needs to be richer than just an OpenAPI spec. RPC API domains need two or more contract artifacts:
 
 - **OpenAPI spec** — same resource schemas used by the REST APIs
-- **State machine YAML** (required) — valid states, transitions, guards, effects, timeouts, SLA behavior, audit requirements, notification triggers, and event catalog
-- **Rules YAML** (optional) — declarative rules with logic conditions and actions. Rule types include assignment, priority, eligibility, escalation, alert, and more. Only needed when the domain involves condition-based decisions beyond what guards express (e.g., routing objects to queues based on context, setting priority based on application data, alert thresholds for operational monitoring).
+- **State machine YAML** (required) — valid states, transitions (actor-triggered, each becomes a named RPC endpoint), event subscriptions (react to domain events including creation, field changes, and timer callbacks), guards, named procedures, and SLA behavior.
 - **Metrics YAML** (optional) — defines what to measure for operational monitoring. Metric names, labels, source linkage (which states/transitions produce the data), and targets — not implementation details (Prometheus vs. Datadog is a deployment concern).
 
-Every behavior-shaped domain needs a state machine — that's what makes it behavior-shaped. Rules are an additional artifact for domains that need condition-based decisions evaluated against broader context. Metrics are an additional artifact for domains that need operational monitoring. For example, workflow management needs state machine + rules + metrics. A simple approval process may only need the state machine.
+Every behavior-shaped domain needs a state machine — that's what makes it behavior-shaped. Metrics are an additional artifact for domains that need operational monitoring. For example, workflow management needs a state machine + metrics. A simple approval process may only need the state machine.
 
 ### Any domain: field metadata
 
@@ -78,70 +77,17 @@ Each contract artifact captures a different concern. **Behavioral contracts** (s
 
 ### State machine
 
-The state machine YAML defines the lifecycle of an object — its states, transitions, who can trigger them, what conditions must hold, and what side effects must occur. It follows [statechart semantics](https://statecharts.dev/) written as custom YAML with a JSON Schema defining the format.
+The state machine YAML defines the lifecycle of an object — its valid states, who can trigger each operation, what conditions must hold, and what must happen when they fire. It follows [statechart semantics](https://statecharts.dev/) written as custom YAML with a JSON Schema defining the format.
 
-```yaml
-# Simplified example — a task that can be claimed and completed
-states:
-  pending:
-    transitions:
-      - to: in_progress
-        trigger: claim
-        actors: [caseworker]
-        guard: taskIsUnassigned
-        effects:
-          - set: { assignedToId: $caller.id }
-          - create: TaskAuditEvent
-          - notify: { channel: email, recipient: $object.supervisorId, template: task-claimed }
-
-# Custom top-level field — added by the workflow domain to handle creation-time orchestration.
-# Domains extend the base schema with fields like this as requirements emerge.
-onCreate:
-  effects:
-    - evaluate-rules: workflow-rules    # References the rules YAML file
-      description: Route task to queue and set priority
-```
-
-Each `trigger` becomes an RPC API endpoint — `claim` on `Task` in the `workflow` domain becomes `POST /workflow/tasks/:id/claim`. Effects are declarative side effects (create records, update fields, send notifications, evaluate rules) that must occur when a transition fires.
+A state machine file uses a top-level `machines:` array — one entry per entity type the domain governs. Each machine declares its valid states, initial state, **transitions** (actor-triggered actions, each becoming a `POST /{domain}/{resource}/{id}/{transitionId}` endpoint), and **events** (subscriptions to named domain events — including creation, field-change, and timer callbacks — that run steps automatically when they fire). Shared **guards** (named boolean conditions controlling access) and **procedures** (named step sequences for reusable logic) are defined once at the file or machine level and called by name from transitions and events. Procedures use a `context:` block to load related records from other domains before running their steps — for example, the `assignToQueue` procedure loads the application record to determine the correct queue before setting `queueId`.
 
 ### Complex calculation logic
 
-Some domains involve calculation logic beyond what the rules artifact is designed to express — eligibility determination, tax calculation, risk scoring. Where `evaluate-rules` invokes the portable rules YAML that ships with the contracts, a custom `call` effect type can be added for when the logic lives in a dedicated external engine. The contract defines when calculations happen (which transition), what goes in and comes out (OpenAPI schemas), and how results are audited (effects) — without prescribing how the calculations work. `call` is an example of extending the base effect types to meet domain-specific needs, the same way `onCreate` extends the base top-level fields.
-
-### Rules
-
-Rules are a separate YAML artifact for condition-based decisions — routing, assignment, prioritization, escalation, eligibility. The rules file is context-agnostic — it doesn't know what object it operates on. The state machine provides context when it fires an `evaluate-rules` effect: the governed entity is bound to a context variable, so the same rules structure could apply to tasks, applications, or any other object with the referenced fields. The binding name is domain-specific — `object` is used as a placeholder in these examples, but a real domain would use its own name (e.g., `task.*` in workflow, `application.*` in intake).
-
-```yaml
-# workflow-rules.yaml — referenced by: evaluate-rules: workflow-rules
-route-snap-tasks:
-  ruleType: assignment
-  condition: { "==": [{ "var": "object.programCode" }, "SNAP"] }
-  action: { assignToQueue: "snap-processing" }
-
-high-priority-expedited:
-  ruleType: priority
-  condition: { "==": [{ "var": "object.isExpedited" }, true] }
-  action: { setPriority: high }
-```
-
-Rule types (like `assignment` and `priority`) and what their actions mean (like `assignToQueue` and `setPriority`) are domain-specific — the exact schema for defining these is a design detail to be worked out during implementation. What the proposal establishes is the pattern: rules are declarative, keyed by ID (so state overlays can target individual rules), and invoked by the state machine via effects. Conditions need a portable, serializable expression format — [JSON Logic](https://jsonlogic.com/) is a lightweight option with implementations in most languages, though alternatives like CEL or FEEL could be substituted if more expressive power is needed. The contract YAML uses one canonical format so the shared tooling (mock server, validation, tests) only needs one evaluator. States that prefer a different expression language author in that language and have their conversion scripts translate to the canonical format when generating the YAML — the same tool-agnostic pattern used for authoring tools.
+Some domains involve calculation logic that named procedures alone can't express — eligibility determination, tax calculation, risk scoring. The state machine defines when the calculation happens (which transition or event), what goes in and out (OpenAPI schemas on the transition's `schema:` block), and what steps run with the result — without prescribing how the calculation works. A procedure step can call an external engine endpoint; the contract defines the interface, the adapter supplies the implementation.
 
 ### Metrics
 
-Metrics define what to measure — metric names, labels, targets, and where the data comes from. Each metric's `source` references specific states or transitions in the state machine by name, which is how the two artifacts link together. They specify *what* to measure, not *how* to collect it.
-
-```yaml
-# Simplified example — measure how long tasks wait before being claimed.
-task-time-to-claim:
-  description: Time from task creation to first claim
-  source:
-    from: pending          # State name from the state machine
-    to: in_progress        # State name from the state machine
-    trigger: claim         # Transition trigger name from the state machine
-  target:
-    p95: 4h                # 95th percentile target (also supports p50, p99, max, avg, etc.)
-```
+Metrics define what to measure — metric names, labels, targets, and where the data comes from. Each metric's source references specific states or handler names in the state machine, which is how the two artifacts link together. They specify *what* to measure and what the targets are, not *how* to collect or store it (Prometheus vs. Datadog is a deployment concern).
 
 #### Standards alignment
 
@@ -168,36 +114,12 @@ The behavioral contract formats (state machine, rules, metrics) are custom YAML 
 | Capability | How it extends the format | Standard precedent |
 |---|---|---|
 | Parallel/hierarchical states | Add `children` or `parallel` property to state definitions | SCXML `<parallel>`, statechart nested states |
-| Timer/timeout transitions | Add `onTimeout` top-level field with duration and effects | BPMN timer boundary events, Camunda timer tasks |
-| OR guard composition | Accept guard objects with `any`/`all` keys alongside current string refs | SCXML `<if>`/`<elseif>` compound conditions |
-| Rule chaining | Add `next` property to ruleSets for sequential evaluation | DMN decision requirements graphs |
-| Cross-domain rule context | Expand `context` bindings (e.g., `application.*` alongside `task.*`) | DMN business knowledge models |
-| Notification effects | Add `notify` effect type with channel, recipient, template | WS-HumanTask notification tasks |
+| Rule chaining | Add `next` property to rules for sequential evaluation | DMN decision requirements graphs |
+| Notification steps | Add `notify` step type with channel, recipient, template | WS-HumanTask notification tasks |
 
 ### Field metadata
 
 Field metadata describes context-dependent information about fields — annotations (program relevance, verification requirements, regulatory citations), permissions, and labels/translations. Field metadata links to the OpenAPI spec (field names, types, enums), not the state machine — it's about what context accompanies data fields, not lifecycle.
-
-```yaml
-# Simplified example — field-level annotations for multi-program context
-fields:
-  income.amount:
-    annotations:
-      - type: relevance
-        context: SNAP
-        value: gross amount counted
-      - type: relevance
-        context: Medicaid
-        value: net amount for MAGI
-      - type: verification
-        value: pay stub, employer letter, or tax return
-      - type: regulation
-        context: SNAP
-        value: 7 CFR 273.9(a) — Gross income determination
-    permissions:
-      caseworker: read-write
-      applicant: read-only
-```
 
 **Source paths** — Field metadata uses dot-notation paths to link to OpenAPI schema fields. The first segment is the schema name (e.g., `member` for ApplicationMember, `income` for Income); subsequent segments are field names, including nested paths (e.g., `member.citizenshipInfo.status`). The validation script verifies these paths resolve — if field metadata references a path that doesn't exist in the schema, validation fails.
 
@@ -209,7 +131,7 @@ fields:
 
 3. **Annotation consumption** — Consumers iterate over whatever annotation types exist and render them — they don't need to know what any specific annotation type means. Adding a new annotation type is a metadata change, not a code change.
 
-The adapter's role is to serve field metadata to consumers (possibly after resolving state overlays) and to use parts of it for server-side logic (e.g., determining which records to create during `onCreate`). See [Extensibility and customization](#extensibility-and-customization) for how annotation types scale.
+The adapter's role is to serve field metadata to consumers (possibly after resolving state overlays) and to use parts of it for server-side logic (e.g., determining which records to create on submission). See [Extensibility and customization](#extensibility-and-customization) for how annotation types scale.
 
 #### Standards alignment
 
@@ -232,9 +154,9 @@ The field metadata format is custom but informed by established standards. No si
 
 All contract artifacts — state machine, rules, metrics, field metadata — are declarative YAML governed by JSON Schema, making them diffable and reviewable in PRs. The common extensibility principle: adding capabilities means adding entries to existing structures (rows, fields, types), not restructuring the format. Consumers — adapters, frontends, validation scripts — iterate over whatever they find rather than hardcoding expectations about specific entries.
 
-**State machine** — New effect types (e.g., `audit`, `notify`, `call`) are added to the schema and implemented as handlers in the adapter. Adding an effect type doesn't change existing transitions. New guard types (role-based, time-based, external service checks) follow the same pattern — the evaluation engine dispatches on guard type. Domains extend the base schema with top-level fields as requirements emerge (e.g., `onCreate`, `onTimeout`, `bulkActions`).
+**State machine** — New step types (e.g., `audit`, `notify`) are added to the schema and implemented as step handlers in the adapter. Adding a step type doesn't change existing triggers or operations. New guard types (role-based, time-based, external service checks) follow the same pattern — the evaluation engine dispatches on guard type. New trigger types and operation shapes extend the schema without restructuring existing content.
 
-**Rules** — New decision tables are independent — adding a table doesn't affect existing ones. New condition operators or action types extend the rules schema without restructuring existing rules.
+**Procedures** — Named procedures are independent — adding one doesn't affect existing ones. New step types extend the procedure vocabulary without restructuring existing procedures.
 
 **Metrics** — New source types (state duration, transition count, field value aggregation) and new dimensions for slicing (by program, by worker, by time period) are additive. Adding a metric is adding rows to the metrics table.
 
@@ -259,25 +181,19 @@ The YAML formats are build artifacts, not files that anyone edits by hand. Busin
 
 Because the YAML is always generated from the tables, nobody edits it by hand. When a table row changes, the script regenerates the YAML. When a row is removed, the corresponding YAML is removed too — which is correct, since the transition or rule no longer exists.
 
-**Example — separate tables for the same transition:**
+**Example — separate tables for the same operation:**
 
-*Transitions table:*
+*Operations table:*
 
-| From | To | Trigger | Who | Guard | Effects |
-|------|-----|---------|-----|-------|---------|
-| pending | in_progress | claim | caseworker | Task is unassigned | Assign to worker, create audit event |
+| Machine | Name | From | To | Actors | Conditions | Steps |
+|---------|------|------|-----|--------|------------|-------|
+| Task | claim | pending | in_progress | caseworker | taskIsUnassigned | set assignedToId, emit event |
 
 *Guards table:*
 
 | Guard | Field | Operator | Value |
 |-------|-------|----------|-------|
-| Task is unassigned | `assignedToId` | is null | — |
-
-*Effects table:*
-
-| Trigger | set | create |
-|---------|-----|--------|
-| claim | `assignedToId` = `$caller.id` | TaskAuditEvent (`assigned`) |
+| taskIsUnassigned | `assignedToId` | is null | — |
 
 The same pattern applies to decision tables (conditions and actions with field references), metrics tables (metric names, source linkage to states and transitions, targets), and field metadata tables (annotations, permissions, labels).
 
@@ -318,7 +234,7 @@ The behavioral contract defines **what must happen** — not how the adapter imp
 - **Simple backend** (database + application code) — The adapter orchestrates the behavior itself: enforcing transitions, evaluating guards, running effects, tracking SLA clocks. The contract artifacts are a specification the adapter interprets directly.
 - **Hybrid** — The vendor handles some concerns natively (e.g., state transitions, timeouts) while the adapter orchestrates others (e.g., cross-domain effects, rule evaluation).
 
-So when the contract says "these effects must occur on this transition," it's a requirement, not an execution instruction. When `onCreate` says "evaluate routing rules and create an audit record after object creation," it specifies the required outcome — not that the adapter must intercept the POST and run effects itself. A workflow engine might handle this as a native initialization step. A simpler backend might have the adapter orchestrate the effects inline.
+So when the contract says "these steps must run on this transition," it's a requirement, not an execution instruction. When a creation event subscription says "route to queue and set priority," it specifies the required outcome — not that the adapter must intercept the POST and run steps itself. A workflow engine might handle this as a native initialization step. A simpler backend might have the adapter orchestrate the steps inline.
 
 ### Development to production
 
@@ -357,14 +273,13 @@ This project provides contracts and development tooling. States build their own 
 | Artifact | Audience | Purpose |
 |----------|----------|---------|
 | OpenAPI specs | Developers | Define the REST API surface (schemas, endpoints, parameters) |
-| State machine YAML | Developers | Define the RPC API surface (states, transitions, guards, effects, events, notifications, audit requirements) |
-| Rules YAML | Developers | Define condition-based decisions: routing, assignment, priority, alerts |
+| State machine YAML | Developers | Define the RPC API surface (states, triggers, operations, guards, rules, SLA behavior, events, and audit requirements) |
 | Metrics YAML | Developers | Define what to measure: metric names, labels, source linkage, targets |
 | Field metadata YAML | Developers | Define field-level annotations, permissions, and labels served by the backend |
 | Validation script | Developers | Verify contract artifacts are internally consistent (state machine states match OpenAPI enums, effect targets reference real schemas, event payloads resolve, audit requirements satisfied) — runs in CI |
 | Mock server | Developers | Self-contained adapter with in-memory database for frontend development and integration testing |
 | Integration test suite | Developers | Auto-generated from contracts (transition tests, guard tests, effect verification, event emission checks). Tests verify outcomes, not implementation — it doesn't matter whether the adapter or vendor executed an effect, as long as the expected side effects occurred |
-| Decision tables | Business analysts + developers | Spreadsheets defining conditions and actions for routing, assignment, priority — conversion scripts generate the rules YAML |
+| Decision tables | Business analysts + developers | Spreadsheets defining conditions and actions for routing, assignment, priority — conversion scripts generate the `rules:` section of the state machine YAML |
 | State transition tables | Business analysts + developers | Spreadsheets defining transitions, guards, and effects across related tables — conversion scripts generate the state machine YAML |
 | Field metadata tables | Developers + business analysts | Spreadsheets defining field annotations, permissions, and labels — conversion scripts generate the field metadata YAML |
 | State machine visualizations | Business analysts | Auto-generated diagrams from the state machine YAML showing states, transitions, and actors |
@@ -372,7 +287,7 @@ This project provides contracts and development tooling. States build their own 
 
 Adding a new domain to the mock server is declarative — define artifacts, not code. Add an OpenAPI spec and the mock auto-generates CRUD endpoints; add a state machine YAML and it auto-generates RPC API endpoints with transition enforcement, effects, and rule evaluation. Add field metadata YAML and the mock serves it via a metadata API endpoint.
 
-States don't have to use the base contracts as-is. An overlay system lets states customize any contract artifact — OpenAPI specs, state machine YAML, rules, metrics, field metadata — without forking the base files. Overlays use JSONPath targeting to add, modify, or remove specific elements (e.g., add a state-specific rule, adjust a metric target, modify a transition's guard, add fields to a form section). The base contracts plus overlays produce a merged result that the validation script and integration tests run against, so customizations are still verified for consistency.
+States don't have to use the base contracts as-is. An overlay system lets states customize any contract artifact — OpenAPI specs, state machine YAML, metrics, field metadata — without forking the base files. Overlays use JSONPath targeting to add, modify, or remove specific elements (e.g., add a state-specific rule, adjust a metric target, modify a transition's guard, add fields to a form section). The base contracts plus overlays produce a merged result that the validation script and integration tests run against, so customizations are still verified for consistency.
 
 **How a state uses this:**
 
@@ -394,7 +309,7 @@ States don't have to use the base contracts as-is. An overlay system lets states
 | **Mock-to-production gap** — The mock server interprets contracts directly. Production adapters translate to vendor systems. Edge cases, concurrency, timing, and error handling may behave differently. | Complex domains are prototyped and proven in this repo before states adopt, exercising the mock server's behavioral engine against real domain complexity. The integration test suite runs against both mock and production adapters, verifying the same outcomes. Tests are auto-generated from contracts, so coverage tracks the contract surface. | Behaviors that are hard to specify declaratively — race conditions, concurrent claims, SLA clock precision — may pass mock tests but fail in production under load. Manual test cases are needed for these. |
 | **Vendor contract fidelity** — Not every vendor can natively satisfy every contract requirement. Gaps push behavior into the adapter, increasing its complexity. | The contracts double as a vendor evaluation checklist (see [Contracts as requirements](#contracts-as-requirements)). Gaps are identified before vendor selection, not after. The hybrid model explicitly supports splitting work between vendor and adapter. | The "simple backend" path means the adapter becomes a mini workflow engine. States choosing this path take on significant implementation effort that the contracts specify but don't automate. |
 | **Contract-code drift** — Over time, production adapters may accumulate behavior not reflected in the contracts. The contracts stop being the source of truth. | The integration test suite is the enforcement mechanism — it's generated from contracts, so passing tests means the adapter conforms. Running tests in CI on every deploy keeps drift visible. | Drift in areas not covered by generated tests (logging, performance characteristics, vendor-specific features) won't be caught. Discipline is needed to add manual test cases for these. |
-| **State machine expressiveness** — Statechart semantics cover common lifecycle patterns, but some workflows may need constructs that don't fit cleanly (parallel states, hierarchical states, long-running sagas). | The state machine schema is extensible — domains add top-level fields as requirements emerge (e.g., `onCreate`, `onTimeout`). Statechart semantics already support hierarchy and parallelism if needed. | If a workflow fundamentally doesn't fit a state machine model (e.g., a free-form collaborative process), the contract-driven approach adds friction rather than value. These domains may be better served by a simpler REST API with application-level orchestration. |
+| **State machine expressiveness** — Statechart semantics cover common lifecycle patterns, but some workflows may need constructs that don't fit cleanly (parallel states, hierarchical states, long-running sagas). | The state machine schema is extensible — domains add new transitions, event subscriptions, or procedure step types as requirements emerge. Statechart semantics already support hierarchy and parallelism if needed. | If a workflow fundamentally doesn't fit a state machine model (e.g., a free-form collaborative process), the contract-driven approach adds friction rather than value. These domains may be better served by a simpler REST API with application-level orchestration. |
 | **Expression language limitations** — JSON Logic (or the chosen format) may prove insufficient for complex conditions in rules or form visibility. | The architecture is format-agnostic at the authoring layer — states can author in any expression language and have conversion scripts translate to the canonical format. Switching the canonical format is a tooling change, not a contract restructure. | Migration cost scales with the number of existing rules and form conditions. Early adoption of a more expressive language (CEL, FEEL) reduces this risk but increases the learning curve. |
 
 ### Implementation risks

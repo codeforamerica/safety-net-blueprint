@@ -697,15 +697,17 @@ test('resolve-overlay tests', async (t) => {
 
       // Write a state machine
       writeYaml(dir, 'test-state-machine.yaml', {
+        version: '1.0',
         domain: 'test',
-        object: 'Item',
         apiSpec: 'test-openapi.yaml',
-        states: [{ id: 'draft' }, { id: 'published' }],
-        initialState: 'draft',
-        transitions: [
-          { trigger: 'publish', from: 'draft', to: 'published' }
-        ],
-        requestBodies: [{ trigger: 'publish' }]
+        machines: [{
+          object: 'Item',
+          states: [{ id: 'draft' }, { id: 'published' }],
+          initialState: 'draft',
+          transitions: [
+            { id: 'publish', transition: { from: 'draft', to: 'published' } }
+          ]
+        }]
       });
 
       // Collect yaml files the same way resolve.js does
@@ -764,16 +766,18 @@ test('resolve-overlay tests', async (t) => {
       });
 
       writeYaml(dir, 'test-state-machine.yaml', {
+        version: '1.0',
         domain: 'test',
-        object: 'Item',
         apiSpec: 'test-openapi.yaml',
-        states: [{ id: 'draft' }, { id: 'published' }],
-        initialState: 'draft',
-        transitions: [
-          { trigger: 'publish', from: 'draft', to: 'published' },
-          { trigger: 'archive', from: 'published', to: 'draft' }
-        ],
-        requestBodies: [{ trigger: 'publish' }, { trigger: 'archive' }]
+        machines: [{
+          object: 'Item',
+          states: [{ id: 'draft' }, { id: 'published' }],
+          initialState: 'draft',
+          transitions: [
+            { id: 'publish', transition: { from: 'draft', to: 'published' } },
+            { id: 'archive', transition: { from: 'published', to: 'draft' } }
+          ]
+        }]
       });
 
       const yamlFiles = [
@@ -883,13 +887,17 @@ test('resolve-overlay tests', async (t) => {
       });
 
       writeYaml(dir, 'test-state-machine.yaml', {
+        version: '1.0',
         domain: 'test',
-        object: 'Item',
         apiSpec: 'test-openapi.yaml',
-        states: [{ id: 'draft' }, { id: 'published' }],
-        initialState: 'draft',
-        transitions: [{ trigger: 'publish', from: 'draft', to: 'published' }],
-        requestBodies: [{ trigger: 'publish' }]
+        machines: [{
+          object: 'Item',
+          states: [{ id: 'draft' }, { id: 'published' }],
+          initialState: 'draft',
+          transitions: [
+            { id: 'publish', transition: { from: 'draft', to: 'published' } }
+          ]
+        }]
       });
 
       const yamlFiles = [{

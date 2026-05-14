@@ -1,5 +1,3 @@
-Guard Name,Field,Operator,Value
-taskIsUnassigned,assignedToId,is_null,
-callerIsAssignedWorker,assignedToId,equals,$caller.id
-callerIsSupervisor,$caller.roles,contains_any,"[""supervisor""]"
-callerIsSystem,$caller.roles,contains_any,"[""system""]"
+Guard Name,Condition
+taskIsUnassigned,object.assignedToId == null
+callerIsAssignedWorker,object.assignedToId == caller.id

@@ -178,10 +178,9 @@ function convertPathFormat(path) {
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {string} baseUrl - Base URL for Location headers
  * @param {Array} stateMachines - State machine entries for this API's domain (from discoverStateMachines)
- * @param {Array|null} rules - Rules for this API's domain (null if none)
  * @returns {Array} Array of registered endpoint info
  */
-export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, rules, slaTypes = [], uploadsDir = null) {
+export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaTypes = [], uploadsDir = null) {
   const registeredEndpoints = [];
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
@@ -237,8 +236,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, rules, 
           obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === collectionName;
       });
       const smForEndpoint = smEntry?.stateMachine || null;
+      const machineForEndpoint = smEntry?.machine || null;
       const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
-      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, rules, domainSlaTypes);
+      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint);
       description = 'Create resource';
     } else if (isSubResourceEndpoint(endpoint.path)) {
       // Sub-resource endpoint: /resources/{parentId}/sub or /resources/{parentId}/sub/{subId}
@@ -286,7 +286,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, rules, 
           };
           description = 'List sub-resources';
         } else if (method === 'post') {
-          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, null, null, []);
+          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, null, []);
           handler = (req, res) => {
             req.body = { ...(req.body || {}), [parentField]: req.params[parentParam] };
             return baseCreateHandler(req, res);
@@ -303,7 +303,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, rules, 
         handler = createGetHandler(apiMetadata, endpointWithCollection);
         description = 'Get sub-resource by ID';
       } else if (method === 'patch') {
-        handler = createUpdateHandler(apiMetadata, endpointWithCollection, null, rules);
+        handler = createUpdateHandler(apiMetadata, endpointWithCollection, null);
         description = 'Update sub-resource';
       } else if (method === 'delete') {
         handler = createDeleteHandler(apiMetadata, endpointWithCollection);
@@ -324,7 +324,8 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, rules, 
           obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === collectionName;
       });
       const smForEndpoint = smEntry?.stateMachine || null;
-      handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, rules);
+      const machineForEndpoint = smEntry?.machine || null;
+      handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint);
       description = 'Update resource';
     } else if (method === 'delete' && isItemEndpoint(endpoint.path)) {
       // DELETE /resources/{id} - Delete
@@ -358,10 +359,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, rules, 
  * @param {Array} apiSpecs - Array of API metadata objects
  * @param {string} baseUrl - Base URL for Location headers
  * @param {Array} stateMachines - Array from discoverStateMachines()
- * @param {Array} rules - Array from discoverRules()
  * @returns {Array} Array of all registered endpoints grouped by API
  */
-export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], rules = [], slaTypes = [], metrics = [], uploadsDir = null) {
+export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], uploadsDir = null) {
   console.log('\nRegistering API routes...');
 
   const allEndpoints = [];
@@ -379,7 +379,7 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], ru
   for (const apiSpec of apiSpecs) {
     // Pass all state machines for this domain — there may be more than one (e.g., Application + ApplicationDocument)
     const domainSMs = stateMachines.filter(s => s.domain === apiSpec.name);
-    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, rules, slaTypes, uploadsDir);
+    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, slaTypes, uploadsDir);
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,
@@ -396,10 +396,9 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], ru
  * @param {Object} app - Express app
  * @param {Array} stateMachines - Array from discoverStateMachines()
  * @param {Array} apiSpecs - Array of API metadata objects
- * @param {Array} rules - Array from discoverRules()
  * @returns {Array} Array of registered RPC endpoint info
  */
-export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules = [], slaTypes = []) {
+export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaTypes = []) {
   const registeredEndpoints = [];
 
   for (const sm of stateMachines) {
@@ -431,18 +430,41 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules =
 
     console.log(`  Registering state machine routes for ${sm.domain}/${sm.object}...`);
 
-    for (const transition of sm.stateMachine.transitions) {
-      const rpcPath = `${basePath}/${transition.trigger}`;
+    // New format: transitions on the machine entry (with id + transition.from/to)
+    // Old format: transitions on stateMachine directly (with trigger + from/to)
+    const isNewFormat = sm.machine && Array.isArray(sm.machine.transitions);
+    const entries = isNewFormat
+      ? sm.machine.transitions.map(op => ({
+          id: op.id,
+          from: op.transition?.from,
+          to: op.transition?.to
+        }))
+      : (sm.stateMachine.transitions || []).map(t => ({
+          id: t.trigger,
+          from: t.from,
+          to: t.to
+        }));
+
+    // Deduplicate by id — same operation id may appear with different from-states
+    // (e.g., escalate from pending vs in_progress). Register the route once; the runner
+    // iterates all matching operations to find the right one for the current state.
+    const seenIds = new Set();
+
+    for (const entry of entries) {
+      if (seenIds.has(entry.id)) continue;
+      seenIds.add(entry.id);
+
+      const rpcPath = `${basePath}/${entry.id}`;
       const expressPath = convertPathFormat(rpcPath);
 
       const domainSlaTypes = findSlaTypes(slaTypes, sm.domain);
       const handler = createTransitionHandler(
         collectionName,
         sm.stateMachine,
-        transition.trigger,
+        entry.id,
         paramName,
-        rules,
-        domainSlaTypes
+        domainSlaTypes,
+        isNewFormat ? sm.machine : null
       );
 
       app.post(expressPath, handler);
@@ -451,11 +473,11 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, rules =
         method: 'POST',
         path: rpcPath,
         expressPath,
-        description: `${transition.trigger}: ${transition.from} → ${transition.to}`,
-        trigger: transition.trigger
+        description: `${entry.id}: ${entry.from} → ${entry.to ?? '(in-place)'}`,
+        trigger: entry.id
       });
 
-      console.log(`    POST   ${expressPath} - ${transition.trigger}: ${transition.from} → ${transition.to}`);
+      console.log(`    POST   ${expressPath} - ${entry.id}: ${entry.from} → ${entry.to ?? '(in-place)'}`);
     }
   }
 

@@ -34,7 +34,12 @@ export function emitEventEnvelope(envelope) {
     id: envelope.id || randomUUID(),
     time: envelope.time || new Date().toISOString(),
   };
-  insertResource('events', record);
+  // Infrastructure events (scheduling, etc.) are broadcast for stub interception
+  // but not persisted — they are not domain events observable via /platform/events.
+  const isInfrastructureEvent = record.type?.includes(`${CLOUDEVENTS_TYPE_PREFIX}scheduling.`);
+  if (!isInfrastructureEvent) {
+    insertResource('events', record);
+  }
   eventBus.emit('domain-event', record);
   return record;
 }

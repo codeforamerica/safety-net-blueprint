@@ -1,0 +1,31 @@
+$schema: ./schemas/state-machine-schema.yaml
+version: "1.0"
+
+guards:
+  - id: callerIsApplicant
+    condition: '"applicant" in caller.roles'
+  - id: callerIsCaseworker
+    condition: '"caseworker" in caller.roles'
+  - id: callerIsSupervisor
+    condition: '"supervisor" in caller.roles'
+  - id: callerIsSystem
+    condition: '"system" in caller.roles'
+
+procedures:
+  - id: requestTimer
+    description: "Request a time-based callback from the scheduling service. Pass fireAfter (duration) or fireAt (absolute timestamp); add fireOffset to fire before a target time; add calendarType: business to count business days."
+    parameters: [timerId, callback, fireAfter, fireAt, fireOffset, calendarType]
+    emit:
+      event: scheduling.timer.requested
+      data:
+        timerId: $params.timerId
+        fireAfter: $params.fireAfter
+        fireAt: $params.fireAt
+        fireOffset: $params.fireOffset
+        calendarType: $params.calendarType
+        callback: $params.callback
+
+  - id: cancelTimer
+    description: Cancel a pending timer by its ID. No-ops if the timer has already fired or does not exist.
+    parameters: [timerId]
+    emit: {event: scheduling.timer.cancelled, data: {timerId: $params.timerId}}
