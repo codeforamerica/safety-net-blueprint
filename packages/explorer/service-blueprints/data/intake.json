@@ -152,9 +152,9 @@
         },
         {
           "type": "domain-event",
-          "text": "eligibility.application.prescreened",
+          "text": "eligibility.application.decision_completed",
           "domain": "eligibility",
-          "subtext": "Per-program indicators (likely_eligible | needs_review | likely_ineligible); caseworkers can see alongside verification obligations"
+          "subtext": "One per auto-resolved Medicaid Decision; Decision.submissionChecks records the electronic check results"
         },
         {
           "type": "domain-event",
@@ -194,7 +194,7 @@
         {
           "type": "system",
           "domain": "eligibility",
-          "text": "Pre-screening result evaluated per Medicaid applicant",
+          "text": "Electronic checks evaluated per Medicaid applicant",
           "subtext": "In response to event call.completed"
         },
         {

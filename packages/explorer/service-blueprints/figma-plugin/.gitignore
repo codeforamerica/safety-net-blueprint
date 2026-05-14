@@ -1,5 +1,7 @@
 node_modules/
 dist/
 
-# Active blueprint staged for build (written by build.js)
+# Active data staged for build (written by build.js)
 src/_current.json
+src/_current_cards.json
+src/_current_card_types.json
