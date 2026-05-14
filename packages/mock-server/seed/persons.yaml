@@ -30,18 +30,6 @@ PersonExample1:
   citizenshipInfo:
     status: citizen
     certificateNumber: trepide velociter
-    immigrationInfo:
-      status: active
-      documentType: standard
-      documentNumber: adicio autus
-      alienOrI94Number: claustrum quis
-      documentExpirationDate: '1985-04-12'
-      countryOfIssuance: aiunt aranea
-      hasSponsor: true
-      sponsor:
-        name:
-          firstName: James
-          lastName: Smith
   contactInfo:
     otherPhoneNumber: (668) 757-2940
     mailingAddress:
@@ -107,12 +95,12 @@ PersonExample2:
     status: permanent_resident
     certificateNumber: conscendo thermae
     immigrationInfo:
-      status: active
-      documentType: standard
-      documentNumber: amicitia summa
-      alienOrI94Number: vero thymbra
-      documentExpirationDate: '1990-11-08'
-      countryOfIssuance: compello caterva
+      status: lawful_permanent_resident
+      documentType: i_551
+      documentNumber: A123456789
+      alienOrI94Number: A123456789
+      documentExpirationDate: '2030-11-08'
+      countryOfIssuance: MX
       hasSponsor: false
   contactInfo:
     otherPhoneNumber: (544) 267-7374

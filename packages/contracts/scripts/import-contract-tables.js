@@ -455,6 +455,24 @@ function importRuleSet(csvData, existingDoc, ruleType) {
   return doc;
 }
 
+function importAllRuleSets(csvData, existingDoc) {
+  // Group rows by rule set ID (first column), then delegate to importRuleSet for each group.
+  // The consolidated rules.csv has columns: Rule Set, Order, Condition, Action, Fallback, Description.
+  // importRuleSet expects: Order, Condition, Action, Fallback, Description — so strip the first column.
+  const groups = new Map();
+  for (const row of csvData.data) {
+    const [ruleSetId, ...rest] = row;
+    if (!ruleSetId) continue;
+    if (!groups.has(ruleSetId)) groups.set(ruleSetId, []);
+    groups.get(ruleSetId).push(rest);
+  }
+  let doc = { ...existingDoc };
+  for (const [ruleSetId, rows] of groups) {
+    doc = importRuleSet({ data: rows }, doc, ruleSetId);
+  }
+  return doc;
+}
+
 function importMetrics(csvData, existingDoc) {
   const doc = { ...existingDoc };
 
@@ -903,6 +921,7 @@ function classifyCsvFile(csvFilename) {
   if (csvFilename === 'rules.csv') return { schemaKey: 'state-machine-schema', section: 'sm-rules' };
   if (csvFilename === 'actions.csv') return { schemaKey: 'state-machine-schema', section: 'actions' };
   if (csvFilename === 'request-bodies.csv') return { schemaKey: 'state-machine-schema', section: 'request-bodies' };
+  if (csvFilename === 'rules.csv') return { schemaKey: 'rules-schema', section: 'rules-combined' };
   if (csvFilename.startsWith('rules-') && csvFilename.endsWith('.csv')) return { schemaKey: 'rules-schema', section: 'rules', ruleType: csvFilename.slice(6, -4) };
   if (csvFilename === 'metrics.csv') return { schemaKey: 'metrics-schema', section: 'metrics' };
   if (csvFilename === 'sla-types.csv') return { schemaKey: 'sla-types-schema', section: 'sla-types' };
@@ -1150,6 +1169,9 @@ function main() {
           break;
         case 'rules':
           doc = importRuleSet(parsed, doc, csv.ruleType);
+          break;
+        case 'rules-combined':
+          doc = importAllRuleSets(parsed, doc);
           break;
         case 'metrics':
           doc = importMetrics(parsed, doc);

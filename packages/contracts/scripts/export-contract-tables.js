@@ -5,7 +5,7 @@
  * each contract type into CSV tables grouped by domain.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, unlinkSync, existsSync } from 'fs';
 import { resolve, dirname, basename, relative } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -409,16 +409,19 @@ function renderRequestBodies(doc) {
 // Rules → CSV renderer
 // ---------------------------------------------------------------------------
 
-function renderRuleSet(ruleSet) {
-  const headers = ['Order', 'Condition', 'Action', 'Fallback', 'Description'];
+function renderAllRuleSets(ruleSets) {
+  const headers = ['Rule Set', 'Order', 'Condition', 'Action', 'Fallback', 'Description'];
   const rows = [];
-  for (const rule of ruleSet.rules || []) {
-    const condition = typeof rule.condition === 'object'
-      ? JSON.stringify(rule.condition)
-      : String(rule.condition);
-    const action = rule.action ? JSON.stringify(rule.action) : '';
-    const fallback = rule.fallbackAction ? JSON.stringify(rule.fallbackAction) : '';
-    rows.push([rule.order, condition, action, fallback, rule.description || '']);
+  for (const ruleSet of ruleSets) {
+    const id = ruleSet.ruleType || ruleSet.id;
+    for (const rule of ruleSet.rules || []) {
+      const condition = typeof rule.condition === 'object'
+        ? JSON.stringify(rule.condition)
+        : String(rule.condition);
+      const action = rule.action ? JSON.stringify(rule.action) : '';
+      const fallback = rule.fallbackAction ? JSON.stringify(rule.fallbackAction) : '';
+      rows.push([id, rule.order, condition, action, fallback, rule.description || '']);
+    }
   }
   return csvTable(headers, rows);
 }
@@ -528,11 +531,15 @@ function exportStateMachine(doc, outDir) {
 }
 
 function exportRules(doc, outDir) {
-  const files = {};
-  for (const ruleSet of doc.ruleSets || []) {
-    const suffix = ruleSet.ruleType || ruleSet.id;
-    files[`rules-${suffix}.csv`] = renderRuleSet(ruleSet);
+  // Remove legacy per-ruleSet files before writing the consolidated file
+  if (existsSync(outDir)) {
+    for (const file of readdirSync(outDir)) {
+      if (file.startsWith('rules-') && file.endsWith('.csv')) {
+        unlinkSync(resolve(outDir, file));
+      }
+    }
   }
+  const files = { 'rules.csv': renderAllRuleSets(doc.ruleSets || []) };
   writeFiles(outDir, files);
   return Object.keys(files);
 }

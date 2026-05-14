@@ -8,8 +8,9 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import { execSync, spawn } from 'child_process';
-import { realpathSync, openSync, statSync } from 'fs';
+import { realpathSync, openSync, statSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
+import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
@@ -217,7 +218,9 @@ async function startMockServer(specDirs = null, seedDir = null) {
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
-    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics);
+    const uploadsDir = resolveUploadsDir(resolve(import.meta.dirname, '..', 'uploads'));
+    mkdirSync(uploadsDir, { recursive: true });
+    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, uploadsDir);
 
     // Register state machine RPC routes
     const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes);

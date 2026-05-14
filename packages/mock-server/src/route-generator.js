@@ -11,6 +11,8 @@ import { createDeleteHandler } from './handlers/delete-handler.js';
 import { createTransitionHandler } from './handlers/transition-handler.js';
 import { createSearchHandler } from './handlers/search-handler.js';
 import { createMetricsListHandler, createMetricsGetHandler } from './handlers/metrics-handler.js';
+import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
+import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
 import { findAll, update } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
@@ -178,7 +180,7 @@ function convertPathFormat(path) {
  * @param {Array} stateMachines - State machine entries for this API's domain (from discoverStateMachines)
  * @returns {Array} Array of registered endpoint info
  */
-export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaTypes = []) {
+export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaTypes = [], uploadsDir = null) {
   const registeredEndpoints = [];
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
@@ -197,6 +199,24 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
     // item check because both contain '{' parameters.
     if (endpoint.operationId === 'streamEvents') {
       // Handled by manual registration in server.js before routes are registered
+      continue;
+    } else if (endpoint.operationId === 'uploadDocument' && uploadsDir) {
+      const [middleware, uploadHandler] = createDocumentUploadHandler(uploadsDir, baseUrl);
+      app.post(expressPath, middleware, uploadHandler);
+      registeredEndpoints.push({ method: 'POST', path: expressPath, description: 'Upload document (multipart)' });
+      console.log(`    POST   ${expressPath} - Upload document (multipart)`);
+      continue;
+    } else if (endpoint.operationId === 'uploadDocumentVersion' && uploadsDir) {
+      const [middleware, uploadHandler] = createDocumentVersionUploadHandler(uploadsDir, baseUrl);
+      app.post(expressPath, middleware, uploadHandler);
+      registeredEndpoints.push({ method: 'POST', path: expressPath, description: 'Upload document version (multipart)' });
+      console.log(`    POST   ${expressPath} - Upload document version (multipart)`);
+      continue;
+    } else if (endpoint.operationId === 'getDocumentVersionContent' && uploadsDir) {
+      const contentHandler = createDocumentContentHandler(uploadsDir);
+      app.get(expressPath, contentHandler);
+      registeredEndpoints.push({ method: 'GET', path: expressPath, description: 'Get document version file content' });
+      console.log(`    GET    ${expressPath} - Get document version file content`);
       continue;
     } else if (endpoint.operationId === 'search') {
       // Cross-resource search endpoint — custom handler
@@ -341,7 +361,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
  * @param {Array} stateMachines - Array from discoverStateMachines()
  * @returns {Array} Array of all registered endpoints grouped by API
  */
-export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = []) {
+export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], uploadsDir = null) {
   console.log('\nRegistering API routes...');
 
   const allEndpoints = [];
@@ -359,7 +379,7 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
   for (const apiSpec of apiSpecs) {
     // Pass all state machines for this domain — there may be more than one (e.g., Application + ApplicationDocument)
     const domainSMs = stateMachines.filter(s => s.domain === apiSpec.name);
-    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, slaTypes);
+    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, slaTypes, uploadsDir);
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,

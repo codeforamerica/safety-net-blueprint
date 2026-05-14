@@ -356,32 +356,16 @@ components:
             $ref: "#/components/schemas/Job"
 
     ImmigrationInfo:
-      type: object
-      description: Immigration document information for a non-citizen.
-      properties:
-        status:
-          type: string
-          maxLength: 100
-        documentType:
-          type: string
-          maxLength: 100
-        documentNumber:
-          type: string
-          maxLength: 100
-        alienOrI94Number:
-          type: string
-          maxLength: 100
-        documentExpirationDate:
-          type: string
-          format: date
-        countryOfIssuance:
-          type: string
-          maxLength: 100
-        hasSponsor:
-          type: boolean
-        sponsor:
-          $ref: "#/components/schemas/Sponsor"
-          description: Sponsor information for this non-citizen.
+      allOf:
+        - $ref: "./components/identity.yaml#/ImmigrationInfo"
+        - type: object
+          properties:
+            hasSponsor:
+              type: boolean
+              description: Whether this non-citizen has a financial sponsor.
+            sponsor:
+              $ref: "#/components/schemas/Sponsor"
+              description: Sponsor information for this non-citizen.
 
     Job:
       type: object
