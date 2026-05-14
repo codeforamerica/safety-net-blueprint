@@ -88,22 +88,22 @@ test('state-machine-schema structural requirements', async (t) => {
     assert.equal(valid, false);
   });
 
-  await t.test('requires domain', () => {
+  await t.test('domain is optional (platform files omit it)', () => {
     const { domain: _, ...doc } = base;
-    const { valid } = validate(doc);
-    assert.equal(valid, false);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('requires apiSpec', () => {
+  await t.test('apiSpec is optional (platform files omit it)', () => {
     const { apiSpec: _, ...doc } = base;
-    const { valid } = validate(doc);
-    assert.equal(valid, false);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('requires machines array', () => {
+  await t.test('machines is optional (platform files omit it)', () => {
     const { machines: _, ...doc } = base;
-    const { valid } = validate(doc);
-    assert.equal(valid, false);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
   await t.test('machines must have at least one entry', () => {
@@ -121,7 +121,7 @@ test('state-machine-schema structural requirements', async (t) => {
     assert.equal(valid, false);
   });
 
-  await t.test('machine with no triggers or operations is valid', () => {
+  await t.test('machine with no events or transitions is valid', () => {
     const { valid, errors } = validate(base);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
@@ -146,82 +146,42 @@ test('state-machine-schema trigger types', async (t) => {
     };
   }
 
-  await t.test('onCreate trigger', () => {
-    const doc = withTriggers({
-      onCreate: {
-        then: [{ evaluate: 'assignment-rule', description: 'Route on create' }],
-      },
-    });
-    const { valid, errors } = validate(doc);
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('onUpdate trigger with fields watch list', () => {
-    const doc = withTriggers({
-      onUpdate: {
-        fields: ['isExpedited', 'programType'],
-        then: [{ evaluate: 'priority-rule', description: 'Re-evaluate priority' }],
-      },
-    });
-    const { valid, errors } = validate(doc);
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('onUpdate trigger without fields (fires on any update)', () => {
-    const doc = withTriggers({
-      onUpdate: {
-        then: [{ evaluate: 'priority-rule', description: 'Re-evaluate priority' }],
-      },
-    });
-    const { valid, errors } = validate(doc);
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('onEvent trigger with name:', () => {
-    const doc = withTriggers({
-      onEvent: [{
-        name: 'external.domain.thing_happened',
-        then: [{ emit: { event: 'reacted' }, description: 'React' }],
+  function withEvents(events) {
+    return {
+      version: '1.0', domain: 'test', apiSpec: 'test-openapi.yaml',
+      machines: [{
+        object: 'Widget',
+        states: [{ id: 'draft', slaClock: 'stopped' }, { id: 'active', slaClock: 'running' }],
+        initialState: 'draft',
+        events,
       }],
-    });
+    };
+  }
+
+  await t.test('events list (replaces triggers.onEvent)', () => {
+    const doc = withEvents([{
+      name: 'domain.widget.created',
+      steps: [{ call: 'assignToQueue', description: 'Route on create' }],
+    }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('onEvent trigger with transition', () => {
-    const doc = withTriggers({
-      onEvent: [{
-        name: 'external.domain.thing_happened',
-        transition: { from: 'draft', to: 'active' },
-        then: [{ emit: { event: 'activated' }, description: 'Activate' }],
-      }],
-    });
+  await t.test('events list with name:', () => {
+    const doc = withEvents([{
+      name: 'external.domain.thing_happened',
+      steps: [{ emit: { event: 'reacted', description: 'React' } }],
+    }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('onTimer trigger', () => {
-    const doc = withTriggers({
-      onTimer: [{
-        after: '72h',
-        relativeTo: 'createdAt',
-        calendarType: 'business',
-        transition: { from: 'draft', to: 'active' },
-        then: [{ emit: { event: 'auto_activated' }, description: 'Auto-activate' }],
-      }],
-    });
-    const { valid, errors } = validate(doc);
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('onTimer with negative duration (fires before reference point)', () => {
-    const doc = withTriggers({
-      onTimer: [{
-        after: '-48h',
-        relativeTo: 'slaDeadline',
-        then: [{ emit: { event: 'warning' }, description: 'SLA warning' }],
-      }],
-    });
+  await t.test('events list with transition', () => {
+    const doc = withEvents([{
+      name: 'external.domain.thing_happened',
+      transition: { from: 'draft', to: 'active' },
+      steps: [{ emit: { event: 'activated', description: 'Activate' } }],
+    }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
@@ -229,34 +189,31 @@ test('state-machine-schema trigger types', async (t) => {
 });
 
 // ---------------------------------------------------------------------------
-// Operations
+// Transitions
 // ---------------------------------------------------------------------------
 
-test('state-machine-schema operation types', async (t) => {
+test('state-machine-schema transition types', async (t) => {
 
-  function withOperations(operations) {
+  function withTransitions(transitions) {
     return {
       version: '1.0', domain: 'test', apiSpec: 'test-openapi.yaml',
       machines: [{
         object: 'Widget',
         states: [{ id: 'draft', slaClock: 'stopped' }, { id: 'active', slaClock: 'running' }],
         initialState: 'draft',
-        operations,
+        transitions,
       }],
     };
   }
 
   await t.test('operation with full transition and guards', () => {
-    const doc = withOperations([{
-      name: 'activate',
-      guards: {
-        actors: ['caseworker'],
-        conditions: ['callerIsCaseworker'],
-      },
+    const doc = withTransitions([{
+      id: 'activate',
+      guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
       transition: { from: 'draft', to: 'active' },
-      then: [
-        { set: { field: 'activatedAt', value: '$now' }, description: 'Record activation time' },
-        { emit: { event: 'activated' }, description: 'Emit event' },
+      steps: [
+        { set: { field: 'activatedAt', value: '$now', description: 'Record activation time' } },
+        { emit: { event: 'activated', description: 'Emit event' } },
       ],
     }]);
     const { valid, errors } = validate(doc);
@@ -264,71 +221,72 @@ test('state-machine-schema operation types', async (t) => {
   });
 
   await t.test('operation without transition (in-place)', () => {
-    const doc = withOperations([{
-      name: 'flag',
-      then: [{ set: { field: 'flagged', value: true }, description: 'Flag it' }],
+    const doc = withTransitions([{
+      id: 'flag',
+      steps: [{ set: { field: 'flagged', value: true, description: 'Flag it' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
   await t.test('operation with multi-state from', () => {
-    const doc = withOperations([{
-      name: 'withdraw',
+    const doc = withTransitions([{
+      id: 'withdraw',
       transition: { from: ['draft', 'active'], to: 'draft' },
-      then: [{ emit: { event: 'withdrawn' }, description: 'Emit event' }],
+      steps: [{ emit: { event: 'withdrawn', description: 'Emit event' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
   await t.test('operation with transition from only (no state change)', () => {
-    const doc = withOperations([{
-      name: 'complete-review',
+    const doc = withTransitions([{
+      id: 'complete-review',
       transition: { from: 'active' },
-      guards: { actors: ['caseworker'], conditions: ['callerIsCaseworker'] },
-      then: [{ emit: { event: 'review_completed' }, description: 'Signal review done' }],
+      guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
+      steps: [{ emit: { event: 'review_completed', description: 'Signal review done' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
   await t.test('operation with requestBody', () => {
-    const doc = withOperations([{
-      name: 'withdraw',
+    const doc = withTransitions([{
+      id: 'withdraw',
       transition: { from: 'active', to: 'draft' },
       requestBody: {
         type: 'object',
         required: ['reason'],
         properties: { reason: { type: 'string' } },
       },
-      then: [{ emit: { event: 'withdrawn', data: { reason: '$request.reason' } }, description: 'Emit' }],
+      steps: [{ emit: { event: 'withdrawn', data: { reason: '$request.reason' }, description: 'Emit' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
   await t.test('operation with evaluate step', () => {
-    const doc = withOperations([{
-      name: 'release',
+    const doc = withTransitions([{
+      id: 'release',
       transition: { from: 'active', to: 'draft' },
-      then: [
-        { set: { field: 'assignedToId', value: null }, description: 'Clear assignment' },
-        { evaluate: 'assignment-rule', description: 'Re-evaluate routing' },
+      steps: [
+        { set: { field: 'assignedToId', value: null, description: 'Clear assignment' } },
+        { call: 'assignToQueue', description: 'Re-evaluate routing' },
       ],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('operation with invoke step (create)', () => {
-    const doc = withOperations([{
-      name: 'complete',
+  await t.test('operation with call step (object form, create)', () => {
+    const doc = withTransitions([{
+      id: 'complete',
       transition: { from: 'active', to: 'draft' },
-      then: [{
-        invoke: 'workflow/tasks',
-        body: { taskType: 'follow_up', status: 'pending' },
-        when: { '==': [{ var: '$request.createFollowUp' }, true] },
+      steps: [{
+        if: '$request.createFollowUp == true',
+        then: [{
+          call: { POST: 'workflow/tasks', body: { taskType: 'follow_up', status: 'pending' } },
+        }],
         description: 'Create follow-up task',
       }],
     }]);
@@ -336,13 +294,12 @@ test('state-machine-schema operation types', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('operation with invoke step (append)', () => {
-    const doc = withOperations([{
-      name: 'add-note',
+  await t.test('operation with call step (object form, PATCH append)', () => {
+    const doc = withTransitions([{
+      id: 'add-note',
       transition: { from: 'active' },
-      then: [{
-        invoke: 'widgets/$object.id',
-        append: { field: 'notes', value: '$request.note' },
+      steps: [{
+        call: { PATCH: 'widgets/{object.id}', body: { notes: { $push: '$request.note' } } },
         description: 'Append note',
       }],
     }]);
@@ -365,10 +322,10 @@ test('state-machine-schema guards composition', async (t) => {
         object: 'Widget',
         states: [{ id: 'draft', slaClock: 'stopped' }],
         initialState: 'draft',
-        operations: [{
-          name: 'do-thing',
-          guards: { actors: ['caseworker'], conditions },
-          then: [{ emit: { event: 'done' }, description: 'Done' }],
+        transitions: [{
+          id: 'do-thing',
+          guards: [{ actors: ['caseworker'], conditions }],
+          steps: [{ emit: { event: 'done', description: 'Done' } }],
         }],
       }],
     };
@@ -411,36 +368,64 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
     }],
   };
 
-  await t.test('guards array with is_null operator', () => {
+  await t.test('guards array with CEL condition (null check)', () => {
     const doc = {
       ...base,
-      guards: [{ id: 'widgetIsUnassigned', field: 'assignedToId', operator: 'is_null' }],
+      guards: [{ id: 'widgetIsUnassigned', condition: 'object.assignedToId == null' }],
     };
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('guards array with contains_any and value', () => {
+  await t.test('guards array with CEL condition (role check)', () => {
     const doc = {
       ...base,
-      guards: [{ id: 'callerIsSupervisor', field: '$caller.roles', operator: 'contains_any', value: ['supervisor'] }],
+      guards: [{ id: 'callerIsSupervisor', condition: '"supervisor" in caller.roles' }],
     };
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('rules array with first-match-wins evaluation', () => {
+  await t.test('procedure with if step (conditional)', () => {
     const doc = {
       ...base,
-      rules: [{
-        id: 'routing-rule',
-        evaluation: 'first-match-wins',
-        conditions: [{
-          id: 'snap-queue',
-          order: 1,
-          condition: true,
-          then: [{ set: { field: 'queueId', value: 'snap-intake' } }],
-          description: 'Route to SNAP queue',
+      procedures: [{
+        id: 'openApplication',
+        context: [{ application: { from: 'intake/applications', where: { id: '$task.subjectId' } } }],
+        steps: [{
+          if: '$task.taskType == "application_review" && $application.status == "submitted"',
+          then: [{ call: { POST: 'intake/applications/$application.id/open' } }],
+        }],
+        description: 'Open the application',
+      }],
+    };
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('procedure with no condition (then only, call object form)', () => {
+    const doc = {
+      ...base,
+      procedures: [{
+        id: 'alwaysRunRule',
+        steps: [{ call: { POST: 'intake/applications/$application.id/satisfy' } }],
+        description: 'Always runs',
+      }],
+    };
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('procedure with if/then/else step', () => {
+    const doc = {
+      ...base,
+      procedures: [{
+        id: 'routingRule',
+        description: 'Route to appropriate queue',
+        steps: [{
+          if: '$application.programs.size() == 1 && "snap" in $application.programs',
+          then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }],
+          else: [{ set: { field: 'queueId', value: '$generalQueue.id' } }],
         }],
       }],
     };
@@ -448,50 +433,64 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('rules array with all-match evaluation', () => {
+  await t.test('procedure with match/when step', () => {
     const doc = {
       ...base,
-      rules: [{
-        id: 'create-documents-rule',
-        evaluation: 'all-match',
-        conditions: [
-          {
-            id: 'snap-income-doc',
-            order: 1,
-            condition: { in: ['snap', { var: '$application.programs' }] },
-            then: [{ invoke: 'intake/applications/documents', body: { category: 'income' } }],
-            description: 'Request income doc for SNAP',
+      procedures: [{
+        id: 'routeByCategory',
+        description: 'Route by verification category',
+        steps: [{
+          match: '$object.category',
+          when: {
+            identity: [{ call: { POST: 'data-exchange/service-calls' } }],
+            income: [
+              { call: { POST: 'data-exchange/service-calls' } },
+              { call: { POST: 'data-exchange/service-calls' } },
+            ],
           },
-          {
-            id: 'snap-identity-doc',
-            order: 2,
-            condition: { in: ['snap', { var: '$application.programs' }] },
-            then: [{ invoke: 'intake/applications/documents', body: { category: 'identity' } }],
-            description: 'Request identity doc for SNAP',
-          },
-        ],
+        }],
       }],
     };
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('rule with context bindings including optional', () => {
+  await t.test('procedure with if wrapping match step', () => {
     const doc = {
       ...base,
-      rules: [{
-        id: 'open-application-rule',
-        conditions: [{
-          id: 'open-application',
-          order: 1,
-          condition: true,
-          then: [{ invoke: 'intake/applications/$application.id/open' }],
-          description: 'Open the application',
+      procedures: [{
+        id: 'updateOnResult',
+        description: 'Handle result when verification is found',
+        steps: [{
+          if: '$verification.id != null',
+          then: [{
+            match: '$this.data.result',
+            when: {
+              conclusive: [{ call: { POST: 'intake/applications/verifications/$verification.id/satisfy' } }],
+              inconclusive: [{ call: { POST: 'intake/applications/verifications/$verification.id/mark-inconclusive' } }],
+            },
+          }],
         }],
+      }],
+    };
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('procedure with context bindings', () => {
+    const doc = {
+      ...base,
+      procedures: [{
+        id: 'openApplicationRule',
+        description: 'Open the application',
         context: [
           { task: { from: 'workflow/tasks', where: { id: '$this.subject' } } },
-          { application: { from: 'intake/applications', where: { id: '$task.subjectId' }, optional: true } },
+          { application: { from: 'intake/applications', where: { id: '$task.subjectId' } } },
         ],
+        steps: [{
+          if: '$task.taskType == "application_review"',
+          then: [{ call: { POST: 'intake/applications/$application.id/open' } }],
+        }],
       }],
     };
     const { valid, errors } = validate(doc);
@@ -507,11 +506,11 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
           object: 'WidgetDocument',
           states: [{ id: 'requested', slaClock: 'stopped' }, { id: 'verified', slaClock: 'stopped' }],
           initialState: 'requested',
-          operations: [{
-            name: 'verify',
-            guards: { actors: ['system'], conditions: ['callerIsSystem'] },
+          transitions: [{
+            id: 'verify',
+            guards: [{ actors: ['system'], conditions: ['callerIsSystem'] }],
             transition: { from: 'requested', to: 'verified' },
-            then: [{ emit: { event: 'verified' }, description: 'Mark verified' }],
+            steps: [{ emit: { event: 'verified', description: 'Mark verified' } }],
           }],
         },
       ],
@@ -520,23 +519,22 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('machine with both triggers and operations', () => {
+  await t.test('machine with both events and transitions', () => {
     const doc = {
       ...base,
       machines: [{
         object: 'Widget',
         states: [{ id: 'draft', slaClock: 'stopped' }, { id: 'active', slaClock: 'running' }],
         initialState: 'draft',
-        triggers: {
-          onCreate: {
-            then: [{ evaluate: 'routing-rule', description: 'Route on create' }],
-          },
-        },
-        operations: [{
-          name: 'activate',
-          guards: { actors: ['caseworker'], conditions: ['callerIsCaseworker'] },
+        events: [{
+          name: 'domain.widget.created',
+          steps: [{ call: 'routing-rule', description: 'Route on create' }],
+        }],
+        transitions: [{
+          id: 'activate',
+          guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
           transition: { from: 'draft', to: 'active' },
-          then: [{ emit: { event: 'activated' }, description: 'Activate' }],
+          steps: [{ emit: { event: 'activated', description: 'Activate' } }],
         }],
       }],
     };

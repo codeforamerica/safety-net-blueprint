@@ -127,7 +127,7 @@ async function testStubCrud() {
   // 422 on missing required fields
   const badRes = await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'data_exchange.service_call.created' }  // missing respond
+    body: {}  // missing on
   });
   assert(badRes.status === 422, `invalid stub → expected 422, got ${badRes.status}`);
   console.log('  ✓ POST /mock/stubs/events returns 422 for invalid stub');
@@ -162,7 +162,7 @@ async function testStubConsumedOnEvent() {
   const before = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(before.total === 1, 'stub should be registered');
 
-  // Inject the trigger event — mock rules fire applyStub synchronously
+  // Inject the trigger event — stub engine fires the response synchronously
   const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-001');
   assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
 
@@ -205,21 +205,77 @@ async function testStubFifo() {
 }
 
 // =============================================================================
-// Fallback fires when no stub registered
+// No stub — event fires without error, nothing consumed
 // =============================================================================
 
-async function testFallbackNoStub() {
-  console.log('\n--- Fallback when no stub registered ---');
+async function testNoStubNoError() {
+  console.log('\n--- No stub registered ---');
   await clearStubs();
 
-  // No stub registered — mock rules should fire fallback (conclusive result)
+  // No stub registered — event fires cleanly, service call stays pending
   const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'save' }, 'sc-003');
   assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
 
-  // Stub count should still be 0 (no stub to consume or add)
+  // Stub count should still be 0
   const stubs = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(stubs.total === 0, 'stub count should remain 0');
-  console.log('  ✓ Fallback fires when no stub registered (no error thrown)');
+  console.log('  ✓ Event fires without error when no stub registered');
+}
+
+// =============================================================================
+// Timer stub — scheduling.timer.requested fires callback event
+// =============================================================================
+
+async function testTimerStub() {
+  console.log('\n--- Timer stub ---');
+  await clearStubs();
+
+  // Register a timer stub — no respond needed, callback comes from the event
+  const postRes = await fetch(`${BASE_URL}/mock/stubs/events`, {
+    method: 'POST',
+    body: {
+      on: 'scheduling.timer.requested',
+      match: { 'data.callback.event': 'workflow.creation_deadline' }
+    }
+  });
+  assert(postRes.status === 201, `POST timer stub → expected 201, got ${postRes.status}`);
+
+  const stub = await postRes.json();
+  assert(stub.id, 'stub should have an id');
+  assert(stub.respond === undefined, 'timer stub should have no respond field');
+
+  // Inject a scheduling.timer.requested event with callback data
+  const subjectId = 'task-timer-test-1';
+  const injectRes = await injectEvent(
+    'scheduling.timer.requested',
+    {
+      timerId: `workflow.creation_deadline.${subjectId}`,
+      callback: {
+        event: 'workflow.creation_deadline',
+        data: {}
+      }
+    },
+    subjectId
+  );
+  assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
+
+  // Stub should be consumed
+  const after = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
+  assert(after.total === 0, 'timer stub should be consumed after trigger event fires');
+  console.log('  ✓ Timer stub consumed when scheduling.timer.requested fires');
+
+  // The callback event (workflow.creation_deadline) should have been emitted
+  const eventsRes = await fetch(`${BASE_URL}/platform/events`);
+  const events = await eventsRes.json();
+  const callbackEvent = events.items?.find(e =>
+    e.type?.includes('workflow.creation_deadline') && e.subject === subjectId
+  );
+  assert(callbackEvent, 'workflow.creation_deadline callback event should have been emitted');
+  assert.strictEqual(callbackEvent.data?.timerId, `workflow.creation_deadline.${subjectId}`);
+  assert.strictEqual(callbackEvent.source, '/scheduler');
+  console.log('  ✓ Timer callback event (workflow.creation_deadline) emitted with timerId');
+
+  await clearStubs();
 }
 
 // =============================================================================
@@ -262,6 +318,11 @@ async function testMatchFilter() {
 function assert(condition, message) {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
 }
+assert.strictEqual = (actual, expected, message) => {
+  if (actual !== expected) {
+    throw new Error(`Assertion failed: ${message || `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`}`);
+  }
+};
 
 async function run() {
   console.log('\n' + '='.repeat(70));
@@ -280,8 +341,9 @@ async function run() {
     testStubCrud,
     testStubConsumedOnEvent,
     testStubFifo,
-    testFallbackNoStub,
-    testMatchFilter
+    testNoStubNoError,
+    testMatchFilter,
+    testTimerStub
   ];
 
   let passed = 0;

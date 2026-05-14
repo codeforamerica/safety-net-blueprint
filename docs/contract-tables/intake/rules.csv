@@ -1,10 +1,1 @@
 Rule ID,Evaluation,Conditions
-open-application-rule,first-match-wins,"[open-submitted-application-review] {""and"":[{""!="":[{""var"":""$application.id""},null]},{""=="":[{""var"":""$task.taskType""},""application_review""]},{""=="":[{""var"":""$application.status""},""submitted""]}]}"
-create-interview-rule,first-match-wins,"[create-interview-for-application-review] {""=="":[{""var"":""$task.taskType""},""application_review""]}"
-initiate-data-exchange-rule,first-match-wins,[create-verification-service-call] true
-create-document-checklist-rule,all-match,"[snap-income-document] {""in"":[""snap"",{""var"":""$application.programs""}]}; [snap-identity-document] {""in"":[""snap"",{""var"":""$application.programs""}]}; [snap-residency-document] {""in"":[""snap"",{""var"":""$application.programs""}]}; [medicaid-identity-document] {""in"":[""medicaid"",{""var"":""$application.programs""}]}"
-write-back-verification-rule,first-match-wins,[append-verification-to-member] true
-handle-fdsh-inconclusive-rule,first-match-wins,"[create-citizenship-document-on-fdsh-inconclusive] {""and"":[{""=="":[{""var"":""$this.data.serviceType""},""fdsh""]},{""=="":[{""var"":""$this.data.result""},""inconclusive""]}]}"
-link-appointment-rule,first-match-wins,"[add-appointment-to-interview] {""=="":[{""var"":""$this.data.subjectType""},""interview""]}"
-verify-application-document-rule,all-match,"[transition-document-to-verified] {""=="":[{""var"":""$this.data.subjectType""},""application-document""]}; [record-document-evidence] {""=="":[{""var"":""$this.data.subjectType""},""application-document""]}"
-write-back-determination-rule,first-match-wins,[append-determination-to-member] true

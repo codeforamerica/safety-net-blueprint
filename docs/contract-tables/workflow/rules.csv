@@ -1,3 +1,1 @@
 Rule ID,Evaluation,Conditions
-assignment-rule,first-match-wins,"[snap-only-to-snap-queue] {""and"":[{""=="":[{""var"":""$application.programs.length""},1]},{""in"":[""snap"",{""var"":""$application.programs""}]},{""!="":[{""var"":""$snapQueue""},null]}]}; [default-to-general-queue] true"
-priority-rule,first-match-wins,"[expedited-flag] {""=="":[{""var"":""$object.isExpedited""},true]}; [default-priority] true"

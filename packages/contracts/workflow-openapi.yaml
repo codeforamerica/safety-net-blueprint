@@ -1016,7 +1016,7 @@ components:
       properties: {}
 
     TaskDeletedEvent:
-      $ref: "./components/events.yaml#/ResourceDeletedEvent"
+      $ref: "./schemas/platform-events.yaml#/ResourceDeletedEvent"
 
     TaskAwaitingClientEvent:
       type: object
@@ -1090,7 +1090,7 @@ components:
             - sla_deadline_exceeded
 
     TaskUpdatedEvent:
-      $ref: "./components/events.yaml#/ResourceUpdatedEvent"
+      $ref: "./schemas/platform-events.yaml#/ResourceUpdatedEvent"
 
   examples:
     QueueExample1:

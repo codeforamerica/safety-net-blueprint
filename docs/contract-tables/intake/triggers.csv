@@ -1,7 +1,10 @@
 Machine,Trigger Type,Name / Event,From,To,After,Relative To,Calendar,Guards,Steps
-Application,onEvent,workflow.task.claimed,,,,,,,Evaluate `open-application-rule`; Evaluate `create-interview-rule`
-Application,onEvent,intake.application.submitted,,,,,,,Evaluate `initiate-data-exchange-rule`; Evaluate `create-document-checklist-rule`
-Application,onEvent,data_exchange.call.completed,,,,,,,Evaluate `write-back-verification-rule`; Evaluate `handle-fdsh-inconclusive-rule`
-Application,onEvent,scheduling.appointment.scheduled,,,,,,,Evaluate `link-appointment-rule`
-Application,onEvent,document_management.document.verified,,,,,,,Evaluate `verify-application-document-rule`
-Application,onEvent,eligibility.determination.completed,,,,,,,Evaluate `write-back-determination-rule`
+Application,onEvent,workflow.task.claimed,,,,,,,Call `openApplication`; Call `createInterview`
+Application,onEvent,intake.application.submitted,,,,,,,Call `createProgramVerifications`; Call `createProgramVerifications`
+Application,onEvent,data_exchange.call.completed,,,,,,,Call `updateVerificationOnCallResult`
+Application,onEvent,scheduling.appointment.scheduled,,,,,,,Call `linkAppointment`
+Application,onEvent,document_management.version.uploaded,,,,,,,Call `satisfyVerificationOnDocumentUpload`
+Application,onEvent,eligibility.application.determination_completed,,,,,,,Call `recordDetermination`
+Application,onEvent,eligibility.application.all_determined,,,,,,,POST `intake/applications/{this.subject}/close`
+Application,onEvent,eligibility.application.expedited,,,,,,,PATCH `intake/applications/{this.subject}`
+Verification,onEvent,intake.verification.created,,,,,,,Call `initiateServiceCalls`

@@ -30,6 +30,10 @@ export function resolveValue(value, context) {
       return context.now ?? new Date().toISOString();
     }
 
+    if (value === '$object') return context.object ?? null;
+    if (value === '$caller') return context.caller ?? null;
+    if (value === '$request') return context.request ?? null;
+
     if (value.startsWith('$caller.')) {
       const field = value.slice('$caller.'.length);
       return context.caller?.[field] ?? null;
@@ -48,6 +52,11 @@ export function resolveValue(value, context) {
     if (value.startsWith('$this.')) {
       const field = value.slice('$this.'.length);
       return resolveDotPath(context.this, field) ?? null;
+    }
+
+    if (value.startsWith('$params.')) {
+      const field = value.slice('$params.'.length);
+      return resolveDotPath(context.params, field) ?? null;
     }
 
     // Entity alias: $alias.field from context.entities
@@ -102,7 +111,8 @@ function resolveDotPath(obj, path) {
  * @returns {string} Interpolated path
  */
 function interpolatePath(pathTemplate, context) {
-  return pathTemplate.replace(/\{([^}]+)\}/g, (match, expr) => {
+  // Handle {alias.field} curly-brace syntax
+  const step1 = pathTemplate.replace(/\{([^}]+)\}/g, (match, expr) => {
     const dot = expr.indexOf('.');
     if (dot === -1) return match;
     const alias = expr.slice(0, dot);
@@ -115,15 +125,33 @@ function interpolatePath(pathTemplate, context) {
     else                          val = resolveDotPath(context.entities?.[alias], field);
     return val != null ? String(val) : match;
   });
+  // Handle $alias.field dollar-sign syntax in individual path segments
+  return step1.split('/').map(segment => {
+    if (!segment.startsWith('$')) return segment;
+    const resolved = resolveValue(segment, context);
+    return resolved != null ? String(resolved) : segment;
+  }).join('/');
 }
 
 /**
  * Resolve all fields in a body object against a step context.
- * Handles nested $push values (used in PATCH array-append invoke steps).
+ * Handles $merge (object spread — copy source fields then apply explicit overrides)
+ * and nested $push values (array-append on PATCH).
  */
 function resolveBody(body, context) {
+  if (!body) return {};
   const result = {};
-  for (const [key, val] of Object.entries(body || {})) {
+
+  // $merge: resolve source object first and use as base; explicit keys override
+  if ('$merge' in body) {
+    const source = resolveValue(body['$merge'], context);
+    if (source && typeof source === 'object' && !Array.isArray(source)) {
+      Object.assign(result, source);
+    }
+  }
+
+  for (const [key, val] of Object.entries(body)) {
+    if (key === '$merge') continue;
     if (val && typeof val === 'object' && '$push' in val) {
       result[key] = { $push: resolveBodyValue(val['$push'], context) };
     } else {
@@ -147,13 +175,90 @@ function resolveBodyValue(val, context) {
 }
 
 /**
+ * Evaluate a CEL condition string against a context.
+ * This is a simplified CEL evaluator that handles common patterns used in guards and if steps.
+ * Supports: 'in' operator for array membership, == and != comparisons, null checks, && and ||.
+ *
+ * @param {string} condition - CEL expression string
+ * @param {Object} celData - Data available to the expression (caller, object, request, etc.)
+ * @returns {boolean} Evaluation result
+ */
+function evaluateCEL(condition, celData) {
+  if (!condition || typeof condition !== 'string') return true;
+
+  // Build a simple evaluation context
+  // Replace $-prefixed variables with plain ones for JS eval
+  // CEL in guards uses caller.roles, object.field (no $ prefix)
+  // CEL in procedures/steps uses $caller.*, $object.*, etc.
+
+  try {
+    // Build context object accessible in eval
+    // Note: 'this' is omitted — it is a reserved word and breaks new Function(); use $this instead
+    const ctx = {
+      caller: celData.caller || {},
+      object: celData.object || {},
+      request: celData.request || {},
+      params: celData.params || {},
+      ...Object.fromEntries(
+        Object.entries(celData.entities || {}).map(([k, v]) => [`$${k}`, v])
+      ),
+      $caller: celData.caller || {},
+      $object: celData.object || {},
+      $request: celData.request || {},
+      $this: celData.this || {},
+      $params: celData.params || {},
+      $now: celData.now || new Date().toISOString(),
+    };
+
+    // Add entity aliases with $ prefix
+    for (const [alias, entity] of Object.entries(celData.entities || {})) {
+      ctx[`$${alias}`] = entity;
+    }
+
+    // CEL .size() → .length for JS arrays/strings
+    // CEL 'x in arr' → arr.includes(x) for arrays
+    // We do a lightweight transform for common patterns
+    let jsExpr = condition
+      // Replace .size() with .length
+      .replace(/\.size\(\)/g, '.length')
+      // Replace CEL 'str in arr' with arr.includes(str) — careful with complex expressions
+      .replace(/"([^"]+)"\s+in\s+([\w$\.]+)/g, '(Array.isArray($2) ? $2.includes("$1") : false)')
+      // Replace CEL list.exists(var, predicate) with list.some(var => (predicate))
+      .replace(/\.exists\((\w+),\s*([^)]+(?:\([^)]*\)[^)]*)*)\)/g, '.some($1 => ($2))')
+      // Replace bare variable references (no prefix) to ctx.variable
+      .replace(/\bnull\b/g, 'null');
+
+    // Use Function constructor for safer eval than global eval
+    const fn = new Function(...Object.keys(ctx), `return (${jsExpr});`);
+    return Boolean(fn(...Object.values(ctx)));
+  } catch (e) {
+    console.warn(`CEL evaluation error for condition "${condition}": ${e.message} — defaulting to false`);
+    return false;
+  }
+}
+
+/**
  * Evaluate a single guard condition against a resource.
- * @param {Object} guard - Guard definition with field, operator, value
+ * @param {Object} guard - Guard definition with condition (CEL string)
  * @param {Object} resource - The resource being checked
  * @param {Object} context - Context with caller info
  * @returns {{ pass: boolean, reason: string }}
  */
 export function evaluateGuard(guard, resource, context) {
+  if (guard.condition !== undefined) {
+    // New format: CEL condition string
+    const celData = {
+      caller: context.caller || {},
+      object: resource,
+      request: context.request || {},
+      this: context.this || {},
+      entities: context.entities || {},
+    };
+    const pass = evaluateCEL(guard.condition, celData);
+    return { pass, reason: pass ? null : `Guard "${guard.id}" condition failed: ${guard.condition}` };
+  }
+
+  // Legacy format: field/operator/value
   const fieldValue = guard.field.startsWith('$')
     ? resolveValue(guard.field, context)
     : resource[guard.field];
@@ -268,19 +373,18 @@ export function evaluateGuards(guardNames, guardsMap, resource, context) {
 }
 
 /**
- * Find a valid operation for an operation name given the resource's current status.
- * For the new machines: format where operations live on the machine entry.
+ * Find a valid transition for a transition name given the resource's current status.
  * @param {Object} machine - A machine entry (from machines[])
- * @param {string} operationName - The operation name (e.g., "claim")
+ * @param {string} transitionName - The transition name (e.g., "claim")
  * @param {Object} resource - The resource (must have a status field)
  * @returns {{ operation: Object|null, error: string|null }}
  */
-export function findOperation(machine, operationName, resource) {
-  const operations = machine.operations || [];
+export function findOperation(machine, transitionName, resource) {
+  const transitions = machine.transitions || [];
 
-  const operation = operations.find(op => {
-    if (op.name !== operationName) return false;
-    // In-place operation with no transition.from — valid from any state
+  const operation = transitions.find(op => {
+    if (op.id !== transitionName) return false;
+    // In-place transition with no transition.from — valid from any state
     if (!op.transition?.from) return true;
     const from = op.transition.from;
     return Array.isArray(from) ? from.includes(resource.status) : from === resource.status;
@@ -290,29 +394,69 @@ export function findOperation(machine, operationName, resource) {
     return { operation, error: null };
   }
 
-  const opExists = operations.some(op => op.name === operationName);
+  const opExists = transitions.some(op => op.id === transitionName);
   if (!opExists) {
-    return { operation: null, error: `Unknown operation: ${operationName}` };
+    return { operation: null, error: `Unknown transition: ${transitionName}` };
   }
 
   return {
     operation: null,
-    error: `Cannot ${operationName}: resource is currently "${resource.status}"`
+    error: `Cannot ${transitionName}: resource is currently "${resource.status}"`
   };
 }
 
 /**
- * Apply a list of steps from a then: block (new machines: format).
- * Recognizes: set, emit, evaluate, invoke.
+ * Apply a call: step in object form (HTTP operation, formerly invoke:).
+ * Supports POST to create resources or trigger operations, and PATCH for array-append.
  *
- * invoke: supports two forms (both use HTTP method as the key):
+ * @param {Object} spec - The call object (e.g., { POST: "path", body: { ... } })
+ * @param {Object} context - Step context
+ * @param {Array} pendingCreates - Accumulator for pending creates
+ * @param {Array} pendingOperations - Accumulator for pending operations
+ * @param {Array} pendingAppends - Accumulator for pending appends
+ */
+function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, pendingAppends) {
+  const method = 'POST' in spec ? 'POST' : 'PATCH' in spec ? 'PATCH' : 'GET' in spec ? 'GET' : 'DELETE' in spec ? 'DELETE' : null;
+  if (!method) {
+    console.warn('call: (object form) step missing POST, PATCH, GET, or DELETE key — skipping');
+    return;
+  }
+
+  const rawPath = spec[method];
+  const path = interpolatePath(rawPath, context);
+  const body = resolveBody(spec.body, context);
+
+  if (method === 'POST') {
+    if (rawPath.includes('{') || rawPath.includes('$')) {
+      // Operation trigger: POST to domain/collection/{alias.id}/operation or $ref.field/operation
+      pendingOperations.push({ path, rawPath, body });
+    } else {
+      // Collection create: POST to domain/collection
+      const domain = rawPath.split('/')[0];
+      const entity = deriveCollectionName(rawPath, domain);
+      pendingCreates.push({ entity, data: body });
+    }
+  } else if (method === 'PATCH') {
+    // Array append: PATCH to domain/collection/{alias.id}
+    pendingAppends.push({ path, body });
+  }
+  // GET and DELETE are no-ops in the step engine (read-only or handled elsewhere)
+}
+
+/**
+ * Apply a list of steps from a then: block (new machines: format).
+ * Recognizes: set, emit, call (string = procedure, object = HTTP op), if, match, forEach.
+ *
+ * call: (object form) supports:
  *   POST to a collection:  { POST: "domain/collection", body: { ... } }
  *   POST to an operation:  { POST: "domain/collection/{alias.id}/op", body: { ... } }
  *   PATCH for array-append: { PATCH: "domain/collection/{alias.id}", body: { field: { $push: value } } }
  *
+ * if: evaluates a CEL condition; runs then: on true, else: on false.
+ * match: evaluates a CEL expression; routes to matching branch in on:.
+ *
  * Path template slots use {alias.field} syntax (OpenAPI path template style).
  * Value expressions use $alias.field syntax (OpenAPI 3.1 Runtime Expression style).
- * See api-patterns.yaml behavioral_contract_steps for the full vocabulary.
  *
  * @param {Array} steps - Step items from a then: list
  * @param {Object} resource - The resource to modify (mutated in place)
@@ -321,7 +465,7 @@ export function findOperation(machine, operationName, resource) {
  *   pendingCreates: Array<{ entity: string, data: Object }>,
  *   pendingOperations: Array<{ path: string, rawPath: string, body: Object }>,
  *   pendingAppends: Array<{ path: string, body: Object }>,
- *   pendingRuleEvaluations: Array<{ ruleId?: string, ruleType?: string }>,
+ *   pendingProcedures: Array<{ procedureId?: string }>,
  *   pendingEvents: Array<{ action: string, data: Object }>
  * }}
  */
@@ -329,24 +473,75 @@ export function applySteps(steps, resource, context) {
   const pendingCreates = [];
   const pendingOperations = [];
   const pendingAppends = [];
-  const pendingRuleEvaluations = [];
+  const pendingProcedures = [];
   const pendingEvents = [];
 
-  if (!steps) return { pendingCreates, pendingOperations, pendingAppends, pendingRuleEvaluations, pendingEvents };
+  if (!steps) return { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents };
 
   for (const step of steps) {
-    if (step.when !== undefined) {
-      const logicData = {
-        request: context.request || {},
+    // if: step — CEL conditional branch
+    if (step.if !== undefined) {
+      const celData = {
+        caller: context.caller || {},
         object: context.object || {},
+        request: context.request || {},
         this: context.this || {},
-        ...Object.fromEntries(Object.entries(context.entities ?? {})),
+        entities: context.entities || {},
+        params: context.params || {},
+        now: context.now,
       };
-      if (!jsonLogic.apply(step.when, logicData)) continue;
+      const conditionMet = evaluateCEL(step.if, celData);
+      const branchSteps = conditionMet ? (step.then || []) : (step.else || []);
+      const nested = applySteps(branchSteps, resource, context);
+      pendingCreates.push(...nested.pendingCreates);
+      pendingOperations.push(...nested.pendingOperations);
+      pendingAppends.push(...nested.pendingAppends);
+      pendingProcedures.push(...nested.pendingProcedures);
+      pendingEvents.push(...nested.pendingEvents);
+      continue;
+    }
+
+    // match: step — dispatch on a resolved value
+    if (step.match !== undefined) {
+      const matchValue = resolveValue(step.match, context);
+      const branches = step.when || {};
+      const matchedSteps = branches[matchValue];
+      if (matchedSteps) {
+        const nested = applySteps(matchedSteps, resource, context);
+        pendingCreates.push(...nested.pendingCreates);
+        pendingOperations.push(...nested.pendingOperations);
+        pendingAppends.push(...nested.pendingAppends);
+        pendingProcedures.push(...nested.pendingProcedures);
+        pendingEvents.push(...nested.pendingEvents);
+      }
+      continue;
     }
 
     if (step.forEach) {
-      const { from: collectionPath, where, as: itemAlias, then: forEachSteps } = step.forEach;
+      // forEach with in: iterates over an array parameter
+      if (step.forEach.in !== undefined) {
+        const inValue = resolveValue(step.forEach.in, context);
+        const items = Array.isArray(inValue) ? inValue : [];
+        const itemAlias = step.forEach.as;
+        for (const item of items) {
+          const itemContext = {
+            ...context,
+            entities: { ...(context.entities ?? {}), ...(itemAlias ? { [itemAlias]: item } : {}) },
+            // Expose category/item as $params.category equivalent
+            params: { ...(context.params || {}), ...(itemAlias ? { [itemAlias]: item } : {}) },
+          };
+          const nested = applySteps(step.do || [], resource, itemContext);
+          pendingCreates.push(...nested.pendingCreates);
+          pendingOperations.push(...nested.pendingOperations);
+          pendingAppends.push(...nested.pendingAppends);
+          pendingProcedures.push(...nested.pendingProcedures);
+          pendingEvents.push(...nested.pendingEvents);
+        }
+        continue;
+      }
+
+      const { from: collectionPath, where, as: itemAlias } = step.forEach;
+      const forEachSteps = step.do || [];
       if (!collectionPath || !where || !itemAlias) {
         console.warn('forEach: missing required from:, where:, or as: — skipping');
         continue;
@@ -395,7 +590,7 @@ export function applySteps(steps, resource, context) {
         pendingCreates.push(...nested.pendingCreates);
         pendingOperations.push(...nested.pendingOperations);
         pendingAppends.push(...nested.pendingAppends);
-        pendingRuleEvaluations.push(...nested.pendingRuleEvaluations);
+        pendingProcedures.push(...nested.pendingProcedures);
         pendingEvents.push(...nested.pendingEvents);
       }
     } else if (step.set) {
@@ -407,39 +602,38 @@ export function applySteps(steps, resource, context) {
       }
       pendingEvents.push({ action: step.emit.event, data });
     } else if (step.evaluate) {
-      pendingRuleEvaluations.push({ ruleId: step.evaluate });
-    } else if (step.invoke) {
-      const spec = step.invoke;
-      const method = 'POST' in spec ? 'POST' : 'PATCH' in spec ? 'PATCH' : null;
-      if (!method) {
-        console.warn('invoke: step missing POST or PATCH key — skipping');
-        continue;
+      pendingProcedures.push({ procedureId: step.evaluate });
+    } else if (step.call !== undefined) {
+      // call: can be a string (procedure name) or an object (HTTP operation, formerly invoke:)
+      if (typeof step.call === 'string') {
+        // String form: call a named procedure — handled by the runner, not here
+        pendingProcedures.push({ procedureId: step.call, with: step.with });
+      } else if (step.call && typeof step.call === 'object') {
+        // Object form: HTTP operation (formerly invoke:)
+        applyCallObjectStep(step.call, context, pendingCreates, pendingOperations, pendingAppends);
       }
-
-      const rawPath = spec[method];
-      const path = interpolatePath(rawPath, context);
-      const body = resolveBody(spec.body, context);
-
-      if (method === 'POST') {
+    } else if (step.invoke) {
+      // Legacy invoke: support (string or object form)
+      if (typeof step.invoke === 'string') {
+        // Legacy string form: invoke: "path" with separate body:
+        const rawPath = step.invoke;
+        const path = interpolatePath(rawPath, context);
+        const body = resolveBody(step.body, context);
         if (rawPath.includes('{')) {
-          // Operation trigger: POST to domain/collection/{alias.id}/operation
           pendingOperations.push({ path, rawPath, body });
         } else {
-          // Collection create: POST to domain/collection
-          // Derive the DB collection name from the full path so sub-collection paths
-          // (e.g. intake/applications/documents) map correctly (→ application-documents).
           const domain = rawPath.split('/')[0];
           const entity = deriveCollectionName(rawPath, domain);
           pendingCreates.push({ entity, data: body });
         }
       } else {
-        // Array append: PATCH to domain/collection/{alias.id}
-        pendingAppends.push({ path, body });
+        // Legacy object form: { POST: path, body: ... }
+        applyCallObjectStep(step.invoke, context, pendingCreates, pendingOperations, pendingAppends);
       }
     }
   }
 
-  return { pendingCreates, pendingOperations, pendingAppends, pendingRuleEvaluations, pendingEvents };
+  return { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents };
 }
 
 /**
@@ -521,14 +715,14 @@ export function applyEventEffect(effect, context) {
  * @param {Array} effects - Array of effect definitions
  * @param {Object} resource - The resource to modify (mutated in place)
  * @param {Object} context - Context with caller, object, request, and now info
- * @returns {{ pendingCreates: Array, pendingRuleEvaluations: Array, pendingEvents: Array }}
+ * @returns {{ pendingCreates: Array, pendingProcedures: Array, pendingEvents: Array }}
  */
 export function applyEffects(effects, resource, context) {
   const pendingCreates = [];
-  const pendingRuleEvaluations = [];
+  const pendingProcedures = [];
   const pendingEvents = [];
 
-  if (!effects) return { pendingCreates, pendingRuleEvaluations, pendingEvents };
+  if (!effects) return { pendingCreates, pendingProcedures, pendingEvents };
 
   for (const effect of effects) {
     // Evaluate `when` clause before executing the effect
@@ -549,14 +743,11 @@ export function applyEffects(effects, resource, context) {
       case 'event':
         pendingEvents.push(applyEventEffect(effect, context));
         break;
-      case 'evaluate-rules':
-        pendingRuleEvaluations.push({ ruleType: effect.ruleType });
-        break;
       default:
         // Silently skip unimplemented effect types (forward-compatible)
         break;
     }
   }
 
-  return { pendingCreates, pendingRuleEvaluations, pendingEvents };
+  return { pendingCreates, pendingProcedures, pendingEvents };
 }

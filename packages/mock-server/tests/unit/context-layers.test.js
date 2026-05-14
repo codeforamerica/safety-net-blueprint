@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { insertResource, clearAll } from '../../src/database-manager.js';
-import { resolveContextLayers } from '../../src/handlers/rule-evaluation.js';
+import { resolveContextLayers } from '../../src/handlers/procedure-runner.js';
 import { createUpdateHandler } from '../../src/handlers/update-handler.js';
 import { createCreateHandler } from '../../src/handlers/create-handler.js';
 
@@ -82,16 +82,9 @@ test('resolveContextLayers — inner scope wins on name conflict', () => {
   assert.strictEqual(entities.queue.id, 'q-machine'); // machine wins
 });
 
-test('resolveContextLayers — returns null when required binding fails', () => {
+test('resolveContextLayers — binding that finds no record resolves to null', () => {
   clearAll('queues');
   const domainContext = [{ missing: { from: 'workflow/queues', where: { name: 'nonexistent' } } }];
-  const result = resolveContextLayers([domainContext, null, null], {}, makeBase());
-  assert.strictEqual(result, null);
-});
-
-test('resolveContextLayers — optional binding failure returns empty slot, not null', () => {
-  clearAll('queues');
-  const domainContext = [{ missing: { from: 'workflow/queues', where: { name: 'nonexistent' }, optional: true } }];
   const result = resolveContextLayers([domainContext, null, null], {}, makeBase());
   assert.ok(result !== null);
   assert.strictEqual(result.missing, null);
@@ -106,7 +99,7 @@ test('resolveContextLayers — all null/empty layers returns empty entities', ()
 // Integration: machine-level context available in onCreate steps
 // =============================================================================
 
-test('createCreateHandler — machine-level context available in onCreate then: steps', () => {
+test('createCreateHandler — machine-level context available in onCreate steps:', () => {
   clearAll('testresources');
   clearAll('queues');
   insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
@@ -119,12 +112,12 @@ test('createCreateHandler — machine-level context available in onCreate then: 
     context: [{ snapQueue: { from: 'workflow/queues', where: { name: 'snap-intake' } } }],
     triggers: {
       onCreate: {
-        then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
+        steps: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
       }
     }
   };
 
-  const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], [], machine);
+  const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], machine);
   const req = { body: { name: 'test' }, headers: { 'x-caller-id': 'sys', 'x-caller-roles': 'system' }, path: '/testresources' };
   const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
 
@@ -138,7 +131,7 @@ test('createCreateHandler — machine-level context available in onCreate then: 
 // Integration: machine-level context available in onUpdate steps
 // =============================================================================
 
-test('createUpdateHandler — machine-level context available in onUpdate then: steps', () => {
+test('createUpdateHandler — machine-level context available in onUpdate steps:', () => {
   clearAll('testresources');
   clearAll('queues');
   insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
@@ -153,12 +146,12 @@ test('createUpdateHandler — machine-level context available in onUpdate then: 
     triggers: {
       onUpdate: {
         fields: ['isExpedited'],
-        then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
+        steps: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
       }
     }
   };
 
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], [], machine);
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine);
   const req = { params: { id: 'res-ctx-1' }, body: { isExpedited: true }, headers: {}, path: '/testresources' };
   const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
 

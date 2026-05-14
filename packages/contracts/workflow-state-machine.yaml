@@ -1,731 +1,341 @@
 $schema: ./schemas/state-machine-schema.yaml
+extends: ./platform-state-machine.yaml
 version: "1.0"
 domain: workflow
 apiSpec: workflow-openapi.yaml
 machines:
   - object: Task
     states:
-      - id: pending
-        slaClock: running
-      - id: in_progress
-        slaClock: running
-      - id: completed
-        slaClock: stopped
-      - id: escalated
-        slaClock: running
-      - id: cancelled
-        slaClock: stopped
-      - id: awaiting_client
-        slaClock: paused
-      - id: awaiting_verification
-        slaClock: paused
-      - id: pending_review
-        slaClock: running
+      - {id: pending, slaClock: running}
+      - {id: in_progress, slaClock: running}
+      - {id: completed, slaClock: stopped}
+      - {id: escalated, slaClock: running}
+      - {id: cancelled, slaClock: stopped}
+      - {id: awaiting_client, slaClock: paused}
+      - {id: awaiting_verification, slaClock: paused}
+      - {id: pending_review, slaClock: running}
     initialState: pending
-    triggers:
-      onCreate:
-        then:
-          - evaluate: assignment-rule
-            description: Route task to a queue based on subject and program
-          - evaluate: priority-rule
-            description: Set task priority on creation
-      onUpdate:
-        fields:
-          - isExpedited
-          - programType
-          - queueId
-        then:
-          - evaluate: priority-rule
-            description: Re-evaluate priority when expedited status or program type changes
-          - evaluate: assignment-rule
-            description: Re-evaluate assignment when queue or program type changes
-      onEvent:
-        - name: intake.application.submitted
-          then:
-            - invoke:
-                POST: workflow/tasks
-                body:
-                  taskType: application_review
-                  name: Application review
-                  status: pending
-                  subjectType: application
-                  subjectId: $this.subject
-              description: Create an intake review task when an application is submitted
-      onTimer:
-        - after: 72h
-          relativeTo: createdAt
-          calendarType: business
-          transition:
-            from: pending
-            to: escalated
-          then:
-            - evaluate: priority-rule
-              description: Re-evaluate priority on auto-escalation
-            - emit:
-                event: auto_escalated
-                data:
-                  reason: deadline_exceeded
-              description: Emit a domain event recording the automatic escalation
-        - after: "-48h"
-          relativeTo: slaDeadline
-          calendarType: calendar
-          transition:
-            from: in_progress
-            to: escalated
-          then:
-            - evaluate: priority-rule
-              description: Re-evaluate priority on SLA warning escalation
-            - emit:
-                event: auto_escalated
-                data:
-                  reason: sla_deadline_approaching
-              description: Emit a domain event recording the SLA-triggered escalation
-        - after: 0h
-          relativeTo: slaDeadline
-          calendarType: calendar
-          transition:
-            from:
-              - pending
-              - in_progress
-              - escalated
-            to: escalated
-          then:
-            - evaluate: priority-rule
-              description: Re-evaluate priority on SLA breach
-            - emit:
-                event: sla_breached
-                data:
-                  reason: sla_deadline_exceeded
-              description: Emit a domain event recording the SLA deadline breach for federal compliance reporting
-        - after: 30d
-          relativeTo: blockedAt
-          calendarType: calendar
-          transition:
-            from: awaiting_client
-            to: cancelled
-          then:
-            - set:
-                field: cancelledAt
-                value: $now
-              description: Record when the task was automatically cancelled
-            - emit:
-                event: auto_cancelled
-                data:
-                  reason: client_unresponsive
-              description: Emit a domain event recording the automatic cancellation
-        - after: 7d
-          relativeTo: blockedAt
-          calendarType: calendar
-          transition:
-            from: awaiting_verification
-            to: in_progress
-          then:
-            - set:
-                field: blockedAt
-                value: null
-              description: Clear the block timestamp on auto-resume
-            - emit:
-                event: auto_resumed
-                data:
-                  reason: verification_timeout
-              description: Emit a domain event recording the automatic resumption
-    operations:
-      - name: claim
+    transitions:
+      - id: claim
+        description: "POST /tasks/{taskId}/claim — Caseworker takes ownership of an unassigned pending task"
         guards:
-          actors:
-            - caseworker
-            - supervisor
-          conditions:
-            - taskIsUnassigned
-        transition:
-          from: pending
-          to: in_progress
-        then:
-          - set:
-              field: assignedToId
-              value: $caller.id
-            description: Assign task to the claiming worker
-          - emit:
-              event: claimed
-              data:
-                assignedToId: $caller.id
-            description: Emit a domain event recording the claim and who claimed the task
-      - name: complete
+          - actors: [caseworker, supervisor]
+            conditions: [taskIsUnassigned]
+        transition: {from: pending, to: in_progress}
+        steps:
+          - set: {field: assignedToId, value: $caller.id, description: Assign task to the claiming worker}
+          - emit: {event: claimed, data: {assignedToId: $caller.id}, description: Emit a domain event recording the claim and who claimed the task}
+      - id: complete
         guards:
-          actors:
-            - caseworker
-            - supervisor
-          conditions:
-            - callerIsAssignedWorker
-        transition:
-          from: in_progress
-          to: completed
+          - actors: [caseworker, supervisor]
+            conditions: [callerIsAssignedWorker]
+        transition: {from: in_progress, to: completed}
         requestBody:
-          type: object
-          required:
-            - outcome
-          properties:
-            outcome:
-              type: string
-              description: Completion outcome (e.g., approved, denied)
-            notes:
-              type: string
-              description: Optional notes about the completion
-            createFollowUp:
-              type: boolean
-              description: When true, a follow-up task is automatically created
-        then:
-          - set:
-              field: completedAt
-              value: $now
-            description: Record when work finished
-          - set:
-              field: outcome
-              value: $request.outcome
-            description: Store the completion outcome from the request
-          - set:
-              field: completionNotes
-              value: $request.notes
-            description: Store optional completion notes from the request
-          - emit:
-              event: completed
-              data:
-                outcome: $request.outcome
-            description: Emit a domain event recording the completion and its outcome
-          - invoke: workflow/tasks
-            body:
-              name: $object.name
-              description: $object.description
-              subjectType: $object.subjectType
-              subjectId: $object.subjectId
-              programType: $object.programType
-              isExpedited: $object.isExpedited
-              status: pending
-            when:
-              "==":
-                - var: $request.createFollowUp
-                - true
-            description: Create a follow-up task when the caller requests one
-      - name: release
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/CompleteTaskRequest"
+        steps:
+          - set: {field: completedAt, value: $now, description: Record when work finished}
+          - set: {field: outcome, value: $request.outcome, description: Store the completion outcome from the request}
+          - set: {field: completionNotes, value: $request.notes, description: Store optional completion notes from the request}
+          - emit: {event: completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
+          - if: $request.createFollowUp == true
+            then: [{call: {POST: workflow/tasks, body: {$merge: $object, status: pending}}, description: Create a follow-up task when caller requests one}]
+      - id: release
         guards:
-          actors:
-            - caseworker
-            - supervisor
-          conditions:
-            - callerIsAssignedWorker
-        transition:
-          from: in_progress
-          to: pending
+          - actors: [caseworker, supervisor]
+            conditions: [callerIsAssignedWorker]
+        transition: {from: in_progress, to: pending}
         requestBody:
-          type: object
-          required:
-            - reason
-          properties:
-            reason:
-              type: string
-              description: Why the task is being released
-        then:
-          - set:
-              field: assignedToId
-              value: null
-            description: Clear assignment so task returns to queue
-          - emit:
-              event: released
-              data:
-                reason: $request.reason
-            description: Emit a domain event recording the release and its reason
-          - evaluate: assignment-rule
-            description: Re-evaluate assignment rules after release
-          - evaluate: priority-rule
-            description: Re-evaluate priority rules after release
-      - name: escalate
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReleaseTaskRequest"
+        steps:
+          - set: {field: assignedToId, value: null, description: Clear assignment so task returns to queue}
+          - emit: {event: released, data: {reason: $request.reason}, description: Emit a domain event recording the release and its reason}
+          - call: assignToQueue
+          - call: setPriority
+      - id: escalate
         guards:
-          actors:
-            - caseworker
-            - supervisor
-          conditions:
-            - any:
-                - callerIsAssignedWorker
-                - callerIsSupervisor
-        transition:
-          from: in_progress
-          to: escalated
+          - actors: [caseworker, supervisor]
+            conditions: [{any: [callerIsAssignedWorker, callerIsSupervisor]}]
+        transition: {from: in_progress, to: escalated}
         requestBody:
-          type: object
-          required:
-            - reason
-          properties:
-            reason:
-              type: string
-              description: Why the task is being escalated
-        then:
-          - set:
-              field: escalatedAt
-              value: $now
-            description: Record when the task was escalated
-          - evaluate: priority-rule
-            description: Re-evaluate priority after escalation
-          - emit:
-              event: escalated
-              data:
-                reason: $request.reason
-            description: Emit a domain event recording the escalation
-      - name: escalate
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
+        steps:
+          - set: {field: escalatedAt, value: $now, description: Record when the task was escalated}
+          - call: setPriority
+          - emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
+      - id: escalate
         guards:
-          actors:
-            - supervisor
-          conditions:
-            - callerIsSupervisor
-        transition:
-          from: pending
-          to: escalated
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition: {from: pending, to: escalated}
         requestBody:
-          type: object
-          required:
-            - reason
-          properties:
-            reason:
-              type: string
-              description: Why the task is being escalated
-        then:
-          - set:
-              field: escalatedAt
-              value: $now
-            description: Record when the task was escalated
-          - evaluate: priority-rule
-            description: Re-evaluate priority after escalation
-          - emit:
-              event: escalated
-              data:
-                reason: $request.reason
-            description: Emit a domain event recording the escalation
-      - name: de-escalate
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
+        steps:
+          - set: {field: escalatedAt, value: $now, description: Record when the task was escalated}
+          - call: setPriority
+          - emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
+      - id: de-escalate
         guards:
-          actors:
-            - supervisor
-          conditions:
-            - callerIsSupervisor
-        transition:
-          from: escalated
-          to: pending
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition: {from: escalated, to: pending}
         requestBody:
-          type: object
-          properties:
-            notes:
-              type: string
-              description: Optional notes about the de-escalation
-        then:
-          - evaluate: assignment-rule
-            description: Re-evaluate assignment rules after de-escalation
-          - evaluate: priority-rule
-            description: Re-evaluate priority rules after de-escalation
-          - emit:
-              event: de-escalated
-            description: Emit a domain event recording the de-escalation
-      - name: cancel
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/DeEscalateTaskRequest"
+        steps:
+          - call: assignToQueue
+          - call: setPriority
+          - emit: {event: de-escalated, description: Emit a domain event recording the de-escalation}
+      - id: cancel
         guards:
-          actors:
-            - supervisor
-          conditions:
-            - callerIsSupervisor
-        transition:
-          from:
-            - pending
-            - in_progress
-            - escalated
-          to: cancelled
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition: {from: [pending, in_progress, escalated], to: cancelled}
         requestBody:
-          type: object
-          required:
-            - reason
-          properties:
-            reason:
-              type: string
-              description: Why the task is being cancelled
-        then:
-          - set:
-              field: cancelledAt
-              value: $now
-            description: Record when the task was cancelled
-          - emit:
-              event: cancelled
-              data:
-                reason: $request.reason
-            description: Emit a domain event recording the cancellation
-      - name: reopen
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/CancelTaskRequest"
+        steps:
+          - set: {field: cancelledAt, value: $now, description: Record when the task was cancelled}
+          - emit: {event: cancelled, data: {reason: $request.reason}, description: Emit a domain event recording the cancellation}
+      - id: reopen
         guards:
-          actors:
-            - supervisor
-          conditions:
-            - callerIsSupervisor
-        transition:
-          from: cancelled
-          to: pending
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition: {from: cancelled, to: pending}
         requestBody:
-          type: object
-          required:
-            - reason
-          properties:
-            reason:
-              type: string
-              description: Why the cancelled task is being reopened
-        then:
-          - set:
-              field: cancelledAt
-              value: null
-            description: Clear the cancellation timestamp on reopen
-          - evaluate: assignment-rule
-            description: Re-evaluate assignment rules after reopen
-          - evaluate: priority-rule
-            description: Re-evaluate priority rules after reopen
-          - emit:
-              event: reopened
-              data:
-                reason: $request.reason
-            description: Emit a domain event recording the reopen
-      - name: await-client
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReopenTaskRequest"
+        steps:
+          - set: {field: cancelledAt, value: null, description: Clear the cancellation timestamp on reopen}
+          - call: assignToQueue
+          - call: setPriority
+          - emit: {event: reopened, data: {reason: $request.reason}, description: Emit a domain event recording the reopen}
+      - id: await-client
         guards:
-          actors:
-            - caseworker
-            - supervisor
-          conditions:
-            - callerIsAssignedWorker
-        transition:
-          from: in_progress
-          to: awaiting_client
+          - actors: [caseworker, supervisor]
+            conditions: [callerIsAssignedWorker]
+        transition: {from: in_progress, to: awaiting_client}
         requestBody:
-          type: object
-          properties:
-            notes:
-              type: string
-              description: Optional context about what action is being awaited from the client
-        then:
-          - set:
-              field: blockedAt
-              value: $now
-            description: Record when the task entered a waiting state
-          - emit:
-              event: awaiting_client
-            description: Emit a domain event recording the block
-      - name: await-verification
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AwaitClientRequest"
+        steps:
+          - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
+          - call: scheduleClientTimeout
+          - emit: {event: awaiting_client, description: Emit a domain event recording the block}
+      - id: await-verification
         guards:
-          actors:
-            - caseworker
-            - supervisor
-          conditions:
-            - callerIsAssignedWorker
-        transition:
-          from: in_progress
-          to: awaiting_verification
+          - actors: [caseworker, supervisor]
+            conditions: [callerIsAssignedWorker]
+        transition: {from: in_progress, to: awaiting_verification}
         requestBody:
-          type: object
-          properties:
-            notes:
-              type: string
-              description: Optional context about what external verification is pending
-        then:
-          - set:
-              field: blockedAt
-              value: $now
-            description: Record when the task entered a waiting state
-          - emit:
-              event: awaiting_verification
-            description: Emit a domain event recording the block
-      - name: resume
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AwaitVerificationRequest"
+        steps:
+          - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
+          - call: scheduleVerificationTimeout
+          - emit: {event: awaiting_verification, description: Emit a domain event recording the block}
+      - id: resume
+        description: "POST /tasks/{taskId}/resume — Resumes a blocked task, cancelling any active wait timers"
         guards:
-          actors:
-            - caseworker
-            - supervisor
-          conditions:
-            - any:
-                - callerIsAssignedWorker
-                - callerIsSupervisor
-        transition:
-          from:
-            - awaiting_client
-            - awaiting_verification
-          to: in_progress
-        then:
-          - set:
-              field: blockedAt
-              value: null
-            description: Clear the block timestamp on resume
-          - emit:
-              event: resumed
-            description: Emit a domain event recording the resumption
-      - name: system-resume
+          - actors: [caseworker, supervisor]
+            conditions: [{any: [callerIsAssignedWorker, callerIsSupervisor]}]
+        transition: {from: [awaiting_client, awaiting_verification], to: in_progress}
+        steps:
+          - set: {field: blockedAt, value: null, description: Clear the block timestamp on resume}
+          - call: cancelClientTimeout
+          - call: cancelVerificationTimeout
+          - emit: {event: resumed, description: Emit a domain event recording the resumption}
+      - id: system-resume
         guards:
-          actors:
-            - system
-          conditions:
-            - callerIsSystem
-        transition:
-          from: awaiting_verification
-          to: in_progress
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: awaiting_verification, to: in_progress}
         requestBody:
-          type: object
-          required:
-            - source
-          properties:
-            source:
-              type: string
-              description: The verification service that returned results (e.g., IEVS, FDSH)
-            result:
-              type: string
-              description: Summary of the verification result
-        then:
-          - set:
-              field: blockedAt
-              value: null
-            description: Clear the block timestamp on system resume
-          - emit:
-              event: system_resumed
-              data:
-                source: $request.source
-                result: $request.result
-            description: Emit a domain event recording the automated resumption and its result
-      - name: submit-for-review
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SystemResumeTaskRequest"
+        steps:
+          - set: {field: blockedAt, value: null, description: Clear the block timestamp on system resume}
+          - call: cancelVerificationTimeout
+          - emit: {event: system_resumed, data: {source: $request.source, result: $request.result}, description: Emit a domain event recording the automated resumption and its result}
+      - id: system-escalate
         guards:
-          actors:
-            - caseworker
-            - supervisor
-          conditions:
-            - callerIsAssignedWorker
-        transition:
-          from:
-            - in_progress
-            - escalated
-          to: pending_review
-        then:
-          - emit:
-              event: submitted_for_review
-            description: Emit a domain event recording the submission for review
-      - name: approve
-        guards:
-          actors:
-            - supervisor
-          conditions:
-            - callerIsSupervisor
-        transition:
-          from: pending_review
-          to: completed
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: [pending, in_progress, escalated], to: escalated}
         requestBody:
-          type: object
-          required:
-            - outcome
-          properties:
-            outcome:
-              type: string
-              description: Completion outcome (e.g., approved, denied)
-            notes:
-              type: string
-              description: Optional notes from the supervisor
-        then:
-          - set:
-              field: completedAt
-              value: $now
-            description: Record when work was approved and completed
-          - set:
-              field: outcome
-              value: $request.outcome
-            description: Store the outcome from the supervisor's approval
-          - set:
-              field: completionNotes
-              value: $request.notes
-            description: Store optional notes from the supervisor
-          - emit:
-              event: approved
-              data:
-                outcome: $request.outcome
-            description: Emit a domain event recording the approval
-      - name: return-to-worker
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SystemEscalateTaskRequest"
+        steps:
+          - if: $object.escalatedAt == null
+            then: [{set: {field: escalatedAt, value: $now, description: "Record first escalation time; not overwritten on subsequent timer-triggered escalations"}}]
+          - call: setPriority
+          - if: $request.reason == "sla_deadline_exceeded"
+            then: [{emit: {event: sla_breached, data: {reason: $request.reason}, description: Emit a domain event recording the SLA deadline breach for federal compliance reporting}}]
+            else: [{emit: {event: auto_escalated, data: {reason: $request.reason}, description: Emit a domain event recording the automatic escalation}}]
+      - id: system-auto-cancel
+        description: "POST /tasks/{taskId}/system-auto-cancel — System cancels a client-blocked task after 30 days without a response"
         guards:
-          actors:
-            - supervisor
-          conditions:
-            - callerIsSupervisor
-        transition:
-          from: pending_review
-          to: in_progress
-        requestBody:
-          type: object
-          required:
-            - reason
-          properties:
-            reason:
-              type: string
-              description: Why the work is being returned for revision
-        then:
-          - emit:
-              event: returned_to_worker
-              data:
-                reason: $request.reason
-            description: Emit a domain event recording the return for revision
-      - name: assign
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: awaiting_client, to: cancelled}
+        steps:
+          - set: {field: cancelledAt, value: $now, description: Record when the task was automatically cancelled}
+          - emit: {event: auto_cancelled, data: {reason: client_unresponsive}, description: Emit a domain event recording the automatic cancellation}
+      - id: submit-for-review
+        description: "POST /tasks/{taskId}/submit-for-review — Worker submits a completed task to a supervisor for review and approval"
         guards:
-          actors:
-            - supervisor
-          conditions:
-            - callerIsSupervisor
-        transition:
-          from:
-            - pending
-            - in_progress
-            - escalated
-            - awaiting_client
-            - awaiting_verification
-            - pending_review
-        requestBody:
-          type: object
-          required:
-            - assignedToId
-          properties:
-            assignedToId:
-              type: string
-              format: uuid
-              description: ID of the caseworker to assign the task to
-            queueId:
-              type: string
-              format: uuid
-              description: Optional queue to move the task to
-        then:
-          - set:
-              field: assignedToId
-              value: $request.assignedToId
-            description: Assign the task to the specified caseworker
-          - set:
-              field: queueId
-              value: $request.queueId
-            description: Optionally move the task to a different queue
-          - emit:
-              event: assigned
-              data:
-                assignedToId: $request.assignedToId
-                queueId: $request.queueId
-            description: Emit a domain event recording the assignment
-      - name: set-priority
+          - actors: [caseworker, supervisor]
+            conditions: [callerIsAssignedWorker]
+        transition: {from: [in_progress, escalated], to: pending_review}
+        steps:
+          - emit: {event: submitted_for_review, description: Emit a domain event recording the submission for review}
+      - id: approve
         guards:
-          actors:
-            - supervisor
-          conditions:
-            - callerIsSupervisor
-        transition:
-          from:
-            - pending
-            - in_progress
-            - escalated
-            - awaiting_client
-            - awaiting_verification
-            - pending_review
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition: {from: pending_review, to: completed}
         requestBody:
-          type: object
-          required:
-            - priority
-          properties:
-            priority:
-              type: string
-              enum:
-                - expedited
-                - high
-                - normal
-              description: New priority level for the task
-            reason:
-              type: string
-              description: Optional reason for the priority change
-        then:
-          - set:
-              field: priority
-              value: $request.priority
-            description: Override the task priority
-          - emit:
-              event: priority_changed
-              data:
-                priority: $request.priority
-                reason: $request.reason
-            description: Emit a domain event recording the priority change
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ApproveTaskRequest"
+        steps:
+          - set: {field: completedAt, value: $now, description: Record when work was approved and completed}
+          - set: {field: outcome, value: $request.outcome, description: Store the outcome from the supervisor's approval}
+          - set: {field: completionNotes, value: $request.notes, description: Store optional notes from the supervisor}
+          - emit: {event: approved, data: {outcome: $request.outcome}, description: Emit a domain event recording the approval}
+      - id: return-to-worker
+        guards:
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition: {from: pending_review, to: in_progress}
+        requestBody:
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReturnToWorkerRequest"
+        steps:
+          - emit: {event: returned_to_worker, data: {reason: $request.reason}, description: Emit a domain event recording the return for revision}
+      - id: assign
+        guards:
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition:
+          from: [pending, in_progress, escalated, awaiting_client, awaiting_verification, pending_review]
+        requestBody:
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AssignTaskRequest"
+        steps:
+          - set: {field: assignedToId, value: $request.assignedToId, description: Assign the task to the specified caseworker}
+          - set: {field: queueId, value: $request.queueId, description: Optionally move the task to a different queue}
+          - emit: {event: assigned, data: {assignedToId: $request.assignedToId, queueId: $request.queueId}, description: Emit a domain event recording the assignment}
+      - id: set-priority
+        guards:
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition:
+          from: [pending, in_progress, escalated, awaiting_client, awaiting_verification, pending_review]
+        requestBody:
+          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SetPriorityRequest"
+        steps:
+          - set: {field: priority, value: $request.priority, description: Override the task priority}
+          - emit: {event: priority_changed, data: {priority: $request.priority, reason: $request.reason}, description: Emit a domain event recording the priority change}
+    events:
+      - name: workflow.task.created
+        description: Route and prioritize a new task, then schedule its 72-hour creation deadline
+        transition: {}
+        steps:
+          - call: assignToQueue
+          - call: setPriority
+          - call: scheduleCreationDeadline
+      - name: workflow.task.updated
+        description: Re-evaluate priority and queue assignment when relevant fields change; reschedule SLA timers when the SLA deadline is set
+        transition: {}
+        steps:
+          - if: $this.data.changes.exists(c, c.field == "isExpedited" || c.field == "programType")
+            then: [{call: setPriority}]
+          - if: $this.data.changes.exists(c, c.field == "programType" || c.field == "queueId")
+            then: [{call: assignToQueue}]
+          - if: $this.data.changes.exists(c, c.field == "slaDeadline") && $object.slaDeadline != null
+            then: [{call: scheduleSlaWarning}, {call: scheduleSlaBreachTimer}]
+      - name: workflow.creation_deadline
+        description: Auto-escalate after 72-business-hour creation deadline
+        steps:
+          - call: {POST: workflow/tasks/$this.subject/system-escalate, body: {reason: deadline_exceeded}, description: Auto-escalate after 72h creation deadline}
+      - name: workflow.sla_warning
+        description: Auto-escalate 48 hours before SLA deadline
+        steps:
+          - call: {POST: workflow/tasks/$this.subject/system-escalate, body: {reason: sla_deadline_approaching}, description: Auto-escalate 48h before SLA deadline}
+      - name: workflow.sla_breach
+        description: Escalate and record SLA breach at deadline
+        steps:
+          - call: {POST: workflow/tasks/$this.subject/system-escalate, body: {reason: sla_deadline_exceeded}, description: Escalate and record SLA breach at deadline}
+      - name: workflow.client_timeout
+        description: Auto-cancel after 30 calendar days of client unresponsiveness
+        steps:
+          - call: {POST: workflow/tasks/$this.subject/system-auto-cancel, body: {reason: client_unresponsive}, description: Auto-cancel after 30 days client unresponsive}
+      - name: workflow.verification_timeout
+        description: Auto-resume after 7 calendar days waiting on verification
+        steps:
+          - call: {POST: workflow/tasks/$this.subject/system-resume, body: {source: timeout, result: verification_timeout}, description: Auto-resume after 7 days verification timeout}
+      - name: intake.application.submitted
+        description: Create an application review task when a new application is submitted
+        steps:
+          - call: {POST: workflow/tasks, body: {taskType: application_review, name: Application review, status: pending, subjectType: application, subjectId: $this.subject}, description: Create an intake review task when an application is submitted}
+    timers:
+      - id: creation_deadline
+        description: 72-business-hour deadline to act on a newly created task before auto-escalation
+      - id: sla_warning
+        description: Warning fired 48 hours before the task SLA deadline
+      - id: sla_breach
+        description: Fired at the task SLA deadline to record a breach and escalate
+      - id: client_timeout
+        description: 30-calendar-day limit on client unresponsiveness before auto-cancellation
+      - id: verification_timeout
+        description: 7-calendar-day wait on a verification result before auto-resuming
 guards:
   - id: taskIsUnassigned
-    field: assignedToId
-    operator: is_null
+    condition: object.assignedToId == null
   - id: callerIsAssignedWorker
-    field: assignedToId
-    operator: equals
-    value: $caller.id
-  - id: callerIsSupervisor
-    field: $caller.roles
-    operator: contains_any
-    value:
-      - supervisor
-  - id: callerIsSystem
-    field: $caller.roles
-    operator: contains_any
-    value:
-      - system
-rules:
-  - id: assignment-rule
+    condition: object.assignedToId == caller.id
+procedures:
+  - id: assignToQueue
+    description: Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
     context:
-      - application:
-          from: intake/applications
-          where:
-            id: $object.subjectId
-          optional: true
-      - snapQueue:
-          from: workflow/queues
-          where:
-            name: snap-intake
-          optional: true
-      - generalQueue:
-          from: workflow/queues
-          where:
-            name: general-intake
-          optional: true
-    evaluation: first-match-wins
-    conditions:
-      - id: snap-only-to-snap-queue
-        order: 1
-        condition:
-          and:
-            - "==":
-                - var: $application.programs.length
-                - 1
-            - in:
-                - snap
-                - var: $application.programs
-            - "!=":
-                - var: $snapQueue
-                - null
-        then:
-          - set:
-              field: queueId
-              value: $snapQueue.id
-        description: Route SNAP-only applications to the SNAP intake queue. Falls through when snapQueue is unavailable.
-      - id: default-to-general-queue
-        order: 2
-        condition: true
-        then:
-          - set:
-              field: queueId
-              value: $generalQueue.id
-        description: Route all other tasks to the general intake queue.
-  - id: priority-rule
-    evaluation: first-match-wins
-    conditions:
-      - id: expedited-flag
-        order: 1
-        condition:
-          "==":
-            - var: $object.isExpedited
-            - true
-        then:
-          - set:
-              field: priority
-              value: expedited
-        description: Set expedited priority when the task is flagged as expedited.
-      - id: default-priority
-        order: 2
-        condition: true
-        then:
-          - set:
-              field: priority
-              value: normal
-        description: Set normal priority for all other tasks.
+      - application: {from: intake/applications, where: {id: $object.subjectId}}
+      - snapQueue: {from: workflow/queues, where: {name: snap-intake}}
+      - generalQueue: {from: workflow/queues, where: {name: general-intake}}
+    if: $snapQueue != null && (($application != null && $application.programs.size() == 1 && "snap" in $application.programs) || ($application == null && $object.programType == "snap"))
+    then: [{set: {field: queueId, value: $snapQueue.id}}]
+    else: [{set: {field: queueId, value: $generalQueue.id}}]
+  - id: setPriority
+    description: Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+    if: $object.isExpedited == true
+    then: [{set: {field: priority, value: expedited}}]
+    else: [{set: {field: priority, value: normal}}]
+  - id: scheduleTimer
+    description: Schedule a workflow timer; builds timerId and callback event from timerType and $object.id.
+    parameters: [timerType, fireAfter, fireAt, fireOffset, calendarType]
+    call: requestTimer
+    with:
+      $merge: $params
+      timerId: "\"workflow.\" + $params.timerType + \".\" + $object.id"
+      callback: {event: '"workflow." + $params.timerType', data: {}}
+  - id: cancelWorkflowTimer
+    description: Cancel a workflow timer by type; idempotent.
+    parameters: [timerType]
+    call: cancelTimer
+    with: {timerId: "\"workflow.\" + $params.timerType + \".\" + $object.id"}
+  - id: scheduleCreationDeadline
+    description: Schedule auto-escalation 72 business hours after task creation.
+    call: scheduleTimer
+    with: {timerType: creation_deadline, fireAfter: PT72H, calendarType: business}
+  - id: scheduleClientTimeout
+    description: Schedule auto-cancellation after 30 calendar days of client unresponsiveness.
+    call: scheduleTimer
+    with: {timerType: client_timeout, fireAfter: P30D, calendarType: calendar}
+  - id: scheduleVerificationTimeout
+    description: Schedule auto-resume after 7 calendar days waiting on verification.
+    call: scheduleTimer
+    with: {timerType: verification_timeout, fireAfter: P7D, calendarType: calendar}
+  - id: scheduleSlaWarning
+    description: Schedule SLA warning escalation 48 hours before the task SLA deadline.
+    call: scheduleTimer
+    with: {timerType: sla_warning, fireAt: $object.slaDeadline, fireOffset: "-PT48H", calendarType: calendar}
+  - id: scheduleSlaBreachTimer
+    description: Schedule SLA breach escalation at the task SLA deadline.
+    call: scheduleTimer
+    with: {timerType: sla_breach, fireAt: $object.slaDeadline, calendarType: calendar}
+  - id: cancelClientTimeout
+    description: Cancel the client unresponsive timer; idempotent.
+    call: cancelWorkflowTimer
+    with: {timerType: client_timeout}
+  - id: cancelVerificationTimeout
+    description: "Cancel the verification timeout timer; idempotent, safe to call even if already fired."
+    call: cancelWorkflowTimer
+    with: {timerType: verification_timeout}

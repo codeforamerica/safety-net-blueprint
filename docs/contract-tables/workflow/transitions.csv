@@ -1,0 +1,20 @@
+Machine,ID,From,To,Actors,Conditions,Steps
+Task,claim,pending,in_progress,caseworker; supervisor,taskIsUnassigned,Set `assignedToId` → caller's ID; Emit `claimed` event
+Task,complete,in_progress,completed,caseworker; supervisor,callerIsAssignedWorker,Set `completedAt` → current time; Set `outcome` → `$request.outcome`; Set `completionNotes` → `$request.notes`; Emit `completed` event; If ($request.createFollowUp == true): POST `workflow/tasks`
+Task,release,in_progress,pending,caseworker; supervisor,callerIsAssignedWorker,Set `assignedToId` → nothing *(clears field)*; Emit `released` event; Call `assignToQueue`; Call `setPriority`
+Task,escalate,in_progress,escalated,caseworker; supervisor,"any: callerIsAssignedWorker, callerIsSupervisor",Set `escalatedAt` → current time; Call `setPriority`; Emit `escalated` event
+Task,escalate,pending,escalated,supervisor,callerIsSupervisor,Set `escalatedAt` → current time; Call `setPriority`; Emit `escalated` event
+Task,de-escalate,escalated,pending,supervisor,callerIsSupervisor,Call `assignToQueue`; Call `setPriority`; Emit `de-escalated` event
+Task,cancel,pending | in_progress | escalated,cancelled,supervisor,callerIsSupervisor,Set `cancelledAt` → current time; Emit `cancelled` event
+Task,reopen,cancelled,pending,supervisor,callerIsSupervisor,Set `cancelledAt` → nothing *(clears field)*; Call `assignToQueue`; Call `setPriority`; Emit `reopened` event
+Task,await-client,in_progress,awaiting_client,caseworker; supervisor,callerIsAssignedWorker,Set `blockedAt` → current time; Call `scheduleClientTimeout`; Emit `awaiting_client` event
+Task,await-verification,in_progress,awaiting_verification,caseworker; supervisor,callerIsAssignedWorker,Set `blockedAt` → current time; Call `scheduleVerificationTimeout`; Emit `awaiting_verification` event
+Task,resume,awaiting_client | awaiting_verification,in_progress,caseworker; supervisor,"any: callerIsAssignedWorker, callerIsSupervisor",Set `blockedAt` → nothing *(clears field)*; Call `cancelClientTimeout`; Call `cancelVerificationTimeout`; Emit `resumed` event
+Task,system-resume,awaiting_verification,in_progress,system,callerIsSystem,Set `blockedAt` → nothing *(clears field)*; Call `cancelVerificationTimeout`; Emit `system_resumed` event
+Task,system-escalate,pending | in_progress | escalated,escalated,system,callerIsSystem,"If ($object.escalatedAt == null): Set `escalatedAt` → current time; Call `setPriority`; If ($request.reason == ""sla_deadline_exceeded""): Emit `sla_breached` event; else: Emit `auto_escalated` event"
+Task,system-auto-cancel,awaiting_client,cancelled,system,callerIsSystem,Set `cancelledAt` → current time; Emit `auto_cancelled` event
+Task,submit-for-review,in_progress | escalated,pending_review,caseworker; supervisor,callerIsAssignedWorker,Emit `submitted_for_review` event
+Task,approve,pending_review,completed,supervisor,callerIsSupervisor,Set `completedAt` → current time; Set `outcome` → `$request.outcome`; Set `completionNotes` → `$request.notes`; Emit `approved` event
+Task,return-to-worker,pending_review,in_progress,supervisor,callerIsSupervisor,Emit `returned_to_worker` event
+Task,assign,pending | in_progress | escalated | awaiting_client | awaiting_verification | pending_review,,supervisor,callerIsSupervisor,Set `assignedToId` → `$request.assignedToId`; Set `queueId` → `$request.queueId`; Emit `assigned` event
+Task,set-priority,pending | in_progress | escalated | awaiting_client | awaiting_verification | pending_review,,supervisor,callerIsSupervisor,Set `priority` → `$request.priority`; Emit `priority_changed` event

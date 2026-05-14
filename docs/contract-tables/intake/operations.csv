@@ -1,8 +1,1 @@
 Machine,Name,From,To,Actors,Conditions,Steps
-Application,submit,draft,submitted,applicant; caseworker,"any: callerIsApplicant, callerIsCaseworker",Set `submittedAt` → current time; Emit `submitted` event
-Application,open,submitted,under_review,system,callerIsSystem,Emit `opened` event
-Application,withdraw,submitted | under_review,withdrawn,applicant; caseworker; supervisor,"any: callerIsApplicant, callerIsCaseworker, callerIsSupervisor",Set `withdrawnAt` → current time; Emit `withdrawn` event
-Application,close,under_review,closed,caseworker; supervisor; system,"any: callerIsCaseworker, callerIsSupervisor, callerIsSystem",Set `closedAt` → current time; Emit `closed` event
-Application,complete-review,under_review,,caseworker; supervisor,"any: callerIsCaseworker, callerIsSupervisor",Emit `review_completed` event
-Application,flag-expedited,submitted | under_review,,caseworker; supervisor; system,"any: callerIsCaseworker, callerIsSupervisor, callerIsSystem",Set `isExpedited` → `true`; Emit `expedited_flagged` event
-ApplicationDocument,verify,requested,verified,system,callerIsSystem,Emit `verified` event

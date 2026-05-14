@@ -7,9 +7,9 @@
 import { findById, update, create } from './database-manager.js';
 import { findTransition, findOperation, evaluateGuards, applyEffects, applySteps } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
-import { processRuleEvaluations, resolveContextLayers } from './handlers/rule-evaluation.js';
-import { emitEvent } from './emit-event.js';
-import { mergeByPrecedence } from './collection-utils.js';
+import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
+import { emitEvent, emitEventEnvelope, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
+import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { validate } from './validator.js';
 
 /**
@@ -23,7 +23,6 @@ import { validate } from './validator.js';
  * @param {string[]} options.callerRoles    - Caller roles (e.g., ["system"])
  * @param {string} [options.now]            - ISO timestamp; defaults to current time
  * @param {Object} options.stateMachine     - State machine contract
- * @param {Array}  options.rules            - Rules from discoverRules()
  * @param {Array}  [options.slaTypes]       - SLA types from discoverSlaTypes()
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
@@ -38,7 +37,6 @@ export function executeTransition({
   now,
   stateMachine,
   machine = null,
-  rules,
   slaTypes = [],
   requestBody = {},
   traceparent = null
@@ -50,27 +48,23 @@ export function executeTransition({
     return { success: false, status: 404, error: `Resource not found: ${resourceId}` };
   }
 
-  // New format: machine entry has operations; old format: stateMachine has transitions
-  const isNewFormat = machine && Array.isArray(machine.operations);
+  // New format: machine entry has transitions; old format: stateMachine has transitions
+  const isNewFormat = machine && Array.isArray(machine.transitions);
 
   let actors, guardConditions, steps, transitionTo;
+  let operation = null;
 
   if (isNewFormat) {
-    const { operation, error } = findOperation(machine, trigger, resource);
-    if (!operation) {
-      return { success: false, status: 409, error };
+    const found = findOperation(machine, trigger, resource);
+    if (!found.operation) {
+      return { success: false, status: 409, error: found.error };
     }
-    actors = operation.guards?.actors || [];
-    guardConditions = operation.guards?.conditions || [];
-    steps = operation.then || [];
+    operation = found.operation;
+    const guardItems = Array.isArray(operation.guards) ? operation.guards : [];
+    actors = guardItems.flatMap(g => g.actors || []);
+    guardConditions = guardItems.flatMap(g => g.conditions || []);
+    steps = operation.steps || [];
     transitionTo = operation.transition?.to ?? null;
-
-    if (operation.requestBody) {
-      const { valid, errors } = validate(requestBody, operation.requestBody, `operation-${trigger}`);
-      if (!valid) {
-        return { success: false, status: 422, error: 'Request body validation failed', details: errors };
-      }
-    }
   } else {
     const { transition, error } = findTransition(stateMachine, trigger, resource);
     if (!transition) {
@@ -84,6 +78,7 @@ export function executeTransition({
     var legacyEffects = transition.effects;
   }
 
+  // Authorization check before request body validation — return 403 before 422
   if (actors.length > 0) {
     if (!callerRoles.some(r => actors.includes(r))) {
       return {
@@ -102,7 +97,7 @@ export function executeTransition({
   };
 
   const operationContext = isNewFormat
-    ? (machine.operations || []).find(op => op.name === trigger)?.context
+    ? (machine.transitions || []).find(op => op.id === trigger)?.context
     : null;
 
   const entities = resolveContextLayers(
@@ -127,10 +122,18 @@ export function executeTransition({
     };
   }
 
+  // Request body validation: runs after authorization (403) and guard checks (409)
+  if (isNewFormat && operation?.schema?.request) {
+    const { valid, errors } = validate(requestBody, operation.schema.request, `operation-${trigger}`);
+    if (!valid) {
+      return { success: false, status: 422, error: 'Request body validation failed', details: errors };
+    }
+  }
+
   const updated = { ...resource };
   if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
 
-  const { pendingCreates, pendingOperations, pendingAppends, pendingRuleEvaluations, pendingEvents } = isNewFormat
+  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = isNewFormat
     ? applySteps(steps, updated, context)
     : { ...applyEffects(legacyEffects, updated, context), pendingOperations: [], pendingAppends: [] };
 
@@ -142,8 +145,10 @@ export function executeTransition({
     updateSlaInfo(updated, slaTypes, timestamp, stateMachine.states || {});
   }
 
-  const inlineRules = mergeByPrecedence(stateMachine.rules, machine?.rules);
-  processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine.domain, inlineRules, context);
+  const inlineRules = buildInlineRules(stateMachine, machine);
+  const { pendingEvents: ruleEvents } = executeProcedures(
+    pendingProcedures, updated, inlineRules, context
+  );
 
   const diff = {};
   for (const [key, value] of Object.entries(updated)) {
@@ -158,19 +163,30 @@ export function executeTransition({
 
   const domain = stateMachine.domain;
   const object = (machine?.object || stateMachine.object).toLowerCase();
-  for (const event of pendingEvents) {
+  const allEvents = [...pendingEvents, ...(ruleEvents || [])];
+  for (const event of allEvents) {
     try {
-      emitEvent({
-        domain,
-        object,
-        action: event.action,
-        resourceId: resource.id,
-        source: `/${domain}`,
-        data: event.data || null,
-        callerId,
-        traceparent,
-        now: timestamp
-      });
+      if (event.action.includes('.')) {
+        emitEventEnvelope({
+          type: CLOUDEVENTS_TYPE_PREFIX + event.action,
+          source: `/${domain}`,
+          subject: resource.id,
+          data: event.data || null,
+          time: timestamp,
+        });
+      } else {
+        emitEvent({
+          domain,
+          object,
+          action: event.action,
+          resourceId: resource.id,
+          source: `/${domain}`,
+          data: event.data || null,
+          callerId,
+          traceparent,
+          now: timestamp
+        });
+      }
     } catch (e) {
       console.error(`Failed to emit event "${event.action}":`, e.message);
     }

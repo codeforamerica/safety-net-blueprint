@@ -86,7 +86,9 @@ Add items to an existing array without replacing the baseline items. This is a c
   append:
     - id: tanf_standard
       name: TANF Standard
-      durationDays: 45
+      duration:
+        amount: 45
+        unit: days
       warningThresholdPercent: 75
 ```
 
@@ -102,7 +104,7 @@ actions:
     description: Use state-specific status values
     update: [active, inactive, pending_review]
 
-  - target: $.slaTypes[?(@.id == 'snap_expedited')].durationDays  # targets a behavioral YAML file
+  - target: $.slaTypes[?(@.id == 'snap_expedited')].duration.amount  # targets a behavioral YAML file
     description: Extend SNAP expedited deadline per state waiver
     update: 10
 ```
@@ -120,7 +122,7 @@ $.arrayName[?(@.field == 'value')].propertyToModify
 **Modify a specific SLA type:**
 
 ```yaml
-- target: $.slaTypes[?(@.id == 'snap_expedited')].durationDays
+- target: $.slaTypes[?(@.id == 'snap_expedited')].duration.amount
   description: Extend SNAP expedited to 10 days per state waiver
   update: 10
 ```
@@ -137,6 +139,60 @@ Filter expressions support string, numeric, and boolean values:
 - `[?(@.id == 'snap_expedited')]` — string match
 - `[?(@.order == 1)]` — numeric match
 - `[?(@.enabled == true)]` — boolean match
+
+### State machine targets
+
+State machine files use a top-level `machines:` array. Use a filter expression to target a specific machine by its `object` name, then drill into `transitions`, `events`, `procedures`, or `guards`:
+
+**Add a guard to a specific transition:**
+
+```yaml
+- target: $.machines[?(@.object == 'Task')].transitions[?(@.id == 'claim')].guards
+  description: Require office match before claiming
+  update:
+    - actors: [caseworker]
+      conditions:
+        - callerOfficeMatchesTask
+```
+
+**Add a new transition:**
+
+```yaml
+- target: $.machines[?(@.object == 'Task')].transitions
+  description: Add supervisor-override transition for state-specific escalation path
+  append:
+    - id: supervisor-override
+      description: POST /tasks/{taskId}/supervisor-override — Supervisor bypasses standard escalation
+      guards:
+        - actors: [supervisor]
+      from: [in_progress, pending]
+      to: escalated
+      steps:
+        - set: { escalatedAt: $now, escalationReason: supervisor_override }
+        - emit: workflow.task.escalated
+```
+
+**Replace a procedure's steps:**
+
+```yaml
+- target: $.procedures[?(@.id == 'assignToQueue')]
+  description: Replace queue assignment with county-based routing
+  update:
+    id: assignToQueue
+    steps:
+      - set: { queueId: $context.countyQueue.id }
+```
+
+**Add a new event subscription:**
+
+```yaml
+- target: $.machines[?(@.object == 'Task')].events
+  description: React to county transfer events
+  append:
+    - name: case_management.case.county_transferred
+      steps:
+        - call: assignToQueue
+```
 
 ## Global Config Options
 

@@ -260,22 +260,18 @@ rpc_endpoints:
 #
 #   invoke:
 #     # POST form — creates a resource or triggers an operation:
-#     POST: <path>                  # e.g. workflow/tasks, intake/applications/{application.id}/open
+#     POST: <path>                  # e.g. workflow/tasks, intake/applications/$application.id/open
 #     body:
 #       <key>: <value expression>
 #
 #     # PATCH form — appends a value to an array field:
-#     PATCH: <path>                 # e.g. intake/applications/members/{this.data.memberId}
+#     PATCH: <path>                 # e.g. intake/applications/members/$this.data.memberId
 #     body:
 #       <fieldName>:
 #         $push: <value expression> # appended to the array; object or scalar
 #
-# Path template expressions:
-#   {alias.field}   — resolved from context binding aliases (e.g. {application.id})
-#   {this.data.field} — resolved from the current event envelope
-#
-# Value expressions (in body: and set: value:):
-#   $alias.field    — value from a context binding alias (e.g. $application.id)
+# Expressions (paths, body values, and set: value: all use the same syntax):
+#   $alias.field    — value from a context binding alias (e.g. $application.id, usable in paths and bodies)
 #   $this.field     — value from the current event or resource envelope (dot-path supported)
 #   $object.field   — value from the resource being operated on
 #   $request.field  — value from the operation request body
@@ -420,7 +416,7 @@ sub_resource_paths:
 # the on-ramp to pub/sub — the same event types and payloads are delivered via
 # broker subscription in a pub/sub implementation.
 #
-# Events are returned as CloudEvents 1.0 envelopes (see components/events.yaml).
+# Events are returned as CloudEvents 1.0 envelopes (see schemas/platform-events.yaml).
 # Query parameters use CloudEvents attribute names for consistency with the
 # event payload itself.
 events_endpoint:
@@ -512,7 +508,7 @@ events_endpoint:
     body: |
       Standard paginated list response (items, total, limit, offset, hasNext)
       where each item is a CloudEvents 1.0 envelope. The envelope schema is
-      defined in components/events.yaml#/DomainEvent.
+      defined in platform-openapi.yaml#/components/schemas/DomainEvent.
 
   notes:
     - The /events endpoint is read-only for consumers. Events are written
@@ -648,12 +644,12 @@ x_events:
       - trigger: PATCH /resources/{id}
         action: "{object}.updated"
         payload: Field-level diff listing changed fields with before/after values
-        schema: "$ref: ./components/events.yaml#/ResourceUpdatedEvent (shared)"
+        schema: "$ref: ./schemas/platform-events.yaml#/ResourceUpdatedEvent (shared)"
 
       - trigger: DELETE /resources/{id}
         action: "{object}.deleted"
         payload: null
-        schema: "$ref: ./components/events.yaml#/ResourceDeletedEvent (shared)"
+        schema: "$ref: ./schemas/platform-events.yaml#/ResourceDeletedEvent (shared)"
 
     payload_schemas:
       created: |
@@ -664,11 +660,11 @@ x_events:
       updated: |
         Shared across all domains. Use:
           {Resource}UpdatedEvent:
-            $ref: "./components/events.yaml#/ResourceUpdatedEvent"
+            $ref: "./schemas/platform-events.yaml#/ResourceUpdatedEvent"
       deleted: |
         Shared across all domains. Use:
           {Resource}DeletedEvent:
-            $ref: "./components/events.yaml#/ResourceDeletedEvent"
+            $ref: "./schemas/platform-events.yaml#/ResourceDeletedEvent"
 
     traceparent:
       description: |

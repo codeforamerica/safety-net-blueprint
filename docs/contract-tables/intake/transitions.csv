@@ -1,0 +1,10 @@
+Machine,ID,From,To,Actors,Conditions,Steps
+Application,submit,draft,submitted,applicant; caseworker,"any: callerIsApplicant, callerIsCaseworker",Set `submittedAt` → current time; Emit `submitted` event
+Application,open,submitted,under_review,system,callerIsSystem,Emit `opened` event
+Application,complete-review,under_review,,caseworker; supervisor,"any: callerIsCaseworker, callerIsSupervisor",Emit `review_completed` event
+Application,close,under_review,closed,caseworker; supervisor; system,"any: callerIsCaseworker, callerIsSupervisor, callerIsSystem",Set `closedAt` → current time; Emit `closed` event
+Application,withdraw,submitted | under_review,withdrawn,applicant; caseworker; supervisor,"any: callerIsApplicant, callerIsCaseworker, callerIsSupervisor",Set `withdrawnAt` → current time; Emit `withdrawn` event
+Verification,satisfy,pending | inconclusive,satisfied,system,callerIsSystem,Set `satisfiedAt` → current time; Emit `satisfied` event
+Verification,mark-inconclusive,pending,inconclusive,system,callerIsSystem,Emit `inconclusive` event
+Verification,waive,pending | inconclusive,waived,caseworker; supervisor,"any: callerIsCaseworker, callerIsSupervisor",Set `waivedAt` → current time; Emit `waived` event
+Verification,mark-cannot-verify,pending | inconclusive,cannot_verify,caseworker; supervisor,"any: callerIsCaseworker, callerIsSupervisor",Set `closedAt` → current time

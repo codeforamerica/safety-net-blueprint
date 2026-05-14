@@ -30,7 +30,17 @@ tags:
   - name: Search
     description: Cross-resource search across all domains.
 
-x-events: {}
+x-events:
+  scheduling.timer.requested:
+    type: org.codeforamerica.safety-net-blueprint.scheduling.timer.requested
+    summary: Emitted by any domain procedure to request a time-based callback from the scheduling service
+    payload:
+      $ref: "./schemas/platform-events.yaml#/SchedulingTimerRequestedEvent"
+  scheduling.timer.cancelled:
+    type: org.codeforamerica.safety-net-blueprint.scheduling.timer.cancelled
+    summary: Emitted by any domain procedure to cancel a pending timer
+    payload:
+      $ref: "./schemas/platform-events.yaml#/SchedulingTimerCancelledEvent"
 
 paths:
   /events:

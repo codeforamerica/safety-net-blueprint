@@ -144,7 +144,7 @@ function formatFrom(from) {
 /** Describe a single step from a then: list. */
 function describeStepItem(item) {
   if (!item || typeof item !== 'object') return '';
-  const keys = Object.keys(item).filter(k => k !== 'when' && k !== 'description');
+  const keys = Object.keys(item).filter(k => k !== 'description');
   if (keys.length === 0) return '';
   const key = keys[0];
   const val = item[key];
@@ -162,7 +162,30 @@ function describeStepItem(item) {
     }
     case 'evaluate':
       return `Evaluate \`${val}\``;
+    case 'call': {
+      if (typeof val === 'string') return `Call \`${val}\``;
+      // Object form: HTTP operation
+      const method = 'POST' in val ? 'POST' : 'PATCH' in val ? 'PATCH' : 'GET' in val ? 'GET' : 'DELETE' in val ? 'DELETE' : 'CALL';
+      const path = val[method] || '';
+      return `${method} \`${path}\``;
+    }
+    case 'if': {
+      const thenDescs = (item.then || []).map(describeStepItem).filter(Boolean).join('; ');
+      const elseDescs = (item.else || []).map(describeStepItem).filter(Boolean).join('; ');
+      const condStr = typeof val === 'string' ? val : JSON.stringify(val);
+      return elseDescs
+        ? `If (${condStr}): ${thenDescs}; else: ${elseDescs}`
+        : `If (${condStr}): ${thenDescs}`;
+    }
+    case 'match': {
+      const condStr = typeof val === 'string' ? val : JSON.stringify(val);
+      const onDescs = Object.entries(item.when || {})
+        .map(([k, steps]) => `${k}: ${(steps || []).map(describeStepItem).filter(Boolean).join('; ')}`)
+        .join('; ');
+      return `Match (${condStr}): ${onDescs}`;
+    }
     case 'invoke': {
+      // Legacy invoke: support
       if (typeof val === 'string') return `Invoke \`${val}\``;
       const method = 'POST' in val ? 'POST' : 'PATCH' in val ? 'PATCH' : 'INVOKE';
       const path = val[method] || '';
@@ -184,57 +207,64 @@ function formatConditions(conditions) {
   }).join('; ');
 }
 
-function renderTriggers(doc) {
-  const headers = ['Machine', 'Trigger Type', 'Name / Event', 'From', 'To', 'After', 'Relative To', 'Calendar', 'Guards', 'Steps'];
+/** Flatten all guard sets on a transition into a single actors/conditions summary. */
+function flattenGuards(guards) {
+  const allActors = [];
+  const allConditions = [];
+  for (const g of guards || []) {
+    allActors.push(...(g.actors || []));
+    allConditions.push(...(g.conditions || []));
+  }
+  return {
+    actors: [...new Set(allActors)].join('; '),
+    conditions: formatConditions([...new Set(allConditions)]),
+  };
+}
+
+function renderTransitions(doc) {
+  const headers = ['Machine', 'ID', 'From', 'To', 'Actors', 'Conditions', 'Steps'];
   const rows = [];
 
   for (const machine of doc.machines || []) {
-    const t = machine.triggers || {};
-
-    if (t.onCreate) {
-      const actors = (t.onCreate.actors || []).join('; ');
-      const steps = (t.onCreate.then || []).map(describeStepItem).filter(Boolean).join('; ');
-      rows.push([machine.object, 'onCreate', '', '', machine.initialState || '', '', '', '', actors, steps]);
-    }
-
-    if (t.onUpdate) {
-      const fields = (t.onUpdate.fields || []).join(', ');
-      const steps = (t.onUpdate.then || []).map(describeStepItem).filter(Boolean).join('; ');
-      rows.push([machine.object, 'onUpdate', `fields: ${fields || '(any)'}`, '', '', '', '', '', '', steps]);
-    }
-
-    for (const evt of t.onEvent || []) {
-      const conditions = formatConditions(evt.guards?.conditions);
-      const from = evt.transition ? formatFrom(evt.transition.from) : '';
-      const to = evt.transition?.to || '';
-      const steps = (evt.then || []).map(describeStepItem).filter(Boolean).join('; ');
-      rows.push([machine.object, 'onEvent', evt.name || '', from, to, '', '', '', conditions, steps]);
-    }
-
-    for (const timer of t.onTimer || []) {
-      const from = timer.transition ? formatFrom(timer.transition.from) : '';
-      const to = timer.transition?.to || '';
-      const steps = (timer.then || []).map(describeStepItem).filter(Boolean).join('; ');
-      rows.push([machine.object, 'onTimer', '', from, to, timer.after || '', timer.relativeTo || '', timer.calendarType || 'calendar', '', steps]);
+    for (const t of machine.transitions || []) {
+      const { actors, conditions } = flattenGuards(t.guards);
+      const from = t.transition ? formatFrom(t.transition.from) : '';
+      const to = t.transition?.to || '';
+      const steps = (t.steps || []).map(describeStepItem).filter(Boolean).join('; ');
+      rows.push([machine.object, t.id || '', from, to, actors, conditions, steps]);
     }
   }
 
   return csvTable(headers, rows);
 }
 
-function renderOperations(doc) {
-  const headers = ['Machine', 'Name', 'From', 'To', 'Actors', 'Conditions', 'Steps'];
+function renderEvents(doc) {
+  const headers = ['Machine', 'Event', 'Steps'];
   const rows = [];
 
   for (const machine of doc.machines || []) {
-    for (const op of machine.operations || []) {
-      const actors = (op.guards?.actors || []).join('; ');
-      const conditions = formatConditions(op.guards?.conditions);
-      const from = op.transition ? formatFrom(op.transition.from) : '';
-      const to = op.transition?.to || '';
-      const steps = (op.then || []).map(describeStepItem).filter(Boolean).join('; ');
-      rows.push([machine.object, op.name || '', from, to, actors, conditions, steps]);
+    for (const evt of machine.events || []) {
+      const steps = (evt.steps || []).map(describeStepItem).filter(Boolean).join('; ');
+      rows.push([machine.object, evt.name || '', steps]);
     }
+  }
+
+  return csvTable(headers, rows);
+}
+
+function renderProcedures(doc) {
+  const headers = ['ID', 'Scope', 'Description', 'Parameters', 'Steps'];
+  const rows = [];
+
+  const addProc = (proc, scope) => {
+    const params = (proc.parameters || []).join(', ');
+    const steps = (proc.steps || []).map(describeStepItem).filter(Boolean).join('; ');
+    rows.push([proc.id || '', scope, proc.description || '', params, steps]);
+  };
+
+  for (const proc of doc.procedures || []) addProc(proc, 'domain');
+  for (const machine of doc.machines || []) {
+    for (const proc of machine.procedures || []) addProc(proc, machine.object);
   }
 
   return csvTable(headers, rows);
@@ -288,11 +318,10 @@ function formatGuardItem(g) {
   return String(g);
 }
 
-function renderTransitions(doc) {
+function renderLegacyTransitions(doc) {
   const headers = ['From', 'To', 'Trigger', 'On', 'After', 'RelativeTo', 'CalendarType', 'Actors', 'Guards', 'Effects'];
   const rows = [];
 
-  // onCreate as a pseudo-transition (no "from" state)
   if (doc.onCreate) {
     const actors = (doc.onCreate.actors || []).join('; ');
     const effects = (doc.onCreate.effects || []).map(formatEffect).join('; ');
@@ -321,10 +350,25 @@ function renderTransitions(doc) {
 }
 
 function renderGuards(doc) {
+  const guards = doc.guards || [];
+  // Detect format from first guard that has relevant fields
+  const hasNewFormat = guards.some(g => g.condition !== undefined);
+  const hasOldFormat = guards.some(g => g.field !== undefined);
+
+  if (hasNewFormat || (!hasOldFormat && guards.length > 0)) {
+    // New format: condition CEL string
+    const headers = ['Guard Name', 'Condition'];
+    const rows = [];
+    for (const g of guards) {
+      rows.push([g.id, g.condition || '']);
+    }
+    return csvTable(headers, rows);
+  }
+
+  // Legacy format: field/operator/value
   const headers = ['Guard Name', 'Field', 'Operator', 'Value'];
   const rows = [];
-  for (const g of doc.guards || []) {
-    // Only JSON.stringify objects/arrays; leave strings and numbers as-is
+  for (const g of guards) {
     let value = '';
     if (g.value != null) {
       value = typeof g.value === 'object' ? JSON.stringify(g.value) : String(g.value);
@@ -463,10 +507,10 @@ function getContractType(doc) {
 function exportStateMachine(doc, outDir) {
   if (isMachinesFormat(doc)) {
     const files = {
-      'triggers.csv': renderTriggers(doc),
-      'operations.csv': renderOperations(doc),
+      'transitions.csv': renderTransitions(doc),
+      'events.csv': renderEvents(doc),
+      'procedures.csv': renderProcedures(doc),
       'guards.csv': renderGuards(doc),
-      'rules.csv': renderRules(doc),
       'slas.csv': renderStatesSla(doc),
     };
     writeFiles(outDir, files);
@@ -474,7 +518,7 @@ function exportStateMachine(doc, outDir) {
   }
   // Old format
   const files = {
-    'transitions.csv': renderTransitions(doc),
+    'transitions.csv': renderLegacyTransitions(doc),
     'guards.csv': renderGuards(doc),
     'slas.csv': renderSla(doc),
     'request-bodies.csv': renderRequestBodies(doc),
@@ -550,6 +594,11 @@ function formatTransitionGuardRef(g) {
 
 /** Describe a named guard definition in plain English. */
 function describeNamedGuard(g) {
+  // New format: CEL condition string
+  if (g.condition !== undefined) {
+    return `\`${g.condition}\``;
+  }
+  // Legacy format: field/operator/value
   const f = `\`${g.field}\``;
   switch (g.operator) {
     case 'is_null': return `${f} is not set`;
@@ -624,10 +673,10 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
   lines.push('');
   if (isMachines) {
     lines.push('- **States** — the lifecycle stages each resource can be in, and how each affects SLA tracking.');
-    lines.push('- **Triggers** — automatic reactions to lifecycle events: object creation, field changes, external events, and timers (onCreate, onUpdate, onEvent, onTimer).');
-    lines.push('- **Operations** — actor- or system-triggered actions that can move a resource to a new state or update it in place.');
-    lines.push('- **Guards** — named conditions that control who can trigger an operation. If a guard fails, the request is rejected.');
-    lines.push('- **Rules** — named procedures that handle logic spanning multiple resources or that apply in several places.');
+    lines.push('- **Transitions** — actor- or system-triggered actions that can move a resource to a new state or update it in place.');
+    lines.push('- **Events** — automatic reactions to named domain events, including object creation, field changes, and timer callbacks.');
+    lines.push('- **Guards** — named conditions that control who can trigger a transition. If a guard fails, the request is rejected.');
+    lines.push('- **Procedures** — named step sequences called from transitions and events to encapsulate reusable logic.');
   } else {
     lines.push(`- **States** — the lifecycle stages a ${smDoc.object || 'resource'} can be in, and how each affects SLA tracking.`);
     lines.push('- **Transitions** — the actions that move a resource from one state to another.');
@@ -674,98 +723,52 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
     lines.push('');
   }
 
-  // ── Handlers / Transitions ───────────────────────────────────────────────
+  // ── Transitions / Events ────────────────────────────────────────────────
   lines.push('---');
   lines.push('');
 
   if (isMachines) {
-    lines.push('## Triggers');
+    lines.push('## Transitions');
     lines.push('');
-    lines.push('Triggers are automatic reactions to lifecycle events. Each lists what fires it and what steps run.');
+    lines.push('Transitions are actor- or system-triggered actions. Each lists who can trigger it, what state change it causes, and what steps run.');
     lines.push('');
 
     for (const machine of smDoc.machines || []) {
+      const transitions = machine.transitions || [];
+      if (transitions.length === 0) continue;
       lines.push(`### ${machine.object}`);
       lines.push('');
-      const t = machine.triggers || {};
-
-      if (t.onCreate) {
-        lines.push('**On create** — runs when a new record is created:');
-        lines.push('');
-        for (const step of t.onCreate.then || []) {
-          const desc = step.description || describeStepItem(step);
-          if (desc) lines.push(`- ${desc}`);
-        }
-        lines.push('');
+      lines.push('| ID | From | To | Actors | Conditions | Steps |');
+      lines.push('|----|------|----|--------|------------|-------|');
+      for (const t of transitions) {
+        const from = t.transition ? mdCell(formatFrom(t.transition.from)) : '—';
+        const to = t.transition?.to ? mdCell(t.transition.to) : '—';
+        const { actors, conditions } = flattenGuards(t.guards);
+        const actorsCell = mdCell(actors) || '—';
+        const conditionsCell = mdCell(conditions) || '—';
+        const steps = (t.steps || []).map(s => mdCell(s.description || describeStepItem(s))).filter(Boolean).join('<br>');
+        lines.push(`| \`${t.id}\` | ${from} | ${to} | ${actorsCell} | ${conditionsCell} | ${steps} |`);
       }
-
-      if (t.onUpdate) {
-        const fields = t.onUpdate.fields;
-        const fieldStr = fields && fields.length > 0
-          ? `when any of the following fields change: ${fields.map(f => `\`${f}\``).join(', ')}`
-          : 'when any field changes';
-        lines.push(`**On update** — runs ${fieldStr}:`);
-        lines.push('');
-        for (const step of t.onUpdate.then || []) {
-          const desc = step.description || describeStepItem(step);
-          if (desc) lines.push(`- ${desc}`);
-        }
-        lines.push('');
-      }
-
-      const events = t.onEvent || [];
-      if (events.length > 0) {
-        lines.push('**Events** — triggered when an external domain event arrives:');
-        lines.push('');
-        lines.push('| Event | From | To | Conditions | Steps |');
-        lines.push('|-------|------|----|------------|-------|');
-        for (const evt of events) {
-          const from = evt.transition ? mdCell(formatFrom(evt.transition.from)) : '—';
-          const to = evt.transition?.to ? mdCell(evt.transition.to) : '—';
-          const conditions = mdCell(formatConditions(evt.guards?.conditions || [])) || '—';
-          const steps = (evt.then || []).map(s => mdCell(s.description || describeStepItem(s))).filter(Boolean).join('<br>');
-          lines.push(`| \`${evt.name}\` | ${from} | ${to} | ${conditions} | ${steps} |`);
-        }
-        lines.push('');
-      }
-
-      const timers = t.onTimer || [];
-      if (timers.length > 0) {
-        lines.push('**Timers** — fire automatically after a duration elapses:');
-        lines.push('');
-        lines.push('| From | To | After | Relative To | Calendar | Steps |');
-        lines.push('|------|----|-------|-------------|----------|-------|');
-        for (const timer of timers) {
-          const from = timer.transition ? mdCell(formatFrom(timer.transition.from)) : '—';
-          const to = timer.transition?.to ? mdCell(timer.transition.to) : '—';
-          const steps = (timer.then || []).map(s => mdCell(s.description || describeStepItem(s))).filter(Boolean).join('<br>');
-          lines.push(`| ${from} | ${to} | ${mdCell(timer.after)} | ${mdCell(timer.relativeTo)} | ${mdCell(timer.calendarType || 'calendar')} | ${steps} |`);
-        }
-        lines.push('');
-      }
+      lines.push('');
     }
 
     lines.push('---');
     lines.push('');
-    lines.push('## Operations');
+    lines.push('## Events');
     lines.push('');
-    lines.push('Operations are actor- or system-triggered actions. Each lists who can trigger it, what state change it causes, and what steps run.');
+    lines.push('Event subscriptions react to named domain events — including object creation, field changes, and timer callbacks.');
     lines.push('');
 
     for (const machine of smDoc.machines || []) {
-      const ops = machine.operations || [];
-      if (ops.length === 0) continue;
+      const events = machine.events || [];
+      if (events.length === 0) continue;
       lines.push(`### ${machine.object}`);
       lines.push('');
-      lines.push('| Name | From | To | Actors | Conditions | Steps |');
-      lines.push('|------|------|----|--------|------------|-------|');
-      for (const op of ops) {
-        const from = op.transition ? mdCell(formatFrom(op.transition.from)) : '—';
-        const to = op.transition?.to ? mdCell(op.transition.to) : '—';
-        const actors = (op.guards?.actors || []).join(', ') || '—';
-        const conditions = mdCell(formatConditions(op.guards?.conditions || [])) || '—';
-        const steps = (op.then || []).map(s => mdCell(s.description || describeStepItem(s))).filter(Boolean).join('<br>');
-        lines.push(`| \`${op.name}\` | ${from} | ${to} | ${mdCell(actors)} | ${conditions} | ${steps} |`);
+      lines.push('| Event | Steps |');
+      lines.push('|-------|-------|');
+      for (const evt of events) {
+        const steps = (evt.steps || []).map(s => mdCell(s.description || describeStepItem(s))).filter(Boolean).join('<br>');
+        lines.push(`| \`${evt.name}\` | ${steps || '—'} |`);
       }
       lines.push('');
     }
@@ -869,32 +872,25 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
     lines.push('');
   }
 
-  // ── Rules ────────────────────────────────────────────────────────────────
-  if (isMachines && (smDoc.rules || []).length > 0) {
+  // ── Procedures ───────────────────────────────────────────────────────────
+  const allProcedures = [
+    ...(smDoc.procedures || []).map(p => ({ ...p, scope: 'domain' })),
+    ...(smDoc.machines || []).flatMap(m => (m.procedures || []).map(p => ({ ...p, scope: m.object }))),
+  ];
+  if (isMachines && allProcedures.length > 0) {
     lines.push('---');
     lines.push('');
-    lines.push('## Rules');
+    lines.push('## Procedures');
     lines.push('');
-    lines.push('Rules are named procedures called from trigger and operation steps. They handle logic that spans multiple resources or applies in several places.');
+    lines.push('Named step sequences called from transitions and events. They encapsulate reusable logic.');
     lines.push('');
-
-    for (const rule of smDoc.rules) {
-      lines.push(`### \`${rule.id}\``);
-      lines.push('');
-      lines.push(`Evaluation: **${rule.evaluation || 'first-match-wins'}**`);
-      lines.push('');
-      lines.push('| # | Condition | Steps |');
-      lines.push('|---|-----------|-------|');
-      for (const cond of rule.conditions || []) {
-        const order = cond.order != null ? String(cond.order) : '';
-        const condStr = cond.condition === true || cond.condition === undefined ? 'always'
-          : typeof cond.condition === 'object' ? jsonLogicToFeel(cond.condition)
-          : String(cond.condition);
-        const steps = (cond.then || []).map(s => mdCell(s.description || describeStepItem(s))).filter(Boolean).join('<br>');
-        lines.push(`| ${order} | ${mdCell(condStr)} | ${steps} |`);
-      }
-      lines.push('');
+    lines.push('| ID | Scope | Description | Parameters |');
+    lines.push('|----|-------|-------------|------------|');
+    for (const proc of allProcedures) {
+      const params = (proc.parameters || []).join(', ') || '—';
+      lines.push(`| \`${mdCell(proc.id)}\` | ${mdCell(proc.scope)} | ${mdCell(proc.description || '')} | ${mdCell(params)} |`);
     }
+    lines.push('');
   } else if (!isMachines && rulesDoc && (rulesDoc.ruleSets || []).length > 0) {
     lines.push('---');
     lines.push('');

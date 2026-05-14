@@ -52,3 +52,23 @@ export function mergeByPrecedence(base = [], overrides = []) {
   for (const item of (overrides || [])) map.set(item.id, item);
   return [...map.values()];
 }
+
+/**
+ * Build the combined inline lookup array for executeProcedures.
+ * Merges procedures (platform → domain → machine) into one id-keyed array.
+ * Procedures are looked up by executeProcedure when call: steps reference a named procedure id.
+ *
+ * @param {Object} stateMachine - Top-level state machine doc (may have _platformProcedures)
+ * @param {Object|null} machine - Machine-level entry (may have procedures and rules)
+ * @returns {Array} Flat array of procedures and rules, higher-precedence items winning on id
+ */
+export function buildInlineRules(stateMachine, machine) {
+  // Precedence: platform < domain < machine (higher overrides lower on same id)
+  const procedures = mergeByPrecedence(
+    mergeByPrecedence(stateMachine?._platformProcedures || [], stateMachine?.procedures || []),
+    machine?.procedures || []
+  );
+  const rules = mergeByPrecedence(stateMachine?.rules || [], machine?.rules || []);
+  // Rules take precedence over procedures for same id (unlikely, but consistent)
+  return mergeByPrecedence(procedures, rules);
+}

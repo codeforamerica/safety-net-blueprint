@@ -154,12 +154,12 @@ test('createUpdateHandler — onUpdate fires when watched field is patched', () 
     triggers: {
       onUpdate: {
         fields: ['isExpedited'],
-        then: [{ set: { field: 'priority', value: 'expedited' } }]
+        steps: [{ set: { field: 'priority', value: 'expedited' } }]
       }
     }
   };
 
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], [], machine);
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine);
   const { req, res } = makeReqRes({ id: 'res-1' }, { isExpedited: true });
   handler(req, res);
 
@@ -177,12 +177,12 @@ test('createUpdateHandler — onUpdate does not fire when non-watched field is p
     triggers: {
       onUpdate: {
         fields: ['isExpedited'],
-        then: [{ set: { field: 'priority', value: 'expedited' } }]
+        steps: [{ set: { field: 'priority', value: 'expedited' } }]
       }
     }
   };
 
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], [], machine);
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine);
   const { req, res } = makeReqRes({ id: 'res-2' }, { notes: 'updated' });
   handler(req, res);
 
@@ -200,12 +200,12 @@ test('createUpdateHandler — onUpdate fires for all fields when no watchedField
     triggers: {
       onUpdate: {
         // no fields: — fires on any patch
-        then: [{ set: { field: 'priority', value: 'high' } }]
+        steps: [{ set: { field: 'priority', value: 'high' } }]
       }
     }
   };
 
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], [], machine);
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine);
   const { req, res } = makeReqRes({ id: 'res-3' }, { notes: 'anything' });
   handler(req, res);
 

@@ -2,13 +2,13 @@
  * Handler for POST /resources (create)
  */
 
-import { create, update } from '../database-manager.js';
+import { create, update, findById } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { initializeSlaInfo } from '../sla-engine.js';
-import { processRuleEvaluations, resolveContextLayers } from './rule-evaluation.js';
-import { mergeByPrecedence } from '../collection-utils.js';
+import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
+import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 
 /**
@@ -17,10 +17,9 @@ import { emitEvent } from '../emit-event.js';
  * @param {Object} endpoint - Endpoint metadata
  * @param {string} baseUrl - Base URL for Location header
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
- * @param {Array|null} rules - Rules from discoverRules() (null for APIs without rules)
  * @returns {Function} Express handler
  */
-export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, rules, slaTypes = [], machine = null) {
+export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null) {
   return (req, res) => {
     try {
       // Check if request body is an object (400 for malformed request)
@@ -113,13 +112,12 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         }
         const context = { ...baseContext, entities };
 
-        const { pendingCreates, pendingRuleEvaluations } = isNewFormat
-          ? applySteps(onCreate.then || [], resource, context)
+        const { pendingCreates, pendingProcedures } = isNewFormat
+          ? applySteps(onCreate.steps || [], resource, context)
           : applyEffects(onCreate.effects || [], resource, context);
 
-        // Process rule evaluations (sets queueId, priority, etc.)
-        const inlineRules = mergeByPrecedence(stateMachine?.rules, machine?.rules);
-        processRuleEvaluations(pendingRuleEvaluations, resource, rules, stateMachine?.domain, inlineRules, context);
+        const inlineRules = buildInlineRules(stateMachine, machine);
+        executeProcedures(pendingProcedures, resource, inlineRules, context);
 
         // Execute pending creates
         for (const { entity, data } of pendingCreates) {
@@ -171,9 +169,12 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // so sub-resource POSTs like /applications/app-123/documents get the right URL.
       const location = `${baseUrl}${req.path}/${resource.id}`;
 
+      // Re-read from DB so the response reflects any mutations made by event subscriptions
+      // (e.g. assignToQueue running synchronously in response to the created event)
+      const fresh = findById(endpoint.collectionName, resource.id) || resource;
       res.status(201)
         .header('Location', location)
-        .json(resource);
+        .json(fresh);
     } catch (error) {
       console.error('Create handler error:', error);
 

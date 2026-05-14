@@ -1,0 +1,148 @@
+# Request body schemas for workflow state machine transitions.
+# Referenced from workflow-state-machine.yaml via $ref in each transition's requestBody.
+# Uses $defs to match the JSON Schema pattern used by other schema files in this directory.
+
+$defs:
+  ApproveTaskRequest:
+    type: object
+    required:
+      - outcome
+    properties:
+      outcome:
+        type: string
+        description: Completion outcome (e.g., approved, denied)
+      notes:
+        type: string
+        description: Optional notes from the supervisor
+
+  AssignTaskRequest:
+    type: object
+    required:
+      - assignedToId
+    properties:
+      assignedToId:
+        type: string
+        format: uuid
+        description: ID of the caseworker to assign the task to
+      queueId:
+        type: string
+        format: uuid
+        description: Optional queue to move the task to
+
+  AwaitClientRequest:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional context about what action is being awaited from the client
+
+  AwaitVerificationRequest:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional context about what external verification is pending
+
+  CancelTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the task is being cancelled
+
+  CompleteTaskRequest:
+    type: object
+    required:
+      - outcome
+    properties:
+      outcome:
+        type: string
+        description: Completion outcome (e.g., approved, denied)
+      notes:
+        type: string
+        description: Optional notes about the completion
+      createFollowUp:
+        type: boolean
+        description: When true, a follow-up task is automatically created
+
+  DeEscalateTaskRequest:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional notes about the de-escalation
+
+  EscalateTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the task is being escalated
+
+  ReleaseTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the task is being released
+
+  ReopenTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the cancelled task is being reopened
+
+  ReturnToWorkerRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the work is being returned for revision
+
+  SetPriorityRequest:
+    type: object
+    required:
+      - priority
+    properties:
+      priority:
+        type: string
+        enum:
+          - expedited
+          - high
+          - normal
+        description: New priority level for the task
+      reason:
+        type: string
+        description: Optional reason for the priority change
+
+  SystemEscalateTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the task is being automatically escalated (deadline_exceeded, sla_deadline_approaching, sla_deadline_exceeded)
+
+  SystemResumeTaskRequest:
+    type: object
+    required:
+      - source
+    properties:
+      source:
+        type: string
+        description: The verification service that returned results (e.g., IEVS, FDSH)
+      result:
+        type: string
+        description: Summary of the verification result

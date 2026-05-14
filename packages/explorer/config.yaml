@@ -187,8 +187,9 @@ events:
 
   # ── Document Management ──────────────────────────────────────────────────────
 
-  # emitted when an applicant or caseworker uploads a document linked to an application
-  - name: document.uploaded
+  # emitted when a DocumentVersion is uploaded; intake subscribes when the document
+  # carries metadata.intake.verificationId to satisfy the linked Verification
+  - name: version.uploaded
     publisher: document_management
     status: planned
     subscribers:
@@ -216,11 +217,6 @@ events:
       - case_management
       - workflow
 
-  - name: application.expedited_flagged
-    publisher: intake
-    status: implemented
-    subscribers:
-      - workflow
 
   # fires automatically when all VerificationItems are resolved —
   # triggers the eligibility rules engine, no caseworker action needed

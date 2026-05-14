@@ -10,11 +10,10 @@ import { executeTransition } from '../state-machine-runner.js';
  * @param {Object} stateMachine - The state machine contract
  * @param {string} trigger - Transition trigger name (e.g., "claim")
  * @param {string} paramName - URL parameter name for the resource ID
- * @param {Array} rules - Array from discoverRules()
  * @param {Array} [slaTypes] - SLA types from discoverSlaTypes()
  * @returns {Function} Express handler
  */
-export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, rules, slaTypes = [], machine = null) {
+export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null) {
   return (req, res) => {
     try {
       const resourceId = req.params[paramName];
@@ -43,7 +42,6 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
         now,
         stateMachine,
         machine,
-        rules,
         slaTypes,
         requestBody: req.body || {},
         traceparent

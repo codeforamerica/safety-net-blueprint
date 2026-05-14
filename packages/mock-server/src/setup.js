@@ -8,18 +8,11 @@ import { seedAllDatabases } from './seeder.js';
 import { validateSeedData } from './seed-validator.js';
 import { validateAll, getValidationStatus } from '@codeforamerica/safety-net-blueprint-contracts/validation';
 import { discoverStateMachines } from './state-machine-loader.js';
-import { discoverRules } from './rules-loader.js';
 import { discoverSlaTypes } from './sla-loader.js';
 import { discoverMetrics } from './metrics-loader.js';
 import { discoverConfigs } from './config-loader.js';
 import { insertResource } from './database-manager.js';
 import { registerConfigManaged } from './config-registry.js';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -90,16 +83,6 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     stateMachines.forEach(sm => console.log(`  - ${sm.domain}/${sm.object}`));
   }
 
-  // Discover rule contracts (production) and mock simulation rules (development-only)
-  const productionRules = discoverRules(specsDir);
-  const mockRulesDir = join(__dirname, '..', 'mock-rules');
-  const mockRules = discoverRules(mockRulesDir);
-  const rules = [...productionRules, ...mockRules];
-  if (verbose && rules.length > 0) {
-    console.log(`\n✓ Discovered ${productionRules.length} production rule file(s) + ${mockRules.length} mock simulation rule file(s):`);
-    rules.forEach(r => console.log(`  - ${r.domain} (${r.ruleSets.length} ruleSet(s))`));
-  }
-
   // Discover SLA type contracts
   const slaTypes = discoverSlaTypes(specsDir);
   if (verbose && slaTypes.length > 0) {
@@ -160,7 +143,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, rules, slaTypes, metrics, configs, summary };
+  return { apiSpecs, stateMachines, slaTypes, metrics, configs, summary };
 }
 
 /**

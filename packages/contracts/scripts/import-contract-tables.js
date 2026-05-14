@@ -297,9 +297,9 @@ function importTransitions(csvData, existingDoc) {
     if (to) transition.to = to;
 
     // Preserve timer fields from CSV (new format) or existing YAML (legacy format)
-    const timerOn = on || existingTransition?.on;
+    const timerOn = on || existingTransition?.trigger;
     if (timerOn) {
-      transition.on = timerOn;
+      transition.trigger = timerOn;
       transition.after = after || existingTransition?.after;
       transition.relativeTo = relativeTo || existingTransition?.relativeTo;
       if (calendarType || existingTransition?.calendarType) {
@@ -329,13 +329,25 @@ function importTransitions(csvData, existingDoc) {
 function importGuards(csvData, existingDoc) {
   const doc = { ...existingDoc };
   const guards = [];
+
+  // Detect format from headers
+  const isNewFormat = csvData.headers.length === 2 && csvData.headers[1] === 'Condition';
+
   for (const row of csvData.data) {
-    const [name, field, operator, value] = row;
-    const guard = { id: name, field };
-    if (operator) guard.operator = operator;
-    const parsed = parseJsonField(value);
-    if (parsed !== undefined && parsed !== '') guard.value = parsed;
-    guards.push(guard);
+    if (isNewFormat) {
+      // New format: Guard Name | Condition
+      const [name, condition] = row;
+      const guard = { id: name, condition: condition || '' };
+      guards.push(guard);
+    } else {
+      // Legacy format: Guard Name | Field | Operator | Value
+      const [name, field, operator, value] = row;
+      const guard = { id: name, field };
+      if (operator) guard.operator = operator;
+      const parsed = parseJsonField(value);
+      if (parsed !== undefined && parsed !== '') guard.value = parsed;
+      guards.push(guard);
+    }
   }
   doc.guards = guards;
   return doc;
@@ -603,10 +615,11 @@ function importTriggers(csvData, existingDoc) {
       if (actors !== null) triggers.onCreate = { ...triggers.onCreate, actors };
     }
 
-    // onEvent — match by event name, update transition and guards.conditions
+    // events — match by event name, update transition and guards.conditions
     const onEventRows = rows.filter(r => r[I.type] === 'onEvent');
-    if (triggers.onEvent && onEventRows.length > 0) {
-      triggers.onEvent = triggers.onEvent.map(evt => {
+    const machineEvents = machine.events || [];
+    if (machineEvents.length > 0 && onEventRows.length > 0) {
+      const updatedEvents = machineEvents.map(evt => {
         const row = onEventRows.find(r => r[I.nameEvent] === evt.name);
         if (!row) return evt;
 
@@ -622,6 +635,7 @@ function importTriggers(csvData, existingDoc) {
         }
         return updated;
       });
+      return { ...machine, triggers, events: updatedEvents };
     }
 
     // onTimer — match by after + relativeTo, update transition and calendarType
@@ -676,8 +690,8 @@ function importOperations(csvData, existingDoc) {
         ? op.transition.from.join(' | ')
         : (op.transition?.from || '');
       const row = rows.find(r =>
-        r[I.name] === op.name && (r[I.from] || '') === existingFrom
-      ) || rows.find(r => r[I.name] === op.name);
+        r[I.name] === op.id && (r[I.from] || '') === existingFrom
+      ) || rows.find(r => r[I.name] === op.id);
       if (!row) return op;
 
       const updated = { ...op };
@@ -725,6 +739,59 @@ function importSmRules(csvData, existingDoc) {
       updated.evaluation = evaluation;
     }
     return updated;
+  });
+
+  return doc;
+}
+
+/**
+ * Merge transition guard metadata from transitions.csv into machines[].transitions.
+ * Columns: Machine | ID | From | To | Actors | Conditions | Steps
+ * Steps are preserved from the existing YAML — the CSV captures only a summary.
+ */
+function importSmTransitions(csvData, existingDoc) {
+  if (!isMachinesFormat(existingDoc)) {
+    console.warn('  transitions.csv found but YAML is not in machines format — skipping');
+    return existingDoc;
+  }
+  const doc = { ...existingDoc };
+  const I = { machine: 0, id: 1, from: 2, to: 3, actors: 4, conditions: 5 };
+
+  const parseActors = val => val ? val.split('; ').map(a => a.trim()).filter(Boolean) : null;
+  const parseConditions = val => val ? val.split('; ').map(parseGuardItem).filter(Boolean) : null;
+
+  doc.machines = (doc.machines || []).map(machine => {
+    const rows = csvData.data.filter(r => r[I.machine] === machine.object);
+    if (rows.length === 0) return machine;
+
+    const transitions = (machine.transitions || []).map(t => {
+      const existingFrom = Array.isArray(t.transition?.from)
+        ? t.transition.from.join(' | ')
+        : (t.transition?.from || '');
+      const row = rows.find(r => r[I.id] === t.id && (r[I.from] || '') === existingFrom)
+        || rows.find(r => r[I.id] === t.id);
+      if (!row) return t;
+
+      const updated = { ...t };
+      const actors = parseActors(row[I.actors]);
+      const conditions = parseConditions(row[I.conditions]);
+      if (actors !== null || conditions !== null) {
+        // Guards is an array of guard sets — update the first set, or create one
+        const existingGuards = t.guards || [];
+        const firstGuard = { ...(existingGuards[0] || {}) };
+        if (actors !== null) firstGuard.actors = actors;
+        if (conditions !== null) firstGuard.conditions = conditions;
+        updated.guards = [firstGuard, ...existingGuards.slice(1)];
+      }
+      if (row[I.from] || row[I.to]) {
+        updated.transition = { ...(t.transition || {}) };
+        if (row[I.from]) updated.transition.from = parseFrom(row[I.from]);
+        if (row[I.to]) updated.transition.to = row[I.to];
+      }
+      return updated;
+    });
+
+    return { ...machine, transitions };
   });
 
   return doc;
@@ -822,11 +889,16 @@ function importActions(csvData, existingDoc) {
 // ---------------------------------------------------------------------------
 
 function classifyCsvFile(csvFilename) {
-  if (csvFilename === 'transitions.csv') return { schemaKey: 'state-machine-schema', section: 'transitions' };
+  // New-format CSVs (machines/transitions/events/procedures)
+  if (csvFilename === 'transitions.csv') return { schemaKey: 'state-machine-schema', section: 'sm-transitions' };
+  if (csvFilename === 'events.csv') return { schemaKey: 'state-machine-schema', section: 'sm-events' };
+  if (csvFilename === 'procedures.csv') return { schemaKey: 'state-machine-schema', section: 'sm-procedures' };
+  if (csvFilename === 'guards.csv') return { schemaKey: 'state-machine-schema', section: 'guards' };
+  if (csvFilename === 'slas.csv') return { schemaKey: 'state-machine-schema', section: 'sla' };
+  // Old-format CSVs — kept for backward compatibility
   if (csvFilename === 'triggers.csv') return { schemaKey: 'state-machine-schema', section: 'triggers' };
   if (csvFilename === 'operations.csv') return { schemaKey: 'state-machine-schema', section: 'operations' };
   if (csvFilename === 'handlers.csv') return { schemaKey: 'state-machine-schema', section: 'handlers' };
-  if (csvFilename === 'guards.csv') return { schemaKey: 'state-machine-schema', section: 'guards' };
   if (csvFilename === 'sla.csv') return { schemaKey: 'state-machine-schema', section: 'sla' };
   if (csvFilename === 'rules.csv') return { schemaKey: 'state-machine-schema', section: 'sm-rules' };
   if (csvFilename === 'actions.csv') return { schemaKey: 'state-machine-schema', section: 'actions' };
@@ -1036,6 +1108,19 @@ function main() {
       const parsed = parseCsv(content);
 
       switch (csv.section) {
+        // New-format sections
+        case 'sm-transitions':
+          doc = importSmTransitions(parsed, doc);
+          break;
+        case 'sm-events':
+          // Events are subscriptions with complex step bodies — no structural metadata to merge
+          console.log(`  ${csv.csvFile}: event steps are preserved from YAML; skipping merge`);
+          break;
+        case 'sm-procedures':
+          // Procedures have complex step bodies — no structural metadata to merge
+          console.log(`  ${csv.csvFile}: procedure steps are preserved from YAML; skipping merge`);
+          break;
+        // Old-format sections (backward compatibility)
         case 'transitions':
           doc = importTransitions(parsed, doc);
           break;

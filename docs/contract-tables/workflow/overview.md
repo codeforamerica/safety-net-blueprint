@@ -7,10 +7,10 @@ This document describes the complete behavioral contract for the **Task** resour
 ## How to read this document
 
 - **States** — the lifecycle stages each resource can be in, and how each affects SLA tracking.
-- **Triggers** — automatic reactions to lifecycle events: object creation, field changes, external events, and timers (onCreate, onUpdate, onEvent, onTimer).
-- **Operations** — actor- or system-triggered actions that can move a resource to a new state or update it in place.
-- **Guards** — named conditions that control who can trigger an operation. If a guard fails, the request is rejected.
-- **Rules** — named procedures that handle logic spanning multiple resources or that apply in several places.
+- **Transitions** — actor- or system-triggered actions that can move a resource to a new state or update it in place.
+- **Events** — automatic reactions to named domain events, including object creation, field changes, and timer callbacks.
+- **Guards** — named conditions that control who can trigger a transition. If a guard fails, the request is rejected.
+- **Procedures** — named step sequences called from transitions and events to encapsulate reusable logic.
 
 To propose a change, there are two paths:
 - **Non-technical:** Edit the CSV files in this folder and ask a developer to run `npm run contract-tables:import` to apply your changes to the source YAML.
@@ -40,65 +40,52 @@ The **SLA clock** tracks time toward resolution:
 
 ---
 
-## Triggers
+## Transitions
 
-Triggers are automatic reactions to lifecycle events. Each lists what fires it and what steps run.
+Transitions are actor- or system-triggered actions. Each lists who can trigger it, what state change it causes, and what steps run.
 
 ### Task
 
-**On create** — runs when a new record is created:
-
-- Route task to a queue based on subject and program
-- Set task priority on creation
-
-**On update** — runs when any of the following fields change: `isExpedited`, `programType`, `queueId`:
-
-- Re-evaluate priority when expedited status or program type changes
-- Re-evaluate assignment when queue or program type changes
-
-**Events** — triggered when an external domain event arrives:
-
-| Event | From | To | Conditions | Steps |
-|-------|------|----|------------|-------|
-| `intake.application.submitted` | — | — | — | Create an intake review task when an application is submitted |
-
-**Timers** — fire automatically after a duration elapses:
-
-| From | To | After | Relative To | Calendar | Steps |
-|------|----|-------|-------------|----------|-------|
-| pending | escalated | 72h | createdAt | business | Re-evaluate priority on auto-escalation<br>Emit a domain event recording the automatic escalation |
-| in_progress | escalated | -48h | slaDeadline | calendar | Re-evaluate priority on SLA warning escalation<br>Emit a domain event recording the SLA-triggered escalation |
-| pending \| in_progress \| escalated | escalated | 0h | slaDeadline | calendar | Re-evaluate priority on SLA breach<br>Emit a domain event recording the SLA deadline breach for federal compliance reporting |
-| awaiting_client | cancelled | 30d | blockedAt | calendar | Record when the task was automatically cancelled<br>Emit a domain event recording the automatic cancellation |
-| awaiting_verification | in_progress | 7d | blockedAt | calendar | Clear the block timestamp on auto-resume<br>Emit a domain event recording the automatic resumption |
+| ID | From | To | Actors | Conditions | Steps |
+|----|------|----|--------|------------|-------|
+| `claim` | pending | in_progress | caseworker; supervisor | taskIsUnassigned | Set `assignedToId` → caller's ID<br>Emit `claimed` event |
+| `complete` | in_progress | completed | caseworker; supervisor | callerIsAssignedWorker | Set `completedAt` → current time<br>Set `outcome` → `$request.outcome`<br>Set `completionNotes` → `$request.notes`<br>Emit `completed` event<br>If ($request.createFollowUp == true): POST `workflow/tasks` |
+| `release` | in_progress | pending | caseworker; supervisor | callerIsAssignedWorker | Set `assignedToId` → nothing *(clears field)*<br>Emit `released` event<br>Call `assignToQueue`<br>Call `setPriority` |
+| `escalate` | in_progress | escalated | caseworker; supervisor | any: callerIsAssignedWorker, callerIsSupervisor | Set `escalatedAt` → current time<br>Call `setPriority`<br>Emit `escalated` event |
+| `escalate` | pending | escalated | supervisor | callerIsSupervisor | Set `escalatedAt` → current time<br>Call `setPriority`<br>Emit `escalated` event |
+| `de-escalate` | escalated | pending | supervisor | callerIsSupervisor | Call `assignToQueue`<br>Call `setPriority`<br>Emit `de-escalated` event |
+| `cancel` | pending \| in_progress \| escalated | cancelled | supervisor | callerIsSupervisor | Set `cancelledAt` → current time<br>Emit `cancelled` event |
+| `reopen` | cancelled | pending | supervisor | callerIsSupervisor | Set `cancelledAt` → nothing *(clears field)*<br>Call `assignToQueue`<br>Call `setPriority`<br>Emit `reopened` event |
+| `await-client` | in_progress | awaiting_client | caseworker; supervisor | callerIsAssignedWorker | Set `blockedAt` → current time<br>Call `scheduleClientTimeout`<br>Emit `awaiting_client` event |
+| `await-verification` | in_progress | awaiting_verification | caseworker; supervisor | callerIsAssignedWorker | Set `blockedAt` → current time<br>Call `scheduleVerificationTimeout`<br>Emit `awaiting_verification` event |
+| `resume` | awaiting_client \| awaiting_verification | in_progress | caseworker; supervisor | any: callerIsAssignedWorker, callerIsSupervisor | Set `blockedAt` → nothing *(clears field)*<br>Call `cancelClientTimeout`<br>Call `cancelVerificationTimeout`<br>Emit `resumed` event |
+| `system-resume` | awaiting_verification | in_progress | system | callerIsSystem | Set `blockedAt` → nothing *(clears field)*<br>Call `cancelVerificationTimeout`<br>Emit `system_resumed` event |
+| `system-escalate` | pending \| in_progress \| escalated | escalated | system | callerIsSystem | If ($object.escalatedAt == null): Set `escalatedAt` → current time<br>Call `setPriority`<br>If ($request.reason == "sla_deadline_exceeded"): Emit `sla_breached` event; else: Emit `auto_escalated` event |
+| `system-auto-cancel` | awaiting_client | cancelled | system | callerIsSystem | Set `cancelledAt` → current time<br>Emit `auto_cancelled` event |
+| `submit-for-review` | in_progress \| escalated | pending_review | caseworker; supervisor | callerIsAssignedWorker | Emit `submitted_for_review` event |
+| `approve` | pending_review | completed | supervisor | callerIsSupervisor | Set `completedAt` → current time<br>Set `outcome` → `$request.outcome`<br>Set `completionNotes` → `$request.notes`<br>Emit `approved` event |
+| `return-to-worker` | pending_review | in_progress | supervisor | callerIsSupervisor | Emit `returned_to_worker` event |
+| `assign` | pending \| in_progress \| escalated \| awaiting_client \| awaiting_verification \| pending_review | — | supervisor | callerIsSupervisor | Set `assignedToId` → `$request.assignedToId`<br>Set `queueId` → `$request.queueId`<br>Emit `assigned` event |
+| `set-priority` | pending \| in_progress \| escalated \| awaiting_client \| awaiting_verification \| pending_review | — | supervisor | callerIsSupervisor | Set `priority` → `$request.priority`<br>Emit `priority_changed` event |
 
 ---
 
-## Operations
+## Events
 
-Operations are actor- or system-triggered actions. Each lists who can trigger it, what state change it causes, and what steps run.
+Event subscriptions react to named domain events — including object creation, field changes, and timer callbacks.
 
 ### Task
 
-| Name | From | To | Actors | Conditions | Steps |
-|------|------|----|--------|------------|-------|
-| `claim` | pending | in_progress | caseworker, supervisor | taskIsUnassigned | Assign task to the claiming worker<br>Emit a domain event recording the claim and who claimed the task |
-| `complete` | in_progress | completed | caseworker, supervisor | callerIsAssignedWorker | Record when work finished<br>Store the completion outcome from the request<br>Store optional completion notes from the request<br>Emit a domain event recording the completion and its outcome<br>Create a follow-up task when the caller requests one |
-| `release` | in_progress | pending | caseworker, supervisor | callerIsAssignedWorker | Clear assignment so task returns to queue<br>Emit a domain event recording the release and its reason<br>Re-evaluate assignment rules after release<br>Re-evaluate priority rules after release |
-| `escalate` | in_progress | escalated | caseworker, supervisor | any: callerIsAssignedWorker, callerIsSupervisor | Record when the task was escalated<br>Re-evaluate priority after escalation<br>Emit a domain event recording the escalation |
-| `escalate` | pending | escalated | supervisor | callerIsSupervisor | Record when the task was escalated<br>Re-evaluate priority after escalation<br>Emit a domain event recording the escalation |
-| `de-escalate` | escalated | pending | supervisor | callerIsSupervisor | Re-evaluate assignment rules after de-escalation<br>Re-evaluate priority rules after de-escalation<br>Emit a domain event recording the de-escalation |
-| `cancel` | pending \| in_progress \| escalated | cancelled | supervisor | callerIsSupervisor | Record when the task was cancelled<br>Emit a domain event recording the cancellation |
-| `reopen` | cancelled | pending | supervisor | callerIsSupervisor | Clear the cancellation timestamp on reopen<br>Re-evaluate assignment rules after reopen<br>Re-evaluate priority rules after reopen<br>Emit a domain event recording the reopen |
-| `await-client` | in_progress | awaiting_client | caseworker, supervisor | callerIsAssignedWorker | Record when the task entered a waiting state<br>Emit a domain event recording the block |
-| `await-verification` | in_progress | awaiting_verification | caseworker, supervisor | callerIsAssignedWorker | Record when the task entered a waiting state<br>Emit a domain event recording the block |
-| `resume` | awaiting_client \| awaiting_verification | in_progress | caseworker, supervisor | any: callerIsAssignedWorker, callerIsSupervisor | Clear the block timestamp on resume<br>Emit a domain event recording the resumption |
-| `system-resume` | awaiting_verification | in_progress | system | callerIsSystem | Clear the block timestamp on system resume<br>Emit a domain event recording the automated resumption and its result |
-| `submit-for-review` | in_progress \| escalated | pending_review | caseworker, supervisor | callerIsAssignedWorker | Emit a domain event recording the submission for review |
-| `approve` | pending_review | completed | supervisor | callerIsSupervisor | Record when work was approved and completed<br>Store the outcome from the supervisor's approval<br>Store optional notes from the supervisor<br>Emit a domain event recording the approval |
-| `return-to-worker` | pending_review | in_progress | supervisor | callerIsSupervisor | Emit a domain event recording the return for revision |
-| `assign` | pending \| in_progress \| escalated \| awaiting_client \| awaiting_verification \| pending_review | — | supervisor | callerIsSupervisor | Assign the task to the specified caseworker<br>Optionally move the task to a different queue<br>Emit a domain event recording the assignment |
-| `set-priority` | pending \| in_progress \| escalated \| awaiting_client \| awaiting_verification \| pending_review | — | supervisor | callerIsSupervisor | Override the task priority<br>Emit a domain event recording the priority change |
+| Event | Steps |
+|-------|-------|
+| `workflow.task.created` | Call `assignToQueue`<br>Call `setPriority`<br>Call `scheduleCreationDeadline` |
+| `workflow.task.updated` | If ($this.data.changes.exists(c, c.field == "isExpedited" \|\| c.field == "programType")): Call `setPriority`<br>If ($this.data.changes.exists(c, c.field == "programType" \|\| c.field == "queueId")): Call `assignToQueue`<br>If ($this.data.changes.exists(c, c.field == "slaDeadline") && $object.slaDeadline != null): Call `scheduleSlaWarning`; Call `scheduleSlaBreachTimer` |
+| `workflow.creation_deadline` | POST `workflow/tasks/$this.subject/system-escalate` |
+| `workflow.sla_warning` | POST `workflow/tasks/$this.subject/system-escalate` |
+| `workflow.sla_breach` | POST `workflow/tasks/$this.subject/system-escalate` |
+| `workflow.client_timeout` | POST `workflow/tasks/$this.subject/system-auto-cancel` |
+| `workflow.verification_timeout` | POST `workflow/tasks/$this.subject/system-resume` |
+| `intake.application.submitted` | POST `workflow/tasks` |
 
 ---
 
@@ -108,34 +95,28 @@ Guards are conditions checked before a transition fires. A transition will not e
 
 | Guard | Condition |
 |-------|-----------|
-| `taskIsUnassigned` | `assignedToId` is not set |
-| `callerIsAssignedWorker` | `assignedToId` = `$caller.id` |
-| `callerIsSupervisor` | `$caller.roles` contains any of `supervisor` |
-| `callerIsSystem` | `$caller.roles` contains any of `system` |
+| `taskIsUnassigned` | `object.assignedToId == null` |
+| `callerIsAssignedWorker` | `object.assignedToId == caller.id` |
 
 ---
 
-## Rules
+## Procedures
 
-Rules are named procedures called from trigger and operation steps. They handle logic that spans multiple resources or applies in several places.
+Named step sequences called from transitions and events. They encapsulate reusable logic.
 
-### `assignment-rule`
-
-Evaluation: **first-match-wins**
-
-| # | Condition | Steps |
-|---|-----------|-------|
-| 1 | $application.programs.length = 1 and "snap" in $application.programs and $snapQueue != null | Set `queueId` → `$snapQueue.id` |
-| 2 | always | Set `queueId` → `$generalQueue.id` |
-
-### `priority-rule`
-
-Evaluation: **first-match-wins**
-
-| # | Condition | Steps |
-|---|-----------|-------|
-| 1 | $object.isExpedited = true | Set `priority` → `expedited` |
-| 2 | always | Set `priority` → `normal` |
+| ID | Scope | Description | Parameters |
+|----|-------|-------------|------------|
+| `assignToQueue` | domain | Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field. | — |
+| `setPriority` | domain | Set expedited priority when the task is flagged as expedited; otherwise set normal priority. | — |
+| `scheduleTimer` | domain | Schedule a workflow timer; builds timerId and callback event from timerType and $object.id. | timerType, fireAfter, fireAt, fireOffset, calendarType |
+| `cancelWorkflowTimer` | domain | Cancel a workflow timer by type; idempotent. | timerType |
+| `scheduleCreationDeadline` | domain | Schedule auto-escalation 72 business hours after task creation. | — |
+| `scheduleClientTimeout` | domain | Schedule auto-cancellation after 30 calendar days of client unresponsiveness. | — |
+| `scheduleVerificationTimeout` | domain | Schedule auto-resume after 7 calendar days waiting on verification. | — |
+| `scheduleSlaWarning` | domain | Schedule SLA warning escalation 48 hours before the task SLA deadline. | — |
+| `scheduleSlaBreachTimer` | domain | Schedule SLA breach escalation at the task SLA deadline. | — |
+| `cancelClientTimeout` | domain | Cancel the client unresponsive timer; idempotent. | — |
+| `cancelVerificationTimeout` | domain | Cancel the verification timeout timer; idempotent, safe to call even if already fired. | — |
 
 ---
 
