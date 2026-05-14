@@ -250,14 +250,16 @@ test('state-machine-schema transition types', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('operation with requestBody', () => {
+  await t.test('operation with schema.request', () => {
     const doc = withTransitions([{
       id: 'withdraw',
       transition: { from: 'active', to: 'draft' },
-      requestBody: {
-        type: 'object',
-        required: ['reason'],
-        properties: { reason: { type: 'string' } },
+      schema: {
+        request: {
+          type: 'object',
+          required: ['reason'],
+          properties: { reason: { type: 'string' } },
+        },
       },
       steps: [{ emit: { event: 'withdrawn', data: { reason: '$request.reason' }, description: 'Emit' } }],
     }]);

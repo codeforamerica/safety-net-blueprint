@@ -135,6 +135,32 @@ machines:
                 withdrawnAt: $now
                 reason: $request.reason
               description: Emit application.withdrawn — triggers open task cancellation and withdrawal notice
+      - id: flag-expedited
+        description: POST /applications/{applicationId}/flag-expedited — Caseworker, supervisor, or system flags the application as qualifying for expedited processing
+        guards:
+          - actors:
+              - caseworker
+              - supervisor
+              - system
+            conditions:
+              - any:
+                  - callerIsCaseworker
+                  - callerIsSupervisor
+                  - callerIsSystem
+        transition:
+          from:
+            - submitted
+            - under_review
+        steps:
+          - set:
+              field: isExpedited
+              value: true
+              description: Mark the application as qualifying for expedited processing
+          - emit:
+              event: expedited_flagged
+              data:
+                flaggedAt: $now
+              description: Emit application.expedited_flagged — triggers workflow to escalate to expedited SLA track
     events:
       - name: workflow.task.claimed
         description: Open the application for review and create an interview record when a caseworker claims the intake review task
@@ -321,7 +347,6 @@ machines:
                     program: $this.data.program
                     outcome: $this.data.outcome
                     determinedAt: $this.data.determinedAt
-    triggers: {}
   - object: Verification
     states:
       - id: pending
@@ -510,8 +535,6 @@ machines:
                   intake:
                     verificationId: $object.id
                     applicationId: $object.applicationId
-    triggers: {}
 guards:
   - id: callerIsApplicant
     condition: "\"applicant\" in caller.roles"
-rules: []

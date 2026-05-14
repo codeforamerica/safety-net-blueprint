@@ -111,7 +111,7 @@ export function executeTransition({
   const context = { ...baseContext, entities };
 
   const guardsMap = Object.fromEntries(
-    [...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
+    [...(stateMachine._platformGuards || []), ...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
   );
   const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
   if (!guardResult.pass) {

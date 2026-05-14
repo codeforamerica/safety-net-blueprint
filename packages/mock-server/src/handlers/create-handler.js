@@ -71,8 +71,8 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const object = endpoint.collectionName.replace(/s$/, '');
 
       // Resolve onCreate — new format: machine.triggers.onCreate; old format: stateMachine.onCreate
-      const isNewFormat = machine && machine.triggers;
-      const onCreate = isNewFormat ? machine.triggers?.onCreate : stateMachine?.onCreate;
+      const isNewFormat = Array.isArray(stateMachine?.machines) || machine?.triggers != null;
+      const onCreate = isNewFormat ? machine?.triggers?.onCreate : stateMachine?.onCreate;
 
       // Execute onCreate steps/effects if this resource has a state machine
       if (onCreate) {

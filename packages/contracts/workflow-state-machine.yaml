@@ -30,8 +30,9 @@ machines:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
         transition: {from: in_progress, to: completed}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/CompleteTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/CompleteTaskRequest"
         steps:
           - set: {field: completedAt, value: $now, description: Record when work finished}
           - set: {field: outcome, value: $request.outcome, description: Store the completion outcome from the request}
@@ -44,8 +45,9 @@ machines:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
         transition: {from: in_progress, to: pending}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReleaseTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReleaseTaskRequest"
         steps:
           - set: {field: assignedToId, value: null, description: Clear assignment so task returns to queue}
           - emit: {event: released, data: {reason: $request.reason}, description: Emit a domain event recording the release and its reason}
@@ -56,8 +58,9 @@ machines:
           - actors: [caseworker, supervisor]
             conditions: [{any: [callerIsAssignedWorker, callerIsSupervisor]}]
         transition: {from: in_progress, to: escalated}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
         steps:
           - set: {field: escalatedAt, value: $now, description: Record when the task was escalated}
           - call: setPriority
@@ -67,8 +70,9 @@ machines:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
         transition: {from: pending, to: escalated}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
         steps:
           - set: {field: escalatedAt, value: $now, description: Record when the task was escalated}
           - call: setPriority
@@ -78,8 +82,9 @@ machines:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
         transition: {from: escalated, to: pending}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/DeEscalateTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/DeEscalateTaskRequest"
         steps:
           - call: assignToQueue
           - call: setPriority
@@ -89,8 +94,9 @@ machines:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
         transition: {from: [pending, in_progress, escalated], to: cancelled}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/CancelTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/CancelTaskRequest"
         steps:
           - set: {field: cancelledAt, value: $now, description: Record when the task was cancelled}
           - emit: {event: cancelled, data: {reason: $request.reason}, description: Emit a domain event recording the cancellation}
@@ -99,8 +105,9 @@ machines:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
         transition: {from: cancelled, to: pending}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReopenTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReopenTaskRequest"
         steps:
           - set: {field: cancelledAt, value: null, description: Clear the cancellation timestamp on reopen}
           - call: assignToQueue
@@ -111,8 +118,9 @@ machines:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
         transition: {from: in_progress, to: awaiting_client}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AwaitClientRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AwaitClientRequest"
         steps:
           - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
           - call: scheduleClientTimeout
@@ -122,8 +130,9 @@ machines:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
         transition: {from: in_progress, to: awaiting_verification}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AwaitVerificationRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AwaitVerificationRequest"
         steps:
           - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
           - call: scheduleVerificationTimeout
@@ -144,8 +153,9 @@ machines:
           - actors: [system]
             conditions: [callerIsSystem]
         transition: {from: awaiting_verification, to: in_progress}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SystemResumeTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SystemResumeTaskRequest"
         steps:
           - set: {field: blockedAt, value: null, description: Clear the block timestamp on system resume}
           - call: cancelVerificationTimeout
@@ -155,8 +165,9 @@ machines:
           - actors: [system]
             conditions: [callerIsSystem]
         transition: {from: [pending, in_progress, escalated], to: escalated}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SystemEscalateTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SystemEscalateTaskRequest"
         steps:
           - if: $object.escalatedAt == null
             then: [{set: {field: escalatedAt, value: $now, description: "Record first escalation time; not overwritten on subsequent timer-triggered escalations"}}]
@@ -186,8 +197,9 @@ machines:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
         transition: {from: pending_review, to: completed}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ApproveTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ApproveTaskRequest"
         steps:
           - set: {field: completedAt, value: $now, description: Record when work was approved and completed}
           - set: {field: outcome, value: $request.outcome, description: Store the outcome from the supervisor's approval}
@@ -198,8 +210,9 @@ machines:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
         transition: {from: pending_review, to: in_progress}
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReturnToWorkerRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReturnToWorkerRequest"
         steps:
           - emit: {event: returned_to_worker, data: {reason: $request.reason}, description: Emit a domain event recording the return for revision}
       - id: assign
@@ -208,8 +221,9 @@ machines:
             conditions: [callerIsSupervisor]
         transition:
           from: [pending, in_progress, escalated, awaiting_client, awaiting_verification, pending_review]
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AssignTaskRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AssignTaskRequest"
         steps:
           - set: {field: assignedToId, value: $request.assignedToId, description: Assign the task to the specified caseworker}
           - set: {field: queueId, value: $request.queueId, description: Optionally move the task to a different queue}
@@ -220,8 +234,9 @@ machines:
             conditions: [callerIsSupervisor]
         transition:
           from: [pending, in_progress, escalated, awaiting_client, awaiting_verification, pending_review]
-        requestBody:
-          $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SetPriorityRequest"
+        schema:
+          request:
+            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SetPriorityRequest"
         steps:
           - set: {field: priority, value: $request.priority, description: Override the task priority}
           - emit: {event: priority_changed, data: {priority: $request.priority, reason: $request.reason}, description: Emit a domain event recording the priority change}

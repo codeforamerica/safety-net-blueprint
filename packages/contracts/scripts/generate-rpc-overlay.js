@@ -65,7 +65,10 @@ export function discoverStateMachines(specsDir) {
     try {
       const content = readFileSync(filePath, 'utf8');
       const stateMachine = yaml.load(content);
-      if (!stateMachine || !stateMachine.domain || !stateMachine.object) continue;
+      if (!stateMachine || !stateMachine.domain) continue;
+      // New format: object lives inside machines[]; old format: top-level object
+      const hasMachines = Array.isArray(stateMachine.machines) && stateMachine.machines.length > 0;
+      if (!stateMachine.object && !hasMachines) continue;
       results.push({ filePath, stateMachine });
     } catch {
       continue;
@@ -241,7 +244,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
       {
         target: '$.paths',
         file: stateMachine.apiSpec,
-        description: `Add state machine transition endpoints for ${stateMachine.domain} ${stateMachine.object.toLowerCase()}s`,
+        description: `Add state machine transition endpoints for ${stateMachine.domain}`,
         update: pathsUpdate
       }
     ]
