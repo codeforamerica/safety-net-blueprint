@@ -142,10 +142,15 @@ paths:
       operationId: listQueues
       tags:
         - Queues
+      x-sortable:
+        fields: [name, createdAt, updatedAt]
+        default: name
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: A paginated collection of queues.
@@ -264,10 +269,24 @@ paths:
       operationId: listTasks
       tags:
         - Tasks
+      x-sortable:
+        fields: [createdAt, updatedAt, priority, status, startedAt]
+        # Newest first. We considered defaulting to (status, createdAt) so
+        # open work would surface first, but string-sorting "cancelled"
+        # alphabetically would put closed work first — the opposite of what
+        # operators expect. Callers needing open-tasks-first should filter
+        # with `?q=status:pending,in_progress&sort=createdAt` rather than
+        # rely on a tricky default. A denormalized statusOrdinal field is
+        # the right answer if we want a state-aware default; that's a
+        # separate spec change (Phase 2 spec linter forbids sort on
+        # computed/non-stored fields).
+        default: -createdAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: A paginated collection of tasks.
@@ -389,10 +408,15 @@ paths:
       operationId: listMetrics
       tags:
         - Metrics
+      x-sortable:
+        fields: [name, aggregate, value, computedAt]
+        default: name
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
         - name: groupBy
           in: query
           required: false

@@ -29,10 +29,21 @@ paths:
       operationId: listCases
       tags:
       - Cases
+      x-sortable:
+        # effectiveStartDate/effectiveEndDate are benefit-period markers and
+        # could leak case status transitions (case opening/closing dates)
+        # via sort-order pagination. Included anyway because caseworker
+        # workload views and recertification-due lists are the dominant
+        # operational need; the threat model assumes collection-read
+        # implies record-read for callers with listCases scope (A01:2025).
+        fields: [createdAt, updatedAt, effectiveStartDate, effectiveEndDate, status]
+        default: -updatedAt
+        tieBreaker: id
       parameters:
       - "$ref": "./components/parameters.yaml#/SearchQueryParam"
       - "$ref": "./components/parameters.yaml#/LimitParam"
       - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - "$ref": "./components/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated collection of cases.

@@ -113,7 +113,7 @@ export const SORTABLE_FIELD_REGEX = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0
  * schema property with `x-pii: true`; the validator honors that annotation
  * via findPropertyByPath regardless of name.
  */
-const SENSITIVE_FIELD_NAMES = /^(ssn|socialSecurityNumber|dateOfBirth|dob|birthDate|taxpayerId|taxpayerNumber|ein|riskScore|fraudScore|isFlagged|email|phoneNumber|address|bankAccount|routingNumber|incomeAmount|annualIncome)$/i;
+const SENSITIVE_FIELD_NAMES = /^(ssn|socialSecurityNumber|dateOfBirth|dob|birthDate|taxpayerId|taxpayerNumber|ein|riskScore|fraudScore|isFlagged|email|emailAddress|phoneNumber|phone|address|addressLine1|addressLine2|streetAddress|bankAccount|accountNumber|routingNumber|amount|incomeAmount|annualIncome|wageAmount|idpSubject)$/i;
 
 /**
  * Resolve an internal JSON pointer like "#/components/schemas/Task" against

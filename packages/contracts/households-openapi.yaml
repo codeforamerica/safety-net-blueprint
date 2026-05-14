@@ -29,10 +29,17 @@ paths:
       operationId: listHouseholds
       tags:
       - Households
+      x-sortable:
+        # Address and member identity fields excluded — sort order would
+        # leak addresses and member PII via pagination (A01:2025).
+        fields: [createdAt, updatedAt]
+        default: -updatedAt
+        tieBreaker: id
       parameters:
       - "$ref": "./components/parameters.yaml#/SearchQueryParam"
       - "$ref": "./components/parameters.yaml#/LimitParam"
       - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - "$ref": "./components/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated collection of households.

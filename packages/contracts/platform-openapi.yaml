@@ -46,8 +46,16 @@ paths:
       operationId: listEvents
       tags:
         - Events
+      x-sortable:
+        # Matches the documented "ascending time order" default in the
+        # operation description above — required for cursor-based polling.
+        # Clients can override (e.g., sort=-time for newest-first dashboards).
+        fields: [time, type, source]
+        default: time
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
         - name: type
           in: query
           description: >

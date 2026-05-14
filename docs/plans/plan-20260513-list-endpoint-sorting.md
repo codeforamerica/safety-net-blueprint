@@ -124,14 +124,14 @@ Tasks in this phase can be parallelized cautiously — the integration test auth
 
 Apply `x-sortable` to every existing list endpoint that should support sorting. Each commit migrates one or two domains so the change set is reviewable.
 
-- [ ] Write an integration test asserting that every list endpoint either declares `x-sortable` or returns a documented 400 on `?sort=` — i.e., no endpoint silently ignores the parameter (this catches regressions during migration and afterwards)
-- [ ] Add `x-sortable` to `workflow-openapi.yaml` list endpoints (tasks, queues, metrics) with `tieBreaker: id` (default) and sensible per-endpoint defaults
-- [ ] Add `x-sortable` to `intake-openapi.yaml` list endpoints (applications, members, documents)
-- [ ] Add `x-sortable` to `data-exchange-openapi.yaml` (services, service-calls)
-- [ ] Add `x-sortable` to `persons-openapi.yaml`, `households-openapi.yaml`, `incomes-openapi.yaml`, `case-management-openapi.yaml`, `scheduling-openapi.yaml`, `users-openapi.yaml`, `document-management-openapi.yaml`, `platform-openapi.yaml`
-- [ ] As part of each domain migration, audit which fields are safe to declare in `x-sortable.fields` — exclude any field whose sort order would leak information (e.g., SSN, dateOfBirth, internal risk scores, sensitive flags). Sort order is an oracle (A01:2025)
-- [ ] Regenerate contract tables (`npm run contract-tables:export`) and design reference (`npm run design:reference`); commit the updated artifacts so the CI freshness checks pass
-- [ ] Run `npm run preflight` and address any spec lint failures the new validator surfaces
+- [x] Write an integration test asserting that every list endpoint either declares `x-sortable` or returns a documented 400 on `?sort=` — i.e., no endpoint silently ignores the parameter (this catches regressions during migration and afterwards) *(landed as `all-list-endpoints-have-x-sortable.test.js` — a meta-test over the loaded specs, not a server-driven integration test, since list endpoints don't go through `validateSpec` and the inspection is purely declarative)*
+- [x] Add `x-sortable` to `workflow-openapi.yaml` list endpoints (tasks, queues, metrics) with `tieBreaker: id` (default) and sensible per-endpoint defaults
+- [x] Add `x-sortable` to `intake-openapi.yaml` list endpoints (applications, members, documents)
+- [x] Add `x-sortable` to `data-exchange-openapi.yaml` (services, service-calls)
+- [x] Add `x-sortable` to `persons-openapi.yaml`, `households-openapi.yaml`, `incomes-openapi.yaml`, `case-management-openapi.yaml`, `scheduling-openapi.yaml`, `users-openapi.yaml`, `document-management-openapi.yaml`, `platform-openapi.yaml`
+- [x] As part of each domain migration, audit which fields are safe to declare in `x-sortable.fields` — exclude any field whose sort order would leak information (e.g., SSN, dateOfBirth, internal risk scores, sensitive flags). Sort order is an oracle (A01:2025)
+- [x] Regenerate contract tables (`npm run contract-tables:export`) and design reference (`npm run design:reference`); commit the updated artifacts so the CI freshness checks pass *(contract tables regenerated; only preexisting `intake/rules.csv` drift updated — no new tables triggered by sortable migrations. `design:reference` script reference is stale at the npm-script level — the source file was moved to the explorer package in an earlier merge — preexisting issue out of scope for #288)*
+- [x] Run `npm run preflight` and address any spec lint failures the new validator surfaces *(no new lint failures from sortable migrations; preflight unit/integration failures are SQLite binding mismatches that predate Phase 5)*
 
 These domain-by-domain tasks are mechanical and can be done in parallel by multiple authors if needed.
 

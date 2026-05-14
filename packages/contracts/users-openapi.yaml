@@ -52,10 +52,18 @@ paths:
         Requires `users:read` permission.
       operationId: listUsers
       tags: [Users]
+      x-sortable:
+        # email omitted intentionally — sort order leaks email-domain
+        # groupings even without projection (A01:2025). idpSubject likewise
+        # leaks IdP-side identifier patterns.
+        fields: [createdAt, updatedAt, status]
+        default: -updatedAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: Paginated list of users.
