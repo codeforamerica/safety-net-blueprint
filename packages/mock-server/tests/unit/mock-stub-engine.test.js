@@ -69,11 +69,17 @@ test('registerStub — throws when on is missing', () => {
   );
 });
 
-test('registerStub — throws when respond.type is missing', () => {
+test('registerStub — throws when respond is present but missing type', () => {
   assert.throws(
     () => registerStub({ on: 'data_exchange.service_call.created', respond: {} }),
     /respond/
   );
+});
+
+test('registerStub — allows stub without respond (timer stub format)', () => {
+  const stub = registerStub({ on: 'scheduling.timer.requested' });
+  assert.ok(stub.id);
+  assert.strictEqual(stub.respond, undefined);
 });
 
 // =============================================================================

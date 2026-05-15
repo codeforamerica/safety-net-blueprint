@@ -127,7 +127,7 @@ async function testStubCrud() {
   // 422 on missing required fields
   const badRes = await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'data_exchange.service_call.created' }  // missing respond
+    body: {}  // missing on
   });
   assert(badRes.status === 422, `invalid stub → expected 422, got ${badRes.status}`);
   console.log('  ✓ POST /mock/stubs/events returns 422 for invalid stub');
@@ -162,7 +162,7 @@ async function testStubConsumedOnEvent() {
   const before = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(before.total === 1, 'stub should be registered');
 
-  // Inject the trigger event — mock rules fire applyStub synchronously
+  // Inject the trigger event — stub engine fires the response synchronously
   const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-001');
   assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
 
@@ -205,21 +205,77 @@ async function testStubFifo() {
 }
 
 // =============================================================================
-// Fallback fires when no stub registered
+// No stub — event fires without error, nothing consumed
 // =============================================================================
 
-async function testFallbackNoStub() {
-  console.log('\n--- Fallback when no stub registered ---');
+async function testNoStubNoError() {
+  console.log('\n--- No stub registered ---');
   await clearStubs();
 
-  // No stub registered — mock rules should fire fallback (conclusive result)
+  // No stub registered — event fires cleanly, service call stays pending
   const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'save' }, 'sc-003');
   assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
 
-  // Stub count should still be 0 (no stub to consume or add)
+  // Stub count should still be 0
   const stubs = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(stubs.total === 0, 'stub count should remain 0');
-  console.log('  ✓ Fallback fires when no stub registered (no error thrown)');
+  console.log('  ✓ Event fires without error when no stub registered');
+}
+
+// =============================================================================
+// Timer stub — scheduling.timer.requested fires callback event
+// =============================================================================
+
+async function testTimerStub() {
+  console.log('\n--- Timer stub ---');
+  await clearStubs();
+
+  // Register a timer stub — no respond needed, callback comes from the event
+  const postRes = await fetch(`${BASE_URL}/mock/stubs/events`, {
+    method: 'POST',
+    body: {
+      on: 'scheduling.timer.requested',
+      match: { 'data.callback.event': 'workflow.creation_deadline' }
+    }
+  });
+  assert(postRes.status === 201, `POST timer stub → expected 201, got ${postRes.status}`);
+
+  const stub = await postRes.json();
+  assert(stub.id, 'stub should have an id');
+  assert(stub.respond === undefined, 'timer stub should have no respond field');
+
+  // Inject a scheduling.timer.requested event with callback data
+  const subjectId = 'task-timer-test-1';
+  const injectRes = await injectEvent(
+    'scheduling.timer.requested',
+    {
+      timerId: `workflow.creation_deadline.${subjectId}`,
+      callback: {
+        event: 'workflow.creation_deadline',
+        data: {}
+      }
+    },
+    subjectId
+  );
+  assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
+
+  // Stub should be consumed
+  const after = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
+  assert(after.total === 0, 'timer stub should be consumed after trigger event fires');
+  console.log('  ✓ Timer stub consumed when scheduling.timer.requested fires');
+
+  // The callback event (workflow.creation_deadline) should have been emitted
+  const eventsRes = await fetch(`${BASE_URL}/platform/events`);
+  const events = await eventsRes.json();
+  const callbackEvent = events.items?.find(e =>
+    e.type?.includes('workflow.creation_deadline') && e.subject === subjectId
+  );
+  assert(callbackEvent, 'workflow.creation_deadline callback event should have been emitted');
+  assert.strictEqual(callbackEvent.data?.timerId, `workflow.creation_deadline.${subjectId}`);
+  assert.strictEqual(callbackEvent.source, '/scheduler');
+  console.log('  ✓ Timer callback event (workflow.creation_deadline) emitted with timerId');
+
+  await clearStubs();
 }
 
 // =============================================================================
@@ -258,64 +314,15 @@ async function testMatchFilter() {
 // =============================================================================
 // Test runner
 // =============================================================================
-// HTTP stubs — CRUD and listing
-// =============================================================================
-
-async function testHttpStubCrud() {
-  console.log('\n--- HTTP stub CRUD ---');
-  await clearStubs();
-
-  // POST — register an HTTP stub
-  const postRes = await fetch(`${BASE_URL}/mock/stubs`, {
-    method: 'POST',
-    body: {
-      type: 'http',
-      match: { method: 'POST', url: '/evaluate/expedited-screening' },
-      response: { body: { expedited: true } }
-    }
-  });
-  assert(postRes.status === 201, `POST /mock/stubs (http) → expected 201, got ${postRes.status}`);
-  const stub = await postRes.json();
-  assert(stub.id, 'HTTP stub should have an id');
-  assert(stub.id.startsWith('http.'), `expected http. prefix, got: ${stub.id}`);
-  assert(stub.type === 'http', `expected type: http, got: ${stub.type}`);
-  console.log('  ✓ POST /mock/stubs registers HTTP stub with http. prefixed ID');
-
-  // GET — HTTP stub appears in listing
-  const getRes = await fetch(`${BASE_URL}/mock/stubs`);
-  const list = await getRes.json();
-  assert(list.total === 1, `expected 1 stub, got ${list.total}`);
-  assert(list.items[0].type === 'http', 'listed stub should have type: http');
-  console.log('  ✓ GET /mock/stubs includes HTTP stub');
-
-  // DELETE/:id — remove HTTP stub by ID
-  const delRes = await fetch(`${BASE_URL}/mock/stubs/${stub.id}`, { method: 'DELETE' });
-  assert(delRes.status === 204, `DELETE /mock/stubs/:id → expected 204, got ${delRes.status}`);
-  const afterDel = await (await fetch(`${BASE_URL}/mock/stubs`)).json();
-  assert(afterDel.total === 0, 'stub should be removed');
-  console.log('  ✓ DELETE /mock/stubs/:id removes HTTP stub');
-
-  // 422 — missing match.url
-  const badRes = await fetch(`${BASE_URL}/mock/stubs`, {
-    method: 'POST',
-    body: { type: 'http', match: { method: 'POST' } }
-  });
-  assert(badRes.status === 422, `expected 422 for missing match.url, got ${badRes.status}`);
-  console.log('  ✓ POST /mock/stubs returns 422 when match.url is missing');
-
-  // DELETE all — clears HTTP stubs
-  await fetch(`${BASE_URL}/mock/stubs`, { method: 'POST', body: { type: 'http', match: { url: '/evaluate/determination' } } });
-  await fetch(`${BASE_URL}/mock/stubs`, { method: 'DELETE' });
-  const afterClear = await (await fetch(`${BASE_URL}/mock/stubs`)).json();
-  assert(afterClear.total === 0, 'all stubs should be cleared');
-  console.log('  ✓ DELETE /mock/stubs clears HTTP stubs');
-}
-
-// =============================================================================
 
 function assert(condition, message) {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
 }
+assert.strictEqual = (actual, expected, message) => {
+  if (actual !== expected) {
+    throw new Error(`Assertion failed: ${message || `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`}`);
+  }
+};
 
 async function run() {
   console.log('\n' + '='.repeat(70));
@@ -334,9 +341,9 @@ async function run() {
     testStubCrud,
     testStubConsumedOnEvent,
     testStubFifo,
-    testFallbackNoStub,
+    testNoStubNoError,
     testMatchFilter,
-    testHttpStubCrud,
+    testTimerStub
   ];
 
   let passed = 0;

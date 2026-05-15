@@ -12,8 +12,10 @@ import {
   findTransition,
   applySetEffect,
   applyCreateEffect,
-  applyEffects
+  applyEffects,
+  applySteps
 } from '../../src/state-machine-engine.js';
+import { insertResource, clearAll } from '../../src/database-manager.js';
 
 // =============================================================================
 // resolveValue
@@ -83,6 +85,100 @@ test('resolveValue — $object.missing returns null', () => {
 
 test('resolveValue — $object.field with no context.object returns null', () => {
   assert.strictEqual(resolveValue('$object.id', {}), null);
+});
+
+// =============================================================================
+// evaluateGuard — condition format (CEL)
+// These match the real guard conditions in workflow-state-machine.yaml and intake-state-machine.yaml
+// =============================================================================
+
+test('evaluateGuard — condition: object.assignedToId == null passes when null', () => {
+  const guard = { id: 'taskIsUnassigned', condition: 'object.assignedToId == null' };
+  const result = evaluateGuard(guard, { assignedToId: null }, { caller: {} });
+  assert.strictEqual(result.pass, true);
+  assert.strictEqual(result.reason, null);
+});
+
+test('evaluateGuard — condition: object.assignedToId == null fails when set', () => {
+  const guard = { id: 'taskIsUnassigned', condition: 'object.assignedToId == null' };
+  const result = evaluateGuard(guard, { assignedToId: 'worker-1' }, { caller: {} });
+  assert.strictEqual(result.pass, false);
+  assert.ok(result.reason.includes('taskIsUnassigned'));
+});
+
+test('evaluateGuard — condition: object.assignedToId == caller.id passes when equal', () => {
+  const guard = { id: 'callerIsAssignedWorker', condition: 'object.assignedToId == caller.id' };
+  const result = evaluateGuard(guard, { assignedToId: 'worker-1' }, { caller: { id: 'worker-1' } });
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuard — condition: object.assignedToId == caller.id fails when different', () => {
+  const guard = { id: 'callerIsAssignedWorker', condition: 'object.assignedToId == caller.id' };
+  const result = evaluateGuard(guard, { assignedToId: 'worker-1' }, { caller: { id: 'worker-2' } });
+  assert.strictEqual(result.pass, false);
+  assert.ok(result.reason.includes('callerIsAssignedWorker'));
+});
+
+test('evaluateGuard — condition: "applicant" in caller.roles passes when role present', () => {
+  const guard = { id: 'callerIsApplicant', condition: '"applicant" in caller.roles' };
+  const result = evaluateGuard(guard, {}, { caller: { roles: ['applicant'] } });
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuard — condition: "applicant" in caller.roles fails when role absent', () => {
+  const guard = { id: 'callerIsApplicant', condition: '"applicant" in caller.roles' };
+  const result = evaluateGuard(guard, {}, { caller: { roles: ['caseworker'] } });
+  assert.strictEqual(result.pass, false);
+});
+
+// =============================================================================
+// evaluateGuards — with CEL condition guard map
+// =============================================================================
+
+test('evaluateGuards — CEL condition guard passes', () => {
+  const guardsMap = {
+    taskIsUnassigned: { id: 'taskIsUnassigned', condition: 'object.assignedToId == null' }
+  };
+  const result = evaluateGuards(['taskIsUnassigned'], guardsMap, { assignedToId: null }, { caller: {} });
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuards — CEL condition guard fails', () => {
+  const guardsMap = {
+    taskIsUnassigned: { id: 'taskIsUnassigned', condition: 'object.assignedToId == null' }
+  };
+  const result = evaluateGuards(['taskIsUnassigned'], guardsMap, { assignedToId: 'worker-1' }, { caller: {} });
+  assert.strictEqual(result.pass, false);
+  assert.strictEqual(result.failedGuard, 'taskIsUnassigned');
+});
+
+test('evaluateGuards — multiple CEL guards all pass', () => {
+  const guardsMap = {
+    isUnassigned: { id: 'isUnassigned', condition: 'object.assignedToId == null' },
+    callerIsWorker: { id: 'callerIsWorker', condition: '"caseworker" in caller.roles' }
+  };
+  const result = evaluateGuards(
+    ['isUnassigned', 'callerIsWorker'],
+    guardsMap,
+    { assignedToId: null },
+    { caller: { roles: ['caseworker'] } }
+  );
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuards — stops at first failing CEL guard', () => {
+  const guardsMap = {
+    isUnassigned: { id: 'isUnassigned', condition: 'object.assignedToId == null' },
+    callerIsWorker: { id: 'callerIsWorker', condition: '"caseworker" in caller.roles' }
+  };
+  const result = evaluateGuards(
+    ['isUnassigned', 'callerIsWorker'],
+    guardsMap,
+    { assignedToId: 'worker-1' },
+    { caller: { roles: ['caseworker'] } }
+  );
+  assert.strictEqual(result.pass, false);
+  assert.strictEqual(result.failedGuard, 'isUnassigned');
 });
 
 // =============================================================================
@@ -504,49 +600,484 @@ test('applyEffects — handles null effects gracefully', () => {
 
 test('applyEffects — handles empty effects array', () => {
   const resource = { status: 'pending' };
-  const { pendingCreates, pendingRuleEvaluations } = applyEffects([], resource, {});
+  const { pendingCreates, pendingProcedures } = applyEffects([], resource, {});
   assert.strictEqual(resource.status, 'pending');
   assert.deepStrictEqual(pendingCreates, []);
-  assert.deepStrictEqual(pendingRuleEvaluations, []);
+  assert.deepStrictEqual(pendingProcedures, []);
 });
 
-// =============================================================================
-// applyEffects — evaluate-rules
-// =============================================================================
-
-test('applyEffects — collects evaluate-rules in pendingRuleEvaluations', () => {
-  const resource = { status: 'pending' };
-  const effects = [
-    { type: 'evaluate-rules', ruleType: 'assignment' },
-    { type: 'evaluate-rules', ruleType: 'priority' }
-  ];
-  const { pendingCreates, pendingRuleEvaluations } = applyEffects(effects, resource, {});
-  assert.deepStrictEqual(pendingCreates, []);
-  assert.deepStrictEqual(pendingRuleEvaluations, [
-    { ruleType: 'assignment' },
-    { ruleType: 'priority' }
-  ]);
-});
-
-test('applyEffects — mixes set, create, and evaluate-rules effects', () => {
+test('applyEffects — mixes set and create effects', () => {
   const resource = { assignedToId: null };
   const context = { caller: { id: 'worker-1' }, object: { id: 'task-1' }, now: '2025-01-15T10:00:00.000Z' };
   const effects = [
     { type: 'set', field: 'assignedToId', value: '$caller.id' },
     { type: 'create', entity: 'audit', fields: { taskId: '$object.id' } },
-    { type: 'evaluate-rules', ruleType: 'assignment' }
   ];
-  const { pendingCreates, pendingRuleEvaluations } = applyEffects(effects, resource, context);
+  const { pendingCreates, pendingProcedures } = applyEffects(effects, resource, context);
   assert.strictEqual(resource.assignedToId, 'worker-1');
   assert.strictEqual(pendingCreates.length, 1);
-  assert.deepStrictEqual(pendingRuleEvaluations, [{ ruleType: 'assignment' }]);
+  assert.deepStrictEqual(pendingProcedures, []);
 });
 
-test('applyEffects — returns empty pendingRuleEvaluations when no evaluate-rules effects', () => {
+test('applyEffects — returns empty pendingProcedures when no procedure effects', () => {
   const resource = { status: 'pending' };
   const effects = [
     { type: 'set', field: 'status', value: 'active' }
   ];
-  const { pendingRuleEvaluations } = applyEffects(effects, resource, {});
-  assert.deepStrictEqual(pendingRuleEvaluations, []);
+  const { pendingProcedures } = applyEffects(effects, resource, {});
+  assert.deepStrictEqual(pendingProcedures, []);
+});
+
+// =============================================================================
+// evaluateGuard — is_not_null
+// =============================================================================
+
+test('evaluateGuard — is_not_null passes when field has a value', () => {
+  const guard = { field: 'assignedToId', operator: 'is_not_null' };
+  const result = evaluateGuard(guard, { assignedToId: 'worker-1' }, {});
+  assert.strictEqual(result.pass, true);
+  assert.strictEqual(result.reason, null);
+});
+
+test('evaluateGuard — is_not_null fails when field is null', () => {
+  const guard = { field: 'assignedToId', operator: 'is_not_null' };
+  const result = evaluateGuard(guard, { assignedToId: null }, {});
+  assert.strictEqual(result.pass, false);
+  assert.ok(result.reason.includes('assignedToId'));
+});
+
+test('evaluateGuard — is_not_null fails when field is undefined', () => {
+  const guard = { field: 'assignedToId', operator: 'is_not_null' };
+  const result = evaluateGuard(guard, {}, {});
+  assert.strictEqual(result.pass, false);
+});
+
+// =============================================================================
+// evaluateGuard — not_equals
+// =============================================================================
+
+test('evaluateGuard — not_equals passes when values differ', () => {
+  const guard = { field: 'status', operator: 'not_equals', value: 'cancelled' };
+  const result = evaluateGuard(guard, { status: 'pending' }, {});
+  assert.strictEqual(result.pass, true);
+});
+
+test('evaluateGuard — not_equals fails when values are equal', () => {
+  const guard = { field: 'status', operator: 'not_equals', value: 'cancelled' };
+  const result = evaluateGuard(guard, { status: 'cancelled' }, {});
+  assert.strictEqual(result.pass, false);
+  assert.ok(result.reason.includes('status'));
+});
+
+test('evaluateGuard — not_equals resolves $caller.id for comparison', () => {
+  const guard = { field: 'assignedToId', operator: 'not_equals', value: '$caller.id' };
+  const context = { caller: { id: 'worker-2' } };
+  const result = evaluateGuard(guard, { assignedToId: 'worker-1' }, context);
+  assert.strictEqual(result.pass, true);
+});
+
+// =============================================================================
+// resolveValue — additional expressions
+// =============================================================================
+
+test('resolveValue — $request.field resolves from context', () => {
+  const context = { request: { reason: 'urgent' } };
+  assert.strictEqual(resolveValue('$request.reason', context), 'urgent');
+});
+
+test('resolveValue — $request.field returns null when missing', () => {
+  assert.strictEqual(resolveValue('$request.missing', { request: {} }), null);
+});
+
+test('resolveValue — $this.field resolves from context.this', () => {
+  const context = { this: { subject: 'app-123', data: { program: 'snap' } } };
+  assert.strictEqual(resolveValue('$this.subject', context), 'app-123');
+});
+
+test('resolveValue — $this.nested.field resolves dot path', () => {
+  const context = { this: { data: { program: 'snap' } } };
+  assert.strictEqual(resolveValue('$this.data.program', context), 'snap');
+});
+
+test('resolveValue — $alias.field resolves from context.entities', () => {
+  const context = { entities: { application: { id: 'app-1', status: 'submitted' } } };
+  assert.strictEqual(resolveValue('$application.status', context), 'submitted');
+});
+
+test('resolveValue — bare $alias resolves whole entity from context.entities', () => {
+  const entity = { id: 'q-1', name: 'snap-intake' };
+  const context = { entities: { snapQueue: entity } };
+  assert.deepStrictEqual(resolveValue('$snapQueue', context), entity);
+});
+
+test('resolveValue — $alias.field returns null when alias not in entities', () => {
+  assert.strictEqual(resolveValue('$unknown.field', { entities: {} }), null);
+});
+
+// =============================================================================
+// applySteps — set
+// =============================================================================
+
+test('applySteps — set step mutates resource field', () => {
+  const resource = { status: 'pending', assignedToId: null };
+  const context = { caller: { id: 'worker-1' }, object: resource, request: {}, now: '2025-01-01T00:00:00Z' };
+  applySteps([{ set: { field: 'assignedToId', value: '$caller.id' } }], resource, context);
+  assert.strictEqual(resource.assignedToId, 'worker-1');
+});
+
+test('applySteps — set step with literal value', () => {
+  const resource = { status: 'pending' };
+  applySteps([{ set: { field: 'status', value: 'active' } }], resource, {});
+  assert.strictEqual(resource.status, 'active');
+});
+
+// =============================================================================
+// applySteps — emit
+// =============================================================================
+
+test('applySteps — emit step queues pendingEvent with resolved data', () => {
+  const resource = { id: 'app-1' };
+  const context = { object: resource, request: {}, now: '2025-01-01T00:00:00Z' };
+  const { pendingEvents } = applySteps([{
+    emit: { event: 'submitted', data: { submittedAt: '$now', appId: '$object.id' } }
+  }], resource, context);
+  assert.strictEqual(pendingEvents.length, 1);
+  assert.strictEqual(pendingEvents[0].action, 'submitted');
+  assert.strictEqual(pendingEvents[0].data.submittedAt, '2025-01-01T00:00:00Z');
+  assert.strictEqual(pendingEvents[0].data.appId, 'app-1');
+});
+
+// =============================================================================
+// applySteps — evaluate
+// =============================================================================
+
+test('applySteps — evaluate step queues procedureId in pendingProcedures', () => {
+  const { pendingProcedures } = applySteps([{ evaluate: 'assign-queue-rule' }], {}, {});
+  assert.deepStrictEqual(pendingProcedures, [{ procedureId: 'assign-queue-rule' }]);
+});
+
+// =============================================================================
+// applySteps — invoke POST (collection create)
+// =============================================================================
+
+test('applySteps — invoke POST to collection queues pendingCreate', () => {
+  const context = { object: { id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
+  const { pendingCreates } = applySteps([{
+    invoke: { POST: 'intake/application-documents', body: { applicationId: '$object.id', category: 'income' } }
+  }], {}, context);
+  assert.strictEqual(pendingCreates.length, 1);
+  assert.strictEqual(pendingCreates[0].entity, 'application-documents');
+  assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
+  assert.strictEqual(pendingCreates[0].data.category, 'income');
+});
+
+// =============================================================================
+// applySteps — invoke POST (operation trigger)
+// =============================================================================
+
+test('applySteps — invoke POST to operation path queues pendingOperation', () => {
+  const context = { entities: { application: { id: 'app-99' } }, object: {}, request: {} };
+  const { pendingOperations } = applySteps([{
+    invoke: { POST: 'intake/applications/{application.id}/open' }
+  }], {}, context);
+  assert.strictEqual(pendingOperations.length, 1);
+  assert.strictEqual(pendingOperations[0].path, 'intake/applications/app-99/open');
+});
+
+// =============================================================================
+// applySteps — invoke PATCH ($push)
+// =============================================================================
+
+test('applySteps — invoke PATCH queues pendingAppend with resolved $push body', () => {
+  const context = {
+    entities: { member: { id: 'mem-1' } },
+    this: { data: { verificationType: 'income', result: 'verified' } },
+    object: {}, request: {}
+  };
+  const { pendingAppends } = applySteps([{
+    invoke: {
+      PATCH: 'intake/application-members/{member.id}',
+      body: { verifications: { $push: { type: '$this.data.verificationType', status: '$this.data.result' } } }
+    }
+  }], {}, context);
+  assert.strictEqual(pendingAppends.length, 1);
+  assert.strictEqual(pendingAppends[0].path, 'intake/application-members/mem-1');
+  assert.deepStrictEqual(pendingAppends[0].body.verifications.$push, { type: 'income', status: 'verified' });
+});
+
+// =============================================================================
+// applySteps — when:
+// =============================================================================
+
+
+test('applySteps — when: exposes entity aliases', () => {
+  const resource = { status: 'pending' };
+  const context = { entities: { queue: { type: 'expedited' } }, object: {}, request: {} };
+  applySteps([{
+    when: { '==': [{ var: 'queue.type' }, 'expedited'] },
+    set: { field: 'status', value: 'expedited' }
+  }], resource, context);
+  assert.strictEqual(resource.status, 'expedited');
+});
+
+// =============================================================================
+// applySteps — forEach (field-value where)
+// =============================================================================
+
+test('applySteps — forEach runs do: once per matching record (field-value where)', () => {
+  clearAll('application-members');
+  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
+  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
+  insertResource('application-members', { id: 'mem-3', applicationId: 'app-2' });
+
+  const created = [];
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: { from: 'intake/application-members', where: { applicationId: '$object.id' }, as: 'member' },
+    do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+  }], {}, context);
+
+  assert.strictEqual(pendingCreates.length, 2);
+  const memberIds = pendingCreates.map(c => c.data.memberId).sort();
+  assert.deepStrictEqual(memberIds, ['mem-1', 'mem-2']);
+});
+
+test('applySteps — forEach skips non-matching records', () => {
+  clearAll('application-members');
+  insertResource('application-members', { id: 'mem-x', applicationId: 'app-99' });
+
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: { from: 'intake/application-members', where: { applicationId: '$object.id' }, as: 'member' },
+    do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+  }], {}, context);
+
+  assert.strictEqual(pendingCreates.length, 0);
+});
+
+// =============================================================================
+// applySteps — forEach (JSON Logic where)
+// =============================================================================
+
+test('applySteps — forEach with JSON Logic where filters records', () => {
+  clearAll('application-members');
+  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1', citizenshipStatus: 'citizen' });
+  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1', citizenshipStatus: 'non-citizen' });
+
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: { from: 'intake/application-members', where: { '==': [{ var: 'citizenshipStatus' }, 'non-citizen'] }, as: 'member' },
+    do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+  }], {}, context);
+
+  assert.strictEqual(pendingCreates.length, 1);
+  assert.strictEqual(pendingCreates[0].data.memberId, 'mem-2');
+});
+
+// =============================================================================
+// applySteps — nested forEach
+// =============================================================================
+
+test('applySteps — nested forEach iterates inner collection for each outer item', () => {
+  clearAll('application-members');
+  clearAll('service-types');
+  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
+  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
+  insertResource('service-types', { id: 'svc-snap', name: 'snap' });
+  insertResource('service-types', { id: 'svc-mcd', name: 'medicaid' });
+
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: { from: 'intake/application-members', where: { applicationId: '$object.id' }, as: 'member' },
+    do: [{
+      forEach: { from: 'data-exchange/service-types', where: { '!=': [{ var: 'id' }, 'none'] }, as: 'svcType' },
+      do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id', serviceTypeId: '$svcType.id' } } }]
+    }]
+  }], {}, context);
+
+  // 2 members × 2 service types = 4 creates
+  assert.strictEqual(pendingCreates.length, 4);
+});
+
+// =============================================================================
+// applySteps — call: (string form)
+// =============================================================================
+
+test('applySteps — call: string queues procedure in pendingProcedures', () => {
+  const { pendingProcedures } = applySteps([{ call: 'assign-queue' }], {}, {});
+  assert.deepStrictEqual(pendingProcedures, [{ procedureId: 'assign-queue', with: undefined }]);
+});
+
+test('applySteps — call: string with with: passes parameters', () => {
+  const context = { object: { id: 'app-1' }, request: {} };
+  const { pendingProcedures } = applySteps([{
+    call: 'notify-caseworker',
+    with: { applicationId: '$object.id', channel: 'email' }
+  }], {}, context);
+  assert.strictEqual(pendingProcedures.length, 1);
+  assert.strictEqual(pendingProcedures[0].procedureId, 'notify-caseworker');
+  assert.deepStrictEqual(pendingProcedures[0].with, { applicationId: '$object.id', channel: 'email' });
+});
+
+// =============================================================================
+// applySteps — call: (object form)
+// =============================================================================
+
+test('applySteps — call: object POST to collection queues pendingCreate', () => {
+  const context = { object: { id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
+  const { pendingCreates } = applySteps([{
+    call: { POST: 'intake/application-documents', body: { applicationId: '$object.id', category: 'income' } }
+  }], {}, context);
+  assert.strictEqual(pendingCreates.length, 1);
+  assert.strictEqual(pendingCreates[0].entity, 'application-documents');
+  assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
+  assert.strictEqual(pendingCreates[0].data.category, 'income');
+});
+
+test('applySteps — call: object POST to operation path queues pendingOperation', () => {
+  const context = { entities: { application: { id: 'app-99' } }, object: {}, request: {} };
+  const { pendingOperations } = applySteps([{
+    call: { POST: 'intake/applications/{application.id}/open' }
+  }], {}, context);
+  assert.strictEqual(pendingOperations.length, 1);
+  assert.strictEqual(pendingOperations[0].path, 'intake/applications/app-99/open');
+});
+
+test('applySteps — call: object PATCH queues pendingAppend', () => {
+  const context = {
+    entities: { member: { id: 'mem-1' } },
+    this: { data: { result: 'verified' } },
+    object: {}, request: {}
+  };
+  const { pendingAppends } = applySteps([{
+    call: {
+      PATCH: 'intake/application-members/{member.id}',
+      body: { verifications: { $push: { status: '$this.data.result' } } }
+    }
+  }], {}, context);
+  assert.strictEqual(pendingAppends.length, 1);
+  assert.strictEqual(pendingAppends[0].path, 'intake/application-members/mem-1');
+  assert.deepStrictEqual(pendingAppends[0].body.verifications.$push, { status: 'verified' });
+});
+
+// =============================================================================
+// applySteps — if: / then: / else:
+// =============================================================================
+
+test('applySteps — if: true runs then: steps', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { status: 'pending' }, request: {} };
+  applySteps([{
+    if: "$object.status == 'pending'",
+    then: [{ set: { field: 'status', value: 'active' } }]
+  }], resource, context);
+  assert.strictEqual(resource.status, 'active');
+});
+
+test('applySteps — if: false skips then: steps', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { status: 'submitted' }, request: {} };
+  applySteps([{
+    if: "$object.status == 'pending'",
+    then: [{ set: { field: 'status', value: 'active' } }]
+  }], resource, context);
+  assert.strictEqual(resource.status, 'pending');
+});
+
+test('applySteps — if: false runs else: steps', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { status: 'submitted' }, request: {} };
+  applySteps([{
+    if: "$object.status == 'pending'",
+    then: [{ set: { field: 'status', value: 'active' } }],
+    else: [{ set: { field: 'status', value: 'fallback' } }]
+  }], resource, context);
+  assert.strictEqual(resource.status, 'fallback');
+});
+
+test('applySteps — if: true skips else: steps', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { status: 'pending' }, request: {} };
+  applySteps([{
+    if: "$object.status == 'pending'",
+    then: [{ set: { field: 'status', value: 'active' } }],
+    else: [{ set: { field: 'status', value: 'fallback' } }]
+  }], resource, context);
+  assert.strictEqual(resource.status, 'active');
+});
+
+test('applySteps — if: false with no else: runs no steps', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { status: 'submitted' }, request: {} };
+  applySteps([{
+    if: "$object.status == 'pending'",
+    then: [{ set: { field: 'status', value: 'active' } }]
+  }], resource, context);
+  assert.strictEqual(resource.status, 'pending');
+});
+
+test('applySteps — if: propagates pendingEvents from branch', () => {
+  const resource = { id: 'app-1' };
+  const context = { object: { id: 'app-1', status: 'pending' }, request: {}, now: '2025-01-01T00:00:00Z' };
+  const { pendingEvents } = applySteps([{
+    if: "$object.status == 'pending'",
+    then: [{ emit: { event: 'activated', data: { appId: '$object.id' } } }]
+  }], resource, context);
+  assert.strictEqual(pendingEvents.length, 1);
+  assert.strictEqual(pendingEvents[0].action, 'activated');
+  assert.strictEqual(pendingEvents[0].data.appId, 'app-1');
+});
+
+// =============================================================================
+// applySteps — match: / when:
+// =============================================================================
+
+test('applySteps — match: runs steps for matching when: branch', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { program: 'snap' }, request: {} };
+  applySteps([{
+    match: '$object.program',
+    when: {
+      snap: [{ set: { field: 'status', value: 'snap-routed' } }],
+      medicaid: [{ set: { field: 'status', value: 'medicaid-routed' } }]
+    }
+  }], resource, context);
+  assert.strictEqual(resource.status, 'snap-routed');
+});
+
+test('applySteps — match: skips non-matching when: branches', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { program: 'medicaid' }, request: {} };
+  applySteps([{
+    match: '$object.program',
+    when: {
+      snap: [{ set: { field: 'status', value: 'snap-routed' } }],
+      medicaid: [{ set: { field: 'status', value: 'medicaid-routed' } }]
+    }
+  }], resource, context);
+  assert.strictEqual(resource.status, 'medicaid-routed');
+});
+
+test('applySteps — match: runs no steps when value matches no branch', () => {
+  const resource = { status: 'pending' };
+  const context = { object: { program: 'tanf' }, request: {} };
+  applySteps([{
+    match: '$object.program',
+    when: {
+      snap: [{ set: { field: 'status', value: 'snap-routed' } }]
+    }
+  }], resource, context);
+  assert.strictEqual(resource.status, 'pending');
+});
+
+test('applySteps — match: propagates pendingCreates from branch', () => {
+  const context = { object: { program: 'snap', id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
+  const { pendingCreates } = applySteps([{
+    match: '$object.program',
+    when: {
+      snap: [{ call: { POST: 'data-exchange/service-calls', body: { applicationId: '$object.id' } } }]
+    }
+  }], {}, context);
+  assert.strictEqual(pendingCreates.length, 1);
+  assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
 });

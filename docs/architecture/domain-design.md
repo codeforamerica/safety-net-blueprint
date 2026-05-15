@@ -126,7 +126,7 @@ Work items, tasks, and SLA tracking. **[Details →](domains/workflow.md)**
 **Key decisions:**
 - Workflow is about work items: "What needs to be done? Is it on track?"
 - Queues organize tasks for routing and monitoring
-- Routing and priority rules are defined as decision tables in the [rules YAML contract artifact](contract-driven-architecture.md#rules), not as CRUD entities — the state machine invokes them via `evaluate-rules` effects
+- Routing and priority rules are expressed as named procedures in the state machine file, not as CRUD entities — the state machine invokes them via `call:` steps
 - Verification has two purposes:
   - **Data validation**: Is the intake data accurate? (check against external sources)
   - **Program verification**: Does the data meet program evidence standards?

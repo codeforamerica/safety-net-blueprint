@@ -2,12 +2,13 @@
  * Handler for POST /resources (create)
  */
 
-import { create, update } from '../database-manager.js';
+import { create, update, findById } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { initializeSlaInfo } from '../sla-engine.js';
-import { processRuleEvaluations } from './rule-evaluation.js';
+import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
+import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 
 /**
@@ -16,10 +17,9 @@ import { emitEvent } from '../emit-event.js';
  * @param {Object} endpoint - Endpoint metadata
  * @param {string} baseUrl - Base URL for Location header
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
- * @param {Array|null} rules - Rules from discoverRules() (null for APIs without rules)
  * @returns {Function} Express handler
  */
-export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, rules, slaTypes = [], machine = null) {
+export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null) {
   return (req, res) => {
     try {
       // Check if request body is an object (400 for malformed request)
@@ -71,8 +71,8 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const object = endpoint.collectionName.replace(/s$/, '');
 
       // Resolve onCreate — new format: machine.triggers.onCreate; old format: stateMachine.onCreate
-      const isNewFormat = machine && machine.triggers;
-      const onCreate = isNewFormat ? machine.triggers?.onCreate : stateMachine?.onCreate;
+      const isNewFormat = Array.isArray(stateMachine?.machines) || machine?.triggers != null;
+      const onCreate = isNewFormat ? machine?.triggers?.onCreate : stateMachine?.onCreate;
 
       // Execute onCreate steps/effects if this resource has a state machine
       if (onCreate) {
@@ -94,19 +94,30 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         // Snapshot before any steps/effects mutate resource (for DB diff later)
         const original = JSON.parse(JSON.stringify(resource));
 
-        const context = {
+        const baseContext = {
           caller: { id: callerId, roles: callerRoles },
           object: { ...resource },
           request: req.body || {},
           now
         };
 
-        const { pendingCreates, pendingRuleEvaluations } = isNewFormat
-          ? applySteps(onCreate.then || [], resource, context)
+        const entities = resolveContextLayers(
+          [stateMachine?.context, machine?.context, onCreate?.context],
+          resource,
+          baseContext
+        );
+        if (entities === null) {
+          console.error('onCreate: required context binding failed — skipping trigger');
+          return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Context binding failed' });
+        }
+        const context = { ...baseContext, entities };
+
+        const { pendingCreates, pendingProcedures } = isNewFormat
+          ? applySteps(onCreate.steps || [], resource, context)
           : applyEffects(onCreate.effects || [], resource, context);
 
-        // Process rule evaluations (sets queueId, priority, etc.)
-        processRuleEvaluations(pendingRuleEvaluations, resource, rules, stateMachine?.domain, stateMachine?.rules, context);
+        const inlineRules = buildInlineRules(stateMachine, machine);
+        executeProcedures(pendingProcedures, resource, inlineRules, context);
 
         // Execute pending creates
         for (const { entity, data } of pendingCreates) {
@@ -158,9 +169,12 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // so sub-resource POSTs like /applications/app-123/documents get the right URL.
       const location = `${baseUrl}${req.path}/${resource.id}`;
 
+      // Re-read from DB so the response reflects any mutations made by event subscriptions
+      // (e.g. assignToQueue running synchronously in response to the created event)
+      const fresh = findById(endpoint.collectionName, resource.id) || resource;
       res.status(201)
         .header('Location', location)
-        .json(resource);
+        .json(fresh);
     } catch (error) {
       console.error('Create handler error:', error);
 

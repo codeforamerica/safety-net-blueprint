@@ -17,6 +17,7 @@
  */
 
 import { parseQueryString, tokensToSqlConditions } from './query-parser.js';
+import { parseSortString, buildOrderByClause } from './sort-parser.js';
 
 /**
  * Build search conditions for SQLite JSON queries
@@ -54,7 +55,11 @@ export function buildSearchConditions(queryParams = {}, searchableFields = []) {
   if (!queryParams.q) {
     for (const [key, value] of Object.entries(queryParams)) {
       // Skip special parameters
-      if (['search', 'q', 'limit', 'offset', 'page'].includes(key)) {
+      // Reserved query parameters — handled elsewhere, not field filters.
+      // `sort` is consumed by resolveOrderByClause; treating it as a
+      // field filter would emit `WHERE json_extract(data, '$.sort') = ?`
+      // and return zero rows.
+      if (['search', 'q', 'limit', 'offset', 'page', 'sort'].includes(key)) {
         continue;
       }
 
@@ -125,31 +130,87 @@ export function parsePagination(queryParams = {}, defaults = { limit: 25, offset
 }
 
 /**
+ * Resolve the effective ORDER BY clause from sortConfig + the client's
+ * ?sort= parameter. Returns:
+ *   { orderBy: string } on success — orderBy may be a full "ORDER BY ..."
+ *     fragment or the legacy fallback when no sortConfig is declared
+ *   { error: { code, message, field? } } on parser failure — caller turns
+ *     this into a 400 response with the documented error codes
+ *
+ * If sortConfig is undefined (endpoint did not declare x-sortable), any
+ * client-supplied ?sort= is rejected with INVALID_SORT_FIELD; an absent
+ * ?sort= falls through to the legacy default (createdAt DESC) for backward
+ * compatibility with endpoints that have not yet migrated.
+ */
+function resolveOrderByClause(queryParams, sortConfig) {
+  const hasClientSort = typeof queryParams.sort === 'string' && queryParams.sort.trim().length > 0;
+
+  if (!sortConfig) {
+    if (hasClientSort) {
+      return {
+        error: {
+          code: 'INVALID_SORT_FIELD',
+          message: 'this endpoint does not support the sort parameter'
+        }
+      };
+    }
+    // Legacy fallback for endpoints that haven't declared x-sortable yet.
+    return {
+      orderBy: `ORDER BY COALESCE(json_extract(data, '$.createdAt'), '1970-01-01T00:00:00Z') DESC`
+    };
+  }
+
+  // Parse the effective sort expression. ?sort= wins; otherwise use the
+  // endpoint's declared default. Both flow through parseSortString so the
+  // default's validity is asserted at runtime too (not just at lint time).
+  const expression = hasClientSort ? queryParams.sort : sortConfig.default;
+  const parsed = parseSortString(expression, sortConfig);
+  if (!parsed.ok) {
+    return { error: { code: parsed.code, message: parsed.message, field: parsed.field } };
+  }
+  return { orderBy: buildOrderByClause(parsed.fields, sortConfig) };
+}
+
+/**
  * Execute search query with filters and pagination
  * @param {Object} db - SQLite database instance
  * @param {Object} queryParams - Request query parameters
  * @param {Array} searchableFields - Fields that support search
  * @param {Object} paginationDefaults - Default pagination values
- * @returns {Object} {items: Array, total: number, limit: number, offset: number, hasNext: boolean}
+ * @param {{fields: string[], default?: string, tieBreaker?: string|null, maxFields?: number}} [sortConfig]
+ *        Parsed x-sortable extension from the endpoint;
+ *        undefined for endpoints without x-sortable.
+ * @returns {{items: Object[], total: number, limit: number, offset: number, hasNext: boolean}
+ *          | {error: {code: string, message: string, field?: string}}}
+ *        On success: items + pagination metadata.
+ *        On sort parse failure: an error object the list handler renders as 400.
  */
-export function executeSearch(db, queryParams = {}, searchableFields = [], paginationDefaults = {}) {
+export function executeSearch(db, queryParams = {}, searchableFields = [], paginationDefaults = {}, sortConfig) {
+  // Sort resolution happens OUTSIDE the try/catch below by design — sort
+  // errors are caller-side input validation (translate to 400), not database
+  // failures (which return empty results). Do not move this resolution
+  // inside the try; doing so would mask sort errors as empty 200 responses.
+  const orderByResult = resolveOrderByClause(queryParams, sortConfig);
+  if (orderByResult.error) return { error: orderByResult.error };
+  const orderByClause = orderByResult.orderBy;
+
   const { whereClauses, params } = buildSearchConditions(queryParams, searchableFields);
   const whereClause = buildWhereClause(whereClauses);
   const { limit, offset } = parsePagination(queryParams, paginationDefaults);
-  
+
   try {
     // Get total count
     const countQuery = `SELECT COUNT(*) as count FROM resources ${whereClause}`.trim();
     const countStmt = db.prepare(countQuery);
     const countResult = countStmt.get(...params);
     const total = countResult?.count || 0;
-    
-    // Get paginated items
-    // Use COALESCE to handle NULL createdAt values (sorts them last)
+
+    // Get paginated items using the resolved ORDER BY clause (may be empty
+    // when sortConfig.tieBreaker is null and no client sort is provided).
     const selectQuery = `
-      SELECT data FROM resources 
+      SELECT data FROM resources
       ${whereClause}
-      ORDER BY COALESCE(json_extract(data, '$.createdAt'), '1970-01-01T00:00:00Z') DESC
+      ${orderByClause}
       LIMIT ? OFFSET ?
     `.trim();
     const selectStmt = db.prepare(selectQuery);

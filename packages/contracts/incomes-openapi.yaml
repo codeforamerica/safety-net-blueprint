@@ -29,10 +29,16 @@ paths:
       operationId: listIncome
       tags:
       - Income
+      x-sortable:
+        # `amount` excluded — sort order would binary-search a person's wages (A01:2025).
+        fields: [reportedOn, startDate, endDate, type, frequency]
+        default: -reportedOn
+        tieBreaker: id
       parameters:
       - "$ref": "./components/parameters.yaml#/SearchQueryParam"
       - "$ref": "./components/parameters.yaml#/LimitParam"
       - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - "$ref": "./components/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated collection of income.

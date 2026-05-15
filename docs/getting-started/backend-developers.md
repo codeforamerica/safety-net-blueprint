@@ -6,7 +6,7 @@ This guide is for developers who work with the contract artifacts — OpenAPI sp
 
 See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
 
-> **Note:** OpenAPI specs, validation, overlays, the mock server for CRUD operations, the state machine engine (transitions, guards, `set`/`create`/`evaluate-rules` effects), rule evaluation (assignment and priority), and cross-artifact validation work today. Additional behavioral tooling — conversion scripts and metrics — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes both the current and target developer experience.
+> **Note:** OpenAPI specs, validation, overlays, the mock server for CRUD operations, the state machine engine (transitions, guards, `set`/`create`/`call:` steps, event subscriptions, timer stubs), and cross-artifact validation work today. Additional behavioral tooling — conversion scripts and metrics — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes both the current and target developer experience.
 
 ## What You'll Do
 
@@ -80,7 +80,7 @@ Each concern gets its own table (sheet in a spreadsheet):
 
 - **State transitions** — From State, To State, Trigger, Who, Guard, Effects
 - **Guards** — Guard name, Field, Operator, Value
-- **Effects** — Trigger, effect details (set, create, lookup, evaluate-rules, event)
+- **Steps** — Trigger, step details (set, create, call, emit, if/match)
 - **Decision rules** — Conditions and actions for routing, assignment, priority
 - **Metrics** — Metric name, source type, source linkage, target
 - **Field metadata** — Field annotations, permissions, labels, program requirements
@@ -109,7 +109,7 @@ This runs OpenAPI syntax validation, lint, pattern compliance, schema validation
 
 ### 4. Test with the Mock Server
 
-The mock server serves REST APIs (CRUD endpoints from OpenAPI specs) and a behavioral engine that interprets state machine and rules YAML — auto-generating RPC endpoints from triggers, enforcing transitions, evaluating guards, executing `set`/`create`/`evaluate-rules` effects, and running assignment and priority rules. Additional capabilities (metrics tracking, `lookup`/`event` effects) are planned.
+The mock server serves REST APIs (CRUD endpoints from OpenAPI specs) and a behavioral engine that interprets state machine YAML — auto-generating RPC endpoints from transitions, enforcing valid state changes, evaluating guards, executing steps (`set`, `create`, `call`, `emit`), dispatching event subscriptions, and firing timer stubs. Additional capabilities (metrics tracking) are planned.
 
 ```bash
 # Within this repository

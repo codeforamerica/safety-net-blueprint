@@ -8,8 +8,9 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import { execSync, spawn } from 'child_process';
-import { realpathSync, openSync, statSync } from 'fs';
+import { realpathSync, openSync, statSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
+import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
@@ -18,8 +19,7 @@ import { closeAll } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
-import { registerStub, registerHttpStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
-import { registerTimerStub, listTimerStubs, removeTimerStub, clearTimerStubs, fireNextTimer } from '../src/timer-stub-engine.js';
+import { registerStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
 import { findById } from '../src/database-manager.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
@@ -109,14 +109,12 @@ async function startMockServer(specDirs = null, seedDir = null) {
     }
     let apiSpecs = [];
     let allStateMachines = [];
-    let allRules = [];
     let allSlaTypes = [];
     let allMetrics = [];
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
-      allRules = allRules.concat(result.rules);
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
       allMetrics = allMetrics.concat(result.metrics);
     }
@@ -174,9 +172,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
     // See packages/mock-server/mock-rules/README.md for full usage documentation.
     app.post('/mock/stubs/events', (req, res) => {
       try {
-        const stub = req.body?.type === 'http'
-          ? registerHttpStub(req.body)
-          : registerStub(req.body);
+        const stub = registerStub(req.body);
         res.status(201).json(stub);
       } catch (err) {
         res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
@@ -200,44 +196,9 @@ async function startMockServer(specDirs = null, seedDir = null) {
     console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
     console.log('  DELETE /mock/stubs/events - Clear all event stubs');
 
-    // Timer stub registry — pre-program mock timestamps for onTimer testing.
-    app.post('/mock/stubs/timers', (req, res) => {
-      try {
-        const stub = registerTimerStub(req.body);
-        res.status(201).json(stub);
-      } catch (err) {
-        res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
-      }
-    });
-    app.get('/mock/stubs/timers', (req, res) => {
-      const items = listTimerStubs();
-      res.json({ items, total: items.length });
-    });
-    app.delete('/mock/stubs/timers', (req, res) => {
-      clearTimerStubs();
-      res.status(204).end();
-    });
-    app.delete('/mock/stubs/timers/:id', (req, res) => {
-      const removed = removeTimerStub(req.params.id);
-      if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Timer stub "${req.params.id}" not found` });
-      res.status(204).end();
-    });
-    // Fire the next timer stub — sweeps all resources for due onTimer entries
-    app.post('/mock/timers/fire', (req, res) => {
-      const result = fireNextTimer(allStateMachines, allRules, allSlaTypes);
-      if (!result) {
-        return res.status(422).json({ code: 'NO_TIMER_STUBS', message: 'No timer stubs registered. Use POST /mock/stubs/timers to register one.' });
-      }
-      res.json(result);
-    });
-    console.log('  POST   /mock/stubs/timers - Register a timer stub');
-    console.log('  GET    /mock/stubs/timers - List active timer stubs');
-    console.log('  DELETE /mock/stubs/timers/:id - Remove a timer stub');
-    console.log('  DELETE /mock/stubs/timers - Clear all timer stubs');
-    console.log('  POST   /mock/timers/fire - Fire next timer stub, sweep all resources');
 
-    // Register event subscriptions (event-triggered rule sets)
-    registerEventSubscriptions(allRules, allStateMachines, allSlaTypes, apiSpecs);
+    // Register event subscriptions
+    registerEventSubscriptions(allStateMachines, allSlaTypes, apiSpecs);
 
     // Enrich service call creation with catalog-derived fields (after schema validation).
     // Copies serviceType and callMode from the referenced ExternalService, sets status to pending.
@@ -257,10 +218,12 @@ async function startMockServer(specDirs = null, seedDir = null) {
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
-    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allRules, allSlaTypes, allMetrics);
+    const uploadsDir = resolveUploadsDir(resolve(import.meta.dirname, '..', 'uploads'));
+    mkdirSync(uploadsDir, { recursive: true });
+    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, uploadsDir);
 
     // Register state machine RPC routes
-    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allRules, allSlaTypes);
+    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes);
 
 
     // 404 handler for undefined routes

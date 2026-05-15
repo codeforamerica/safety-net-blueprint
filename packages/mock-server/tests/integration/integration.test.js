@@ -1141,13 +1141,14 @@ async function runTests() {
     if (supTaskId) {
       try {
         console.log(`\n  SUP-2. Supervisor assigns task to worker-aaa — status stays pending`);
+        const workerAaaId = '00000000-0000-0000-0000-000000000001';
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
-          body: JSON.stringify({ assignedToId: 'worker-aaa' })
+          body: JSON.stringify({ assignedToId: workerAaaId })
         });
         const data = await response.json();
-        if (response.status === 200 && data.status === 'pending' && data.assignedToId === 'worker-aaa') {
+        if (response.status === 200 && data.status === 'pending' && data.assignedToId === workerAaaId) {
           console.log('     ✓ PASS: Task assigned, status=pending, assignedToId=worker-aaa');
           totalPassed++;
         } else {
@@ -1166,13 +1167,14 @@ async function runTests() {
     if (supTaskId) {
       try {
         console.log(`\n  SUP-3. Supervisor reassigns to worker-bbb — status stays pending`);
+        const workerBbbId = '00000000-0000-0000-0000-000000000002';
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
-          body: JSON.stringify({ assignedToId: 'worker-bbb' })
+          body: JSON.stringify({ assignedToId: workerBbbId })
         });
         const data = await response.json();
-        if (response.status === 200 && data.status === 'pending' && data.assignedToId === 'worker-bbb') {
+        if (response.status === 200 && data.status === 'pending' && data.assignedToId === workerBbbId) {
           console.log('     ✓ PASS: Task reassigned to worker-bbb, status still pending');
           totalPassed++;
         } else {
@@ -1259,10 +1261,10 @@ async function runTests() {
       const response = await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
-        body: JSON.stringify({ assignedToId: 'worker-bbb' })
+        body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000002' })
       });
       const data = await response.json();
-      if (response.status === 200 && data.status === 'in_progress' && data.assignedToId === 'worker-bbb') {
+      if (response.status === 200 && data.status === 'in_progress' && data.assignedToId === '00000000-0000-0000-0000-000000000002') {
         console.log('     ✓ PASS: Assigned in_progress task, status stays in_progress');
         totalPassed++;
       } else {
@@ -1283,7 +1285,7 @@ async function runTests() {
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' },
-          body: JSON.stringify({ assignedToId: 'worker-bbb' })
+          body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000002' })
         });
         if (response.status === 403) {
           console.log('     ✓ PASS: Returns 403 FORBIDDEN for caseworker');
@@ -1331,13 +1333,13 @@ async function runTests() {
         console.log(`\n  SUP-9. Assign on completed task → 409`);
         await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': '00000000-0000-0000-0000-000000000002', 'X-Caller-Roles': 'caseworker' },
           body: JSON.stringify({ outcome: 'approved' })
         });
         const response = await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
-          body: JSON.stringify({ assignedToId: 'worker-aaa' })
+          body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000001' })
         });
         if (response.status === 409) {
           console.log('     ✓ PASS: Returns 409 — assign not available in completed state');

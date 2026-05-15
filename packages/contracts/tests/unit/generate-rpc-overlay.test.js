@@ -39,38 +39,48 @@ const sampleStateMachine = {
   domain: 'workflow',
   object: 'Task',
   apiSpec: 'workflow-openapi.yaml',
-  states: [
-    { id: 'pending' },
-    { id: 'in_progress' },
-    { id: 'completed' }
-  ],
-  initialState: 'pending',
-  guards: [
-    { id: 'taskIsUnassigned', field: 'assignedToId', operator: 'is_null' },
-    { id: 'callerIsAssignedWorker', field: 'assignedToId', operator: 'equals', value: '$caller.id' }
-  ],
-  transitions: [
-    { trigger: 'claim', from: 'pending', to: 'in_progress', guards: ['taskIsUnassigned'], effects: [{ type: 'set', field: 'assignedToId', value: '$caller.id' }] },
-    { trigger: 'complete', from: 'in_progress', to: 'completed', guards: ['callerIsAssignedWorker'], effects: [] },
-    { trigger: 'release', from: 'in_progress', to: 'pending', guards: ['callerIsAssignedWorker'], effects: [{ type: 'set', field: 'assignedToId', value: null }] }
-  ],
-  requestBodies: [
-    { trigger: 'claim' },
+  machines: [
     {
-      trigger: 'complete',
-      type: 'object',
-      properties: {
-        outcome: { type: 'string', description: 'Completion outcome' }
-      },
-      required: ['outcome']
-    },
-    {
-      trigger: 'release',
-      type: 'object',
-      properties: {
-        reason: { type: 'string', description: 'Why the task is being released' }
-      },
-      required: ['reason']
+      object: 'Task',
+      states: [
+        { id: 'pending' },
+        { id: 'in_progress' },
+        { id: 'completed' }
+      ],
+      initialState: 'pending',
+      transitions: [
+        {
+          id: 'claim',
+          transition: { from: 'pending', to: 'in_progress' },
+          steps: [{ set: { field: 'assignedToId', value: '$caller.id' } }]
+        },
+        {
+          id: 'complete',
+          transition: { from: 'in_progress', to: 'completed' },
+          schema: {
+            request: {
+              type: 'object',
+              properties: {
+                outcome: { type: 'string', description: 'Completion outcome' }
+              },
+              required: ['outcome']
+            }
+          }
+        },
+        {
+          id: 'release',
+          transition: { from: 'in_progress', to: 'pending' },
+          schema: {
+            request: {
+              type: 'object',
+              properties: {
+                reason: { type: 'string', description: 'Why the task is being released' }
+              },
+              required: ['reason']
+            }
+          }
+        }
+      ]
     }
   ]
 };

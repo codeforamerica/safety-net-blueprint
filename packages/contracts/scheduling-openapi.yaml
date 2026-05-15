@@ -33,10 +33,15 @@ paths:
       operationId: listAppointments
       tags:
       - Appointments
+      x-sortable:
+        fields: [startAt, endAt, createdAt, updatedAt, status, appointmentType]
+        default: startAt
+        tieBreaker: id
       parameters:
       - "$ref": "./components/parameters.yaml#/SearchQueryParam"
       - "$ref": "./components/parameters.yaml#/LimitParam"
       - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - "$ref": "./components/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated collection of appointments.

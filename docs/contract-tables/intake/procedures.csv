@@ -1,0 +1,10 @@
+ID,Scope,Description,Parameters,Steps
+openApplication,Application,Transition the application from submitted to under_review when a caseworker claims the intake review task,,
+createInterview,Application,Create an Interview record when a caseworker claims an application_review task; SNAP requires an interview before determination (7 CFR § 273.2(e)),,
+createProgramVerifications,Application,Create electronic Verifications per member and document Verifications at the household level for the given program,"program, memberCategories, householdCategories",
+updateVerificationOnCallResult,Application,"Transition the Verification based on the service call result; on inconclusive, creates a document fallback per ex parte rules (42 CFR § 435.911)",,
+linkAppointment,Application,Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.,,
+satisfyVerificationOnDocumentUpload,Application,Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification,,POST `intake/applications/verifications/$verification.id/satisfy`; PATCH `intake/applications/verifications/$verification.id`
+recordDetermination,Application,Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.,,
+initiateServiceCalls,Verification,Route each electronic Verification to its required service calls by category; document-type Verifications are skipped by initiateServiceCall,,
+initiateServiceCall,Verification,Post a single service call for this Verification; no-ops for document-type Verifications,serviceId,

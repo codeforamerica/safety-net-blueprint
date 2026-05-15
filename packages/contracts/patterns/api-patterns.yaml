@@ -260,22 +260,18 @@ rpc_endpoints:
 #
 #   invoke:
 #     # POST form — creates a resource or triggers an operation:
-#     POST: <path>                  # e.g. workflow/tasks, intake/applications/{application.id}/open
+#     POST: <path>                  # e.g. workflow/tasks, intake/applications/$application.id/open
 #     body:
 #       <key>: <value expression>
 #
 #     # PATCH form — appends a value to an array field:
-#     PATCH: <path>                 # e.g. intake/applications/members/{this.data.memberId}
+#     PATCH: <path>                 # e.g. intake/applications/members/$this.data.memberId
 #     body:
 #       <fieldName>:
 #         $push: <value expression> # appended to the array; object or scalar
 #
-# Path template expressions:
-#   {alias.field}   — resolved from context binding aliases (e.g. {application.id})
-#   {this.data.field} — resolved from the current event envelope
-#
-# Value expressions (in body: and set: value:):
-#   $alias.field    — value from a context binding alias (e.g. $application.id)
+# Expressions (paths, body values, and set: value: all use the same syntax):
+#   $alias.field    — value from a context binding alias (e.g. $application.id, usable in paths and bodies)
 #   $this.field     — value from the current event or resource envelope (dot-path supported)
 #   $object.field   — value from the resource being operated on
 #   $request.field  — value from the operation request body
@@ -420,7 +416,7 @@ sub_resource_paths:
 # the on-ramp to pub/sub — the same event types and payloads are delivered via
 # broker subscription in a pub/sub implementation.
 #
-# Events are returned as CloudEvents 1.0 envelopes (see components/events.yaml).
+# Events are returned as CloudEvents 1.0 envelopes (see schemas/platform-events.yaml).
 # Query parameters use CloudEvents attribute names for consistency with the
 # event payload itself.
 events_endpoint:
@@ -512,7 +508,7 @@ events_endpoint:
     body: |
       Standard paginated list response (items, total, limit, offset, hasNext)
       where each item is a CloudEvents 1.0 envelope. The envelope schema is
-      defined in components/events.yaml#/DomainEvent.
+      defined in platform-openapi.yaml#/components/schemas/DomainEvent.
 
   notes:
     - The /events endpoint is read-only for consumers. Events are written
@@ -648,12 +644,12 @@ x_events:
       - trigger: PATCH /resources/{id}
         action: "{object}.updated"
         payload: Field-level diff listing changed fields with before/after values
-        schema: "$ref: ./components/events.yaml#/ResourceUpdatedEvent (shared)"
+        schema: "$ref: ./schemas/platform-events.yaml#/ResourceUpdatedEvent (shared)"
 
       - trigger: DELETE /resources/{id}
         action: "{object}.deleted"
         payload: null
-        schema: "$ref: ./components/events.yaml#/ResourceDeletedEvent (shared)"
+        schema: "$ref: ./schemas/platform-events.yaml#/ResourceDeletedEvent (shared)"
 
     payload_schemas:
       created: |
@@ -664,11 +660,11 @@ x_events:
       updated: |
         Shared across all domains. Use:
           {Resource}UpdatedEvent:
-            $ref: "./components/events.yaml#/ResourceUpdatedEvent"
+            $ref: "./schemas/platform-events.yaml#/ResourceUpdatedEvent"
       deleted: |
         Shared across all domains. Use:
           {Resource}DeletedEvent:
-            $ref: "./components/events.yaml#/ResourceDeletedEvent"
+            $ref: "./schemas/platform-events.yaml#/ResourceDeletedEvent"
 
     traceparent:
       description: |
@@ -1364,11 +1360,6 @@ x_extensions:
     type: object
     fields:
       resource: Name of the related schema (PascalCase, e.g., Queue)
-      domain: >
-        Optional. The blueprint domain that owns the related resource (e.g., intake,
-        workflow). Required when the referenced resource lives in a different domain
-        than the spec declaring the relationship. Omit for same-domain references.
-        Values must be a valid Domain enum value (see schemas/common/enums.yaml).
       style: >
         Optional. "expand" causes the mock server to replace the Id field with
         an inline object of the related resource. Default: reference by ID only.
@@ -1379,13 +1370,48 @@ x_extensions:
         x-relationship:
           resource: Queue
 
-      # Cross-domain reference
-      applicationId:
-        type: string
-        format: uuid
-        x-relationship:
-          resource: Application
-          domain: intake
+  x-sortable:
+    description: >
+      Declares the sort behavior of a list operation — which fields a client
+      may include in ?sort=, the default sort when ?sort= is omitted, the
+      tie-breaker appended for stable pagination, and an optional cap on the
+      number of fields a client may send. Operations referencing the
+      SortParam component MUST declare x-sortable; operations without
+      x-sortable reject any ?sort= query parameter with 400 INVALID_SORT_FIELD.
+      See the `sorting` section of this file for the runtime convention and
+      the field-name lexical rule.
+    location: list operation level (peer to parameters and responses)
+    type: object
+    fields:
+      fields: >
+        Required. Array of field names a client may include in ?sort=.
+        Dot-notation for nested fields (e.g., name.lastName). Every entry
+        must reference a real property on the resource's response schema.
+      default: >
+        Optional. Comma-separated sort applied when the client omits ?sort=.
+        Same syntax as the query parameter. Every field referenced here must
+        appear in `fields`. If absent, no client-driven sort is applied when
+        ?sort= is omitted — only the tie-breaker.
+      tieBreaker: >
+        Optional, defaults to "id". Single field name appended to every
+        effective sort to guarantee deterministic ordering for stable
+        pagination. Explicit null disables it (rare — not recommended).
+      maxFields: >
+        Optional. Hard cap on the number of fields a client may include in
+        ?sort=. If absent, adapters apply an implicit ceiling (5 in the
+        reference implementation).
+    example: |
+      paths:
+        /tasks:
+          get:
+            operationId: listTasks
+            x-sortable:
+              fields: [createdAt, priority, dueDate, status]
+              default: -priority,dueDate
+              tieBreaker: id
+              maxFields: 3
+            parameters:
+              - $ref: "./components/parameters.yaml#/SortParam"
 
   x-status:
     description: >
@@ -2081,52 +2107,121 @@ etags:
     - Consider ETag scope: entire resource or specific fields
 
 # =============================================================================
-# Sorting# =============================================================================
-# STATUS: Not yet implemented
+# Sorting
+# =============================================================================
 sorting:
   description: |
-    Standard query parameter for sorting list endpoint results.
-    Sorting is typically used with REST APIs that return collections.
+    Standard query parameter for sorting list endpoint results. List
+    operations declare what's sortable via the `x-sortable` OpenAPI extension;
+    the mock server and any conforming adapter honor the resulting `?sort=`
+    query string with deterministic, paginatable ordering.
+
+    See `docs/architecture/x-extensions.md#x-sortable` for the full extension
+    reference and `components/parameters.yaml#SortParam` for the shared
+    parameter component that every sort-enabled list operation references.
 
   parameter:
+    component: SortParam
     name: sort
     location: query
     type: string
     description: |
-      Comma-separated list of fields to sort by. Prefix with - for descending.
-      First field is primary sort, subsequent fields are secondary sorts.
+      Comma-separated list of fields to sort by. Prefix with `-` for descending.
+      First field is primary sort, subsequent fields are tie-breakers in
+      declaration order. The configured per-endpoint tie-breaker is always
+      appended for stable pagination.
 
   syntax:
     ascending: "fieldName"
     descending: "-fieldName"
     multiple: "field1,-field2,field3"
+    nested: "name.lastName"
 
   examples:
     - sort=createdAt           # Oldest first
     - sort=-createdAt          # Newest first
     - sort=status,-priority    # By status (asc), then priority (desc)
     - sort=-dueDate,createdAt  # By due date (desc), then created (asc)
+    - sort=name.lastName       # Nested field via dot-notation
 
-  default_behavior:
-    description: If no sort specified, use sensible default per resource
-    typical_defaults:
-      - List endpoints: -createdAt (newest first)
-      - Search results: relevance score (if applicable)
+  extension:
+    name: x-sortable
+    description: |
+      Operation-level extension declaring sort behavior for a list endpoint.
+      Validated by validate-patterns.js. Each list endpoint that allows
+      `?sort=` MUST declare `x-sortable` and reference the SortParam
+      component in its parameters list.
+    fields:
+      fields:
+        required: true
+        type: array<string>
+        description: |
+          Field names a client may include in `?sort=`. Names use dot-notation
+          for nested fields (e.g., name.lastName). Every entry must reference
+          a real property on the resource's response schema.
+      default:
+        required: false
+        type: string
+        description: |
+          Comma-separated sort expression applied when the client omits `?sort=`.
+          Same syntax as the query parameter. Every field referenced here must
+          appear in `fields`. If absent, no client-driven sort is applied when
+          `?sort=` is omitted — only the tie-breaker.
+      tieBreaker:
+        required: false
+        type: string
+        default: id
+        description: |
+          A single field name appended to every effective sort to guarantee
+          deterministic ordering for stable pagination. Defaults to `id`.
+          Explicit `null` disables the tie-breaker (rare — only valid when
+          the resource has no usable identifier; not recommended).
+      maxFields:
+        required: false
+        type: integer
+        description: |
+          Hard cap on the number of fields a client may include in `?sort=`.
+          If absent, the adapter applies an implicit ceiling (5 in the
+          reference implementation). The pattern doc recommends 3 or fewer.
+
+  field_name_lexical_rule:
+    description: |
+      Every field name appearing in `fields`, `default`, or `tieBreaker` MUST
+      match the regular expression below. The pattern validator enforces this
+      at lint time; the runtime parser enforces it again as defense in depth.
+      This is a security boundary — field names are interpolated into ORDER BY
+      and json_extract path strings, which SQLite does not parameterize.
+    regex: "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+
+  null_value_ordering:
+    description: |
+      Records with NULL in a sort field sort deterministically:
+        - ascending: NULL values appear last
+        - descending: NULL values appear first
+      This is implemented via COALESCE on the SQL side and documented here
+      so adapter implementations stay consistent across deployments.
 
   error_handling:
     invalid_field:
       status: 400
       code: INVALID_SORT_FIELD
       message: "Unknown sort field: {field}"
+      when: |
+        Client requested a sort field that does not exist on the resource
+        schema, or the endpoint did not declare `x-sortable` at all.
     unsortable_field:
       status: 400
       code: FIELD_NOT_SORTABLE
       message: "Field '{field}' does not support sorting"
+      when: |
+        Client requested a sort field that exists on the resource schema but
+        is not in the endpoint's `x-sortable.fields` allowlist.
 
   implementation_notes:
-    - Document sortable fields in OpenAPI spec
-    - Consider index implications for sortable fields
-    - Limit number of sort fields (e.g., max 3)
+    - Sort field names interpolate into raw SQL — adapters MUST validate against the lexical regex AND the allowlist before constructing any query
+    - Sort order is an oracle — fields whose ordering would leak information (SSN, dateOfBirth, risk scores, sensitive flags) MUST NOT appear in `x-sortable.fields`
+    - The pattern doc recommends 3 or fewer sort fields; adapters MAY enforce stricter caps via `maxFields` and MUST apply an implicit ceiling when omitted
+    - Failed sort parses SHOULD log the offending field name at info level (not the raw query string, which may carry PII from other params) to support detection of probing
 
 # =============================================================================
 # Long-Running Operations
@@ -2276,80 +2371,57 @@ config_managed_resources:
     delete_guard: DELETE returns 409 CONFIG_MANAGED for any resource with a config-managed ID.
 
 # =============================================================================
-# Context Pass-Through (Cross-Domain Metadata)
+# Cross-Domain Communication
 # =============================================================================
-# Opaque metadata attached to a resource by one domain so that an async event
-# handler in another domain can correlate the result back to the originating
-# resource without a database lookup.
-#
-# Example: at submission, intake creates a Verification and a data-exchange
-# service call. It PUTs { intake: { verificationId: "ver-abc" } } onto the
-# service call. When data-exchange.service-call.completed fires, the intake
-# rule reads event.data.metadata.intake.verificationId and transitions the
-# correct Verification directly.
-context_passthrough:
-  description: |
-    Opaque namespace-keyed metadata attached to resources to enable async
-    correlation across domains. Each domain owns its namespace; namespace-level
-    mutations prevent callers from clobbering each other's keys.
+# Two patterns govern how domains interact. Choosing the wrong one creates
+# hidden coupling — see docs/architecture/inter-domain-communication.md for
+# the full decision rule.
+cross_domain_communication:
+  patterns:
+    command:
+      description: >
+        A direct synchronous API call from one domain to another. Use when the
+        calling domain needs a result to continue its own operation.
+      when_to_use: >
+        The caller cannot complete its current operation without a result from
+        the target domain. Examples: uploading a document and receiving the
+        document ID to attach to a verification record; resolving a person
+        identity match before continuing an application submission.
+      contract_surface: >
+        The calling domain depends on the target domain's OpenAPI contract.
+        The dependency is explicit and versioned.
 
-  structure:
-    description: Nested object — top-level keys are domain names; values are domain-defined key/value pairs.
-    schema:
-      type: object
-      additionalProperties:
-        type: object
-        additionalProperties: true
-    example: |
-      {
-        "intake":   { "verificationId": "ver-abc-123" },
-        "workflow": { "taskId": "tsk-xyz-456" }
-      }
+    domain_event:
+      description: >
+        An async signal emitted when a domain's own state changes. Other domains
+        subscribe and react independently. Use when notifying that something
+        happened — not when expecting a result.
+      when_to_use: >
+        The producing domain's operation is already complete and other domains
+        may optionally react. The producer has no knowledge of its consumers.
+        Examples: application submitted, task claimed, determination completed.
+      contract_surface: >
+        Declared in the producing domain's x-events section. Payload schema is
+        the contract; adding a new consumer requires no change to the producer.
 
-  json_logic_access:
-    description: |
-      Use the JSON Logic var operator with dot notation to traverse the nested
-      structure. Nested objects are required — flat keys with dots (e.g.,
-      "intake.verificationId" as a single top-level key) are unreachable via var.
-    example: |
-      # Read intake.verificationId from a data-exchange completion event:
-      { "var": "event.data.metadata.intake.verificationId" }
+    async_command:
+      description: >
+        A command that initiates a long-running operation, with a domain event
+        delivering the result when it is ready. Use when a synchronous result
+        is not available within a single request.
+      when_to_use: >
+        The operation crosses a system boundary or takes time (e.g. an external
+        agency call). The calling domain initiates via a command, then reacts to
+        the result event. Use the context_passthrough pattern to correlate the
+        result back to the originating record.
+      example: >
+        Intake creates a data-exchange service call (command). The external
+        service responds asynchronously. A domain event delivers the result.
+        Intake reads metadata.intake.verificationId from the event payload and
+        transitions the correct verification record.
 
-  mutation_endpoints:
-    description: |
-      Namespace-level PUT and DELETE. Each caller replaces or removes its own
-      domain namespace entirely. No key-level merging; callers never touch
-      another domain's namespace.
-    put:
-      path: "PUT /{resources}/{id}/metadata/{domain}"
-      description: Replace the caller's entire namespace with the provided object.
-      path_parameter:
-        name: domain
-        schema:
-          $ref: "components/common.yaml#/Domain"
-      request_body:
-        type: object
-        additionalProperties: true
-      response: 200 with updated resource
-      example: |
-        PUT /service-calls/{id}/metadata/intake
-        Content-Type: application/json
-        { "verificationId": "ver-abc-123" }
-    delete:
-      path: "DELETE /{resources}/{id}/metadata/{domain}"
-      description: Remove the caller's entire namespace from metadata.
-      path_parameter:
-        name: domain
-        schema:
-          $ref: "components/common.yaml#/Domain"
-      response: 204
-
-  use_case:
-    name: Verification write-back
-    description: |
-      Intake creates a Verification and a data-exchange service call at
-      submission. It sets metadata.intake.verificationId on the service call
-      (via the createResource metadata field in rules). When
-      data-exchange.service-call.completed fires, the intake rule reads
-      event.data.metadata.intake.verificationId and calls triggerTransition
-      on the correct Verification — no query needed.
+  decision_rule: >
+    Does the calling domain need a result from the other domain to complete its
+    current operation? → command. Is the calling domain notifying that its own
+    state changed? → domain_event. If neither fits cleanly, consider the
+    async_command variant.

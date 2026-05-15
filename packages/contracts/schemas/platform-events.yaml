@@ -1,0 +1,140 @@
+# Platform event payload schemas — the event catalog for cross-platform events.
+#
+# These schemas define the data payloads for:
+#   - CRUD lifecycle events (updated, deleted) emitted automatically by all REST handlers
+#   - Scheduling service contract events (timer request, cancellation, callback)
+#
+# This file is the event catalog for the platform layer. Both OpenAPI specs and
+# JSON Schema contracts (state machine files, SLA types, etc.) reference it.
+#
+# ResourceCreatedEvent is intentionally NOT defined here — its payload is the
+# full resource snapshot, which varies by domain. Each domain defines a
+# {Resource}CreatedEvent that $ref's its own resource schema.
+#
+# Used by: workflow-openapi.yaml, platform-openapi.yaml, and any domain
+# OpenAPI spec that emits CRUD lifecycle or scheduling events.
+
+FieldChange:
+  type: object
+  description: A single field change recorded in an updated event.
+  additionalProperties: false
+  required:
+    - field
+    - before
+    - after
+  properties:
+    field:
+      type: string
+      description: Name of the changed field.
+    before:
+      description: Value of the field before the update.
+    after:
+      description: Value of the field after the update.
+
+ResourceUpdatedEvent:
+  type: object
+  description: |
+    Payload for a CRUD-emitted updated event. Contains a field-level diff
+    recording which fields changed and their before/after values.
+
+    Emitted automatically by the mock server on every PATCH request.
+    Consumers can react to specific field mutations without fetching the
+    full resource.
+  required:
+    - changes
+  properties:
+    changes:
+      type: array
+      description: List of fields that changed, with before and after values.
+      items:
+        $ref: "#/FieldChange"
+
+ResourceDeletedEvent:
+  type: object
+  description: |
+    Payload for a CRUD-emitted deleted event. Carries no data — the entity
+    no longer exists and consumers should treat the subject ID as permanently
+    removed.
+  properties: {}
+
+SchedulingTimerCancelledEvent:
+  type: object
+  description: |
+    Payload for a timer cancellation request sent to the scheduling service.
+    If the timer has already fired or does not exist, this is a no-op.
+  required:
+    - timerId
+  properties:
+    timerId:
+      type: string
+      description: The timer to cancel.
+
+SchedulingTimerRequestedEvent:
+  type: object
+  description: |
+    Payload for a timer request sent to the scheduling service. The scheduling
+    service registers the timer and fires the caller-specified callback event
+    when the timer expires, passing callback.data through unchanged and adding
+    timerId to the payload.
+  required:
+    - timerId
+    - callback
+  properties:
+    timerId:
+      type: string
+      description: >
+        Deterministic timer identifier in the form domain.timerType.objectId
+        (e.g., workflow.creation_deadline.task-123).
+        Used as the cancellation key — safe to register idempotently with the same ID.
+    fireAfter:
+      type: string
+      description: ISO 8601 duration to wait before firing (e.g., PT72H, P30D). Mutually exclusive with fireAt.
+    fireAt:
+      type: string
+      format: date-time
+      description: Absolute timestamp to fire at. Use when the fire time is tied to a known deadline on the object. Mutually exclusive with fireAfter.
+    fireOffset:
+      type: string
+      description: ISO 8601 duration (negative) applied to fireAt to fire before the target time (e.g., -PT48H fires 48 hours before fireAt). Only valid when fireAt is set.
+    calendarType:
+      type: string
+      enum:
+        - calendar
+        - business
+      description: When business, elapsed time counts only business days. Defaults to calendar.
+    callback:
+      type: object
+      description: What to deliver when the timer fires.
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          description: >
+            CloudEvents type of the domain-specific event to emit when the timer expires
+            (e.g., workflow.creation_deadline). The scheduling service passes this through
+            unchanged — it does not derive or modify the event name.
+        data:
+          type: object
+          description: Payload to include in the callback event, passed through unchanged. The scheduling service adds timerId to this payload before delivery.
+          additionalProperties: true
+
+TimerCallbackEvent:
+  type: object
+  description: |
+    Payload delivered by the scheduling service when a timer expires. Contains
+    callback.data from the original scheduling.timer.requested event, passed
+    through unchanged, with timerId added by the scheduling service.
+
+    The scheduling service is a pure relay — it does not add, derive, or modify
+    any fields beyond timerId. The event name is the domain-specific name from
+    callback.event in the original request (e.g., workflow.creation_deadline),
+    not a generic scheduler.timer.fired event.
+  required:
+    - timerId
+  properties:
+    timerId:
+      type: string
+      description: The deterministic timer ID from the original scheduling request.
+  additionalProperties: true

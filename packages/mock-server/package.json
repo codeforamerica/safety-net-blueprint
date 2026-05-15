@@ -37,6 +37,7 @@
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
     "json-logic-js": "^2.0.5",
+    "multer": "^2.1.1",
     "swagger-ui-express": "^5.0.1"
   },
   "engines": {

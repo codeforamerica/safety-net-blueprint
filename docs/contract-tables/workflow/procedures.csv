@@ -1,0 +1,12 @@
+ID,Scope,Description,Parameters,Steps
+assignToQueue,domain,"Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.",,
+setPriority,domain,Set expedited priority when the task is flagged as expedited; otherwise set normal priority.,,
+scheduleTimer,domain,Schedule a workflow timer; builds timerId and callback event from timerType and $object.id.,"timerType, fireAfter, fireAt, fireOffset, calendarType",
+cancelWorkflowTimer,domain,Cancel a workflow timer by type; idempotent.,timerType,
+scheduleCreationDeadline,domain,Schedule auto-escalation 72 business hours after task creation.,,
+scheduleClientTimeout,domain,Schedule auto-cancellation after 30 calendar days of client unresponsiveness.,,
+scheduleVerificationTimeout,domain,Schedule auto-resume after 7 calendar days waiting on verification.,,
+scheduleSlaWarning,domain,Schedule SLA warning escalation 48 hours before the task SLA deadline.,,
+scheduleSlaBreachTimer,domain,Schedule SLA breach escalation at the task SLA deadline.,,
+cancelClientTimeout,domain,Cancel the client unresponsive timer; idempotent.,,
+cancelVerificationTimeout,domain,"Cancel the verification timeout timer; idempotent, safe to call even if already fired.",,

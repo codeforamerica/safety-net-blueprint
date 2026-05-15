@@ -1,5 +1,2 @@
-Guard Name,Field,Operator,Value
-callerIsApplicant,$caller.roles,contains_any,"[""applicant""]"
-callerIsCaseworker,$caller.roles,contains_any,"[""caseworker""]"
-callerIsSupervisor,$caller.roles,contains_any,"[""supervisor""]"
-callerIsSystem,$caller.roles,contains_any,"[""system""]"
+Guard Name,Condition
+callerIsApplicant,"""applicant"" in caller.roles"

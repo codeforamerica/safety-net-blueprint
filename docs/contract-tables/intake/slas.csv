@@ -4,5 +4,8 @@ Application,submitted,running
 Application,under_review,running
 Application,withdrawn,stopped
 Application,closed,stopped
-ApplicationDocument,requested,stopped
-ApplicationDocument,verified,stopped
+Verification,pending,stopped
+Verification,inconclusive,stopped
+Verification,satisfied,stopped
+Verification,waived,stopped
+Verification,cannot_verify,stopped

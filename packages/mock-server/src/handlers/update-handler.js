@@ -5,7 +5,8 @@
 import { findById, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
-import { processRuleEvaluations } from './rule-evaluation.js';
+import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
+import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 
 /**
@@ -61,10 +62,9 @@ export function buildChanges(before, after) {
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
  * @param {Object|null} stateMachine - State machine contract (for onUpdate effects)
- * @param {Array} rules - Rules for rule evaluation effects
  * @returns {Function} Express handler
  */
-export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, rules = [], slaTypes = [], machine = null) {
+export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null) {
   const paramName = extractPathParam(endpoint.path);
   return (req, res) => {
     try {
@@ -125,7 +125,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       // because isExpedited changed) are included in the event's changes array.
       const newOnUpdate = machine?.triggers?.onUpdate;
       const oldOnUpdate = stateMachine?.onUpdate;
-      const hasOnUpdate = newOnUpdate?.then?.length > 0 || oldOnUpdate?.effects?.length > 0;
+      const hasOnUpdate = newOnUpdate?.steps?.length > 0 || oldOnUpdate?.effects?.length > 0;
 
       if (hasOnUpdate) {
         const watchedFields = newOnUpdate?.fields ?? oldOnUpdate?.fields;
@@ -137,7 +137,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           const callerRoles = req.headers['x-caller-roles']
             ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
             : [];
-          const context = {
+          const baseContext = {
             caller: {
               id: req.headers['x-caller-id'],
               roles: callerRoles
@@ -147,13 +147,24 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
             now: new Date().toISOString(),
           };
 
-          let pendingRuleEvaluations;
-          if (newOnUpdate?.then?.length > 0) {
-            ({ pendingRuleEvaluations } = applySteps(newOnUpdate.then, updated, context));
-          } else {
-            ({ pendingRuleEvaluations } = applyEffects(oldOnUpdate.effects, updated, context));
+          const entities = resolveContextLayers(
+            [stateMachine?.context, machine?.context, newOnUpdate?.context ?? oldOnUpdate?.context],
+            updated,
+            baseContext
+          );
+          if (entities === null) {
+            console.error('onUpdate: required context binding failed — skipping trigger');
           }
-          processRuleEvaluations(pendingRuleEvaluations, updated, rules, stateMachine?.domain, stateMachine?.rules, context);
+          const context = entities !== null ? { ...baseContext, entities } : baseContext;
+
+          let pendingProcedures;
+          if (newOnUpdate?.steps?.length > 0) {
+            ({ pendingProcedures } = applySteps(newOnUpdate.steps, updated, context));
+          } else {
+            ({ pendingProcedures } = applyEffects(oldOnUpdate.effects, updated, context));
+          }
+          const inlineRules = buildInlineRules(stateMachine, machine);
+          executeProcedures(pendingProcedures, updated, inlineRules, context);
 
           // Persist any rule-driven mutations (e.g. priority, queueId) back to DB
           const onUpdateDiff = {};

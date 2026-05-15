@@ -99,11 +99,9 @@ Task-type-specific states (e.g., `hearing_scheduled` for fair hearing tasks) are
 
 Timer-triggered transitions fire automatically when durations elapse. See [Decision 6](#decision-6-calendartype-is-explicit-per-timer-transition) for how calendar vs. business-hour deadlines are handled.
 
-### Lifecycle hooks
+### Reactive behavior
 
-**`onCreate`** — fires when a task is created. Used to invoke routing rules, set initial priority, and emit a creation event.
-
-**`onUpdate`** — fires when specific fields change via an external update (not a transition). The `fields` filter explicitly declares which field changes have downstream effects — e.g., `isExpedited` and `programType`, but not `assignedToId` (set by transitions). Transition-internal field changes do not trigger `onUpdate`.
+Creation-time and field-change behavior is handled via event subscriptions in the `events:` block, not special lifecycle hooks. The `workflow.task.created` subscription fires when a task is created — it invokes the `assignToQueue` and `setPriority` procedures and schedules the initial timer set. The `workflow.task.updated` subscription fires when fields change via PATCH — it re-evaluates priority when `isExpedited` or `programType` change. Transition-internal field changes do not trigger the update subscription.
 
 ---
 
@@ -243,7 +241,7 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
   |---|---|---|---|---|---|---|---|
   | Trigger | Named trigger → RPC endpoint | Status transition button | State flow trigger | Sequence flow / signal | Claim, start, complete, skip | Named flow action → RPC | Generic BPMN gateway |
   | Precondition | Guards | Validator condition | Condition script | Gateway condition | Potential owner constraints | Decision rule / router | Conditional expression |
-  | Side effect | `set`, `create`, `evaluate-rules`, `event` | Post-function | Business Rule | Execution Listener | Task handler | Declare Expressions + activity | Smart Services |
+  | Side effect | `set`, `create`, `call:`, `emit:` | Post-function | Business Rule | Execution Listener | Task handler | Declare Expressions + activity | Smart Services |
   | Conditional effect | `when` (JSON Logic) | — | Condition on Business Rule | Expression on Listener | — | Condition on activity | Conditional gateway |
 
 **Decision:** Each transition trigger becomes a named RPC endpoint (`POST /tasks/:id/claim`). PATCH is reserved for updating task fields (not state changes).
@@ -261,7 +259,7 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
 **Considerations:**
 - Declaring effects in the contract makes the behavior inspectable and independently verifiable — a reviewer can understand what a transition does without reading source code.
 - JSM and ServiceNow build audit records as a side effect of internal processing — the schema is implicit and not independently inspectable.
-- Effect types: `set` (update fields), `evaluate-rules` (invoke rules engine), `event` (emit domain event), `create` (write a new record), `when` (conditional wrapper using JSON Logic).
+- Step types: `set` (update fields), `call` (invoke a named procedure), `emit` (fire a domain event), `create` (write a new record), `if`/`match` (conditional branching using CEL expressions).
 
 **Decision:** Effects are declared in the state machine YAML and executed by the engine. The contract is the specification.
 
@@ -368,9 +366,9 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
 
 - Pega supports both push (system assigns) and pull (worker requests next task) routing. The blueprint uses push routing only; pull routing is a known gap — see [Known gaps](#routing-and-assignment).
 
-**Decision:** `workflow-rules.yaml` is entirely replaceable per state. Rules are invoked via `evaluate-rules` effects in the state machine — neither system needs to understand the other's internals.
+**Decision:** Routing and priority logic lives in named procedures (`assignToQueue`, `setPriority`) defined in the state machine file. States replace or overlay individual procedures — neither the state machine lifecycle logic nor the routing logic needs to understand the other's internals.
 
-**Customization:** States replace `workflow-rules.yaml` entirely. States can add `evaluate-rules` effects to additional transitions via overlay.
+**Customization:** States replace or overlay individual procedures via the state machine overlay. States can add `call:` steps to additional transitions via overlay.
 
 ---
 
@@ -383,7 +381,7 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
 **Considerations:**
 - `first-match-wins` is simple, predictable, and easy to debug. Rules are evaluated in order; the first match wins.
 - Multi-factor weighted scoring — combining urgency, program type, task age, and other attributes into a numeric priority — is not expressible with `first-match-wins`. This is a known gap; see [Known gaps](#routing-and-assignment).
-- `escalate` uses `evaluate-rules: priority` rather than `set priority: high` — hardcoding a priority value would break states with different escalation behavior per program type.
+- `escalate` uses `call: setPriority` rather than `set priority: high` — hardcoding a priority value would break states with different escalation behavior per program type.
 
 **Decision:** `first-match-wins`. Weighted scoring is a planned enhancement — see issue #200.
 
@@ -669,7 +667,7 @@ Metrics are defined as YAML contract artifacts in `workflow-metrics.yaml`, along
 
 ### Decision 26: JSON Logic as the rule condition expression language
 
-**Status:** Decided: JSON Logic
+**Status:** Superseded by [Behavioral Contract DSL — Decision 1](../cross-cutting/behavioral-contract-dsl.md#decision-1-cel-as-the-expression-language)
 
 **What's being decided:** Which expression language is used for rule conditions, guards, and filter predicates across the blueprint — and whether to adopt an existing open format or define a bespoke one.
 

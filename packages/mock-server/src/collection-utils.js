@@ -1,6 +1,5 @@
 /**
- * Shared utility for deriving database collection names from paths.
- * Extracted to avoid circular dependencies between route-generator and rule-evaluation.
+ * Shared utilities for collection name derivation and state machine merging.
  */
 
 /**
@@ -38,4 +37,38 @@ export function deriveCollectionName(path, basePath) {
 
   // Pluralize singleton segment names so they match the DB collection convention
   return lastSegment && !lastSegment.endsWith('s') ? `${lastSegment}s` : lastSegment;
+}
+
+/**
+ * Merge two arrays of id-keyed items (guards or rules), with overrides taking precedence.
+ * Domain-level items come first; machine-level items override by id.
+ *
+ * @param {Array} base - Domain-level items (e.g., stateMachine.guards)
+ * @param {Array} overrides - Machine-level items (e.g., machine.guards)
+ * @returns {Array} Merged array, machine-level items winning on id conflict
+ */
+export function mergeByPrecedence(base = [], overrides = []) {
+  const map = new Map((base || []).map(item => [item.id, item]));
+  for (const item of (overrides || [])) map.set(item.id, item);
+  return [...map.values()];
+}
+
+/**
+ * Build the combined inline lookup array for executeProcedures.
+ * Merges procedures (platform → domain → machine) into one id-keyed array.
+ * Procedures are looked up by executeProcedure when call: steps reference a named procedure id.
+ *
+ * @param {Object} stateMachine - Top-level state machine doc (may have _platformProcedures)
+ * @param {Object|null} machine - Machine-level entry (may have procedures and rules)
+ * @returns {Array} Flat array of procedures and rules, higher-precedence items winning on id
+ */
+export function buildInlineRules(stateMachine, machine) {
+  // Precedence: platform < domain < machine (higher overrides lower on same id)
+  const procedures = mergeByPrecedence(
+    mergeByPrecedence(stateMachine?._platformProcedures || [], stateMachine?.procedures || []),
+    machine?.procedures || []
+  );
+  const rules = mergeByPrecedence(stateMachine?.rules || [], machine?.rules || []);
+  // Rules take precedence over procedures for same id (unlikely, but consistent)
+  return mergeByPrecedence(procedures, rules);
 }
