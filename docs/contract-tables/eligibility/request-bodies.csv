@@ -1,9 +1,0 @@
-Object,Trigger,Fields
-Determination,flag-expedited,(none)
-Determination,begin-evaluation,(none)
-Determination,evaluate-final,(none)
-Determination,complete,(none)
-Determination,withdraw,(none)
-Decision,approve,path: string (required)
-Decision,deny,path: string (required); denialReasonCode: string (required)
-Decision,mark-ineligible,path: string (required); denialReasonCode: string (required)

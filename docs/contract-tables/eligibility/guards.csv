@@ -1,3 +1,1 @@
-Object,Guard Name,Field,Operator,Value
-Determination,callerIsSystem,$caller.roles,contains_any,"[""system""]"
-Decision,callerIsSystem,$caller.roles,contains_any,"[""system""]"
+Guard Name,Field,Operator,Value

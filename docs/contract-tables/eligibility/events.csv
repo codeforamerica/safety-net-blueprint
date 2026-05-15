@@ -1,0 +1,8 @@
+Machine,Event,Steps
+Determination,intake.application.submitted,POST `eligibility/determinations`
+Determination,eligibility.determination.created,Call `initializeDetermination`
+Determination,intake.application.review_completed,Call `evaluateFinalDetermination`
+Determination,eligibility.application.decision_completed,If ($pendingDecision == null): POST `eligibility/determinations/$this.data.determinationId/complete`
+Determination,intake.application.withdrawn,If ($determination.id != null): POST `eligibility/determinations/$determination.id/withdraw`
+Decision,eligibility.decision.created,Match ($object.program): snap: Call `evaluateSnapExpedited`; medicaid: Call `initiateMedicaidDataExchange`
+Decision,data_exchange.call.completed,Call `evaluateMedicaidExParte`

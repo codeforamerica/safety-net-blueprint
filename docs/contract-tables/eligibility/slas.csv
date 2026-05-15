@@ -1,5 +1,4 @@
-Object,State,SLA Clock
-Determination,pending,running
+Machine,State,SLA Clock
 Determination,in_progress,running
 Determination,completed,stopped
 Determination,withdrawn,stopped

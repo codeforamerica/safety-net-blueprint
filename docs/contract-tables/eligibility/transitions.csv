@@ -1,9 +1,7 @@
-Object,From,To,Trigger,On,After,RelativeTo,CalendarType,Actors,Guards,Effects
-Determination,pending,,flag-expedited,,,,,system,callerIsSystem,set expeditedFlagged = true; event
-Determination,pending,in_progress,begin-evaluation,,,,,system,callerIsSystem,evaluate-rules
-Determination,in_progress,,evaluate-final,,,,,system,callerIsSystem,evaluate-rules
-Determination,in_progress,completed,complete,,,,,system,callerIsSystem,set completedAt = $now; event
-Determination,pending | in_progress,withdrawn,withdraw,,,,,system,callerIsSystem,set withdrawnAt = $now
-Decision,pending,approved,approve,,,,,system,callerIsSystem,set decidedAt = $now; set path = $request.path; event
-Decision,pending,denied,deny,,,,,system,callerIsSystem,set decidedAt = $now; set path = $request.path; set denialReasonCode = $request.denialReasonCode; event
-Decision,pending,ineligible,mark-ineligible,,,,,system,callerIsSystem,set decidedAt = $now; set path = $request.path; set denialReasonCode = $request.denialReasonCode; event
+Machine,ID,From,To,Actors,Conditions,Steps
+Determination,flag-expedited,in_progress,,system,callerIsSystem,Set `expeditedFlagged` → `true`; Emit `expedited` event
+Determination,complete,in_progress,completed,system,callerIsSystem,Set `completedAt` → current time; Emit `determination_completed` event
+Determination,withdraw,in_progress,withdrawn,system,callerIsSystem,Set `withdrawnAt` → current time; Emit `withdrawn` event
+Decision,approve,pending,approved,system,callerIsSystem,Set `decidedAt` → current time; Set `path` → `$request.path`; Emit `decision_completed` event
+Decision,deny,pending,denied,system,callerIsSystem,Set `decidedAt` → current time; Set `path` → `$request.path`; Set `denialReasonCode` → `$request.denialReasonCode`; Emit `decision_completed` event
+Decision,mark-ineligible,pending,ineligible,system,callerIsSystem,Set `decidedAt` → current time; Set `path` → `$request.path`; Set `denialReasonCode` → `$request.denialReasonCode`; Emit `decision_completed` event

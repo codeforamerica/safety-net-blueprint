@@ -1050,14 +1050,7 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
 }
 
 function exportOverview(smDoc, rulesDoc, slaTypesDoc, metricsDoc, outDir) {
-  let content;
-  if (smDoc.machines && smDoc.machines.length > 0) {
-    content = smDoc.machines
-      .map(machine => renderOverview(machine, rulesDoc, slaTypesDoc, metricsDoc))
-      .join('\n\n---\n\n');
-  } else {
-    content = renderOverview(smDoc, rulesDoc, slaTypesDoc, metricsDoc);
-  }
+  const content = renderOverview(smDoc, rulesDoc, slaTypesDoc, metricsDoc);
   writeFiles(outDir, { 'overview.md': content });
   return ['overview.md'];
 }
