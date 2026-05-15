@@ -52,17 +52,17 @@ Transitions are actor- or system-triggered actions. Each lists who can trigger i
 
 | ID | From | To | Actors | Conditions | Steps |
 |----|------|----|--------|------------|-------|
-| `flag-expedited` | in_progress | — | system | callerIsSystem | Set `expeditedFlagged` → `true`<br>Emit `expedited` event |
-| `complete` | in_progress | completed | system | callerIsSystem | Set `completedAt` → current time<br>Emit `determination_completed` event |
+| `flag-expedited` | in_progress | — | system | callerIsSystem | Set `expeditedFlagged` → `true`<br>Emit `eligibility.application.expedited` event |
+| `complete` | in_progress | completed | system | callerIsSystem | Set `completedAt` → current time<br>Emit `eligibility.application.determination_completed` event |
 | `withdraw` | in_progress | withdrawn | system | callerIsSystem | Set `withdrawnAt` → current time<br>Emit `withdrawn` event |
 
 ### Decision
 
 | ID | From | To | Actors | Conditions | Steps |
 |----|------|----|--------|------------|-------|
-| `approve` | pending | approved | system | callerIsSystem | Set `decidedAt` → current time<br>Set `path` → `$request.path`<br>Emit `decision_completed` event |
-| `deny` | pending | denied | system | callerIsSystem | Set `decidedAt` → current time<br>Set `path` → `$request.path`<br>Set `denialReasonCode` → `$request.denialReasonCode`<br>Emit `decision_completed` event |
-| `mark-ineligible` | pending | ineligible | system | callerIsSystem | Set `decidedAt` → current time<br>Set `path` → `$request.path`<br>Set `denialReasonCode` → `$request.denialReasonCode`<br>Emit `decision_completed` event |
+| `approve` | pending | approved | system | callerIsSystem | Set `decidedAt` → current time<br>Set `path` → `$request.path`<br>Emit `eligibility.application.decision_completed` event |
+| `deny` | pending | denied | system | callerIsSystem | Set `decidedAt` → current time<br>Set `path` → `$request.path`<br>Set `denialReasonCode` → `$request.denialReasonCode`<br>Emit `eligibility.application.decision_completed` event |
+| `mark-ineligible` | pending | ineligible | system | callerIsSystem | Set `decidedAt` → current time<br>Set `path` → `$request.path`<br>Set `denialReasonCode` → `$request.denialReasonCode`<br>Emit `eligibility.application.decision_completed` event |
 
 ---
 

@@ -11,10 +11,10 @@ Auto-generated from state machine `emit` and subscription declarations.
 | `eligibility.application.determination_completed` | *(unknown)* | [Intake/Application](intake.md#application) |
 | `eligibility.application.expedited` | *(unknown)* | [Intake/Application](intake.md#application) |
 | `eligibility.decision.created` | *(unknown)* | [Eligibility/Decision](eligibility.md#decision) |
-| `eligibility.decision.decision_completed` | [Eligibility/Decision](eligibility.md#decision) | *(none)* |
+| `eligibility.decision.eligibility.application.decision_completed` | [Eligibility/Decision](eligibility.md#decision) | *(none)* |
 | `eligibility.determination.created` | *(unknown)* | [Eligibility/Determination](eligibility.md#determination) |
-| `eligibility.determination.determination_completed` | [Eligibility/Determination](eligibility.md#determination) | *(none)* |
-| `eligibility.determination.expedited` | [Eligibility/Determination](eligibility.md#determination) | *(none)* |
+| `eligibility.determination.eligibility.application.determination_completed` | [Eligibility/Determination](eligibility.md#determination) | *(none)* |
+| `eligibility.determination.eligibility.application.expedited` | [Eligibility/Determination](eligibility.md#determination) | *(none)* |
 | `eligibility.determination.withdrawn` | [Eligibility/Determination](eligibility.md#determination) | *(none)* |
 | `intake.application.closed` | [Intake/Application](intake.md#application) | *(none)* |
 | `intake.application.expedited_flagged` | [Intake/Application](intake.md#application) | *(none)* |

@@ -23,7 +23,7 @@ machines:
         transition: {from: in_progress}
         steps:
           - set: {field: expeditedFlagged, value: true, description: Record that the household qualifies for expedited SNAP processing}
-          - emit: {event: expedited, data: {flaggedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.expedited — Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))"}
+          - emit: {event: eligibility.application.expedited, data: {flaggedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.expedited — Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))"}
       - id: complete
         description: "POST /determinations/{determinationId}/complete — System marks a Determination as complete after all program Decisions are resolved"
         guards:
@@ -32,7 +32,7 @@ machines:
         transition: {from: in_progress, to: completed}
         steps:
           - set: {field: completedAt, value: $now, description: Record when all Decisions were resolved}
-          - emit: {event: determination_completed, data: {completedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.determination_completed — signals all program Decisions are resolved; Intake subscribes to close the application"}
+          - emit: {event: eligibility.application.determination_completed, data: {completedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.determination_completed — signals all program Decisions are resolved; Intake subscribes to close the application"}
       - id: withdraw
         description: "POST /determinations/{determinationId}/withdraw — System withdraws a Determination when the associated application is withdrawn"
         guards:
@@ -45,8 +45,9 @@ machines:
     events:
       - name: intake.application.submitted
         steps:
-          - call: {POST: eligibility/determinations, body: {applicationId: $this.subject, programs: $this.data.programs}, description: Create a Determination for the submitted application}
+          - call: {POST: eligibility/determinations, body: {applicationId: $this.subject, programs: $this.data.programs, status: in_progress}, description: Create a Determination for the submitted application}
       - name: eligibility.determination.created
+        transition: {}
         description: Create one Decision per program when a Determination is created
         steps:
           - call: initializeDetermination
@@ -74,7 +75,7 @@ machines:
         steps:
           - forEach: {in: $object.programs, as: program}
             do:
-              - call: {POST: eligibility/determinations/$object.id/decisions, body: {applicationId: $object.applicationId, determinationId: $object.id, program: $program}}
+              - call: {POST: eligibility/determinations/decisions, body: {applicationId: $object.applicationId, determinationId: $object.id, program: $program, status: pending}}
       - id: evaluateFinalDetermination
         description: Call the final determination adapter for each remaining pending Decision (42 CFR § 435.912)
         steps:
@@ -105,7 +106,7 @@ machines:
         steps:
           - set: {field: decidedAt, value: $now, description: Record when the Decision was finalized}
           - set: {field: path, value: $request.path, description: Record whether the Decision was reached automatically or by a caseworker}
-          - emit: {event: decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: approved, path: $request.path}, description: "Emit eligibility.application.decision_completed — Intake records the outcome per member; Determination checks if all Decisions are resolved"}
+          - emit: {event: eligibility.application.decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: approved, path: $request.path}, description: "Emit eligibility.application.decision_completed — Intake records the outcome per member; Determination checks if all Decisions are resolved"}
       - id: deny
         description: "POST /determinations/{determinationId}/decisions/{decisionId}/deny — System denies a Decision based on failing eligibility criteria"
         schema:
@@ -119,7 +120,7 @@ machines:
           - set: {field: decidedAt, value: $now}
           - set: {field: path, value: $request.path}
           - set: {field: denialReasonCode, value: $request.denialReasonCode, description: "Store the machine-readable denial reason; required for the Notice of Action and appeal basis (7 CFR § 273.2(h), 42 CFR § 435.917)"}
-          - emit: {event: decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: denied, path: $request.path, denialReasonCode: $request.denialReasonCode}}
+          - emit: {event: eligibility.application.decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: denied, path: $request.path, denialReasonCode: $request.denialReasonCode}}
       - id: mark-ineligible
         description: "POST /determinations/{determinationId}/decisions/{decisionId}/mark-ineligible — System marks a Decision as categorically ineligible"
         schema:
@@ -133,7 +134,7 @@ machines:
           - set: {field: decidedAt, value: $now}
           - set: {field: path, value: $request.path}
           - set: {field: denialReasonCode, value: $request.denialReasonCode, description: "Store the categorical ineligibility reason code (e.g., citizenship bar for SNAP, age limit for TANF)"}
-          - emit: {event: decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: ineligible, path: $request.path, denialReasonCode: $request.denialReasonCode}}
+          - emit: {event: eligibility.application.decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: ineligible, path: $request.path, denialReasonCode: $request.denialReasonCode}}
     events:
       - name: eligibility.decision.created
         description: Run expedited SNAP screening or initiate Medicaid data exchange when a Decision is created
