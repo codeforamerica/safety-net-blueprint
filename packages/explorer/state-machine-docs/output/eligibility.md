@@ -27,7 +27,7 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
 ### Event subscriptions
 
 - **`intake.application.submitted`** *(emitted by [Intake/Application](intake.md#application))*
-  - `POST eligibility/determinations`
+  - Create a Determination for the submitted application
 - **`eligibility.determination.created`**
   - Create one Decision per program when a Determination is created
 - **`intake.application.review_completed`** *(emitted by [Intake/Application](intake.md#application))*
@@ -36,11 +36,11 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
 - **`eligibility.application.decision_completed`**
   - Look up: pendingDecision
   - If `$pendingDecision is null`:
-    - `POST eligibility/determinations/$this.data.determinationId/complete`
+    - Complete the Determination when all program Decisions are resolved
 - **`intake.application.withdrawn`** *(emitted by [Intake/Application](intake.md#application))*
   - Look up: determination
   - If `id is set`:
-    - `POST eligibility/determinations/$determination.id/withdraw`
+    - Withdraw the Determination; already-resolved Decisions are preserved as the audit record
 
 ---
 

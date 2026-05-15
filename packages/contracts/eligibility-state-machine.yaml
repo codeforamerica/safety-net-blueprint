@@ -44,9 +44,8 @@ machines:
           - emit: {event: withdrawn, data: {withdrawnAt: $now, applicationId: $object.applicationId, determinationId: $object.id}}
     events:
       - name: intake.application.submitted
-        description: Create a Determination when an application is submitted
         steps:
-          - call: {POST: eligibility/determinations, body: {applicationId: $this.subject, programs: $this.data.programs}}
+          - call: {POST: eligibility/determinations, body: {applicationId: $this.subject, programs: $this.data.programs}, description: Create a Determination for the submitted application}
       - name: eligibility.determination.created
         description: Create one Decision per program when a Determination is created
         steps:
@@ -58,19 +57,17 @@ machines:
         steps:
           - call: evaluateFinalDetermination
       - name: eligibility.application.decision_completed
-        description: Complete the Determination when all program Decisions are resolved
         context:
           - pendingDecision: {from: eligibility/determinations/decisions, where: {determinationId: $this.data.determinationId, status: pending}}
         steps:
           - if: '$pendingDecision == null'
-            then: [{call: {POST: eligibility/determinations/$this.data.determinationId/complete}}]
+            then: [{call: {POST: eligibility/determinations/$this.data.determinationId/complete, description: Complete the Determination when all program Decisions are resolved}}]
       - name: intake.application.withdrawn
-        description: Withdraw the Determination when the application is withdrawn; preserves resolved Decisions as the audit record
         context:
           - determination: {from: eligibility/determinations, where: {applicationId: $this.subject}}
         steps:
           - if: '$determination.id != null'
-            then: [{call: {POST: eligibility/determinations/$determination.id/withdraw}}]
+            then: [{call: {POST: eligibility/determinations/$determination.id/withdraw, description: Withdraw the Determination; already-resolved Decisions are preserved as the audit record}}]
     procedures:
       - id: initializeDetermination
         description: Create one Decision per program when a Determination is created
