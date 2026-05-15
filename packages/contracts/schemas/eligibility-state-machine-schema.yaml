@@ -1,0 +1,47 @@
+# Request body schemas for eligibility state machine transitions.
+# Referenced from eligibility-state-machine.yaml via $ref in each transition's schema.request.
+
+$defs:
+  ApproveDecisionRequest:
+    type: object
+    required:
+      - path
+    properties:
+      path:
+        type: string
+        enum:
+          - auto
+          - manual
+        description: Whether the Decision was reached automatically (ex parte) or by a caseworker
+
+  DenyDecisionRequest:
+    type: object
+    required:
+      - path
+      - denialReasonCode
+    properties:
+      path:
+        type: string
+        enum:
+          - auto
+          - manual
+        description: Whether the Decision was reached automatically (ex parte) or by a caseworker
+      denialReasonCode:
+        type: string
+        description: Machine-readable denial reason code. Program-specific — defined at implementation from FNS code sets (SNAP) or CMS code sets (Medicaid)
+
+  MarkIneligibleRequest:
+    type: object
+    required:
+      - path
+      - denialReasonCode
+    properties:
+      path:
+        type: string
+        enum:
+          - auto
+          - manual
+        description: Whether the Decision was reached automatically (ex parte) or by a caseworker
+      denialReasonCode:
+        type: string
+        description: Machine-readable categorical ineligibility code (e.g., citizenship bar, age limit). Program-specific — defined at implementation
