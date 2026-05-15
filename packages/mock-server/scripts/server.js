@@ -15,12 +15,12 @@ import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
-import { closeAll } from '../src/database-manager.js';
+import { closeAll, insertResource, findById } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
 import { registerStub, registerHttpStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
-import { findById } from '../src/database-manager.js';
+import { registerConfigManaged } from '../src/config-registry.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -111,12 +111,14 @@ async function startMockServer(specDirs = null, seedDir = null) {
     let allStateMachines = [];
     let allSlaTypes = [];
     let allMetrics = [];
+    let allConfigs = [];
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
       allMetrics = allMetrics.concat(result.metrics);
+      allConfigs = allConfigs.concat(result.configs || []);
     }
 
 
@@ -197,6 +199,28 @@ async function startMockServer(specDirs = null, seedDir = null) {
     console.log('  GET    /mock/stubs/events - List active event stubs');
     console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
     console.log('  DELETE /mock/stubs/events - Clear all event stubs');
+
+    // Reset endpoint — clears all runtime data and re-seeds config-managed resources.
+    // Config-managed items (queues, services, document types) are restored; all other
+    // data is wiped. Useful for putting tests into a known-clean state without restarting.
+    app.post('/mock/reset', (req, res) => {
+      clearAll();
+      clearStubs();
+      for (const config of allConfigs) {
+        for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
+          for (const entry of entries) {
+            const data = { ...entry };
+            for (const key of Object.keys(data)) {
+              if (key.startsWith('x-')) delete data[key];
+            }
+            insertResource(catalogKey, { ...data, source: 'system' });
+            registerConfigManaged(catalogKey, data.id);
+          }
+        }
+      }
+      res.status(204).end();
+    });
+    console.log('  POST   /mock/reset - Reset all runtime data (keeps config-managed resources)');
 
 
     // Register event subscriptions

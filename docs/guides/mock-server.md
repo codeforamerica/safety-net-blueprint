@@ -25,20 +25,22 @@ Adding a new operation or resource requires only a contract change.
 
 ## Seed data
 
-The server seeds its in-memory database from YAML files in `packages/mock-server/seed/` at startup. Each file covers one domain (e.g., `workflow.yaml`). The key prefix (e.g., `Task`, `Queue`) identifies the collection.
+At startup, the server populates its databases from two sources:
 
-Some resources — queues and other catalog entries — are defined in `*-config.yaml` files and seeded as system-managed records. These are separate from the hand-edited seed files.
+- **Seed files** (`packages/mock-server/seed/`) — hand-edited YAML files with example data for local development.
+- **Config files** (`*-config.yaml`) — catalog entries like queues, services, and document types that the server treats as system-managed records.
 
-To reset all data:
+**`POST /mock/reset`** clears all runtime data and restores the config-managed catalog entries. It does not reseed from the seed files — you get an empty database plus the catalog. Use it at the start of each integration test suite to start from a clean, known state.
+
 ```bash
-npm run mock:reset   # clear all data
-npm run mock:start   # restart to reseed
+curl -X POST http://localhost:1080/mock/reset
 ```
 
-To regenerate seed files from current schemas:
+To fully reseed from example data (for local development):
 ```bash
-npm run mock:seed
+npm run mock:seed   # regenerate seed files from current schemas
 ```
+Then restart the server to load the new seed data.
 
 ## Caller context
 
@@ -164,9 +166,16 @@ MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
 
 | Command | Description |
 |---------|-------------|
-| `npm run mock:start` | Start server, seeds from `packages/mock-server/seed/` |
+| `npm run mock:start` | Start server |
 | `npm run mock:seed` | Regenerate seed files from current schemas |
-| `npm run mock:reset` | Clear all data (restart to reseed) |
+
+| Endpoint | Description |
+|---------|-------------|
+| `POST /mock/reset` | Clear runtime data; restore config-managed resources |
+| `POST /mock/stubs/events` | Register an event stub |
+| `GET /mock/stubs/events` | List active event stubs |
+| `DELETE /mock/stubs/events/:id` | Remove a specific stub |
+| `DELETE /mock/stubs/events` | Clear all stubs |
 
 ## Troubleshooting
 
@@ -177,8 +186,7 @@ lsof -ti:1080 | xargs kill
 
 **Stale or wrong data:**
 ```bash
-npm run mock:reset
-npm run mock:start
+curl -X POST http://localhost:1080/mock/reset
 ```
 
 **Search not working:** Check that the seeded examples have non-empty string fields to search against.
