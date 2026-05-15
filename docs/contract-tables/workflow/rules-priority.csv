@@ -1,3 +1,0 @@
-Order,Condition,Action,Fallback,Description
-1,"{""=="":[{""var"":""this.isExpedited""},true]}","{""setPriority"":""expedited""}",,Set expedited priority when the task is flagged as expedited.
-2,true,"{""setPriority"":""normal""}",,Set normal priority for all other tasks.

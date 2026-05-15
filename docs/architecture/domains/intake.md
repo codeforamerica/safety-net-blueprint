@@ -698,26 +698,29 @@ No verification obligation fields live on `Application`. No verification status 
 - The same challenge exists for workflow task creation and document checklist generation: those domains (workflow, intake's document requirements) also needed intake data transformed into their own resource shapes. The rules engine solved both problems with `createResource`.
 - Intake rules already have access to `ApplicationMember` fields via context bindings. The rules engine can map member fields into the data exchange request payload as part of the `createResource` action — no separate orchestration layer needed.
 - This keeps data exchange as a generic platform service: it accepts `data-exchange/service-calls` resources with a `service` identifier and a `payload`, executes the call, and emits `data-exchange.service-call.completed`. It does not know what domain triggered the call or how the payload was assembled.
+- Defining the fan-out in intake rules means the behavior is a contracted artifact — visible in `intake-rules.yaml`, auditable, and state-customizable via overlay. If the fan-out lived in a data exchange adapter, the logic would be opaque to the blueprint and each state would have to re-implement it without a baseline to start from.
 - States can customize which fields are mapped and which services are called via overlay — the mapping lives in rules, which are overlay-configurable.
 
-**Decision:** Intake rules create `data-exchange/service-calls` resources via `createResource`, with member fields mapped into the service-specific request payload. Data exchange executes the call and emits a completion event. Data exchange has no knowledge of intake entities. The field mapping and service selection live entirely in the rules contract, making them state-customizable.
+**Decision:** Intake rules create `data-exchange/service-calls` resources via `forEach` over the application's members, with member fields mapped into the service-specific request payload. Data exchange executes the call and emits a completion event. Data exchange has no knowledge of intake entities. The field mapping, service selection, and per-member fan-out live entirely in the rules contract, making them state-customizable.
 
 Example (per-member fdsh_ssa citizenship check, SNAP only):
 ```yaml
+context:
+  - as: members
+    entity: intake/application-members
+    where:
+      "==": [{var: applicationId}, {var: application.id}]
 action:
-  for: member
-  in: members
-  if:
-    in: [snap, {var: application.programs}]
-  createResource:
-    entity: data-exchange/service-calls
-    fields:
-      serviceType: fdsh_ssa
-      subjectType: application-member
-      subjectId: {var: member.id}
-      metadata:
-        intake:
-          verificationId: {var: verification.id}
+  forEach:
+    in: {var: members}
+    as: member
+    createResource:
+      entity: data-exchange/service-calls
+      fields:
+        applicationId: {var: application.id}
+        memberId: {var: member.id}
+        serviceType: fdsh_ssa
+        requestedAt: {var: this.time}
 ```
 
 The `metadata.intake.verificationId` context passthrough allows the `data-exchange.service-call.completed` handler to correlate the result back to the pre-created Verification record without querying for it. See `packages/contracts/patterns/api-patterns.yaml#context_passthrough`.

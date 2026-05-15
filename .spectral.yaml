@@ -129,3 +129,9 @@ overrides:
   - files: ["packages/contracts/platform-openapi.yaml#/paths/~1events~1stream"]
     rules:
       response-body-json-only: off
+  # Document management: upload endpoints use multipart/form-data; content endpoint returns raw bytes.
+  # request-body-json-only and response-body-json-only are intentionally off for this domain.
+  - files: ["packages/contracts/document-management-openapi.yaml"]
+    rules:
+      request-body-json-only: off
+      response-body-json-only: off

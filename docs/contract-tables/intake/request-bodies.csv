@@ -1,7 +1,0 @@
-Trigger,Fields
-submit,(none)
-open,(none)
-withdraw,reason: string (required)
-close,(none)
-complete-review,(none)
-flag-expedited,(none)

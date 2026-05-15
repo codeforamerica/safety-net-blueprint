@@ -8,8 +8,9 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import { execSync, spawn } from 'child_process';
-import { realpathSync, openSync, statSync } from 'fs';
+import { realpathSync, openSync, statSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
+import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
@@ -108,14 +109,12 @@ async function startMockServer(specDirs = null, seedDir = null) {
     }
     let apiSpecs = [];
     let allStateMachines = [];
-    let allRules = [];
     let allSlaTypes = [];
     let allMetrics = [];
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
-      allRules = allRules.concat(result.rules);
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
       allMetrics = allMetrics.concat(result.metrics);
     }
@@ -128,7 +127,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
     app.use(cors({
       origin: '*',
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Caller-Id', 'X-Caller-Role', 'X-Mock-Now'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Caller-Id', 'X-Caller-Roles', 'X-Mock-Now', 'traceparent'],
       credentials: true
     }));
 
@@ -169,9 +168,9 @@ async function startMockServer(specDirs = null, seedDir = null) {
     });
     console.log('  POST   /platform/events - Inject external domain event (testing)');
 
-    // Mock stub registry endpoints — for pre-programming event responses in tests.
+    // Event stub registry — pre-program event responses for integration tests.
     // See packages/mock-server/mock-rules/README.md for full usage documentation.
-    app.post('/mock/stubs', (req, res) => {
+    app.post('/mock/stubs/events', (req, res) => {
       try {
         const stub = req.body?.type === 'http'
           ? registerHttpStub(req.body)
@@ -181,26 +180,27 @@ async function startMockServer(specDirs = null, seedDir = null) {
         res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
       }
     });
-    app.get('/mock/stubs', (req, res) => {
+    app.get('/mock/stubs/events', (req, res) => {
       const items = listStubs();
       res.json({ items, total: items.length });
     });
-    app.delete('/mock/stubs', (req, res) => {
+    app.delete('/mock/stubs/events', (req, res) => {
       clearStubs();
       res.status(204).end();
     });
-    app.delete('/mock/stubs/:id', (req, res) => {
+    app.delete('/mock/stubs/events/:id', (req, res) => {
       const removed = removeStub(req.params.id);
       if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Stub "${req.params.id}" not found` });
       res.status(204).end();
     });
-    console.log('  POST   /mock/stubs - Register a stub response');
-    console.log('  GET    /mock/stubs - List active stubs');
-    console.log('  DELETE /mock/stubs/:id - Remove a stub');
-    console.log('  DELETE /mock/stubs - Clear all stubs');
+    console.log('  POST   /mock/stubs/events - Register an event stub');
+    console.log('  GET    /mock/stubs/events - List active event stubs');
+    console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
+    console.log('  DELETE /mock/stubs/events - Clear all event stubs');
 
-    // Register event subscriptions (event-triggered rule sets)
-    registerEventSubscriptions(allRules, allStateMachines, allSlaTypes, apiSpecs);
+
+    // Register event subscriptions
+    registerEventSubscriptions(allStateMachines, allSlaTypes, apiSpecs);
 
     // Enrich service call creation with catalog-derived fields (after schema validation).
     // Copies serviceType and callMode from the referenced ExternalService, sets status to pending.
@@ -220,10 +220,12 @@ async function startMockServer(specDirs = null, seedDir = null) {
 
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
-    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allRules, allSlaTypes, allMetrics);
+    const uploadsDir = resolveUploadsDir(resolve(import.meta.dirname, '..', 'uploads'));
+    mkdirSync(uploadsDir, { recursive: true });
+    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, uploadsDir);
 
     // Register state machine RPC routes
-    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allRules, allSlaTypes);
+    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes);
 
 
     // 404 handler for undefined routes

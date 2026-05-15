@@ -1,0 +1,9 @@
+Machine,State,SLA Clock
+Task,pending,running
+Task,in_progress,running
+Task,completed,stopped
+Task,escalated,running
+Task,cancelled,stopped
+Task,awaiting_client,paused
+Task,awaiting_verification,paused
+Task,pending_review,running

@@ -783,12 +783,12 @@ components:
         - $ref: "#/components/schemas/TaskWritable"
         - type: object
           description: |
-            Payload to create a new task. At minimum, name and status are required.
+            Payload to create a new task. name is required; status is set by the state machine and
+            defaults to the initialState (pending) when omitted.
 
             Note: id, createdAt, and updatedAt are server-generated and will be returned in the response.
           required:
             - name
-            - status
           properties:
             slaInfo:
               type: array
@@ -1016,7 +1016,7 @@ components:
       properties: {}
 
     TaskDeletedEvent:
-      $ref: "./components/events.yaml#/ResourceDeletedEvent"
+      $ref: "./schemas/platform-events.yaml#/ResourceDeletedEvent"
 
     TaskAwaitingClientEvent:
       type: object
@@ -1090,7 +1090,7 @@ components:
             - sla_deadline_exceeded
 
     TaskUpdatedEvent:
-      $ref: "./components/events.yaml#/ResourceUpdatedEvent"
+      $ref: "./schemas/platform-events.yaml#/ResourceUpdatedEvent"
 
   examples:
     QueueExample1:

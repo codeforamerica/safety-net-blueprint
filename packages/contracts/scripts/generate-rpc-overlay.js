@@ -65,7 +65,10 @@ export function discoverStateMachines(specsDir) {
     try {
       const content = readFileSync(filePath, 'utf8');
       const stateMachine = yaml.load(content);
-      if (!stateMachine || !stateMachine.domain || !stateMachine.object) continue;
+      if (!stateMachine || !stateMachine.domain) continue;
+      // New format: object lives inside machines[]; old format: top-level object
+      const hasMachines = Array.isArray(stateMachine.machines) && stateMachine.machines.length > 0;
+      if (!stateMachine.object && !hasMachines) continue;
       results.push({ filePath, stateMachine });
     } catch {
       continue;
@@ -150,22 +153,17 @@ export function buildOperationId(trigger, objectName) {
 }
 
 /**
- * Build a request body schema from the state machine's requestBodies entry.
- * @param {Object} bodyDef - The requestBodies definition for this trigger
- * @returns {Object|null} OpenAPI requestBody object, or null if no body needed
+ * Build an OpenAPI requestBody object from a transition's schema.request definition.
+ * @param {Object|null} requestSchema - The schema.request value (resolved JSON Schema object)
+ * @returns {Object|null} OpenAPI requestBody object, or null if no schema provided
  */
-function buildRequestBody(bodyDef) {
-  if (!bodyDef) return null;
-
-  // Strip the trigger field; if nothing remains, no request body is needed
-  const { trigger: _trigger, ...schema } = bodyDef;
-  if (Object.keys(schema).length === 0) return null;
-
+function buildRequestBody(requestSchema) {
+  if (!requestSchema) return null;
   return {
     required: true,
     content: {
       'application/json': {
-        schema
+        schema: requestSchema
       }
     }
   };
@@ -179,57 +177,60 @@ function buildRequestBody(bodyDef) {
  */
 export function generateOverlay(stateMachine, endpointInfo) {
   const { itemPath, paramRefs, tag, schemaRef } = endpointInfo;
-  const requestBodies = stateMachine.requestBodies || [];
 
   const pathsUpdate = {};
+  const seenIds = new Set();
 
-  for (const transition of stateMachine.transitions) {
-    const rpcPath = `${itemPath}/${transition.trigger}`;
-    const operationId = buildOperationId(transition.trigger, stateMachine.object);
+  for (const machine of (stateMachine.machines || [])) {
+    const objectName = machine.object || stateMachine.object;
 
-    const operation = {
-      summary: `${transition.trigger.charAt(0).toUpperCase() + transition.trigger.slice(1)} ${stateMachine.object.toLowerCase()}`,
-      description: `Trigger the ${transition.trigger} transition (${transition.from} → ${transition.to}).`,
-      operationId
-    };
+    for (const transition of (machine.transitions || [])) {
+      // Deduplicate — same id may appear for different from-states (e.g. escalate)
+      if (seenIds.has(transition.id)) continue;
+      seenIds.add(transition.id);
 
-    if (tag) {
-      operation.tags = [tag];
+      const rpcPath = `${itemPath}/${transition.id}`;
+      const operationId = buildOperationId(transition.id, objectName);
+      const from = transition.transition?.from;
+      const to = transition.transition?.to ?? '(in-place)';
+      const fromLabel = Array.isArray(from) ? from.join(' | ') : (from ?? '?');
+
+      const operation = {
+        summary: `${transition.id.charAt(0).toUpperCase() + transition.id.slice(1).replace(/-/g, ' ')} ${objectName.toLowerCase()}`,
+        description: transition.description || `Trigger the ${transition.id} transition (${fromLabel} → ${to}).`,
+        operationId
+      };
+
+      if (tag) {
+        operation.tags = [tag];
+      }
+
+      if (paramRefs.length > 0) {
+        operation.parameters = paramRefs.map(ref => ref.$ref ? { $ref: ref.$ref } : ref);
+      }
+
+      const requestBody = buildRequestBody(transition.schema?.request || null);
+      if (requestBody) {
+        operation.requestBody = requestBody;
+      }
+
+      const responseSchema = transition.schema?.response
+        ? transition.schema.response
+        : (schemaRef ? { $ref: schemaRef } : { type: 'object' });
+
+      operation.responses = {
+        '200': {
+          description: 'Transition applied successfully.',
+          content: { 'application/json': { schema: responseSchema } }
+        },
+        '400': { $ref: './components/responses.yaml#/BadRequest' },
+        '404': { $ref: './components/responses.yaml#/NotFound' },
+        '409': { $ref: './components/responses.yaml#/Conflict' },
+        '500': { $ref: './components/responses.yaml#/InternalError' }
+      };
+
+      pathsUpdate[rpcPath] = { post: operation };
     }
-
-    // Copy parameter references from the item endpoint
-    if (paramRefs.length > 0) {
-      operation.parameters = paramRefs.map(ref => {
-        if (ref.$ref) return { $ref: ref.$ref };
-        return ref;
-      });
-    }
-
-    // Add request body if defined
-    const bodyDef = requestBodies.find(rb => rb.trigger === transition.trigger);
-    const requestBody = buildRequestBody(bodyDef);
-    if (requestBody) {
-      operation.requestBody = requestBody;
-    }
-
-    // Standard responses
-    const responses = {
-      '200': {
-        description: 'Transition applied successfully.',
-        content: {
-          'application/json': {
-            schema: schemaRef ? { $ref: schemaRef } : { type: 'object' }
-          }
-        }
-      },
-      '400': { $ref: './components/responses.yaml#/BadRequest' },
-      '404': { $ref: './components/responses.yaml#/NotFound' },
-      '409': { $ref: './components/responses.yaml#/Conflict' },
-      '500': { $ref: './components/responses.yaml#/InternalError' }
-    };
-
-    operation.responses = responses;
-    pathsUpdate[rpcPath] = { post: operation };
   }
 
   return {
@@ -243,7 +244,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
       {
         target: '$.paths',
         file: stateMachine.apiSpec,
-        description: `Add state machine transition endpoints for ${stateMachine.domain} ${stateMachine.object.toLowerCase()}s`,
+        description: `Add state machine transition endpoints for ${stateMachine.domain}`,
         update: pathsUpdate
       }
     ]

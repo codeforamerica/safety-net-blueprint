@@ -1,0 +1,5 @@
+Machine,Trigger Type,Name / Event,From,To,After,Relative To,Calendar,Guards,Steps
+Task,onEvent,workflow.task.created,,,,,,,Call `assignToQueue`; Call `evaluatePriority`; Call `requestTimer`
+Task,onEvent,workflow.task.updated,,,,,,,"If ($this.data.fields.exists(f, f == ""isExpedited"" || f == ""programType"")): Call `evaluatePriority`; If ($this.data.fields.exists(f, f == ""programType"" || f == ""queueId"")): Call `assignToQueue`; If ($this.data.fields.exists(f, f == ""slaDeadline"") && $object.slaDeadline != null): Call `requestTimer`; Call `requestTimer`"
+Task,onEvent,scheduler.timer.fired,,,,,,,Match ($this.data.timerType): creation_deadline: POST `workflow/tasks/{this.data.subject}/system-escalate`; sla_warning: POST `workflow/tasks/{this.data.subject}/system-escalate`; sla_breach: POST `workflow/tasks/{this.data.subject}/system-escalate`; client_timeout: POST `workflow/tasks/{this.data.subject}/system-auto-cancel`; verification_timeout: POST `workflow/tasks/{this.data.subject}/system-resume`
+Task,onEvent,intake.application.submitted,,,,,,,POST `workflow/tasks`

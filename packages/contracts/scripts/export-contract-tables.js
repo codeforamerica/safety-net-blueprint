@@ -5,7 +5,7 @@
  * each contract type into CSV tables grouped by domain.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, unlinkSync, existsSync } from 'fs';
 import { resolve, dirname, basename, relative } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -119,16 +119,194 @@ function csvTable(headers, rows) {
 }
 
 // ---------------------------------------------------------------------------
-// State machine → CSV renderers
+// Format detection
 // ---------------------------------------------------------------------------
 
-/** Format a single effect as a readable expression (e.g., "set assignedToId = $caller.id") */
+/** True when the document uses the machines/handlers/actions format. */
+function isMachinesFormat(doc) {
+  return Array.isArray(doc.machines);
+}
+
+// ---------------------------------------------------------------------------
+// State machine → CSV renderers (shared helpers)
+// ---------------------------------------------------------------------------
+
+/** Format a `from` value — arrays become "state1 | state2" to avoid CSV ambiguity. */
+function formatFrom(from) {
+  if (Array.isArray(from)) return from.join(' | ');
+  return from || '';
+}
+
+// ---------------------------------------------------------------------------
+// New format renderers (machines/handlers/actions)
+// ---------------------------------------------------------------------------
+
+/** Describe a single step from a then: list. */
+function describeStepItem(item) {
+  if (!item || typeof item !== 'object') return '';
+  const keys = Object.keys(item).filter(k => k !== 'description');
+  if (keys.length === 0) return '';
+  const key = keys[0];
+  const val = item[key];
+  switch (key) {
+    case 'set': {
+      const v = val?.value === null ? 'nothing *(clears field)*'
+        : val?.value === '$now' ? 'current time'
+        : val?.value === '$caller.id' ? "caller's ID"
+        : `\`${val?.value}\``;
+      return `Set \`${val?.field}\` → ${v}`;
+    }
+    case 'emit': {
+      const event = typeof val === 'string' ? val : val?.event;
+      return `Emit \`${event}\` event`;
+    }
+    case 'evaluate':
+      return `Evaluate \`${val}\``;
+    case 'call': {
+      if (typeof val === 'string') return `Call \`${val}\``;
+      // Object form: HTTP operation
+      const method = 'POST' in val ? 'POST' : 'PATCH' in val ? 'PATCH' : 'GET' in val ? 'GET' : 'DELETE' in val ? 'DELETE' : 'CALL';
+      const path = val[method] || '';
+      return `${method} \`${path}\``;
+    }
+    case 'if': {
+      const thenDescs = (item.then || []).map(describeStepItem).filter(Boolean).join('; ');
+      const elseDescs = (item.else || []).map(describeStepItem).filter(Boolean).join('; ');
+      const condStr = typeof val === 'string' ? val : JSON.stringify(val);
+      return elseDescs
+        ? `If (${condStr}): ${thenDescs}; else: ${elseDescs}`
+        : `If (${condStr}): ${thenDescs}`;
+    }
+    case 'match': {
+      const condStr = typeof val === 'string' ? val : JSON.stringify(val);
+      const onDescs = Object.entries(item.when || {})
+        .map(([k, steps]) => `${k}: ${(steps || []).map(describeStepItem).filter(Boolean).join('; ')}`)
+        .join('; ');
+      return `Match (${condStr}): ${onDescs}`;
+    }
+    case 'invoke': {
+      // Legacy invoke: support
+      if (typeof val === 'string') return `Invoke \`${val}\``;
+      const method = 'POST' in val ? 'POST' : 'PATCH' in val ? 'PATCH' : 'INVOKE';
+      const path = val[method] || '';
+      return `${method} \`${path}\``;
+    }
+    default:
+      return `Call \`${key}\``;
+  }
+}
+
+/** Format a guards.conditions list (strings and any/all composition objects). */
+function formatConditions(conditions) {
+  if (!conditions || conditions.length === 0) return '';
+  return conditions.map(c => {
+    if (typeof c === 'string') return c;
+    if (c.any) return `any: ${c.any.join(', ')}`;
+    if (c.all) return `all: ${c.all.join(', ')}`;
+    return JSON.stringify(c);
+  }).join('; ');
+}
+
+/** Flatten all guard sets on a transition into a single actors/conditions summary. */
+function flattenGuards(guards) {
+  const allActors = [];
+  const allConditions = [];
+  for (const g of guards || []) {
+    allActors.push(...(g.actors || []));
+    allConditions.push(...(g.conditions || []));
+  }
+  return {
+    actors: [...new Set(allActors)].join('; '),
+    conditions: formatConditions([...new Set(allConditions)]),
+  };
+}
+
+function renderTransitions(doc) {
+  const headers = ['Machine', 'ID', 'From', 'To', 'Actors', 'Conditions', 'Steps'];
+  const rows = [];
+
+  for (const machine of doc.machines || []) {
+    for (const t of machine.transitions || []) {
+      const { actors, conditions } = flattenGuards(t.guards);
+      const from = t.transition ? formatFrom(t.transition.from) : '';
+      const to = t.transition?.to || '';
+      const steps = (t.steps || []).map(describeStepItem).filter(Boolean).join('; ');
+      rows.push([machine.object, t.id || '', from, to, actors, conditions, steps]);
+    }
+  }
+
+  return csvTable(headers, rows);
+}
+
+function renderEvents(doc) {
+  const headers = ['Machine', 'Event', 'Steps'];
+  const rows = [];
+
+  for (const machine of doc.machines || []) {
+    for (const evt of machine.events || []) {
+      const steps = (evt.steps || []).map(describeStepItem).filter(Boolean).join('; ');
+      rows.push([machine.object, evt.name || '', steps]);
+    }
+  }
+
+  return csvTable(headers, rows);
+}
+
+function renderProcedures(doc) {
+  const headers = ['ID', 'Scope', 'Description', 'Parameters', 'Steps'];
+  const rows = [];
+
+  const addProc = (proc, scope) => {
+    const params = (proc.parameters || []).join(', ');
+    const steps = (proc.steps || []).map(describeStepItem).filter(Boolean).join('; ');
+    rows.push([proc.id || '', scope, proc.description || '', params, steps]);
+  };
+
+  for (const proc of doc.procedures || []) addProc(proc, 'domain');
+  for (const machine of doc.machines || []) {
+    for (const proc of machine.procedures || []) addProc(proc, machine.object);
+  }
+
+  return csvTable(headers, rows);
+}
+
+function renderRules(doc) {
+  const headers = ['Rule ID', 'Evaluation', 'Conditions'];
+  const rows = [];
+  for (const rule of doc.rules || []) {
+    const conditions = (rule.conditions || []).map(c => {
+      const id = c.id ? `[${c.id}] ` : '';
+      const cond = c.condition === true || c.condition === undefined ? 'true'
+        : typeof c.condition === 'object' ? JSON.stringify(c.condition)
+        : String(c.condition);
+      return `${id}${cond}`;
+    }).join('; ');
+    rows.push([rule.id || '', rule.evaluation || 'first-match-wins', conditions]);
+  }
+  return csvTable(headers, rows);
+}
+
+function renderStatesSla(doc) {
+  const headers = ['Machine', 'State', 'SLA Clock'];
+  const rows = [];
+  for (const machine of doc.machines || []) {
+    for (const state of machine.states || []) {
+      rows.push([machine.object, state.id, state.slaClock || '']);
+    }
+  }
+  return csvTable(headers, rows);
+}
+
+// ---------------------------------------------------------------------------
+// Old format renderers (transitions/effects) — kept for any unmigrated files
+// ---------------------------------------------------------------------------
+
+/** Format a single effect as a readable expression */
 function formatEffect(e) {
   if (e.type === 'set' && e.field) {
     const val = e.value === null ? 'null' : (e.value != null ? String(e.value) : '');
     return `set ${e.field} = ${val}`;
   }
-  // Fall back to type for unknown effect types
   return e.type || '';
 }
 
@@ -140,17 +318,10 @@ function formatGuardItem(g) {
   return String(g);
 }
 
-/** Format a `from` value — arrays become "state1 | state2" to avoid CSV ambiguity. */
-function formatFrom(from) {
-  if (Array.isArray(from)) return from.join(' | ');
-  return from || '';
-}
-
-function renderTransitions(doc) {
+function renderLegacyTransitions(doc) {
   const headers = ['From', 'To', 'Trigger', 'On', 'After', 'RelativeTo', 'CalendarType', 'Actors', 'Guards', 'Effects'];
   const rows = [];
 
-  // onCreate as a pseudo-transition (no "from" state)
   if (doc.onCreate) {
     const actors = (doc.onCreate.actors || []).join('; ');
     const effects = (doc.onCreate.effects || []).map(formatEffect).join('; ');
@@ -179,10 +350,25 @@ function renderTransitions(doc) {
 }
 
 function renderGuards(doc) {
+  const guards = doc.guards || [];
+  // Detect format from first guard that has relevant fields
+  const hasNewFormat = guards.some(g => g.condition !== undefined);
+  const hasOldFormat = guards.some(g => g.field !== undefined);
+
+  if (hasNewFormat || (!hasOldFormat && guards.length > 0)) {
+    // New format: condition CEL string
+    const headers = ['Guard Name', 'Condition'];
+    const rows = [];
+    for (const g of guards) {
+      rows.push([g.id, g.condition || '']);
+    }
+    return csvTable(headers, rows);
+  }
+
+  // Legacy format: field/operator/value
   const headers = ['Guard Name', 'Field', 'Operator', 'Value'];
   const rows = [];
-  for (const g of doc.guards || []) {
-    // Only JSON.stringify objects/arrays; leave strings and numbers as-is
+  for (const g of guards) {
     let value = '';
     if (g.value != null) {
       value = typeof g.value === 'object' ? JSON.stringify(g.value) : String(g.value);
@@ -223,16 +409,19 @@ function renderRequestBodies(doc) {
 // Rules → CSV renderer
 // ---------------------------------------------------------------------------
 
-function renderRuleSet(ruleSet) {
-  const headers = ['Order', 'Condition', 'Action', 'Fallback', 'Description'];
+function renderAllRuleSets(ruleSets) {
+  const headers = ['Rule Set', 'Order', 'Condition', 'Action', 'Fallback', 'Description'];
   const rows = [];
-  for (const rule of ruleSet.rules || []) {
-    const condition = typeof rule.condition === 'object'
-      ? JSON.stringify(rule.condition)
-      : String(rule.condition);
-    const action = rule.action ? JSON.stringify(rule.action) : '';
-    const fallback = rule.fallbackAction ? JSON.stringify(rule.fallbackAction) : '';
-    rows.push([rule.order, condition, action, fallback, rule.description || '']);
+  for (const ruleSet of ruleSets) {
+    const id = ruleSet.ruleType || ruleSet.id;
+    for (const rule of ruleSet.rules || []) {
+      const condition = typeof rule.condition === 'object'
+        ? JSON.stringify(rule.condition)
+        : String(rule.condition);
+      const action = rule.action ? JSON.stringify(rule.action) : '';
+      const fallback = rule.fallbackAction ? JSON.stringify(rule.fallbackAction) : '';
+      rows.push([id, rule.order, condition, action, fallback, rule.description || '']);
+    }
   }
   return csvTable(headers, rows);
 }
@@ -388,29 +577,38 @@ function renderMultiMachineRequestBodies(machines) {
 }
 
 function exportStateMachine(doc, outDir) {
-  const files = doc.machines && doc.machines.length > 0
-    ? {
-        'transitions.csv': renderMultiMachineTransitions(doc.machines),
-        'guards.csv': renderMultiMachineGuards(doc.machines),
-        'sla.csv': renderMultiMachineSla(doc.machines),
-        'request-bodies.csv': renderMultiMachineRequestBodies(doc.machines),
-      }
-    : {
-        'transitions.csv': renderTransitions(doc),
-        'guards.csv': renderGuards(doc),
-        'sla.csv': renderSla(doc),
-        'request-bodies.csv': renderRequestBodies(doc),
-      };
+  if (isMachinesFormat(doc)) {
+    const files = {
+      'transitions.csv': renderTransitions(doc),
+      'events.csv': renderEvents(doc),
+      'procedures.csv': renderProcedures(doc),
+      'guards.csv': renderGuards(doc),
+      'slas.csv': renderStatesSla(doc),
+    };
+    writeFiles(outDir, files);
+    return Object.keys(files);
+  }
+  // Old format
+  const files = {
+    'transitions.csv': renderLegacyTransitions(doc),
+    'guards.csv': renderGuards(doc),
+    'slas.csv': renderSla(doc),
+    'request-bodies.csv': renderRequestBodies(doc),
+  };
   writeFiles(outDir, files);
   return Object.keys(files);
 }
 
 function exportRules(doc, outDir) {
-  const files = {};
-  for (const ruleSet of doc.ruleSets || []) {
-    const suffix = ruleSet.ruleType || ruleSet.id;
-    files[`rules-${suffix}.csv`] = renderRuleSet(ruleSet);
+  // Remove legacy per-ruleSet files before writing the consolidated file
+  if (existsSync(outDir)) {
+    for (const file of readdirSync(outDir)) {
+      if (file.startsWith('rules-') && file.endsWith('.csv')) {
+        unlinkSync(resolve(outDir, file));
+      }
+    }
   }
+  const files = { 'rules.csv': renderAllRuleSets(doc.ruleSets || []) };
   writeFiles(outDir, files);
   return Object.keys(files);
 }
@@ -472,6 +670,11 @@ function formatTransitionGuardRef(g) {
 
 /** Describe a named guard definition in plain English. */
 function describeNamedGuard(g) {
+  // New format: CEL condition string
+  if (g.condition !== undefined) {
+    return `\`${g.condition}\``;
+  }
+  // Legacy format: field/operator/value
   const f = `\`${g.field}\``;
   switch (g.operator) {
     case 'is_null': return `${f} is not set`;
@@ -531,23 +734,34 @@ function describeRuleAction(action) {
 
 function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) {
   const lines = [];
-  const obj = smDoc.object || 'Object';
+  const isMachines = isMachinesFormat(smDoc);
+  const domainLabel = isMachines
+    ? (smDoc.machines || []).map(m => m.object).join(' / ')
+    : (smDoc.object || 'Object');
 
-  lines.push(`# ${obj} Workflow — Contract Overview`);
+  lines.push(`# ${domainLabel} — Contract Overview`);
   lines.push('');
   lines.push('> Generated from source YAML files. Do not edit this file directly — changes will be overwritten on the next export.');
   lines.push('');
-  lines.push(`This document describes the complete behavioral contract for the **${obj}** resource. It is intended for product owners, policy staff, and other non-technical reviewers who need to understand or propose changes to task lifecycle behavior.`);
+  lines.push(`This document describes the complete behavioral contract for the **${domainLabel}** resource${isMachines && (smDoc.machines || []).length > 1 ? 's' : ''}. It is intended for product owners, policy staff, and other non-technical reviewers.`);
   lines.push('');
   lines.push('## How to read this document');
   lines.push('');
-  lines.push(`- **States** — the lifecycle stages a ${obj} can be in, and how each affects SLA tracking.`);
-  lines.push('- **Transitions** — the actions that move a task from one state to another. Actor-triggered transitions are called explicitly by a person or system; timer-triggered transitions fire automatically after a set amount of time. Each transition lists who can trigger it (via guards), and what happens when it fires (effects).');
-  lines.push('- **Guards** — named conditions that control who can perform a transition. If a guard fails, the transition is rejected.');
-  lines.push('- **Request bodies** — the data a caller must (or may) include when triggering a transition.');
-  lines.push(`- **Rules** — automated logic that runs at key moments (task creation, field updates, certain transitions) to assign tasks to queues and set their priority. Rules are evaluated in order; the first matching rule wins.`);
+  if (isMachines) {
+    lines.push('- **States** — the lifecycle stages each resource can be in, and how each affects SLA tracking.');
+    lines.push('- **Transitions** — actor- or system-triggered actions that can move a resource to a new state or update it in place.');
+    lines.push('- **Events** — automatic reactions to named domain events, including object creation, field changes, and timer callbacks.');
+    lines.push('- **Guards** — named conditions that control who can trigger a transition. If a guard fails, the request is rejected.');
+    lines.push('- **Procedures** — named step sequences called from transitions and events to encapsulate reusable logic.');
+  } else {
+    lines.push(`- **States** — the lifecycle stages a ${smDoc.object || 'resource'} can be in, and how each affects SLA tracking.`);
+    lines.push('- **Transitions** — the actions that move a resource from one state to another.');
+    lines.push('- **Guards** — named conditions that control who can perform a transition. If a guard fails, the transition is rejected.');
+    lines.push('- **Request bodies** — the data a caller must (or may) include when triggering a transition.');
+    lines.push('- **Rules** — automated logic that runs at key lifecycle moments.');
+  }
   lines.push('');
-  lines.push('To propose a change — for example, adding a new state, changing who can escalate a task, or adjusting a routing rule — there are two paths:');
+  lines.push('To propose a change, there are two paths:');
   lines.push('- **Non-technical:** Edit the CSV files in this folder and ask a developer to run `npm run contract-tables:import` to apply your changes to the source YAML.');
   lines.push('- **Technical:** Edit the source YAML files directly and submit a pull request.');
   lines.push('');
@@ -557,82 +771,139 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
   lines.push('');
   lines.push('## States');
   lines.push('');
-  lines.push('Tasks move through a defined set of states. The **SLA clock** tracks time toward resolution:');
+  lines.push('The **SLA clock** tracks time toward resolution:');
   lines.push('- **Running** — time is counting toward the SLA deadline');
-  lines.push('- **Paused** — time is not counting (task is blocked, waiting on external input)');
+  lines.push('- **Paused** — time is not counting (resource is blocked, waiting on external input)');
   lines.push('- **Stopped** — work is complete; SLA is no longer tracked');
   lines.push('');
-  lines.push('| State | SLA Clock |');
-  lines.push('|-------|-----------|');
-  for (const state of smDoc.states || []) {
-    const clock = state.slaClock
-      ? state.slaClock.charAt(0).toUpperCase() + state.slaClock.slice(1)
-      : '';
-    lines.push(`| ${mdCell(state.id)} | ${mdCell(clock)} |`);
-  }
-  lines.push('');
 
-  // ── Transitions ─────────────────────────────────────────────────────────
+  if (isMachines) {
+    for (const machine of smDoc.machines || []) {
+      lines.push(`### ${machine.object}`);
+      lines.push('');
+      lines.push('| State | SLA Clock |');
+      lines.push('|-------|-----------|');
+      for (const state of machine.states || []) {
+        const clock = state.slaClock ? state.slaClock.charAt(0).toUpperCase() + state.slaClock.slice(1) : '';
+        lines.push(`| ${mdCell(state.id)} | ${mdCell(clock)} |`);
+      }
+      lines.push('');
+    }
+  } else {
+    lines.push('| State | SLA Clock |');
+    lines.push('|-------|-----------|');
+    for (const state of smDoc.states || []) {
+      const clock = state.slaClock ? state.slaClock.charAt(0).toUpperCase() + state.slaClock.slice(1) : '';
+      lines.push(`| ${mdCell(state.id)} | ${mdCell(clock)} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Transitions / Events ────────────────────────────────────────────────
   lines.push('---');
   lines.push('');
-  lines.push('## Transitions');
-  lines.push('');
 
-  if (smDoc.onCreate) {
-    lines.push('### On Create');
+  if (isMachines) {
+    lines.push('## Transitions');
     lines.push('');
-    lines.push('The following effects run automatically when a task is first created:');
+    lines.push('Transitions are actor- or system-triggered actions. Each lists who can trigger it, what state change it causes, and what steps run.');
     lines.push('');
-    for (const e of smDoc.onCreate.effects || []) {
-      lines.push(`- ${describeEffect(e)}`);
+
+    for (const machine of smDoc.machines || []) {
+      const transitions = machine.transitions || [];
+      if (transitions.length === 0) continue;
+      lines.push(`### ${machine.object}`);
+      lines.push('');
+      lines.push('| ID | From | To | Actors | Conditions | Steps |');
+      lines.push('|----|------|----|--------|------------|-------|');
+      for (const t of transitions) {
+        const from = t.transition ? mdCell(formatFrom(t.transition.from)) : '—';
+        const to = t.transition?.to ? mdCell(t.transition.to) : '—';
+        const { actors, conditions } = flattenGuards(t.guards);
+        const actorsCell = mdCell(actors) || '—';
+        const conditionsCell = mdCell(conditions) || '—';
+        const steps = (t.steps || []).map(s => mdCell(s.description || describeStepItem(s))).filter(Boolean).join('<br>');
+        lines.push(`| \`${t.id}\` | ${from} | ${to} | ${actorsCell} | ${conditionsCell} | ${steps} |`);
+      }
+      lines.push('');
+    }
+
+    lines.push('---');
+    lines.push('');
+    lines.push('## Events');
+    lines.push('');
+    lines.push('Event subscriptions react to named domain events — including object creation, field changes, and timer callbacks.');
+    lines.push('');
+
+    for (const machine of smDoc.machines || []) {
+      const events = machine.events || [];
+      if (events.length === 0) continue;
+      lines.push(`### ${machine.object}`);
+      lines.push('');
+      lines.push('| Event | Steps |');
+      lines.push('|-------|-------|');
+      for (const evt of events) {
+        const steps = (evt.steps || []).map(s => mdCell(s.description || describeStepItem(s))).filter(Boolean).join('<br>');
+        lines.push(`| \`${evt.name}\` | ${steps || '—'} |`);
+      }
+      lines.push('');
+    }
+  } else {
+    lines.push('## Transitions');
+    lines.push('');
+
+    if (smDoc.onCreate) {
+      lines.push('### On Create');
+      lines.push('');
+      lines.push('The following effects run automatically when a task is first created:');
+      lines.push('');
+      for (const e of smDoc.onCreate.effects || []) {
+        lines.push(`- ${describeEffect(e)}`);
+      }
+      lines.push('');
+    }
+
+    if (smDoc.onUpdate) {
+      lines.push('### On Update');
+      lines.push('');
+      const fields = smDoc.onUpdate.fields;
+      const fieldStr = fields && fields.length > 0
+        ? `when any of the following fields change: ${fields.map(f => `\`${f}\``).join(', ')}`
+        : 'when any field changes';
+      lines.push(`The following effects run ${fieldStr}:`);
+      lines.push('');
+      for (const e of smDoc.onUpdate.effects || []) {
+        lines.push(`- ${describeEffect(e)}`);
+      }
+      lines.push('');
+    }
+
+    const allTransitions = smDoc.transitions || [];
+    const actorTransitions = allTransitions.filter(t => !t.on);
+    const timerTransitions = allTransitions.filter(t => t.on === 'timer');
+
+    lines.push('### Actor-triggered');
+    lines.push('');
+    lines.push('| Trigger | From | To | Guards | Effects |');
+    lines.push('|---------|------|----|--------|---------|');
+    for (const t of actorTransitions) {
+      const from = Array.isArray(t.from) ? t.from.join(', ') : (t.from || '');
+      const guards = (t.guards || []).map(g => mdCell(formatTransitionGuardRef(g))).join('<br>');
+      const effects = (t.effects || []).map(e => mdCell(describeEffect(e))).join('<br>');
+      lines.push(`| \`${t.trigger}\` | ${mdCell(from)} | ${mdCell(t.to)} | ${guards} | ${effects} |`);
+    }
+    lines.push('');
+
+    lines.push('### Timer-triggered');
+    lines.push('');
+    lines.push('| Trigger | From | To | After | Relative To | Calendar | Effects |');
+    lines.push('|---------|------|----|-------|-------------|----------|---------|');
+    for (const t of timerTransitions) {
+      const effects = (t.effects || []).map(e => mdCell(describeEffect(e))).join('<br>');
+      lines.push(`| \`${t.trigger}\` | ${mdCell(t.from)} | ${mdCell(t.to)} | ${mdCell(t.after)} | ${mdCell(t.relativeTo)} | ${mdCell(t.calendarType || 'calendar')} | ${effects} |`);
     }
     lines.push('');
   }
-
-  if (smDoc.onUpdate) {
-    lines.push('### On Update');
-    lines.push('');
-    const fields = smDoc.onUpdate.fields;
-    const fieldStr = fields && fields.length > 0
-      ? `when any of the following fields change: ${fields.map(f => `\`${f}\``).join(', ')}`
-      : 'when any field changes';
-    lines.push(`The following effects run ${fieldStr}:`);
-    lines.push('');
-    for (const e of smDoc.onUpdate.effects || []) {
-      lines.push(`- ${describeEffect(e)}`);
-    }
-    lines.push('');
-  }
-
-  const allTransitions = smDoc.transitions || [];
-  const actorTransitions = allTransitions.filter(t => !t.on);
-  const timerTransitions = allTransitions.filter(t => t.on === 'timer');
-
-  lines.push('### Actor-triggered');
-  lines.push('');
-  lines.push('These transitions fire when a caseworker, supervisor, or the system calls the corresponding endpoint (`POST /tasks/{id}/{trigger}`).');
-  lines.push('');
-  lines.push('| Trigger | From | To | Guards | Effects |');
-  lines.push('|---------|------|----|--------|---------|');
-  for (const t of actorTransitions) {
-    const from = Array.isArray(t.from) ? t.from.join(', ') : (t.from || '');
-    const guards = (t.guards || []).map(g => mdCell(formatTransitionGuardRef(g))).join('<br>');
-    const effects = (t.effects || []).map(e => mdCell(describeEffect(e))).join('<br>');
-    lines.push(`| \`${t.trigger}\` | ${mdCell(from)} | ${mdCell(t.to)} | ${guards} | ${effects} |`);
-  }
-  lines.push('');
-
-  lines.push('### Timer-triggered');
-  lines.push('');
-  lines.push('These transitions fire automatically based on elapsed time — no actor action is required.');
-  lines.push('');
-  lines.push('| Trigger | From | To | After | Relative To | Calendar | Effects |');
-  lines.push('|---------|------|----|-------|-------------|----------|---------|');
-  for (const t of timerTransitions) {
-    const effects = (t.effects || []).map(e => mdCell(describeEffect(e))).join('<br>');
-    lines.push(`| \`${t.trigger}\` | ${mdCell(t.from)} | ${mdCell(t.to)} | ${mdCell(t.after)} | ${mdCell(t.relativeTo)} | ${mdCell(t.calendarType || 'calendar')} | ${effects} |`);
-  }
-  lines.push('');
 
   // ── Guards ───────────────────────────────────────────────────────────────
   lines.push('---');
@@ -648,35 +919,55 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
   }
   lines.push('');
 
-  // ── Request Bodies ───────────────────────────────────────────────────────
-  lines.push('---');
-  lines.push('');
-  lines.push('## Request Bodies');
-  lines.push('');
-  lines.push('Data sent when calling a trigger endpoint. Required fields must always be included; optional fields may be omitted.');
-  lines.push('');
-  lines.push('| Trigger | Required | Optional |');
-  lines.push('|---------|----------|----------|');
-  for (const body of smDoc.requestBodies || []) {
-    if (!body || !body.properties) {
-      lines.push(`| \`${body.trigger}\` | — | — |`);
-    } else {
-      const required = new Set(body.required || []);
-      const reqFields = Object.entries(body.properties)
-        .filter(([n]) => required.has(n))
-        .map(([n, p]) => `\`${n}\` *(${p.type || 'any'})*`)
-        .join(', ');
-      const optFields = Object.entries(body.properties)
-        .filter(([n]) => !required.has(n))
-        .map(([n, p]) => `\`${n}\` *(${p.type || 'any'})*`)
-        .join(', ');
-      lines.push(`| \`${body.trigger}\` | ${reqFields || '—'} | ${optFields || '—'} |`);
+  // ── Request Bodies (old format only) ─────────────────────────────────────
+  if (!isMachines) {
+    lines.push('---');
+    lines.push('');
+    lines.push('## Request Bodies');
+    lines.push('');
+    lines.push('Data sent when calling a trigger endpoint. Required fields must always be included; optional fields may be omitted.');
+    lines.push('');
+    lines.push('| Trigger | Required | Optional |');
+    lines.push('|---------|----------|----------|');
+    for (const body of smDoc.requestBodies || []) {
+      if (!body || !body.properties) {
+        lines.push(`| \`${body.trigger}\` | — | — |`);
+      } else {
+        const required = new Set(body.required || []);
+        const reqFields = Object.entries(body.properties)
+          .filter(([n]) => required.has(n))
+          .map(([n, p]) => `\`${n}\` *(${p.type || 'any'})*`)
+          .join(', ');
+        const optFields = Object.entries(body.properties)
+          .filter(([n]) => !required.has(n))
+          .map(([n, p]) => `\`${n}\` *(${p.type || 'any'})*`)
+          .join(', ');
+        lines.push(`| \`${body.trigger}\` | ${reqFields || '—'} | ${optFields || '—'} |`);
+      }
     }
+    lines.push('');
   }
-  lines.push('');
 
-  // ── Rules ────────────────────────────────────────────────────────────────
-  if (rulesDoc && (rulesDoc.ruleSets || []).length > 0) {
+  // ── Procedures ───────────────────────────────────────────────────────────
+  const allProcedures = [
+    ...(smDoc.procedures || []).map(p => ({ ...p, scope: 'domain' })),
+    ...(smDoc.machines || []).flatMap(m => (m.procedures || []).map(p => ({ ...p, scope: m.object }))),
+  ];
+  if (isMachines && allProcedures.length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push('## Procedures');
+    lines.push('');
+    lines.push('Named step sequences called from transitions and events. They encapsulate reusable logic.');
+    lines.push('');
+    lines.push('| ID | Scope | Description | Parameters |');
+    lines.push('|----|-------|-------------|------------|');
+    for (const proc of allProcedures) {
+      const params = (proc.parameters || []).join(', ') || '—';
+      lines.push(`| \`${mdCell(proc.id)}\` | ${mdCell(proc.scope)} | ${mdCell(proc.description || '')} | ${mdCell(params)} |`);
+    }
+    lines.push('');
+  } else if (!isMachines && rulesDoc && (rulesDoc.ruleSets || []).length > 0) {
     lines.push('---');
     lines.push('');
     lines.push('## Rules');

@@ -1,5 +1,0 @@
-Order,Condition,Action,Fallback,Description
-1,"{""=="":[{""var"":""this.data.subjectType""},""verification""]}","{""triggerTransition"":{""entity"":""intake/applications/verifications"",""idFrom"":""verification.id"",""transition"":""satisfy""},""appendToArray"":{""entity"":""intake/applications/verifications"",""idFrom"":""verification.id"",""field"":""evidence"",""value"":{""type"":""document"",""documentId"":{""var"":""this.subject""},""receivedAt"":{""var"":""this.time""}}}}",,"Satisfy the Verification and record the document ID as evidence when document-management
-reports successful verification (Decision 15). Only fires when the document's subjectType
-is ""verification"", ensuring documents not linked to a Verification are silently ignored.
-"

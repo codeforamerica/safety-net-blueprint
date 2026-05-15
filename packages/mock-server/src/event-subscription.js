@@ -12,158 +12,309 @@
  */
 
 import { eventBus } from './event-bus.js';
-import { create, update, findAll, findById } from './database-manager.js';
-import { buildRuleContext, evaluateRuleSet, evaluateAllMatchRuleSet, resolvePath } from './rules-engine.js';
-import { resolveContextEntities } from './handlers/rule-evaluation.js';
-import { executeActions } from './action-handlers.js';
+import { create, update, findById } from './database-manager.js';
 import { executeTransition } from './state-machine-runner.js';
-import { applyEffects } from './state-machine-engine.js';
-import { processRuleEvaluations } from './handlers/rule-evaluation.js';
-import { emitEvent, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
-import { deriveCollectionName } from './collection-utils.js';
+import { applySteps, evaluateGuards } from './state-machine-engine.js';
+import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
+import { emitEvent, emitEventEnvelope, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
+import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
  * Accepts the full type or a short suffix (last three dot-segments).
- * Examples:
- *   on: "org.codeforamerica.safety-net-blueprint.intake.application.submitted" → matches exactly
- *   on: "intake.application.submitted" → matches by suffix
  */
 function eventTypeMatches(eventType, onValue) {
   if (!onValue || !eventType) return false;
   if (eventType === onValue) return true;
-  // Short form: accept if the event type ends with the declared suffix
   return eventType === CLOUDEVENTS_TYPE_PREFIX + onValue;
 }
 
 /**
- * Find the state machine for a domain/resource entity reference.
- * @param {string} entity - "domain/resource[/sub-resource]" format (e.g., "intake/applications/documents")
+ * Find the smEntry (domain + object + stateMachine + machine) for a domain/collection pair.
  * @param {Array} allStateMachines - from discoverStateMachines()
- * @returns {Object|null} The state machine contract, or null
+ * @param {string} domain - e.g. "intake"
+ * @param {string} collection - kebab-plural e.g. "applications"
  */
-function findStateMachineForEntity(entity, allStateMachines) {
-  const domainName = entity.split('/')[0];
-  const collectionName = deriveCollectionName(entity, domainName);
-  const match = allStateMachines.find(sm => {
-    if (sm.domain !== domainName) return false;
-    // Convert PascalCase object name to kebab-plural. Also accepts suffix match so single-word
-    // objects (e.g., "Verification") correctly match sub-resource collections like "application-verifications".
+function findSmEntryForCollection(allStateMachines, domain, collection) {
+  return allStateMachines.find(sm => {
+    if (sm.domain !== domain) return false;
     const kebabPlural = sm.object
       .replace(/([a-z])([A-Z])/g, '$1-$2')
       .toLowerCase() + 's';
-    return collectionName === kebabPlural || collectionName.endsWith('-' + kebabPlural);
-  });
-  return match?.stateMachine || null;
+    return kebabPlural === collection;
+  }) || null;
 }
 
 /**
- * Build rich deps for platform actions (createResource, triggerTransition).
- * These actions need access to the full server context: DB, state machines, rules.
+ * Execute a pending operation trigger (invoke: { POST: domain/collection/{id}/operation }).
+ * The path is fully interpolated: domain/collection/uuid/operation.
  */
-function buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes, apiSpecs = []) {
-  // Build a combined map of full event type → payload schema from all loaded specs
-  const eventSchemas = {};
-  for (const spec of apiSpecs) {
-    if (spec.eventSchemas) Object.assign(eventSchemas, spec.eventSchemas);
+function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller) {
+  const parts = path.split('/');
+  if (parts.length < 4) {
+    console.error(`executePendingOperation: path "${path}" must have at least 4 segments`);
+    return;
   }
-  return {
-    // For assignToQueue / setPriority (existing on-demand deps)
-    findByField(collection, field, value) {
-      const { items } = findAll(collection, { [field]: value }, { limit: 1 });
-      return items.length > 0 ? items[0] : null;
-    },
+  const operation = parts.pop();    // "open"
+  const resourceId = parts.pop();   // UUID
+  const collectionPath = parts.join('/');
+  const domain = parts[0];
+  const collection = deriveCollectionName(collectionPath, domain);
 
-    // For createResource
-    context: ruleContext,
-    dbCreate: create,
-    dbUpdate: update,
-    findStateMachine: (entity) => findStateMachineForEntity(entity, allStateMachines),
-    applyEffects,
-    processRuleEvaluations,
-    allRules,
-    allSlaTypes,
-    emitCreatedEvent(domainName, collectionName, resource) {
-      try {
-        emitEvent({
-          domain: domainName,
-          object: collectionName.replace(/s$/, ''),
-          action: 'created',
-          resourceId: resource.id,
-          source: `/${domainName}`,
-          data: { ...resource },
-          callerId: 'system'
-        });
-      } catch (e) {
-        console.error(`Failed to emit created event for ${domainName}/${collectionName}:`, e.message);
-      }
-    },
+  const smEntry = findSmEntryForCollection(allStateMachines, domain, collection);
+  if (!smEntry) {
+    console.error(`executePendingOperation: no state machine for ${domain}/${collection}`);
+    return;
+  }
 
-    // For applyStub — schema-aware response construction
-    eventSchemas,
-
-    // For triggerTransition / appendToArray
-    resolvePath,
-    dbFindById: findById,
-    executeTransition: (opts) => executeTransition({ ...opts, allRules, allSlaTypes })
-  };
+  try {
+    executeTransition({
+      resourceName: collection,
+      resourceId,
+      trigger: operation,
+      callerId: caller?.id || 'system',
+      callerRoles: caller?.roles || ['system'],
+      stateMachine: smEntry.stateMachine,
+      machine: smEntry.machine,
+      slaTypes: allSlaTypes,
+      requestBody: body || {},
+      now,
+    });
+  } catch (e) {
+    console.error(`executePendingOperation: "${operation}" on ${collection}/${resourceId} failed: ${e.message}`);
+  }
 }
 
 /**
- * Register event subscriptions for all loaded rule sets that declare an `on:` field.
- * Call once at server startup after rules and state machines are loaded.
+ * Apply a pending array-append (invoke: { PATCH: domain/collection/{id}, body: { field: { $push: value } } }).
+ */
+function executePendingAppend({ path, body }) {
+  const parts = path.split('/');
+  const id = parts.pop();
+  const collectionPath = parts.join('/');
+  const domain = parts[0];
+  const collection = deriveCollectionName(collectionPath, domain);
+
+  const existing = findById(collection, id);
+  if (!existing) {
+    console.error(`executePendingAppend: ${collection}/${id} not found`);
+    return;
+  }
+
+  const patch = {};
+  for (const [field, val] of Object.entries(body || {})) {
+    if (val && typeof val === 'object' && '$push' in val) {
+      const currentArr = Array.isArray(existing[field]) ? existing[field] : [];
+      patch[field] = [...currentArr, val['$push']];
+    } else {
+      patch[field] = val;
+    }
+  }
+
+  update(collection, id, patch);
+}
+
+/**
+ * Register event subscriptions for all state machines that declare `events:` entries.
+ * Call once at server startup after state machines are loaded.
  *
- * @param {Array} allRules         - from discoverRules()
  * @param {Array} allStateMachines - from discoverStateMachines()
  * @param {Array} [allSlaTypes]    - from discoverSlaTypes()
  */
-export function registerEventSubscriptions(allRules, allStateMachines, allSlaTypes = [], apiSpecs = []) {
-  // Collect all event-triggered rule sets across all rule files
-  const subscriptions = [];
-  for (const ruleFile of allRules) {
-    for (const ruleSet of ruleFile.ruleSets || []) {
-      if (ruleSet.on) {
-        subscriptions.push({ ruleSet, domain: ruleFile.domain, resource: ruleFile.resource });
+export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = []) {
+  // Collect events entries from new-format state machines
+  const machineEventSubs = [];
+  for (const smEntry of allStateMachines) {
+    const onEvents = smEntry.machine?.events;
+    if (!Array.isArray(onEvents)) continue;
+    for (const entry of onEvents) {
+      if (entry.name && Array.isArray(entry.steps)) {
+        machineEventSubs.push({ smEntry, entry });
       }
     }
   }
 
-  if (subscriptions.length === 0) return;
+  if (machineEventSubs.length === 0) return;
 
-  console.log(`\n✓ Registered ${subscriptions.length} event subscription(s):`);
-  for (const { ruleSet, domain } of subscriptions) {
-    console.log(`  - ${domain}/${ruleSet.id} → on: ${ruleSet.on}`);
+  console.log(`\n✓ Registered ${machineEventSubs.length} machine onEvent subscription(s):`);
+  for (const { smEntry, entry } of machineEventSubs) {
+    console.log(`  - ${smEntry.domain}/${smEntry.machine.object} onEvent → on: ${entry.name}`);
   }
 
   eventBus.on('domain-event', (event) => {
-    for (const { ruleSet } of subscriptions) {
-      if (!eventTypeMatches(event.type, ruleSet.on)) continue;
+    // Machine event subscriptions
+    for (const { smEntry, entry } of machineEventSubs) {
+      if (!eventTypeMatches(event.type, entry.name)) continue;
 
       try {
-        // Resolve context bindings with the event envelope as "this"
-        const resolvedEntities = resolveContextEntities(ruleSet.context, event);
-        if (resolvedEntities === null) continue; // required binding failed
+        const now = new Date().toISOString();
+        const caller = { id: 'system', roles: ['system'] };
 
-        // Build rule context: this = event envelope, plus resolved entities
-        const ruleContext = buildRuleContext(event, resolvedEntities);
-
-        // Build rich deps for platform actions (needed for both evaluation paths)
-        const deps = buildPlatformDeps(ruleContext, allRules, allStateMachines, allSlaTypes, apiSpecs);
-
-        if (ruleSet.evaluation === 'all-match') {
-          // Execute every matching rule's action in order
-          const matches = evaluateAllMatchRuleSet(ruleSet, ruleContext);
-          for (const match of matches) {
-            executeActions(match.action, event, deps, match.fallbackAction);
+        // When transition: is present, the event targets an existing resource
+        // (identified by event.subject). Look it up and enforce the from state guard.
+        let resource = {};
+        let targetCollection = null;
+        let originalSnapshot = null;
+        if (entry.transition) {
+          targetCollection = smEntry.machine.object
+            .replace(/([a-z])([A-Z])/g, '$1-$2')
+            .toLowerCase() + 's';
+          const found = findById(targetCollection, event.subject);
+          if (!found) {
+            console.error(`Machine onEvent "${entry.name}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
+            continue;
           }
-        } else {
-          // first-match-wins (default)
-          const result = evaluateRuleSet(ruleSet, ruleContext);
-          if (!result.matched) continue;
-          executeActions(result.action, event, deps, result.fallbackAction);
+          const from = entry.transition.from;
+          if (from) {
+            const fromArr = Array.isArray(from) ? from : [from];
+            if (!fromArr.includes(found.status)) continue;
+          }
+          resource = { ...found };
+          originalSnapshot = { ...found };
+        }
+
+        const baseContext = {
+          caller,
+          object: { ...resource },
+          request: {},
+          this: event,
+          now,
+        };
+
+        const entities = resolveContextLayers(
+          [smEntry.stateMachine?.context, smEntry.machine?.context, entry.context],
+          resource,
+          baseContext
+        );
+        if (entities === null) {
+          console.error(`Machine onEvent "${entry.name}": required context binding failed — skipping`);
+          continue;
+        }
+        const context = { ...baseContext, entities };
+
+        // Evaluate guards if defined on this onEvent entry
+        const guardConditions = entry.guards?.conditions || [];
+        if (guardConditions.length > 0) {
+          const guardsMap = Object.fromEntries(
+            mergeByPrecedence(smEntry.stateMachine?.guards || [], smEntry.machine?.guards || [])
+              .map(g => [g.id, g])
+          );
+          const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
+          if (!guardResult.pass) continue;
+        }
+
+        const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
+          applySteps(entry.steps, resource, context);
+
+        // Apply state transition if present (mutations are persisted after procedures run)
+        if (entry.transition?.to) {
+          resource.status = entry.transition.to;
+        }
+
+        // Handle collection creates
+        for (const { entity, data } of pendingCreates) {
+          try {
+            const created = create(entity, data);
+            emitEvent({
+              domain: smEntry.domain,
+              object: entity.replace(/s$/, ''),
+              action: 'created',
+              resourceId: created.id,
+              source: `/${smEntry.domain}`,
+              data: { ...created },
+              callerId: 'system',
+              now,
+            });
+          } catch (e) {
+            console.error(`onEvent create failed for ${entity}:`, e.message);
+          }
+        }
+
+        // Handle array appends
+        for (const append of pendingAppends) {
+          try {
+            executePendingAppend(append);
+          } catch (e) {
+            console.error(`onEvent append failed for "${append.path}":`, e.message);
+          }
+        }
+
+        // Handle operation triggers
+        for (const op of pendingOperations) {
+          try {
+            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller);
+          } catch (e) {
+            console.error(`onEvent operation failed for "${op.path}":`, e.message);
+          }
+        }
+
+        // Handle events emitted directly by onEvent steps
+        const domain = smEntry.domain;
+        const object = smEntry.machine.object.toLowerCase();
+        const subjectId = entry.transition ? event.subject : null;
+        const allPendingEvents = [...(pendingEvents || [])];
+
+        // Handle procedure calls (call: steps in onEvent then: blocks)
+        if (pendingProcedures.length > 0) {
+          const inlineRules = buildInlineRules(smEntry.stateMachine, smEntry.machine);
+          try {
+            const { pendingOperations: procOps, pendingEvents: procEvts } = executeProcedures(
+              pendingProcedures, resource, inlineRules, context
+            );
+            for (const op of procOps) {
+              try {
+                executePendingOperation(op, now, allStateMachines, allSlaTypes, caller);
+              } catch (e) {
+                console.error(`onEvent procedure operation failed for "${op.path}":`, e.message);
+              }
+            }
+            allPendingEvents.push(...(procEvts || []));
+          } catch (e) {
+            console.error(`onEvent executeProcedures failed:`, e.message);
+          }
+        }
+
+        // Persist all resource mutations (from direct steps and procedures) after everything runs
+        if (entry.transition && targetCollection && originalSnapshot) {
+          const diff = {};
+          for (const [key, value] of Object.entries(resource)) {
+            if (originalSnapshot[key] !== value && key !== 'id' && key !== 'createdAt') {
+              diff[key] = value;
+            }
+          }
+          if (Object.keys(diff).length > 0) {
+            update(targetCollection, event.subject, diff);
+          }
+        }
+
+        for (const evt of allPendingEvents) {
+          try {
+            if (evt.action.includes('.')) {
+              emitEventEnvelope({
+                type: CLOUDEVENTS_TYPE_PREFIX + evt.action,
+                source: `/${domain}`,
+                subject: subjectId,
+                data: evt.data || null,
+                time: now,
+              });
+            } else {
+              emitEvent({
+                domain,
+                object,
+                action: evt.action,
+                resourceId: subjectId,
+                source: `/${domain}`,
+                data: evt.data || null,
+                callerId: 'system',
+                now,
+              });
+            }
+          } catch (e) {
+            console.error(`onEvent emit "${evt.action}" failed:`, e.message);
+          }
         }
       } catch (e) {
-        console.error(`Event subscription "${ruleSet.id}" failed for event "${event.type}":`, e.message);
+        console.error(`Machine onEvent "${entry.name}" failed:`, e.message);
       }
     }
   });

@@ -4,22 +4,56 @@
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 title: State Machine
-description: Schema for behavioral contract state machine YAML files.
+description: >
+  Schema for behavioral contract state machine YAML files.
+  Each file covers one domain and may contain one or more machines.
+
+
+  Top-level structure:
+    extends   — optional path to a platform-state-machine.yaml (or similar) file
+                whose guards and procedures are inherited by this file. Domain-level
+                guards and procedures override platform-level ones with the same id;
+                machine-level guards and procedures override domain-level ones.
+    machines  — one per governed entity type; each machine defines states,
+                events (reactions to named domain events),
+                and transitions (actor- or system-triggered actions). Events
+                and transitions are machine-level — they are bound to a
+                specific entity's lifecycle and cannot be shared across
+                machines. Omit for platform files that only define shared
+                guards and procedures.
+    guards     — named boolean conditions available to all machines in the
+                 domain. Can also be defined at the machine level when a
+                 condition only applies to one entity type; machine-level
+                 guards take precedence over domain-level guards with the
+                 same id.
+    procedures — named reusable step sequences available to all machines in
+                 the domain; called with call: procedure-id. Procedures with
+                 parameters: accept arguments via with:. Can also be defined
+                 at the machine level; machine-level procedures take
+                 precedence over domain-level procedures with the same id.
 type: object
 required:
   - version
-  - domain
-  - apiSpec
 additionalProperties: false
 
 properties:
+  $schema:
+    type: string
+
   version:
     type: string
     description: Schema version for change tracking.
 
+  extends:
+    type: string
+    description: >
+      Path to a platform or shared state machine file whose guards and procedures
+      are inherited by this file. Precedence order: platform → domain → machine.
+      Domain-level definitions override platform-level ones with the same id.
+
   domain:
     type: string
-    description: Domain namespace (e.g., workflow).
+    description: Domain namespace (e.g., workflow, eligibility).
 
   apiSpec:
     type: string
@@ -27,71 +61,58 @@ properties:
 
   machines:
     type: array
-    description: >
-      State machines for this domain. Use when a domain governs multiple entity
-      types (e.g., Determination and Decision). Each entry is a complete machine
-      for one entity type.
+    description: State machines for this domain, one per governed entity type. Omit for platform files.
     minItems: 1
     items:
       $ref: "#/$defs/Machine"
 
-  object:
-    type: string
-    description: The governed entity type (e.g., Task). Used for single-machine files.
-
-  states:
-    type: array
-    description: List of states with their configuration.
-    minItems: 1
-    items:
-      $ref: "#/$defs/State"
-
-  initialState:
-    type: string
-    description: The state an object starts in after creation.
-
   guards:
     type: array
-    description: Guard definitions, referenced by id in transitions.
+    description: >
+      Named boolean conditions shared across all machines in the domain.
+      Referenced by id in guards.conditions lists.
     items:
       $ref: "#/$defs/Guard"
 
-  onCreate:
-    $ref: "#/$defs/OnCreate"
-
-  onUpdate:
-    $ref: "#/$defs/OnUpdate"
-
-  transitions:
+  procedures:
     type: array
-    description: Ordered list of valid state transitions.
-    minItems: 1
+    description: >
+      Named reusable step sequences called with call: procedure-id.
+      Shared across all machines in the domain.
     items:
-      $ref: "#/$defs/Transition"
-
-  requestBodies:
-    type: array
-    description: Request body schemas, one per trigger.
-    items:
-      $ref: "#/$defs/RequestBody"
-
-  audit:
-    $ref: "#/$defs/Audit"
+      $ref: "#/$defs/Procedure"
 
 $defs:
+
   Machine:
     type: object
-    description: A state machine for one governed entity type within a domain.
+    description: >
+      A state machine for one governed entity type.
+
+
+      Machine structure:
+        object       — the entity type this machine governs (e.g., Task, Application).
+        states       — the valid lifecycle states for this entity type.
+        initialState — the state assigned on creation.
+        context      — stable data available to all events, transitions, and procedures
+                       in this machine (e.g., named queues, config records).
+        transitions  — actor- or system-triggered actions; each becomes a
+                       POST /{resource}/{id}/{transitionId} endpoint.
+        events       — reactions to named domain events arriving on a subscription.
+                       Array — one entry per subscribed event name.
+        guards       — named conditions scoped to this machine; take precedence over
+                       domain-level guards with the same id.
+        procedures   — named step sequences scoped to this machine; take precedence over
+                       domain-level procedures with the same id.
     required:
       - object
       - states
       - initialState
-      - transitions
     additionalProperties: false
     properties:
       object:
         type: string
-        description: The governed entity type (e.g., Determination).
+        description: The governed entity type (e.g., Task, Determination).
       states:
         type: array
         minItems: 1
@@ -100,25 +121,40 @@ $defs:
       initialState:
         type: string
         description: The state an object starts in after creation.
-      guards:
-        type: array
-        items:
-          $ref: "#/$defs/Guard"
-      onCreate:
-        $ref: "#/$defs/OnCreate"
-      onUpdate:
-        $ref: "#/$defs/OnUpdate"
+      context:
+        $ref: "#/$defs/ContextProperty"
       transitions:
         type: array
-        minItems: 1
+        description: Actor- or system-triggered transitions. Each becomes a POST /{resource}/{id}/{transitionId} endpoint.
         items:
           $ref: "#/$defs/Transition"
-      requestBodies:
+      events:
         type: array
+        description: Event subscriptions — automatic reactions to external domain events arriving on a subscription.
         items:
-          $ref: "#/$defs/RequestBody"
-      audit:
-        $ref: "#/$defs/Audit"
+          $ref: "#/$defs/OnEvent"
+      timers:
+        type: array
+        description: >
+          Timer type declarations for this machine. Each entry names a timer type used by this machine.
+          The scheduling service emits the callback event named "{domain}.{id}" when the timer fires.
+          Timer types are declared here so they are visible alongside the state machine that uses them.
+        items:
+          $ref: "#/$defs/TimerDeclaration"
+      guards:
+        type: array
+        description: >
+          Named boolean conditions scoped to this machine. Take precedence over
+          any domain-level guard with the same id.
+        items:
+          $ref: "#/$defs/Guard"
+      procedures:
+        type: array
+        description: >
+          Named reusable step sequences scoped to this machine.
+          Take precedence over any domain-level procedure with the same id.
+        items:
+          $ref: "#/$defs/Procedure"
 
   State:
     type: object
@@ -126,93 +162,164 @@ $defs:
     required:
       - id
       - slaClock
+    additionalProperties: true
     properties:
       id:
         type: string
-        description: State identifier, used as the status value on the resource.
+        pattern: "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+        description: State identifier (snake_case), used as the status value on the resource.
       slaClock:
         type: string
         enum:
           - running
           - stopped
           - paused
-        description: SLA clock behavior while in this state.
-    additionalProperties: true
+        description: SLA clock behavior while the object is in this state.
 
-  Guard:
+  # ---------------------------------------------------------------------------
+  # OnEvent
+  # ---------------------------------------------------------------------------
+  # The event payload is available as $this without any binding:
+  #   $this.subject  — the primary id referenced by the event
+  #   $this.data.*   — event data fields
+  #   $this.time     — event timestamp
+  #
+  # Steps and procedures inherit all context already bound at the machine level.
+  # Define context: here only for lookups specific to this event — typically
+  # the entities referenced by the event payload. Procedures called from this
+  # handler inherit those bindings automatically.
+  #
+  # Example:
+  #   events:
+  #     - name: workflow.task.claimed
+  #       context:
+  #         - reviewTask:
+  #             from: workflow/tasks
+  #             where:
+  #               id: $this.subject
+  #       steps:
+  #         - call: open-application
+  # ---------------------------------------------------------------------------
+  OnEvent:
     type: object
-    description: A named condition that must be true for a transition to fire.
+    description: >
+      A reaction to an external domain event arriving on a subscription.
+
+
+      onEvent structure:
+        name        — fully qualified event name (e.g., intake.application.submitted).
+        description — human-readable summary of what this subscription does.
+        transition  — if present, requires an existing instance; from limits source states.
+        guards      — conditions that must pass before steps run.
+        context     — data available to all steps; inherits machine context.
+        steps       — steps to execute.
+    required:
+      - name
+      - steps
+    additionalProperties: false
+    properties:
+      name:
+        type: string
+        description: Fully qualified event name (e.g., intake.application.submitted).
+      description:
+        type: string
+        description: Human-readable summary of what triggers this subscription and what it does.
+      transition:
+        $ref: "#/$defs/TransitionBlock"
+      guards:
+        $ref: "#/$defs/Guards"
+      context:
+        $ref: "#/$defs/ContextProperty"
+      steps:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/StepItem"
+
+  # ---------------------------------------------------------------------------
+  # Transition
+  # ---------------------------------------------------------------------------
+  # Steps and procedures inherit all context already bound at the machine level.
+  # Define context: here only for lookups specific to this transition.
+  # Omit transition: for in-place transitions that don't change state.
+  # Use guards.actors: to restrict which roles can call the transition.
+  # Use schema.request: to define and validate the POST body; fields are
+  # accessible in steps as $request.field.
+  #
+  # Example:
+  #   transitions:
+  #     - id: claim
+  #       transition:
+  #         from: pending
+  #         to: in_progress
+  #       guards:
+  #         actors:
+  #           - caseworker
+  #         conditions:
+  #           - taskIsUnassigned
+  #       steps:
+  #         - set:
+  #             field: assignedToId
+  #             value: $caller.id
+  # ---------------------------------------------------------------------------
+  Transition:
+    type: object
+    description: >
+      An actor- or system-triggered transition. Becomes a POST /{resource}/{id}/{transitionId} endpoint.
+
+
+      Transition structure:
+        id          — URL path segment for this transition.
+        description — human-readable summary of what the transition does; used as the OpenAPI operation description.
+        schema      — request and response schemas; both optional. Fields in schema.request are accessible as $request.field.
+        transition  — source and target states; omit for in-place transitions.
+        guards      — actor roles and conditions that must pass before steps run.
+        context     — data available to all steps; inherits machine context.
+        steps       — steps to execute.
     required:
       - id
-      - field
-      - operator
+      - steps
+    additionalProperties: false
     properties:
       id:
         type: string
-        description: Guard identifier, referenced by name in transitions.
-      field:
+        pattern: "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+        description: Transition identifier (kebab-case) — becomes the URL path segment.
+      description:
         type: string
-        description: Field or variable reference to evaluate.
-      operator:
-        type: string
-        enum:
-          - is_null
-          - is_not_null
-          - equals
-          - not_equals
-          - contains_all
-          - contains_any
-        description: Comparison operator.
-      value:
-        description: Value to compare against (omit for is_null/is_not_null).
-    additionalProperties: false
-
-  OnCreate:
-    type: object
-    description: Effects that run when the object is created (no "from" state).
-    required:
-      - effects
-    properties:
-      actors:
+        description: Human-readable summary of what this transition does.
+      schema:
+        type: object
+        description: Request and response schemas for the generated endpoint. Both fields are optional.
+        additionalProperties: false
+        properties:
+          request:
+            type: object
+            description: JSON Schema for the POST body. Fields accessible in steps as $request.field.
+            additionalProperties: true
+          response:
+            type: object
+            description: JSON Schema for the 200 response body. Defaults to the resource schema when absent.
+            additionalProperties: true
+      transition:
+        $ref: "#/$defs/TransitionBlock"
+      guards:
+        $ref: "#/$defs/Guards"
+      context:
+        $ref: "#/$defs/ContextProperty"
+      steps:
         type: array
-        items:
-          type: string
-        description: Who can create the object.
-      effects:
-        type: array
-        items:
-          $ref: "#/$defs/Effect"
         minItems: 1
-    additionalProperties: false
-
-  OnUpdate:
-    type: object
-    description: Effects that run when the object's fields are updated outside of a transition.
-    required:
-      - effects
-    properties:
-      fields:
-        type: array
         items:
-          type: string
-        description: Only fire when one of these fields changes. Omit to fire on any update.
-      effects:
-        type: array
-        items:
-          $ref: "#/$defs/Effect"
-        minItems: 1
-    additionalProperties: false
+          $ref: "#/$defs/StepItem"
 
-  Transition:
+  TransitionBlock:
     type: object
-    description: A valid state change with guards and effects.
-    required:
-      - trigger
-      - from
+    description: >
+      Groups state change information for a handler. Presence means an existing instance
+      is required. to absent means in-place (state does not change).
+    additionalProperties: false
     properties:
-      trigger:
-        type: string
-        description: Action name — becomes the RPC endpoint.
       from:
         oneOf:
           - type: string
@@ -221,46 +328,41 @@ $defs:
             items:
               type: string
             minItems: 2
-            description: Multiple source states (transition fires from any of them).
-        description: Source state(s).
+            description: Multiple source states — handler fires from any of them.
       to:
         type: string
-        description: >
-          Target state. Omit for in-place transitions (e.g., assign, set-priority)
-          where the operation updates fields and emits events without changing state.
-      on:
-        type: string
-        enum:
-          - timer
-        description: When present, transition fires automatically rather than via actor request.
-      after:
-        type: string
-        description: Duration string (e.g., 72h, 7d, -48h). Required when on=timer.
-      relativeTo:
-        type: string
-        description: >
-          Reference point for the duration. Task timestamp fields (createdAt, blockedAt,
-          escalatedAt, startedAt) measure elapsed time since that moment. The special value
-          slaDeadline measures time remaining before the SLA deadline — use a negative
-          duration (e.g., -48h) to fire N hours before expiry. Required when on=timer.
-      calendarType:
-        type: string
-        enum:
-          - calendar
-          - business
-        default: calendar
-        description: Whether the duration is measured in calendar time or business hours/days. Defaults to calendar.
+        description: Target state. Omit for in-place operations.
+
+  Guards:
+    type: array
+    description: >
+      Array of guard items. Each item specifies actors and conditions that must pass.
+      Written compactly as: - actors: [role1, role2]\n  conditions: [guard1]
+    items:
+      $ref: "#/$defs/GuardItem"
+
+  GuardItem:
+    type: object
+    description: A single guard — specifies actor roles and named conditions.
+    additionalProperties: false
+    properties:
       actors:
         type: array
         items:
           type: string
-        description: Roles that can trigger this transition.
-      guards:
+        description: >
+          Roles authorized to trigger this handler. Checked before conditions.
+          Omit to allow any authenticated caller (conditions still apply).
+      conditions:
         type: array
+        description: >
+          Guard conditions that must pass. Strings are named guard ids (must all pass — AND).
+          Objects support composition: any: [...] passes if at least one named guard passes (OR);
+          all: [...] passes if all named guards pass (AND, explicit form).
         items:
           oneOf:
             - type: string
-              description: Named guard reference — must pass.
+              description: Named guard id — must pass.
             - type: object
               description: Composition — any or all of the listed guards must pass.
               properties:
@@ -277,112 +379,518 @@ $defs:
                   minItems: 2
                   description: All of these named guards must pass (AND).
               additionalProperties: false
-        description: Guards that must pass for the transition to fire.
-      effects:
-        type: array
-        items:
-          $ref: "#/$defs/Effect"
-        description: Side effects that occur when the transition fires.
-    additionalProperties: false
 
-  Effect:
+  # ---------------------------------------------------------------------------
+  # StepItem — step vocabulary and value expressions
+  # ---------------------------------------------------------------------------
+  # VALUE EXPRESSIONS
+  # Anywhere a step accepts a value (set: value:, emit: data:, call: body:,
+  # forEach: body:), you write a value expression — a short $-prefixed string
+  # that the engine resolves at runtime to a concrete value. Expressions let
+  # steps reference the current object, the caller, the request body, the
+  # event payload, and any context-bound entity without hardcoding data.
+  #
+  #   $now              Current timestamp (ISO 8601)
+  #   $caller.field     Field on the authenticated caller
+  #   $object.field     Field on the governed object
+  #   $request.field    Field from the operation request body
+  #   $this.field       Field on the triggering event payload
+  #   $alias.field      Field on a context-bound entity
+  #   $alias            The whole context-bound entity (bare alias)
+  #   literal           Any non-$ string is treated as a literal value
+  #
+  # In path slots (call: path strings), use $alias.field like any other expression:
+  #   POST: intake/applications/$application.id/open
+  #
+  # STEP TYPES
+  # Steps are the actions executed in a then: list. The following step types
+  # are supported:
+  #
+  # SET
+  #   Set a field on the governed object.
+  #     - set:
+  #         field: assignedToId
+  #         value: $caller.id
+  #
+  # EMIT
+  #   Emit a domain event. The platform prefixes the full CloudEvents type
+  #   automatically from the domain and object.
+  #     - emit:
+  #         event: submitted
+  #         data:
+  #           submittedAt: $now
+  #           programs: $object.programs
+  #
+  # CALL (string form) — call a named procedure:
+  #     - call: procedure-name
+  #       with:
+  #         param: value
+  #
+  # CALL (object form) — POST/PATCH/GET/DELETE to an API path:
+  #   POST to a collection path — creates a new resource:
+  #     - call:
+  #         POST: intake/applications/documents
+  #         body:
+  #           applicationId: $application.id
+  #           category: income
+  #
+  #   POST to an operation path — triggers a state machine operation on an
+  #   existing resource (path ends with the operation name):
+  #     - call:
+  #         POST: intake/applications/$application.id/open
+  #
+  #   PATCH to a resource path — appends to an array field using $push:
+  #     - call:
+  #         PATCH: intake/application-members/$member.id
+  #         body:
+  #           verifications:
+  #             $push:
+  #               type: $this.data.verificationType
+  #               status: $this.data.result
+  #
+  #   Body operators — special keys in a body object:
+  #     $merge — copy all fields from a source object; explicit sibling keys override.
+  #              Use to create a new resource from an existing one with minimal changes:
+  #       - call:
+  #           POST: workflow/tasks
+  #           body:
+  #             $merge: $object
+  #             status: pending
+  #     $push  — append a value to a named array field (PATCH only):
+  #       body:
+  #         appointments: {$push: $this.subject}
+  #
+  #   Path slots and body values use the same $alias.field expression syntax.
+  #
+  # IF
+  #   Conditional branch — evaluates a CEL expression; runs then: on true, else: on false.
+  #     - if: '$task.taskType == "application_review" && $application.status == "submitted"'
+  #       then:
+  #         - call:
+  #             POST: intake/applications/$application.id/open
+  #       else:
+  #         - call:
+  #             POST: intake/applications/$application.id/skip
+  #
+  # MATCH
+  #   Dispatch on a single value — evaluates a CEL expression and routes to the matching branch.
+  #     - match: $object.category
+  #       when:
+  #         identity:
+  #           - call:
+  #               POST: data-exchange/service-calls
+  #               body:
+  #                 serviceId: $identityService.id
+  #         income:
+  #           - call:
+  #               POST: data-exchange/service-calls
+  #               body:
+  #                 serviceId: $incomeService.id
+  #
+  # FOREACH
+  #   Query a collection and execute do: steps once per matching record.
+  #   Use when you need to create or update one resource per item in a set.
+  #
+  #   forEach uses the same from:/where: syntax as ContextBinding. The
+  #   difference is that forEach iterates over ALL matching records, while
+  #   ContextBinding returns only the first match.
+  #
+  #   Example:
+  #     - forEach: {from: intake/application-members, where: {applicationId: $application.id}, as: member}
+  #       do:
+  #         - call: {POST: data-exchange/service-calls, body: {applicationId: $application.id, requestingResourceId: $member.id}}
+  #
+  #   Nested forEach is supported for multi-level iteration.
+  #   Use a JSON Logic where: to filter on more than equality (see ContextBinding).
+  #
+  # ---------------------------------------------------------------------------
+  StepItem:
+    description: >
+      A single step in a then: list. One of: SetStep, EmitStep, CallStep, IfStep, MatchStep, ForEachStep.
+      All step types accept an optional description:.
+    oneOf:
+      - $ref: "#/$defs/SetStep"
+      - $ref: "#/$defs/EmitStep"
+      - $ref: "#/$defs/CallStep"
+      - $ref: "#/$defs/IfStep"
+      - $ref: "#/$defs/MatchStep"
+      - $ref: "#/$defs/ForEachStep"
+
+  SetStep:
     type: object
-    description: A side effect that occurs during a transition or onCreate.
-    required:
-      - type
+    description: Set a field on the governed object.
+    required: [set]
+    additionalProperties: false
     properties:
-      type:
-        type: string
-        enum:
-          - set
-          - create
-          - lookup
-          - evaluate-rules
-          - event
-        description: Effect type discriminator.
-      field:
-        type: string
-        description: Target field (for set effects).
-      value:
-        description: Value to set, or payload template.
-      entity:
-        type: string
-        description: Target entity (for create/lookup effects).
-      fields:
+      set:
         type: object
-        description: Field values for created records.
-        additionalProperties: true
-      lookupField:
-        type: string
-        description: Field to look up by (for lookup effects).
-      bindTo:
-        type: string
-        description: Variable to bind lookup results to.
-      relativeTo:
-        type: string
-        description: Reference point for relative values (e.g., $now).
-      action:
-        type: string
-        description: Event action name (for event effects, e.g. "claimed", "completed").
-      data:
+        required: [field, value]
+        additionalProperties: false
+        properties:
+          field: {type: string, description: Field name on the governed object.}
+          value: {description: Value expression ($now, $caller.field, $object.field, $request.field, or a literal).}
+          description: {type: string}
+
+  EmitStep:
+    type: object
+    description: Emit a domain event. The platform prefixes the full CloudEvents type automatically from domain and object.
+    required: [emit]
+    additionalProperties: false
+    properties:
+      emit:
         type: object
-        description: Transition-specific data to include in the event payload.
+        required: [event]
+        additionalProperties: false
+        properties:
+          event: {type: string, description: "Event action name (e.g. submitted, completed)."}
+          data:
+            type: object
+            additionalProperties: true
+            description: Event data fields. Values are value expressions.
+          description: {type: string}
+
+  CallStep:
+    type: object
+    description: Call a named procedure (string) or make an HTTP API call (object with POST/PATCH/GET/DELETE key).
+    required: [call]
+    additionalProperties: false
+    properties:
+      call:
+        oneOf:
+          - type: string
+            description: Named procedure id.
+          - type: object
+            description: "HTTP call — one key is the method (POST, PATCH, GET, DELETE) and its value is the path; optional body:."
+            additionalProperties: true
+      with:
+        type: object
         additionalProperties: true
-      ruleType:
+        description: Arguments passed to a named procedure (string call form only).
+      description: {type: string}
+
+  IfStep:
+    type: object
+    description: "Conditional branch — evaluates a CEL expression; runs then: on true, else: on false."
+    required: [if, then]
+    additionalProperties: false
+    properties:
+      if:
         type: string
-        description: Single rule type to evaluate (for evaluate-rules effects).
-      ruleTypes:
+        description: CEL expression to evaluate.
+      then:
         type: array
-        items:
-          type: string
-        description: Rule types to evaluate (for evaluate-rules effects).
+        minItems: 1
+        items: {$ref: "#/$defs/StepItem"}
+      else:
+        type: array
+        minItems: 1
+        items: {$ref: "#/$defs/StepItem"}
+      description: {type: string}
+
+  MatchStep:
+    type: object
+    description: Dispatch on a single value — evaluates a CEL expression and routes to the matching branch in when:.
+    required: [match, when]
+    additionalProperties: false
+    properties:
+      match:
+        type: string
+        description: "CEL expression whose result is matched against when: keys."
       when:
-        description: JSON Logic condition — effect only fires when true.
+        type: object
+        description: Map of match values to step arrays.
+        additionalProperties:
+          type: array
+          items: {$ref: "#/$defs/StepItem"}
+      description: {type: string}
+
+  ForEachStep:
+    type: object
+    description: "Query a collection (from:/where:) or iterate an array (in:); run do: steps once per item."
+    required: [forEach, do]
+    additionalProperties: false
+    properties:
+      forEach:
+        type: object
+        required: [as]
+        additionalProperties: false
+        properties:
+          from:
+            type: string
+            description: Collection path to query (e.g., intake/application-members).
+          where:
+            description: Filter condition — field-value equality pairs or JSON Logic.
+            oneOf:
+              - type: object
+                additionalProperties: true
+          in:
+            type: string
+            description: "Array value expression to iterate over instead of from:/where: (e.g., $params.memberCategories)."
+          as:
+            type: string
+            description: Alias name for each item; referenced as $alias.field in steps.
+      do:
+        type: array
+        minItems: 1
+        items: {$ref: "#/$defs/StepItem"}
+      description: {type: string}
+
+  Guard:
+    type: object
+    description: A named boolean condition evaluated against the object or caller context.
+    required:
+      - id
+      - condition
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        pattern: "^[a-z][a-zA-Z0-9]*$"
+        description: Guard identifier (camelCase), referenced by name in guards.conditions.
+      condition:
+        type: string
+        description: >
+          CEL expression that must evaluate to true for the guard to pass.
+          Reference caller attributes as caller.roles (no $ prefix in CEL),
+          and object fields as object.field.
+          Example: '"applicant" in caller.roles'
+
+  # ---------------------------------------------------------------------------
+  # Procedure
+  # ---------------------------------------------------------------------------
+  # Multi-step form (required when the procedure has more than one step, or
+  # when the same step type appears more than once — YAML maps forbid duplicate keys):
+  #   - id: release
+  #     steps:
+  #       - call: assignToQueue
+  #       - call: evaluatePriority
+  #       - emit: {event: released, data: {reason: $request.reason}}
+  #
+  # Single-step form (drop steps: when there is exactly one step):
+  #   - id: cancelWorkflowTimer
+  #     description: Cancel a workflow timer by type; idempotent.
+  #     parameters: [timerType]
+  #     call: cancelTimer
+  #     with: {timerId: "\"workflow.\" + $params.timerType + \".\" + $object.id"}
+  #
+  # Conditional form (single if: step — can also be written without steps:):
+  #   - id: evaluatePriority
+  #     if: $object.isExpedited == true
+  #     then:
+  #       - set: {field: priority, value: expedited}
+  #     else:
+  #       - set: {field: priority, value: normal}
+  #
+  # Parameterized form (called with with:); $merge: $params spreads caller args:
+  #   - id: scheduleTimer
+  #     parameters: [timerType, fireAfter, calendarType]
+  #     call: requestTimer
+  #     with:
+  #       $merge: $params
+  #       timerId: "\"workflow.\" + $params.timerType + \".\" + $object.id"
+  #       callback: {event: '"workflow." + $params.timerType', data: {}}
+  # ---------------------------------------------------------------------------
+  Procedure:
+    type: object
+    description: >
+      A named reusable step sequence called with call: procedure-id.
+      Inherits all context in scope at the call site (machine + trigger/operation).
+      Parameterized procedures accept arguments via with: at the call site;
+      parameters are referenced as $params.name in steps and in CEL conditions.
+
+
+      Two forms:
+        Multi-step: use steps: [...] when more than one step or duplicate step types.
+        Single-step: place the step key (call:, set:, emit:, if:, match:, forEach:)
+          directly on the procedure object; omit steps:.
+    required:
+      - id
+    additionalProperties: true
+    properties:
+      id:
+        type: string
+        pattern: "^[a-z][a-zA-Z0-9]*$"
+        description: "Procedure identifier (camelCase), referenced in call: steps."
       description:
         type: string
-        description: Human-readable description of what this effect does.
-    additionalProperties: false
+        description: Human-readable explanation of what this procedure does.
+      parameters:
+        type: array
+        items:
+          type: string
+        description: >
+          Parameter names this procedure accepts. Callers pass values via with:.
+          Parameters are referenced in steps as $params.name and in CEL conditions
+          as $params.name.
+      context:
+        $ref: "#/$defs/ContextProperty"
+      steps:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/StepItem"
+        description: >
+          Steps to execute (multi-step form). Omit when using the single-step form
+          with a step key directly on the procedure object.
 
-  RequestBody:
-    description: OpenAPI-style schema for a trigger's request body.
+  TimerDeclaration:
     type: object
+    description: >
+      Declares a timer type used by a machine. The full callback event name is
+      "{domain}.{id}" by convention (e.g., "workflow.creation_deadline" for id: creation_deadline
+      in domain: workflow). The scheduling service fires this event when the timer expires.
     required:
-      - trigger
+      - id
+    additionalProperties: false
     properties:
-      trigger:
+      id:
         type: string
-        description: Transition trigger name this body applies to.
-      type:
+        pattern: "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+        description: >
+          Timer type identifier (snake_case). Combined with the domain name to form the
+          callback event name: {domain}.{id} (e.g., workflow.creation_deadline).
+      description:
         type: string
-      properties:
-        type: object
-        additionalProperties: true
+        description: Human-readable explanation of what this timer is for.
+
+  # ---------------------------------------------------------------------------
+  # ContextProperty / ContextBinding — scoped context
+  # ---------------------------------------------------------------------------
+  # context: is a list of ContextBinding objects. Each binding is a single
+  # key-value pair where the key is the alias name and the value specifies the
+  # lookup (from: + where:). The alias then becomes $alias in step value
+  # expressions and { var: "alias.field" } in JSON Logic conditions.
+  #
+  # Example:
+  #   context:
+  #     - snapIntake:           # alias name
+  #         from: workflow/queues
+  #         where:
+  #           id: snap-intake-queue
+  #     - application:          # alias name — referenced as $application.field
+  #         from: intake/applications
+  #         where:
+  #           id: $this.subject
+  #
+  # Context bindings fetch related data and make it available to steps and
+  # conditions as named aliases ($alias, $alias.field). They work like lexical
+  # scoping in JavaScript — inner scope wins when the same alias appears at
+  # multiple levels, and rules inherit everything already in scope at the call
+  # site without any redeclaration.
+  #
+  # Context can be defined at four levels:
+  #
+  #   domain          Stable configuration shared across all machines in the
+  #                   file — e.g. a config record that every machine needs.
+  #                   Resolved once per file load.
+  #
+  #   machine         Stable configuration shared by all triggers, operations,
+  #                   and rules in one machine — e.g. named queues, config
+  #                   records specific to that machine. Resolved once per
+  #                   machine invocation.
+  #
+  #   trigger /       Dynamic data specific to the event being handled — e.g.
+  #   operation       the task or application referenced in an event payload.
+  #                   Resolved fresh on every invocation.
+  #
+  #   procedure       Optional overrides or additions for a specific procedure. Most
+  #                   procedures need no local context because the data they need is
+  #                   already in scope from the machine or trigger level. Add
+  #                   local context only when the procedure needs something the
+  #                   caller's scope doesn't provide.
+  #
+  # The triggering event payload is always available as "this" without any
+  # binding. $this.subject is the event subject id; $this.data holds event data
+  # fields; $this.time is the event timestamp.
+  #
+  # Bindings are resolved in declaration order within each level. A binding may
+  # reference any alias already resolved above it — earlier in the same context
+  # block, or from any outer scope level (chaining).
+  #
+  # Best practices:
+  #   - Put config shared across all machines at the domain level. Put
+  #     machine-specific stable config (queues, config records) on the machine.
+  #     Put event-specific lookups on the trigger/operation. Put rule-specific
+  #     additions only where the caller's scope doesn't already provide them.
+  #   - Name aliases by purpose, not type. Use "snapIntake" not "snapQueue";
+  #     "reviewTask" not "task".
+  #   - Bindings resolve to null when no record is found. Null-guard in conditions
+  #     when a miss is legitimate; access the field directly when it must exist
+  #     (a null dereference will surface the misconfiguration at runtime).
+  # ---------------------------------------------------------------------------
+  ContextProperty:
+    type: array
+    description: >
+      List of ContextBinding objects. Each item is a single-key object where
+      the key is the alias name and the value is a lookup (from: + where:).
+      See the comment block above for a concrete example and the four scope levels.
+      See ContextBinding for where: syntax options.
+    items:
+      $ref: "#/$defs/ContextBinding"
+
+  # ---------------------------------------------------------------------------
+  # ContextBinding
+  # ---------------------------------------------------------------------------
+  # A single data lookup. The key is the alias name. Always returns a single
+  # entity (or null if not found). To work with multiple
+  # records, use forEach: — same from:/where: syntax but iterates all matches.
+  #
+  # WHERE SYNTAX — two forms:
+  #
+  #   (1) Field-value equality pairs. Values can be $this.field, $alias.field,
+  #       $object.field, or a literal string:
+  #
+  #       context:
+  #         - application:
+  #             from: intake/applications
+  #             where:
+  #               id: $this.subject
+  #
+  #   (2) JSON Logic — use when you need inequality, AND/OR, or computed
+  #       conditions. { var: "fieldName" } references the candidate record;
+  #       { var: "this.field" } the event; { var: "alias.field" } a prior binding:
+  #
+  #       context:
+  #         - member:
+  #             from: intake/application-members
+  #             where:
+  #               and:
+  #                 - { "==": [{ var: "applicationId" }, { var: "application.id" }] }
+  #                 - { "!=": [{ var: "citizenshipStatus" }, "citizen"] }
+  #
+  # CHAINING
+  #   Bindings resolve in declaration order. A binding may reference any alias
+  #   already resolved above it in the same block, or from any outer scope level.
+  # ---------------------------------------------------------------------------
+  ContextBinding:
+    type: object
+    description: >
+      A single data lookup keyed by alias name. The alias becomes $alias in step
+      expressions and { var: "alias.field" } in JSON Logic conditions.
+      ContextBinding properties:
+        from            — collection path to query (required).
+        where (optional) — filter condition; field-value pairs or JSON Logic.
+    minProperties: 1
+    maxProperties: 1
+    additionalProperties:
+      type: object
       required:
-        type: array
-        items:
+        - from
+      additionalProperties: false
+      properties:
+        from:
           type: string
-    additionalProperties: true
+          description: >
+            Collection path to query (e.g., intake/applications,
+            intake/application-members, workflow/tasks).
+        where:
+          description: >
+            Filter condition — field-value equality pairs or a JSON Logic
+            expression. See ContextBinding comment block for full syntax.
+            Always returns the first matching record. Use forEach: to iterate
+            over all matches.
+          oneOf:
+            - type: object
+              description: Field-value equality pairs or JSON Logic expression.
+              additionalProperties: true
 
-  Audit:
-    type: object
-    description: Declarative audit requirements for validation.
-    required:
-      - entity
-      - scope
-      - requiredFields
-    properties:
-      entity:
-        type: string
-        description: The audit record entity type.
-      scope:
-        type: string
-        enum:
-          - all
-          - transitions-only
-        description: Whether audit covers all transitions + onCreate, or transitions only.
-      requiredFields:
-        type: array
-        items:
-          type: string
-        description: Fields that must be present on every audit record.
-    additionalProperties: false

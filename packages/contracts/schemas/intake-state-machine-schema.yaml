@@ -1,0 +1,31 @@
+# Request body schemas for intake state machine transitions.
+# Referenced from intake-state-machine.yaml via $ref in each transition's requestBody.
+# Uses $defs to match the JSON Schema pattern used by other schema files in this directory.
+
+$defs:
+  MarkCannotVerifyRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the obligation cannot be satisfied after exhausting available options
+
+  WaiveVerificationRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the verification requirement is being waived
+
+  WithdrawApplicationRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the application is being withdrawn

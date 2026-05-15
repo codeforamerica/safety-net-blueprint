@@ -449,18 +449,34 @@ components:
 
     ExternalServiceCallCreate:
       type: object
-      description: Fields required to submit a new external service call.
+      description: |
+        Fields required to submit a new external service call. Exactly one of `serviceId`
+        or `serviceType` must be provided to identify the target ExternalService catalog entry.
       additionalProperties: false
       required:
-        - serviceId
         - requestingResourceId
+      oneOf:
+        - required: [serviceId]
+          not:
+            required: [serviceType]
+        - required: [serviceType]
+          not:
+            required: [serviceId]
       properties:
         serviceId:
           type: string
           format: uuid
-          description: ID of the ExternalService catalog entry to call.
+          description: >
+            ID of the ExternalService catalog entry to call.
+            Alternative to serviceType; use serviceType for a more readable reference.
           x-relationship:
             resource: ExternalService
+        serviceType:
+          $ref: "#/components/schemas/ServiceType"
+          description: >
+            ServiceType key of the ExternalService catalog entry to call (e.g., fdsh_ssa).
+            The server resolves to the matching catalog entry at submission time.
+            Alternative to serviceId.
         requestingResourceId:
           type: string
           format: uuid
