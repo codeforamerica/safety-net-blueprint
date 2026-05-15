@@ -29,10 +29,17 @@ paths:
       operationId: listPersons
       tags:
       - Persons
+      x-sortable:
+        # name.* needed for alphabetical browse; ssn, dateOfBirth, contact, and
+        # address fields excluded — sort order leaks them via pagination (A01:2025).
+        fields: [createdAt, updatedAt, name.lastName, name.firstName]
+        default: name.lastName,name.firstName
+        tieBreaker: id
       parameters:
       - "$ref": "./components/parameters.yaml#/SearchQueryParam"
       - "$ref": "./components/parameters.yaml#/LimitParam"
       - "$ref": "./components/parameters.yaml#/OffsetParam"
+      - "$ref": "./components/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated collection of persons.

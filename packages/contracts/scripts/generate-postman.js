@@ -548,6 +548,14 @@ function generateListRequests(apiMetadata, endpoint, examples) {
       continue;
     }
 
+    // `sort` is not a filter — it's an ordering parameter validated against
+    // the endpoint's x-sortable allowlist. Generating `?sort=example` would
+    // produce a 400 FIELD_NOT_SORTABLE on every migrated list endpoint.
+    // Sort coverage lives in the unit/integration tests instead.
+    if (param.name === 'sort') {
+      continue;
+    }
+
     // Add filter example
     const filterValue = param.schema?.enum?.[0] || 'example';
     requests.push({

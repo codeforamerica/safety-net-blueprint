@@ -87,10 +87,17 @@ paths:
       operationId: listApplications
       tags:
         - Applications
+      x-sortable:
+        # submittedAt is user-meaningful but caseworker recency triage needs it;
+        # threat model assumes listApplications scope implies record-read (A01:2025).
+        fields: [createdAt, updatedAt, submittedAt, status]
+        default: -submittedAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: A paginated collection of applications.
@@ -212,10 +219,16 @@ paths:
       operationId: listApplicationDocuments
       tags:
         - Documents
+      x-sortable:
+        fields: [createdAt, updatedAt, category, status]
+        # Group by category, oldest request first within each.
+        default: category,createdAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: A paginated list of application documents.
@@ -389,10 +402,17 @@ paths:
       operationId: listApplicationMembers
       tags:
         - Members
+      x-sortable:
+        # name.* needed for alphabetical browse; ssn/dateOfBirth excluded —
+        # sort order is an oracle even when fields aren't projected (A01:2025).
+        fields: [createdAt, updatedAt, name.lastName, name.firstName]
+        default: name.lastName,name.firstName
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: A paginated list of application members.
