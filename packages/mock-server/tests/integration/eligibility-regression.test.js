@@ -9,7 +9,7 @@
  */
 
 import assert from 'assert';
-import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, createTestRunner, setupServer, teardownServer, clearHttpStubs } from './helpers.js';
+import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, createTestRunner, setupServer, teardownServer, clearHttpStubs, registerHttpStub } from './helpers.js';
 
 const { test, section, results } = createTestRunner();
 
@@ -419,6 +419,69 @@ async function testWithdrawal() {
 }
 
 // ---------------------------------------------------------------------------
+// Medicaid ex parte — triggered by data_exchange.call.completed
+// ---------------------------------------------------------------------------
+
+async function testMedicaidExParteEvaluation() {
+  section('Medicaid ex parte — triggered by data_exchange.call.completed');
+
+  await test('data_exchange.call.completed with no pending service calls triggers medicaid-ex-parte adapter call', async () => {
+    await clearHttpStubs();
+
+    // Intercept both data-exchange service call creates so the DB has no pending calls.
+    // With $pendingCall == null the evaluateMedicaidExParte guard passes when the event fires.
+    await registerHttpStub({ match: { method: 'POST', url: '/data-exchange/service-calls' } });
+    await registerHttpStub({ match: { method: 'POST', url: '/data-exchange/service-calls' } });
+
+    // Register the ex parte adapter stub
+    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/medicaid-ex-parte' } });
+
+    const appId = `app-exparte-${Date.now()}`;
+    await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId);
+
+    // Get the Medicaid Decision ID
+    const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
+    const { items: decisions } = await (await fetch(`${BASE_URL}${DETERMINATIONS}/${dets[0].id}/decisions`)).json();
+    const decision = decisions[0];
+
+    // Fire data_exchange.call.completed — no pending service calls in DB, guard passes
+    await injectEvent('data_exchange.call.completed', { decisionId: decision.id, result: 'conclusive' }, `sc-${Date.now()}`);
+
+    // ex parte stub should be consumed
+    const { items } = await (await fetch(`${BASE_URL}/mock/stubs/http`)).json();
+    assert.strictEqual(items.length, 0, 'medicaid-ex-parte HTTP stub should be consumed by evaluateMedicaidExParte');
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Final determination — triggered by intake.application.review_completed
+// ---------------------------------------------------------------------------
+
+async function testFinalDetermination() {
+  section('Final determination — triggered by review_completed');
+
+  await test('intake.application.review_completed triggers evaluate/determination for each pending Decision', async () => {
+    await clearHttpStubs();
+
+    const appId = `app-final-${Date.now()}`;
+
+    // Stub out the expedited screening call triggered when the SNAP Decision is created
+    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/expedited-screening' } });
+
+    await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
+
+    // Register HTTP stub for the final determination adapter call
+    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/determination' } });
+
+    await injectEvent('intake.application.review_completed', {}, appId);
+
+    // All stubs consumed: expedited screening during submission, evaluate/determination during review
+    const { items } = await (await fetch(`${BASE_URL}/mock/stubs/http`)).json();
+    assert.strictEqual(items.length, 0, 'all adapter stubs should be consumed');
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -435,6 +498,8 @@ async function runTests() {
     await testDecisionTransitions();
     await testMedicaidServiceCalls();
     await testSnapExpeditedScreeningStub();
+    await testMedicaidExParteEvaluation();
+    await testFinalDetermination();
     await testDeterminationCompletion();
     await testWithdrawal();
   } finally {

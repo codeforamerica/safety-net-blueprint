@@ -76,6 +76,10 @@ export async function clearHttpStubs() {
   await fetch(`${BASE_URL}/mock/stubs/http`, { method: 'DELETE' });
 }
 
+export async function registerHttpStub(stub) {
+  return fetch(`${BASE_URL}/mock/stubs/http`, { method: 'POST', body: stub });
+}
+
 export function createTestRunner() {
   let passed = 0;
   let failed = 0;
