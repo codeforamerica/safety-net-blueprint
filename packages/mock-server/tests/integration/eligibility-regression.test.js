@@ -9,7 +9,7 @@
  */
 
 import assert from 'assert';
-import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, createTestRunner, setupServer, teardownServer } from './helpers.js';
+import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, createTestRunner, setupServer, teardownServer, clearHttpStubs } from './helpers.js';
 
 const { test, section, results } = createTestRunner();
 
@@ -269,18 +269,13 @@ async function testDecisionTransitions() {
 }
 
 // ---------------------------------------------------------------------------
-// Medicaid — Decision created; service call chain requires engine enhancement
+// Medicaid — service calls created via initiateMedicaidDataExchange
 // ---------------------------------------------------------------------------
 
 async function testMedicaidServiceCalls() {
-  section('Medicaid — Decision created on submission');
+  section('Medicaid — data exchange service calls created on Decision');
 
-  // Note: the initiateMedicaidDataExchange procedure runs when eligibility.decision.created
-  // fires. The mock server's procedure runner does not currently emit `created` events for
-  // resources created inside procedures, so that event never fires and service calls are not
-  // automatically created. That chain is a known gap; testing Decision creation here.
-
-  await test('Medicaid submission creates a Medicaid Decision in pending state', async () => {
+  await test('Medicaid submission creates two data-exchange service calls (fdsh_fti and fdsh_medicare_vci)', async () => {
     const appId = `app-med-${Date.now()}`;
     await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId);
 
@@ -290,7 +285,12 @@ async function testMedicaidServiceCalls() {
     const { items: decisions } = await (await fetch(`${BASE_URL}${DETERMINATIONS}/${detId}/decisions`)).json();
     const decision = decisions.find(d => d.program === 'medicaid');
     assert.ok(decision, 'Medicaid Decision should exist');
-    assert.strictEqual(decision.status, 'pending');
+
+    const { items: calls } = await (await fetch(`${BASE_URL}${SERVICE_CALLS}?limit=100`)).json();
+    const decisionCalls = calls.filter(c => c.decisionId === decision.id);
+    assert.strictEqual(decisionCalls.length, 2, 'should create exactly two service calls for Medicaid Decision');
+    assert.ok(decisionCalls.find(c => c.serviceType === 'fdsh_fti'), 'fdsh_fti service call should be created');
+    assert.ok(decisionCalls.find(c => c.serviceType === 'fdsh_medicare_vci'), 'fdsh_medicare_vci service call should be created');
   });
 
   await test('SNAP submission does not create data-exchange service calls', async () => {
@@ -305,6 +305,40 @@ async function testMedicaidServiceCalls() {
     const { items: calls } = await (await fetch(`${BASE_URL}${SERVICE_CALLS}?limit=100`)).json();
     const decisionCalls = calls.filter(c => c.decisionId === decision.id);
     assert.strictEqual(decisionCalls.length, 0, 'SNAP Decision should not create data-exchange service calls');
+  });
+}
+
+// ---------------------------------------------------------------------------
+// SNAP expedited screening — HTTP stub intercept
+// ---------------------------------------------------------------------------
+
+async function testSnapExpeditedScreeningStub() {
+  section('SNAP expedited screening — HTTP stub intercept');
+
+  await test('HTTP stub for POST /eligibility-adapter/evaluate/expedited-screening is consumed when SNAP Decision is created', async () => {
+    await clearHttpStubs();
+
+    // Register stub using the domain-scoped form
+    const stubRes = await fetch(`${BASE_URL}/mock/stubs/http`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/expedited-screening' } }),
+    });
+    assert.strictEqual(stubRes.status, 201, 'stub registration should return 201');
+    const stub = await stubRes.json();
+    assert.ok(stub.id, 'stub should have an id');
+
+    // Submit SNAP application — triggers Decision creation → eligibility.decision.created →
+    // evaluateSnapExpedited → POST /eligibility-adapter/evaluate/expedited-screening → stub intercepts
+    const appId = `app-snap-stub-${Date.now()}`;
+    await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
+
+    // Stub should be consumed
+    const listRes = await fetch(`${BASE_URL}/mock/stubs/http`);
+    assert.strictEqual(listRes.status, 200);
+    const { items } = await listRes.json();
+    const remaining = items.filter(s => s.id === stub.id);
+    assert.strictEqual(remaining.length, 0, 'HTTP stub should be consumed by evaluateSnapExpedited');
   });
 }
 
@@ -400,6 +434,7 @@ async function runTests() {
     await testDeterminationTransitions();
     await testDecisionTransitions();
     await testMedicaidServiceCalls();
+    await testSnapExpeditedScreeningStub();
     await testDeterminationCompletion();
     await testWithdrawal();
   } finally {

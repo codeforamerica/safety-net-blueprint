@@ -132,13 +132,27 @@ export function matchAndPop(eventType, envelope) {
 }
 
 /**
+ * Resolve a stub's effective match URL.
+ * If `domain` is set, the effective URL is `/<domain><url>` (e.g., `/eligibility-adapter/evaluate/expedited-screening`).
+ * Otherwise `url` is matched as-is against the full request path.
+ */
+function resolveStubUrl(stub) {
+  const { url, domain } = stub.match;
+  return domain ? `/${domain}${url}` : url;
+}
+
+/**
  * Register an HTTP stub. Returns the stored stub with its assigned ID.
  *
  * @param {Object} stub
- * @param {Object} stub.match           - { method?, url } — method defaults to any if omitted
- * @param {string} stub.match.url       - URL path to match exactly (e.g., "/evaluate/expedited-screening")
- * @param {string} [stub.match.method]  - HTTP method (e.g., "POST"); omit to match any method
- * @param {Object} [stub.response]      - { status?, body? } — status defaults to 200
+ * @param {Object} stub.match            - { method?, url, domain? }
+ * @param {string} stub.match.url        - Path to match. With `domain`, this is relative to the domain
+ *   (e.g., "/evaluate/expedited-screening"). Without `domain`, it is the full request path
+ *   (e.g., "/eligibility-adapter/evaluate/expedited-screening").
+ * @param {string} [stub.match.domain]   - Domain prefix (e.g., "eligibility-adapter"). When set, the
+ *   effective match path is `/<domain><url>`, scoping the stub to a specific API domain.
+ * @param {string} [stub.match.method]   - HTTP method (e.g., "POST"); omit to match any method
+ * @param {Object} [stub.response]       - { status?, body? } — status defaults to 200
  * @returns {Object} The registered stub with id and type assigned
  */
 export function registerHttpStub(stub) {
@@ -152,44 +166,81 @@ export function registerHttpStub(stub) {
 
 /**
  * Scan HTTP stubs in registration order, find and remove the first one that
- * matches the given method and URL.
+ * matches the given method and full request path.
  *
- * @param {string} method  - HTTP method (e.g., "POST")
- * @param {string} url     - URL path (e.g., "/evaluate/expedited-screening")
+ * A stub matches when:
+ *   - method matches (or stub has no method restriction)
+ *   - effective stub URL matches `requestPath`:
+ *       - if stub has `domain`: `/<domain><url>` must equal `requestPath`
+ *       - otherwise: `url` must equal `requestPath`
+ *
+ * @param {string} method       - HTTP method (e.g., "POST")
+ * @param {string} requestPath  - Full request path (e.g., "/eligibility-adapter/evaluate/expedited-screening")
  * @returns {Object|null} The matched stub, or null if none matched
  */
-export function matchAndPopHttp(method, url) {
+export function matchAndPopHttp(method, requestPath) {
   const idx = httpStubs.findIndex(s => {
     const methodMatch = !s.match.method || s.match.method.toUpperCase() === method.toUpperCase();
-    return methodMatch && s.match.url === url;
+    return methodMatch && resolveStubUrl(s) === requestPath;
   });
   if (idx === -1) return null;
   return httpStubs.splice(idx, 1)[0];
 }
 
 /**
- * Return a snapshot of all registered stubs (both event and HTTP).
+ * Return a snapshot of registered event stubs.
  */
 export function listStubs() {
-  return [...stubs, ...httpStubs];
+  return [...stubs];
 }
 
 /**
- * Remove a specific stub by ID (searches both event and HTTP registries).
+ * Return a snapshot of registered HTTP stubs.
+ */
+export function listHttpStubs() {
+  return [...httpStubs];
+}
+
+/**
+ * Remove a specific stub by ID (searches event registry only).
  * @returns {boolean} true if found and removed, false if not found
  */
 export function removeStub(id) {
-  let idx = stubs.findIndex(s => s.id === id);
+  const idx = stubs.findIndex(s => s.id === id);
   if (idx !== -1) { stubs.splice(idx, 1); return true; }
-  idx = httpStubs.findIndex(s => s.id === id);
+  return false;
+}
+
+/**
+ * Remove a specific HTTP stub by ID.
+ * @returns {boolean} true if found and removed, false if not found
+ */
+export function removeHttpStub(id) {
+  const idx = httpStubs.findIndex(s => s.id === id);
   if (idx !== -1) { httpStubs.splice(idx, 1); return true; }
   return false;
 }
 
 /**
- * Remove all registered stubs (both event and HTTP) and reset ID counters.
+ * Remove all registered event stubs and reset event ID counters.
  */
 export function clearStubs() {
+  stubs.length = 0;
+  idCounters.clear();
+}
+
+/**
+ * Remove all registered HTTP stubs and reset HTTP ID counters.
+ */
+export function clearHttpStubs() {
+  httpStubs.length = 0;
+  httpIdCounters.clear();
+}
+
+/**
+ * Remove all registered stubs (both event and HTTP). Used by mock/reset.
+ */
+export function clearAllStubs() {
   stubs.length = 0;
   httpStubs.length = 0;
   idCounters.clear();

@@ -156,6 +156,72 @@ curl -X DELETE http://localhost:1080/mock/stubs/events/service_call.created-1   
 curl -X DELETE http://localhost:1080/mock/stubs/events                          # clear all
 ```
 
+## HTTP stubs
+
+An HTTP stub intercepts a request to any mock server endpoint before normal handler logic runs — no database read, no state machine evaluation, just the stub response. Stubs are consumed FIFO: register one per call you expect, then verify it was consumed.
+
+Use HTTP stubs to simulate adapter calls that the state machine triggers internally (e.g., a SNAP expedited screening adapter call triggered by `eligibility.decision.created`).
+
+```bash
+# Register a stub
+curl -X POST http://localhost:1080/mock/stubs/http \
+  -H "Content-Type: application/json" \
+  -d '{
+    "match": {
+      "method": "POST",
+      "domain": "eligibility-adapter",
+      "url": "/evaluate/expedited-screening"
+    },
+    "response": {
+      "status": 200,
+      "body": { "expedited": true }
+    }
+  }'
+# → 201 { "id": "http.expedited-screening-1", "type": "http", ... }
+```
+
+**`match` fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `url` | yes | Request path. With `domain`, this is relative to the domain (e.g., `/evaluate/expedited-screening`). Without `domain`, it is the full request path. |
+| `domain` | no | API domain prefix (e.g., `eligibility-adapter`). When set, the effective match path is `/<domain><url>`. Use this to scope a stub to a specific domain when multiple domains share the same endpoint path. |
+| `method` | no | HTTP method (e.g., `POST`). Omit to match any method. |
+
+**`response` fields** (optional — defaults to 200 `{}`):
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `status` | 200 | HTTP status code |
+| `body` | `{}` | JSON response body |
+
+**DELETE stubs** default to `status: 204` with no body.
+
+**Verifying consumption:** after the flow that triggers the adapter call, `GET /mock/stubs/http` should return an empty list.
+
+```bash
+# 1. Register stub before triggering the flow
+curl -X POST http://localhost:1080/mock/stubs/http \
+  -d '{"match": {"method": "POST", "domain": "eligibility-adapter", "url": "/evaluate/expedited-screening"}}'
+
+# 2. Trigger the flow (SNAP application creates a Decision → fires eligibility.decision.created
+#    → evaluateSnapExpedited procedure → POST /eligibility-adapter/evaluate/expedited-screening)
+curl -X POST http://localhost:1080/platform/events \
+  -d '{"specversion":"1.0","type":"org.codeforamerica.safety-net-blueprint.intake.application.submitted","source":"/test","subject":"app-123","data":{"programs":["snap"]}}'
+
+# 3. Verify stub was consumed
+curl http://localhost:1080/mock/stubs/http
+# → { "items": [], "total": 0 }
+```
+
+### Managing HTTP stubs
+
+```bash
+curl http://localhost:1080/mock/stubs/http                                       # list all
+curl -X DELETE http://localhost:1080/mock/stubs/http/http.expedited-screening-1  # remove one
+curl -X DELETE http://localhost:1080/mock/stubs/http                             # clear all
+```
+
 ## Configuration
 
 ```bash
@@ -174,8 +240,12 @@ MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
 | `POST /mock/reset` | Clear runtime data; restore config-managed resources |
 | `POST /mock/stubs/events` | Register an event stub |
 | `GET /mock/stubs/events` | List active event stubs |
-| `DELETE /mock/stubs/events/:id` | Remove a specific stub |
-| `DELETE /mock/stubs/events` | Clear all stubs |
+| `DELETE /mock/stubs/events/:id` | Remove a specific event stub |
+| `DELETE /mock/stubs/events` | Clear all event stubs |
+| `POST /mock/stubs/http` | Register an HTTP stub |
+| `GET /mock/stubs/http` | List active HTTP stubs |
+| `DELETE /mock/stubs/http/:id` | Remove a specific HTTP stub |
+| `DELETE /mock/stubs/http` | Clear all HTTP stubs |
 
 ## Troubleshooting
 

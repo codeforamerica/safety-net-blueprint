@@ -5,6 +5,7 @@
 import { findById, deleteResource } from '../database-manager.js';
 import { emitEvent } from '../emit-event.js';
 import { isConfigManaged } from '../config-registry.js';
+import { matchAndPopHttp } from '../mock-stub-engine.js';
 
 /**
  * Create delete handler for a resource
@@ -16,6 +17,14 @@ export function createDeleteHandler(apiMetadata, endpoint) {
   const paramName = extractPathParam(endpoint.path);
   return (req, res) => {
     try {
+      const httpStub = matchAndPopHttp(req.method, req.path);
+      if (httpStub) {
+        const status = httpStub.response?.status ?? 204;
+        return status === 204 || !httpStub.response?.body
+          ? res.status(status).end()
+          : res.status(status).json(httpStub.response.body);
+      }
+
       const resourceId = req.params[paramName] || req.params.id;
 
       // Check if resource exists
