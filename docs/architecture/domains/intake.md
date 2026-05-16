@@ -80,6 +80,28 @@ Federal law sets maximum processing timelines that begin at application receipt 
 - Federal requirements are minimal; states have broad discretion over intake procedures
 - No federal automated determination requirement; no prescribed interview structure
 
+### Verification requirements
+
+Federal regulations prescribe which verification categories must be established and whether electronic checks must be attempted before requesting paper documents.
+
+**SNAP (7 CFR § 273.2(f)):** States must verify the following before certification:
+- **Identity** — of the primary applicant
+- **Residency** — household resides in the state (document-only; no electronic check exists)
+- **Citizenship/immigration status** — for each member applying for SNAP; non-citizens must provide immigration status documentation
+- **Income** — all sources of earned and unearned income
+
+**Medicaid (42 CFR § 435.956):** States must attempt electronic verification through federal data sources before requesting paper documents (ex parte rule). Required verifications:
+- **Citizenship** — electronic check required first (fdsh_ssa); paper documents requested only if inconclusive
+- **Immigration status** — electronic check required first (fdsh_vlp, then save if inconclusive); paper documents requested only if inconclusive
+- **Income** — electronic checks via fdsh_fti (tax data) and ssa_ievs (SSA benefit income)
+- **Identity** — electronic check via fdsh_ssa
+
+**IEVS (7 CFR § 272.8):** The Income and Eligibility Verification System mandate requires states to query multiple federal income sources. Timing varies by source:
+- **ssa_ievs (SOLQ)** — real-time; can run at submission
+- **irs_ievs, swica (wage/employment), uib (unemployment)** — batch-quarterly; these run as ongoing case management checks, not at initial intake submission
+
+**Domain boundary:** Intake initiates all verification-related electronic checks at submission. Eligibility subscribes to the results and uses them for determination. See [Decision 20](#decision-20-existing-coverage-check-ownership) for why existing coverage checks (fdsh_medicare, fdsh_vci) are owned by eligibility rather than intake.
+
 ---
 
 ## Entity model
@@ -132,7 +154,7 @@ A unified record representing one item on the household's verification checklist
 
 Verification records are created by the rules engine in response to intake events, not manually by caseworkers under normal circumstances. Household-level obligations (e.g., proof of residency) are linked to the application only. Member-level obligations (e.g., proof of income, citizenship) are linked to both the application and the specific member.
 
-**Key fields:** `id`, `applicationId`, `memberId` (nullable — null for household-level obligations), `verificationType` (`document` | `electronic`), `category` (`citizenship`, `income`, `identity`, `residency`, `immigration`, etc.), `status` (`pending` | `inconclusive` | `satisfied` | `waived` | `cannot_verify`), `source` (for electronic: `fdsh` | `ievs` | `save` | `ssa`), `evidence` (for document: IDs of verified documents from document management), `createdAt`, `updatedAt`
+**Key fields:** `id`, `applicationId`, `memberId` (nullable — null for household-level obligations), `category` (`income | identity | residency | citizenship | immigration`), `status` (`pending | inconclusive | satisfied | waived | cannot_verify`), `evidence[]` (typed sub-items: electronic items carry `source` (`fdsh_ssa | fdsh_vlp | fdsh_fti | ssa_ievs | save`), `result`, `serviceCallId`, `receivedAt`; document items carry `documentId`, `receivedAt`, `reviewedAt`, `reviewedBy`), `documentRequests[]` (sub-items: `noticeId`, `sentAt`, `dueAt`, `channel`), `createdAt`, `updatedAt`
 
 See [Decision 14](#decision-14-verification-checklist-generation), [Decision 19](#decision-19-unified-verification-entity).
 
@@ -210,7 +232,7 @@ Events from other domains that intake reacts to:
 |---|---|---|
 | `workflow.task.claimed` | A caseworker claiming the intake review task signals they have begun active review — intake should reflect this in the application lifecycle. See [Decision 8](#decision-8-submitted--under_review-transition-trigger). | Trigger `submitted → under_review` on the linked application |
 | `eligibility.determination_complete` | Eligibility publishes outcomes per program; intake subscribes to determine when all programs are resolved and the application can be closed. See [Decision 6](#decision-6-intake-phase-end--lifecycle-state). | Trigger `close` when all programs are determined |
-| `data-exchange.service-call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns a result, the rules engine updates the affected `Verification` status — satisfied if verified, or creating a conditional document-based obligation if inconclusive. See [Decision 14](#decision-14-verification-checklist-generation), [Decision 17](#decision-17-external-service-verification-write-backs), [Decision 18](#decision-18-data-exchange-orchestration). | Rules engine updates `Verification` status; creates document-based `Verification` if inconclusive |
+| `data-exchange.service-call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns a result, the rules engine transitions the affected `Verification` and appends an electronic evidence item — satisfied if conclusive, inconclusive if not; a document request entry is appended to `documentRequests[]` when inconclusive. See [Decision 14](#decision-14-verification-checklist-generation), [Decision 17](#decision-17-external-service-verification-write-backs), [Decision 18](#decision-18-data-exchange-orchestration). | Rules engine transitions `Verification`; appends electronic evidence item; appends to `documentRequests[]` if inconclusive |
 | `scheduling.appointment.scheduled` | Intake must link each scheduled appointment to the correct Interview entity so the appointments array stays current. Required for caseworkers to see appointment history and for the interview completion flow to be traceable. See [Decision 15](#decision-15-interview-entity-model). | Rules engine appends the appointmentId to `Interview.appointments` for the linked interview |
 | `document_management.document_version.uploaded` | When a new document version is uploaded, intake's rules engine evaluates whether the upload satisfies a pending verification obligation. Without this event, intake has no trigger to mark the `Verification` as satisfied when a document is received. | Rules engine transitions the matching `Verification` record to `satisfied` and records the document ID in its `evidence` list |
 
@@ -240,7 +262,8 @@ Quick reference — each decision is detailed in the section below.
 | 16 | [Interview task creation timing](#decision-16-interview-task-creation-timing) | Interview task created at task claim time (when caseworker is known), not at submission. |
 | 17 | [External service verification write-backs](#decision-17-external-service-verification-write-backs) | Obligation status → `Verification` record; verified facts → `ApplicationMember` fields. |
 | 18 | [Data exchange orchestration](#decision-18-data-exchange-orchestration) | Intake rules create `data-exchange/service-calls` resources — data exchange stays generic; field mapping lives in rules. |
-| 19 | [Unified Verification entity](#decision-19-unified-verification-entity) | Single `Verification` entity with `verificationType` replaces `ApplicationDocument` and `ApplicationMember.verifications[]`. |
+| 19 | [Unified Verification entity](#decision-19-unified-verification-entity) | Obligation-centric `Verification` entity — evidence accumulates as sub-items; replaces `ApplicationDocument` and `ApplicationMember.verifications[]`. |
+| 20 | [Existing coverage check ownership](#decision-20-existing-coverage-check-ownership) | fdsh_medicare and fdsh_vci are eligibility's calls — not intake Verification obligations. |
 
 ---
 
@@ -566,7 +589,7 @@ Household-level obligations (one per application): rule sets without collection 
 
 Member-level obligations (one per qualifying member): rule sets with a collection binding on `application.members`, using `for/in/if` iteration to create one `Verification` per member.
 
-Example structure (per-member income obligation):
+Example structure (per-member income obligation, SNAP):
 ```yaml
 context:
   - as: application
@@ -589,11 +612,10 @@ rules:
           applicationId: {var: application.id}
           memberId: {var: member.id}
           category: income
-          verificationType: document
           status: pending
 ```
 
-Citizenship obligations illustrate the two-phase pattern: at submission, an `electronic` `Verification` is created for FDSH; when `data-exchange.service-call.completed` fires with result `verified`, the item is set to `satisfied`; if inconclusive, a new `document` `Verification` is created for the paper citizenship proof.
+Citizenship obligations illustrate the two-phase pattern: at submission, a `Verification` with `category: citizenship` is created and an fdsh_ssa service call is initiated; when `data-exchange.service-call.completed` fires with `result: conclusive`, the Verification transitions to `satisfied` and an electronic evidence item is appended; if inconclusive, a document request is created and appended to `documentRequests[]`. Citizenship and immigration Verifications are created only for SNAP applicants — Medicaid defers citizenship/immigration verification to the eligibility domain (see #250).
 
 **Options:**
 - **(A)** Hardcoded in intake — requirements defined as static program-to-document mappings; simpler but not state-customizable
@@ -601,7 +623,7 @@ Citizenship obligations illustrate the two-phase pattern: at submission, an `ele
 
 **Note on rules condition language:** JSON Logic (an open spec) is the condition layer for rule set expressions. DMN (Decision Model and Notation, OMG standard) was considered — it is supported by Camunda, Red Hat Decision Manager, and Flowable — but ruled out: DMN is XML-table-based and too heavyweight for a YAML-native format. The action vocabulary (`createResource`, `triggerTransition`, `for/in` iteration) is necessarily domain-specific regardless of condition language.
 
-**Deferred:** `category` enum values (`residency`, `income`, `identity`, `citizenship`, `immigration`, `utilities_shelter`, etc.) are defined in the `Verification` contract implementation issue.
+**Verification categories:** `income`, `identity`, `residency`, `citizenship`, `immigration`. Residency is SNAP-required (7 CFR § 273.2(f)(1)(iii)) and document-only — no electronic check exists. Citizenship and immigration are created per member, SNAP only.
 
 ---
 
@@ -650,18 +672,18 @@ Citizenship obligations illustrate the two-phase pattern: at submission, an `ele
 **What's being decided:** When an external service call (FDSH, IEVS, SAVE) returns a result, where does the outcome go — to a verification obligation record, to the member entity directly, or to the application?
 
 **Considerations:**
-- All federal external verification services operate per-person: FDSH checks citizenship and income per SSN; IEVS/The Work Number checks employment and income per SSN; SAVE checks immigration status per person. None return household-level aggregate results.
+- All federal external verification services operate per-person: fdsh_ssa checks citizenship and identity per SSN; fdsh_fti and ssa_ievs check income per SSN; fdsh_vlp and save check immigration status per person. None return household-level aggregate results.
 - The result carries two distinct kinds of information: (1) **whether the obligation is satisfied** (was citizenship verified? was income verified?) and (2) **verified facts** (the confirmed income amount, the confirmed citizenship status). These are different concerns — one is a checklist status, the other is a data update to the member record.
 - Writing the obligation outcome directly to `ApplicationMember` as a status field blends checklist management with member data. It also doesn't generalize: once `Verification` exists as a unified checklist entity (see [Decision 14](#decision-14-verification-checklist-generation)), the obligation status naturally belongs there, not as a separate field on `ApplicationMember`.
 - Writing verified facts (e.g., confirmed income amount, confirmed citizenship status) to `ApplicationMember` is correct — those are person facts that belong on the member record and are used by the eligibility domain for determination.
 
 **Decision:** Write-backs split by concern:
-- **Obligation status** → `Verification`. When `data-exchange.service-call.completed` fires, the rules engine transitions the corresponding `Verification` to `satisfied` or `inconclusive`; if inconclusive, creates a new document-based `Verification` for the paper document requirement.
+- **Obligation status** → `Verification`. When `data-exchange.service-call.completed` fires, the rules engine transitions the corresponding `Verification` (`satisfy` for conclusive, `mark_inconclusive` for inconclusive), appends an electronic evidence item to `evidence[]`, and if inconclusive appends a document request entry to `documentRequests[]`.
 - **Verified facts** → `ApplicationMember`. Facts confirmed by the external service (confirmed income amount, confirmed citizenship status, confirmed immigration category) are written to the member record via `triggerTransition` or field updates — available to eligibility for determination.
 
 No verification obligation fields live on `Application`. No verification status fields live on `ApplicationMember` — those moved to `Verification`.
 
-**Deferred:** The specific `ApplicationMember` fields updated per service (FDSH, IEVS, SAVE, SSA) — names, types, and allowed values — are defined in the `ApplicationMember` contract implementation issue.
+**Deferred:** The specific `ApplicationMember` fields updated per service (fdsh_ssa, fdsh_fti, fdsh_vlp, ssa_ievs, save) — names, types, and allowed values — are defined in the `ApplicationMember` contract implementation issue.
 
 ---
 
@@ -681,7 +703,7 @@ No verification obligation fields live on `Application`. No verification status 
 
 **Decision:** Intake rules create `data-exchange/service-calls` resources via `forEach` over the application's members, with member fields mapped into the service-specific request payload. Data exchange executes the call and emits a completion event. Data exchange has no knowledge of intake entities. The field mapping, service selection, and per-member fan-out live entirely in the rules contract, making them state-customizable.
 
-Example (per-member FDSH citizenship check):
+Example (per-member fdsh_ssa citizenship check, SNAP only):
 ```yaml
 context:
   - as: members
@@ -701,6 +723,8 @@ action:
         requestedAt: {var: this.time}
 ```
 
+The `metadata.intake.verificationId` context passthrough allows the `data-exchange.service-call.completed` handler to correlate the result back to the pre-created Verification record without querying for it. See `packages/contracts/patterns/api-patterns.yaml#context_passthrough`.
+
 ---
 
 ### Decision 19: Unified Verification entity
@@ -717,7 +741,7 @@ action:
 
 **Options:**
 - **(A)** Separate entities — `ApplicationDocument` for paper requirements; `ApplicationMember.verifications[]` for electronic results; two structures, two query paths, no shared lifecycle
-- **(B)** ✓ Unified `Verification` entity — `verificationType: document | electronic` discriminates the two; a single API endpoint (`/applications/{id}/verifications`) covers the full checklist; a shared lifecycle applies to both types
+- **(B)** ✓ Unified `Verification` entity — obligation-centric; a single API endpoint (`/applications/{id}/verifications`) covers the full checklist; electronic and document evidence accumulate as sub-items on the same record; a shared lifecycle applies to both
 
 **Lifecycle:**
 
@@ -731,7 +755,25 @@ action:
 
 Transitions: `pending → satisfied | inconclusive | waived | cannot_verify`; `inconclusive → satisfied | waived | cannot_verify`. Terminal states: `satisfied`, `waived`, `cannot_verify`.
 
-**Customization:** The `category` enum (`citizenship`, `income`, `identity`, `residency`, `immigration`, etc.) and `source` enum (`fdsh`, `ievs`, `save`, `ssa`) are overlay-extensible. States may add program-specific verification categories or additional electronic source identifiers.
+**Customization:** The `category` enum (`income | identity | residency | citizenship | immigration`) and `evidence.source` enum (`fdsh_ssa | fdsh_vlp | fdsh_fti | ssa_ievs | save`) are overlay-extensible. States may add program-specific verification categories or additional electronic source identifiers.
+
+---
+
+### Decision 20: Existing coverage check ownership
+
+**Status:** Decided: B
+
+**What's being decided:** Whether checks for existing health coverage (Medicare enrollment via fdsh_medicare, employer-sponsored insurance via fdsh_vci) are initiated by intake as Verification obligations or by the eligibility domain as determination inputs.
+
+**Considerations:**
+- Every other electronic check intake initiates corresponds to something the applicant declared — citizenship, immigration status, income. If the check is inconclusive, there is a document fallback path: intake creates a document request and the caseworker follows up with the applicant. The Verification obligation has an applicant-facing resolution path.
+- Existing coverage is different: the applicant does not declare "I have Medicare" or "I have employer-sponsored insurance." The system proactively checks. There is no document fallback if the result is inconclusive — there is no document an applicant can provide to prove they don't have existing coverage.
+- The result informs the eligibility determination directly (existing coverage affects Medicaid eligibility) rather than resolving an applicant obligation. Caseworkers do not need to act on existing coverage results in intake — the outcome flows to the eligibility determination.
+- Modeling existing coverage as an intake Verification would create a Verification with no document request path and no applicant-facing action, which is inconsistent with what the Verification checklist represents.
+
+**Options:**
+- **(A)** Intake initiates fdsh_medicare and fdsh_vci at submission, stores results as `existing_coverage` Verifications — keeps all electronic checks in one domain; but requires a Verification category with no applicant-facing resolution path
+- **(B)** ✓ Eligibility initiates fdsh_medicare and fdsh_vci as part of its determination process — existing coverage is a determination input, not a verification obligation; intake has no `existing_coverage` Verification category; the results belong to eligibility's domain
 
 ---
 

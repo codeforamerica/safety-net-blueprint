@@ -8,71 +8,7 @@
  * Run with: npm run test:integration
  */
 
-import http from 'http';
-import { URL } from 'url';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const contractsDir = resolve(__dirname, '..', '..', '..', 'contracts');
-
-const BASE_URL = 'http://localhost:1080';
-const PREFIX = 'org.codeforamerica.safety-net-blueprint.';
-
-// Simple http fetch wrapper (reused from integration.test.js pattern)
-async function fetch(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
-    const requestOptions = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || 80,
-      path: urlObj.pathname + urlObj.search,
-      method: options.method || 'GET',
-      headers: options.headers || {}
-    };
-
-    if (options.body) {
-      const bodyString = JSON.stringify(options.body);
-      requestOptions.headers['Content-Length'] = Buffer.byteLength(bodyString);
-      requestOptions.headers['Content-Type'] = requestOptions.headers['Content-Type'] || 'application/json';
-    }
-
-    const req = http.request(requestOptions, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        resolve({
-          ok: res.statusCode >= 200 && res.statusCode < 300,
-          status: res.statusCode,
-          json: async () => JSON.parse(data),
-          text: async () => data
-        });
-      });
-    });
-
-    req.on('error', reject);
-    if (options.body) req.write(JSON.stringify(options.body));
-    req.end();
-  });
-}
-
-async function clearStubs() {
-  await fetch(`${BASE_URL}/mock/stubs/events`, { method: 'DELETE' });
-}
-
-async function injectEvent(type, data = {}, subject = 'sub-test-1') {
-  return fetch(`${BASE_URL}/platform/events`, {
-    method: 'POST',
-    body: {
-      specversion: '1.0',
-      type: PREFIX + type,
-      source: '/test',
-      subject,
-      data
-    }
-  });
-}
+import { BASE_URL, fetch, injectEvent, clearStubs, setupServer, teardownServer } from './helpers.js';
 
 // =============================================================================
 // /mock/stubs/events CRUD
@@ -329,13 +265,7 @@ async function run() {
   console.log('Mock Stubs Integration Tests');
   console.log('='.repeat(70));
 
-  // Start the mock server if not already running
-  const alreadyRunning = await isServerRunning();
-  if (!alreadyRunning) {
-    console.log('\n  Starting mock server...');
-    await startMockServer([contractsDir]);
-    console.log('  ✓ Mock server started');
-  }
+  const serverStartedByTests = await setupServer();
 
   const suites = [
     testStubCrud,
@@ -343,7 +273,7 @@ async function run() {
     testStubFifo,
     testNoStubNoError,
     testMatchFilter,
-    testTimerStub
+    testTimerStub,
   ];
 
   let passed = 0;
@@ -359,11 +289,8 @@ async function run() {
     }
   }
 
-  // Clean up stubs and stop the server if we started it
   await clearStubs();
-  if (!alreadyRunning) {
-    await stopServer(false);
-  }
+  await teardownServer(serverStartedByTests);
 
   console.log('\n' + '='.repeat(70));
   console.log(`Mock Stubs: ${passed} passed, ${failed} failed`);

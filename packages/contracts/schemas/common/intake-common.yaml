@@ -1,0 +1,29 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/intake-common.yaml"
+title: IntakeCommon
+description: >
+  Shared intake types passed to external systems (e.g., eligibility adapter).
+  Referenced by the eligibility adapter interface and by the intake OpenAPI spec
+  so both stay in sync.
+
+$defs:
+  VerificationSummary:
+    type: object
+    description: >
+      A summary of one verification obligation and its current status. Passed
+      to the final determination call so the rules engine can factor in which
+      verifications have been satisfied, waived, or are still pending.
+    additionalProperties: true
+    properties:
+      category:
+        type: string
+        description: The type of verification (e.g., income, identity, residency).
+      status:
+        type: string
+        enum:
+          - pending
+          - inconclusive
+          - satisfied
+          - waived
+          - cannot_verify
+        description: Current status of the verification obligation.

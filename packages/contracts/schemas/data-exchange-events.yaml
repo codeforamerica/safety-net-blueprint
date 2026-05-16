@@ -29,7 +29,7 @@ $defs:
         x-relationship:
           resource: ExternalServiceCall
       serviceType:
-        $ref: "./common.yaml#/$defs/ServiceType"
+        $ref: "./common/data-exchange-common.yaml#/$defs/ServiceType"
       requestingResourceId:
         type: string
         format: uuid
@@ -71,7 +71,7 @@ $defs:
         x-relationship:
           resource: ExternalServiceCall
       serviceType:
-        $ref: "./common.yaml#/$defs/ServiceType"
+        $ref: "./common/data-exchange-common.yaml#/$defs/ServiceType"
       requestingResourceId:
         type: string
         format: uuid
@@ -106,7 +106,7 @@ $defs:
         x-relationship:
           resource: ExternalServiceCall
       serviceType:
-        $ref: "./common.yaml#/$defs/ServiceType"
+        $ref: "./common/data-exchange-common.yaml#/$defs/ServiceType"
       requestingResourceId:
         type: string
         format: uuid
@@ -134,7 +134,7 @@ $defs:
         x-relationship:
           resource: ExternalServiceCall
       serviceType:
-        $ref: "./common.yaml#/$defs/ServiceType"
+        $ref: "./common/data-exchange-common.yaml#/$defs/ServiceType"
       requestingResourceId:
         type: string
         format: uuid

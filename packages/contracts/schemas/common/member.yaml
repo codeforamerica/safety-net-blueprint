@@ -1,0 +1,84 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/member.yaml"
+title: MemberDemographics
+description: >
+  Demographic and eligibility-relevant identity fields for a household member.
+  This is the canonical definition of a member's demographic data, shared across
+  domains. Domain resources (e.g., ApplicationMember in intake) extend this by
+  adding resource metadata (id, applicationId, createdAt, updatedAt) and
+  domain-specific fields.
+
+type: object
+required:
+  - dateOfBirth
+
+properties:
+  dateOfBirth:
+    type: string
+    format: date
+    description: Member's date of birth. Used in age-based program eligibility criteria.
+  relationshipToHead:
+    $ref: "#/$defs/HouseholdRelationship"
+  citizenshipStatus:
+    $ref: "#/$defs/CitizenshipStatus"
+  immigrationStatus:
+    $ref: "#/$defs/ImmigrationStatus"
+  isDisabled:
+    type: boolean
+    description: >
+      Whether the member has a disability. Affects SNAP deductions for medical
+      expenses (7 CFR § 273.9(d)(3)) and may affect Medicaid eligibility
+      pathways.
+  programs:
+    type: array
+    items:
+      $ref: "./enums.yaml#/$defs/Program"
+    description: Programs this member is applying for.
+
+additionalProperties: true
+
+$defs:
+  HouseholdRelationship:
+    type: string
+    enum:
+      - head_of_household
+      - spouse
+      - partner
+      - child
+      - parent
+      - sibling
+      - grandparent
+      - grandchild
+      - other_relative
+      - non_relative
+    description: The member's relationship to the head of household.
+
+  CitizenshipStatus:
+    type: string
+    enum:
+      - us_citizen
+      - us_national
+      - non_citizen
+    description: >
+      The member's citizenship status. Affects eligibility for SNAP
+      (non-citizens face a 5-year bar in most cases, 8 U.S.C. § 1612) and
+      Medicaid (42 CFR § 435.406).
+
+  ImmigrationStatus:
+    type: string
+    enum:
+      - qualified_alien
+      - lawful_permanent_resident
+      - refugee
+      - asylee
+      - cuban_haitian_entrant
+      - amerasian
+      - victim_of_trafficking
+      - parolee
+      - undocumented
+      - not_applicable
+    description: >
+      The member's immigration status. Required for non-citizens to determine
+      qualified alien status under 8 U.S.C. § 1641. Verified electronically
+      via FDSH VLP or SAVE (42 CFR § 435.956(c)).
+

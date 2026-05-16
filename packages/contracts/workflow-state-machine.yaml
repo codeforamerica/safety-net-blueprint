@@ -26,6 +26,7 @@ machines:
           - set: {field: assignedToId, value: $caller.id, description: Assign task to the claiming worker}
           - emit: {event: claimed, data: {assignedToId: $caller.id}, description: Emit a domain event recording the claim and who claimed the task}
       - id: complete
+        description: "POST /tasks/{taskId}/complete — Marks an in-progress task done with an outcome and optional notes"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
@@ -41,6 +42,7 @@ machines:
           - if: $request.createFollowUp == true
             then: [{call: {POST: workflow/tasks, body: {$merge: $object, status: pending}}, description: Create a follow-up task when caller requests one}]
       - id: release
+        description: "POST /tasks/{taskId}/release — Returns an in-progress task to the queue, clearing the assignment"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
@@ -54,6 +56,7 @@ machines:
           - call: assignToQueue
           - call: setPriority
       - id: escalate
+        description: "POST /tasks/{taskId}/escalate — Flags an in-progress task for supervisor attention"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [{any: [callerIsAssignedWorker, callerIsSupervisor]}]
@@ -66,6 +69,7 @@ machines:
           - call: setPriority
           - emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
       - id: escalate
+        description: "POST /tasks/{taskId}/escalate — Supervisor escalates a pending task without claiming it first"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -78,6 +82,7 @@ machines:
           - call: setPriority
           - emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
       - id: de-escalate
+        description: "POST /tasks/{taskId}/de-escalate — Returns an escalated task to the pending queue"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -90,6 +95,7 @@ machines:
           - call: setPriority
           - emit: {event: de-escalated, description: Emit a domain event recording the de-escalation}
       - id: cancel
+        description: "POST /tasks/{taskId}/cancel — Supervisor cancels a task from any active state"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -101,6 +107,7 @@ machines:
           - set: {field: cancelledAt, value: $now, description: Record when the task was cancelled}
           - emit: {event: cancelled, data: {reason: $request.reason}, description: Emit a domain event recording the cancellation}
       - id: reopen
+        description: "POST /tasks/{taskId}/reopen — Supervisor returns a cancelled task to the pending queue"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -114,6 +121,7 @@ machines:
           - call: setPriority
           - emit: {event: reopened, data: {reason: $request.reason}, description: Emit a domain event recording the reopen}
       - id: await-client
+        description: "POST /tasks/{taskId}/await-client — Pauses an in-progress task while waiting for a client response"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
@@ -126,6 +134,7 @@ machines:
           - call: scheduleClientTimeout
           - emit: {event: awaiting_client, description: Emit a domain event recording the block}
       - id: await-verification
+        description: "POST /tasks/{taskId}/await-verification — Pauses an in-progress task while waiting for a verification result"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
@@ -149,6 +158,7 @@ machines:
           - call: cancelVerificationTimeout
           - emit: {event: resumed, description: Emit a domain event recording the resumption}
       - id: system-resume
+        description: "POST /tasks/{taskId}/system-resume — System resumes a verification-blocked task after a timeout or result arrives"
         guards:
           - actors: [system]
             conditions: [callerIsSystem]
@@ -161,6 +171,7 @@ machines:
           - call: cancelVerificationTimeout
           - emit: {event: system_resumed, data: {source: $request.source, result: $request.result}, description: Emit a domain event recording the automated resumption and its result}
       - id: system-escalate
+        description: "POST /tasks/{taskId}/system-escalate — System auto-escalates a task when an SLA deadline is approaching or exceeded"
         guards:
           - actors: [system]
             conditions: [callerIsSystem]
@@ -193,6 +204,7 @@ machines:
         steps:
           - emit: {event: submitted_for_review, description: Emit a domain event recording the submission for review}
       - id: approve
+        description: "POST /tasks/{taskId}/approve — Supervisor approves a submitted task and records the final outcome"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -206,6 +218,7 @@ machines:
           - set: {field: completionNotes, value: $request.notes, description: Store optional notes from the supervisor}
           - emit: {event: approved, data: {outcome: $request.outcome}, description: Emit a domain event recording the approval}
       - id: return-to-worker
+        description: "POST /tasks/{taskId}/return-to-worker — Supervisor sends a review-pending task back to the worker with feedback"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -216,6 +229,7 @@ machines:
         steps:
           - emit: {event: returned_to_worker, data: {reason: $request.reason}, description: Emit a domain event recording the return for revision}
       - id: assign
+        description: "POST /tasks/{taskId}/assign — Supervisor reassigns a task to a specific caseworker or moves it to a different queue"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -229,6 +243,7 @@ machines:
           - set: {field: queueId, value: $request.queueId, description: Optionally move the task to a different queue}
           - emit: {event: assigned, data: {assignedToId: $request.assignedToId, queueId: $request.queueId}, description: Emit a domain event recording the assignment}
       - id: set-priority
+        description: "POST /tasks/{taskId}/set-priority — Supervisor manually overrides the task priority"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]

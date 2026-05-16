@@ -3,6 +3,7 @@
  */
 
 import { executeTransition } from '../state-machine-runner.js';
+import { matchAndPopHttp } from '../mock-stub-engine.js';
 
 /**
  * Create a transition handler for an RPC endpoint.
@@ -16,6 +17,11 @@ import { executeTransition } from '../state-machine-runner.js';
 export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null) {
   return (req, res) => {
     try {
+      const httpStub = matchAndPopHttp(req.method, req.path);
+      if (httpStub) {
+        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+      }
+
       const resourceId = req.params[paramName];
 
       const callerId = req.headers['x-caller-id'];

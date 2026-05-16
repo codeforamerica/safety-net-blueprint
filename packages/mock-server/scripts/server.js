@@ -15,12 +15,12 @@ import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
-import { closeAll } from '../src/database-manager.js';
+import { closeAll, clearAllDatabases, insertResource, findById } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
-import { registerStub, listStubs, removeStub, clearStubs } from '../src/mock-stub-engine.js';
-import { findById } from '../src/database-manager.js';
+import { registerStub, registerHttpStub, listStubs, listHttpStubs, removeStub, removeHttpStub, clearStubs, clearHttpStubs, clearAllStubs } from '../src/mock-stub-engine.js';
+import { registerConfigManaged } from '../src/config-registry.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -111,12 +111,14 @@ async function startMockServer(specDirs = null, seedDir = null) {
     let allStateMachines = [];
     let allSlaTypes = [];
     let allMetrics = [];
+    let allConfigs = [];
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
       allMetrics = allMetrics.concat(result.metrics);
+      allConfigs = allConfigs.concat(result.configs || []);
     }
 
 
@@ -169,11 +171,9 @@ async function startMockServer(specDirs = null, seedDir = null) {
     console.log('  POST   /platform/events - Inject external domain event (testing)');
 
     // Event stub registry — pre-program event responses for integration tests.
-    // See packages/mock-server/mock-rules/README.md for full usage documentation.
     app.post('/mock/stubs/events', (req, res) => {
       try {
-        const stub = registerStub(req.body);
-        res.status(201).json(stub);
+        res.status(201).json(registerStub(req.body));
       } catch (err) {
         res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
       }
@@ -182,10 +182,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
       const items = listStubs();
       res.json({ items, total: items.length });
     });
-    app.delete('/mock/stubs/events', (req, res) => {
-      clearStubs();
-      res.status(204).end();
-    });
+    app.delete('/mock/stubs/events', (req, res) => { clearStubs(); res.status(204).end(); });
     app.delete('/mock/stubs/events/:id', (req, res) => {
       const removed = removeStub(req.params.id);
       if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Stub "${req.params.id}" not found` });
@@ -195,6 +192,51 @@ async function startMockServer(specDirs = null, seedDir = null) {
     console.log('  GET    /mock/stubs/events - List active event stubs');
     console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
     console.log('  DELETE /mock/stubs/events - Clear all event stubs');
+
+    // HTTP stub registry — intercept any inbound request and return a pre-programmed response.
+    app.post('/mock/stubs/http', (req, res) => {
+      try {
+        res.status(201).json(registerHttpStub(req.body));
+      } catch (err) {
+        res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
+      }
+    });
+    app.get('/mock/stubs/http', (req, res) => {
+      const items = listHttpStubs();
+      res.json({ items, total: items.length });
+    });
+    app.delete('/mock/stubs/http', (req, res) => { clearHttpStubs(); res.status(204).end(); });
+    app.delete('/mock/stubs/http/:id', (req, res) => {
+      const removed = removeHttpStub(req.params.id);
+      if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Stub "${req.params.id}" not found` });
+      res.status(204).end();
+    });
+    console.log('  POST   /mock/stubs/http - Register an HTTP stub');
+    console.log('  GET    /mock/stubs/http - List active HTTP stubs');
+    console.log('  DELETE /mock/stubs/http/:id - Remove an HTTP stub');
+    console.log('  DELETE /mock/stubs/http - Clear all HTTP stubs');
+
+    // Reset endpoint — clears all runtime data and re-seeds config-managed resources.
+    // Config-managed items (queues, services, document types) are restored; all other
+    // data is wiped. Useful for putting tests into a known-clean state without restarting.
+    app.post('/mock/reset', (req, res) => {
+      clearAllDatabases();
+      clearAllStubs();
+      for (const config of allConfigs) {
+        for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
+          for (const entry of entries) {
+            const data = { ...entry };
+            for (const key of Object.keys(data)) {
+              if (key.startsWith('x-')) delete data[key];
+            }
+            insertResource(catalogKey, { ...data, source: 'system' });
+            registerConfigManaged(catalogKey, data.id);
+          }
+        }
+      }
+      res.status(204).end();
+    });
+    console.log('  POST   /mock/reset - Reset all runtime data (keeps config-managed resources)');
 
 
     // Register event subscriptions

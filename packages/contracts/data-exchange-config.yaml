@@ -137,8 +137,6 @@ services:
     name: Interstate Enrollment Check
     serviceType: enrollment_check
     defaultCallMode: async
-    programs:
-      - all
     description: >
       Inter-state enrollment hub query. Checks for duplicate enrollment across
       states and programs.
@@ -147,8 +145,6 @@ services:
     name: SSA Incarceration Check
     serviceType: incarceration_check
     defaultCallMode: async
-    programs:
-      - all
     description: >
       SSA Prison Verification System (PUPS) batch query. Returns confinement
       status matched against SSA beneficiary records.

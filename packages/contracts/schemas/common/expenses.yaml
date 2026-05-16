@@ -1,0 +1,45 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/expenses.yaml"
+title: Expense
+description: >
+  A single expense record for a household member. Used across domains wherever
+  expense data is collected, evaluated, or passed to the rules engine adapter.
+  Certain expense categories affect SNAP net income calculations and Medicaid
+  deductions (e.g., medical expenses for elderly/disabled members).
+
+type: object
+required:
+  - category
+  - amount
+  - frequency
+
+properties:
+  category:
+    $ref: "#/$defs/ExpenseCategory"
+  amount:
+    type: number
+    format: float
+    minimum: 0
+    description: The expense amount for the given frequency period.
+  frequency:
+    $ref: "./enums.yaml#/$defs/Frequency"
+
+additionalProperties: true
+
+$defs:
+  ExpenseCategory:
+    type: string
+    enum:
+      - housing
+      - utilities
+      - childcare
+      - medical
+      - dependent_care
+      - child_support_paid
+      - other
+    description: >
+      The category of expense. Housing and utilities are used in SNAP expedited
+      screening (7 CFR § 273.2(i)). Medical expenses apply as deductions for
+      elderly or disabled SNAP members (7 CFR § 273.9(d)(3)). Childcare and
+      dependent care are deductible for SNAP (7 CFR § 273.9(d)(4)).
+

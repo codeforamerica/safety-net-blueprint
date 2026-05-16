@@ -1,24 +1,12 @@
-# Shared type definitions referenced by both OpenAPI components and JSON Schema
-# config validators. Extracting shared types here avoids duplication between
-# components/common.yaml (OpenAPI) and schemas/*-schema.yaml (JSON Schema).
-
 $schema: "https://json-schema.org/draft/2020-12/schema"
-title: Shared Common Types
+$id: "schemas/common/auth.yaml"
+title: CommonAuth
+description: >
+  Shared connection and credential configuration schemas. Used in domain config
+  files (e.g., data-exchange-config.yaml, eligibility-adapter-config.yaml) to
+  define how adapters connect to external services.
 
 $defs:
-  Domain:
-    type: string
-    description: >
-      Blueprint domain identifier. Used as the {domain} path parameter on
-      metadata mutation endpoints (PUT/DELETE /{resources}/{id}/metadata/{domain})
-      and as the value type for x-domain annotations on domain OpenAPI specs.
-    enum:
-      - data-exchange
-      - document-management
-      - eligibility
-      - intake
-      - workflow
-
   Endpoint:
     type: object
     description: >
@@ -60,38 +48,3 @@ $defs:
     #
     # See the domain config file (e.g., data-exchange-config.yaml) for
     # service-specific credential guidance.
-
-  Program:
-    type: string
-    description: >
-      Federal public assistance program. Uses federal program names — states
-      display their own program branding (e.g., "Medical Assistance",
-      "Medi-Cal") in the UI layer.
-    enum:
-      - snap
-      - medicaid
-      - tanf
-      - all
-
-  ServiceType:
-    type: string
-    description: >
-      The specific federal service interface being called. Each type has a
-      distinct adapter interface, input schema, and result schema.
-
-      FDSH services are prefixed fdsh_ — they route through the CMS Federal
-      Data Services Hub. IEVS sources are separate systems with distinct
-      interfaces. See the Data Exchange architecture doc for the full reference.
-    enum:
-      - fdsh_ssa
-      - fdsh_vlp
-      - fdsh_fti
-      - fdsh_medicare
-      - fdsh_vci
-      - ssa_ievs
-      - irs_ievs
-      - swica
-      - uib
-      - save
-      - enrollment_check
-      - incarceration_check

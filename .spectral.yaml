@@ -135,3 +135,8 @@ overrides:
     rules:
       request-body-json-only: off
       response-body-json-only: off
+  # Eligibility adapter: all POST operations are RPC-style evaluation endpoints (not resource
+  # creation) and correctly return 200 with a computation result, not 201.
+  - files: ["packages/contracts/eligibility-adapter-openapi.yaml"]
+    rules:
+      post-must-return-201: off

@@ -41,7 +41,6 @@ $defs:
       - name
       - serviceType
       - defaultCallMode
-      - programs
     additionalProperties: false
     properties:
       id:
@@ -57,7 +56,7 @@ $defs:
         maxLength: 200
         description: Human-readable name (e.g., "SSA Composite via FDSH").
       serviceType:
-        $ref: "schemas/common.yaml#/$defs/ServiceType"
+        $ref: "schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
       defaultCallMode:
         type: string
         description: Default call mode for submissions against this service. Can be overridden per call.
@@ -66,12 +65,11 @@ $defs:
           - sync
       programs:
         type: array
-        description: Programs that use this service.
-        minItems: 1
+        description: Programs this service is relevant to. Omit if the service applies regardless of program.
         items:
-          $ref: "schemas/common.yaml#/$defs/Program"
+          $ref: "schemas/common/enums.yaml#/$defs/Program"
       endpoint:
-        $ref: "schemas/common.yaml#/$defs/Endpoint"
+        $ref: "schemas/common/auth.yaml#/$defs/Endpoint"
         description: >
           Connection parameters for this service. States fill in this object
           via overlay. Omit in the blueprint baseline — adapters will fail to

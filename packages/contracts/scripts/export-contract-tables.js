@@ -507,6 +507,75 @@ function getContractType(doc) {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Multi-machine CSV renderers (Object column prepended)
+// ---------------------------------------------------------------------------
+
+function renderMultiMachineTransitions(machines) {
+  const headers = ['Object', 'From', 'To', 'Trigger', 'On', 'After', 'RelativeTo', 'CalendarType', 'Actors', 'Guards', 'Effects'];
+  const rows = [];
+  for (const machine of machines) {
+    if (machine.onCreate) {
+      const actors = (machine.onCreate.actors || []).join('; ');
+      const effects = (machine.onCreate.effects || []).map(formatEffect).join('; ');
+      rows.push([machine.object, '(create)', machine.initialState || '', 'create', '', '', '', '', actors, '', effects]);
+    }
+    for (const t of machine.transitions || []) {
+      const actors = (t.actors || []).join('; ');
+      const guards = (t.guards || []).map(formatGuardItem).join('; ');
+      const effects = (t.effects || []).map(formatEffect).join('; ');
+      rows.push([machine.object, formatFrom(t.from), t.to, t.trigger, t.on || '', t.after || '', t.relativeTo || '', t.calendarType || '', actors, guards, effects]);
+    }
+  }
+  return csvTable(headers, rows);
+}
+
+function renderMultiMachineGuards(machines) {
+  const headers = ['Object', 'Guard Name', 'Field', 'Operator', 'Value'];
+  const rows = [];
+  for (const machine of machines) {
+    for (const g of machine.guards || []) {
+      let value = '';
+      if (g.value != null) {
+        value = typeof g.value === 'object' ? JSON.stringify(g.value) : String(g.value);
+      }
+      rows.push([machine.object, g.id, g.field || '', g.operator || '', value]);
+    }
+  }
+  return csvTable(headers, rows);
+}
+
+function renderMultiMachineSla(machines) {
+  const headers = ['Object', 'State', 'SLA Clock'];
+  const rows = [];
+  for (const machine of machines) {
+    for (const state of machine.states || []) {
+      rows.push([machine.object, state.id, state.slaClock || '']);
+    }
+  }
+  return csvTable(headers, rows);
+}
+
+function renderMultiMachineRequestBodies(machines) {
+  const headers = ['Object', 'Trigger', 'Fields'];
+  const rows = [];
+  for (const machine of machines) {
+    for (const body of machine.requestBodies || []) {
+      if (!body || !body.properties) {
+        rows.push([machine.object, body.trigger, '(none)']);
+      } else {
+        const required = new Set(body.required || []);
+        const fields = Object.entries(body.properties).map(([name, prop]) => {
+          const req = required.has(name) ? ' (required)' : '';
+          return `${name}: ${prop.type || 'any'}${req}`;
+        });
+        rows.push([machine.object, body.trigger, fields.join('; ')]);
+      }
+    }
+  }
+  return csvTable(headers, rows);
+}
+
 function exportStateMachine(doc, outDir) {
   if (isMachinesFormat(doc)) {
     const files = {
@@ -981,9 +1050,9 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
 }
 
 function exportOverview(smDoc, rulesDoc, slaTypesDoc, metricsDoc, outDir) {
-  const files = { 'overview.md': renderOverview(smDoc, rulesDoc, slaTypesDoc, metricsDoc) };
-  writeFiles(outDir, files);
-  return Object.keys(files);
+  const content = renderOverview(smDoc, rulesDoc, slaTypesDoc, metricsDoc);
+  writeFiles(outDir, { 'overview.md': content });
+  return ['overview.md'];
 }
 
 // ---------------------------------------------------------------------------
