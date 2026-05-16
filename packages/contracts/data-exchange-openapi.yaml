@@ -73,10 +73,15 @@ paths:
       operationId: listServices
       tags:
         - Services
+      x-sortable:
+        fields: [name, serviceType, defaultCallMode]
+        default: name
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
         - name: serviceType
           in: query
           description: Filter by service type.
@@ -123,10 +128,15 @@ paths:
       operationId: listServiceCalls
       tags:
         - ServiceCalls
+      x-sortable:
+        fields: [createdAt, updatedAt, status, serviceType, callMode]
+        default: -createdAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
         - name: requestingResourceId
           in: query
           description: Filter by the requesting resource ID.

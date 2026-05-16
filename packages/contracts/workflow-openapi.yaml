@@ -142,10 +142,15 @@ paths:
       operationId: listQueues
       tags:
         - Queues
+      x-sortable:
+        fields: [name, createdAt, updatedAt]
+        default: name
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: A paginated collection of queues.
@@ -264,10 +269,17 @@ paths:
       operationId: listTasks
       tags:
         - Tasks
+      x-sortable:
+        fields: [createdAt, updatedAt, priority, status, startedAt]
+        # Newest first. State-aware default would need a denormalized
+        # statusOrdinal — out of scope. Callers filter via `?q=status:...`.
+        default: -createdAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: A paginated collection of tasks.
@@ -389,10 +401,15 @@ paths:
       operationId: listMetrics
       tags:
         - Metrics
+      x-sortable:
+        fields: [name, aggregate, value, computedAt]
+        default: name
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
         - name: groupBy
           in: query
           required: false

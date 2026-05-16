@@ -71,10 +71,15 @@ paths:
       operationId: listDocuments
       tags:
         - Documents
+      x-sortable:
+        fields: [createdAt, updatedAt, title, documentDate, lifecycleState]
+        default: -updatedAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
         - name: documentTypeId
           in: query
           description: Filter by document type.
@@ -404,10 +409,15 @@ paths:
       operationId: listDocumentTypes
       tags:
         - DocumentTypes
+      x-sortable:
+        fields: [name, retentionYears, retentionTrigger]
+        default: name
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: A paginated list of document types.
@@ -502,10 +512,15 @@ paths:
       operationId: listDocumentLinks
       tags:
         - DocumentLinks
+      x-sortable:
+        fields: [createdAt, subjectType, role]
+        default: -createdAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
         - name: documentId
           in: query
           description: Filter by document.

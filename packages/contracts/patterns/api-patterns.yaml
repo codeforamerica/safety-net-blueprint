@@ -1383,6 +1383,49 @@ x_extensions:
           resource: Application
           domain: intake
 
+  x-sortable:
+    description: >
+      Declares the sort behavior of a list operation — which fields a client
+      may include in ?sort=, the default sort when ?sort= is omitted, the
+      tie-breaker appended for stable pagination, and an optional cap on the
+      number of fields a client may send. Operations referencing the
+      SortParam component MUST declare x-sortable; operations without
+      x-sortable reject any ?sort= query parameter with 400 INVALID_SORT_FIELD.
+      See the `sorting` section of this file for the runtime convention and
+      the field-name lexical rule.
+    location: list operation level (peer to parameters and responses)
+    type: object
+    fields:
+      fields: >
+        Required. Array of field names a client may include in ?sort=.
+        Dot-notation for nested fields (e.g., name.lastName). Every entry
+        must reference a real property on the resource's response schema.
+      default: >
+        Optional. Comma-separated sort applied when the client omits ?sort=.
+        Same syntax as the query parameter. Every field referenced here must
+        appear in `fields`. If absent, no client-driven sort is applied when
+        ?sort= is omitted — only the tie-breaker.
+      tieBreaker: >
+        Optional, defaults to "id". Single field name appended to every
+        effective sort to guarantee deterministic ordering for stable
+        pagination. Explicit null disables it (rare — not recommended).
+      maxFields: >
+        Optional. Hard cap on the number of fields a client may include in
+        ?sort=. If absent, adapters apply an implicit ceiling (5 in the
+        reference implementation).
+    example: |
+      paths:
+        /tasks:
+          get:
+            operationId: listTasks
+            x-sortable:
+              fields: [createdAt, priority, dueDate, status]
+              default: -priority,dueDate
+              tieBreaker: id
+              maxFields: 3
+            parameters:
+              - $ref: "./components/parameters.yaml#/SortParam"
+
   x-status:
     description: >
       Implementation or lifecycle status of the API or a specific operation.
@@ -2077,52 +2120,121 @@ etags:
     - Consider ETag scope: entire resource or specific fields
 
 # =============================================================================
-# Sorting# =============================================================================
-# STATUS: Not yet implemented
+# Sorting
+# =============================================================================
 sorting:
   description: |
-    Standard query parameter for sorting list endpoint results.
-    Sorting is typically used with REST APIs that return collections.
+    Standard query parameter for sorting list endpoint results. List
+    operations declare what's sortable via the `x-sortable` OpenAPI extension;
+    the mock server and any conforming adapter honor the resulting `?sort=`
+    query string with deterministic, paginatable ordering.
+
+    See `docs/architecture/x-extensions.md#x-sortable` for the full extension
+    reference and `components/parameters.yaml#SortParam` for the shared
+    parameter component that every sort-enabled list operation references.
 
   parameter:
+    component: SortParam
     name: sort
     location: query
     type: string
     description: |
-      Comma-separated list of fields to sort by. Prefix with - for descending.
-      First field is primary sort, subsequent fields are secondary sorts.
+      Comma-separated list of fields to sort by. Prefix with `-` for descending.
+      First field is primary sort, subsequent fields are tie-breakers in
+      declaration order. The configured per-endpoint tie-breaker is always
+      appended for stable pagination.
 
   syntax:
     ascending: "fieldName"
     descending: "-fieldName"
     multiple: "field1,-field2,field3"
+    nested: "name.lastName"
 
   examples:
     - sort=createdAt           # Oldest first
     - sort=-createdAt          # Newest first
     - sort=status,-priority    # By status (asc), then priority (desc)
     - sort=-dueDate,createdAt  # By due date (desc), then created (asc)
+    - sort=name.lastName       # Nested field via dot-notation
 
-  default_behavior:
-    description: If no sort specified, use sensible default per resource
-    typical_defaults:
-      - List endpoints: -createdAt (newest first)
-      - Search results: relevance score (if applicable)
+  extension:
+    name: x-sortable
+    description: |
+      Operation-level extension declaring sort behavior for a list endpoint.
+      Validated by validate-patterns.js. Each list endpoint that allows
+      `?sort=` MUST declare `x-sortable` and reference the SortParam
+      component in its parameters list.
+    fields:
+      fields:
+        required: true
+        type: array<string>
+        description: |
+          Field names a client may include in `?sort=`. Names use dot-notation
+          for nested fields (e.g., name.lastName). Every entry must reference
+          a real property on the resource's response schema.
+      default:
+        required: false
+        type: string
+        description: |
+          Comma-separated sort expression applied when the client omits `?sort=`.
+          Same syntax as the query parameter. Every field referenced here must
+          appear in `fields`. If absent, no client-driven sort is applied when
+          `?sort=` is omitted — only the tie-breaker.
+      tieBreaker:
+        required: false
+        type: string
+        default: id
+        description: |
+          A single field name appended to every effective sort to guarantee
+          deterministic ordering for stable pagination. Defaults to `id`.
+          Explicit `null` disables the tie-breaker (rare — only valid when
+          the resource has no usable identifier; not recommended).
+      maxFields:
+        required: false
+        type: integer
+        description: |
+          Hard cap on the number of fields a client may include in `?sort=`.
+          If absent, the adapter applies an implicit ceiling (5 in the
+          reference implementation). The pattern doc recommends 3 or fewer.
+
+  field_name_lexical_rule:
+    description: |
+      Every field name appearing in `fields`, `default`, or `tieBreaker` MUST
+      match the regular expression below. The pattern validator enforces this
+      at lint time; the runtime parser enforces it again as defense in depth.
+      This is a security boundary — field names are interpolated into ORDER BY
+      and json_extract path strings, which SQLite does not parameterize.
+    regex: "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+
+  null_value_ordering:
+    description: |
+      Records with NULL in a sort field sort deterministically:
+        - ascending: NULL values appear last
+        - descending: NULL values appear first
+      This is implemented via COALESCE on the SQL side and documented here
+      so adapter implementations stay consistent across deployments.
 
   error_handling:
     invalid_field:
       status: 400
       code: INVALID_SORT_FIELD
       message: "Unknown sort field: {field}"
+      when: |
+        Client requested a sort field that does not exist on the resource
+        schema, or the endpoint did not declare `x-sortable` at all.
     unsortable_field:
       status: 400
       code: FIELD_NOT_SORTABLE
       message: "Field '{field}' does not support sorting"
+      when: |
+        Client requested a sort field that exists on the resource schema but
+        is not in the endpoint's `x-sortable.fields` allowlist.
 
   implementation_notes:
-    - Document sortable fields in OpenAPI spec
-    - Consider index implications for sortable fields
-    - Limit number of sort fields (e.g., max 3)
+    - Sort field names interpolate into raw SQL — adapters MUST validate against the lexical regex AND the allowlist before constructing any query
+    - Sort order is an oracle — fields whose ordering would leak information (SSN, dateOfBirth, risk scores, sensitive flags) MUST NOT appear in `x-sortable.fields`
+    - The pattern doc recommends 3 or fewer sort fields; adapters MAY enforce stricter caps via `maxFields` and MUST apply an implicit ceiling when omitted
+    - Failed sort parses SHOULD log the offending field name at info level (not the raw query string, which may carry PII from other params) to support detection of probing
 
 # =============================================================================
 # Long-Running Operations

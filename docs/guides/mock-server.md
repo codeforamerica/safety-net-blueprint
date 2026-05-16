@@ -222,6 +222,22 @@ curl -X DELETE http://localhost:1080/mock/stubs/http/http.expedited-screening-1 
 curl -X DELETE http://localhost:1080/mock/stubs/http                             # clear all
 ```
 
+## Sorting (`?sort=`)
+
+The mock server honors the `x-sortable` extension on every list endpoint:
+
+```bash
+curl "http://localhost:1080/workflow/tasks?sort=-priority,dueDate"
+```
+
+Mock-specific behavior:
+
+- Endpoints without `x-sortable` reject any `?sort=` with `400 INVALID_SORT_FIELD` — the parameter is not silently ignored.
+- When the spec omits `maxFields`, the mock server applies an implicit ceiling of 5.
+- Null values sort last on ascending order, first on descending.
+
+For the full sort syntax, error codes, and adapter implementation guidance, see [Search Patterns — Sorting](search-patterns.md#sorting).
+
 ## Configuration
 
 ```bash

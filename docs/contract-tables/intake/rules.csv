@@ -28,16 +28,16 @@ appointment-scheduled-link-to-interview,1,"{""=="":[{""var"":""this.data.subject
 Only fires when the appointment's subjectType is ""interview"", ensuring non-interview
 appointments scheduled via the shared scheduling domain are ignored.
 "
+eligibility-determination-write-back,1,true,"{""appendToArray"":{""entity"":""intake/applications/members"",""idFrom"":""this.data.memberId"",""field"":""programDeterminations"",""value"":{""program"":{""var"":""this.data.program""},""outcome"":{""var"":""this.data.outcome""},""determinedAt"":{""var"":""this.data.determinedAt""}}}}",,"Write eligibility determination outcome back to ApplicationMember.programDeterminations.
+Informational write-back only — does not trigger application close. Medicaid RTE results
+may arrive before intake closes; SNAP results typically arrive after.
+"
+status-transition,1,"{""and"":[{""!="":[{""var"":""application.id""},null]},{""=="":[{""var"":""task.taskType""},""application_review""]},{""=="":[{""var"":""application.status""},""submitted""]}]}","{""triggerTransition"":{""entity"":""intake/applications"",""idFrom"":""application.id"",""transition"":""open""}}",,"When a caseworker claims an application_review task, transition the linked application from submitted to under_review. Guards on the intake open transition enforce that only system-role callers can execute this.
+"
 document-verified-write-back,1,"{""=="":[{""var"":""this.data.subjectType""},""application-document""]}","{""triggerTransition"":{""entity"":""intake/applications/documents"",""idFrom"":""applicationDocument.id"",""transition"":""verify""},""appendToArray"":{""entity"":""intake/applications/documents"",""idFrom"":""applicationDocument.id"",""field"":""evidence"",""value"":{""var"":""this.subject""}}}",,"Transition the ApplicationDocument to verified and record the document ID in its
 evidence list when document-management reports successful verification (Decision 15).
 Only fires when the document's subjectType is ""application-document"", ensuring
 documents uploaded in document-management without linking to an ApplicationDocument
 (via subjectType/subjectId) are silently ignored — analogous to an appointment
 scheduled without linking to an interview.
-"
-eligibility-determination-write-back,1,true,"{""appendToArray"":{""entity"":""intake/applications/members"",""idFrom"":""this.data.memberId"",""field"":""programDeterminations"",""value"":{""program"":{""var"":""this.data.program""},""outcome"":{""var"":""this.data.outcome""},""determinedAt"":{""var"":""this.data.determinedAt""}}}}",,"Write eligibility determination outcome back to ApplicationMember.programDeterminations.
-Informational write-back only — does not trigger application close. Medicaid RTE results
-may arrive before intake closes; SNAP results typically arrive after.
-"
-status-transition,1,"{""and"":[{""!="":[{""var"":""application.id""},null]},{""=="":[{""var"":""task.taskType""},""application_review""]},{""=="":[{""var"":""application.status""},""submitted""]}]}","{""triggerTransition"":{""entity"":""intake/applications"",""idFrom"":""application.id"",""transition"":""open""}}",,"When a caseworker claims an application_review task, transition the linked application from submitted to under_review. Guards on the intake open transition enforce that only system-role callers can execute this.
 "

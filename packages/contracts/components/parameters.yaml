@@ -125,3 +125,58 @@ SearchQueryParam:
     nestedField:
       summary: Filter by nested field
       value: "applicant.state:CA"
+
+SortParam:
+  name: sort
+  in: query
+  required: false
+  schema:
+    type: string
+  description: |
+    Comma-separated list of fields to sort the response by. Prefix a field
+    with `-` for descending order. The first field is the primary sort;
+    subsequent fields are tie-breakers in declaration order.
+
+    **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+    Most HTTP clients handle this automatically. Examples below show
+    human-readable syntax for clarity.
+
+    Which fields a given list endpoint allows is declared in the operation's
+    `x-sortable.fields` extension. Sending a field name not present in that
+    list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+    exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+    parameter is omitted, the operation's `x-sortable.default` (if declared)
+    is applied; otherwise no client-driven sort is applied. A configured
+    tie-breaker (default `id`) is always appended for stable pagination.
+
+    See `api-patterns.yaml#sorting` for the full convention and
+    `docs/architecture/x-extensions.md` for the extension shape.
+
+    ## Syntax
+
+    | Pattern | Description | Example |
+    |---------|-------------|---------|
+    | `fieldName` | Ascending | `sort=createdAt` |
+    | `-fieldName` | Descending | `sort=-createdAt` |
+    | `field1,field2` | Multi-field | `sort=status,-priority` |
+    | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+
+    ## Examples
+
+    - `sort=createdAt` — oldest first
+    - `sort=-createdAt` — newest first
+    - `sort=-priority,dueDate` — highest priority first, then oldest due date
+    - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+  examples:
+    ascendingByDate:
+      summary: Oldest first
+      value: "createdAt"
+    descendingByDate:
+      summary: Newest first
+      value: "-createdAt"
+    multiField:
+      summary: Multi-field — primary then tie-breaker
+      value: "-priority,dueDate"
+    nestedField:
+      summary: Sort by a nested field
+      value: "name.lastName"
