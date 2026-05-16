@@ -434,7 +434,11 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
       // Collection create: POST to domain/collection
       const domain = rawPath.split('/')[0];
       const entity = deriveCollectionName(rawPath, domain);
-      pendingCreates.push({ entity, data: body });
+      const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
+      const lastSeg = pathSegs[pathSegs.length - 1] || '';
+      const eventObject = lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg;
+      const stubUrl = '/' + rawPath.split('/').slice(1).join('/');
+      pendingCreates.push({ entity, domain, eventObject, stubUrl, data: body });
     }
   } else if (method === 'PATCH') {
     // Array append: PATCH to domain/collection/{alias.id}
@@ -624,7 +628,10 @@ export function applySteps(steps, resource, context) {
         } else {
           const domain = rawPath.split('/')[0];
           const entity = deriveCollectionName(rawPath, domain);
-          pendingCreates.push({ entity, data: body });
+          const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
+          const lastSeg = pathSegs[pathSegs.length - 1] || '';
+          const eventObject = lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg;
+          pendingCreates.push({ entity, domain, eventObject, data: body });
         }
       } else {
         // Legacy object form: { POST: path, body: ... }
