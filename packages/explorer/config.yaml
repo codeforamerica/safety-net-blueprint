@@ -117,12 +117,10 @@ events:
   # updates and task lifecycle events
   - name: call.completed
     publisher: data_exchange
-    status: planned
+    status: implemented
     subscribers:
       - intake
-      - workflow
       - eligibility
-      - client_management
 
   - name: call.submitted
     publisher: data_exchange
@@ -149,8 +147,6 @@ events:
 
   # expedited screening result — intake sets isExpedited: true on the application;
   # workflow subscribes directly to assign the expedited SLA track (no re-publish needed)
-  # CONTRACT NOTE: workflow rules need a subscription to this event; intake-rules.yaml
-  # flag-expedited transition and application.expedited_flagged event can be removed
   - name: eligibility.application.expedited
     publisher: eligibility
     status: planned
@@ -163,7 +159,7 @@ events:
   # may fire multiple times as individual Decisions resolve
   - name: eligibility.application.decision_completed
     publisher: eligibility
-    status: planned
+    status: implemented
     subscribers:
       - intake
 
@@ -171,7 +167,7 @@ events:
   # triggers intake to update final status and close the application
   - name: eligibility.application.determination_completed
     publisher: eligibility
-    status: planned
+    status: implemented
     subscribers:
       - intake
 
@@ -181,7 +177,7 @@ events:
   # carries metadata.intake.verificationId to satisfy the linked Verification
   - name: version.uploaded
     publisher: document_management
-    status: planned
+    status: implemented
     subscribers:
       - intake
 
@@ -212,7 +208,7 @@ events:
   # triggers the eligibility rules engine, no caseworker action needed
   - name: application.review_completed
     publisher: intake
-    status: planned
+    status: implemented
     subscribers:
       - eligibility
 
@@ -261,8 +257,9 @@ events:
   # appointment.completed records the outcome for regulatory tracking
   - name: appointment.scheduled
     publisher: scheduling
-    status: planned
-    subscribers: []
+    status: implemented
+    subscribers:
+      - intake
 
   - name: appointment.completed
     publisher: scheduling
