@@ -58,11 +58,6 @@ x-events:
     summary: Emitted when intake is complete and the application is ready for eligibility determination
     payload:
       $ref: "#/components/schemas/ApplicationClosedEvent"
-  application.expedited_flagged:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.expedited_flagged
-    summary: Emitted when an application is flagged for expedited processing
-    payload:
-      $ref: "#/components/schemas/ApplicationExpeditedFlaggedEvent"
   application.review_completed:
     type: org.codeforamerica.safety-net-blueprint.intake.application.review_completed
     summary: Emitted when a caseworker signals data collection is complete; triggers eligibility determination. No state change.
@@ -736,6 +731,12 @@ components:
               type: string
               format: date-time
               readOnly: true
+            programDeterminations:
+              type: array
+              readOnly: true
+              description: Per-program eligibility determination results, populated as decisions arrive from the eligibility domain.
+              items:
+                $ref: "#/components/schemas/ApplicationMemberProgramDetermination"
 
     ApplicationMemberCreate:
       allOf:
@@ -762,6 +763,27 @@ components:
               items:
                 $ref: "#/components/schemas/ApplicationMember"
 
+    ApplicationMemberProgramDetermination:
+      type: object
+      description: A single program eligibility determination result for a household member.
+      required:
+        - program
+        - status
+      properties:
+        program:
+          type: string
+          description: Program identifier (e.g., snap, medicaid, tanf).
+        outcome:
+          type: string
+          description: Determination outcome for this member/program combination.
+          enum:
+            - approved
+            - denied
+        determinedAt:
+          type: string
+          format: date-time
+          description: When the determination was recorded.
+
     # ---------------------------------------------------------------------------
     # Verification
     # ---------------------------------------------------------------------------
@@ -786,6 +808,12 @@ components:
             - immigration
             - income
             - residency
+        verificationType:
+          type: string
+          description: How this verification obligation is to be fulfilled.
+          enum:
+            - document
+            - electronic
 
     Verification:
       allOf:
@@ -974,17 +1002,6 @@ components:
           format: uuid
           description: Identifier of the deleted application.
 
-    ApplicationExpeditedFlaggedEvent:
-      type: object
-      description: Payload for application.expedited_flagged — triggers escalation to expedited SLA track.
-      required:
-        - flaggedAt
-      properties:
-        flaggedAt:
-          type: string
-          format: date-time
-          description: When the expedited flag was set.
-
     ApplicationOpenedEvent:
       type: object
       description: Payload for application.opened — signals caseworker has begun active review.
@@ -1034,11 +1051,6 @@ components:
             - in_person
             - phone
             - mail
-        isExpedited:
-          type:
-            - boolean
-            - "null"
-          description: Whether expedited screening has already determined the application qualifies. Null if not yet screened.
 
     ApplicationUpdatedEvent:
       type: object

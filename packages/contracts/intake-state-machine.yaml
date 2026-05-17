@@ -42,7 +42,6 @@ machines:
                 submittedAt: $now
                 programs: $object.programs
                 channel: $object.channel
-                isExpedited: $object.isExpedited
               description: Emit application.submitted — starts the regulatory clock; triggers caseworker task creation and confirmation notice
       - id: open
         description: POST /applications/{applicationId}/open — System marks a submitted application as under active caseworker review
@@ -135,32 +134,6 @@ machines:
                 withdrawnAt: $now
                 reason: $request.reason
               description: Emit application.withdrawn — triggers open task cancellation and withdrawal notice
-      - id: flag-expedited
-        description: POST /applications/{applicationId}/flag-expedited — Caseworker, supervisor, or system flags the application as qualifying for expedited processing
-        guards:
-          - actors:
-              - caseworker
-              - supervisor
-              - system
-            conditions:
-              - any:
-                  - callerIsCaseworker
-                  - callerIsSupervisor
-                  - callerIsSystem
-        transition:
-          from:
-            - submitted
-            - under_review
-        steps:
-          - set:
-              field: isExpedited
-              value: true
-              description: Mark the application as qualifying for expedited processing
-          - emit:
-              event: expedited_flagged
-              data:
-                flaggedAt: $now
-              description: Emit application.expedited_flagged — triggers workflow to escalate to expedited SLA track
     events:
       - name: workflow.task.claimed
         description: Open the application for review and create an interview record when a caseworker claims the intake review task
@@ -208,7 +181,7 @@ machines:
         description: Link a scheduled appointment to the associated interview record
         steps:
           - call: linkAppointment
-      - name: document_management.version.uploaded
+      - name: document_management.document_version.uploaded
         description: Satisfy the verification obligation and record the uploaded document as evidence when a document is uploaded
         context:
           - verification:
@@ -217,8 +190,29 @@ machines:
                 id: $this.data.metadata.intake.verificationId
         steps:
           - call: satisfyVerificationOnDocumentUpload
-      - name: eligibility.application.determination_completed
-        description: Write the eligibility outcome back to the application member record when a program determination is completed
+      - name: eligibility.determination.created
+        description: Create one Decision per household member per applied-for program when an eligibility Determination is created for this application
+        steps:
+          - forEach:
+              from: intake/application-members
+              where:
+                applicationId: $this.data.applicationId
+              as: member
+            do:
+              - forEach:
+                  in: $member.programsApplyingFor
+                  as: program
+                do:
+                  - call:
+                      POST: eligibility/determinations/decisions
+                      body:
+                        determinationId: $this.subject
+                        applicationId: $this.data.applicationId
+                        memberId: $member.id
+                        program: $program
+                        status: pending
+      - name: eligibility.application.decision_completed
+        description: Write the eligibility outcome back to the application member record when a per-member program decision is completed
         context:
           - member:
               from: intake/application-members
@@ -226,7 +220,7 @@ machines:
                 id: $this.data.memberId
         steps:
           - call: recordDetermination
-      - name: eligibility.application.all_determined
+      - name: eligibility.application.determination_completed
         description: Close the application once all program and member combinations have received a determination
         steps:
           - call:
@@ -303,8 +297,30 @@ machines:
             when:
               conclusive:
                 - call:
+                    PATCH: intake/applications/verifications/$verification.id
+                    body:
+                      evidence:
+                        $push:
+                          type: electronic
+                          source: $this.data.serviceType
+                          result: $this.data.result
+                          serviceCallId: $this.data.serviceCallId
+                          receivedAt: $now
+                    description: Record the electronic verification result as evidence
+                - call:
                     POST: intake/applications/verifications/$verification.id/satisfy
               inconclusive:
+                - call:
+                    PATCH: intake/applications/verifications/$verification.id
+                    body:
+                      evidence:
+                        $push:
+                          type: electronic
+                          source: $this.data.serviceType
+                          result: $this.data.result
+                          serviceCallId: $this.data.serviceCallId
+                          receivedAt: $now
+                    description: Record the electronic verification result as evidence
                 - call:
                     POST: intake/applications/verifications/$verification.id/mark-inconclusive
                 - call:
@@ -333,8 +349,11 @@ machines:
               PATCH: intake/applications/verifications/$verification.id
               body:
                 evidence:
-                  $push: $this.subject
-              description: Record the document version ID as evidence on the Verification
+                  $push:
+                    type: document
+                    documentId: $this.data.documentId
+                    receivedAt: $now
+              description: Record the uploaded document as evidence on the Verification
       - id: recordDetermination
         description: Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
         if: $member.id != null
@@ -345,8 +364,8 @@ machines:
                 programDeterminations:
                   $push:
                     program: $this.data.program
-                    outcome: $this.data.outcome
-                    determinedAt: $this.data.determinedAt
+                    outcome: $this.data.status
+                    determinedAt: $this.data.decidedAt
   - object: Verification
     states:
       - id: pending

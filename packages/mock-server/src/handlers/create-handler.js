@@ -64,10 +64,10 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         update(endpoint.collectionName, resource.id, { source: 'user' });
       }
 
-      // Apply initial state from state machine
+      // Apply initial state from state machine if no status was supplied in the body.
       // New format: machine.initialState; old format: stateMachine.initialState
       const initialState = machine?.initialState ?? stateMachine?.initialState;
-      if (initialState) {
+      if (initialState && !resource.status) {
         resource.status = initialState;
         update(endpoint.collectionName, resource.id, { status: initialState });
       }

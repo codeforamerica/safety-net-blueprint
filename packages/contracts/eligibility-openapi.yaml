@@ -45,6 +45,10 @@ paths:
       operationId: listDeterminations
       tags:
         - Determinations
+      x-sortable:
+        fields: [createdAt, updatedAt, status]
+        default: -createdAt
+        tieBreaker: id
       parameters:
         - name: applicationId
           in: query
@@ -56,6 +60,7 @@ paths:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated list of determinations.
@@ -110,6 +115,10 @@ paths:
       operationId: listDecisions
       tags:
         - Determinations
+      x-sortable:
+        fields: [createdAt, updatedAt, status, program]
+        default: -createdAt
+        tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
@@ -211,6 +220,7 @@ components:
         automatically (via electronic checks and rules engine) or manually by a caseworker.
       required:
         - determinationId
+        - memberId
         - program
         - status
       properties:
@@ -225,6 +235,20 @@ components:
           description: The determination this decision belongs to.
           x-relationship:
             resource: Determination
+        applicationId:
+          type: string
+          format: uuid
+          description: The application this decision belongs to.
+          x-relationship:
+            resource: Application
+            domain: intake
+        memberId:
+          type: string
+          format: uuid
+          description: The household member this decision covers.
+          x-relationship:
+            resource: ApplicationMember
+            domain: intake
         program:
           $ref: "./components/common.yaml#/Program"
           description: The program this decision covers.
@@ -343,6 +367,7 @@ components:
         - applicationId
         - determinationId
         - decisionId
+        - memberId
         - program
         - status
       properties:
@@ -362,6 +387,13 @@ components:
           format: uuid
           x-relationship:
             resource: Decision
+        memberId:
+          type: string
+          format: uuid
+          description: The household member this decision covers.
+          x-relationship:
+            resource: ApplicationMember
+            domain: intake
         program:
           $ref: "./components/common.yaml#/Program"
         status:

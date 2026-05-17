@@ -38,7 +38,7 @@ domains:
     label: Intake
     status: partial
     description: Application submission & intake processing
-    entities: [Application, ApplicationMember, Income, Expense, Resource]
+    entities: [Application, ApplicationMember, Income, Expense, Resource, Verification]
 
   - id: eligibility
     label: Eligibility

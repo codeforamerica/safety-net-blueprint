@@ -286,7 +286,16 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           };
           description = 'List sub-resources';
         } else if (method === 'post') {
-          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, null, []);
+          const subResourceName = endpoint.path.split('/').pop();
+          const subSmEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
+            const obj = s.object;
+            return obj?.toLowerCase() + 's' === subResourceName ||
+              obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === subResourceName;
+          });
+          const subSmForEndpoint = subSmEntry?.stateMachine || null;
+          const subMachineForEndpoint = subSmEntry?.machine || null;
+          const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
+          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint);
           handler = (req, res) => {
             req.body = { ...(req.body || {}), [parentField]: req.params[parentParam] };
             return baseCreateHandler(req, res);
