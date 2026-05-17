@@ -149,7 +149,7 @@ events:
   # workflow subscribes directly to assign the expedited SLA track (no re-publish needed)
   - name: eligibility.application.expedited
     publisher: eligibility
-    status: planned
+    status: implemented
     subscribers:
       - intake
       - workflow

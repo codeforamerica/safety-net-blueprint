@@ -293,6 +293,18 @@ machines:
         description: Auto-resume after 7 calendar days waiting on verification
         steps:
           - call: {POST: workflow/tasks/$this.subject/system-resume, body: {source: timeout, result: verification_timeout}, description: Auto-resume after 7 days verification timeout}
+      - name: eligibility.application.expedited
+        description: Flag the intake review task as expedited and switch it to the 7-day SLA when SNAP expedited criteria are confirmed (7 CFR § 273.2(i))
+        context:
+          - task: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
+        steps:
+          - if: $task.id != null
+            then:
+              - call:
+                  PATCH: workflow/tasks/$task.id
+                  body:
+                    isExpedited: true
+                    slaType: snap_expedited
       - name: intake.application.submitted
         description: Create an application review task when a new application is submitted
         steps:

@@ -8,7 +8,7 @@ Auto-generated from state machine `emit` and subscription declarations.
 | `document_management.document_version.uploaded` | *(unknown)* | [Intake/Application](intake.md#application) |
 | `eligibility.application.decision_completed` | *(unknown)* | [Eligibility/Determination](eligibility.md#determination), [Intake/Application](intake.md#application) |
 | `eligibility.application.determination_completed` | *(unknown)* | [Intake/Application](intake.md#application) |
-| `eligibility.application.expedited` | *(unknown)* | [Intake/Application](intake.md#application) |
+| `eligibility.application.expedited` | *(unknown)* | [Intake/Application](intake.md#application), [Workflow/Task](workflow.md) |
 | `eligibility.decision.created` | *(unknown)* | [Eligibility/Decision](eligibility.md#decision) |
 | `eligibility.decision.eligibility.application.decision_completed` | [Eligibility/Decision](eligibility.md#decision) | *(none)* |
 | `eligibility.determination.created` | *(unknown)* | [Intake/Application](intake.md#application) |
@@ -60,7 +60,7 @@ These events are subscribed to but have no emitter in the current state machines
 - `document_management.document_version.uploaded` — subscribed by [Intake/Application](intake.md#application)
 - `eligibility.application.decision_completed` — subscribed by [Eligibility/Determination](eligibility.md#determination), [Intake/Application](intake.md#application)
 - `eligibility.application.determination_completed` — subscribed by [Intake/Application](intake.md#application)
-- `eligibility.application.expedited` — subscribed by [Intake/Application](intake.md#application)
+- `eligibility.application.expedited` — subscribed by [Intake/Application](intake.md#application), [Workflow/Task](workflow.md)
 - `eligibility.decision.created` — subscribed by [Eligibility/Decision](eligibility.md#decision)
 - `eligibility.determination.created` — subscribed by [Intake/Application](intake.md#application)
 - `intake.verification.created` — subscribed by [Intake/Verification](intake.md#verification)
