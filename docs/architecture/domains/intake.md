@@ -185,6 +185,7 @@ Based on regulatory requirements and vendor consensus:
 | `draft` | Started but not yet submitted; no regulatory clock running |
 | `submitted` | Formally submitted; regulatory clock starts |
 | `under_review` | Assigned to a caseworker and being processed |
+| `pending_approval` | Determination complete; awaiting supervisor sign-off before closure. SLA clock paused. |
 | `withdrawn` | Applicant voluntarily withdrew before determination |
 | `closed` | Processing complete; determination made by eligibility domain |
 
@@ -195,7 +196,10 @@ Based on regulatory requirements and vendor consensus:
 - **submit**: `draft` → `submitted` — applicant files; regulatory clock starts; triggers caseworker task creation and confirmation notice
 - **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; assignment may happen separately and does not necessarily trigger this transition; see [Decision 8](#decision-8-submitted--under_review-transition-trigger)
 - **withdraw**: `submitted` | `under_review` → `withdrawn` — applicant-initiated; triggers open task cancellation
-- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination; see [Decision 6](#decision-6-intake-phase-end--lifecycle-state)
+- **close**: `under_review` → `closed` — system closes the application when all determinations are received; see [Decision 6](#decision-6-intake-phase-end--lifecycle-state)
+- **submit-for-approval**: `under_review` → `pending_approval` — system routes to supervisor review when state-configured approval thresholds are met; thresholds configured via rules overlay (baseline default is no approval required)
+- **approve-determination**: `pending_approval` → `closed` — supervisor approves the determination; triggers case creation
+- **reject-determination**: `pending_approval` → `under_review` — supervisor rejects; returns application to caseworker for revision
 
 ---
 
@@ -220,8 +224,10 @@ Events are listed with the operational or regulatory need that drives them — t
 | `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. See [Decision 13](#decision-13-post-submission-program-routing--task-creation-and-automated-eligibility) for how routing differs by program. | `draft` → `submitted` | Workflow, Communication (confirmation notice), Eligibility (automated determination for applicable programs) |
 | `application.opened` | Signals that a caseworker has begun active review. Workflow needs to update the task state; supervisors tracking queue throughput need to know when review started vs. when it was filed. | `submitted` → `under_review` | Workflow (update task to in_progress) |
 | `application.withdrawn` | A withdrawn application must stop all in-flight processing immediately. Open workflow tasks must be cancelled; any scheduled interview or document request must be voided; communication must notify the household. Failing to act on this event risks processing an application the household has abandoned. | any → `withdrawn` | Workflow (cancel open tasks), Communication (withdrawal notice) |
-| `application.closed` | Signals that intake is complete and the application is ready for or has received an eligibility determination. Case Management needs this event to know when to create a service delivery case (if approved). Without it, case management has no trigger to act. | `under_review` → `closed` | Case Management (create case if approved), Eligibility |
+| `application.closed` | Signals that intake is complete and the application is ready for or has received an eligibility determination. Case Management needs this event to know when to create a service delivery case (if approved). Without it, case management has no trigger to act. | `under_review` → `closed` or `pending_approval` → `closed` | Case Management (create case if approved), Workflow (complete or cancel open tasks) |
 | `application.review_completed` | Caseworker signals that data collection is complete and the application is ready for eligibility determination. No state change — application stays `under_review` until intake receives eligibility outcomes and closes itself. Eligibility needs this event to know when to begin determination; without it, eligibility has no trigger distinct from submission. | `complete-review` trigger (no state change) | Eligibility |
+| `determination.approval_needed` | Signals that a determination requires supervisor sign-off before the application can close. No federal mandate; states configure approval thresholds (benefit amount, denial type, exception flags) via rules overlay. The baseline default is no approval required (`if: false` condition). | `under_review` → `pending_approval` | Workflow (create supervisor approval task, move caseworker task to pending_review) |
+| `determination.rejected` | Signals that a supervisor rejected the determination and the application is returned to caseworker review. Workflow needs this event to return the caseworker task to in_progress so the caseworker can revise and resubmit. | `pending_approval` → `under_review` | Workflow (return caseworker task to in_progress, complete supervisor approval task) |
 
 ### Event subscriptions
 

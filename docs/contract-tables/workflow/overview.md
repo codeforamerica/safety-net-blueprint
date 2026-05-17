@@ -49,12 +49,12 @@ Transitions are actor- or system-triggered actions. Each lists who can trigger i
 | ID | From | To | Actors | Conditions | Steps |
 |----|------|----|--------|------------|-------|
 | `claim` | pending | in_progress | caseworker; supervisor | taskIsUnassigned | Set `assignedToId` → caller's ID<br>Emit `claimed` event |
-| `complete` | in_progress | completed | caseworker; supervisor | callerIsAssignedWorker | Set `completedAt` → current time<br>Set `outcome` → `$request.outcome`<br>Set `completionNotes` → `$request.notes`<br>Emit `completed` event<br>If ($request.createFollowUp == true): POST `workflow/tasks` |
+| `complete` | in_progress | completed | caseworker; supervisor; system | callerIsAssignedWorker; callerIsSystem | Set `completedAt` → current time<br>Set `outcome` → `$request.outcome`<br>Set `completionNotes` → `$request.notes`<br>Emit `completed` event<br>If ($request.createFollowUp == true): POST `workflow/tasks` |
 | `release` | in_progress | pending | caseworker; supervisor | callerIsAssignedWorker | Set `assignedToId` → nothing *(clears field)*<br>Emit `released` event<br>Call `assignToQueue`<br>Call `setPriority` |
 | `escalate` | in_progress | escalated | caseworker; supervisor | any: callerIsAssignedWorker, callerIsSupervisor | Set `escalatedAt` → current time<br>Call `setPriority`<br>Emit `escalated` event |
 | `escalate` | pending | escalated | supervisor | callerIsSupervisor | Set `escalatedAt` → current time<br>Call `setPriority`<br>Emit `escalated` event |
 | `de-escalate` | escalated | pending | supervisor | callerIsSupervisor | Call `assignToQueue`<br>Call `setPriority`<br>Emit `de-escalated` event |
-| `cancel` | pending \| in_progress \| escalated | cancelled | supervisor | callerIsSupervisor | Set `cancelledAt` → current time<br>Emit `cancelled` event |
+| `cancel` | pending \| in_progress \| escalated | cancelled | supervisor; system | callerIsSupervisor; callerIsSystem | Set `cancelledAt` → current time<br>Emit `cancelled` event |
 | `reopen` | cancelled | pending | supervisor | callerIsSupervisor | Set `cancelledAt` → nothing *(clears field)*<br>Call `assignToQueue`<br>Call `setPriority`<br>Emit `reopened` event |
 | `await-client` | in_progress | awaiting_client | caseworker; supervisor | callerIsAssignedWorker | Set `blockedAt` → current time<br>Call `scheduleClientTimeout`<br>Emit `awaiting_client` event |
 | `await-verification` | in_progress | awaiting_verification | caseworker; supervisor | callerIsAssignedWorker | Set `blockedAt` → current time<br>Call `scheduleVerificationTimeout`<br>Emit `awaiting_verification` event |
@@ -62,9 +62,9 @@ Transitions are actor- or system-triggered actions. Each lists who can trigger i
 | `system-resume` | awaiting_verification | in_progress | system | callerIsSystem | Set `blockedAt` → nothing *(clears field)*<br>Call `cancelVerificationTimeout`<br>Emit `system_resumed` event |
 | `system-escalate` | pending \| in_progress \| escalated | escalated | system | callerIsSystem | If ($object.escalatedAt == null): Set `escalatedAt` → current time<br>Call `setPriority`<br>If ($request.reason == "sla_deadline_exceeded"): Emit `sla_breached` event; else: Emit `auto_escalated` event |
 | `system-auto-cancel` | awaiting_client | cancelled | system | callerIsSystem | Set `cancelledAt` → current time<br>Emit `auto_cancelled` event |
-| `submit-for-review` | in_progress \| escalated | pending_review | caseworker; supervisor | callerIsAssignedWorker | Emit `submitted_for_review` event |
-| `approve` | pending_review | completed | supervisor | callerIsSupervisor | Set `completedAt` → current time<br>Set `outcome` → `$request.outcome`<br>Set `completionNotes` → `$request.notes`<br>Emit `approved` event |
-| `return-to-worker` | pending_review | in_progress | supervisor | callerIsSupervisor | Emit `returned_to_worker` event |
+| `submit-for-review` | in_progress \| escalated | pending_review | caseworker; supervisor; system | callerIsAssignedWorker; callerIsSystem | Emit `submitted_for_review` event |
+| `approve` | pending_review | completed | supervisor; system | callerIsSupervisor; callerIsSystem | Set `completedAt` → current time<br>Set `outcome` → `$request.outcome`<br>Set `completionNotes` → `$request.notes`<br>Emit `approved` event |
+| `return-to-worker` | pending_review | in_progress | supervisor; system | callerIsSupervisor; callerIsSystem | Emit `returned_to_worker` event |
 | `assign` | pending \| in_progress \| escalated \| awaiting_client \| awaiting_verification \| pending_review | — | supervisor | callerIsSupervisor | Set `assignedToId` → `$request.assignedToId`<br>Set `queueId` → `$request.queueId`<br>Emit `assigned` event |
 | `set-priority` | pending \| in_progress \| escalated \| awaiting_client \| awaiting_verification \| pending_review | — | supervisor | callerIsSupervisor | Set `priority` → `$request.priority`<br>Emit `priority_changed` event |
 
@@ -85,7 +85,11 @@ Event subscriptions react to named domain events — including object creation, 
 | `workflow.sla_breach` | POST `workflow/tasks/$this.subject/system-escalate` |
 | `workflow.client_timeout` | POST `workflow/tasks/$this.subject/system-auto-cancel` |
 | `workflow.verification_timeout` | POST `workflow/tasks/$this.subject/system-resume` |
+| `eligibility.application.expedited` | If ($task.id != null): PATCH `workflow/tasks/$task.id` |
 | `intake.application.submitted` | POST `workflow/tasks` |
+| `intake.application.closed` | If ($reviewTask.id != null && $reviewTask.status == "pending_review"): POST `workflow/tasks/$reviewTask.id/approve`<br>If ($reviewTask.id != null && $reviewTask.status == "in_progress"): POST `workflow/tasks/$reviewTask.id/complete`<br>If ($reviewTask.id != null && $reviewTask.status == "pending"): POST `workflow/tasks/$reviewTask.id/cancel`<br>If ($approvalTask.id != null): POST `workflow/tasks/$approvalTask.id/complete` |
+| `intake.determination.approval_needed` | If ($reviewTask.id != null): POST `workflow/tasks/$reviewTask.id/submit-for-review`<br>POST `workflow/tasks` |
+| `intake.determination.rejected` | If ($reviewTask.id != null): POST `workflow/tasks/$reviewTask.id/return-to-worker`<br>If ($approvalTask.id != null): POST `workflow/tasks/$approvalTask.id/complete` |
 
 ---
 

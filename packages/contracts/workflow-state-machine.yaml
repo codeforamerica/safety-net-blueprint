@@ -30,6 +30,8 @@ machines:
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: in_progress, to: completed}
         schema:
           request:
@@ -99,6 +101,8 @@ machines:
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: [pending, in_progress, escalated], to: cancelled}
         schema:
           request:
@@ -200,6 +204,8 @@ machines:
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: [in_progress, escalated], to: pending_review}
         steps:
           - emit: {event: submitted_for_review, description: Emit a domain event recording the submission for review}
@@ -208,6 +214,8 @@ machines:
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: pending_review, to: completed}
         schema:
           request:
@@ -222,6 +230,8 @@ machines:
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: pending_review, to: in_progress}
         schema:
           request:
@@ -309,6 +319,79 @@ machines:
         description: Create an application review task when a new application is submitted
         steps:
           - call: {POST: workflow/tasks, body: {taskType: application_review, name: Application review, status: pending, subjectType: application, subjectId: $this.subject}, description: Create an intake review task when an application is submitted}
+      - name: intake.application.closed
+        description: Complete open tasks for the application when intake closes; handles direct close, supervisor-approved close, and auto-determination paths
+        context:
+          - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
+          - approvalTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: determination_approval}}
+        steps:
+          - if: $reviewTask.id != null && $reviewTask.status == "pending_review"
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/approve
+                  body:
+                    outcome: application_closed
+                  description: Complete the caseworker task that was awaiting supervisor approval
+          - if: $reviewTask.id != null && $reviewTask.status == "in_progress"
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/complete
+                  body:
+                    outcome: application_closed
+                  description: Complete the active caseworker task on application close
+          - if: $reviewTask.id != null && $reviewTask.status == "pending"
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/cancel
+                  body:
+                    reason: application_closed
+                  description: Cancel the unclaimed caseworker task when the application was auto-determined at submission
+          - if: $approvalTask.id != null
+            then:
+              - call:
+                  POST: workflow/tasks/$approvalTask.id/complete
+                  body:
+                    outcome: application_closed
+                  description: Complete the supervisor approval task
+      - name: intake.determination.approval_needed
+        description: Move the caseworker's review task to pending_review and create a supervisor approval task when a determination requires sign-off
+        context:
+          - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
+        steps:
+          - if: $reviewTask.id != null
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/submit-for-review
+                  description: Move caseworker task to pending_review while supervisor reviews the determination
+          - call:
+              POST: workflow/tasks
+              body:
+                taskType: determination_approval
+                name: Determination approval
+                status: pending
+                subjectType: application
+                subjectId: $this.subject
+              description: Create a supervisor approval task
+      - name: intake.determination.rejected
+        description: Return the caseworker's review task to in_progress and complete the supervisor approval task when a determination is rejected
+        context:
+          - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
+          - approvalTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: determination_approval}}
+        steps:
+          - if: $reviewTask.id != null
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/return-to-worker
+                  body:
+                    reason: determination_rejected
+                  description: Return the caseworker task to in_progress for revision
+          - if: $approvalTask.id != null
+            then:
+              - call:
+                  POST: workflow/tasks/$approvalTask.id/complete
+                  body:
+                    outcome: determination_rejected
+                  description: Complete the supervisor approval task with a rejected outcome
     timers:
       - id: creation_deadline
         description: 72-business-hour deadline to act on a newly created task before auto-escalation

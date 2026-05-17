@@ -73,6 +73,12 @@ x-events:
     summary: Emitted when an application is deleted (auto-emitted on DELETE)
     payload:
       $ref: "#/components/schemas/ApplicationDeletedEvent"
+  determination.approval_needed:
+    type: org.codeforamerica.safety-net-blueprint.intake.determination.approval_needed
+    summary: Emitted when a determination requires supervisor sign-off before the application can be closed; states configure approval thresholds via rules overlay
+  determination.rejected:
+    type: org.codeforamerica.safety-net-blueprint.intake.determination.rejected
+    summary: Emitted when a supervisor rejects a determination, returning the application to caseworker review
 
 paths:
   /applications:
@@ -599,6 +605,7 @@ components:
                 - draft
                 - submitted
                 - under_review
+                - pending_approval
                 - withdrawn
                 - closed
             isExpedited:

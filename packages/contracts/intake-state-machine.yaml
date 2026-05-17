@@ -12,6 +12,8 @@ machines:
         slaClock: running
       - id: under_review
         slaClock: running
+      - id: pending_approval
+        slaClock: stopped
       - id: withdrawn
         slaClock: stopped
       - id: closed
@@ -78,6 +80,54 @@ machines:
               data:
                 reviewCompletedAt: $now
               description: Emit application.review_completed — signals data collection is complete; triggers eligibility determination
+      - id: submit-for-approval
+        description: POST /applications/{applicationId}/submit-for-approval — System routes the application to supervisor review when state-configured approval thresholds are met
+        guards:
+          - actors:
+              - system
+            conditions:
+              - callerIsSystem
+        transition:
+          from: under_review
+          to: pending_approval
+        steps:
+          - emit:
+              event: determination.approval_needed
+              description: Emit determination.approval_needed — triggers supervisor approval task creation; states configure approval thresholds via rules overlay
+      - id: approve-determination
+        description: POST /applications/{applicationId}/approve-determination — Supervisor approves the determination; closes the application and triggers NOA and case creation
+        guards:
+          - actors:
+              - supervisor
+            conditions:
+              - callerIsSupervisor
+        transition:
+          from: pending_approval
+          to: closed
+        steps:
+          - set:
+              field: closedAt
+              value: $now
+              description: Record when the intake phase closed
+          - emit:
+              event: closed
+              data:
+                closedAt: $now
+              description: Emit application.closed — signals intake is complete; triggers case creation
+      - id: reject-determination
+        description: POST /applications/{applicationId}/reject-determination — Supervisor rejects the determination and returns the application to the caseworker for revision
+        guards:
+          - actors:
+              - supervisor
+            conditions:
+              - callerIsSupervisor
+        transition:
+          from: pending_approval
+          to: under_review
+        steps:
+          - emit:
+              event: determination.rejected
+              description: Emit determination.rejected — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker
       - id: close
         description: POST /applications/{applicationId}/close — Marks a reviewed application as closed after all determinations are complete
         guards:
@@ -221,11 +271,17 @@ machines:
         steps:
           - call: recordDetermination
       - name: eligibility.application.determination_completed
-        description: Close the application once all program and member combinations have received a determination
+        description: Close the application or route to supervisor approval when all program and member combinations have received a determination
         steps:
-          - call:
-              POST: intake/applications/$this.subject/close
-              description: Close the application when all program+member combinations are determined
+          - if: "false"
+            then:
+              - call:
+                  POST: intake/applications/$this.subject/submit-for-approval
+                  description: Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay
+            else:
+              - call:
+                  POST: intake/applications/$this.subject/close
+                  description: Close the application when all determinations are in and no supervisor approval is required
       - name: eligibility.application.expedited
         description: Flag the application as expedited when eligibility screening confirms the applicant meets expedited processing criteria
         steps:
