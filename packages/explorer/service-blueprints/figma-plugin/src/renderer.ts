@@ -349,6 +349,8 @@ function renderTypedCard(card: Card, cardWidth: number): FrameNode {
     labelNode.layoutSizingHorizontal = 'FILL';
   }
 
+  header.locked = true;
+
   const cardFrame = vFrame(`card:${card.type}`, 0);
   cardFrame.resize(cardWidth, 1);
   cardFrame.primaryAxisSizingMode = 'AUTO';
@@ -365,6 +367,7 @@ function renderTypedCard(card: Card, cardWidth: number): FrameNode {
     body.resize(cardWidth, 1);
     body.primaryAxisSizingMode = 'AUTO';
     body.counterAxisSizingMode = 'FIXED';
+    body.locked = true;
 
     const sub = txt(card.subtext, 12, 'Regular', p.bodyFg, textWidth);
     body.appendChild(sub);
@@ -646,8 +649,7 @@ function sspTxt(
 function renderDesignCard(entry: CardEntry): FrameNode {
   const p = paletteFor(entry.type, entry.actor) ?? PALETTE['note'];
 
-  // Merge citation into subtext for display
-  const bodyText = [entry.citation, entry.subtext].filter(Boolean).join(' — ');
+  const bodyText = entry.subtext || '';
 
   // Header
   const header = figma.createFrame();
@@ -702,9 +704,11 @@ function renderDesignCard(entry: CardEntry): FrameNode {
     header.appendChild(pill);
   }
 
+  header.locked = true;
+
   // Card container
   const card = figma.createFrame();
-  card.name = `card:${entry.type}`;
+  card.name = entry.citation || '';
   card.layoutMode = 'VERTICAL';
   card.itemSpacing = 0;
   card.cornerRadius = DESIGN_CARD_CORNER;
@@ -725,6 +729,7 @@ function renderDesignCard(entry: CardEntry): FrameNode {
     body.resize(DESIGN_CARD_W, 1);
     body.primaryAxisSizingMode = 'AUTO';
     body.counterAxisSizingMode = 'FIXED';
+    body.locked = true;
 
     const sub = sspTxt(bodyText, 14, 'Regular', p.bodyFg, {
       lineHeight: 21,
@@ -738,60 +743,87 @@ function renderDesignCard(entry: CardEntry): FrameNode {
   return card;
 }
 
+// Wrap a text node in a transparent auto-sized frame so it can live inside a SectionNode
+// (SectionNode only accepts FrameNode/GroupNode/ComponentNode as children).
+function labelFrame(content: string, size: number, style: 'Regular' | 'Medium' | 'Semi Bold', color: string): FrameNode {
+  const f = figma.createFrame();
+  f.name = '';  // suppress Section annotation
+  f.fills = [];
+  f.layoutMode = 'VERTICAL';
+  f.primaryAxisSizingMode = 'AUTO';
+  f.counterAxisSizingMode = 'AUTO';
+  f.clipsContent = false;
+  const t = txt(content, size, style, color);
+  f.appendChild(t);
+  return f;
+}
+
 export async function renderCards(data: CardData): Promise<void> {
   await figma.loadFontAsync({ family: 'Source Sans Pro', style: 'Regular' });
   await figma.loadFontAsync({ family: 'Source Sans Pro', style: 'SemiBold' });
   await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
   await figma.loadFontAsync({ family: 'Inter', style: 'Semi Bold' });
 
-  // Top-level container
-  const domainFrame = figma.createFrame();
-  domainFrame.name = `${data.name} — Cards`;
-  domainFrame.layoutMode = 'VERTICAL';
-  domainFrame.primaryAxisSizingMode = 'AUTO';
-  domainFrame.counterAxisSizingMode = 'AUTO';
-  domainFrame.paddingTop = domainFrame.paddingBottom = 40;
-  domainFrame.paddingLeft = domainFrame.paddingRight = 40;
-  domainFrame.itemSpacing = DESIGN_SECTION_GAP;
-  domainFrame.fills = fill('#F3F3F3');
+  // All cards and labels go inside one Section so the library moves as a unit.
+  // Individual cards can be dragged out of the section onto any diagram.
+  const PAGE_PADDING  = 40;
+  const CARDS_PER_ROW = 5;
+
+  const lib = figma.createSection();
+  lib.name = `${data.name} — Card Library`;
+  figma.currentPage.appendChild(lib);
+
+  let x = PAGE_PADDING;
+  let y = PAGE_PADDING;
+
+  // Title
+  const titleFrame = labelFrame(`${data.name} — Card Library`, 16, 'Semi Bold', '#1A1A1A');
+  lib.appendChild(titleFrame);
+  titleFrame.x = x;
+  titleFrame.y = y;
+  y += titleFrame.height + 24;
 
   for (const phase of data.phases) {
     for (const subPhase of phase.subPhases) {
       if (!subPhase.cards.length) continue;
 
-      const sectionLabel = `${phase.label}  /  ${subPhase.label}`;
+      const phaseLabel = `${phase.label}  /  ${subPhase.label}`;
+      const labelF = labelFrame(phaseLabel.toUpperCase(), 10, 'Semi Bold', '#888888');
+      lib.appendChild(labelF);
+      labelF.x = x;
+      labelF.y = y;
+      y += labelF.height + 12;
 
-      const section = figma.createFrame();
-      section.name = sectionLabel;
-      section.layoutMode = 'VERTICAL';
-      section.primaryAxisSizingMode = 'AUTO';
-      section.counterAxisSizingMode = 'AUTO';
-      section.itemSpacing = 12;
-      section.fills = [];
-
-      const labelNode = txt(sectionLabel.toUpperCase(), 10, 'Semi Bold', '#888888');
-      section.appendChild(labelNode);
-
-      const row = figma.createFrame();
-      row.name = 'cards';
-      row.layoutMode = 'HORIZONTAL';
-      row.primaryAxisSizingMode = 'AUTO';
-      row.counterAxisSizingMode = 'AUTO';
-      row.itemSpacing = DESIGN_CARD_GAP;
-      row.fills = [];
-      if ('layoutWrap' in row) (row as FrameNode & { layoutWrap: string }).layoutWrap = 'WRAP';
+      let col = 0;
+      let rowX = x;
+      let rowMaxH = 0;
 
       for (const entry of subPhase.cards) {
         const card = renderDesignCard(entry);
-        row.appendChild(card);
+        lib.appendChild(card);
+        card.x = rowX;
+        card.y = y;
+
+        rowMaxH = Math.max(rowMaxH, card.height);
+        rowX += DESIGN_CARD_W + DESIGN_CARD_GAP;
+        col++;
+
+        if (col >= CARDS_PER_ROW) {
+          col = 0;
+          rowX = x;
+          y += rowMaxH + DESIGN_CARD_GAP;
+          rowMaxH = 0;
+        }
       }
 
-      section.appendChild(row);
-      domainFrame.appendChild(section);
+      if (col > 0) y += rowMaxH;
+      y += DESIGN_SECTION_GAP;
     }
   }
 
-  figma.currentPage.appendChild(domainFrame);
-  figma.viewport.scrollAndZoomIntoView([domainFrame]);
-  figma.notify(`Generated: ${data.name} cards`);
+  const sectionW = PAGE_PADDING * 2 + CARDS_PER_ROW * DESIGN_CARD_W + (CARDS_PER_ROW - 1) * DESIGN_CARD_GAP;
+  lib.resizeWithoutConstraints(sectionW, y + PAGE_PADDING);
+
+  figma.viewport.scrollAndZoomIntoView([lib]);
+  figma.notify(`Generated: ${data.name} — Card Library`);
 }
