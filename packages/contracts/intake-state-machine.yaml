@@ -16,13 +16,15 @@ machines:
     transitions:
       - id: submit
         description: POST /applications/{applicationId}/submit — Formally submits a draft application, starting the regulatory processing clock
+        context:
+          - members: {from: intake/application-members, where: {applicationId: $object.id}}
         guards:
           - actors: [applicant, caseworker]
             conditions: [{any: [callerIsApplicant, callerIsCaseworker]}]
         transition: {from: draft, to: submitted}
         steps:
           - set: {field: submittedAt, value: $now, description: Record when the application was formally submitted}
-          - emit: {event: submitted, data: {submittedAt: $now, programs: $object.programs, channel: $object.channel}, description: Emit application.submitted — starts the regulatory clock; triggers caseworker task creation and confirmation notice}
+          - emit: {event: submitted, data: {submittedAt: $now, programs: $object.programs, channel: $object.channel, memberIds: $members.*.id}, description: "Emit application.submitted — starts the regulatory clock; triggers caseworker task creation, confirmation notice, and person matching"}
       - id: open
         description: POST /applications/{applicationId}/open — System marks a submitted application as under active caseworker review
         guards:

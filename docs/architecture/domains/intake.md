@@ -467,7 +467,7 @@ Arguments for a caseworker-triggered event with no new state:
 - The contract is the same regardless of whether the implementation matches synchronously (during the submission request) or asynchronously (after); the field exists and gets populated either way — timing is an implementation choice
 - Triggering at submission is the right moment: the caseworker should see prior history when they open the application for review; deferring to eligibility loses that context
 
-**Decision:** Identity matching is triggered at submission. `ApplicationMember` carries a nullable `resolvedPersonId` field populated by the matching process. Whether the implementation calls the identity service synchronously or asynchronously is left to the implementor.
+**Decision:** Identity matching is triggered at submission. `ApplicationMember` carries a nullable `personId` field populated by the matching process. Whether the implementation calls the identity service synchronously or asynchronously is left to the implementor.
 
 ---
 

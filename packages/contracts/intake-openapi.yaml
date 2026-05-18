@@ -708,6 +708,14 @@ components:
         immigrationInfo:
           $ref: "./components/identity.yaml#/ImmigrationInfo"
           description: Immigration document details. Required when citizenshipStatus is not citizen and the member is applying for Medicaid.
+        personId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
+          x-relationship:
+            resource: Person
+            domain: client-management
 
     ApplicationMember:
       allOf:
@@ -738,6 +746,10 @@ components:
               type: string
               format: date-time
               readOnly: true
+            personMatch:
+              readOnly: true
+              nullable: true
+              $ref: "#/components/schemas/PersonMatch"
             programDeterminations:
               type: array
               readOnly: true
@@ -769,6 +781,43 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/ApplicationMember"
+
+    PersonMatch:
+      type: object
+      description: Person matching state for an application member. Populated when client_management.person.match_resolved is received. Null until matching begins.
+      properties:
+        matchStatus:
+          type: string
+          enum:
+            - confirmed
+            - review_required
+            - no_match
+        candidates:
+          type: array
+          description: Match candidates. Populated for review_required; empty otherwise.
+          items:
+            $ref: "#/components/schemas/PersonMatchCandidate"
+
+    PersonMatchCandidate:
+      type: object
+      description: A candidate person record returned by the person matching process.
+      required:
+        - personId
+        - confidenceScore
+      properties:
+        personId:
+          type: string
+          format: uuid
+          description: The candidate person record ID.
+          x-relationship:
+            resource: Person
+            domain: client-management
+        confidenceScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Match confidence score from 0 (no confidence) to 1 (certain).
 
     ApplicationMemberProgramDetermination:
       type: object
@@ -972,111 +1021,35 @@ components:
 
     # Event payload schemas — referenced by x-events section above
 
-    ApplicationReviewCompletedEvent:
-      type: object
-      description: Payload for application.review_completed — signals data collection is complete; triggers eligibility determination.
-      required:
-        - reviewCompletedAt
-      properties:
-        reviewCompletedAt:
-          type: string
-          format: date-time
-          description: When the caseworker signaled review was complete.
+    # --- Events ---
+    # Payload schemas live in schemas/intake-events.yaml for reuse across
+    # OpenAPI and future AsyncAPI specs. These are passthroughs.
+    # ApplicationCreatedEvent is a resource snapshot — see Application schema above.
 
     ApplicationClosedEvent:
-      type: object
-      description: Payload for application.closed — signals intake is complete.
-      required:
-        - closedAt
-      properties:
-        closedAt:
-          type: string
-          format: date-time
-          description: When the intake phase closed.
+      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationClosedEvent"
 
     ApplicationCreatedEvent:
       description: Snapshot of the newly created application resource.
       $ref: "#/components/schemas/Application"
 
     ApplicationDeletedEvent:
-      type: object
-      description: Payload for application.deleted — auto-emitted when an application record is permanently removed.
-      required:
-        - id
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Identifier of the deleted application.
+      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationDeletedEvent"
 
     ApplicationOpenedEvent:
-      type: object
-      description: Payload for application.opened — signals caseworker has begun active review.
-      required:
-        - openedAt
-        - programs
-      properties:
-        openedAt:
-          type: string
-          format: date-time
-          description: When the application moved to under_review.
-        programs:
-          type: array
-          description: Programs the household is applying for. Included so downstream systems can fan out per-program work after intake screening (see Decision 15).
-          items:
-            type: string
-            enum:
-              - snap
-              - medicaid
-              - tanf
+      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationOpenedEvent"
+
+    ApplicationReviewCompletedEvent:
+      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationReviewCompletedEvent"
 
     ApplicationSubmittedEvent:
-      type: object
-      description: Payload for application.submitted — starts the regulatory clock; triggers program-type-aware routing (see Decision 15).
-      required:
-        - submittedAt
-        - programs
-      properties:
-        submittedAt:
-          type: string
-          format: date-time
-          description: When the application was formally submitted.
-        programs:
-          type: array
-          description: Programs the household is applying for. Consumers route per program type — not all programs generate caseworker tasks at submission.
-          items:
-            type: string
-            enum:
-              - snap
-              - medicaid
-              - tanf
-        channel:
-          type: string
-          description: How the application was filed.
-          enum:
-            - online
-            - in_person
-            - phone
-            - mail
+      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationSubmittedEvent"
 
     ApplicationUpdatedEvent:
-      type: object
-      description: Payload for application.updated — auto-emitted on PATCH; contains only the fields that changed.
-      additionalProperties: true
+      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationUpdatedEvent"
 
     ApplicationWithdrawnEvent:
-      type: object
-      description: Payload for application.withdrawn — triggers open task cancellation and withdrawal notice.
-      required:
-        - withdrawnAt
-      properties:
-        withdrawnAt:
-          type: string
-          format: date-time
-          description: When the application was withdrawn.
-        reason:
-          type: string
-          description: Why the application was withdrawn.
+      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationWithdrawnEvent"
 
     VerificationDocumentEvidence:
       type: object
