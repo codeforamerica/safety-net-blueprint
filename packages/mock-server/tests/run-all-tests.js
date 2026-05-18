@@ -10,8 +10,9 @@
 
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 import { readdirSync, existsSync } from 'fs';
+import { startMockServer, stopServer, isServerRunning } from '../scripts/server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -141,6 +142,16 @@ async function runAllTests() {
     if (postmanCollections.length > 0) {
       console.log('\n📮 Postman Collections');
       console.log('-'.repeat(70));
+
+      const contractsDir = resolve(__dirname, '..', '..', 'contracts');
+      const alreadyRunning = await isServerRunning().catch(() => false);
+      if (!alreadyRunning) {
+        console.log('Starting mock server...');
+        await startMockServer([contractsDir]);
+        await new Promise(res => setTimeout(res, 1500));
+        console.log('Mock server started\n');
+      }
+
       for (const collectionFile of postmanCollections) {
         try {
           await runPostmanCollection(collectionFile);
@@ -152,6 +163,8 @@ async function runAllTests() {
           console.error('   Make sure the mock server is running: npm run mock:start');
         }
       }
+
+      if (!alreadyRunning) await stopServer(false);
     }
   }
   
