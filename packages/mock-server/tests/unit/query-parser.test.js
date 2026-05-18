@@ -355,9 +355,10 @@ function runTests() {
     assertEqual(whereClauses[0], "json_extract(data, '$.created') >= ?");
   });
 
-  test('still uses REAL cast for numeric bounds that look year-ish', () => {
-    // A bare year like "2025" isn't a date — it's an integer. Keep the cast.
-    const tokens = [{ type: TokenType.GREATER_THAN, field: 'year', value: 2025 }];
+  test('still uses REAL cast for bare-year bounds', () => {
+    // The parser emits "2025" as a string. It doesn't match yyyy-mm-dd,
+    // so it stays on the cast path and keeps numeric ordering.
+    const tokens = [{ type: TokenType.GREATER_THAN, field: 'year', value: '2025' }];
     const { whereClauses } = tokensToSqlConditions(tokens, []);
     assertEqual(whereClauses[0], "CAST(json_extract(data, '$.year') AS REAL) > ?");
   });
