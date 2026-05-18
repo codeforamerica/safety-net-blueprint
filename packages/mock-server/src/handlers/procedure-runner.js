@@ -15,7 +15,8 @@ import { matchAndPopHttp } from '../mock-stub-engine.js';
  */
 function resolveDotPath(obj, path) {
   if (obj == null || !path) return null;
-  return path.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
+  const normalized = path.replace(/\[(\d+)\]/g, '.$1');
+  return normalized.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
 }
 
 /**

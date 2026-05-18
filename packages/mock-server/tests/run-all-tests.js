@@ -11,7 +11,7 @@
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { readdirSync } from 'fs';
+import { readdirSync, existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,6 +27,13 @@ const integrationTestFiles = readdirSync(integrationDir)
   .filter(file => file.endsWith('.test.js'))
   .map(file => join('integration', file));
 
+const postmanDir = join(__dirname, 'postman');
+const postmanCollections = existsSync(postmanDir)
+  ? readdirSync(postmanDir)
+      .filter(file => file.endsWith('.json'))
+      .map(file => join('postman', file))
+  : [];
+
 const args = process.argv.slice(2);
 const runUnit = args.includes('--unit') || args.includes('--all') || args.length === 0;
 const runIntegration = args.includes('--integration') || args.includes('--all');
@@ -37,12 +44,12 @@ async function runTest(testFile) {
     console.log(`\n${'='.repeat(70)}`);
     console.log(`Running: ${testFile}`);
     console.log('='.repeat(70));
-    
+
     const proc = spawn('node', [testPath], {
       stdio: 'inherit',
       shell: true
     });
-    
+
     proc.on('close', (code) => {
       if (code === 0) {
         resolve(true);
@@ -50,7 +57,33 @@ async function runTest(testFile) {
         reject(new Error(`Test ${testFile} failed with exit code ${code}`));
       }
     });
-    
+
+    proc.on('error', (error) => {
+      reject(error);
+    });
+  });
+}
+
+async function runPostmanCollection(collectionFile) {
+  return new Promise((resolve, reject) => {
+    const collectionPath = join(__dirname, collectionFile);
+    console.log(`\n${'='.repeat(70)}`);
+    console.log(`Running Postman collection: ${collectionFile}`);
+    console.log('='.repeat(70));
+
+    const proc = spawn('npx', ['newman', 'run', collectionPath, '--reporters', 'cli'], {
+      stdio: 'inherit',
+      shell: true
+    });
+
+    proc.on('close', (code) => {
+      if (code === 0) {
+        resolve(true);
+      } else {
+        reject(new Error(`Postman collection ${collectionFile} failed with exit code ${code}`));
+      }
+    });
+
     proc.on('error', (error) => {
       reject(error);
     });
@@ -62,11 +95,11 @@ async function runAllTests() {
   console.log('='.repeat(70));
   
   if (runUnit && runIntegration) {
-    console.log(`Running ${unitTestFiles.length} unit test(s) and ${integrationTestFiles.length} integration test(s)...`);
+    console.log(`Running ${unitTestFiles.length} unit test(s), ${integrationTestFiles.length} integration test(s), and ${postmanCollections.length} Postman collection(s)...`);
   } else if (runUnit) {
     console.log(`Running ${unitTestFiles.length} unit test(s)...`);
   } else if (runIntegration) {
-    console.log(`Running ${integrationTestFiles.length} integration test(s) (requires mock server)...`);
+    console.log(`Running ${integrationTestFiles.length} integration test(s) and ${postmanCollections.length} Postman collection(s) (requires mock server)...`);
   }
   
   let passed = 0;
@@ -102,6 +135,22 @@ async function runAllTests() {
         failedTests.push(testFile);
         console.error(`\n✗ ${testFile} failed: ${error.message}`);
         console.error('   Make sure the mock server is running: npm run mock:start');
+      }
+    }
+
+    if (postmanCollections.length > 0) {
+      console.log('\n📮 Postman Collections');
+      console.log('-'.repeat(70));
+      for (const collectionFile of postmanCollections) {
+        try {
+          await runPostmanCollection(collectionFile);
+          passed++;
+        } catch (error) {
+          failed++;
+          failedTests.push(collectionFile);
+          console.error(`\n✗ ${collectionFile} failed: ${error.message}`);
+          console.error('   Make sure the mock server is running: npm run mock:start');
+        }
       }
     }
   }

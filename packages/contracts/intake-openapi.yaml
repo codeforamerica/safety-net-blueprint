@@ -1089,6 +1089,7 @@ components:
       description: An outbound notice requesting documents from an applicant for a verification obligation.
       required:
         - noticeId
+        - type
         - sentAt
       properties:
         noticeId:
@@ -1097,6 +1098,15 @@ components:
           description: ID of the notice in the communication domain.
           x-relationship:
             resource: External
+        type:
+          type: string
+          description: Template identifier for the notice. Matches the type field on the communication.notice.sent event.
+          enum:
+            - document_request_citizenship_verification
+            - document_request_identity_verification
+            - document_request_immigration_verification
+            - document_request_income_verification
+            - document_request_residency_verification
         sentAt:
           type: string
           format: date-time

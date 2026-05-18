@@ -72,6 +72,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         update(endpoint.collectionName, resource.id, { status: initialState });
       }
 
+
       const callerId = req.headers['x-caller-id'] || 'system';
       const now = new Date().toISOString();
       const traceparent = req.headers['traceparent'] || null;

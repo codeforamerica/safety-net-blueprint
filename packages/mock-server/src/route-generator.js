@@ -14,7 +14,7 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
-import { findAll, update } from './database-manager.js';
+import { findAll, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName } from './collection-utils.js';
 
@@ -173,6 +173,25 @@ function convertPathFormat(path) {
 
 
 /**
+ * Extract required array field names from a JSON Schema (handles allOf).
+ * Returns a defaults map like { evidence: [], documentRequests: [] }.
+ */
+function extractRequiredArrayDefaults(responseSchema) {
+  if (!responseSchema) return {};
+  const defaults = {};
+  const schemas = responseSchema.allOf || [responseSchema];
+  for (const s of schemas) {
+    const props = s.properties || {};
+    for (const field of (s.required || [])) {
+      if (props[field]?.type === 'array') {
+        defaults[field] = [];
+      }
+    }
+  }
+  return defaults;
+}
+
+/**
  * Register routes for an API specification
  * @param {Object} app - Express app
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
@@ -238,6 +257,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
       const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
+      const arrayDefaults = extractRequiredArrayDefaults(endpoint.responseSchema);
+      if (machineForEndpoint?.initialState) arrayDefaults.status = machineForEndpoint.initialState;
+      if (Object.keys(arrayDefaults).length > 0) registerCollectionDefaults(collectionName, arrayDefaults);
       handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint);
       description = 'Create resource';
     } else if (isSubResourceEndpoint(endpoint.path)) {
@@ -295,6 +317,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           const subSmForEndpoint = subSmEntry?.stateMachine || null;
           const subMachineForEndpoint = subSmEntry?.machine || null;
           const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
+          const subArrayDefaults = extractRequiredArrayDefaults(endpoint.responseSchema);
+          if (subMachineForEndpoint?.initialState) subArrayDefaults.status = subMachineForEndpoint.initialState;
+          if (Object.keys(subArrayDefaults).length > 0) registerCollectionDefaults(collectionName, subArrayDefaults);
           const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint);
           handler = (req, res) => {
             req.body = { ...(req.body || {}), [parentField]: req.params[parentParam] };

@@ -62,7 +62,11 @@ export function executeTransition({
     operation = found.operation;
     const guardItems = Array.isArray(operation.guards) ? operation.guards : [];
     actors = guardItems.flatMap(g => g.actors || []);
-    guardConditions = guardItems.flatMap(g => g.conditions || []);
+    // Evaluate only the conditions from the guard entry whose actors match the caller's roles.
+    // Guards with multiple entries (e.g., caseworker vs. system) define role-specific condition
+    // sets — all conditions must not be merged across entries.
+    const matchingEntry = guardItems.find(g => (g.actors || []).some(a => callerRoles.includes(a)));
+    guardConditions = matchingEntry ? (matchingEntry.conditions || []) : [];
     steps = operation.steps || [];
     transitionTo = operation.transition?.to ?? null;
   } else {

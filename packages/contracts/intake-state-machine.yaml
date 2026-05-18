@@ -151,6 +151,22 @@ machines:
         description: Flag the application as expedited when eligibility screening confirms the applicant meets expedited processing criteria
         steps:
           - call: {PATCH: intake/applications/$this.subject, body: {isExpedited: true}, description: Set isExpedited on the application when eligibility screening confirms expedited criteria are met}
+      - name: client_management.person.match_resolved
+        description: Write person match results back to the ApplicationMember when Client Management resolves a match
+        context:
+          - member: {from: intake/application-members, where: {id: $this.data.memberId}}
+        steps:
+          - call: recordPersonMatch
+      - name: communication.notice.sent
+        description: Append the document request notice to the Verification's documentRequests when Communication sends a notice
+        context:
+          - verification: {from: intake/applications/verifications, where: {id: $this.data.metadata.intake.verificationId}}
+        steps:
+          - call:
+              PATCH: intake/applications/verifications/$verification.id
+              body:
+                documentRequests:
+                  $push: {noticeId: $this.data.noticeId, type: $this.data.type, sentAt: $this.data.sentAt}
     procedures:
       - id: openApplication
         description: Transition the application from submitted to under_review when a caseworker claims the intake review task
@@ -165,7 +181,9 @@ machines:
         then:
           - call: {POST: intake/applications/interview, body: {applicationId: $task.subjectId}}
       - id: createProgramVerifications
-        description: Create electronic Verifications per member and document Verifications at the household level for the given program
+        description: >
+          Create electronic Verifications per member and document Verifications at the household level for the given program.
+          Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
         parameters: [program, memberCategories, householdCategories]
         if: $params.program in $application.programs
         then:
@@ -235,6 +253,28 @@ machines:
               body:
                 programDeterminations:
                   $push: {program: $this.data.program, outcome: $this.data.status, determinedAt: $this.data.decidedAt}
+      - id: recordPersonMatch
+        description: Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches
+        if: $member.id != null
+        then:
+          - match: $this.data.matchType
+            when:
+              confirmed:
+                - call:
+                    PATCH: intake/application-members/$member.id
+                    body:
+                      personId: $this.data.candidates[0].personId
+                      personMatch: {matchStatus: confirmed, candidates: $this.data.candidates}
+              review_required:
+                - call:
+                    PATCH: intake/application-members/$member.id
+                    body:
+                      personMatch: {matchStatus: review_required, candidates: $this.data.candidates}
+              no_match:
+                - call:
+                    PATCH: intake/application-members/$member.id
+                    body:
+                      personMatch: {matchStatus: no_match, candidates: []}
   - object: Verification
     states:
       - {id: pending, slaClock: stopped}

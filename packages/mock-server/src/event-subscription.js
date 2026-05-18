@@ -41,7 +41,8 @@ function findSmEntryForCollection(allStateMachines, domain, collection) {
     const kebabPlural = sm.object
       .replace(/([a-z])([A-Z])/g, '$1-$2')
       .toLowerCase() + 's';
-    return kebabPlural === collection;
+    // Also match sub-collection names like "application-verifications" → "verifications"
+    return kebabPlural === collection || collection.endsWith(`-${kebabPlural}`);
   }) || null;
 }
 
