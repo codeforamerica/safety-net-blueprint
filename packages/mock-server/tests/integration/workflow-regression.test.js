@@ -24,8 +24,16 @@ async function registerStub(stub) {
 }
 
 async function allEvents() {
-  const res = await fetch(`${BASE_URL}/platform/events?limit=1000`);
-  return ((await res.json()).items) || [];
+  let items = [];
+  let offset = 0;
+  while (true) {
+    const res = await fetch(`${BASE_URL}/platform/events?limit=100&offset=${offset}`);
+    const data = await res.json();
+    items = items.concat(data.items || []);
+    if (!data.hasNext) break;
+    offset += 100;
+  }
+  return items;
 }
 
 function findEvent(events, typeSuffix, subject) {
