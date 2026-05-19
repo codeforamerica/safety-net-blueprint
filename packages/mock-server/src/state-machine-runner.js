@@ -175,7 +175,7 @@ export function executeTransition({
         emitEventEnvelope({
           type: CLOUDEVENTS_TYPE_PREFIX + event.action,
           source: `/${domain}`,
-          subject: resource.id,
+          subject: event.subject ?? resource.id,
           data: event.data || null,
           time: timestamp,
         });
@@ -185,6 +185,7 @@ export function executeTransition({
           object,
           action: event.action,
           resourceId: resource.id,
+          subject: event.subject,
           source: `/${domain}`,
           data: event.data || null,
           callerId,

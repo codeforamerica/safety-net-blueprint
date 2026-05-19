@@ -611,7 +611,7 @@ export function applySteps(steps, resource, context) {
       for (const [key, value] of Object.entries(step.emit.data || {})) {
         data[key] = resolveValue(value, context);
       }
-      pendingEvents.push({ action: step.emit.event, data });
+      pendingEvents.push({ action: step.emit.event, data, subject: step.emit.subject ? resolveValue(step.emit.subject, context) : undefined });
     } else if (step.evaluate) {
       pendingProcedures.push({ procedureId: step.evaluate });
     } else if (step.call !== undefined) {

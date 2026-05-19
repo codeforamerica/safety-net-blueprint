@@ -23,7 +23,7 @@ machines:
         transition: {from: in_progress}
         steps:
           - set: {field: expeditedFlagged, value: true, description: Record that the household qualifies for expedited SNAP processing}
-          - emit: {event: eligibility.application.expedited, data: {flaggedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.expedited — Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))"}
+          - emit: {event: eligibility.application.expedited, subject: $object.applicationId, data: {flaggedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.expedited — Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))"}
       - id: complete
         description: "POST /determinations/{determinationId}/complete — System marks a Determination as complete after all program Decisions are resolved"
         guards:
@@ -32,7 +32,7 @@ machines:
         transition: {from: in_progress, to: completed}
         steps:
           - set: {field: completedAt, value: $now, description: Record when all Decisions were resolved}
-          - emit: {event: eligibility.application.determination_completed, data: {completedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.determination_completed — signals all program Decisions are resolved; Intake subscribes to close the application"}
+          - emit: {event: eligibility.application.determination_completed, subject: $object.applicationId, data: {completedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.determination_completed — signals all program Decisions are resolved; Intake subscribes to close the application"}
       - id: withdraw
         description: "POST /determinations/{determinationId}/withdraw — System withdraws a Determination when the associated application is withdrawn"
         guards:
@@ -41,7 +41,7 @@ machines:
         transition: {from: in_progress, to: withdrawn}
         steps:
           - set: {field: withdrawnAt, value: $now, description: Record when the withdrawal occurred; already-resolved Decisions are preserved as the audit record}
-          - emit: {event: withdrawn, data: {withdrawnAt: $now, applicationId: $object.applicationId, determinationId: $object.id}}
+          - emit: {event: withdrawn, subject: $object.applicationId, data: {withdrawnAt: $now, applicationId: $object.applicationId, determinationId: $object.id}}
     events:
       - name: intake.application.submitted
         steps:
