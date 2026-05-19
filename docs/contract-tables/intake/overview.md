@@ -32,6 +32,7 @@ The **SLA clock** tracks time toward resolution:
 | draft | Stopped |
 | submitted | Running |
 | under_review | Running |
+| pending_approval | Stopped |
 | withdrawn | Stopped |
 | closed | Stopped |
 
@@ -58,9 +59,11 @@ Transitions are actor- or system-triggered actions. Each lists who can trigger i
 | `submit` | draft | submitted | applicant; caseworker | any: callerIsApplicant, callerIsCaseworker | Set `submittedAt` → current time<br>Emit `submitted` event |
 | `open` | submitted | under_review | system | callerIsSystem | Emit `opened` event |
 | `complete-review` | under_review | — | caseworker; supervisor | any: callerIsCaseworker, callerIsSupervisor | Emit `review_completed` event |
+| `submit-for-approval` | under_review | pending_approval | system | callerIsSystem | Emit `determination.approval_needed` event |
+| `approve-determination` | pending_approval | closed | supervisor | callerIsSupervisor | Set `closedAt` → current time<br>Emit `closed` event |
+| `reject-determination` | pending_approval | under_review | supervisor | callerIsSupervisor | Emit `determination.rejected` event |
 | `close` | under_review | closed | caseworker; supervisor; system | any: callerIsCaseworker, callerIsSupervisor, callerIsSystem | Set `closedAt` → current time<br>Emit `closed` event |
 | `withdraw` | submitted \| under_review | withdrawn | applicant; caseworker; supervisor | any: callerIsApplicant, callerIsCaseworker, callerIsSupervisor | Set `withdrawnAt` → current time<br>Emit `withdrawn` event |
-| `flag-expedited` | submitted \| under_review | — | caseworker; supervisor; system | any: callerIsCaseworker, callerIsSupervisor, callerIsSystem | Set `isExpedited` → `true`<br>Emit `expedited_flagged` event |
 
 ### Verification
 
@@ -85,9 +88,10 @@ Event subscriptions react to named domain events — including object creation, 
 | `intake.application.submitted` | Call `createProgramVerifications`<br>Call `createProgramVerifications` |
 | `data_exchange.call.completed` | Call `updateVerificationOnCallResult` |
 | `scheduling.appointment.scheduled` | Call `linkAppointment` |
-| `document_management.version.uploaded` | Call `satisfyVerificationOnDocumentUpload` |
-| `eligibility.application.determination_completed` | Call `recordDetermination` |
-| `eligibility.application.all_determined` | POST `intake/applications/$this.subject/close` |
+| `document_management.document_version.uploaded` | Call `satisfyVerificationOnDocumentUpload` |
+| `eligibility.determination.created` | Call `forEach` |
+| `eligibility.application.decision_completed` | Call `recordDetermination` |
+| `eligibility.application.determination_completed` | If (false): POST `intake/applications/$this.subject/submit-for-approval`; else: POST `intake/applications/$this.subject/close` |
 | `eligibility.application.expedited` | PATCH `intake/applications/$this.subject` |
 
 ### Verification

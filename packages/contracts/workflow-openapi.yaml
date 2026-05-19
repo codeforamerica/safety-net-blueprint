@@ -270,9 +270,9 @@ paths:
       tags:
         - Tasks
       x-sortable:
-        fields: [createdAt, updatedAt, priority, status, startedAt]
-        # Newest first. State-aware default would need a denormalized
-        # statusOrdinal — out of scope. Callers filter via `?q=status:...`.
+        fields: [createdAt, updatedAt, priority, status, startedAt, slaDeadline]
+        # Default is newest-first until priority becomes numeric (see #294);
+        # alphabetical sort on the current string enum does not give correct urgency order.
         default: -createdAt
         tieBreaker: id
       parameters:

@@ -192,46 +192,6 @@ async function testApplicationWithdraw() {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Application — in-place operations
-// ---------------------------------------------------------------------------
-
-async function testApplicationInPlace() {
-  section('Application — in-place operations');
-
-  await test('flag-expedited (submitted) — sets isExpedited, no state change', async () => {
-    const { id } = await createAndSubmitApp();
-    const res = await fetch(`${BASE_URL}${APP}/${id}/flag-expedited`, { method: 'POST', headers: CASEWORKER });
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    assert.strictEqual(data.status, 'submitted');
-    assert.strictEqual(data.isExpedited, true);
-  });
-
-  await test('flag-expedited (under_review) — sets isExpedited, no state change', async () => {
-    const { id } = await createOpenApp();
-    const res = await fetch(`${BASE_URL}${APP}/${id}/flag-expedited`, { method: 'POST', headers: SYSTEM });
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    assert.strictEqual(data.status, 'under_review');
-    assert.strictEqual(data.isExpedited, true);
-  });
-
-  await test('flag-expedited from draft → 409 CONFLICT', async () => {
-    const { id } = (await (await fetch(`${BASE_URL}${APP}`, {
-      method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
-    })).json());
-    const res = await fetch(`${BASE_URL}${APP}/${id}/flag-expedited`, { method: 'POST', headers: CASEWORKER });
-    assert.strictEqual(res.status, 409);
-  });
-
-  await test('flag-expedited by applicant → 403 FORBIDDEN', async () => {
-    const { id } = await createAndSubmitApp();
-    const res = await fetch(`${BASE_URL}${APP}/${id}/flag-expedited`, { method: 'POST', headers: APPLICANT });
-    assert.strictEqual(res.status, 403);
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Verification — lifecycle operations
@@ -539,38 +499,49 @@ async function testInitiateServiceCallsRule() {
 async function testCallCompletedRules() {
   section('call.completed rules: update verification + create document fallback [REQUIRES: /verifications in spec]');
 
-  await test('verified result → Verification transitions to satisfied', async () => {
+  await test('conclusive result → Verification transitions to satisfied + electronic evidence appended', async () => {
     const { id: appId } = await createOpenApp(['snap']);
     const { id: verificationId } = await (await fetch(`${BASE_URL}${VERIFICATIONS}`, {
       method: 'POST', headers: SYSTEM,
       body: { applicationId: appId, category: 'identity', verificationType: 'electronic' },
     })).json();
 
+    const serviceCallId = `sc-${verificationId}`;
     await injectEvent('data_exchange.call.completed', {
-      verificationId,
-      result: 'verified',
-      applicationId: appId,
-    }, `sc-${verificationId}`);
+      metadata: { intake: { verificationId } },
+      result: 'conclusive',
+      serviceCallId,
+      serviceType: 'fdsh_ssa',
+    }, serviceCallId);
 
     const verification = await (await fetch(`${BASE_URL}${VERIFICATIONS}/${verificationId}`)).json();
-    assert.strictEqual(verification.status, 'satisfied', 'Verification should be satisfied after verified result');
+    assert.strictEqual(verification.status, 'satisfied', 'Verification should be satisfied after conclusive result');
+    assert.ok(Array.isArray(verification.evidence) && verification.evidence.length > 0, 'evidence should be recorded');
+    const evidenceItem = verification.evidence.find(e => e.type === 'electronic' && e.result === 'conclusive');
+    assert.ok(evidenceItem, 'electronic evidence item with result=conclusive should be appended');
+    assert.strictEqual(evidenceItem.serviceCallId, serviceCallId);
   });
 
-  await test('inconclusive result → Verification transitions to inconclusive', async () => {
+  await test('inconclusive result → Verification transitions to inconclusive + electronic evidence appended', async () => {
     const { id: appId } = await createOpenApp(['snap']);
     const { id: verificationId } = await (await fetch(`${BASE_URL}${VERIFICATIONS}`, {
       method: 'POST', headers: SYSTEM,
       body: { applicationId: appId, category: 'identity', verificationType: 'electronic' },
     })).json();
 
+    const serviceCallId = `sc-${verificationId}`;
     await injectEvent('data_exchange.call.completed', {
-      verificationId,
+      metadata: { intake: { verificationId } },
       result: 'inconclusive',
-      applicationId: appId,
-    }, `sc-${verificationId}`);
+      serviceCallId,
+      serviceType: 'fdsh_ssa',
+    }, serviceCallId);
 
     const verification = await (await fetch(`${BASE_URL}${VERIFICATIONS}/${verificationId}`)).json();
     assert.strictEqual(verification.status, 'inconclusive', 'Verification should be inconclusive after inconclusive result');
+    assert.ok(Array.isArray(verification.evidence) && verification.evidence.length > 0, 'evidence should be recorded');
+    const evidenceItem = verification.evidence.find(e => e.type === 'electronic' && e.result === 'inconclusive');
+    assert.ok(evidenceItem, 'electronic evidence item with result=inconclusive should be appended');
   });
 
   await test('inconclusive result → creates document fallback Verification for same category', async () => {
@@ -583,11 +554,13 @@ async function testCallCompletedRules() {
     const beforeRes = await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${appId}&limit=20`);
     const { total: countBefore } = await beforeRes.json();
 
+    const serviceCallId = `sc-${verificationId}`;
     await injectEvent('data_exchange.call.completed', {
-      verificationId,
+      metadata: { intake: { verificationId } },
       result: 'inconclusive',
-      applicationId: appId,
-    }, `sc-${verificationId}`);
+      serviceCallId,
+      serviceType: 'fdsh_ssa',
+    }, serviceCallId);
 
     const { items, total: countAfter } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${appId}&limit=20`)).json();
     assert.ok(countAfter > countBefore, 'a new Verification should be created');
@@ -599,8 +572,10 @@ async function testCallCompletedRules() {
 
   await test('call.completed for unknown verificationId — no error, no change', async () => {
     await injectEvent('data_exchange.call.completed', {
-      verificationId: 'nonexistent-id',
-      result: 'verified',
+      metadata: { intake: { verificationId: 'nonexistent-id' } },
+      result: 'conclusive',
+      serviceCallId: 'sc-unknown',
+      serviceType: 'fdsh_ssa',
     }, 'sc-unknown');
     // No assertion needed — the test passes if no error is thrown
   });
@@ -613,9 +588,9 @@ async function testCallCompletedRules() {
 // ---------------------------------------------------------------------------
 
 async function testDocumentUploadRule() {
-  section('document.uploaded rule: satisfy verification + record evidence [REQUIRES: /verifications in spec]');
+  section('document_version.uploaded rule: satisfy verification + record evidence [REQUIRES: /verifications in spec]');
 
-  await test('upload with subjectType: verification → satisfies Verification + records evidence', async () => {
+  await test('document_version.uploaded with verificationId in metadata → satisfies Verification + records document evidence', async () => {
     const { id: appId } = await createOpenApp(['snap']);
     const { id: verificationId } = await (await fetch(`${BASE_URL}${VERIFICATIONS}`, {
       method: 'POST', headers: SYSTEM,
@@ -623,31 +598,36 @@ async function testDocumentUploadRule() {
     })).json();
 
     const documentId = 'doc-001';
-    await injectEvent('document_management.document.uploaded', {
-      subjectType: 'verification',
-      subjectId: verificationId,
-    }, documentId);
+    await injectEvent('document_management.document_version.uploaded', {
+      metadata: { intake: { verificationId } },
+      documentId,
+      documentVersionId: 'ver-001',
+      versionNumber: 1,
+    }, 'ver-001');
 
     const verification = await (await fetch(`${BASE_URL}${VERIFICATIONS}/${verificationId}`)).json();
     assert.strictEqual(verification.status, 'satisfied', 'Verification should be satisfied after document upload');
-    assert.ok(Array.isArray(verification.evidence), 'evidence should be an array');
-    assert.ok(verification.evidence.includes(documentId), 'document ID should be recorded in evidence');
+    assert.ok(Array.isArray(verification.evidence) && verification.evidence.length > 0, 'evidence should be recorded');
+    const evidenceItem = verification.evidence.find(e => e.type === 'document' && e.documentId === documentId);
+    assert.ok(evidenceItem, 'document evidence item with correct documentId should be appended');
   });
 
-  await test('upload with subjectType other than verification — ignored', async () => {
+  await test('document_version.uploaded without matching verificationId — ignored', async () => {
     const { id: appId } = await createOpenApp(['snap']);
     const { id: verificationId } = await (await fetch(`${BASE_URL}${VERIFICATIONS}`, {
       method: 'POST', headers: SYSTEM,
       body: { applicationId: appId, category: 'income', verificationType: 'document' },
     })).json();
 
-    await injectEvent('document_management.document.uploaded', {
-      subjectType: 'application',
-      subjectId: appId,
-    }, 'doc-002');
+    await injectEvent('document_management.document_version.uploaded', {
+      metadata: { intake: { verificationId: 'nonexistent-id' } },
+      documentId: 'doc-002',
+      documentVersionId: 'ver-002',
+      versionNumber: 1,
+    }, 'ver-002');
 
     const verification = await (await fetch(`${BASE_URL}${VERIFICATIONS}/${verificationId}`)).json();
-    assert.strictEqual(verification.status, 'pending', 'Verification should remain pending — upload was not for a verification');
+    assert.strictEqual(verification.status, 'pending', 'Verification should remain pending — upload was not for this verification');
   });
 }
 
@@ -704,22 +684,25 @@ async function testLinkAppointmentRule() {
 
 // ---------------------------------------------------------------------------
 // record-determination-rule
-// Triggered by: eligibility.application.determination_completed
+// Triggered by: eligibility.application.decision_completed
 // REQUIRES: /application-members in spec
 // ---------------------------------------------------------------------------
 
 async function testRecordDeterminationRule() {
-  section('record-determination-rule: determination_completed → member write-back [REQUIRES: /application-members in spec]');
+  section('record-determination-rule: decision_completed → member write-back [REQUIRES: /application-members in spec]');
 
-  await test('determination_completed → writes outcome to ApplicationMember.programDeterminations', async () => {
+  await test('decision_completed → writes outcome to ApplicationMember.programDeterminations', async () => {
     const { id: appId } = await createOpenApp(['snap']);
     const member = await createMember(appId, ['snap']);
 
-    await injectEvent('eligibility.application.determination_completed', {
+    await injectEvent('eligibility.application.decision_completed', {
       memberId: member.id,
       program: 'snap',
-      outcome: 'approved',
-      determinedAt: new Date().toISOString(),
+      status: 'approved',
+      decidedAt: new Date().toISOString(),
+      decisionId: 'dec-001',
+      determinationId: 'det-001',
+      applicationId: appId,
     }, appId);
 
     const updatedMember = await (await fetch(`${BASE_URL}${MEMBERS}/${member.id}`)).json();
@@ -727,53 +710,110 @@ async function testRecordDeterminationRule() {
     const determination = updatedMember.programDeterminations.find(d => d.program === 'snap');
     assert.ok(determination, 'snap determination should be recorded');
     assert.strictEqual(determination.outcome, 'approved');
+    assert.ok(determination.determinedAt, 'determinedAt should be set');
   });
 
-  await test('multiple determinations appended — does not overwrite', async () => {
-    const { id: appId } = await createOpenApp(['snap', 'medicaid']);
-    const member = await createMember(appId, ['snap', 'medicaid']);
+  await test('denied decision recorded correctly', async () => {
+    const { id: appId } = await createOpenApp(['snap']);
+    const member = await createMember(appId, ['snap']);
 
-    await injectEvent('eligibility.application.determination_completed', {
-      memberId: member.id, program: 'snap', outcome: 'approved',
-      determinedAt: new Date().toISOString(),
-    }, appId);
-
-    await injectEvent('eligibility.application.determination_completed', {
-      memberId: member.id, program: 'medicaid', outcome: 'denied',
-      determinedAt: new Date().toISOString(),
+    await injectEvent('eligibility.application.decision_completed', {
+      memberId: member.id,
+      program: 'snap',
+      status: 'denied',
+      decidedAt: new Date().toISOString(),
+      decisionId: 'dec-002',
+      determinationId: 'det-002',
+      applicationId: appId,
     }, appId);
 
     const updatedMember = await (await fetch(`${BASE_URL}${MEMBERS}/${member.id}`)).json();
-    assert.strictEqual(updatedMember.programDeterminations.length, 2, 'both determinations should be recorded');
+    const determination = updatedMember.programDeterminations.find(d => d.program === 'snap');
+    assert.ok(determination, 'snap determination should be recorded');
+    assert.strictEqual(determination.outcome, 'denied');
+  });
+
+  await test('multiple decisions for same member appended — does not overwrite', async () => {
+    const { id: appId } = await createOpenApp(['snap', 'medicaid']);
+    const member = await createMember(appId, ['snap', 'medicaid']);
+
+    await injectEvent('eligibility.application.decision_completed', {
+      memberId: member.id, program: 'snap', status: 'approved',
+      decidedAt: new Date().toISOString(), decisionId: 'dec-003', determinationId: 'det-003', applicationId: appId,
+    }, appId);
+
+    await injectEvent('eligibility.application.decision_completed', {
+      memberId: member.id, program: 'medicaid', status: 'denied',
+      decidedAt: new Date().toISOString(), decisionId: 'dec-004', determinationId: 'det-003', applicationId: appId,
+    }, appId);
+
+    const updatedMember = await (await fetch(`${BASE_URL}${MEMBERS}/${member.id}`)).json();
+    assert.strictEqual(updatedMember.programDeterminations.length, 2, 'both program determinations should be recorded');
+    const snap = updatedMember.programDeterminations.find(d => d.program === 'snap');
+    const medicaid = updatedMember.programDeterminations.find(d => d.program === 'medicaid');
+    assert.strictEqual(snap.outcome, 'approved');
+    assert.strictEqual(medicaid.outcome, 'denied');
+  });
+
+  await test('decisions for different members are written to correct members', async () => {
+    const { id: appId } = await createOpenApp(['snap']);
+    const memberA = await createMember(appId, ['snap']);
+    const memberB = await createMember(appId, ['snap']);
+
+    await injectEvent('eligibility.application.decision_completed', {
+      memberId: memberA.id, program: 'snap', status: 'approved',
+      decidedAt: new Date().toISOString(), decisionId: 'dec-005', determinationId: 'det-004', applicationId: appId,
+    }, appId);
+
+    await injectEvent('eligibility.application.decision_completed', {
+      memberId: memberB.id, program: 'snap', status: 'denied',
+      decidedAt: new Date().toISOString(), decisionId: 'dec-006', determinationId: 'det-004', applicationId: appId,
+    }, appId);
+
+    const updatedA = await (await fetch(`${BASE_URL}${MEMBERS}/${memberA.id}`)).json();
+    const updatedB = await (await fetch(`${BASE_URL}${MEMBERS}/${memberB.id}`)).json();
+
+    assert.strictEqual(updatedA.programDeterminations.find(d => d.program === 'snap')?.outcome, 'approved', 'memberA should be approved');
+    assert.strictEqual(updatedB.programDeterminations.find(d => d.program === 'snap')?.outcome, 'denied', 'memberB should be denied');
+  });
+
+  await test('decision_completed with unknown memberId — no error, no change', async () => {
+    const { id: appId } = await createOpenApp(['snap']);
+    await injectEvent('eligibility.application.decision_completed', {
+      memberId: 'nonexistent-member',
+      program: 'snap', status: 'approved',
+      decidedAt: new Date().toISOString(), decisionId: 'dec-007', determinationId: 'det-005', applicationId: appId,
+    }, appId);
+    // No assertion needed — passes if no error thrown
   });
 }
 
 // ---------------------------------------------------------------------------
 // close-application-on-all-determined-rule
-// Triggered by: eligibility.application.all_determined
+// Triggered by: eligibility.application.determination_completed
 // ---------------------------------------------------------------------------
 
 async function testCloseOnAllDeterminedRule() {
-  section('close-application-on-all-determined-rule: all_determined → application closed');
+  section('close-application-on-all-determined-rule: determination_completed → application closed');
 
-  await test('all_determined → application transitions to closed', async () => {
+  await test('determination_completed → application transitions to closed', async () => {
     const { id: appId } = await createOpenApp(['snap']);
 
-    await injectEvent('eligibility.application.all_determined', {}, appId);
+    await injectEvent('eligibility.application.determination_completed', {}, appId);
 
     const app = await (await fetch(`${BASE_URL}${APP}/${appId}`)).json();
-    assert.strictEqual(app.status, 'closed', 'application should be closed after all_determined');
+    assert.strictEqual(app.status, 'closed', 'application should be closed after determination_completed');
     assert.ok(app.closedAt, 'closedAt should be set');
   });
 
-  await test('all_determined for non-under_review application — no change (close guard enforces state)', async () => {
+  await test('determination_completed for non-under_review application — no change (close guard enforces state)', async () => {
     const { id: appId } = await createAndSubmitApp(['snap']);
     // Application is in 'submitted', not 'under_review' — close operation should reject
 
-    await injectEvent('eligibility.application.all_determined', {}, appId);
+    await injectEvent('eligibility.application.determination_completed', {}, appId);
 
     const app = await (await fetch(`${BASE_URL}${APP}/${appId}`)).json();
-    assert.strictEqual(app.status, 'submitted', 'submitted application should not be affected by all_determined');
+    assert.strictEqual(app.status, 'submitted', 'submitted application should not be affected by determination_completed');
   });
 }
 
@@ -888,7 +928,6 @@ async function runTests() {
   try {
     await testApplicationLifecycle();
     await testApplicationWithdraw();
-    await testApplicationInPlace();
     if (verificationsAvailable) await testVerificationLifecycle();
     if (verificationsAvailable && membersAvailable) await testCreateVerificationChecklistRule();
     if (verificationsAvailable) await testInitiateServiceCallsRule();

@@ -122,7 +122,7 @@ A person linked to an application. May be the primary applicant, a household mem
 
 SNAP requires all household members to be listed regardless of whether they are individually applying (7 CFR § 273.1).
 
-**Key fields:** `firstName`, `lastName`, `dateOfBirth`, `sex`, `SSN`, `relationship`, `roles`, `programsApplyingFor`, `resolvedPersonId`
+**Key fields:** `firstName`, `lastName`, `dateOfBirth`, `sex`, `SSN`, `relationship`, `roles`, `programsApplyingFor`, `resolvedPersonId`, `programDeterminations[]` (per-program eligibility outcomes written back by the eligibility domain)
 
 See [Decision 1](#decision-1-role-vs-relationship-on-applicationmember), [Decision 2](#decision-2-programs-applied-for--placement), [Decision 4](#decision-4-authorized-representative--modeling), [Decision 10](#decision-10-person-identity-matching).
 
@@ -154,7 +154,7 @@ A unified record representing one item on the household's verification checklist
 
 Verification records are created by the rules engine in response to intake events, not manually by caseworkers under normal circumstances. Household-level obligations (e.g., proof of residency) are linked to the application only. Member-level obligations (e.g., proof of income, citizenship) are linked to both the application and the specific member.
 
-**Key fields:** `id`, `applicationId`, `memberId` (nullable — null for household-level obligations), `category` (`income | identity | residency | citizenship | immigration`), `status` (`pending | inconclusive | satisfied | waived | cannot_verify`), `evidence[]` (typed sub-items: electronic items carry `source` (`fdsh_ssa | fdsh_vlp | fdsh_fti | ssa_ievs | save`), `result`, `serviceCallId`, `receivedAt`; document items carry `documentId`, `receivedAt`, `reviewedAt`, `reviewedBy`), `documentRequests[]` (sub-items: `noticeId`, `sentAt`, `dueAt`, `channel`), `createdAt`, `updatedAt`
+**Key fields:** `id`, `applicationId`, `memberId` (nullable — null for household-level obligations), `category` (`income | identity | residency | citizenship | immigration`), `verificationType` (`document | electronic`), `status` (`pending | inconclusive | satisfied | waived | cannot_verify`), `evidence[]` (typed sub-items: electronic items carry `source` (`fdsh_ssa | fdsh_vlp | fdsh_fti | ssa_ievs | save`), `result`, `serviceCallId`, `receivedAt`; document items carry `documentId`, `receivedAt`, `reviewedAt`, `reviewedBy`), `documentRequests[]` (sub-items: `noticeId`, `sentAt`, `dueAt`, `channel`), `createdAt`, `updatedAt`
 
 See [Decision 14](#decision-14-verification-checklist-generation), [Decision 19](#decision-19-unified-verification-entity).
 
@@ -185,6 +185,7 @@ Based on regulatory requirements and vendor consensus:
 | `draft` | Started but not yet submitted; no regulatory clock running |
 | `submitted` | Formally submitted; regulatory clock starts |
 | `under_review` | Assigned to a caseworker and being processed |
+| `pending_approval` | Determination complete; awaiting supervisor sign-off before closure. SLA clock paused. |
 | `withdrawn` | Applicant voluntarily withdrew before determination |
 | `closed` | Processing complete; determination made by eligibility domain |
 
@@ -195,7 +196,10 @@ Based on regulatory requirements and vendor consensus:
 - **submit**: `draft` → `submitted` — applicant files; regulatory clock starts; triggers caseworker task creation and confirmation notice
 - **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; assignment may happen separately and does not necessarily trigger this transition; see [Decision 8](#decision-8-submitted--under_review-transition-trigger)
 - **withdraw**: `submitted` | `under_review` → `withdrawn` — applicant-initiated; triggers open task cancellation
-- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination; see [Decision 6](#decision-6-intake-phase-end--lifecycle-state)
+- **close**: `under_review` → `closed` — system closes the application when all determinations are received; see [Decision 6](#decision-6-intake-phase-end--lifecycle-state)
+- **submit-for-approval**: `under_review` → `pending_approval` — system routes to supervisor review when state-configured approval thresholds are met; thresholds configured via rules overlay (baseline default is no approval required)
+- **approve-determination**: `pending_approval` → `closed` — supervisor approves the determination; triggers case creation
+- **reject-determination**: `pending_approval` → `under_review` — supervisor rejects; returns application to caseworker for revision
 
 ---
 
@@ -219,10 +223,11 @@ Events are listed with the operational or regulatory need that drives them — t
 |---|---|---|---|
 | `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. See [Decision 13](#decision-13-post-submission-program-routing--task-creation-and-automated-eligibility) for how routing differs by program. | `draft` → `submitted` | Workflow, Communication (confirmation notice), Eligibility (automated determination for applicable programs) |
 | `application.opened` | Signals that a caseworker has begun active review. Workflow needs to update the task state; supervisors tracking queue throughput need to know when review started vs. when it was filed. | `submitted` → `under_review` | Workflow (update task to in_progress) |
-| `application.expedited_flagged` | SNAP requires a determination within 7 days for expedited households. The workflow domain needs to immediately escalate to a higher-priority SLA track — the standard 30-day task SLA is wrong for these cases. This is a named trigger effect, not a generic field update. | `flag-expedited` trigger | Workflow (escalate to expedited SLA) |
 | `application.withdrawn` | A withdrawn application must stop all in-flight processing immediately. Open workflow tasks must be cancelled; any scheduled interview or document request must be voided; communication must notify the household. Failing to act on this event risks processing an application the household has abandoned. | any → `withdrawn` | Workflow (cancel open tasks), Communication (withdrawal notice) |
-| `application.closed` | Signals that intake is complete and the application is ready for or has received an eligibility determination. Case Management needs this event to know when to create a service delivery case (if approved). Without it, case management has no trigger to act. | `under_review` → `closed` | Case Management (create case if approved), Eligibility |
+| `application.closed` | Signals that intake is complete and the application is ready for or has received an eligibility determination. Case Management needs this event to know when to create a service delivery case (if approved). Without it, case management has no trigger to act. | `under_review` → `closed` or `pending_approval` → `closed` | Case Management (create case if approved), Workflow (complete or cancel open tasks) |
 | `application.review_completed` | Caseworker signals that data collection is complete and the application is ready for eligibility determination. No state change — application stays `under_review` until intake receives eligibility outcomes and closes itself. Eligibility needs this event to know when to begin determination; without it, eligibility has no trigger distinct from submission. | `complete-review` trigger (no state change) | Eligibility |
+| `determination.approval_needed` | Signals that a determination requires supervisor sign-off before the application can close. No federal mandate; states configure approval thresholds (benefit amount, denial type, exception flags) via rules overlay. The baseline default is no approval required (`if: false` condition). | `under_review` → `pending_approval` | Workflow (create supervisor approval task, move caseworker task to pending_review) |
+| `determination.rejected` | Signals that a supervisor rejected the determination and the application is returned to caseworker review. Workflow needs this event to return the caseworker task to in_progress so the caseworker can revise and resubmit. | `pending_approval` → `under_review` | Workflow (return caseworker task to in_progress, complete supervisor approval task) |
 
 ### Event subscriptions
 
@@ -232,7 +237,7 @@ Events from other domains that intake reacts to:
 |---|---|---|
 | `workflow.task.claimed` | A caseworker claiming the intake review task signals they have begun active review — intake should reflect this in the application lifecycle. See [Decision 8](#decision-8-submitted--under_review-transition-trigger). | Trigger `submitted → under_review` on the linked application |
 | `eligibility.determination_complete` | Eligibility publishes outcomes per program; intake subscribes to determine when all programs are resolved and the application can be closed. See [Decision 6](#decision-6-intake-phase-end--lifecycle-state). | Trigger `close` when all programs are determined |
-| `data-exchange.service-call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns a result, the rules engine transitions the affected `Verification` and appends an electronic evidence item — satisfied if conclusive, inconclusive if not; a document request entry is appended to `documentRequests[]` when inconclusive. See [Decision 14](#decision-14-verification-checklist-generation), [Decision 17](#decision-17-external-service-verification-write-backs), [Decision 18](#decision-18-data-exchange-orchestration). | Rules engine transitions `Verification`; appends electronic evidence item; appends to `documentRequests[]` if inconclusive |
+| `data_exchange.call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns a result, the rules engine transitions the affected `Verification` and appends an electronic evidence item — satisfied if conclusive, inconclusive if not; a document request entry is appended to `documentRequests[]` when inconclusive (see #274). See [Decision 14](#decision-14-verification-checklist-generation), [Decision 17](#decision-17-external-service-verification-write-backs), [Decision 18](#decision-18-data-exchange-orchestration). | Rules engine transitions `Verification`; appends electronic evidence item; appends to `documentRequests[]` if inconclusive |
 | `scheduling.appointment.scheduled` | Intake must link each scheduled appointment to the correct Interview entity so the appointments array stays current. Required for caseworkers to see appointment history and for the interview completion flow to be traceable. See [Decision 15](#decision-15-interview-entity-model). | Rules engine appends the appointmentId to `Interview.appointments` for the linked interview |
 | `document_management.document_version.uploaded` | When a new document version is uploaded, intake's rules engine evaluates whether the upload satisfies a pending verification obligation. Without this event, intake has no trigger to mark the `Verification` as satisfied when a document is received. | Rules engine transitions the matching `Verification` record to `satisfied` and records the document ID in its `evidence` list |
 
@@ -462,7 +467,7 @@ Arguments for a caseworker-triggered event with no new state:
 - The contract is the same regardless of whether the implementation matches synchronously (during the submission request) or asynchronously (after); the field exists and gets populated either way — timing is an implementation choice
 - Triggering at submission is the right moment: the caseworker should see prior history when they open the application for review; deferring to eligibility loses that context
 
-**Decision:** Identity matching is triggered at submission. `ApplicationMember` carries a nullable `resolvedPersonId` field populated by the matching process. Whether the implementation calls the identity service synchronously or asynchronously is left to the implementor.
+**Decision:** Identity matching is triggered at submission. `ApplicationMember` carries a nullable `personId` field populated by the matching process. Whether the implementation calls the identity service synchronously or asynchronously is left to the implementor.
 
 ---
 

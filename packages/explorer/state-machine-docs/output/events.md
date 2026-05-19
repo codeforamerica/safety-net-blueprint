@@ -5,19 +5,17 @@ Auto-generated from state machine `emit` and subscription declarations.
 | Event | Published by | Subscribers |
 |---|---|---|
 | `data_exchange.call.completed` | *(unknown)* | [Eligibility/Decision](eligibility.md#decision), [Intake/Application](intake.md#application) |
-| `document_management.version.uploaded` | *(unknown)* | [Intake/Application](intake.md#application) |
-| `eligibility.application.all_determined` | *(unknown)* | [Intake/Application](intake.md#application) |
-| `eligibility.application.decision_completed` | *(unknown)* | [Eligibility/Determination](eligibility.md#determination) |
+| `document_management.document_version.uploaded` | *(unknown)* | [Intake/Application](intake.md#application) |
+| `eligibility.application.decision_completed` | *(unknown)* | [Eligibility/Determination](eligibility.md#determination), [Intake/Application](intake.md#application) |
 | `eligibility.application.determination_completed` | *(unknown)* | [Intake/Application](intake.md#application) |
-| `eligibility.application.expedited` | *(unknown)* | [Intake/Application](intake.md#application) |
+| `eligibility.application.expedited` | *(unknown)* | [Intake/Application](intake.md#application), [Workflow/Task](workflow.md) |
 | `eligibility.decision.created` | *(unknown)* | [Eligibility/Decision](eligibility.md#decision) |
 | `eligibility.decision.eligibility.application.decision_completed` | [Eligibility/Decision](eligibility.md#decision) | *(none)* |
-| `eligibility.determination.created` | *(unknown)* | [Eligibility/Determination](eligibility.md#determination) |
+| `eligibility.determination.created` | *(unknown)* | [Intake/Application](intake.md#application) |
 | `eligibility.determination.eligibility.application.determination_completed` | [Eligibility/Determination](eligibility.md#determination) | *(none)* |
 | `eligibility.determination.eligibility.application.expedited` | [Eligibility/Determination](eligibility.md#determination) | *(none)* |
 | `eligibility.determination.withdrawn` | [Eligibility/Determination](eligibility.md#determination) | *(none)* |
 | `intake.application.closed` | [Intake/Application](intake.md#application) | *(none)* |
-| `intake.application.expedited_flagged` | [Intake/Application](intake.md#application) | *(none)* |
 | `intake.application.opened` | [Intake/Application](intake.md#application) | *(none)* |
 | `intake.application.review_completed` | [Intake/Application](intake.md#application) | [Eligibility/Determination](eligibility.md#determination) |
 | `intake.application.submitted` | [Intake/Application](intake.md#application) | [Eligibility/Determination](eligibility.md#determination), [Intake/Application](intake.md#application), [Workflow/Task](workflow.md) |
@@ -59,13 +57,12 @@ Auto-generated from state machine `emit` and subscription declarations.
 These events are subscribed to but have no emitter in the current state machines:
 
 - `data_exchange.call.completed` — subscribed by [Eligibility/Decision](eligibility.md#decision), [Intake/Application](intake.md#application)
-- `document_management.version.uploaded` — subscribed by [Intake/Application](intake.md#application)
-- `eligibility.application.all_determined` — subscribed by [Intake/Application](intake.md#application)
-- `eligibility.application.decision_completed` — subscribed by [Eligibility/Determination](eligibility.md#determination)
+- `document_management.document_version.uploaded` — subscribed by [Intake/Application](intake.md#application)
+- `eligibility.application.decision_completed` — subscribed by [Eligibility/Determination](eligibility.md#determination), [Intake/Application](intake.md#application)
 - `eligibility.application.determination_completed` — subscribed by [Intake/Application](intake.md#application)
-- `eligibility.application.expedited` — subscribed by [Intake/Application](intake.md#application)
+- `eligibility.application.expedited` — subscribed by [Intake/Application](intake.md#application), [Workflow/Task](workflow.md)
 - `eligibility.decision.created` — subscribed by [Eligibility/Decision](eligibility.md#decision)
-- `eligibility.determination.created` — subscribed by [Eligibility/Determination](eligibility.md#determination)
+- `eligibility.determination.created` — subscribed by [Intake/Application](intake.md#application)
 - `intake.verification.created` — subscribed by [Intake/Verification](intake.md#verification)
 - `scheduling.appointment.scheduled` — subscribed by [Intake/Application](intake.md#application)
 - `workflow.client_timeout` — subscribed by [Workflow/Task](workflow.md)

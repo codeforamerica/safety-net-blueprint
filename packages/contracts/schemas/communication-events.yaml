@@ -1,0 +1,48 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Communication Event Schemas
+
+$defs:
+  NoticeSentEvent:
+    type: object
+    description: |
+      Payload for the communication.notice.sent event. Emitted when Communication
+      sends a notice to a client. The metadata field carries domain-keyed correlation
+      context from the triggering event so consumers can correlate the notice back
+      to their records without additional lookups.
+    additionalProperties: false
+    required:
+      - noticeId
+      - type
+      - sentAt
+    properties:
+      noticeId:
+        type: string
+        format: uuid
+        description: ID of the notice that was sent.
+      type:
+        type: string
+        description: >
+          Template identifier for the notice. Determines which template Communication
+          used to generate the notice content. States may overlay the enum to add
+          program-specific notice types.
+        enum:
+          - document_request_citizenship_verification
+          - document_request_identity_verification
+          - document_request_immigration_verification
+          - document_request_income_verification
+          - document_request_residency_verification
+      sentAt:
+        type: string
+        format: date-time
+        description: When the notice was sent.
+      metadata:
+        type: object
+        description: >
+          Domain-keyed correlation context. Keys are domain names; values are
+          arbitrary objects defined by the triggering domain. Treated as opaque
+          by Communication — echoed back verbatim from the triggering event.
+          Example: {"intake": {"verificationId": "uuid-of-the-verification"}}
+        additionalProperties:
+          type: object
+          additionalProperties: true
+        nullable: true

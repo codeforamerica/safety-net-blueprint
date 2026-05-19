@@ -1,0 +1,1299 @@
+{
+  "info": {
+    "name": "Application Submission Flow",
+    "description": "Exercises the full intake submission flow: verification checklist creation, service call results, expedited flagging, eligibility write-back, and person matching. Requires the mock server running at http://localhost:1080.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:1080"
+    },
+    {
+      "key": "appId",
+      "value": ""
+    },
+    {
+      "key": "memberAId",
+      "value": ""
+    },
+    {
+      "key": "memberBId",
+      "value": ""
+    },
+    {
+      "key": "memberCId",
+      "value": ""
+    },
+    {
+      "key": "identityVerifIdA",
+      "value": ""
+    },
+    {
+      "key": "incomeVerifIdA",
+      "value": ""
+    },
+    {
+      "key": "residencyVerifId",
+      "value": ""
+    },
+    {
+      "key": "incomeDocFallbackVerifId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Create application (snap + medicaid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "applicant"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"programs\": [\"snap\", \"medicaid\"], \"channel\": \"online\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('application created with status draft', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('draft');",
+                  "  pm.expect(body.programs).to.include.members(['snap', 'medicaid']);",
+                  "  pm.collectionVariables.set('appId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create member A (snap + medicaid — will confirm)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "worker-aaa"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "caseworker"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"roles\": [\"primary_applicant\"], \"programsApplyingFor\": [\"snap\", \"medicaid\"]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('member A created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.applicationId).to.eql(pm.collectionVariables.get('appId'));",
+                  "  pm.collectionVariables.set('memberAId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create member B (snap only — will no_match)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "worker-aaa"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "caseworker"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"snap\"]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('member B created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('memberBId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create member C (medicaid only — will review_required)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "worker-aaa"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "caseworker"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"medicaid\"]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('member C created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('memberCId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "applicant"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('application submitted — status is submitted, submittedAt set', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('submitted');",
+                  "  pm.expect(body.submittedAt).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AC 1+2 — Verifications created at submission",
+      "item": [
+        {
+          "name": "GET verifications for application",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications?limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "verifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('13 verifications created (3 members × snap+medicaid)', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const { items, total } = pm.response.json();",
+                  "  pm.expect(total).to.eql(13, '3 income + 3 identity + 1 residency + 3 citizenship + 3 immigration');",
+                  "});",
+                  "",
+                  "pm.test('all verifications start as pending', () => {",
+                  "  const { items } = pm.response.json();",
+                  "  items.forEach(v => pm.expect(v.status).to.eql('pending', `${v.category} (${v.id}) should be pending`));",
+                  "});",
+                  "",
+                  "pm.test('all verifications have empty evidence and documentRequests', () => {",
+                  "  const { items } = pm.response.json();",
+                  "  items.forEach(v => {",
+                  "    pm.expect(v.evidence, `${v.category} evidence`).to.be.an('array').that.is.empty;",
+                  "    pm.expect(v.documentRequests, `${v.category} documentRequests`).to.be.an('array');",
+                  "  });",
+                  "});",
+                  "",
+                  "pm.test('SNAP: 3 income (electronic) per member', () => {",
+                  "  const { items } = pm.response.json();",
+                  "  const income = items.filter(v => v.category === 'income');",
+                  "  pm.expect(income.length).to.eql(3);",
+                  "  income.forEach(v => pm.expect(v.verificationType).to.eql('electronic'));",
+                  "  income.forEach(v => pm.expect(v.memberId).to.be.a('string'));",
+                  "  const memberAId = pm.collectionVariables.get('memberAId');",
+                  "  pm.collectionVariables.set('incomeVerifIdA', (income.find(v => v.memberId === memberAId) || {}).id || '');",
+                  "});",
+                  "",
+                  "pm.test('SNAP: 3 identity (electronic) per member', () => {",
+                  "  const { items } = pm.response.json();",
+                  "  const identity = items.filter(v => v.category === 'identity');",
+                  "  pm.expect(identity.length).to.eql(3);",
+                  "  identity.forEach(v => pm.expect(v.verificationType).to.eql('electronic'));",
+                  "  const memberAId = pm.collectionVariables.get('memberAId');",
+                  "  pm.collectionVariables.set('identityVerifIdA', (identity.find(v => v.memberId === memberAId) || {}).id || '');",
+                  "});",
+                  "",
+                  "pm.test('SNAP: 1 residency (document) at household level — no memberId', () => {",
+                  "  const { items } = pm.response.json();",
+                  "  const residency = items.filter(v => v.category === 'residency');",
+                  "  pm.expect(residency.length).to.eql(1);",
+                  "  pm.expect(residency[0].verificationType).to.eql('document');",
+                  "  pm.expect(!residency[0].memberId).to.be.true;",
+                  "  pm.collectionVariables.set('residencyVerifId', residency[0].id);",
+                  "});",
+                  "",
+                  "pm.test('Medicaid: 3 citizenship (electronic) per member', () => {",
+                  "  const { items } = pm.response.json();",
+                  "  const citizenship = items.filter(v => v.category === 'citizenship');",
+                  "  pm.expect(citizenship.length).to.eql(3);",
+                  "  citizenship.forEach(v => pm.expect(v.verificationType).to.eql('electronic'));",
+                  "  citizenship.forEach(v => pm.expect(v.memberId).to.be.a('string'));",
+                  "});",
+                  "",
+                  "pm.test('Medicaid: 3 immigration (electronic) per member', () => {",
+                  "  const { items } = pm.response.json();",
+                  "  const immigration = items.filter(v => v.category === 'immigration');",
+                  "  pm.expect(immigration.length).to.eql(3);",
+                  "  immigration.forEach(v => pm.expect(v.verificationType).to.eql('electronic'));",
+                  "  immigration.forEach(v => pm.expect(v.memberId).to.be.a('string'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AC 2 — Residency has documentRequests array at creation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{residencyVerifId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "verifications",
+                "{{residencyVerifId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 2 — residency Verification has empty documentRequests before notice', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.category).to.eql('residency');",
+                  "  pm.expect(body.verificationType).to.eql('document');",
+                  "  pm.expect(body.documentRequests).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inject communication.notice.sent (residency)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-residency-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0001-0001-0001-000000000001\",\n    \"type\": \"document_request_residency_verification\",\n    \"sentAt\": \"2026-01-15T09:00:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{residencyVerifId}}\" } }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify residency documentRequests populated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{residencyVerifId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "verifications",
+                "{{residencyVerifId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 2 — residency documentRequests has one entry after notice', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.documentRequests).to.be.an('array').with.lengthOf(1);",
+                  "  const req = body.documentRequests[0];",
+                  "  pm.expect(req.noticeId).to.be.a('string');",
+                  "  pm.expect(req.type).to.eql('document_request_residency_verification');",
+                  "  pm.expect(req.sentAt).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AC 3 — Conclusive service call result",
+      "item": [
+        {
+          "name": "Inject data_exchange.call.completed (conclusive) for identity/member A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-conclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{identityVerifIdA}}\" } },\n    \"result\": \"conclusive\",\n    \"serviceCallId\": \"sc-conclusive-001\",\n    \"serviceType\": \"fdsh_ssa\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify identity Verification for member A is satisfied",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{identityVerifIdA}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "verifications",
+                "{{identityVerifIdA}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 3 — conclusive result: status satisfied', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('satisfied');",
+                  "  pm.expect(body.satisfiedAt).to.be.a('string');",
+                  "});",
+                  "",
+                  "pm.test('AC 3 — electronic evidence item recorded with result: conclusive', () => {",
+                  "  const body = pm.response.json();",
+                  "  const evidence = body.evidence || [];",
+                  "  pm.expect(evidence.length).to.be.greaterThan(0);",
+                  "  const item = evidence.find(e => e.type === 'electronic' && e.result === 'conclusive');",
+                  "  pm.expect(item).to.exist;",
+                  "  pm.expect(item.serviceCallId).to.eql('sc-conclusive-001');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AC 4 — Inconclusive service call result",
+      "item": [
+        {
+          "name": "Inject data_exchange.call.completed (inconclusive) for income/member A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-inconclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeVerifIdA}}\" } },\n    \"result\": \"inconclusive\",\n    \"serviceCallId\": \"sc-inconclusive-001\",\n    \"serviceType\": \"ssa_ievs\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify income Verification for member A is inconclusive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{incomeVerifIdA}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "verifications",
+                "{{incomeVerifIdA}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 4 — inconclusive result: status inconclusive', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('inconclusive');",
+                  "});",
+                  "",
+                  "pm.test('AC 4 — electronic evidence item recorded with result: inconclusive', () => {",
+                  "  const body = pm.response.json();",
+                  "  const evidence = body.evidence || [];",
+                  "  pm.expect(evidence.length).to.be.greaterThan(0);",
+                  "  const item = evidence.find(e => e.type === 'electronic' && e.result === 'inconclusive');",
+                  "  pm.expect(item).to.exist;",
+                  "  pm.expect(item.serviceCallId).to.eql('sc-inconclusive-001');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify document fallback income Verification created for member A",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications?limit=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "verifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "30"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 4 — document fallback income Verification created for member A', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const { items } = pm.response.json();",
+                  "  const memberAId = pm.collectionVariables.get('memberAId');",
+                  "  const incomeVerifIdA = pm.collectionVariables.get('incomeVerifIdA');",
+                  "  const fallback = items.find(v =>",
+                  "    v.category === 'income' &&",
+                  "    v.verificationType === 'document' &&",
+                  "    v.memberId === memberAId &&",
+                  "    v.id !== incomeVerifIdA",
+                  "  );",
+                  "  pm.expect(fallback).to.exist;",
+                  "  pm.expect(fallback.status).to.eql('pending');",
+                  "  pm.collectionVariables.set('incomeDocFallbackVerifId', fallback.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inject communication.notice.sent (income fallback)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-income-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0002-0002-0002-000000000002\",\n    \"type\": \"document_request_income_verification\",\n    \"sentAt\": \"2026-01-15T09:30:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeDocFallbackVerifId}}\" } }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify income fallback documentRequests populated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{incomeDocFallbackVerifId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "verifications",
+                "{{incomeDocFallbackVerifId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 4 — income fallback documentRequests has one entry after notice', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.documentRequests).to.be.an('array').with.lengthOf(1);",
+                  "  const req = body.documentRequests[0];",
+                  "  pm.expect(req.noticeId).to.be.a('string');",
+                  "  pm.expect(req.type).to.eql('document_request_income_verification');",
+                  "  pm.expect(req.sentAt).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AC 5 — Expedited flag",
+      "item": [
+        {
+          "name": "Inject eligibility.application.expedited",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.eligibility.application.expedited\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify application isExpedited: true",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 5 — isExpedited set to true', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().isExpedited).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AC 6 — Eligibility decision write-back",
+      "item": [
+        {
+          "name": "Inject eligibility.application.decision_completed (member A, snap, approved)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.eligibility.application.decision_completed\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"program\": \"snap\",\n    \"status\": \"approved\",\n    \"decidedAt\": \"2026-01-15T10:00:00Z\",\n    \"decisionId\": \"dec-snap-001\",\n    \"determinationId\": \"det-001\",\n    \"applicationId\": \"{{appId}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify member A programDeterminations written",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members",
+                "{{memberAId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 6 — snap determination written to member A', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  const determinations = body.programDeterminations || [];",
+                  "  pm.expect(determinations.length).to.be.greaterThan(0);",
+                  "  const snap = determinations.find(d => d.program === 'snap');",
+                  "  pm.expect(snap).to.exist;",
+                  "  pm.expect(snap.outcome).to.eql('approved');",
+                  "  pm.expect(snap.determinedAt).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AC 7 — Person match: confirmed (member A)",
+      "item": [
+        {
+          "name": "Inject client_management.person.match_resolved (confirmed, member A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberAId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"matchType\": \"confirmed\",\n    \"candidates\": [\n      { \"personId\": \"aaaaaaaa-0001-0001-0001-000000000001\", \"confidenceScore\": 0.99 }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify member A personId set and personMatch populated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members",
+                "{{memberAId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 7 — confirmed: personId set on member A', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().personId).to.eql('aaaaaaaa-0001-0001-0001-000000000001');",
+                  "});",
+                  "",
+                  "pm.test('AC 7 — confirmed: personMatch.matchStatus is confirmed', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.personMatch).to.exist;",
+                  "  pm.expect(body.personMatch.matchStatus).to.eql('confirmed');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AC 8 — Person match: no_match (member B)",
+      "item": [
+        {
+          "name": "Inject client_management.person.match_resolved (no_match, member B)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberBId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberBId}}\",\n    \"matchType\": \"no_match\",\n    \"candidates\": []\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify member B personId null and personMatch.matchStatus no_match",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberBId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members",
+                "{{memberBId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 8 — no_match: personId remains null', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(!body.personId).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('AC 8 — no_match: personMatch.matchStatus is no_match', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.personMatch).to.exist;",
+                  "  pm.expect(body.personMatch.matchStatus).to.eql('no_match');",
+                  "});",
+                  "",
+                  "pm.test('AC 8 — no_match: candidates is empty', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.personMatch.candidates).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AC 9 — Person match: review_required (member C)",
+      "item": [
+        {
+          "name": "Inject client_management.person.match_resolved (review_required, member C)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberCId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberCId}}\",\n    \"matchType\": \"review_required\",\n    \"candidates\": [\n      { \"personId\": \"cccccccc-0001-0001-0001-000000000001\", \"confidenceScore\": 0.82 },\n      { \"personId\": \"cccccccc-0002-0002-0002-000000000002\", \"confidenceScore\": 0.74 }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify member C personId null, personMatch.candidates populated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberCId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members",
+                "{{memberCId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 9 — review_required: personId remains null', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(!pm.response.json().personId).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('AC 9 — review_required: personMatch.matchStatus is review_required', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.personMatch).to.exist;",
+                  "  pm.expect(body.personMatch.matchStatus).to.eql('review_required');",
+                  "});",
+                  "",
+                  "pm.test('AC 9 — review_required: candidates populated with personId and confidenceScore', () => {",
+                  "  const body = pm.response.json();",
+                  "  const candidates = (body.personMatch || {}).candidates || [];",
+                  "  pm.expect(candidates.length).to.eql(2);",
+                  "  candidates.forEach(c => {",
+                  "    pm.expect(c.personId).to.be.a('string');",
+                  "    pm.expect(c.confidenceScore).to.be.a('number');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

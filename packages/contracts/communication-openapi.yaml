@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info:
+  title: Communication Service API
+  version: 1.0.0
+  x-domain: communication
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    API for the Communication domain — notices and correspondence to clients.
+    Full REST paths are TBD; this spec currently declares the events emitted
+    by this domain.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: https://api.example.com/communication
+    description: Production server
+  - url: http://localhost:1080/communication
+    description: Local development server
+
+x-events:
+  notice.sent:
+    type: org.codeforamerica.safety-net-blueprint.communication.notice.sent
+    summary: >
+      Emitted when Communication sends a notice to a client. Intake subscribes
+      to append a documentRequests entry to the relevant Verification.
+    payload:
+      $ref: "./schemas/communication-events.yaml#/$defs/NoticeSentEvent"
+
+paths: {}
+
+components:
+  schemas:
+    NoticeSentEvent:
+      $ref: "./schemas/communication-events.yaml#/$defs/NoticeSentEvent"
