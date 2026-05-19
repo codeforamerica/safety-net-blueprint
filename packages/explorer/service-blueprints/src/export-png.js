@@ -2,24 +2,18 @@
 /**
  * export-png.js
  *
- * Converts a rendered service blueprint SVG to a PNG via Puppeteer.
- * Reads from dist/<domain>.svg, writes to output/<domain>.png.
+ * Screenshots an HTML file to a PNG via Puppeteer, then deletes the HTML.
  *
  * Requires puppeteer (optional dependency — skips gracefully if not installed).
  */
 
-import { resolve, dirname, basename } from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import { existsSync, mkdirSync } from 'fs';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const distDir   = resolve(__dirname, '..', 'dist');
-const outDir    = resolve(__dirname, '..', 'output');
+import { pathToFileURL } from 'url';
 
 /**
- * @param {string} domain  e.g. "intake"
+ * @param {string} htmlPath  absolute path to an HTML file to screenshot
+ * @param {string} pngPath   absolute path to write the PNG
  */
-export async function exportPng(domain) {
+export async function exportHtmlPng(htmlPath, pngPath) {
   let puppeteer;
   try {
     puppeteer = (await import('puppeteer')).default;
@@ -28,33 +22,12 @@ export async function exportPng(domain) {
     return;
   }
 
-  const svgPath = resolve(distDir, `${domain}.svg`);
-  if (!existsSync(svgPath)) {
-    console.warn(`SVG not found at ${svgPath} — skipping PNG export`);
-    return;
-  }
-
   const browser = await puppeteer.launch({ headless: 'new' });
   const page    = await browser.newPage();
-
-  await page.goto(pathToFileURL(svgPath).href, { waitUntil: 'networkidle0' });
-
-  // Read the SVG's intrinsic dimensions and size the viewport to match exactly,
-  // so the screenshot captures the full diagram without scrollbars or clipping.
-  const { width, height } = await page.evaluate(() => {
-    const svg = document.querySelector('svg');
-    return {
-      width:  Math.ceil(svg.width.baseVal.value),
-      height: Math.ceil(svg.height.baseVal.value),
-    };
-  });
-
-  await page.setViewport({ width, height, deviceScaleFactor: 1 });
-
-  mkdirSync(outDir, { recursive: true });
-  const pngPath = resolve(outDir, `${domain}.png`);
-  await page.screenshot({ path: pngPath, fullPage: false });
-  console.log(`Wrote ${pngPath}`);
-
+  await page.setViewport({ width: 1400, height: 900, deviceScaleFactor: 1 });
+  await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'networkidle0' });
+  await page.screenshot({ path: pngPath, fullPage: true });
   await browser.close();
+
+  console.log(`Wrote ${pngPath}`);
 }

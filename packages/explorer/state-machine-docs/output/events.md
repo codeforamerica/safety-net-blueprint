@@ -10,6 +10,7 @@ Auto-generated from state machine `emit` and subscription declarations.
 | `eligibility.application.determination_completed` | *(unknown)* | [Intake/Application](intake.md#application) |
 | `eligibility.application.expedited` | *(unknown)* | [Intake/Application](intake.md#application) |
 | `intake.application.closed` | [Intake/Application](intake.md#application) | *(none)* |
+| `intake.application.expedited_flagged` | [Intake/Application](intake.md#application) | *(none)* |
 | `intake.application.opened` | [Intake/Application](intake.md#application) | *(none)* |
 | `intake.application.review_completed` | [Intake/Application](intake.md#application) | *(none)* |
 | `intake.application.submitted` | [Intake/Application](intake.md#application) | [Intake/Application](intake.md#application), [Workflow/Task](workflow.md) |

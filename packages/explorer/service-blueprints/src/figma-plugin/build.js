@@ -29,8 +29,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2).filter(a => a !== '--watch');
 const watch = process.argv.includes('--watch');
 
-const inputDir  = args[0] ? path.resolve(args[0]) : path.join(__dirname, '..', 'data');
-const outputDir = args[1] ? path.resolve(args[1]) : path.join(__dirname, 'dist');
+const inputDir  = args[0] ? path.resolve(args[0]) : path.join(__dirname, '..', '..', 'data');
+const outputDir = args[1] ? path.resolve(args[1]) : path.join(__dirname, '..', '..', 'output', 'figma-plugin-dist');
 
 // ── Validate input ────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ console.log(`Blueprint: ${path.relative(__dirname, blueprintSrc)} → src/_curre
 // Groups by flow label (phase) → enclosing fragment label (sub-phase).
 // Deduplicates globally by citation so each regulation appears once.
 
-const configSrc = path.join(__dirname, '..', '..', 'config.yaml');
+const configSrc = path.join(__dirname, '..', '..', '..', 'config.yaml');
 const cardsCurrentPath = path.join(__dirname, 'src', '_current_cards.json');
 
 
@@ -128,7 +128,7 @@ if (fs.existsSync(configSrc)) {
 // Convert card-types YAML to JSON and stage to the well-known path renderer.ts imports.
 // This is the source of truth for all card type colors, labels, and icon keys.
 
-const cardTypesSrc = path.join(__dirname, '..', 'config', 'card-types.yaml');
+const cardTypesSrc = path.join(__dirname, '..', '..', 'config', 'card-types.yaml');
 const cardTypesCurrentPath = path.join(__dirname, 'src', '_current_card_types.json');
 if (fs.existsSync(cardTypesSrc)) {
   const cardTypesData = yaml.load(fs.readFileSync(cardTypesSrc, 'utf8'));

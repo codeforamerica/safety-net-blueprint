@@ -32,6 +32,11 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `submitted`/`under_review` → `withdrawn`
   - Record when the application was withdrawn (sets `withdrawnAt`)
   - Emit: `intake.application.withdrawn` — triggers open task cancellation and withdrawal notice
+- **flag-expedited** — Caseworker, supervisor, or system flags the application as qualifying for expedited processing
+  - Actors: caseworker, supervisor, or system
+  - Transition: no state change
+  - Mark the application as qualifying for expedited processing (sets `isExpedited`)
+  - Emit: `intake.application.expedited_flagged` — triggers workflow to escalate to expedited SLA track
 
 ### Event subscriptions
 

@@ -2,22 +2,19 @@
 /**
  * export-png.js
  *
- * Uses Puppeteer to render each context map view as a PNG, then packages
- * them into a zip file for easy sharing.
+ * Uses Puppeteer to render each context map view as a PNG.
  *
  * Usage:
  *   node export-png.js [html-dir [img-dir]]
  *
  * Output:
- *   dist/<slide>.png                  — one PNG per view (intermediary)
- *   output/context-map-slides.zip     — zip of all PNGs (tracked artifact)
+ *   dist/<slide>.png  — one PNG per view (gitignored)
  *
  * Slide naming matches CONTENT keys from build-html.js (key + ".png"):
  *   domains.png, domain_<id>.png, flow_<domain>_<id>.png
  */
 
 import puppeteer from 'puppeteer';
-import JSZip from 'jszip';
 import { writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -50,9 +47,6 @@ await page.evaluate(() => {
 
 const keys = await page.evaluate(() => Object.keys(CONTENT));
 
-const zip = new JSZip();
-const folder = zip.folder('context-map-slides');
-
 for (let i = 0; i < keys.length; i++) {
   const key = keys[i];
 
@@ -68,14 +62,9 @@ for (let i = 0; i < keys.length; i++) {
   const png = await el.screenshot({ type: 'png' });
 
   writeFileSync(resolve(imgDir, filename), png);
-  folder.file(filename, png);
 
   process.stdout.write(' done\n');
 }
 
 await browser.close();
-
-const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-const zipPath = resolve(htmlDir, 'context-map-slides.zip');
-writeFileSync(zipPath, zipBuffer);
-console.log(`Written: ${zipPath}`);
+console.log(`Written ${keys.length} PNGs to ${imgDir}`);
