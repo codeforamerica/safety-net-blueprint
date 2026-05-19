@@ -356,6 +356,85 @@ async function testSnapExpeditedScreeningStub() {
 }
 
 // ---------------------------------------------------------------------------
+// Cross-domain write-back — emit subject routes to application, not determination
+// ---------------------------------------------------------------------------
+
+async function testCrossDomainWriteBack() {
+  section('Cross-domain write-back — emit subject correctness');
+
+  await test('flag-expedited on Determination sets isExpedited on the intake Application', async () => {
+    // Submit a real application through intake so the Determination is created
+    // by the state machine (not a synthetic inject), exercising the full emit path.
+    const appRes = await fetch(`${BASE_URL}/intake/applications`, {
+      method: 'POST',
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    assert.strictEqual(appRes.status, 201, 'application creation should return 201');
+    const app = await appRes.json();
+    const appId = app.id;
+
+    // Submit the application to trigger Determination creation via the state machine
+    await fetch(`${BASE_URL}/intake/applications/${appId}/submit`, {
+      method: 'POST',
+      headers: caller('applicant-1', 'applicant'),
+    });
+
+    // Get the Determination created by the submission flow
+    const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
+    assert.ok(dets.length > 0, 'Determination should be created by submission flow');
+    const det = dets[0];
+
+    // Call flag-expedited on the Determination as system
+    const flagRes = await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}/flag-expedited`, {
+      method: 'POST', headers: SYSTEM,
+    });
+    assert.strictEqual(flagRes.status, 200, `flag-expedited should return 200, got ${flagRes.status}`);
+
+    // The eligibility state machine emits eligibility.application.expedited with
+    // subject: $object.applicationId. The intake state machine subscribes and PATCHes
+    // the application. Assert the write-back landed on the correct application.
+    const updatedApp = await (await fetch(`${BASE_URL}/intake/applications/${appId}`)).json();
+    assert.strictEqual(updatedApp.isExpedited, true, 'isExpedited should be set on the application by cross-domain write-back');
+  });
+
+  await test('determination_completed on Determination closes the intake Application', async () => {
+    const appRes = await fetch(`${BASE_URL}/intake/applications`, {
+      method: 'POST',
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    const app = await appRes.json();
+    const appId = app.id;
+
+    // Add a member so a SNAP Decision is created on submission
+    await createApplicationMember(appId, ['snap']);
+
+    await fetch(`${BASE_URL}/intake/applications/${appId}/submit`, {
+      method: 'POST',
+      headers: caller('applicant-1', 'applicant'),
+    });
+
+    // Move application to under_review so it can be closed (system-only transition)
+    await fetch(`${BASE_URL}/intake/applications/${appId}/open`, {
+      method: 'POST', headers: SYSTEM,
+    });
+
+    const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
+    const det = dets[0];
+    const { items: decisions } = await (await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}/decisions`)).json();
+    const decision = decisions[0];
+
+    // Approve the Decision — triggers determination completion → determination_completed event
+    await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}/decisions/${decision.id}/approve`, {
+      method: 'POST', headers: SYSTEM, body: { path: 'auto' },
+    });
+
+    // determination_completed emits with subject: $object.applicationId; intake closes the application
+    const updatedApp = await (await fetch(`${BASE_URL}/intake/applications/${appId}`)).json();
+    assert.strictEqual(updatedApp.status, 'closed', 'application should be closed by cross-domain determination_completed write-back');
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Determination completes when all Decisions are resolved
 // ---------------------------------------------------------------------------
 
@@ -519,6 +598,7 @@ async function runTests() {
     await testFinalDetermination();
     await testDeterminationCompletion();
     await testWithdrawal();
+    await testCrossDomainWriteBack();
   } finally {
     await teardownServer(serverStartedByTests);
   }
