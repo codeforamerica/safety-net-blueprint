@@ -13,7 +13,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `draft` → `submitted`
   - Record when the application was formally submitted (sets `submittedAt`)
   - Emit: `intake.application.submitted` — starts the regulatory clock; triggers caseworker task creation and confirmation notice
-    - Subscribed by: [Intake/Application](intake.md#application), [Workflow/Task](workflow.md)
+    - Subscribed by: [Eligibility/Determination](eligibility.md#determination), [Intake/Application](intake.md#application), [Workflow/Task](workflow.md)
 - **open** — System marks a submitted application as under active caseworker review
   - Actors: system only
   - Transition: `submitted` → `under_review`
@@ -22,6 +22,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Actors: caseworker, or supervisor
   - Transition: no state change
   - Emit: `intake.application.review_completed` — signals data collection is complete; triggers eligibility determination
+    - Subscribed by: [Eligibility/Determination](eligibility.md#determination)
 - **close** — Marks a reviewed application as closed after all determinations are complete
   - Actors: caseworker, supervisor, or system
   - Transition: `under_review` → `closed`
@@ -32,6 +33,12 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `submitted`/`under_review` → `withdrawn`
   - Record when the application was withdrawn (sets `withdrawnAt`)
   - Emit: `intake.application.withdrawn` — triggers open task cancellation and withdrawal notice
+    - Subscribed by: [Eligibility/Determination](eligibility.md#determination)
+- **flag-expedited** — Caseworker, supervisor, or system flags the application as qualifying for expedited processing
+  - Actors: caseworker, supervisor, or system
+  - Transition: no state change
+  - Mark the application as qualifying for expedited processing (sets `isExpedited`)
+  - Emit: `intake.application.expedited_flagged` — triggers workflow to escalate to expedited SLA track
 
 ### Event subscriptions
 

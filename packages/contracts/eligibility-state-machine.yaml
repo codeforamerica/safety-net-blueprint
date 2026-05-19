@@ -1,0 +1,166 @@
+$schema: ./schemas/state-machine-schema.yaml
+extends: ./platform-state-machine.yaml
+version: "1.0"
+domain: eligibility
+apiSpec: eligibility-openapi.yaml
+
+machines:
+  # ---------------------------------------------------------------------------
+  # Determination — aggregate tracking resolution across all program Decisions.
+  # ---------------------------------------------------------------------------
+  - object: Determination
+    states:
+      - {id: in_progress, slaClock: running}
+      - {id: completed, slaClock: stopped}
+      - {id: withdrawn, slaClock: stopped}
+    initialState: in_progress
+    transitions:
+      - id: flag-expedited
+        description: "POST /determinations/{determinationId}/flag-expedited — System flags a Determination as qualifying for expedited SNAP processing"
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: in_progress}
+        steps:
+          - set: {field: expeditedFlagged, value: true, description: Record that the household qualifies for expedited SNAP processing}
+          - emit: {event: eligibility.application.expedited, data: {flaggedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.expedited — Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))"}
+      - id: complete
+        description: "POST /determinations/{determinationId}/complete — System marks a Determination as complete after all program Decisions are resolved"
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: in_progress, to: completed}
+        steps:
+          - set: {field: completedAt, value: $now, description: Record when all Decisions were resolved}
+          - emit: {event: eligibility.application.determination_completed, data: {completedAt: $now, applicationId: $object.applicationId, determinationId: $object.id}, description: "Emit eligibility.application.determination_completed — signals all program Decisions are resolved; Intake subscribes to close the application"}
+      - id: withdraw
+        description: "POST /determinations/{determinationId}/withdraw — System withdraws a Determination when the associated application is withdrawn"
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: in_progress, to: withdrawn}
+        steps:
+          - set: {field: withdrawnAt, value: $now, description: Record when the withdrawal occurred; already-resolved Decisions are preserved as the audit record}
+          - emit: {event: withdrawn, data: {withdrawnAt: $now, applicationId: $object.applicationId, determinationId: $object.id}}
+    events:
+      - name: intake.application.submitted
+        steps:
+          - call: {POST: eligibility/determinations, body: {applicationId: $this.subject, programs: $this.data.programs, status: in_progress}, description: Create a Determination for the submitted application}
+      - name: eligibility.determination.created
+        transition: {}
+        description: Create one Decision per program when a Determination is created
+        steps:
+          - call: initializeDetermination
+      - name: intake.application.review_completed
+        description: Run final eligibility determination for all remaining pending Decisions after caseworker review is complete (42 CFR § 435.912)
+        context:
+          - determination: {from: eligibility/determinations, where: {applicationId: $this.subject}}
+        steps:
+          - call: evaluateFinalDetermination
+      - name: eligibility.application.decision_completed
+        context:
+          - pendingDecision: {from: eligibility/determinations/decisions, where: {determinationId: $this.data.determinationId, status: pending}}
+        steps:
+          - if: '$pendingDecision == null'
+            then: [{call: {POST: eligibility/determinations/$this.data.determinationId/complete, description: Complete the Determination when all program Decisions are resolved}}]
+      - name: intake.application.withdrawn
+        context:
+          - determination: {from: eligibility/determinations, where: {applicationId: $this.subject}}
+        steps:
+          - if: '$determination.id != null'
+            then: [{call: {POST: eligibility/determinations/$determination.id/withdraw, description: Withdraw the Determination; already-resolved Decisions are preserved as the audit record}}]
+    procedures:
+      - id: initializeDetermination
+        description: Create one Decision per program when a Determination is created
+        steps:
+          - forEach: {in: $object.programs, as: program}
+            do:
+              - call: {POST: eligibility/determinations/decisions, body: {applicationId: $object.applicationId, determinationId: $object.id, program: $program, status: pending}}
+      - id: evaluateFinalDetermination
+        description: Call the final determination adapter for each remaining pending Decision (42 CFR § 435.912)
+        steps:
+          - forEach: {from: eligibility/determinations/decisions, where: {determinationId: $determination.id, status: pending}, as: decision}
+            do:
+              - call: {POST: eligibility-adapter/evaluate/determination, body: {decisionId: $decision.id, determinationId: $determination.id, applicationId: $determination.applicationId, program: $decision.program}}
+
+  # ---------------------------------------------------------------------------
+  # Decision — one per program per Determination; tracks per-program outcome.
+  # ---------------------------------------------------------------------------
+  - object: Decision
+    states:
+      - {id: pending, slaClock: running}
+      - {id: approved, slaClock: stopped}
+      - {id: denied, slaClock: stopped}
+      - {id: ineligible, slaClock: stopped}
+    initialState: pending
+    transitions:
+      - id: approve
+        description: "POST /determinations/{determinationId}/decisions/{decisionId}/approve — System approves a Decision after automatic or caseworker review"
+        schema:
+          request:
+            $ref: ./schemas/eligibility-state-machine-schema.yaml#/$defs/ApproveDecisionRequest
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: pending, to: approved}
+        steps:
+          - set: {field: decidedAt, value: $now, description: Record when the Decision was finalized}
+          - set: {field: path, value: $request.path, description: Record whether the Decision was reached automatically or by a caseworker}
+          - emit: {event: eligibility.application.decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: approved, path: $request.path}, description: "Emit eligibility.application.decision_completed — Intake records the outcome per member; Determination checks if all Decisions are resolved"}
+      - id: deny
+        description: "POST /determinations/{determinationId}/decisions/{decisionId}/deny — System denies a Decision based on failing eligibility criteria"
+        schema:
+          request:
+            $ref: ./schemas/eligibility-state-machine-schema.yaml#/$defs/DenyDecisionRequest
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: pending, to: denied}
+        steps:
+          - set: {field: decidedAt, value: $now}
+          - set: {field: path, value: $request.path}
+          - set: {field: denialReasonCode, value: $request.denialReasonCode, description: "Store the machine-readable denial reason; required for the Notice of Action and appeal basis (7 CFR § 273.2(h), 42 CFR § 435.917)"}
+          - emit: {event: eligibility.application.decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: denied, path: $request.path, denialReasonCode: $request.denialReasonCode}}
+      - id: mark-ineligible
+        description: "POST /determinations/{determinationId}/decisions/{decisionId}/mark-ineligible — System marks a Decision as categorically ineligible"
+        schema:
+          request:
+            $ref: ./schemas/eligibility-state-machine-schema.yaml#/$defs/MarkIneligibleRequest
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: pending, to: ineligible}
+        steps:
+          - set: {field: decidedAt, value: $now}
+          - set: {field: path, value: $request.path}
+          - set: {field: denialReasonCode, value: $request.denialReasonCode, description: "Store the categorical ineligibility reason code (e.g., citizenship bar for SNAP, age limit for TANF)"}
+          - emit: {event: eligibility.application.decision_completed, data: {decidedAt: $now, applicationId: $object.applicationId, determinationId: $object.determinationId, decisionId: $object.id, program: $object.program, status: ineligible, path: $request.path, denialReasonCode: $request.denialReasonCode}}
+    events:
+      - name: eligibility.decision.created
+        description: Run expedited SNAP screening or initiate Medicaid data exchange when a Decision is created
+        steps:
+          - match: $object.program
+            when:
+              snap: [{call: evaluateSnapExpedited}]
+              medicaid: [{call: initiateMedicaidDataExchange}]
+      - name: data_exchange.call.completed
+        description: Run Medicaid ex parte evaluation when all data exchange results for a Decision are in (42 CFR § 435.911)
+        steps:
+          - call: evaluateMedicaidExParte
+    procedures:
+      - id: evaluateSnapExpedited
+        description: "Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))"
+        call: {POST: eligibility-adapter/evaluate/expedited-screening, body: {decisionId: $object.id, determinationId: $object.determinationId, applicationId: $object.applicationId}}
+      - id: initiateMedicaidDataExchange
+        description: Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)
+        steps:
+          - call: {POST: data-exchange/service-calls, body: {serviceType: fdsh_fti, decisionId: $object.id, applicationId: $object.applicationId}}
+          - call: {POST: data-exchange/service-calls, body: {serviceType: fdsh_medicare_vci, decisionId: $object.id, applicationId: $object.applicationId}}
+      - id: evaluateMedicaidExParte
+        description: Call the Medicaid ex parte adapter when all data exchange results for a Decision are in; adapter triggers approve, deny, or mark-ineligible (42 CFR § 435.911)
+        context:
+          - decision: {from: eligibility/determinations/decisions, where: {id: $this.data.decisionId}}
+          - pendingCall: {from: data-exchange/service-calls, where: {decisionId: $this.data.decisionId, status: pending}}
+        if: '$decision.id != null && $decision.program == "medicaid" && $pendingCall == null'
+        then:
+          - call: {POST: eligibility-adapter/evaluate/medicaid-ex-parte, body: {decisionId: $decision.id, determinationId: $decision.determinationId, applicationId: $decision.applicationId}}

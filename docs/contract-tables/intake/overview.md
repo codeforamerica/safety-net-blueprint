@@ -60,6 +60,7 @@ Transitions are actor- or system-triggered actions. Each lists who can trigger i
 | `complete-review` | under_review | — | caseworker; supervisor | any: callerIsCaseworker, callerIsSupervisor | Emit `review_completed` event |
 | `close` | under_review | closed | caseworker; supervisor; system | any: callerIsCaseworker, callerIsSupervisor, callerIsSystem | Set `closedAt` → current time<br>Emit `closed` event |
 | `withdraw` | submitted \| under_review | withdrawn | applicant; caseworker; supervisor | any: callerIsApplicant, callerIsCaseworker, callerIsSupervisor | Set `withdrawnAt` → current time<br>Emit `withdrawn` event |
+| `flag-expedited` | submitted \| under_review | — | caseworker; supervisor; system | any: callerIsCaseworker, callerIsSupervisor, callerIsSystem | Set `isExpedited` → `true`<br>Emit `expedited_flagged` event |
 
 ### Verification
 

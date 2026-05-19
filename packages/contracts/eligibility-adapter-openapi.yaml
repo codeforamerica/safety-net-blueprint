@@ -1,0 +1,361 @@
+openapi: 3.1.0
+info:
+  title: Eligibility Adapter API
+  version: 1.0.0
+  x-domain: eligibility
+  x-status: stable
+  x-visibility: external
+  description: |
+    Contracted interface for the state-provided eligibility evaluation adapter.
+    The blueprint calls these endpoints to perform program eligibility evaluations.
+    States implement this interface against whatever backend system they use —
+    a rules engine, a legacy case management platform, or any other system.
+    The blueprint treats the adapter as a black box.
+
+    Each call represents one evaluation for one application and one program.
+    All request schemas extend AdapterRequest, which includes a metadata passthrough
+    field the blueprint sets for correlation. Adapters must echo metadata back
+    unchanged in the response. See docs/architecture/cross-cutting/adapters.md.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: https://adapter.example.com
+    description: State-configured adapter server
+  - url: http://localhost:9090
+    description: Local stub server
+tags:
+  - name: Evaluate
+    description: Eligibility evaluation endpoints.
+x-events: {}
+
+paths:
+  /evaluate/expedited-screening:
+    post:
+      summary: Evaluate expedited SNAP screening
+      description: |
+        Determines whether an application qualifies for expedited SNAP processing
+        based on household-level financial criteria (7 CFR § 273.2(i)). Called at
+        submission before caseworker assignment. Member-level data is not required
+        for the baseline criteria; states may extend the request via overlay if
+        their rules engine needs additional context.
+      operationId: evaluateExpeditedScreening
+      tags:
+        - Evaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpeditedScreeningRequest"
+      responses:
+        '200':
+          description: Expedited screening result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpeditedScreeningResponse"
+              example:
+                metadata: {}
+                expedited: false
+        '400':
+          $ref: "./components/responses.yaml#/BadRequest"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /evaluate/medicaid-ex-parte:
+    post:
+      summary: Evaluate Medicaid ex parte
+      description: |
+        Determines Medicaid eligibility for one applicant using electronic data
+        exchange results, without requiring applicant-provided documentation.
+        Called once per applicant after all Medicaid electronic checks complete.
+        Applications that can be fully determined ex parte are closed automatically
+        without caseworker intervention (42 CFR § 435.916).
+      operationId: evaluateMedicaidExParte
+      tags:
+        - Evaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedicaidExParteRequest"
+      responses:
+        '200':
+          description: Medicaid ex parte evaluation result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramDecision"
+              example:
+                metadata: {}
+                program: medicaid
+                status: approved
+                path: ex_parte
+        '400':
+          $ref: "./components/responses.yaml#/BadRequest"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /evaluate/determination:
+    post:
+      summary: Evaluate final determination
+      description: |
+        Runs final eligibility determination for one applicant (or household) and
+        one program after caseworker review is complete. Called once per program
+        with pending decisions after intake.application.review_completed fires.
+
+        Use IndividualDeterminationRequest for per-applicant programs (medicaid,
+        chip, tanf, ccdf) and HouseholdDeterminationRequest for household programs
+        (snap).
+      operationId: evaluateDetermination
+      tags:
+        - Evaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/IndividualDeterminationRequest"
+                - $ref: "#/components/schemas/HouseholdDeterminationRequest"
+      responses:
+        '200':
+          description: Final determination result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramDecision"
+              example:
+                metadata: {}
+                program: snap
+                status: approved
+        '400':
+          $ref: "./components/responses.yaml#/BadRequest"
+        '500':
+          $ref: "./components/responses.yaml#/InternalError"
+
+components:
+  schemas:
+
+    # -------------------------------------------------------------------------
+    # Shared context schemas
+    # -------------------------------------------------------------------------
+
+    MemberContext:
+      description: >
+        A household member with their demographic data and associated income,
+        expenses, and assets. Used as the evaluation payload passed to the
+        adapter for each member.
+      allOf:
+        - $ref: "./schemas/common/member.yaml"
+        - type: object
+          properties:
+            income:
+              type: array
+              items:
+                $ref: "./schemas/common/income.yaml"
+              description: Income records for this member.
+            expenses:
+              type: array
+              items:
+                $ref: "./schemas/common/expenses.yaml"
+              description: Expense records for this member.
+            assets:
+              type: array
+              items:
+                $ref: "./schemas/common/assets.yaml"
+              description: Asset records for this member.
+
+    ElectronicCheckResult:
+      $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceCallResult"
+
+    VerificationSummary:
+      description: >
+        A verification summary as passed by the intake domain. Extends the common
+        shape with the member identifier from the intake domain.
+      allOf:
+        - $ref: "./schemas/common/intake-common.yaml#/$defs/VerificationSummary"
+        - type: object
+          properties:
+            memberId:
+              type: string
+              format: uuid
+              description: >
+                Identifier of the intake domain member this verification applies to.
+                Passed through from intake for correlation — the adapter does not
+                resolve this identifier.
+              x-relationship:
+                resource: External
+
+    # -------------------------------------------------------------------------
+    # Base request schemas for program evaluation
+    # -------------------------------------------------------------------------
+
+    PerMemberProgramRequest:
+      description: >
+        Base request for per-applicant program evaluations (medicaid, chip, tanf,
+        ccdf). One call per applicant per program. Extends AdapterRequest with the
+        program being evaluated and the applicant's context.
+      allOf:
+        - $ref: "./components/adapter.yaml#/AdapterRequest"
+        - type: object
+          required:
+            - program
+            - member
+          properties:
+            program:
+              $ref: "./components/common.yaml#/Program"
+              description: The program being evaluated.
+            member:
+              $ref: "#/components/schemas/MemberContext"
+              description: The applicant being evaluated.
+
+    PerHouseholdProgramRequest:
+      description: >
+        Base request for per-household program evaluations (snap). One call per
+        household per program. Extends AdapterRequest with the program being
+        evaluated, all members in the household benefit unit, and household-level
+        data. The returned ProgramDecision represents the household unit as a whole.
+      allOf:
+        - $ref: "./components/adapter.yaml#/AdapterRequest"
+        - type: object
+          required:
+            - program
+            - members
+            - household
+          properties:
+            program:
+              $ref: "./components/common.yaml#/Program"
+              description: The program being evaluated.
+            members:
+              type: array
+              items:
+                $ref: "#/components/schemas/MemberContext"
+              description: All members in the household benefit unit.
+            household:
+              $ref: "./schemas/common/household.yaml"
+              description: Household-level data used in benefit calculation.
+
+    # -------------------------------------------------------------------------
+    # Response schema
+    # -------------------------------------------------------------------------
+
+    ProgramDecision:
+      description: >
+        Eligibility decision for one program, returned by the adapter. Used as the
+        response for both per-applicant and per-household evaluations — for household
+        programs the decision represents the household unit as a whole. Extends
+        AdapterResponse so the blueprint's metadata is echoed back for correlation.
+      allOf:
+        - $ref: "./components/adapter.yaml#/AdapterResponse"
+        - type: object
+          required:
+            - program
+            - status
+          properties:
+            program:
+              $ref: "./components/common.yaml#/Program"
+              description: The program this decision applies to.
+            status:
+              $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionStatus"
+              description: The eligibility outcome.
+            path:
+              $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionPath"
+              description: How the decision was reached.
+            denialReasonCode:
+              type: string
+              description: Machine-readable reason code when status is denied or ineligible.
+
+    # -------------------------------------------------------------------------
+    # Expedited SNAP screening
+    # -------------------------------------------------------------------------
+
+    ExpeditedScreeningRequest:
+      description: >
+        Request payload for expedited SNAP screening. Evaluates household-level
+        financial criteria only (7 CFR § 273.2(i)) — combined income, assets,
+        and shelter costs. States needing member-level data for their rules engine
+        can extend this via overlay.
+      allOf:
+        - $ref: "./components/adapter.yaml#/AdapterRequest"
+        - type: object
+          required:
+            - household
+          properties:
+            household:
+              $ref: "./schemas/common/household.yaml"
+              description: Household-level data used in SNAP expedited screening criteria.
+
+    ExpeditedScreeningResponse:
+      description: Response from expedited SNAP screening.
+      allOf:
+        - $ref: "./components/adapter.yaml#/AdapterResponse"
+        - type: object
+          required:
+            - expedited
+          properties:
+            expedited:
+              type: boolean
+              description: Whether the application qualifies for expedited SNAP processing.
+
+    # -------------------------------------------------------------------------
+    # Medicaid ex parte
+    # -------------------------------------------------------------------------
+
+    MedicaidExParteRequest:
+      description: >
+        Request payload for Medicaid ex parte evaluation of one applicant. Extends
+        PerMemberProgramRequest with the electronic check results needed to determine
+        Medicaid eligibility without applicant-provided documentation.
+      allOf:
+        - $ref: "#/components/schemas/PerMemberProgramRequest"
+        - type: object
+          required:
+            - electronicChecks
+          properties:
+            electronicChecks:
+              type: array
+              items:
+                $ref: "#/components/schemas/ElectronicCheckResult"
+              description: >
+                Results from FDSH FTI, FDSH Medicare/VCI, and other Medicaid
+                data exchange calls for this applicant.
+
+    # -------------------------------------------------------------------------
+    # Final determination
+    # -------------------------------------------------------------------------
+
+    IndividualDeterminationRequest:
+      description: >
+        Final determination request for per-applicant programs (medicaid, chip,
+        tanf, ccdf). Extends PerMemberProgramRequest with the verification summary
+        for this applicant.
+      allOf:
+        - $ref: "#/components/schemas/PerMemberProgramRequest"
+        - type: object
+          required:
+            - verificationSummary
+          properties:
+            verificationSummary:
+              type: array
+              items:
+                $ref: "#/components/schemas/VerificationSummary"
+              description: Status of verification obligations relevant to this applicant and program.
+
+    HouseholdDeterminationRequest:
+      description: >
+        Final determination request for per-household programs (snap). Extends
+        PerHouseholdProgramRequest with the verification summary for the household.
+      allOf:
+        - $ref: "#/components/schemas/PerHouseholdProgramRequest"
+        - type: object
+          required:
+            - verificationSummary
+          properties:
+            verificationSummary:
+              type: array
+              items:
+                $ref: "#/components/schemas/VerificationSummary"
+              description: Status of verification obligations relevant to this household and program.

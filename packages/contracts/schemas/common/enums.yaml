@@ -1,0 +1,50 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/enums.yaml"
+title: CommonEnums
+description: >
+  Canonical shared enumerations used across domains and artifact types
+  (OpenAPI specs, state machines, rules schemas). Define once here;
+  reference everywhere. States extend values via overlay.
+
+$defs:
+  Domain:
+    type: string
+    enum:
+      - data-exchange
+      - document-management
+      - eligibility
+      - intake
+      - workflow
+    description: >
+      Blueprint domain identifier. Used as the {domain} path parameter on
+      metadata mutation endpoints and as the value type for x-domain annotations
+      on domain OpenAPI specs.
+
+  Frequency:
+    type: string
+    enum:
+      - hourly
+      - daily
+      - weekly
+      - every_2_weeks
+      - twice_a_month
+      - monthly
+      - yearly
+    description: >
+      How often an income or expense amount is received or incurred.
+      Not all values apply to all contexts — hourly and daily are typical
+      for income; weekly through yearly are typical for expenses.
+
+  Program:
+    type: string
+    enum:
+      - snap          # Supplemental Nutrition Assistance Program
+      - medicaid      # Medicaid
+      - chip          # Children's Health Insurance Program
+      - tanf          # Temporary Assistance for Needy Families
+      - ccdf          # Child Care and Development Fund (child care subsidy)
+    description: >
+      Public assistance program available through integrated online benefits
+      applications. Values use the federal program name; state-specific names
+      (e.g., "medical_assistance" for Medicaid) are overlay concerns. States
+      may extend this list via overlay.

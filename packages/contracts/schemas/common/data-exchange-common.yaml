@@ -1,0 +1,62 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/data-exchange-common.yaml"
+title: DataExchangeCommon
+description: >
+  Shared data exchange types used across the eligibility adapter interface and
+  data exchange domain events. Define once here so both consumers stay in sync.
+
+$defs:
+  ServiceType:
+    type: string
+    description: >
+      The specific federal service interface being called. Each type has a
+      distinct adapter interface, input schema, and result schema.
+
+      FDSH services are prefixed fdsh_ — they route through the CMS Federal
+      Data Services Hub. IEVS sources are separate systems with distinct
+      interfaces. See the Data Exchange architecture doc for the full reference.
+    enum:
+      - fdsh_ssa
+      - fdsh_vlp
+      - fdsh_fti
+      - fdsh_medicare
+      - fdsh_vci
+      - ssa_ievs
+      - irs_ievs
+      - swica
+      - uib
+      - save
+      - enrollment_check
+      - incarceration_check
+
+  ServiceCallResult:
+    type: object
+    description: >
+      The outcome of a single data exchange service call. Shared between the
+      CallCompletedEvent payload and the eligibility adapter input schema so
+      both consumers reference the same field names and result values.
+      The serviceResult field carries the service-specific raw payload —
+      its shape is polymorphic on serviceType.
+    additionalProperties: true
+    properties:
+      serviceType:
+        $ref: "#/$defs/ServiceType"
+        description: The data exchange service that performed the check.
+      result:
+        type: string
+        enum:
+          - conclusive
+          - inconclusive
+          - partial
+          - error
+        description: High-level outcome of the service call.
+      receivedAt:
+        type: string
+        format: date-time
+        description: When the result was received.
+      serviceResult:
+        type: object
+        additionalProperties: true
+        description: >
+          Service-type-specific result payload. Shape varies by serviceType —
+          see data-exchange-adapter-openapi.yaml for the schema per service type.

@@ -3,6 +3,7 @@
  */
 
 import { findById } from '../database-manager.js';
+import { matchAndPopHttp } from '../mock-stub-engine.js';
 
 /**
  * Create get-by-id handler for a resource
@@ -14,6 +15,11 @@ export function createGetHandler(apiMetadata, endpoint) {
   const paramName = extractPathParam(endpoint.path);
   return (req, res) => {
     try {
+      const httpStub = matchAndPopHttp(req.method, req.path);
+      if (httpStub) {
+        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+      }
+
       const resourceId = req.params[paramName] || req.params.id;
 
       const resource = findById(endpoint.collectionName, resourceId);

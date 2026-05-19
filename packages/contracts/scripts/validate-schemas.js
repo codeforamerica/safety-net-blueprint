@@ -100,19 +100,27 @@ async function main() {
   // Preload schemas from the schemas/ subdirectory so cross-file $refs resolve.
   // Schemas are added with a key matching their relative path (e.g. "schemas/config-schema.yaml")
   // so that $ref: "schemas/config-schema.yaml" in a domain schema resolves correctly.
+  // Recurses into subdirectories (e.g. schemas/common/) using the same relative-path key convention.
   const schemasSubdir = resolve(baseDir, 'schemas');
-  if (existsSync(schemasSubdir) && statSync(schemasSubdir).isDirectory()) {
-    for (const f of readdirSync(schemasSubdir)) {
-      if (!f.endsWith('.yaml') && !f.endsWith('.yml')) continue;
-      try {
-        const content = readFileSync(resolve(schemasSubdir, f), 'utf8');
-        const schema = yaml.load(content);
-        ajv.addSchema(schema, `schemas/${f}`);
-      } catch {
-        // Skip files that fail to parse
+  function loadSchemasDir(dir, prefix) {
+    if (!existsSync(dir) || !statSync(dir).isDirectory()) return;
+    for (const f of readdirSync(dir)) {
+      const fullPath = resolve(dir, f);
+      const key = `${prefix}${f}`;
+      if (statSync(fullPath).isDirectory()) {
+        loadSchemasDir(fullPath, `${key}/`);
+      } else if (f.endsWith('.yaml') || f.endsWith('.yml')) {
+        try {
+          const content = readFileSync(fullPath, 'utf8');
+          const schema = yaml.load(content);
+          ajv.addSchema(schema, key);
+        } catch {
+          // Skip files that fail to parse
+        }
       }
     }
   }
+  loadSchemasDir(schemasSubdir, 'schemas/');
 
   for (const { filePath, schemaPath, doc } of filesToValidate) {
     const relFile = relative(baseDir, filePath);

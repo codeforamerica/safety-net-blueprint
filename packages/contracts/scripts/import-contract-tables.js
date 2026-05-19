@@ -196,7 +196,11 @@ function findYamlForDomain(outDir, domain, schemaKeyword, csvs) {
 
     if (csvTriggers.size > 0) {
       const scored = matches.map(m => {
-        const existingTriggers = new Set((m.doc.transitions || []).map(t => t.trigger));
+        // Collect triggers from single-machine or multi-machine format
+        const allTransitions = m.doc.machines
+          ? m.doc.machines.flatMap(mac => mac.transitions || [])
+          : (m.doc.transitions || []);
+        const existingTriggers = new Set(allTransitions.map(t => t.trigger));
         const overlap = [...csvTriggers].filter(t => existingTriggers.has(t)).length;
         return { ...m, overlap };
       });
@@ -206,7 +210,10 @@ function findYamlForDomain(outDir, domain, schemaKeyword, csvs) {
   }
 
   // Fallback: prefer the YAML with more transitions (the richer/primary one)
-  return matches.sort((a, b) => (b.doc.transitions?.length || 0) - (a.doc.transitions?.length || 0))[0];
+  const transitionCount = (doc) => doc.machines
+    ? doc.machines.reduce((n, m) => n + (m.transitions?.length || 0), 0)
+    : (doc.transitions?.length || 0);
+  return matches.sort((a, b) => transitionCount(b.doc) - transitionCount(a.doc))[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -903,6 +910,47 @@ function importActions(csvData, existingDoc) {
 }
 
 // ---------------------------------------------------------------------------
+// Multi-machine import helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Apply an import function to a document that may use the machines array format.
+ * When the CSV has an Object column, rows are grouped by object name and the
+ * importFn is applied separately to each machine. Without an Object column,
+ * importFn is applied to the document as-is (single-machine or legacy format).
+ */
+function applyToMachine(parsedCsv, doc, importFn) {
+  if (!doc.machines) return importFn(parsedCsv, doc);
+
+  const headers = parsedCsv.headers || [];
+  const objectColIdx = headers.indexOf('Object');
+  if (objectColIdx === -1) return importFn(parsedCsv, doc);
+
+  // Strip Object column, group rows by machine name
+  const strippedHeaders = headers.filter((_, i) => i !== objectColIdx);
+  const byObject = new Map();
+  for (const row of parsedCsv.data) {
+    const objectName = row[objectColIdx];
+    const strippedRow = row.filter((_, i) => i !== objectColIdx);
+    if (!byObject.has(objectName)) byObject.set(objectName, []);
+    byObject.get(objectName).push(strippedRow);
+  }
+
+  const machines = [...doc.machines];
+  for (const [objectName, rows] of byObject) {
+    const machineIdx = machines.findIndex(m => m.object === objectName);
+    if (machineIdx === -1) {
+      console.warn(`  Warning: no machine found for object "${objectName}" — skipping`);
+      continue;
+    }
+    const machineCsv = { headers: strippedHeaders, data: rows };
+    machines[machineIdx] = importFn(machineCsv, machines[machineIdx]);
+  }
+
+  return { ...doc, machines };
+}
+
+// ---------------------------------------------------------------------------
 // Determine what CSV file maps to which contract type and section
 // ---------------------------------------------------------------------------
 
@@ -1141,7 +1189,7 @@ function main() {
           break;
         // Old-format sections (backward compatibility)
         case 'transitions':
-          doc = importTransitions(parsed, doc);
+          doc = applyToMachine(parsed, doc, importTransitions);
           break;
         case 'triggers':
           doc = importTriggers(parsed, doc);
@@ -1153,10 +1201,10 @@ function main() {
           doc = importHandlers(parsed, doc);
           break;
         case 'guards':
-          doc = importGuards(parsed, doc);
+          doc = applyToMachine(parsed, doc, importGuards);
           break;
         case 'sla':
-          doc = importSla(parsed, doc);
+          doc = applyToMachine(parsed, doc, importSla);
           break;
         case 'sm-rules':
           doc = importSmRules(parsed, doc);
@@ -1165,7 +1213,7 @@ function main() {
           doc = importActions(parsed, doc);
           break;
         case 'request-bodies':
-          doc = importRequestBodies(parsed, doc);
+          doc = applyToMachine(parsed, doc, importRequestBodies);
           break;
         case 'rules':
           doc = importRuleSet(parsed, doc, csv.ruleType);

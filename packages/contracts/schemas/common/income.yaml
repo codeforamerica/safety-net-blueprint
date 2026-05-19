@@ -1,0 +1,82 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/income.yaml"
+title: Income
+description: >
+  A single income record for a household member. Used across domains wherever
+  income data is collected, evaluated, or passed to the rules engine adapter.
+
+type: object
+required:
+  - type
+  - amount
+  - frequency
+
+properties:
+  type:
+    $ref: "#/$defs/IncomeType"
+  unearnedType:
+    $ref: "#/$defs/UnearnedIncomeType"
+    description: Required when type is unearned.
+  incomeBasis:
+    $ref: "#/$defs/IncomeBasis"
+  amount:
+    type: number
+    format: float
+    minimum: 0
+    description: The income amount for the given frequency period.
+  frequency:
+    $ref: "./enums.yaml#/$defs/Frequency"
+  startDate:
+    type: string
+    format: date
+    description: When the member first began receiving this income.
+  endDate:
+    type: string
+    format: date
+    description: When the member expects this income to end, if applicable.
+
+additionalProperties: true
+
+$defs:
+  IncomeType:
+    type: string
+    enum:
+      - employed
+      - self_employed
+      - unearned
+    description: The category of income.
+
+  UnearnedIncomeType:
+    type: string
+    enum:
+      - unemployment
+      - kinship_payment
+      - veterans_programs
+      - adoption_and_refugee_services
+      - ssi_or_ssdi
+      - private_disability
+      - workers_compensation
+      - disability_from_veterans_programs
+      - legal_settlement
+      - scholarship
+      - educational_grant
+      - work_study
+      - spousal_support
+      - child_support
+      - retirement_or_pension
+      - investment_interest_and_dividends
+      - social_security_retirement
+      - rental_income
+      - gambling_or_lottery_winnings
+      - gifts_or_donations
+      - loan_or_mortgage_income
+      - research_participation
+      - other
+    description: The specific type of unearned income.
+
+  IncomeBasis:
+    type: string
+    enum:
+      - net
+      - gross
+    description: Whether the amount is net or gross.

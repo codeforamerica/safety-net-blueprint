@@ -20,4 +20,4 @@ properties:
     description: Schema version for change tracking.
 
   domain:
-    $ref: "common.yaml#/$defs/Domain"
+    $ref: "common/enums.yaml#/$defs/Domain"

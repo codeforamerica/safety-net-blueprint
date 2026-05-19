@@ -10,6 +10,7 @@ import { initializeSlaInfo } from '../sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
+import { matchAndPopHttp } from '../mock-stub-engine.js';
 
 /**
  * Create create handler for a resource
@@ -22,6 +23,13 @@ import { emitEvent } from '../emit-event.js';
 export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null) {
   return (req, res) => {
     try {
+      // HTTP stub intercept — if a stub is registered for this method + path, return it
+      // before normal processing. Used in tests to simulate adapter responses.
+      const httpStub = matchAndPopHttp(req.method, req.path);
+      if (httpStub) {
+        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+      }
+
       // Check if request body is an object (400 for malformed request)
       if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
         return res.status(400).json({

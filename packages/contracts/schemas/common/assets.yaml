@@ -1,0 +1,43 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/assets.yaml"
+title: Asset
+description: >
+  A single asset record for a household member. Used across domains wherever
+  asset data is collected, evaluated, or passed to the rules engine adapter.
+  Liquid assets are used in SNAP resource tests and expedited screening
+  (7 CFR § 273.8, 7 CFR § 273.2(i)).
+
+type: object
+required:
+  - type
+  - value
+
+properties:
+  type:
+    $ref: "#/$defs/AssetType"
+  value:
+    type: number
+    format: float
+    minimum: 0
+    description: The current fair market value of the asset.
+  description:
+    type: string
+    description: Optional free-text description of the asset.
+
+additionalProperties: true
+
+$defs:
+  AssetType:
+    type: string
+    enum:
+      - liquid
+      - vehicle
+      - real_property
+      - retirement_account
+      - life_insurance
+      - other
+    description: >
+      The category of asset. Liquid assets (cash, checking, savings) are
+      counted in the SNAP resource test (7 CFR § 273.8) and expedited
+      screening resource threshold. Vehicle and real property treatment
+      varies by program and state policy.

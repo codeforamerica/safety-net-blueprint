@@ -409,21 +409,26 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
       continue;
     }
 
-    // Find the item endpoint that matches the state machine object
-    // e.g., object "Task" matches path "/tasks/{taskId}"
-    const objectCollection = sm.object.toLowerCase() + 's';
+    // Find the item endpoint that matches the state machine object.
+    // Uses suffix matching so single-word objects (e.g., "Verification") correctly match
+    // sub-resource collections like "application-verifications".
+    // e.g., object "Task" matches "tasks"; object "Verification" matches "application-verifications"
+    const objectPluralSuffix = sm.object.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's';
     const itemEndpoint = apiSpec.endpoints.find(
-      e => e.method.toLowerCase() === 'get' && isItemEndpoint(e.path)
-        && deriveCollectionName(e.path, apiSpec.serverBasePath) === objectCollection
+      e => e.method.toLowerCase() === 'get' && (isItemEndpoint(e.path) || isSubItemEndpoint(e.path))
+        && (() => {
+          const col = deriveCollectionName(e.path, apiSpec.serverBasePath);
+          return col === objectPluralSuffix || col.endsWith('-' + objectPluralSuffix);
+        })()
     );
     if (!itemEndpoint) {
       console.warn(`  No item endpoint found for "${sm.domain}" — skipping state machine routes`);
       continue;
     }
 
-    const basePath = itemEndpoint.path; // e.g., /tasks/{taskId}
-    const paramMatch = basePath.match(/\{([^}]+)\}/);
-    const paramName = paramMatch ? paramMatch[1] : 'id';
+    const basePath = itemEndpoint.path; // e.g., /tasks/{taskId} or /applications/{applicationId}/verifications/{verificationId}
+    const allParams = [...basePath.matchAll(/\{([^}]+)\}/g)];
+    const paramName = allParams.length > 0 ? allParams[allParams.length - 1][1] : 'id';
 
     // Derive collection name from the resource path
     const collectionName = deriveCollectionName(itemEndpoint.path, apiSpec.serverBasePath);

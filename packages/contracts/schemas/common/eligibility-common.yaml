@@ -1,0 +1,33 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/eligibility-common.yaml"
+title: EligibilityCommon
+description: >
+  Shared eligibility types used by the eligibility domain and the eligibility
+  adapter interface. Referenced by both so states can overlay the adapter spec
+  to diverge from the baseline without affecting the internal domain.
+
+$defs:
+  DecisionStatus:
+    type: string
+    enum:
+      - pending
+      - approved
+      - denied
+      - ineligible
+    description: >
+      Outcome status of a single program eligibility decision.
+      `pending` — not yet evaluated, or deferred to caseworker review by the
+      rules engine. `approved` — member meets program requirements. `denied` —
+      member does not meet requirements based on provided information.
+      `ineligible` — member cannot qualify for this program (e.g., citizenship
+      bar, age limit).
+
+  DecisionPath:
+    type: string
+    enum:
+      - auto
+      - manual
+    description: >
+      How the decision was reached. `auto` — resolved by the rules engine
+      without caseworker intervention (e.g., Medicaid ex parte). `manual` —
+      resolved by a caseworker after review.

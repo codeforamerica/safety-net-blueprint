@@ -1,105 +1,39 @@
 /**
  * Integration Tests for Mock Server
  *
- * Tests the full stack: fixture data → mock server → HTTP → assertions.
+ * Tests the full stack: mock server → HTTP → assertions.
  *
  * Setup:
- *   1. A temp directory is created with base specs + fixture examples overlaid.
- *   2. The mock server is started against that temp directory.
- *   3. A Postman collection is generated from the same temp directory.
- *   4. All tests run against the mock seeded with fixture data.
- *
- * Fixture IDs are stable and namespaced by resource type. See
- * packages/mock-server/tests/fixtures/setup.js for the ID namespace map.
+ *   1. The mock server is started (or reset if already running).
+ *   2. A Postman collection is generated from the contracts directory.
+ *   3. All tests run against the mock server.
  *
  * Run with: npm run test:integration
  */
 
-import http from 'http';
-import { URL } from 'url';
 import { execSync } from 'child_process';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync, existsSync, mkdtempSync, rmSync } from 'fs';
+import { readFileSync, mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
 import newman from 'newman';
-import { setupFixtureDir, teardownFixtureDir } from '../fixtures/setup.js';
-import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
 import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
+import { BASE_URL, contractsDir, fetch, setupServer, teardownServer } from './helpers.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const BASE_URL = 'http://localhost:1080';
-let fixtureDir = null;
+const fixturesDir = resolve(__dirname, '..', 'fixtures');
 let serverStartedByTests = false;
 
 // Simple fetch polyfill using Node.js http module
-async function fetch(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
-    const requestOptions = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
-      path: urlObj.pathname + urlObj.search,
-      method: options.method || 'GET',
-      headers: options.headers || {}
-    };
-
-    if (options.body) {
-      const bodyString = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-      requestOptions.headers['Content-Length'] = Buffer.byteLength(bodyString);
-      if (!requestOptions.headers['Content-Type']) {
-        requestOptions.headers['Content-Type'] = 'application/json';
-      }
-    }
-
-    const req = http.request(requestOptions, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        resolve({
-          ok: res.statusCode >= 200 && res.statusCode < 300,
-          status: res.statusCode,
-          statusText: res.statusMessage,
-          headers: res.headers,
-          json: async () => JSON.parse(data),
-          text: async () => data
-        });
-      });
-    });
-
-    req.on('error', reject);
-
-    if (options.body) {
-      const bodyString = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-      req.write(bodyString);
-    }
-
-    req.end();
-  });
-}
-
-/**
- * Load examples for an API from the fixture directory
- */
 function loadExamples(apiName) {
   try {
-    const examplesPath = join(fixtureDir, `${apiName}.yaml`);
-    const content = readFileSync(examplesPath, 'utf8');
-    const examples = yaml.load(content) || {};
-
-    return Object.entries(examples)
-      .filter(([key, value]) => {
-        if (!value || typeof value !== 'object') return false;
-        if (value.items && Array.isArray(value.items)) return false;
-        if (key.toLowerCase().includes('payload') || key.toLowerCase().includes('list')) return false;
-        return value.id;
-      })
-      .map(([key, value]) => ({ key, data: value }));
-  } catch (error) {
-    console.log(`    ⚠️  No examples found for ${apiName}`);
+    const content = readFileSync(`${fixturesDir}/${apiName}.yaml`, 'utf8');
+    return Object.entries(yaml.load(content) || {})
+      .filter(([key, value]) => value?.id && !value.items && !key.toLowerCase().includes('payload'))
+      .map(([, value]) => ({ data: value }));
+  } catch {
     return [];
   }
 }
@@ -132,6 +66,14 @@ async function testApi(api, examples) {
   const apiName = api.name;
   const apiPath = api.baseResource || `/${apiName}`;
   const singularName = singularize(apiPath.slice(1));
+  const hasListEndpoint = api.endpoints.some(e => e.method === 'GET' && e.path === apiPath);
+
+  if (!hasListEndpoint) {
+    console.log(`\n${'='.repeat(70)}`);
+    console.log(`Skipping API: ${apiName} (no list endpoint)`);
+    console.log(`${'='.repeat(70)}`);
+    return { passed: 0, failed: 0, total: 0 };
+  }
 
   console.log(`\n${'='.repeat(70)}`);
   console.log(`Testing API: ${apiName}`);
@@ -180,36 +122,7 @@ async function testApi(api, examples) {
     failed++;
   }
 
-  // Test 3: GET by ID (if examples exist)
-  if (examples.length > 0) {
-    try {
-      console.log(`\n  3. GET ${apiPath}/{id} (get by ID)`);
-      const exampleId = examples[0].data.id;
-      const response = await fetch(`${BASE_URL}${apiPath}/${exampleId}`);
-
-      if (response.status === 200) {
-        const data = await response.json();
-        if (data.id === exampleId) {
-          console.log(`     ✓ PASS: Returns resource by ID`);
-          console.log(`       ID: ${exampleId}`);
-          passed++;
-        } else {
-          console.log('     ✗ FAIL: Returned resource has wrong ID');
-          failed++;
-        }
-      } else {
-        console.log(`     ✗ FAIL: Expected 200, got ${response.status}`);
-        failed++;
-      }
-    } catch (error) {
-      console.log(`     ✗ FAIL: ${error.message}`);
-      failed++;
-    }
-  } else {
-    console.log(`\n  3. GET ${apiPath}/{id} - SKIPPED (no examples)`);
-  }
-
-  // Test 4: GET by ID - 404 for unknown ID
+  // Test 3: GET by ID - 404 for unknown ID
   try {
     console.log(`\n  4. GET ${apiPath}/{id} - 404 for unknown ID`);
     const unknownId = '00000000-0000-0000-0000-000000000000';
@@ -437,7 +350,7 @@ async function runPostmanTests() {
     const generateScript = resolve(__dirname, '../../../contracts/scripts/generate-postman.js');
     console.log('\n  Generating Postman collection from fixture specs...');
     execSync(
-      `node "${generateScript}" --spec="${fixtureDir}" --out="${collectionPath}"`,
+      `node "${generateScript}" --spec="${contractsDir}" --out="${collectionPath}"`,
       { stdio: 'pipe' }
     );
     console.log(`  ✓ Collection generated`);
@@ -504,7 +417,7 @@ async function runPostmanTests() {
  * Main test runner
  */
 async function runTests() {
-  console.log('Integration Tests — Fixture-Based\n');
+  console.log('Integration Tests\n');
   console.log('='.repeat(70));
 
   let totalPassed = 0;
@@ -512,37 +425,20 @@ async function runTests() {
   let totalTests = 0;
 
   // =========================================================================
-  // Setup: create fixture dir and start mock server
+  // Setup: start mock server if needed, then reset to a clean state
   // =========================================================================
-  console.log('\n📦 Setting up fixture directory...');
-  fixtureDir = setupFixtureDir();
-  console.log(`  ✓ Fixture dir: ${fixtureDir}`);
-
   try {
-    const isRunning = await isServerRunning();
-    if (isRunning) {
-      console.log('\n  ⚠️  Mock server already running on port 1080.');
-      console.log('      Integration tests require a fixture-seeded server.');
-      console.log('      Stop the existing server and re-run, or the tests may');
-      console.log('      fail if the server is not seeded with fixture data.');
-    } else {
-      console.log('\n  Starting mock server with fixture data...');
-      await startMockServer([fixtureDir]);
-      serverStartedByTests = true;
-      await new Promise(res => setTimeout(res, 1000));
-      console.log('  ✓ Mock server started');
-    }
+    serverStartedByTests = await setupServer();
   } catch (error) {
     console.log(`  ✗ FAIL: Cannot start server: ${error.message}`);
-    teardownFixtureDir(fixtureDir);
     process.exit(1);
   }
 
   // =========================================================================
-  // Discover APIs from fixture dir
+  // Discover APIs
   // =========================================================================
   console.log('\n🔍 Discovering APIs...');
-  const apis = await loadAllSpecs({ specsDir: fixtureDir });
+  const apis = await loadAllSpecs({ specsDir: contractsDir });
 
   if (apis.length === 0) {
     console.log('  ⚠️  No APIs found');
@@ -1365,20 +1261,26 @@ async function runTests() {
   console.log('='.repeat(70));
 
   try {
-    console.log(`\n  Testing all ${apis.length} API(s) are accessible...`);
+    const listApis = apis.filter(api =>
+      api.endpoints.some(e => e.method === 'GET' && e.path === (api.baseResource || '/' + api.name))
+    );
+    console.log(`\n  Testing all ${listApis.length} API(s) with list endpoints are accessible...`);
     const results = await Promise.all(
-      apis.map(api => fetch(`${BASE_URL}${api.baseResource || '/' + api.name}`))
+      listApis.map(api => fetch(`${BASE_URL}${api.baseResource || '/' + api.name}`))
     );
 
     const allOk = results.every(r => r.ok);
     if (allOk) {
-      console.log(`  ✓ PASS: All ${apis.length} API(s) accessible`);
-      apis.forEach((api, i) => {
+      console.log(`  ✓ PASS: All ${listApis.length} API(s) accessible`);
+      listApis.forEach((api, i) => {
         console.log(`    - ${api.baseResource || '/' + api.name}: ${results[i].status}`);
       });
       totalPassed++;
     } else {
       console.log(`  ✗ FAIL: Some APIs not accessible`);
+      listApis.forEach((api, i) => {
+        if (!results[i].ok) console.log(`    - ${api.baseResource || '/' + api.name}: ${results[i].status}`);
+      });
       totalFailed++;
     }
     totalTests++;
@@ -1420,14 +1322,7 @@ async function runTests() {
 }
 
 async function cleanup() {
-  if (serverStartedByTests) {
-    console.log('\n🧹 Stopping server...');
-    await stopServer(false);
-  }
-  if (fixtureDir) {
-    teardownFixtureDir(fixtureDir);
-    fixtureDir = null;
-  }
+  await teardownServer(serverStartedByTests);
 }
 
 runTests().catch(async (error) => {

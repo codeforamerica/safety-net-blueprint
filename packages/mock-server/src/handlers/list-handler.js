@@ -4,6 +4,7 @@
 
 import { getDatabase } from '../database-manager.js';
 import { executeSearch } from '../search-engine.js';
+import { matchAndPopHttp } from '../mock-stub-engine.js';
 
 /**
  * Extract all string-typed field paths from an OpenAPI schema.
@@ -41,6 +42,11 @@ export function createListHandler(apiMetadata, endpoint) {
 
   return (req, res) => {
     try {
+      const httpStub = matchAndPopHttp(req.method, req.path);
+      if (httpStub) {
+        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+      }
+
       // Get database (this will create it if it doesn't exist)
       const db = getDatabase(endpoint.collectionName);
 
