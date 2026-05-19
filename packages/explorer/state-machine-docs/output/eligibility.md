@@ -28,8 +28,6 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
 
 - **`intake.application.submitted`** *(emitted by [Intake/Application](intake.md#application))*
   - Create a Determination for the submitted application
-- **`eligibility.determination.created`**
-  - Create one Decision per program when a Determination is created
 - **`intake.application.review_completed`** *(emitted by [Intake/Application](intake.md#application))*
   - Look up: determination
   - Call the final determination adapter for each remaining pending Decision (42 CFR § 435.912)

@@ -295,6 +295,35 @@ test('executeTransition — emit: step stores event in database', () => {
   assert.strictEqual(emitted.data.resourceId, 'res-steps-2');
 });
 
+test('executeTransition — emit: subject override uses value expression instead of resourceId', () => {
+  insertResource('testresources', { id: 'res-steps-2b', status: 'pending', parentId: 'parent-app-99' });
+
+  const machine = makeMachine([{
+    id: 'complete',
+    transition: { from: 'pending', to: 'completed' },
+    guards: [],
+    steps: [{ emit: { event: 'eligibility.application.determination_completed', subject: '$object.parentId', data: {} } }]
+  }]);
+
+  const result = executeTransition({
+    resourceName: 'testresources',
+    resourceId: 'res-steps-2b',
+    trigger: 'complete',
+    callerId: 'system',
+    callerRoles: ['system'],
+    stateMachine: makeStateMachine(),
+    machine,
+    rules: [],
+    now: '2025-01-01T00:00:00Z'
+  });
+
+  assert.strictEqual(result.success, true);
+  const { items: events } = findAll('events', {});
+  const emitted = events.find(e => e.type && e.type.includes('determination_completed'));
+  assert.ok(emitted, 'determination_completed event should be stored');
+  assert.strictEqual(emitted.subject, 'parent-app-99', 'subject should be the overridden value, not the resource id');
+});
+
 test('executeTransition — if: step runs correct branch based on resource state', () => {
   insertResource('testresources', { id: 'res-steps-3', status: 'pending', isExpedited: false });
 

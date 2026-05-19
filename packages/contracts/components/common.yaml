@@ -1,6 +1,6 @@
 # Common domain schemas shared across multiple APIs
 #
-# Schemas: EmployerInfo, Language, Program, Signature
+# Schemas: EmployerInfo, Language, PlatformEvent, Program, Signature
 #
 # See also:
 #   contact.yaml  — Address, Email, PhoneNumber

@@ -75,7 +75,6 @@ Event subscriptions react to named domain events — including object creation, 
 | Event | Steps |
 |-------|-------|
 | `intake.application.submitted` | POST `eligibility/determinations` |
-| `eligibility.determination.created` | Call `initializeDetermination` |
 | `intake.application.review_completed` | Call `evaluateFinalDetermination` |
 | `eligibility.application.decision_completed` | If ($pendingDecision == null): POST `eligibility/determinations/$this.data.determinationId/complete` |
 | `intake.application.withdrawn` | If ($determination.id != null): POST `eligibility/determinations/$determination.id/withdraw` |
@@ -104,7 +103,6 @@ Named step sequences called from transitions and events. They encapsulate reusab
 
 | ID | Scope | Description | Parameters |
 |----|-------|-------------|------------|
-| `initializeDetermination` | Determination | Create one Decision per program when a Determination is created | — |
 | `evaluateFinalDetermination` | Determination | Call the final determination adapter for each remaining pending Decision (42 CFR § 435.912) | — |
 | `evaluateSnapExpedited` | Decision | Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i)) | — |
 | `initiateMedicaidDataExchange` | Decision | Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916) | — |

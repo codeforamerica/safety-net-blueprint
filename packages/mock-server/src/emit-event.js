@@ -59,7 +59,7 @@ export function emitEventEnvelope(envelope) {
  * @param {string|null} [options.now]  - ISO timestamp. Defaults to current time.
  * @returns {Object} The stored event record
  */
-export function emitEvent({ domain, object, action, resourceId, source, data = null, callerId = null, traceparent = null, now = null }) {
+export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, traceparent = null, now = null }) {
   const timestamp = now || new Date().toISOString();
   const normalizedDomain = domain.replace(/-/g, '_');
   const normalizedObject = object.replace(/-/g, '_');
@@ -70,7 +70,7 @@ export function emitEvent({ domain, object, action, resourceId, source, data = n
     id: randomUUID(),
     type,
     source: source || `/${domain}`,
-    subject: resourceId,
+    subject: subject ?? resourceId,
     time: timestamp,
     datacontenttype: 'application/json',
     traceparent: traceparent || null,

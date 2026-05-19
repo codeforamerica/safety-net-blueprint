@@ -23,6 +23,13 @@ const CASEWORKER = caller('worker-1', 'caseworker');
 const DETERMINATIONS = '/eligibility/determinations';
 const SERVICE_CALLS = '/data-exchange/service-calls';
 
+async function createApplicationMember(appId, programs = []) {
+  return fetch(`${BASE_URL}/intake/applications/${appId}/members`, {
+    method: 'POST',
+    body: { roles: ['primary_applicant'], programsApplyingFor: programs },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Read endpoints
 // ---------------------------------------------------------------------------
@@ -71,6 +78,7 @@ async function testDeterminationCreation() {
 
   await test('intake.application.submitted → one Decision created per program', async () => {
     const appId2 = `app-elig-${Date.now()}-2`;
+    await createApplicationMember(appId2, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId2);
 
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId2}`)).json();
@@ -88,6 +96,7 @@ async function testDeterminationCreation() {
 
   await test('Medicaid submission creates a Medicaid Decision', async () => {
     const appId3 = `app-elig-${Date.now()}-3`;
+    await createApplicationMember(appId3, ['medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId3);
 
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId3}`)).json();
@@ -182,6 +191,7 @@ async function testDecisionTransitions() {
 
   async function createDecision(program = 'snap') {
     const appId = `app-dec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    await createApplicationMember(appId, [program]);
     await injectEvent('intake.application.submitted', { programs: [program] }, appId);
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
     assert.ok(dets.length > 0, 'Determination should exist');
@@ -277,6 +287,7 @@ async function testMedicaidServiceCalls() {
 
   await test('Medicaid submission creates two data-exchange service calls (fdsh_fti and fdsh_medicare_vci)', async () => {
     const appId = `app-med-${Date.now()}`;
+    await createApplicationMember(appId, ['medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId);
 
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
@@ -295,6 +306,7 @@ async function testMedicaidServiceCalls() {
 
   await test('SNAP submission does not create data-exchange service calls', async () => {
     const appId = `app-snap-sc-${Date.now()}`;
+    await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
@@ -331,6 +343,7 @@ async function testSnapExpeditedScreeningStub() {
     // Submit SNAP application — triggers Decision creation → eligibility.decision.created →
     // evaluateSnapExpedited → POST /eligibility-adapter/evaluate/expedited-screening → stub intercepts
     const appId = `app-snap-stub-${Date.now()}`;
+    await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
     // Stub should be consumed
@@ -343,6 +356,85 @@ async function testSnapExpeditedScreeningStub() {
 }
 
 // ---------------------------------------------------------------------------
+// Cross-domain write-back — emit subject routes to application, not determination
+// ---------------------------------------------------------------------------
+
+async function testCrossDomainWriteBack() {
+  section('Cross-domain write-back — emit subject correctness');
+
+  await test('flag-expedited on Determination sets isExpedited on the intake Application', async () => {
+    // Submit a real application through intake so the Determination is created
+    // by the state machine (not a synthetic inject), exercising the full emit path.
+    const appRes = await fetch(`${BASE_URL}/intake/applications`, {
+      method: 'POST',
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    assert.strictEqual(appRes.status, 201, 'application creation should return 201');
+    const app = await appRes.json();
+    const appId = app.id;
+
+    // Submit the application to trigger Determination creation via the state machine
+    await fetch(`${BASE_URL}/intake/applications/${appId}/submit`, {
+      method: 'POST',
+      headers: caller('applicant-1', 'applicant'),
+    });
+
+    // Get the Determination created by the submission flow
+    const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
+    assert.ok(dets.length > 0, 'Determination should be created by submission flow');
+    const det = dets[0];
+
+    // Call flag-expedited on the Determination as system
+    const flagRes = await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}/flag-expedited`, {
+      method: 'POST', headers: SYSTEM,
+    });
+    assert.strictEqual(flagRes.status, 200, `flag-expedited should return 200, got ${flagRes.status}`);
+
+    // The eligibility state machine emits eligibility.application.expedited with
+    // subject: $object.applicationId. The intake state machine subscribes and PATCHes
+    // the application. Assert the write-back landed on the correct application.
+    const updatedApp = await (await fetch(`${BASE_URL}/intake/applications/${appId}`)).json();
+    assert.strictEqual(updatedApp.isExpedited, true, 'isExpedited should be set on the application by cross-domain write-back');
+  });
+
+  await test('determination_completed on Determination closes the intake Application', async () => {
+    const appRes = await fetch(`${BASE_URL}/intake/applications`, {
+      method: 'POST',
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    const app = await appRes.json();
+    const appId = app.id;
+
+    // Add a member so a SNAP Decision is created on submission
+    await createApplicationMember(appId, ['snap']);
+
+    await fetch(`${BASE_URL}/intake/applications/${appId}/submit`, {
+      method: 'POST',
+      headers: caller('applicant-1', 'applicant'),
+    });
+
+    // Move application to under_review so it can be closed (system-only transition)
+    await fetch(`${BASE_URL}/intake/applications/${appId}/open`, {
+      method: 'POST', headers: SYSTEM,
+    });
+
+    const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
+    const det = dets[0];
+    const { items: decisions } = await (await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}/decisions`)).json();
+    const decision = decisions[0];
+
+    // Approve the Decision — triggers determination completion → determination_completed event
+    await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}/decisions/${decision.id}/approve`, {
+      method: 'POST', headers: SYSTEM, body: { path: 'auto' },
+    });
+
+    // determination_completed emits with subject: $object.applicationId; intake closes the application
+    const updatedApp = await (await fetch(`${BASE_URL}/intake/applications/${appId}`)).json();
+    assert.strictEqual(updatedApp.status, 'closed', 'application should be closed by cross-domain determination_completed write-back');
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Determination completes when all Decisions are resolved
 // ---------------------------------------------------------------------------
 
@@ -351,6 +443,7 @@ async function testDeterminationCompletion() {
 
   await test('eligibility.application.decision_completed with no pending Decisions → Determination completes', async () => {
     const appId = `app-comp-${Date.now()}`;
+    await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
@@ -371,6 +464,7 @@ async function testDeterminationCompletion() {
 
   await test('second Decision still pending — Determination stays in_progress', async () => {
     const appId = `app-partial-${Date.now()}`;
+    await createApplicationMember(appId, ['snap', 'medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['snap', 'medicaid'] }, appId);
 
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
@@ -437,6 +531,7 @@ async function testMedicaidExParteEvaluation() {
     await registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/medicaid-ex-parte' } });
 
     const appId = `app-exparte-${Date.now()}`;
+    await createApplicationMember(appId, ['medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId);
 
     // Get the Medicaid Decision ID
@@ -468,6 +563,7 @@ async function testFinalDetermination() {
     // Stub out the expedited screening call triggered when the SNAP Decision is created
     await registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/expedited-screening' } });
 
+    await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
     // Register HTTP stub for the final determination adapter call
@@ -502,6 +598,7 @@ async function runTests() {
     await testFinalDetermination();
     await testDeterminationCompletion();
     await testWithdrawal();
+    await testCrossDomainWriteBack();
   } finally {
     await teardownServer(serverStartedByTests);
   }

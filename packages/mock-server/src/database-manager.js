@@ -16,6 +16,17 @@ const __dirname = dirname(__filename);
 // Store database connections
 const databases = new Map();
 
+// Per-collection default field values applied on create (populated at startup from response schemas)
+const collectionDefaults = new Map();
+
+/**
+ * Register default field values for a collection. Applied by create() to every new record.
+ * Used to ensure readOnly required fields (e.g. evidence: []) are present on newly created resources.
+ */
+export function registerCollectionDefaults(collectionName, defaults) {
+  collectionDefaults.set(collectionName, defaults);
+}
+
 /**
  * Get or create database for a resource type
  * @param {string} resourceName - Name of the resource (e.g., 'persons')
@@ -185,7 +196,9 @@ export function create(resourceName, data) {
   const id = randomUUID();
   const now = new Date().toISOString();
   
+  const defaults = collectionDefaults.get(resourceName) || {};
   const resource = {
+    ...defaults,
     ...data,
     id,
     createdAt: now,

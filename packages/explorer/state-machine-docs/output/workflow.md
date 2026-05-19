@@ -151,5 +151,9 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Auto-cancel after 30 days client unresponsive
 - **`workflow.verification_timeout`**
   - Auto-resume after 7 days verification timeout
+- **`eligibility.application.expedited`**
+  - Look up: task
+  - If `id is set`:
+    - `PATCH workflow/tasks/$task.id`
 - **`intake.application.submitted`** *(emitted by [Intake/Application](intake.md#application))*
   - Create an intake review task when an application is submitted

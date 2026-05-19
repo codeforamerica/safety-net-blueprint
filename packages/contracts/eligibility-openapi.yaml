@@ -117,7 +117,7 @@ paths:
         - Determinations
       x-sortable:
         fields: [createdAt, updatedAt, program, status]
-        default: program
+        default: -createdAt
         tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/LimitParam"
@@ -221,6 +221,7 @@ components:
         automatically (via electronic checks and rules engine) or manually by a caseworker.
       required:
         - determinationId
+        - memberId
         - program
         - status
       properties:
@@ -235,6 +236,20 @@ components:
           description: The determination this decision belongs to.
           x-relationship:
             resource: Determination
+        applicationId:
+          type: string
+          format: uuid
+          description: The application this decision belongs to.
+          x-relationship:
+            resource: Application
+            domain: intake
+        memberId:
+          type: string
+          format: uuid
+          description: The household member this decision covers.
+          x-relationship:
+            resource: ApplicationMember
+            domain: intake
         program:
           $ref: "./components/common.yaml#/Program"
           description: The program this decision covers.
@@ -353,6 +368,7 @@ components:
         - applicationId
         - determinationId
         - decisionId
+        - memberId
         - program
         - status
       properties:
@@ -372,6 +388,13 @@ components:
           format: uuid
           x-relationship:
             resource: Decision
+        memberId:
+          type: string
+          format: uuid
+          description: The household member this decision covers.
+          x-relationship:
+            resource: ApplicationMember
+            domain: intake
         program:
           $ref: "./components/common.yaml#/Program"
         status:

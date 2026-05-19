@@ -3,8 +3,9 @@ Application,workflow.task.claimed,Call `openApplication`; Call `createInterview`
 Application,intake.application.submitted,Call `createProgramVerifications`; Call `createProgramVerifications`
 Application,data_exchange.call.completed,Call `updateVerificationOnCallResult`
 Application,scheduling.appointment.scheduled,Call `linkAppointment`
-Application,document_management.version.uploaded,Call `satisfyVerificationOnDocumentUpload`
-Application,eligibility.application.determination_completed,Call `recordDetermination`
-Application,eligibility.application.all_determined,POST `intake/applications/$this.subject/close`
+Application,document_management.document_version.uploaded,Call `satisfyVerificationOnDocumentUpload`
+Application,eligibility.determination.created,Call `forEach`
+Application,eligibility.application.decision_completed,Call `recordDetermination`
+Application,eligibility.application.determination_completed,If (false): POST `intake/applications/$this.subject/submit-for-approval`; else: POST `intake/applications/$this.subject/close`
 Application,eligibility.application.expedited,PATCH `intake/applications/$this.subject`
 Verification,intake.verification.created,Call `initiateServiceCalls`
