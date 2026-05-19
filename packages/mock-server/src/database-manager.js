@@ -285,6 +285,12 @@ export function count(resourceName) {
 /**
  * Close all database connections
  */
+export function clearAllDatabases() {
+  for (const db of databases.values()) {
+    db.prepare('DELETE FROM resources').run();
+  }
+}
+
 export function closeAll() {
   for (const [name, db] of databases.entries()) {
     db.close();

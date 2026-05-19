@@ -124,7 +124,7 @@ export function executeTransition({
 
   // Request body validation: runs after authorization (403) and guard checks (409)
   if (isNewFormat && operation?.schema?.request) {
-    const { valid, errors } = validate(requestBody, operation.schema.request, `operation-${trigger}`);
+    const { valid, errors } = validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`);
     if (!valid) {
       return { success: false, status: 422, error: 'Request body validation failed', details: errors };
     }

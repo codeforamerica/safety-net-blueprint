@@ -14,7 +14,7 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Assign task to the claiming worker (sets `assignedToId`)
   - Emit: `workflow.task.claimed` — Emit a domain event recording the claim and who claimed the task
     - Subscribed by: [Intake/Application](intake.md#application)
-- **complete**
+- **complete** — Marks an in-progress task done with an outcome and optional notes
   - Actors: caseworker, or supervisor
   - Transition: `in_progress` → `completed`
   - Record when work finished (sets `completedAt`)
@@ -23,50 +23,50 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Emit: `workflow.task.completed` — Emit a domain event recording the completion and its outcome
   - If `$request.createFollowUp is true`:
     - Create a follow-up task when caller requests one
-- **release**
+- **release** — Returns an in-progress task to the queue, clearing the assignment
   - Actors: caseworker, or supervisor
   - Transition: `in_progress` → `pending`
   - Clear assignment so task returns to queue (sets `assignedToId`)
   - Emit: `workflow.task.released` — Emit a domain event recording the release and its reason
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
   - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
-- **escalate**
+- **escalate** — Flags an in-progress task for supervisor attention
   - Actors: caseworker, or supervisor
   - Transition: `in_progress` → `escalated`
   - Record when the task was escalated (sets `escalatedAt`)
   - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
   - Emit: `workflow.task.escalated` — Emit a domain event recording the escalation
-- **escalate**
+- **escalate** — Supervisor escalates a pending task without claiming it first
   - Actors: supervisor
   - Transition: `pending` → `escalated`
   - Record when the task was escalated (sets `escalatedAt`)
   - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
   - Emit: `workflow.task.escalated` — Emit a domain event recording the escalation
-- **de-escalate**
+- **de-escalate** — Returns an escalated task to the pending queue
   - Actors: supervisor
   - Transition: `escalated` → `pending`
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
   - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
   - Emit: `workflow.task.de-escalated` — Emit a domain event recording the de-escalation
-- **cancel**
+- **cancel** — Supervisor cancels a task from any active state
   - Actors: supervisor
   - Transition: `pending`/`in_progress`/`escalated` → `cancelled`
   - Record when the task was cancelled (sets `cancelledAt`)
   - Emit: `workflow.task.cancelled` — Emit a domain event recording the cancellation
-- **reopen**
+- **reopen** — Supervisor returns a cancelled task to the pending queue
   - Actors: supervisor
   - Transition: `cancelled` → `pending`
   - Clear the cancellation timestamp on reopen (sets `cancelledAt`)
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
   - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
   - Emit: `workflow.task.reopened` — Emit a domain event recording the reopen
-- **await-client**
+- **await-client** — Pauses an in-progress task while waiting for a client response
   - Actors: caseworker, or supervisor
   - Transition: `in_progress` → `awaiting_client`
   - Record when the task entered a waiting state (sets `blockedAt`)
   - Schedule auto-cancellation after 30 calendar days of client unresponsiveness.
   - Emit: `workflow.task.awaiting_client` — Emit a domain event recording the block
-- **await-verification**
+- **await-verification** — Pauses an in-progress task while waiting for a verification result
   - Actors: caseworker, or supervisor
   - Transition: `in_progress` → `awaiting_verification`
   - Record when the task entered a waiting state (sets `blockedAt`)
@@ -79,13 +79,13 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Cancel the client unresponsive timer; idempotent.
   - Cancel the verification timeout timer; idempotent, safe to call even if already fired.
   - Emit: `workflow.task.resumed` — Emit a domain event recording the resumption
-- **system-resume**
+- **system-resume** — System resumes a verification-blocked task after a timeout or result arrives
   - Actors: system only
   - Transition: `awaiting_verification` → `in_progress`
   - Clear the block timestamp on system resume (sets `blockedAt`)
   - Cancel the verification timeout timer; idempotent, safe to call even if already fired.
   - Emit: `workflow.task.system_resumed` — Emit a domain event recording the automated resumption and its result
-- **system-escalate**
+- **system-escalate** — System auto-escalates a task when an SLA deadline is approaching or exceeded
   - Actors: system only
   - Transition: `pending`/`in_progress`/`escalated` → `escalated`
   - If `escalatedAt is not set`:
@@ -104,24 +104,24 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Actors: caseworker, or supervisor
   - Transition: `in_progress`/`escalated` → `pending_review`
   - Emit: `workflow.task.submitted_for_review` — Emit a domain event recording the submission for review
-- **approve**
+- **approve** — Supervisor approves a submitted task and records the final outcome
   - Actors: supervisor
   - Transition: `pending_review` → `completed`
   - Record when work was approved and completed (sets `completedAt`)
   - Store the outcome from the supervisor's approval (sets `outcome`)
   - Store optional notes from the supervisor (sets `completionNotes`)
   - Emit: `workflow.task.approved` — Emit a domain event recording the approval
-- **return-to-worker**
+- **return-to-worker** — Supervisor sends a review-pending task back to the worker with feedback
   - Actors: supervisor
   - Transition: `pending_review` → `in_progress`
   - Emit: `workflow.task.returned_to_worker` — Emit a domain event recording the return for revision
-- **assign**
+- **assign** — Supervisor reassigns a task to a specific caseworker or moves it to a different queue
   - Actors: supervisor
   - Transition: no state change
   - Assign the task to the specified caseworker (sets `assignedToId`)
   - Optionally move the task to a different queue (sets `queueId`)
   - Emit: `workflow.task.assigned` — Emit a domain event recording the assignment
-- **set-priority**
+- **set-priority** — Supervisor manually overrides the task priority
   - Actors: supervisor
   - Transition: no state change
   - Override the task priority (sets `priority`)

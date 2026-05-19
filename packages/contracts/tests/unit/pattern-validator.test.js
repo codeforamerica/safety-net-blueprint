@@ -752,6 +752,12 @@ test('Pattern Validator Tests', async (t) => {
     validateForeignKeys({
       components: {
         schemas: {
+          Case: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' }
+            }
+          },
           Task: {
             type: 'object',
             properties: {

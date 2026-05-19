@@ -1,0 +1,6 @@
+ID,Scope,Description,Parameters,Steps
+initializeDetermination,Determination,Create one Decision per program when a Determination is created,,Call `forEach`
+evaluateFinalDetermination,Determination,Call the final determination adapter for each remaining pending Decision (42 CFR § 435.912),,Call `forEach`
+evaluateSnapExpedited,Decision,"Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))",,
+initiateMedicaidDataExchange,Decision,"Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)",,POST `data-exchange/service-calls`; POST `data-exchange/service-calls`
+evaluateMedicaidExParte,Decision,"Call the Medicaid ex parte adapter when all data exchange results for a Decision are in; adapter triggers approve, deny, or mark-ineligible (42 CFR § 435.911)",,

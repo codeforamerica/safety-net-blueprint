@@ -1360,6 +1360,11 @@ x_extensions:
     type: object
     fields:
       resource: Name of the related schema (PascalCase, e.g., Queue)
+      domain: >
+        Optional. The blueprint domain that owns the related resource (e.g., intake,
+        workflow). Required when the referenced resource lives in a different domain
+        than the spec declaring the relationship. Omit for same-domain references.
+        Values must be a valid Domain enum value (see schemas/common/enums.yaml).
       style: >
         Optional. "expand" causes the mock server to replace the Id field with
         an inline object of the related resource. Default: reference by ID only.
@@ -1369,6 +1374,14 @@ x_extensions:
         format: uuid
         x-relationship:
           resource: Queue
+
+      # Cross-domain reference
+      applicationId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Application
+          domain: intake
 
   x-sortable:
     description: >
@@ -2425,3 +2438,82 @@ cross_domain_communication:
     current operation? → command. Is the calling domain notifying that its own
     state changed? → domain_event. If neither fits cleanly, consider the
     async_command variant.
+
+# =============================================================================
+# Context Pass-Through (Cross-Domain Metadata)
+# =============================================================================
+# Opaque metadata attached to a resource by one domain so that an async event
+# handler in another domain can correlate the result back to the originating
+# resource without a database lookup.
+#
+# Example: at submission, intake creates a Verification and a data-exchange
+# service call. It PUTs { intake: { verificationId: "ver-abc" } } onto the
+# service call. When data-exchange.service-call.completed fires, the intake
+# rule reads event.data.metadata.intake.verificationId and transitions the
+# correct Verification directly.
+context_passthrough:
+  description: |
+    Opaque namespace-keyed metadata attached to resources to enable async
+    correlation across domains. Each domain owns its namespace; namespace-level
+    mutations prevent callers from clobbering each other's keys.
+
+  structure:
+    description: Nested object — top-level keys are domain names; values are domain-defined key/value pairs.
+    schema:
+      type: object
+      additionalProperties:
+        type: object
+        additionalProperties: true
+    example: |
+      {
+        "intake":   { "verificationId": "ver-abc-123" },
+        "workflow": { "taskId": "tsk-xyz-456" }
+      }
+
+  json_logic_access:
+    description: |
+      Use the JSON Logic var operator with dot notation to traverse the nested
+      structure. Nested objects are required — flat keys with dots (e.g.,
+      "intake.verificationId" as a single top-level key) are unreachable via var.
+    example: |
+      # Read intake.verificationId from a data-exchange completion event:
+      { "var": "event.data.metadata.intake.verificationId" }
+
+  mutation_endpoints:
+    description: |
+      Namespace-level PUT and DELETE. Each caller replaces or removes its own
+      domain namespace entirely. No key-level merging; callers never touch
+      another domain's namespace.
+    put:
+      path: "PUT /{resources}/{id}/metadata/{domain}"
+      description: Replace the caller's entire namespace with the provided object.
+      path_parameter:
+        name: domain
+        schema:
+          $ref: "components/common.yaml#/Domain"
+      request_body:
+        type: object
+        additionalProperties: true
+      response: 200 with updated resource
+      example: |
+        PUT /service-calls/{id}/metadata/intake
+        Content-Type: application/json
+        { "verificationId": "ver-abc-123" }
+    delete:
+      path: "DELETE /{resources}/{id}/metadata/{domain}"
+      description: Remove the caller's entire namespace from metadata.
+      path_parameter:
+        name: domain
+        schema:
+          $ref: "components/common.yaml#/Domain"
+      response: 204
+
+  use_case:
+    name: Verification write-back
+    description: |
+      Intake creates a Verification and a data-exchange service call at
+      submission. It sets metadata.intake.verificationId on the service call
+      (via the createResource metadata field in rules). When
+      data-exchange.service-call.completed fires, the intake rule reads
+      event.data.metadata.intake.verificationId and calls triggerTransition
+      on the correct Verification — no query needed.

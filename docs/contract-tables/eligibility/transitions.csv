@@ -1,0 +1,7 @@
+Machine,ID,From,To,Actors,Conditions,Steps
+Determination,flag-expedited,in_progress,,system,callerIsSystem,Set `expeditedFlagged` → `true`; Emit `eligibility.application.expedited` event
+Determination,complete,in_progress,completed,system,callerIsSystem,Set `completedAt` → current time; Emit `eligibility.application.determination_completed` event
+Determination,withdraw,in_progress,withdrawn,system,callerIsSystem,Set `withdrawnAt` → current time; Emit `withdrawn` event
+Decision,approve,pending,approved,system,callerIsSystem,Set `decidedAt` → current time; Set `path` → `$request.path`; Emit `eligibility.application.decision_completed` event
+Decision,deny,pending,denied,system,callerIsSystem,Set `decidedAt` → current time; Set `path` → `$request.path`; Set `denialReasonCode` → `$request.denialReasonCode`; Emit `eligibility.application.decision_completed` event
+Decision,mark-ineligible,pending,ineligible,system,callerIsSystem,Set `decidedAt` → current time; Set `path` → `$request.path`; Set `denialReasonCode` → `$request.denialReasonCode`; Emit `eligibility.application.decision_completed` event
