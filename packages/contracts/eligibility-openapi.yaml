@@ -116,12 +116,13 @@ paths:
       tags:
         - Determinations
       x-sortable:
-        fields: [createdAt, updatedAt, status, program]
+        fields: [createdAt, updatedAt, program, status]
         default: -createdAt
         tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated list of decisions.

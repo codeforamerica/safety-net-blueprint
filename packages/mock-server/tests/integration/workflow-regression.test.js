@@ -24,7 +24,7 @@ async function registerStub(stub) {
 }
 
 async function allEvents(subject = null) {
-  const qs = subject ? `?subject=${subject}&limit=100` : `?limit=100`;
+  const qs = subject ? `?subject=${subject}&sort=-time&limit=100` : `?sort=-time&limit=100`;
   const res = await fetch(`${BASE_URL}/platform/events${qs}`);
   return ((await res.json()).items) || [];
 }
