@@ -116,12 +116,10 @@ $defs:
       - priority
     properties:
       priority:
-        type: string
-        enum:
-          - expedited
-          - high
-          - normal
-        description: New priority level for the task
+        type: integer
+        minimum: 1
+        maximum: 4
+        description: "New priority level (1=expedited, 2=high, 3=normal, 4=low)"
       reason:
         type: string
         description: Optional reason for the priority change

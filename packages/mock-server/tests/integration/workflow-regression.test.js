@@ -504,11 +504,11 @@ async function testWorkflowLifecycle() {
       body: { name: 'Priority test', programType: 'snap' },
     })).json();
     const res = await fetch(`${BASE_URL}${TASK}/${id}/set-priority`, {
-      method: 'POST', headers: SUPERVISOR, body: { priority: 'high' },
+      method: 'POST', headers: SUPERVISOR, body: { priority: 2 },
     });
     assert.strictEqual(res.status, 200, `expected 200, got ${res.status}`);
     const data = await res.json();
-    assert.strictEqual(data.priority, 'high');
+    assert.strictEqual(data.priority, 2);
     assert.strictEqual(data.status, status, 'status should not change');
   });
 
@@ -518,7 +518,7 @@ async function testWorkflowLifecycle() {
       body: { name: 'Priority guard test', programType: 'snap' },
     })).json();
     const res = await fetch(`${BASE_URL}${TASK}/${id}/set-priority`, {
-      method: 'POST', headers: CASEWORKER, body: { priority: 'high' },
+      method: 'POST', headers: CASEWORKER, body: { priority: 2 },
     });
     assert.strictEqual(res.status, 403);
   });
@@ -748,11 +748,11 @@ async function testWorkflowEventEmission() {
   await test('set-priority emits workflow.task.priority_changed with priority', async () => {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/set-priority`, {
-      method: 'POST', headers: SUPERVISOR, body: { priority: 'high' },
+      method: 'POST', headers: SUPERVISOR, body: { priority: 2 },
     });
     const e = findEvent(await allEvents(id), 'workflow.task.priority_changed', id);
     assert.ok(e, 'workflow.task.priority_changed should be emitted');
-    assert.strictEqual(e.data?.priority, 'high');
+    assert.strictEqual(e.data?.priority, 2);
   });
 }
 
@@ -938,7 +938,7 @@ async function testWorkflowEventSubscriptions() {
       method: 'PATCH', headers: SUPERVISOR, body: { isExpedited: true },
     });
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
-    assert.strictEqual(task.priority, 'expedited', 'priority should be expedited after isExpedited set');
+    assert.strictEqual(task.priority, 1, 'priority should be 1 (expedited) after isExpedited set');
   });
 
   // workflow.task.updated: slaDeadline set → both sla_warning and sla_breach timers scheduled
