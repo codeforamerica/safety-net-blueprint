@@ -13,7 +13,7 @@ TaskExample1:
   isExpedited: true
   subjectId: 00000004-0000-4000-8000-000000000001
   queueId: ae5ed10f-657d-55f3-b53c-b381ec583a1e
-  priority: expedited
+  priority: 1
   startedAt: '2024-01-01T00:00:00.000Z'
   completedAt: '2024-01-01T00:00:00.000Z'
   assignedToId: c076fe9f-2209-52c4-967c-6d0172469fea
@@ -31,7 +31,7 @@ TaskExample2:
   isExpedited: false
   subjectId: 33845328-2970-5989-8996-ddb233383c13
   queueId: f46c5c87-b1fe-55c2-9166-873c2748d4f4
-  priority: high
+  priority: 2
   startedAt: '2024-01-31T00:00:00.000Z'
   completedAt: '2024-01-31T00:00:00.000Z'
   assignedToId: b637ec01-7c66-5587-9592-7bbee3509a36

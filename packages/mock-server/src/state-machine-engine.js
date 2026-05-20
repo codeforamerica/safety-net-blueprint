@@ -7,6 +7,7 @@
 import jsonLogic from 'json-logic-js';
 import { deriveCollectionName } from './collection-utils.js';
 import { findAll, findById } from './database-manager.js';
+import { resolveTimeToken } from './time-tokens.js';
 
 /**
  * Resolve a value expression against a context.
@@ -28,6 +29,11 @@ export function resolveValue(value, context) {
   if (typeof value === 'string') {
     if (value === '$now') {
       return context.now ?? new Date().toISOString();
+    }
+
+    if (value.startsWith('$now+') || value.startsWith('$now-') || value.startsWith('$now@')) {
+      const now = context.now ? new Date(context.now) : new Date();
+      return resolveTimeToken(value, now);
     }
 
     if (value === '$object') return context.object ?? null;

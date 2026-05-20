@@ -9,7 +9,7 @@
   },
   "workspaces": [
     "packages/*",
-    "packages/explorer/service-blueprints/figma-plugin",
+    "packages/explorer/service-blueprints/src/figma-plugin",
     "!packages/resolved"
   ],
   "scripts": {

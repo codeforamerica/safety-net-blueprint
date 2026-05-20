@@ -42,6 +42,35 @@ npm run mock:seed   # regenerate seed files from current schemas
 ```
 Then restart the server to load the new seed data.
 
+### Time tokens in seed files
+
+Seed files support `$now` tokens in date and datetime fields so that fixtures stay current regardless of when the server starts.
+
+| Token | Resolves to |
+|-------|-------------|
+| `$now` | Server start time T |
+| `$now-30d` | T − 30 days |
+| `$now+7d` | T + 7 days |
+| `$now+8h` | T + 8 hours |
+| `$now+2d@09:30` | T + 2 days, local time pinned to 09:30 |
+| `$now@17:00` | Today, local time pinned to 17:00 |
+
+Units: `d` (days), `h` (hours), `m` (minutes), `w` (weeks). Integer amounts only — use a smaller unit for precision (e.g. `$now+36h` rather than `$now+1.5d`). The `@HH:MM` pin sets the time-of-day component in local server time.
+
+All tokens in a single seed load resolve against the same instant, so relative timestamps within a fixture are internally consistent.
+
+Malformed tokens (e.g. `$now+7dasys`) cause the server to exit with an error rather than writing the raw string to the database.
+
+```yaml
+AppointmentExample1:
+  id: 7e1c6f9a-0000-0000-0000-000000000001
+  startAt: "$now+1d@09:30"
+  endAt: "$now+1d@10:00"
+  status: scheduled
+```
+
+You can also use `$now` tokens in event stub `respond.data` fields — there, the time is calculated when the stub fires, not when the server started.
+
 ## Caller context
 
 State machine operations use two headers to identify who is making the request:

@@ -408,10 +408,10 @@ procedures:
     then: [{set: {field: queueId, value: $snapQueue.id}}]
     else: [{set: {field: queueId, value: $generalQueue.id}}]
   - id: setPriority
-    description: Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+    description: Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
     if: $object.isExpedited == true
-    then: [{set: {field: priority, value: expedited}}]
-    else: [{set: {field: priority, value: normal}}]
+    then: [{set: {field: priority, value: 1}}]
+    else: [{set: {field: priority, value: 3}}]
   - id: scheduleTimer
     description: Schedule a workflow timer; builds timerId and callback event from timerType and $object.id.
     parameters: [timerType, fireAfter, fireAt, fireOffset, calendarType]

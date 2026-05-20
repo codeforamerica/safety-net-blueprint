@@ -2,7 +2,7 @@
 
 This document is the architecture reference for the behavioral contract DSL — the YAML-based language used to define state machines, procedures, SLA conditions, and metric filters across all Safety Net Blueprint domains. It covers the three-layer DSL model, expression syntax, condition and branching syntax, function model, and event-driven execution. Standards evaluated: CNCF Serverless Workflow, OMG BPMN 2.0, OMG CMMN, W3C SCXML. Vendor systems compared: Camunda/Zeebe, AWS Step Functions, IBM BPM, and Pega.
 
-> Supersedes [Decision 26: JSON Logic as the rule condition expression language](../domains/workflow-design-reference.md#decision-26-json-logic-as-the-rule-condition-expression-language) in the Workflow Design Reference.
+> Supersedes the JSON Logic decision that previously appeared in the Workflow Design Reference (now consolidated into [workflow.md](../domains/workflow.md)).
 
 ## Overview
 
@@ -258,6 +258,9 @@ Transition IDs use kebab-case verbs (`complete-review`, `mark-inconclusive`). Th
 | 3 | [Internal consistency](#decision-3-internal-consistency) | `if`/`match`/`when` as step types, `call:` for all invocations, guards as CEL conditions. Removes parallel condition syntaxes within the execution layer. |
 | 4 | [Fully event-driven model](#decision-4-fully-event-driven-model) | `onCreate:`, `onUpdate:`, and `onTimer:` are removed. All machine reactions — including creation, field changes, and timer callbacks — are expressed as named event subscriptions. |
 | 5 | [Timer-as-event](#decision-5-timer-as-event) | Timers are requested and delivered as events. Predictable timer IDs are required. The scheduling service contract defines the event boundary. |
+| 6 | [Named RPC transitions, not PATCH](#decision-6-named-rpc-transitions-not-patch) | Each transition is a named endpoint; PATCH is reserved for field updates — named triggers map to audit events and can carry action-specific request bodies |
+| 7 | [Effects declared in state machine YAML](#decision-7-effects-declared-in-state-machine-yaml) | The contract is the specification — behavior is inspectable without reading code |
+| 8 | [Reactive cross-domain coordination via event subscriptions](#decision-8-reactive-cross-domain-coordination-via-event-subscriptions) | Each domain handles its own reactions; the publishing domain has no knowledge of downstream behavior |
 
 ---
 
@@ -389,6 +392,68 @@ Removal of special-cased trigger types (`onCreate:`, `onUpdate:`, `onTimer:`) is
 
 ---
 
+### Decision 6: Named RPC transitions, not PATCH
+
+**Status:** Decided: B
+
+**What's being decided:** Whether state changes are triggered by named action endpoints or by PATCH requests on the governed resource.
+
+**Considerations:**
+- PATCH requires the server to infer intent from a diff — what changed and whether it was authorized. Named triggers make intent explicit.
+- Named triggers map cleanly to audit events, can carry an action-specific request body (e.g., a cancellation reason), and can be independently guarded.
+
+| | Blueprint | JSM | ServiceNow | Camunda | Pega |
+|---|---|---|---|---|---|
+| Trigger | Named RPC endpoint | Status transition button | State flow trigger | Sequence flow / signal | Named flow action |
+| Precondition | Guards | Validator condition | Condition script | Gateway condition | Decision rule |
+| Side effect | `set`, `emit`, `call`, `create` | Post-function | Business Rule | Execution Listener | Declare Expressions |
+
+**Options:**
+- **(A)** PATCH requests trigger state changes
+- **(B) ✓** Each transition is a named RPC endpoint (`POST /{domain}/{resource}/{id}/{transitionId}`); PATCH is reserved for field updates
+
+**Customization:** States add new named transitions via overlay.
+
+---
+
+### Decision 7: Effects declared in state machine YAML
+
+**Status:** Decided: B
+
+**What's being decided:** Whether transition side effects are declared in the state machine contract or implemented per-endpoint in code.
+
+**Considerations:**
+- Declaring effects in the contract makes behavior inspectable without reading code — a reviewer can understand what a transition does from the YAML alone.
+- JSM and ServiceNow build audit records as a side effect of internal processing — the schema is implicit and not independently inspectable.
+
+**Options:**
+- **(A)** Implement side effects per-endpoint in code
+- **(B) ✓** Declare effects in state machine YAML; the engine executes them; the contract is the specification
+
+Step types: `set` (update fields), `emit` (fire a domain event), `call` (invoke a named procedure), `create` (write a new record), `if`/`match` (conditional branching).
+
+**Customization:** States add effects to existing transitions via overlay.
+
+---
+
+### Decision 8: Reactive cross-domain coordination via event subscriptions
+
+**Status:** Decided: B
+
+**What's being decided:** When an event from one domain should trigger a state change in another domain, where does the coordination logic live?
+
+**Considerations:**
+- If a domain's state machine directly calls another domain's transitions, it becomes coupled to that domain's API and lifecycle. States that want to suppress or modify that behavior must modify the publishing domain's contracts — a poor overlay target.
+- ServiceNow Business Rules, Salesforce Platform Events, Pega Event Strategies, and IBM Cúram lifecycle handoffs all use a reactive subscription model where each domain handles its own reactions.
+
+**Options:**
+- **(A)** Originating domain state machine directly calls downstream domain transitions (imperative push)
+- **(B) ✓** Each domain declares event subscriptions in its own state machine; the originating domain emits events and has no knowledge of reactions (reactive subscription)
+
+**Customization:** States override a domain's state machine to change conditions under which an event triggers a downstream transition, without touching the originating domain's contracts.
+
+---
+
 ## References
 
 - [Google CEL specification](https://github.com/google/cel-spec)
@@ -397,6 +462,6 @@ Removal of special-cased trigger types (`onCreate:`, `onUpdate:`, `onTimer:`) is
 - [OMG CMMN 1.1](https://www.omg.org/spec/CMMN/)
 - [W3C SCXML](https://www.w3.org/TR/scxml/)
 - [ISO 8601 Duration format](https://en.wikipedia.org/wiki/ISO_8601#Durations)
-- [Workflow Design Reference — Decision 26 (superseded)](../domains/workflow-design-reference.md#decision-26-json-logic-as-the-rule-condition-expression-language)
+- [Workflow Domain](../domains/workflow.md)
 - [Resolve Pipeline Architecture](../resolve-pipeline.md)
 - [Inter-Domain Communication](../../decisions/inter-domain-communication.md)

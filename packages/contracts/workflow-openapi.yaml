@@ -271,9 +271,7 @@ paths:
         - Tasks
       x-sortable:
         fields: [createdAt, updatedAt, priority, status, startedAt, slaDeadline]
-        # Default is newest-first until priority becomes numeric (see #294);
-        # alphabetical sort on the current string enum does not give correct urgency order.
-        default: -createdAt
+        default: priority,-createdAt
         tieBreaker: id
       parameters:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
@@ -717,13 +715,10 @@ components:
           x-relationship:
             resource: Queue
         priority:
-          type: string
-          enum:
-            - expedited
-            - high
-            - normal
-            - low
-          description: Task processing priority.
+          type: integer
+          minimum: 1
+          maximum: 4
+          description: "Task processing priority (1=expedited, 2=high, 3=normal, 4=low). Lower number = higher urgency. Numeric representation enables correct ascending sort: expedited tasks surface first."
         startedAt:
           type: string
           format: date-time
@@ -1088,8 +1083,8 @@ components:
         - priority
       properties:
         priority:
-          type: string
-          description: The new priority value.
+          type: integer
+          description: The new priority value (1=expedited, 2=high, 3=normal, 4=low).
         reason:
           type: string
           description: Why the priority was changed.
@@ -1131,7 +1126,7 @@ components:
         programType: snap
         isExpedited: true
         queueId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
-        priority: expedited
+        priority: 1
         slaInfo:
           - slaTypeCode: snap_expedited
 
@@ -1147,7 +1142,7 @@ components:
         programType: snap
         isExpedited: true
         queueId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
-        priority: expedited
+        priority: 1
         startedAt: '2024-09-02T09:15:00Z'
         assignedToId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         createdAt: '2024-09-01T14:00:00Z'

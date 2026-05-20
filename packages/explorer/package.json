@@ -4,7 +4,7 @@
   "description": "Context map and service blueprint tooling for the Safety Net Blueprint",
   "type": "module",
   "scripts": {
-    "build": "node context-map/build.js && node service-blueprints/build.js && node data-explorer/build.js",
+    "build": "node context-map/build.js && node service-blueprints/build.js && node data-explorer/build.js && node state-machine-docs/build.js && node adoption-model/src/export-png.js",
     "build:context-map": "node context-map/build.js",
     "build:service-blueprints": "node service-blueprints/build.js",
     "build:data-explorer": "node data-explorer/build.js",
@@ -16,7 +16,6 @@
     "js-yaml": "^4.1.0"
   },
   "optionalDependencies": {
-    "jszip": "^3.10.1",
     "puppeteer": "^22.0.0"
   }
 }

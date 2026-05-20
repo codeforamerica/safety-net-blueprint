@@ -71,6 +71,18 @@ fi
 
 
 
+step "Checking explorer outputs are up to date"
+if npm run build --workspace=packages/explorer 2>&1; then
+  if git diff --exit-code packages/explorer/ > /dev/null 2>&1; then
+    pass "Explorer outputs are up to date"
+  else
+    fail "Explorer outputs are stale — run 'npm run build --workspace=packages/explorer' and commit the results"
+    git diff --name-only packages/explorer/
+  fi
+else
+  fail "Explorer build failed"
+fi
+
 step "Running integration tests"
 # Kill any orphaned mock server from a previous run
 lsof -ti :1080 | xargs kill -9 2>/dev/null || true

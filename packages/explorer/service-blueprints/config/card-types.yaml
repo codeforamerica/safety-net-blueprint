@@ -1,0 +1,159 @@
+# card-types.yaml
+#
+# Source of truth for all card type definitions used by the Service Blueprint
+# Figma plugin. Staged to src/_current_card_types.json at build time.
+#
+# Each type defines:
+#   headerBg — header background color
+#   bodyBg   — body background color
+#   headerFg — header text and icon fill color
+#   bodyFg   — body text color
+#   label    — uppercase type label shown in the pill; omit or leave empty for note-style cards
+#   icon     — key into the ICON_DEFS map in renderer.ts; omit to render pill text only
+#
+# Colors are sourced from the Blueprint Card Figma file (service-blueprints/figma-plugin/).
+# USWDS token blue-warm maps to #2672DE.
+
+types:
+
+  staff-action:
+    headerBg: "#2B1A78"
+    bodyBg: "#EEEBFF"
+    headerFg: "#FFFFFF"
+    bodyFg: "#1A1040"
+    label: STAFF ACTION
+    icon: person-single
+
+  person-action:
+    headerBg: "#2B1A78"
+    bodyBg: "#EEEBFF"
+    headerFg: "#FFFFFF"
+    bodyFg: "#1A1040"
+    label: PERSON
+    icon: person-single
+
+  system:
+    headerBg: "#137C69"
+    bodyBg: "#F1FFFD"
+    headerFg: "#FFFFFF"
+    bodyFg: "#0A3A2E"
+    label: SYSTEM
+    icon: gear
+
+  data-entity:
+    headerBg: "#154C21"
+    bodyBg: "#E3F5E1"
+    headerFg: "#FFFFFF"
+    bodyFg: "#0A2E1E"
+    label: DATA
+    icon: document
+
+  communications:
+    headerBg: "#2672DE"
+    bodyBg: "#EDF5FF"
+    headerFg: "#FFFFFF"
+    bodyFg: "#0A1E40"
+    label: COMMUNICATIONS
+    icon: mail
+
+  domain-event:
+    headerBg: "#2E6276"
+    bodyBg: "#E7F2F5"
+    headerFg: "#FFFFFF"
+    bodyFg: "#0A2E34"
+    label: EVENT
+    icon: lightning
+
+  pain-point:
+    headerBg: "#EB646B"
+    bodyBg: "#F9E9EA"
+    headerFg: "#1A0000"
+    bodyFg: "#2A0A0A"
+    label: PAIN POINT
+    icon: diamond-alert
+
+  opportunity:
+    headerBg: "#FDAF49"
+    bodyBg: "#FEF1DD"
+    headerFg: "#3D2800"
+    bodyFg: "#3D2800"
+    label: OPPORTUNITY
+    icon: lightbulb
+
+  note:
+    headerBg: "#FDDA40"
+    bodyBg: "#FFFBE7"
+    headerFg: "#333333"
+    bodyFg: "#555555"
+    label: ""
+
+  policy:
+    rendersAs: question   # renders as question until policy cards are validated
+    headerBg: "#EDD7CD"
+    bodyBg: "#F8F6F5"
+    headerFg: "#3D2B0E"
+    bodyFg: "#3D2B0E"
+    label: POLICY
+    icon: building
+
+  metrics:
+    headerBg: "#B9E5DF"
+    bodyBg: "#F1FFFD"
+    headerFg: "#1A3A36"
+    bodyFg: "#1A3A36"
+    label: METRICS
+    icon: bar-chart
+
+  question:
+    headerBg: "#686868"
+    bodyBg: "#E3E3E3"
+    headerFg: "#FFFFFF"
+    bodyFg: "#1A1A1A"
+    label: QUESTION
+    icon: help
+
+  touchpoint:
+    headerBg: "#434343"
+    bodyBg: "#F1F1F1"
+    headerFg: "#FFFFFF"
+    bodyFg: "#1A1A1A"
+    label: TOUCHPOINT
+    icon: diamond
+
+# Actor-specific color overrides for person-action cards.
+# When a card has type=person-action and an actor field set, these take precedence
+# over the person-action defaults above.
+
+actors:
+
+  applicant:
+    headerBg: "#D97C20"
+    bodyBg: "#FDECD4"
+    headerFg: "#3D1800"
+    bodyFg: "#3D1800"
+    label: APPLICANT
+    icon: person-single
+
+  caseworker:
+    headerBg: "#2B1A78"
+    bodyBg: "#EEEBFF"
+    headerFg: "#FFFFFF"
+    bodyFg: "#1A1040"
+    label: CASEWORKER
+    icon: person-single
+
+  supervisor:
+    headerBg: "#4F41B2"
+    bodyBg: "#EEEBFF"
+    headerFg: "#FFFFFF"
+    bodyFg: "#1A1040"
+    label: SUPERVISOR
+    icon: person-group
+
+  system:
+    headerBg: "#137C69"
+    bodyBg: "#F1FFFD"
+    headerFg: "#FFFFFF"
+    bodyFg: "#0A3A2E"
+    label: SYSTEM
+    icon: gear
