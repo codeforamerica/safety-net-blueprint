@@ -14,7 +14,6 @@
  *   domains.png, domain_<id>.png, flow_<domain>_<id>.png
  */
 
-import puppeteer from 'puppeteer';
 import { writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -25,6 +24,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // imgDir:  where individual PNGs are written (default: dist/)
 const htmlDir = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, '..', 'output');
 const imgDir  = process.argv[3] ? resolve(process.argv[3]) : resolve(__dirname, '..', 'dist');
+
+if (process.env.CI) {
+  console.log('CI environment — skipping PNG export');
+  process.exit(0);
+}
+
+let puppeteer;
+try {
+  puppeteer = (await import('puppeteer')).default;
+} catch {
+  console.warn('puppeteer not installed — skipping PNG export. Run: npm install puppeteer');
+  process.exit(0);
+}
+
 mkdirSync(imgDir, { recursive: true });
 
 const htmlPath = resolve(htmlDir, 'context-map.html');

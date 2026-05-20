@@ -973,10 +973,10 @@
             subtext: "In response to event eligibility.application.expedited"
           },
           {
-            type: "note",
+            type: "system",
             domain: "workflow",
-            text: "\u26A0 Assign expedited SLA track",
-            subtext: "Expedited SLA type and workflow task switching not yet designed"
+            text: "Assign expedited SLA track",
+            subtext: "In response to event eligibility.application.expedited"
           },
           {
             type: "system",
@@ -1134,7 +1134,7 @@
           {
             type: "system",
             domain: "intake",
-            text: "Interview record updated"
+            text: "Caseworker attests interview complete (PATCH Interview.completedAt)"
           }
         ]
       },
