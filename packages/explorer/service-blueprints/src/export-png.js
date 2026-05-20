@@ -14,6 +14,11 @@ import { pathToFileURL } from 'url';
  * @param {string} pngPath   absolute path to write the PNG
  */
 export async function exportHtmlPng(htmlPath, pngPath) {
+  if (process.env.CI) {
+    console.log('CI environment — skipping PNG export');
+    return;
+  }
+
   let puppeteer;
   try {
     puppeteer = (await import('puppeteer')).default;

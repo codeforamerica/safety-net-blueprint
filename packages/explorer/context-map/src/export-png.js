@@ -25,6 +25,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const htmlDir = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, '..', 'output');
 const imgDir  = process.argv[3] ? resolve(process.argv[3]) : resolve(__dirname, '..', 'dist');
 
+if (process.env.CI) {
+  console.log('CI environment — skipping PNG export');
+  process.exit(0);
+}
+
 let puppeteer;
 try {
   puppeteer = (await import('puppeteer')).default;

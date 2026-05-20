@@ -62,6 +62,11 @@ const SLIDES = [
 ];
 
 async function exportPng() {
+  if (process.env.CI) {
+    console.log('CI environment — skipping PNG export');
+    return;
+  }
+
   let puppeteer;
   try {
     puppeteer = (await import('puppeteer')).default;
