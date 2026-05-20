@@ -1,4 +1,5 @@
-import { ActorType, Blueprint, Card, CardType, Cell, Phase, SubPhase } from './types.js';
+import { ActorType, Blueprint, Card, CardData, CardEntry, CardType, Cell, Phase, SubPhase } from './types.js';
+import cardTypesConfig from './_current_card_types.json';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -23,32 +24,25 @@ const ROW_MIN_HEIGHT   = 80;
 // No icon prefixes — Unicode characters don't match the SVG icons in existing blueprints.
 
 interface CardPalette {
-  headerBg: string;
-  bodyBg:   string;
-  headerFg: string;
-  bodyFg:   string;
-  label:    string;
+  headerBg:   string;
+  bodyBg:     string;
+  headerFg:   string;
+  bodyFg:     string;
+  label:      string;
+  icon?:      string;   // key into ICON_DEFS; omit to render pill text only
+  rendersAs?: string;   // if set, use this type's palette instead (e.g. policy → question)
 }
 
-const PALETTE: Record<CardType, CardPalette> = {
-  'staff-action':  { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'STAFF ACTION'  },
-  'system':        { headerBg: '#137C69', bodyBg: '#F1FFFD', headerFg: '#FFFFFF', bodyFg: '#0A3A2E', label: 'SYSTEM'        },
-  'policy':        { headerBg: '#EDD7CD', bodyBg: '#F8F6F5', headerFg: '#3D2B0E', bodyFg: '#3D2B0E', label: 'POLICY'        },
-  'pain-point':    { headerBg: '#EB646B', bodyBg: '#F9E9EA', headerFg: '#1A0000', bodyFg: '#2A0A0A', label: 'PAIN POINT'   },
-  'opportunity':   { headerBg: '#FDAF49', bodyBg: '#FEF1DD', headerFg: '#3D2800', bodyFg: '#3D2800', label: 'OPPORTUNITY'   },
-  'domain-event':  { headerBg: '#2E6276', bodyBg: '#E7F2F5', headerFg: '#FFFFFF', bodyFg: '#0A2E34', label: 'EVENT'         },
-  'data-entity':   { headerBg: '#154C21', bodyBg: '#E3F5E1', headerFg: '#FFFFFF', bodyFg: '#0A2E1E', label: 'DATA'          },
-  'note':          { headerBg: '#FDDA40', bodyBg: '#FFFBE7', headerFg: '#333333', bodyFg: '#555555', label: ''              },
-  'person-action': { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'PERSON'        },
-};
+// Card type and actor palettes are loaded from config/card-types.yaml (staged at build time).
+const PALETTE      = (cardTypesConfig as { types:  Record<string, CardPalette> }).types;
+const ACTOR_PALETTE = (cardTypesConfig as { actors: Record<string, CardPalette> }).actors;
 
-// Per-actor colors for person-action cards. Overrides PALETTE['person-action'] when actor is set.
-const ACTOR_PALETTE: Record<ActorType, CardPalette> = {
-  'applicant':  { headerBg: '#D97C20', bodyBg: '#FDECD4', headerFg: '#3D1800', bodyFg: '#3D1800', label: 'APPLICANT'  },
-  'caseworker': { headerBg: '#2B1A78', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'CASEWORKER' },
-  'supervisor': { headerBg: '#4F41B2', bodyBg: '#EEEBFF', headerFg: '#FFFFFF', bodyFg: '#1A1040', label: 'SUPERVISOR' },
-  'system':     { headerBg: '#137C69', bodyBg: '#F1FFFD', headerFg: '#FFFFFF', bodyFg: '#0A3A2E', label: 'SYSTEM'     },
-};
+// Resolve rendersAs: if a type has a rendersAs alias, use the target type's palette.
+function paletteFor(type: CardType, actor?: ActorType): CardPalette {
+  if (type === 'person-action' && actor) return ACTOR_PALETTE[actor] ?? PALETTE['person-action'];
+  const p = PALETTE[type];
+  return (p?.rendersAs ? PALETTE[p.rendersAs] : p) ?? p;
+}
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -109,18 +103,40 @@ const ICON_DEFS: Record<string, IconDef> = {
     minX: 179.737, minY: 3241.23, w: 12.667, h: 13.33,
     d: 'M182.737 3247.23H181.404V3251.89H182.737V3247.23ZM186.737 3247.23H185.404V3251.89H186.737V3247.23ZM192.404 3253.23H179.737V3254.56H192.404V3253.23ZM190.737 3247.23H189.404V3251.89H190.737V3247.23ZM186.071 3242.73L189.544 3244.56H182.597L186.071 3242.73ZM186.071 3241.23L179.737 3244.56V3245.89H192.404V3244.56L186.071 3241.23Z',
   },
+  'bar-chart': {
+    // Material Icons "bar_chart" — 24×24 viewBox, Apache 2.0
+    minX: 0, minY: 0, w: 24, h: 24,
+    d: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
+  },
+  'mail': {
+    // Material Icons "mail_outline" — 24×24 viewBox, Apache 2.0
+    minX: 0, minY: 0, w: 24, h: 24,
+    d: 'M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z',
+  },
+  'diamond': {
+    // Simple rotated square — channel/touchpoint marker
+    minX: 0, minY: 0, w: 24, h: 24,
+    d: 'M12 2L2 12 12 22 22 12 12 2z',
+  },
+  'help': {
+    // Material Icons "help" — 24×24 viewBox, Apache 2.0
+    minX: 0, minY: 0, w: 24, h: 24,
+    d: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z',
+  },
 };
 
 // Normalize SVG path data for Figma's vectorPaths:
 // 1. Translate all coordinates by (-dx, -dy) so the bounding box starts at (0,0).
-// 2. Expand H/V/h/v to L commands — Figma's vectorPaths parser rejects H and V.
+// 2. Expand H/V/h/v/S/s to explicit L/C commands — Figma's parser rejects shorthand forms.
 // 3. Convert all relative commands to absolute, tracking current cursor position.
 function normalizePath(d: string, dx: number, dy: number): string {
   const tokens = d.match(/[A-Za-z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g) ?? [];
   const out: string[] = [];
   let i = 0;
-  let cx = 0, cy = 0;   // current point (canvas coords, before translation)
-  let mx = 0, my = 0;   // last explicit M point (for Z reset)
+  let cx = 0, cy = 0;       // current point (canvas coords, before translation)
+  let mx = 0, my = 0;       // last explicit M point (for Z reset)
+  let lastCmd = '';          // previous command letter (for S/s reflection)
+  let lastC2x = 0, lastC2y = 0;  // second control point of last C/c/S/s (for S/s)
 
   const num  = () => parseFloat(tokens[i++]);
   const more = () => i < tokens.length && !/^[A-Za-z]$/.test(tokens[i]);
@@ -129,7 +145,7 @@ function normalizePath(d: string, dx: number, dy: number): string {
   while (i < tokens.length) {
     const cmd = tokens[i++];
     if (!/^[A-Za-z]$/.test(cmd)) continue;
-    if (cmd === 'Z' || cmd === 'z') { out.push('Z'); cx = mx; cy = my; continue; }
+    if (cmd === 'Z' || cmd === 'z') { out.push('Z'); cx = mx; cy = my; lastCmd = cmd; continue; }
 
     do {
       switch (cmd) {
@@ -143,32 +159,46 @@ function normalizePath(d: string, dx: number, dy: number): string {
         case 'v': { const y=cy+num(); cy=y; out.push(`L ${pt(cx,y)}`); break; }
         case 'C': {
           const x1=num(),y1=num(),x2=num(),y2=num(),x=num(),y=num();
-          out.push(`C ${pt(x1,y1)} ${pt(x2,y2)} ${pt(x,y)}`); cx=x; cy=y; break;
+          out.push(`C ${pt(x1,y1)} ${pt(x2,y2)} ${pt(x,y)}`);
+          lastC2x=x2; lastC2y=y2; cx=x; cy=y; break;
         }
         case 'c': {
-          // All offsets relative to current point at start of this segment
           const ox=cx,oy=cy;
           const x1=ox+num(),y1=oy+num(),x2=ox+num(),y2=oy+num(),x=ox+num(),y=oy+num();
-          out.push(`C ${pt(x1,y1)} ${pt(x2,y2)} ${pt(x,y)}`); cx=x; cy=y; break;
+          out.push(`C ${pt(x1,y1)} ${pt(x2,y2)} ${pt(x,y)}`);
+          lastC2x=x2; lastC2y=y2; cx=x; cy=y; break;
+        }
+        case 'S': {
+          // Reflect previous second control point; fall back to current point if no prior curve
+          const isCurve = /^[CcSs]$/.test(lastCmd);
+          const x1 = isCurve ? 2*cx - lastC2x : cx;
+          const y1 = isCurve ? 2*cy - lastC2y : cy;
+          const x2=num(),y2=num(),x=num(),y=num();
+          out.push(`C ${pt(x1,y1)} ${pt(x2,y2)} ${pt(x,y)}`);
+          lastC2x=x2; lastC2y=y2; cx=x; cy=y; break;
+        }
+        case 's': {
+          const isCurve = /^[CcSs]$/.test(lastCmd);
+          const x1 = isCurve ? 2*cx - lastC2x : cx;
+          const y1 = isCurve ? 2*cy - lastC2y : cy;
+          const x2=cx+num(),y2=cy+num(),x=cx+num(),y=cy+num();
+          out.push(`C ${pt(x1,y1)} ${pt(x2,y2)} ${pt(x,y)}`);
+          lastC2x=x2; lastC2y=y2; cx=x; cy=y; break;
         }
       }
+      lastCmd = cmd;
     } while (more());
   }
   return out.join(' ');
 }
 
 function iconKey(type: CardType, actor?: ActorType): string | null {
-  if (type === 'person-action') return actor === 'supervisor' ? 'person-group' : 'person-single';
-  if (type === 'staff-action')  return 'person-single';
-  const map: Partial<Record<CardType, string>> = {
-    system:          'gear',
-    'data-entity':   'document',
-    'domain-event':  'lightning',
-    'pain-point':    'diamond-alert',
-    opportunity:     'lightbulb',
-    policy:          'building',
-  };
-  return map[type] ?? null;
+  // For person-action, use actor-specific icon from config
+  if (type === 'person-action' && actor) return ACTOR_PALETTE[actor]?.icon ?? null;
+  // Follow rendersAs so the displayed icon matches the rendered type
+  const p = PALETTE[type];
+  const resolved = p?.rendersAs ? PALETTE[p.rendersAs] : p;
+  return resolved?.icon ?? null;
 }
 
 // ── Frame helpers ─────────────────────────────────────────────────────────────
@@ -264,9 +294,7 @@ function renderNoteCard(card: Card, cardWidth: number): FrameNode {
 
 // Typed cards: colored header (title + label) + lighter body (subtext).
 function renderTypedCard(card: Card, cardWidth: number): FrameNode {
-  let p = card.type === 'person-action' && card.actor
-    ? ACTOR_PALETTE[card.actor]
-    : PALETTE[card.type];
+  let p = paletteFor(card.type, card.actor);
   if (card.type === 'system' && card.domain) {
     p = { ...p, label: `SYSTEM (${card.domain.toUpperCase()})` };
   }
@@ -321,6 +349,8 @@ function renderTypedCard(card: Card, cardWidth: number): FrameNode {
     labelNode.layoutSizingHorizontal = 'FILL';
   }
 
+  header.locked = true;
+
   const cardFrame = vFrame(`card:${card.type}`, 0);
   cardFrame.resize(cardWidth, 1);
   cardFrame.primaryAxisSizingMode = 'AUTO';
@@ -337,6 +367,7 @@ function renderTypedCard(card: Card, cardWidth: number): FrameNode {
     body.resize(cardWidth, 1);
     body.primaryAxisSizingMode = 'AUTO';
     body.counterAxisSizingMode = 'FIXED';
+    body.locked = true;
 
     const sub = txt(card.subtext, 12, 'Regular', p.bodyFg, textWidth);
     body.appendChild(sub);
@@ -373,9 +404,10 @@ function buildKey(blueprintName: string): FrameNode {
 
   // Standard card types (not person-action — those are shown per-actor below)
   const types: CardType[] = [
-    'system', 'policy',
+    'system', 'policy', 'communications',
     'pain-point', 'opportunity',
     'domain-event', 'data-entity',
+    'metrics', 'question', 'touchpoint',
     'note',
   ];
 
@@ -571,4 +603,227 @@ export async function renderBlueprint(blueprint: Blueprint): Promise<void> {
 
   figma.viewport.scrollAndZoomIntoView([container]);
   figma.notify(`Generated: ${blueprint.name}`);
+}
+
+// ── Card export renderer ──────────────────────────────────────────────────────
+// Renders standalone cards grouped by domain → phase → sub-phase.
+// Uses Source Sans Pro and the design specs from the Blueprint Card Figma file.
+// Does NOT modify the blueprint renderer above.
+
+const DESIGN_CARD_W        = 240;
+const DESIGN_CARD_CORNER   = 5;
+const DESIGN_HEADER_PAD    = 18;  // top/bottom padding inside header
+const DESIGN_BODY_PAD      = 24;  // top/bottom padding inside body
+const DESIGN_TEXT_W        = DESIGN_CARD_W - DESIGN_HEADER_PAD * 2;
+const DESIGN_PILL_PAD_H    = 4;   // pill top/bottom padding
+const DESIGN_PILL_PAD_V    = 8;   // pill left/right padding
+const DESIGN_PILL_GAP      = 4;   // gap between icon and label inside pill
+const DESIGN_SECTION_GAP   = 48;  // vertical gap between sub-phase sections
+const DESIGN_CARD_GAP      = 16;  // horizontal gap between cards in a row
+
+function sspTxt(
+  content: string,
+  size: number,
+  style: 'Regular' | 'SemiBold',
+  color: string,
+  opts?: { lineHeight?: number; letterSpacing?: number; wrapWidth?: number }
+): TextNode {
+  const t = figma.createText();
+  t.fontName = { family: 'Source Sans Pro', style };
+  t.fontSize = size;
+  if (opts?.lineHeight !== undefined) {
+    t.lineHeight = { value: opts.lineHeight, unit: 'PIXELS' };
+  }
+  if (opts?.letterSpacing !== undefined) {
+    t.letterSpacing = { value: opts.letterSpacing, unit: 'PIXELS' };
+  }
+  t.characters = content;
+  t.fills = fill(color);
+  if (opts?.wrapWidth !== undefined) {
+    t.textAutoResize = 'HEIGHT';
+    t.resize(opts.wrapWidth, t.height);
+  }
+  return t;
+}
+
+function renderDesignCard(entry: CardEntry): FrameNode {
+  const p = paletteFor(entry.type, entry.actor) ?? PALETTE['note'];
+
+  const bodyText = entry.subtext || '';
+
+  // Header
+  const header = figma.createFrame();
+  header.name = 'header';
+  header.layoutMode = 'VERTICAL';
+  header.paddingTop = header.paddingBottom = DESIGN_HEADER_PAD;
+  header.paddingLeft = header.paddingRight = DESIGN_HEADER_PAD;
+  header.itemSpacing = 0;
+  header.fills = fill(p.headerBg);
+  header.resize(DESIGN_CARD_W, 1);
+  header.primaryAxisSizingMode = 'AUTO';
+  header.counterAxisSizingMode = 'FIXED';
+
+  const titleNode = sspTxt(entry.text, 18, 'SemiBold', p.headerFg, {
+    lineHeight: 24,
+    wrapWidth: DESIGN_TEXT_W,
+  });
+  header.appendChild(titleNode);
+  titleNode.layoutSizingHorizontal = 'FILL';
+
+  // Type label pill
+  if (p.label) {
+    const pill = figma.createFrame();
+    pill.name = 'pill';
+    pill.layoutMode = 'HORIZONTAL';
+    pill.primaryAxisSizingMode = 'AUTO';
+    pill.counterAxisSizingMode = 'AUTO';
+    pill.counterAxisAlignItems = 'CENTER';
+    pill.paddingTop = pill.paddingBottom = DESIGN_PILL_PAD_H;
+    pill.paddingLeft = pill.paddingRight = DESIGN_PILL_PAD_V;
+    pill.itemSpacing = DESIGN_PILL_GAP;
+    pill.cornerRadius = 12;
+    pill.fills = fill(p.headerBg);
+    pill.strokes = [];
+
+    const key = iconKey(entry.type, entry.actor);
+    const def = key ? ICON_DEFS[key] : null;
+    if (def) {
+      const iconScale = ICON_SIZE / Math.max(def.w, def.h);
+      const v = figma.createVector();
+      v.vectorPaths = [{ windingRule: 'NONZERO', data: normalizePath(def.d, def.minX, def.minY) }];
+      v.fills = fill(p.headerFg);
+      v.strokes = [];
+      v.resize(def.w * iconScale, def.h * iconScale);
+      v.layoutSizingHorizontal = 'FIXED';
+      v.layoutSizingVertical = 'FIXED';
+      pill.appendChild(v);
+    }
+
+    const labelNode = sspTxt(p.label, 12, 'Regular', p.headerFg, { lineHeight: 24, letterSpacing: 1 });
+    pill.appendChild(labelNode);
+    header.appendChild(pill);
+  }
+
+  header.locked = true;
+
+  // Card container
+  const card = figma.createFrame();
+  card.name = entry.citation || '';
+  card.layoutMode = 'VERTICAL';
+  card.itemSpacing = 0;
+  card.cornerRadius = DESIGN_CARD_CORNER;
+  card.clipsContent = true;
+  card.fills = [];
+  card.resize(DESIGN_CARD_W, 1);
+  card.primaryAxisSizingMode = 'AUTO';
+  card.counterAxisSizingMode = 'FIXED';
+  card.appendChild(header);
+
+  if (bodyText) {
+    const body = figma.createFrame();
+    body.name = 'body';
+    body.layoutMode = 'VERTICAL';
+    body.paddingTop = body.paddingBottom = DESIGN_BODY_PAD;
+    body.paddingLeft = body.paddingRight = DESIGN_HEADER_PAD;
+    body.fills = fill(p.bodyBg);
+    body.resize(DESIGN_CARD_W, 1);
+    body.primaryAxisSizingMode = 'AUTO';
+    body.counterAxisSizingMode = 'FIXED';
+    body.locked = true;
+
+    const sub = sspTxt(bodyText, 14, 'Regular', p.bodyFg, {
+      lineHeight: 21,
+      wrapWidth: DESIGN_TEXT_W,
+    });
+    body.appendChild(sub);
+    sub.layoutSizingHorizontal = 'FILL';
+    card.appendChild(body);
+  }
+
+  return card;
+}
+
+// Wrap a text node in a transparent auto-sized frame so it can live inside a SectionNode
+// (SectionNode only accepts FrameNode/GroupNode/ComponentNode as children).
+function labelFrame(content: string, size: number, style: 'Regular' | 'Medium' | 'Semi Bold', color: string): FrameNode {
+  const f = figma.createFrame();
+  f.name = '';  // suppress Section annotation
+  f.fills = [];
+  f.layoutMode = 'VERTICAL';
+  f.primaryAxisSizingMode = 'AUTO';
+  f.counterAxisSizingMode = 'AUTO';
+  f.clipsContent = false;
+  const t = txt(content, size, style, color);
+  f.appendChild(t);
+  return f;
+}
+
+export async function renderCards(data: CardData): Promise<void> {
+  await figma.loadFontAsync({ family: 'Source Sans Pro', style: 'Regular' });
+  await figma.loadFontAsync({ family: 'Source Sans Pro', style: 'SemiBold' });
+  await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+  await figma.loadFontAsync({ family: 'Inter', style: 'Semi Bold' });
+
+  // All cards and labels go inside one Section so the library moves as a unit.
+  // Individual cards can be dragged out of the section onto any diagram.
+  const PAGE_PADDING  = 40;
+  const CARDS_PER_ROW = 5;
+
+  const lib = figma.createSection();
+  lib.name = `${data.name} — Card Library`;
+  figma.currentPage.appendChild(lib);
+
+  let x = PAGE_PADDING;
+  let y = PAGE_PADDING;
+
+  // Title
+  const titleFrame = labelFrame(`${data.name} — Card Library`, 16, 'Semi Bold', '#1A1A1A');
+  lib.appendChild(titleFrame);
+  titleFrame.x = x;
+  titleFrame.y = y;
+  y += titleFrame.height + 24;
+
+  for (const phase of data.phases) {
+    for (const subPhase of phase.subPhases) {
+      if (!subPhase.cards.length) continue;
+
+      const phaseLabel = `${phase.label}  /  ${subPhase.label}`;
+      const labelF = labelFrame(phaseLabel.toUpperCase(), 10, 'Semi Bold', '#888888');
+      lib.appendChild(labelF);
+      labelF.x = x;
+      labelF.y = y;
+      y += labelF.height + 12;
+
+      let col = 0;
+      let rowX = x;
+      let rowMaxH = 0;
+
+      for (const entry of subPhase.cards) {
+        const card = renderDesignCard(entry);
+        lib.appendChild(card);
+        card.x = rowX;
+        card.y = y;
+
+        rowMaxH = Math.max(rowMaxH, card.height);
+        rowX += DESIGN_CARD_W + DESIGN_CARD_GAP;
+        col++;
+
+        if (col >= CARDS_PER_ROW) {
+          col = 0;
+          rowX = x;
+          y += rowMaxH + DESIGN_CARD_GAP;
+          rowMaxH = 0;
+        }
+      }
+
+      if (col > 0) y += rowMaxH;
+      y += DESIGN_SECTION_GAP;
+    }
+  }
+
+  const sectionW = PAGE_PADDING * 2 + CARDS_PER_ROW * DESIGN_CARD_W + (CARDS_PER_ROW - 1) * DESIGN_CARD_GAP;
+  lib.resizeWithoutConstraints(sectionW, y + PAGE_PADDING);
+
+  figma.viewport.scrollAndZoomIntoView([lib]);
+  figma.notify(`Generated: ${data.name} — Card Library`);
 }

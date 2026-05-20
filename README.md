@@ -6,7 +6,7 @@ A systems integration blueprint for safety net benefits programs. Contract artif
 
 > **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness).
 
-**New here?** Start with the [Adoption Model](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/adoption-model/output/adoption-model.html) for a non-technical overview, the [Context Map](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/context-map/output/context-map.html) for a visual map of the system landscape, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/data-explorer/data-explorer.html) to browse the data model.
+**New here?** Start with the [Adoption Model](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/adoption-model/output/adoption-model.html) for a non-technical overview, the [Context Map](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/context-map/output/context-map.html) for a visual map of the system landscape, or the [ORCA Data Explorer](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/data-explorer/output/data-explorer.html) to browse the data model.
 
 ## About This Repository
 

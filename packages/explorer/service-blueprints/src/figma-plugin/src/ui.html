@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body {
+      font-family: Inter, sans-serif;
+      font-size: 13px;
+      margin: 16px;
+      color: #1a1a1a;
+    }
+    label { font-weight: 500; display: block; margin-top: 12px; }
+    label:first-child { margin-top: 0; }
+    select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 6px 8px;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      background: #18a0fb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 8px;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    button:hover { background: #0d8de0; }
+  </style>
+</head>
+<body>
+  <label for="mode">Mode</label>
+  <select id="mode">
+    <option value="blueprint">Service Blueprint</option>
+    <option value="cards">Cards</option>
+  </select>
+
+  <div id="blueprint-options">
+    <label for="blueprint">Blueprint</label>
+    <select id="blueprint">
+      <option value="intake">Intake</option>
+    </select>
+  </div>
+
+  <div id="cards-options" style="display:none">
+    <label for="domain">Domain</label>
+    <select id="domain">
+      <option value="intake">Intake</option>
+    </select>
+  </div>
+
+  <button id="generate">Generate</button>
+
+  <script>
+    const modeEl      = document.getElementById('mode');
+    const bpOptions   = document.getElementById('blueprint-options');
+    const cardOptions = document.getElementById('cards-options');
+
+    modeEl.addEventListener('change', () => {
+      const isCards = modeEl.value === 'cards';
+      bpOptions.style.display   = isCards ? 'none' : '';
+      cardOptions.style.display = isCards ? ''     : 'none';
+    });
+
+    document.getElementById('generate').addEventListener('click', () => {
+      if (modeEl.value === 'blueprint') {
+        const blueprint = document.getElementById('blueprint').value;
+        parent.postMessage({ pluginMessage: { type: 'generate', blueprint } }, '*');
+      } else {
+        const domain = document.getElementById('domain').value;
+        parent.postMessage({ pluginMessage: { type: 'generate-cards', domain } }, '*');
+      }
+    });
+  </script>
+</body>
+</html>

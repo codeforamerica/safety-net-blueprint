@@ -1,5 +1,0 @@
-node_modules/
-dist/
-
-# Active blueprint staged for build (written by build.js)
-src/_current.json

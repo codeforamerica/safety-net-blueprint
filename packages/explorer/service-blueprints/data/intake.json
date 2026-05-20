@@ -98,18 +98,18 @@
       "cards": [
         {
           "type": "policy",
-          "text": "SNAP: 30-day processing clock starts",
-          "subtext": "7 CFR § 273.2(g)(1)"
+          "text": "SNAP: 30-day processing clock",
+          "subtext": "7 CFR § 273.2(g) — Clock starts at submission; determination must be completed within 30 days (7 days for expedited applications)."
         },
         {
           "type": "policy",
           "text": "Expedited SNAP: 7-day clock",
-          "subtext": "7 CFR § 273.2(i) — If household meets expedited criteria"
+          "subtext": "7 CFR § 273.2(i) — If expedited screening at submission returns positive, a 7-day processing deadline applies instead of the standard 30-day deadline. Expedited criteria include low income, low resources, or migrant/seasonal farm worker status."
         },
         {
           "type": "policy",
-          "text": "Medicaid: 45-day clock starts",
-          "subtext": "42 CFR § 435.912 — 90 days if disability determination needed"
+          "text": "Medicaid: 45-day processing clock starts at submission",
+          "subtext": "42 CFR § 435.912 — Determination must be completed within 45 days. 90 days if disability determination required — indicated by program type (e.g., Medicaid ABD vs. MAGI Medicaid)."
         }
       ]
     },
@@ -273,22 +273,6 @@
       ]
     },
     {
-      "laneId": "regulations",
-      "subPhaseId": "active-review",
-      "cards": [
-        {
-          "type": "policy",
-          "text": "Federal verifications required",
-          "subtext": "42 U.S.C. § 1320b-7 — FDSH (citizenship), SAVE (immigration), IEVS (income, SNAP only), SSA (SSN), RTE (existing coverage, Medicaid only)"
-        },
-        {
-          "type": "policy",
-          "text": "Medicaid: electronic verification before requesting paper documents",
-          "subtext": "42 CFR § 435.911 — Ex parte rule — electronic checks must be attempted first; paper documents can only be requested when checks return inconclusive"
-        }
-      ]
-    },
-    {
       "laneId": "system",
       "subPhaseId": "active-review",
       "cards": [
@@ -353,16 +337,6 @@
           "type": "policy",
           "text": "SNAP: interview required before determination",
           "subtext": "7 CFR § 273.2(e) — May be waived by state policy"
-        },
-        {
-          "type": "policy",
-          "text": "SNAP ABAWD work requirement expansion",
-          "subtext": "H.R.1 (pending) — Expands age range subject to work requirements; adds parental requirements for adults with children above the age threshold"
-        },
-        {
-          "type": "policy",
-          "text": "Medicaid community engagement requirement",
-          "subtext": "H.R.1 (pending) — Adults required to demonstrate work, volunteering, caregiving, or education hours to maintain Medicaid eligibility"
         }
       ]
     },

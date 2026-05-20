@@ -1,0 +1,138 @@
+# intake-cards.yaml
+#
+# Cards organized by domain → phase → sub-phase for use with the card export
+# mode of the Service Blueprint Figma plugin.
+#
+# Each card follows the same structure as cards in intake-annotations.yaml:
+#   type     — card type (policy, opportunity, note, pain-point, etc.)
+#   text     — title shown in the card header
+#   subtext  — description shown in the card body
+#   citation — CFR or statutory citation (policy cards only); merged into subtext
+#
+# To add or edit cards, update this file and rebuild:
+#   node build.js   (from packages/explorer/service-blueprints/)
+
+domain: intake
+name: "Intake"
+
+phases:
+
+  - id: application-intake
+    label: "Application Intake"
+    subPhases:
+
+      - id: submission
+        label: "Submission"
+        cards:
+          - type: policy
+            text: "Application acceptance"
+            citation: "7 CFR § 273.2(g)"
+            subtext: "Agency must accept any application on the date of first contact, even if incomplete"
+          - type: policy
+            text: "Date of application"
+            citation: "7 CFR § 273.2(c)(1)"
+            subtext: "Agency must date-stamp or record the date of receipt on every application"
+          - type: policy
+            text: "Right to apply"
+            citation: "7 CFR § 273.2(a)"
+            subtext: "Any household may apply for SNAP benefits regardless of current participation in other programs"
+
+  - id: application-review
+    label: "Application Review"
+    subPhases:
+
+      - id: automated-screening
+        label: "Automated Screening"
+        cards:
+          - type: policy
+            text: "Expedited SNAP"
+            citation: "7 CFR § 273.2(i)(3)(i)"
+            subtext: "Benefits must be issued within 7 days for households with income below $150/month or liquid resources below $100"
+          - type: policy
+            text: "Medicaid timeliness"
+            citation: "42 CFR § 435.912"
+            subtext: "States must make eligibility determinations within 45 days for most applicants, 90 days for disability determinations"
+
+      - id: under-review
+        label: "Task Assignment"
+        cards:
+          - type: policy
+            text: "Interview requirement"
+            citation: "7 CFR § 273.2(e)"
+            subtext: "SNAP applicants must complete an in-person or telephone interview before certification"
+          - type: policy
+            text: "Processing time"
+            citation: "7 CFR § 273.2(i)(1)"
+            subtext: "Agency must act on an application within 30 days of receipt"
+
+      - id: active-review
+        label: "Verification Review"
+        cards:
+          - type: policy
+            text: "Identity verification"
+            citation: "7 CFR § 273.2(f)(1)(vi)"
+            subtext: "Agency must verify the identity of the head of household prior to certification"
+          - type: policy
+            text: "Residency verification"
+            citation: "7 CFR § 273.2(f)(2)"
+            subtext: "Residency must be verified; applicants may not be required to show permanent address"
+          - type: policy
+            text: "Citizenship and immigration status"
+            citation: "8 U.S.C. § 1611 / 7 CFR § 273.4"
+            subtext: "Only U.S. citizens and qualified aliens are eligible for SNAP"
+
+      - id: interview
+        label: "Program Verification"
+        cards:
+          - type: policy
+            text: "Gross income test"
+            citation: "7 CFR § 273.9(a)"
+            subtext: "Household gross income must be at or below 130% of the federal poverty level"
+          - type: policy
+            text: "Net income test"
+            citation: "7 CFR § 273.9(b)"
+            subtext: "Household net income after deductions must be at or below 100% of the federal poverty level"
+          - type: policy
+            text: "Resource limit"
+            citation: "7 CFR § 273.8"
+            subtext: "Most households may not have liquid resources exceeding $2,750; $4,250 for households with elderly or disabled members"
+
+      - id: escalation
+        label: "Escalation"
+        cards:
+          - type: policy
+            text: "Supervisor review"
+            citation: "7 CFR § 273.15"
+            subtext: "Applicants have the right to a fair hearing if the agency delays or denies benefits"
+
+  - id: eligibility-determination
+    label: "Eligibility Determination"
+    subPhases:
+
+      - id: submit-for-determination
+        label: "Submit for Determination"
+        cards:
+          - type: policy
+            text: "Concurrent application"
+            citation: "42 CFR § 435.406"
+            subtext: "States must allow households to apply for Medicaid and SNAP in a single application"
+
+      - id: benefits-calculation
+        label: "Determination"
+        cards:
+          - type: policy
+            text: "Benefit calculation"
+            citation: "7 CFR § 273.10"
+            subtext: "Allotment is calculated by multiplying net income by 30% and subtracting from the maximum allotment for household size"
+
+      - id: decision
+        label: "Closeout"
+        cards:
+          - type: policy
+            text: "Notice of Action"
+            citation: "7 CFR § 273.13"
+            subtext: "Adverse action notice required for denials and closures; 10-day advance notice required before adverse action takes effect"
+          - type: policy
+            text: "Fair hearing rights"
+            citation: "7 CFR § 273.15(a)"
+            subtext: "Every household has the right to a fair hearing to contest any agency action affecting their benefits"

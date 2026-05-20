@@ -109,8 +109,8 @@ function getDomainConfig(domainKey) {
   return { name, color: '#566573', bgColor: '#f2f3f4' };
 }
 
-// Primary schemas that get full ORCA treatment
-const PRIMARY_SCHEMAS = ['Person', 'Household', 'Application', 'Income', 'HouseholdMember'];
+// Schemas listed as domain entities in config.yaml — get full ORCA treatment. Populated in main().
+let PRIMARY_SCHEMAS = [];
 
 // Map of property refs: { "SchemaName.propertyName": "TargetSchemaName" }
 // Populated before dereferencing to preserve type information
@@ -881,52 +881,42 @@ function generateDomainBrowser(domainSchemaMap) {
 }
 
 /**
- * Generate HTML for domain-grouped property tables
+ * Generate a single flat property table. System fields are sorted to the bottom with a badge.
  */
-function generateDomainGroupedTables(groupedProps) {
-  let html = '';
+function generateFlatAttributeTable(props, stateName = null) {
+  if (!props || props.length === 0) return '';
 
-  for (const [domain, props] of Object.entries(groupedProps)) {
-    const config = getDomainConfig(domain);
+  const ordered = props;
 
-    html += `<div class="domain-group" style="--domain-color: ${config.color}; --domain-bg: ${config.bgColor};">\n`;
-    html += `  <h5 class="domain-header"><span class="domain-indicator"></span>${config.name}</h5>\n`;
-    html += `  <table class="property-table">\n`;
-    html += `    <thead>\n`;
-    html += `      <tr>\n`;
-    html += `        <th>Field</th>\n`;
-    html += `        <th>Type</th>\n`;
-    html += `        <th>Req</th>\n`;
-    html += `        <th>Notes</th>\n`;
-    html += `      </tr>\n`;
-    html += `    </thead>\n`;
-    html += `    <tbody>\n`;
+  let html = `<table class="property-table">\n`;
+  html += `  <thead>\n    <tr>\n`;
+  html += `      <th>Field</th>\n      <th>Type</th>\n      <th>Req</th>\n      <th>Notes</th>\n`;
+  html += `    </tr>\n  </thead>\n  <tbody>\n`;
 
-    for (const prop of props) {
-      const reqMark = prop.required ? '&#10003;' : '';
-      const readOnlyMark = prop.readOnly ? ' <span class="read-only-badge">read-only</span>' : '';
-      let notes = prop.description || '';
-      if (prop.enumValues) {
-        notes = `Options: ${prop.enumValues}`;
-      }
-      if (prop.isNested) {
-        notes = notes ? `${notes} [Nested]` : '[Nested object]';
-      }
+  for (const prop of ordered) {
+    const reqMark = prop.required ? '&#10003;' : '';
+    const systemBadge = prop.domain === 'system' ? ' <span class="system-badge">system</span>' : '';
+    const stateMarker = (stateName && prop.isStateSpecific) ? ` data-state-field="${stateName}"` : '';
+    const stateClass = (stateName && prop.isStateSpecific) ? ' state-added-field' : '';
 
-      html += `      <tr data-field="${prop.name}"${prop.isNested ? ' class="expandable"' : ''}>\n`;
-      html += `        <td class="field-name">${prop.name}${readOnlyMark}</td>\n`;
-      html += `        <td class="field-type">${makeTypeClickable(prop.type)}</td>\n`;
-      html += `        <td class="field-required">${reqMark}</td>\n`;
-      html += `        <td class="field-notes">${escapeHtml(notes)}</td>\n`;
-      html += `      </tr>\n`;
-    }
+    let notes = prop.description || '';
+    if (prop.enumValues) notes = `Options: ${prop.enumValues}`;
+    if (prop.isNested) notes = notes ? `${notes} [Nested]` : '[Nested object]';
 
-    html += `    </tbody>\n`;
-    html += `  </table>\n`;
-    html += `</div>\n`;
+    html += `    <tr data-field="${prop.name}"${stateMarker} class="${prop.isNested ? 'expandable' : ''}${stateClass}">\n`;
+    html += `      <td class="field-name">${prop.name}${systemBadge}</td>\n`;
+    html += `      <td class="field-type">${makeTypeClickable(prop.type)}</td>\n`;
+    html += `      <td class="field-required">${reqMark}</td>\n`;
+    html += `      <td class="field-notes">${escapeHtml(notes)}</td>\n`;
+    html += `    </tr>\n`;
   }
 
+  html += `  </tbody>\n</table>\n`;
   return html;
+}
+
+function generateDomainGroupedTables(groupedProps) {
+  return generateFlatAttributeTable(Object.values(groupedProps).flat());
 }
 
 /**
@@ -993,85 +983,110 @@ function generateRelationshipsTab(schemaName, relationships, schemas) {
 /**
  * Generate actions tab content
  */
-function generateActionsTab(schemaName, operations, properties) {
+function generateActionsTab(schemaName, operations, properties, transitions) {
   const ops = operations[schemaName];
+  const smTransitions = (transitions && transitions[schemaName]) || [];
+  const hasCrud = ops && Object.keys(ops).length > 0;
+
+  if (!hasCrud && smTransitions.length === 0) {
+    return '<p class="no-actions">No operations defined for this object.</p>\n';
+  }
+
+  const actionOrder = ['list', 'create', 'get', 'update', 'delete'];
+  const actionLabels = { list: 'List', create: 'Create', get: 'Get', update: 'Update', delete: 'Delete' };
+  const actionNotes = {
+    list: 'Paginated, searchable',
+    create: '',
+    get: 'By ID',
+    update: 'Partial updates',
+    delete: 'Permanent',
+  };
 
   let html = '';
+  html += `<table class="actions-table">\n`;
+  html += `  <thead>\n`;
+  html += `    <tr>\n`;
+  html += `      <th>Action</th>\n`;
+  html += `      <th>Endpoint</th>\n`;
+  html += `      <th>Notes</th>\n`;
+  html += `    </tr>\n`;
+  html += `  </thead>\n`;
+  html += `  <tbody>\n`;
 
-  if (ops && Object.keys(ops).length > 0) {
-    html += `<table class="actions-table">\n`;
-    html += `  <thead>\n`;
-    html += `    <tr>\n`;
-    html += `      <th>Action</th>\n`;
-    html += `      <th>Method</th>\n`;
-    html += `      <th>Path</th>\n`;
-    html += `      <th>Notes</th>\n`;
-    html += `    </tr>\n`;
-    html += `  </thead>\n`;
-    html += `  <tbody>\n`;
-
-    const actionOrder = ['list', 'create', 'get', 'update', 'delete'];
-    const actionLabels = {
-      list: 'List',
-      create: 'Create',
-      get: 'Get',
-      update: 'Update',
-      delete: 'Delete',
-    };
-    const actionNotes = {
-      list: 'Paginated, searchable',
-      create: '',
-      get: 'By ID',
-      update: 'Partial updates',
-      delete: 'Permanent',
-    };
-
+  if (hasCrud) {
     for (const action of actionOrder) {
-      if (ops[action]) {
-        const op = ops[action];
-        let notes = actionNotes[action] || '';
-        if (action === 'create') {
-          const reqFields = properties.filter(p => p.required && !p.readOnly).map(p => p.name);
-          if (reqFields.length > 0) {
-            notes = `Required: ${reqFields.slice(0, 3).join(', ')}${reqFields.length > 3 ? '...' : ''}`;
-          }
+      if (!ops[action]) continue;
+      const op = ops[action];
+      let notes = actionNotes[action] || '';
+      if (action === 'create') {
+        const reqFields = properties.filter(p => p.required && !p.readOnly).map(p => p.name);
+        if (reqFields.length > 0) {
+          notes = `Required: ${reqFields.slice(0, 3).join(', ')}${reqFields.length > 3 ? '...' : ''}`;
         }
-
-        html += `    <tr>\n`;
-        html += `      <td class="action-name">${actionLabels[action]}</td>\n`;
-        html += `      <td class="action-method method-${op.method.toLowerCase()}">${op.method}</td>\n`;
-        html += `      <td class="action-path"><code>${op.path}</code></td>\n`;
-        html += `      <td class="action-notes">${notes}</td>\n`;
-        html += `    </tr>\n`;
       }
+      html += `    <tr>\n`;
+      html += `      <td class="action-name">${actionLabels[action]}</td>\n`;
+      html += `      <td class="action-endpoint"><span class="action-method method-${op.method.toLowerCase()}">${op.method}</span> <code>${op.path}</code></td>\n`;
+      html += `      <td class="action-notes">${notes}</td>\n`;
+      html += `    </tr>\n`;
     }
-
-    html += `  </tbody>\n`;
-    html += `</table>\n`;
-  } else {
-    html += '<p class="no-actions">No CRUD operations defined for this object.</p>\n';
   }
 
-  // Read-only fields section
-  const readOnlyFields = properties.filter(p => p.readOnly);
-  if (readOnlyFields.length > 0) {
-    html += `<div class="read-only-section">\n`;
-    html += `  <h5>Read-Only Fields</h5>\n`;
-    html += `  <p>These fields are managed by the system and cannot be modified:</p>\n`;
-    html += `  <ul class="read-only-list">\n`;
-    for (const field of readOnlyFields) {
-      html += `    <li><code>${field.name}</code> - ${field.type}</li>\n`;
-    }
-    html += `  </ul>\n`;
-    html += `</div>\n`;
+  for (const t of smTransitions) {
+    const notes = t.description || '';
+    const endpoint = t.method && t.path
+      ? `<span class="action-method method-${t.method.toLowerCase()}">${escapeHtml(t.method)}</span> <code>${escapeHtml(t.path)}</code>`
+      : '';
+    html += `    <tr>\n`;
+    html += `      <td class="action-name">${escapeHtml(t.id)}</td>\n`;
+    html += `      <td class="action-endpoint">${endpoint}</td>\n`;
+    html += `      <td class="action-notes">${escapeHtml(notes)}</td>\n`;
+    html += `    </tr>\n`;
   }
+
+  html += `  </tbody>\n`;
+  html += `</table>\n`;
 
   return html;
 }
 /**
+ * Generate events tab content
+ */
+function generateEventsTab(schemaName, events) {
+  const obj = events && events[schemaName];
+  if (!obj || (obj.published.length === 0 && obj.subscribed.length === 0)) {
+    return '<p class="no-actions">No events defined for this object.</p>\n';
+  }
+
+  function eventsTable(rows) {
+    let t = `<table class="actions-table">\n`;
+    t += `  <thead>\n    <tr>\n      <th>Event</th>\n      <th>Description</th>\n    </tr>\n  </thead>\n  <tbody>\n`;
+    for (const e of [...rows].sort((a, b) => a.name.localeCompare(b.name))) {
+      t += `    <tr>\n`;
+      t += `      <td class="action-name"><code>${escapeHtml(e.name)}</code></td>\n`;
+      t += `      <td class="action-notes">${escapeHtml(e.description)}</td>\n`;
+      t += `    </tr>\n`;
+    }
+    t += `  </tbody>\n</table>\n`;
+    return t;
+  }
+
+  let html = '';
+  if (obj.published.length > 0) {
+    html += `<h5 class="transitions-heading">Publishes</h5>\n`;
+    html += eventsTable(obj.published);
+  }
+  if (obj.subscribed.length > 0) {
+    html += `<h5 class="transitions-heading">Subscribes</h5>\n`;
+    html += eventsTable(obj.subscribed);
+  }
+  return html;
+}
+
+/**
  * Generate ORCA-structured HTML for a primary schema
  */
-function generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, domainKey) {
+function generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, domainKey, transitions, events) {
   const { properties } = processSchema(schema, schemaName);
   const description = schema.description || '';
   const domain = DOMAIN_HIERARCHY[domainKey];
@@ -1086,28 +1101,27 @@ function generateOrcaSection(schemaName, schema, relationships, operations, stat
 
   // ORCA Tabs
   html += `  <div class="orca-tabs">\n`;
-  html += `    <button class="orca-tab active" data-tab="overview">Overview</button>\n`;
+  html += `    <button class="orca-tab" data-tab="overview">Overview</button>\n`;
+  html += `    <button class="orca-tab active" data-tab="attributes">Attributes</button>\n`;
   html += `    <button class="orca-tab" data-tab="relationships">Relationships</button>\n`;
   html += `    <button class="orca-tab" data-tab="actions">Actions</button>\n`;
-  html += `    <button class="orca-tab" data-tab="attributes">Attributes</button>\n`;
+  html += `    <button class="orca-tab" data-tab="events">Events</button>\n`;
   html += `  </div>\n`;
 
   // Tab Panels
   html += `  <div class="orca-panels">\n`;
 
   // Overview Panel
-  html += `    <div class="orca-panel active" data-tab="overview">\n`;
+  html += `    <div class="orca-panel" data-tab="overview">\n`;
   html += `      <div class="overview-content">\n`;
   html += `        <h4>What is ${schemaName}?</h4>\n`;
   html += `        <p class="description">${escapeHtml(description)}</p>\n`;
-  html += `        <h4>Key Characteristics</h4>\n`;
-  html += `        <ul class="characteristics">\n`;
-  html += `          <li><strong>Total fields:</strong> ${properties.length}</li>\n`;
-  html += `          <li><strong>Required fields:</strong> ${properties.filter(p => p.required).length}</li>\n`;
-  html += `          <li><strong>Read-only fields:</strong> ${properties.filter(p => p.readOnly).length}</li>\n`;
-  html += `          <li><strong>Nested objects:</strong> ${properties.filter(p => p.isNested).length}</li>\n`;
-  html += `        </ul>\n`;
   html += `      </div>\n`;
+  html += `    </div>\n`;
+
+  // Attributes Panel
+  html += `    <div class="orca-panel active" data-tab="attributes">\n`;
+  html += generateAttributesWithStateVariants(schemaName, schema, stateSchemas, states);
   html += `    </div>\n`;
 
   // Relationships Panel
@@ -1117,12 +1131,12 @@ function generateOrcaSection(schemaName, schema, relationships, operations, stat
 
   // Actions Panel
   html += `    <div class="orca-panel" data-tab="actions">\n`;
-  html += generateActionsTab(schemaName, operations, properties);
+  html += generateActionsTab(schemaName, operations, properties, transitions);
   html += `    </div>\n`;
 
-  // Attributes Panel - with state variants
-  html += `    <div class="orca-panel" data-tab="attributes">\n`;
-  html += generateAttributesWithStateVariants(schemaName, schema, stateSchemas, states);
+  // Events Panel
+  html += `    <div class="orca-panel" data-tab="events">\n`;
+  html += generateEventsTab(schemaName, events);
   html += `    </div>\n`;
 
   html += `  </div>\n`; // End orca-panels
@@ -1223,7 +1237,7 @@ function generateAttributesWithStateVariants(schemaName, baseSchema, stateSchema
   const baseGrouped = groupPropertiesByDomain(baseProps);
 
   html += `<div class="attributes-content" data-state-content="base">\n`;
-  html += generateDomainGroupedTables(baseGrouped);
+  html += generateFlatAttributeTable(baseProps);
   html += `</div>\n`;
 
   // Generate state-specific content
@@ -1252,63 +1266,7 @@ function generateAttributesWithStateVariants(schemaName, baseSchema, stateSchema
     const stateGrouped = groupPropertiesByDomain(stateProps);
 
     html += `<div class="attributes-content" data-state-content="${state.state}" style="display: none;">\n`;
-    if (hasChanges) {
-      html += generateDomainGroupedTablesWithStateMarkers(stateGrouped, state.state);
-    } else {
-      html += generateDomainGroupedTables(stateGrouped);
-    }
-    html += `</div>\n`;
-  }
-
-  return html;
-}
-
-/**
- * Generate domain-grouped tables with state-specific field markers
- */
-function generateDomainGroupedTablesWithStateMarkers(groupedProps, stateName) {
-  let html = '';
-
-  for (const [domain, props] of Object.entries(groupedProps)) {
-    const config = getDomainConfig(domain);
-
-    html += `<div class="domain-group" style="--domain-color: ${config.color}; --domain-bg: ${config.bgColor};">\n`;
-    html += `  <h5 class="domain-header"><span class="domain-indicator"></span>${config.name}</h5>\n`;
-    html += `  <table class="property-table">\n`;
-    html += `    <thead>\n`;
-    html += `      <tr>\n`;
-    html += `        <th>Field</th>\n`;
-    html += `        <th>Type</th>\n`;
-    html += `        <th>Req</th>\n`;
-    html += `        <th>Notes</th>\n`;
-    html += `      </tr>\n`;
-    html += `    </thead>\n`;
-    html += `    <tbody>\n`;
-
-    for (const prop of props) {
-      const reqMark = prop.required ? '&#10003;' : '';
-      const readOnlyMark = prop.readOnly ? ' <span class="read-only-badge">read-only</span>' : '';
-      const stateMarker = prop.isStateSpecific ? ` data-state-field="${stateName}"` : '';
-      const stateClass = prop.isStateSpecific ? ' state-added-field' : '';
-
-      let notes = prop.description || '';
-      if (prop.enumValues) {
-        notes = `Options: ${prop.enumValues}`;
-      }
-      if (prop.isNested) {
-        notes = notes ? `${notes} [Nested]` : '[Nested object]';
-      }
-
-      html += `      <tr data-field="${prop.name}"${stateMarker} class="${prop.isNested ? 'expandable' : ''}${stateClass}">\n`;
-      html += `        <td class="field-name">${prop.name}${readOnlyMark}</td>\n`;
-      html += `        <td class="field-type">${makeTypeClickable(prop.type)}</td>\n`;
-      html += `        <td class="field-required">${reqMark}</td>\n`;
-      html += `        <td class="field-notes">${escapeHtml(notes)}</td>\n`;
-      html += `      </tr>\n`;
-    }
-
-    html += `    </tbody>\n`;
-    html += `  </table>\n`;
+    html += generateFlatAttributeTable(stateProps, hasChanges ? state.state : null);
     html += `</div>\n`;
   }
 
@@ -1584,7 +1542,7 @@ function checkForVariations(schemaName, schemas, stateSchemas, states) {
 /**
  * Generate the full HTML document
  */
-function generateHtml(schemas, stateSchemas, states, relationships, operations) {
+function generateHtml(schemas, stateSchemas, states, relationships, operations, transitions, events) {
   let contentHtml = '';
 
   // Group schemas by high-level domain
@@ -1658,7 +1616,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
       const { domain: schemaDomain } = classifySchemaIntoDomain(schemaName);
 
       if (isPrimary) {
-        contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, schemaDomain);
+        contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, schemaDomain, transitions, events);
       } else {
         contentHtml += generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, schemaDomain);
       }
@@ -1672,7 +1630,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
 
     const isPrimary = PRIMARY_SCHEMAS.includes(schemaName);
     if (isPrimary) {
-      contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, 'unclassified');
+      contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, 'unclassified', transitions, events);
     } else {
       contentHtml += generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, 'unclassified');
     }
@@ -1695,7 +1653,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Safety Net API - ORCA Design Reference</title>
+  <title>Safety Net Blueprint - ORCA Design Reference</title>
   <style>
     * {
       box-sizing: border-box;
@@ -1740,7 +1698,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
 
     .sidebar h1 {
       font-size: 1.2rem;
-      margin-bottom: 10px;
+      margin-bottom: 0;
       padding-bottom: 10px;
       border-bottom: 1px solid #456;
     }
@@ -1816,38 +1774,6 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
     }
 
     /* Domain list colors are applied via inline style — see build script */
-
-    .sidebar-state-selector {
-      margin-bottom: 15px;
-    }
-
-    .sidebar-state-buttons {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .sidebar-state-buttons .state-selector-btn {
-      padding: 6px 12px;
-      font-size: 0.8rem;
-      border: 1px solid #456;
-      background: transparent;
-      color: #bdc3c7;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .sidebar-state-buttons .state-selector-btn:hover {
-      border-color: #3498db;
-      color: #3498db;
-    }
-
-    .sidebar-state-buttons .state-selector-btn.active {
-      background: #3498db;
-      border-color: #3498db;
-      color: white;
-    }
 
     .search-container {
       position: relative;
@@ -2531,7 +2457,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
     .method-patch, .method-put { background: #fff3cd; color: #856404; }
     .method-delete { background: #f8d7da; color: #721c24; }
 
-    .action-path code {
+    .action-endpoint code {
       background: #f8f9fa;
       padding: 3px 8px;
       border-radius: 3px;
@@ -2540,6 +2466,28 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
     .action-notes {
       color: #7f8c8d;
       font-size: 0.9rem;
+    }
+
+    .event-direction {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    .event-direction-publishes { background: #cce5ff; color: #004085; }
+    .event-direction-subscribes { background: #d4edda; color: #155724; }
+
+    .system-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: #ecf0f1;
+      color: #7f8c8d;
+      margin-left: 6px;
+      vertical-align: middle;
     }
 
     .no-actions {
@@ -2930,12 +2878,6 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations) 
     <aside class="sidebar">
       <div class="sidebar-header">
         <a href="#orca-intro" class="sidebar-title"><h1>ORCA Design Reference</h1></a>
-        <div class="sidebar-state-selector">
-          <div class="sidebar-state-buttons">
-            <button class="state-selector-btn active" data-state="base">Base</button>
-            ${states.map(s => `<button class="state-selector-btn" data-state="${s.state}">${s.name}</button>`).join('\n            ')}
-          </div>
-        </div>
         <div class="search-container">
           <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
           <div id="search-results" class="search-results"></div>
@@ -2950,12 +2892,12 @@ ${sidebarHtml}
 
     <main class="main">
       <section id="orca-intro" class="intro-section">
-        <h1>ORCA: Object-Relationship Content Attributes</h1>
+        <h1>ORCA: Objects, Relationships, Calls to Action</h1>
         <p class="intro-description">
-          ORCA is a methodology for organizing and presenting data models in a way that's intuitive for designers.
-          This reference documents the Safety Net API data model—the standardized fields, types, and relationships
-          used across benefit program applications. Use this reference to understand what data exists, how it's
-          structured, and what values are valid for each field.
+          OOUX (Object-Oriented UX) is a design methodology for modeling systems around real-world objects rather
+          than screens or flows. ORCA — Objects, Relationships, Calls to Action — is the core framework of OOUX.
+          This reference applies ORCA to the Safety Net Blueprint: an object-by-object guide to what data exists
+          in the system, how objects relate to each other, and what actions can be taken on them.
         </p>
         <div class="intro-domains">
           <h3>Data Domains</h3>
@@ -2966,24 +2908,17 @@ ${introDomainListHtml}
         </div>
       </section>
 
-      <div class="legend">
-        <div class="legend-item"><span class="badge type">Text</span> Type indicator</div>
-        <div class="legend-item"><span class="badge required">&#10003;</span> Required field</div>
-        <div class="legend-item"><span class="badge link">→</span> Links to another object</div>
-      </div>
-
 ${contentHtml}
     </main>
   </div>
 
   <script>
     // ORCA tabs - with persistence across all schemas
-    let activeTab = localStorage.getItem('orcaActiveTab') || 'overview';
+    let activeTab = 'attributes';
 
     // Function to set active tab across all sections
     function setActiveTabGlobally(tabName) {
       activeTab = tabName;
-      localStorage.setItem('orcaActiveTab', tabName);
 
       document.querySelectorAll('.orca-tabs').forEach(tabGroup => {
         const tabs = tabGroup.querySelectorAll('.orca-tab');
@@ -3197,6 +3132,145 @@ ${contentHtml}
 }
 
 /**
+ * Load state machine transitions from all *-state-machine.yaml files in specDir.
+ * Returns a map of objectName -> normalized transition array.
+ */
+function loadStateMachineTransitions(specDir) {
+  const result = {};
+
+  let files;
+  try {
+    files = readdirSync(specDir).filter(f => f.endsWith('-state-machine.yaml'));
+  } catch {
+    return result;
+  }
+
+  for (const file of files) {
+    let sm;
+    try {
+      sm = yaml.load(readFileSync(join(specDir, file), 'utf8'));
+    } catch {
+      continue;
+    }
+
+    for (const machine of sm.machines || []) {
+      const objectName = machine.object;
+      if (!objectName) continue;
+
+      const normalized = [];
+
+      // New format: machine.transitions[] with id, description, guards[].actors, transition.from/to
+      for (const t of machine.transitions || []) {
+        const desc = t.description || '';
+        const dashIdx = desc.indexOf(' — ');
+        const endpoint = dashIdx >= 0 ? desc.slice(0, dashIdx).trim() : desc.trim();
+        const notes = dashIdx >= 0 ? desc.slice(dashIdx + 3).trim() : '';
+        const parts = endpoint.split(' ');
+        const method = parts[0] || '';
+        const path = parts[1] || '';
+        const actors = (t.guards || []).flatMap(g => g.actors || []);
+
+        normalized.push({
+          id: t.id || '',
+          method,
+          path,
+          actors,
+          from: t.transition?.from || '',
+          to: t.transition?.to || '',
+          description: notes,
+        });
+      }
+
+      // Old format: machine.operations[] with name, guards.actors, transition.from
+      for (const op of machine.operations || []) {
+        const actors = Array.isArray(op.guards?.actors) ? op.guards.actors : [];
+        normalized.push({
+          id: op.name || '',
+          method: '',
+          path: '',
+          actors,
+          from: op.transition?.from || '',
+          to: op.transition?.to || '',
+          description: '',
+        });
+      }
+
+      // Deduplicate by id — same transition may appear for multiple source states
+      const seen = new Set();
+      const deduped = normalized.filter(t => {
+        if (seen.has(t.id)) return false;
+        seen.add(t.id);
+        return true;
+      });
+
+      if (deduped.length > 0) {
+        result[objectName] = (result[objectName] || []).concat(deduped);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Load state machine events (published and subscribed) from all *-state-machine.yaml files.
+ * Returns a map of objectName -> { published: [...], subscribed: [...] }
+ */
+function loadStateMachineEvents(specDir) {
+  const result = {};
+
+  let files;
+  try {
+    files = readdirSync(specDir).filter(f => f.endsWith('-state-machine.yaml'));
+  } catch {
+    return result;
+  }
+
+  for (const file of files) {
+    let sm;
+    try {
+      sm = yaml.load(readFileSync(join(specDir, file), 'utf8'));
+    } catch {
+      continue;
+    }
+
+    const domain = sm.domain || '';
+
+    for (const machine of sm.machines || []) {
+      const objectName = machine.object;
+      if (!objectName) continue;
+
+      const published = [];
+      const subscribed = [];
+
+      // Published: emitted from transition steps
+      for (const t of machine.transitions || []) {
+        for (const step of t.steps || []) {
+          if (step.emit?.event) {
+            const name = `${domain}.${objectName.toLowerCase()}.${step.emit.event}`;
+            const description = step.emit.description || '';
+            if (!published.some(e => e.name === name)) {
+              published.push({ name, description });
+            }
+          }
+        }
+      }
+
+      // Subscribed: from machine.events[]
+      for (const e of machine.events || []) {
+        subscribed.push({ name: e.name || '', description: e.description || '' });
+      }
+
+      if (published.length > 0 || subscribed.length > 0) {
+        result[objectName] = { published, subscribed };
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Main function
  */
 async function main() {
@@ -3216,7 +3290,7 @@ async function main() {
 
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const specDir = resolve(specArg ? specArg.split('=')[1] : join(__dirname, '../../contracts'));
-  const outDir = resolve(outArg ? outArg.split('=')[1] : __dirname);
+  const outDir = resolve(outArg ? outArg.split('=')[1] : join(__dirname, 'output'));
   const configPath = resolve(configArg ? configArg.split('=')[1] : join(__dirname, '../config.yaml'));
   const isSingleFile = statSync(specDir).isFile();
 
@@ -3282,10 +3356,21 @@ async function main() {
     console.log('Extracting API operations...');
     const operations = extractOperations(apiSpecs);
 
+    // Load state machine transitions and events
+    const smSpecDir = isSingleFile ? dirname(specDir) : specDir;
+    const transitions = loadStateMachineTransitions(smSpecDir);
+    console.log(`Loaded transitions for ${Object.keys(transitions).length} object(s): ${Object.keys(transitions).join(', ')}`);
+    const events = loadStateMachineEvents(smSpecDir);
+    console.log(`Loaded events for ${Object.keys(events).length} object(s): ${Object.keys(events).join(', ')}`);
+
+    // Derive primary schemas: anything with a REST endpoint or a state machine gets full ORCA tabs
+    PRIMARY_SCHEMAS = [...new Set([...Object.keys(operations), ...Object.keys(transitions)])];
+    console.log(`Primary schemas: ${PRIMARY_SCHEMAS.join(', ')}`);
+
     // Generate HTML (no state overlays — states use resolve-overlay.js separately)
     const stateSchemas = {};
     const states = [];
-    const html = generateHtml(baseSchemas, stateSchemas, states, relationships, operations);
+    const html = generateHtml(baseSchemas, stateSchemas, states, relationships, operations, transitions, events);
 
     // Write output
     if (!existsSync(outDir)) {
