@@ -874,10 +874,10 @@ async function runTests() {
         snapTaskId = data.id;
         const issues = [];
         if (data.queueId !== snapIntakeQueueId) issues.push(`queueId=${data.queueId}, expected=${snapIntakeQueueId}`);
-        if (data.priority !== 'expedited') issues.push(`priority=${data.priority}, expected=expedited`);
+        if (data.priority !== 1) issues.push(`priority=${data.priority}, expected=1`);
 
         if (issues.length === 0) {
-          console.log('     ✓ PASS: SNAP task → snap-intake queue, expedited priority');
+          console.log('     ✓ PASS: SNAP task → snap-intake queue, expedited priority (1)');
           totalPassed++;
         } else {
           console.log(`     ✗ FAIL: ${issues.join('; ')}`);
@@ -908,10 +908,10 @@ async function runTests() {
         const data = await response.json();
         const issues = [];
         if (data.queueId !== generalIntakeQueueId) issues.push(`queueId=${data.queueId}, expected=${generalIntakeQueueId}`);
-        if (data.priority !== 'normal') issues.push(`priority=${data.priority}, expected=normal`);
+        if (data.priority !== 3) issues.push(`priority=${data.priority}, expected=3`);
 
         if (issues.length === 0) {
-          console.log('     ✓ PASS: Non-SNAP task → general-intake queue, normal priority');
+          console.log('     ✓ PASS: Non-SNAP task → general-intake queue, normal priority (3)');
           totalPassed++;
         } else {
           console.log(`     ✗ FAIL: ${issues.join('; ')}`);
@@ -946,7 +946,7 @@ async function runTests() {
           const data = await releaseRes.json();
           const issues = [];
           if (data.queueId !== snapIntakeQueueId) issues.push(`queueId=${data.queueId}, expected=${snapIntakeQueueId}`);
-          if (data.priority !== 'expedited') issues.push(`priority=${data.priority}, expected=expedited`);
+          if (data.priority !== 1) issues.push(`priority=${data.priority}, expected=1`);
           if (data.status !== 'pending') issues.push(`status=${data.status}, expected=pending`);
 
           if (issues.length === 0) {
@@ -1092,11 +1092,11 @@ async function runTests() {
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/set-priority`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
-          body: JSON.stringify({ priority: 'high', reason: 'Urgent case' })
+          body: JSON.stringify({ priority: 2, reason: 'Urgent case' })
         });
         const data = await response.json();
-        if (response.status === 200 && data.priority === 'high' && data.status === 'pending') {
-          console.log('     ✓ PASS: Priority updated to high, status still pending');
+        if (response.status === 200 && data.priority === 2 && data.status === 'pending') {
+          console.log('     ✓ PASS: Priority updated to 2 (high), status still pending');
           totalPassed++;
         } else {
           console.log(`     ✗ FAIL: priority=${data.priority}, status=${data.status}, http=${response.status}`);
@@ -1205,7 +1205,7 @@ async function runTests() {
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/set-priority`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' },
-          body: JSON.stringify({ priority: 'high' })
+          body: JSON.stringify({ priority: 2 })
         });
         if (response.status === 403) {
           console.log('     ✓ PASS: Returns 403 FORBIDDEN for caseworker');
