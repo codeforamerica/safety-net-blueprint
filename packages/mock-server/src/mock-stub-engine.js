@@ -19,6 +19,7 @@
 
 import { CLOUDEVENTS_TYPE_PREFIX, emitEventEnvelope } from './emit-event.js';
 import { eventBus } from './event-bus.js';
+import { resolveTimeTokens } from './time-tokens.js';
 
 /** Ordered list of registered event stubs. */
 const stubs = [];
@@ -288,7 +289,8 @@ function dispatchStubResponse(stub, envelope) {
 
   if (!stub.respond?.type) return;
 
-  const { type, subject, source, data: stubData } = stub.respond;
+  const { type, subject, source, data: rawStubData } = stub.respond;
+  const stubData = rawStubData ? resolveTimeTokens(rawStubData) : rawStubData;
   const fullType = type.startsWith(CLOUDEVENTS_TYPE_PREFIX) ? type : CLOUDEVENTS_TYPE_PREFIX + type;
 
   // Derive entity ID field name from trigger event type.

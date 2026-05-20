@@ -7,6 +7,7 @@ import yaml from 'js-yaml';
 import { insertResource, clearAll } from './database-manager.js';
 import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { join } from 'path';
+import { resolveTimeTokens } from './time-tokens.js';
 
 /**
  * Load examples from YAML file
@@ -47,10 +48,11 @@ export function seedDatabase(collectionName, seedDir, apiName) {
 
     let seededCount = 0;
     const baseTimestamp = new Date('2024-01-01T00:00:00Z').getTime();
+    const now = new Date();
 
     for (let i = 0; i < resources.length; i++) {
       try {
-        const resource = { ...resources[i].data };
+        const resource = resolveTimeTokens({ ...resources[i].data }, now);
         // Example1 (i=0) gets newest timestamp so it appears first when sorted DESC
         const minutesOffset = (resources.length - 1 - i) * 60000;
         const timestamp = new Date(baseTimestamp + minutesOffset).toISOString();
@@ -138,6 +140,7 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
   console.log('\nSeeding databases from seed files...');
 
   const summary = {};
+  const now = new Date();
 
   for (const api of apiSpecs) {
     try {
@@ -170,7 +173,7 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
 
         for (let i = 0; i < resources.length; i++) {
           try {
-            const resource = { ...resources[i].data };
+            const resource = resolveTimeTokens({ ...resources[i].data }, now);
             const minutesOffset = (resources.length - 1 - i) * 60000;
             const timestamp = new Date(baseTimestamp + minutesOffset).toISOString();
             resource.createdAt = timestamp;
