@@ -284,6 +284,16 @@ export function tokensToSqlConditions(tokens, searchableFields = []) {
   return { whereClauses, params };
 }
 
+// Recognize ISO 8601 date / date-time strings so comparison operators don't
+// silently cast them to REAL. CAST('2026-05-15T16:00:00Z' AS REAL) is 2026.0,
+// which destroys anything finer than year-resolution. SQLite collates ISO
+// strings lexicographically, so plain string comparison is the correct fix
+// (issue #292).
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+function looksLikeIsoDateTime(value) {
+  return typeof value === 'string' && ISO_DATE_RE.test(value);
+}
+
 /**
  * Convert a single token to a SQL condition
  * @param {Object} token - Parsed token
@@ -366,34 +376,34 @@ function tokenToSqlCondition(token, searchableFields) {
 
     case TokenType.GREATER_THAN: {
       const jsonPath = fieldToJsonPath(field);
-      return {
-        clause: `CAST(json_extract(data, '${jsonPath}') AS REAL) > ?`,
-        tokenParams: [value]
-      };
+      const clause = looksLikeIsoDateTime(value)
+        ? `json_extract(data, '${jsonPath}') > ?`
+        : `CAST(json_extract(data, '${jsonPath}') AS REAL) > ?`;
+      return { clause, tokenParams: [value] };
     }
 
     case TokenType.GREATER_THAN_OR_EQUAL: {
       const jsonPath = fieldToJsonPath(field);
-      return {
-        clause: `CAST(json_extract(data, '${jsonPath}') AS REAL) >= ?`,
-        tokenParams: [value]
-      };
+      const clause = looksLikeIsoDateTime(value)
+        ? `json_extract(data, '${jsonPath}') >= ?`
+        : `CAST(json_extract(data, '${jsonPath}') AS REAL) >= ?`;
+      return { clause, tokenParams: [value] };
     }
 
     case TokenType.LESS_THAN: {
       const jsonPath = fieldToJsonPath(field);
-      return {
-        clause: `CAST(json_extract(data, '${jsonPath}') AS REAL) < ?`,
-        tokenParams: [value]
-      };
+      const clause = looksLikeIsoDateTime(value)
+        ? `json_extract(data, '${jsonPath}') < ?`
+        : `CAST(json_extract(data, '${jsonPath}') AS REAL) < ?`;
+      return { clause, tokenParams: [value] };
     }
 
     case TokenType.LESS_THAN_OR_EQUAL: {
       const jsonPath = fieldToJsonPath(field);
-      return {
-        clause: `CAST(json_extract(data, '${jsonPath}') AS REAL) <= ?`,
-        tokenParams: [value]
-      };
+      const clause = looksLikeIsoDateTime(value)
+        ? `json_extract(data, '${jsonPath}') <= ?`
+        : `CAST(json_extract(data, '${jsonPath}') AS REAL) <= ?`;
+      return { clause, tokenParams: [value] };
     }
 
     case TokenType.IN: {

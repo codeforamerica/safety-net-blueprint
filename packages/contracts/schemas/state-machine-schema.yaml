@@ -418,6 +418,7 @@ $defs:
   #   automatically from the domain and object.
   #     - emit:
   #         event: submitted
+  #         subject: $object.applicationId   # optional; overrides default resourceId
   #         data:
   #           submittedAt: $now
   #           programs: $object.programs
@@ -544,6 +545,7 @@ $defs:
         additionalProperties: false
         properties:
           event: {type: string, description: "Event action name (e.g. submitted, completed)."}
+          subject: {type: string, description: "CloudEvents subject override. Value expression. Defaults to the emitting resource's own id."}
           data:
             type: object
             additionalProperties: true

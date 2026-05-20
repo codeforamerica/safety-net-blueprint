@@ -331,6 +331,38 @@ function runTests() {
     assertEqual(params, [1000]);
   });
 
+  test('skips CAST AS REAL for ISO date-time bounds (#292)', () => {
+    // CAST('2026-05-15T16:00:00Z' AS REAL) is 2026.0, which would silently
+    // drop anything finer than year-resolution. SQLite collates strings
+    // lexicographically, so plain string comparison is correct for ISO 8601.
+    const cases = [
+      [TokenType.GREATER_THAN, '>'],
+      [TokenType.GREATER_THAN_OR_EQUAL, '>='],
+      [TokenType.LESS_THAN, '<'],
+      [TokenType.LESS_THAN_OR_EQUAL, '<='],
+    ];
+    for (const [type, op] of cases) {
+      const tokens = [{ type, field: 'startAt', value: '2026-05-15T16:00:00Z' }];
+      const { whereClauses, params } = tokensToSqlConditions(tokens, []);
+      assertEqual(whereClauses[0], `json_extract(data, '$.startAt') ${op} ?`);
+      assertEqual(params, ['2026-05-15T16:00:00Z']);
+    }
+  });
+
+  test('also matches date-only ISO strings', () => {
+    const tokens = [{ type: TokenType.GREATER_THAN_OR_EQUAL, field: 'created', value: '2024-01-01' }];
+    const { whereClauses } = tokensToSqlConditions(tokens, []);
+    assertEqual(whereClauses[0], "json_extract(data, '$.created') >= ?");
+  });
+
+  test('still uses REAL cast for bare-year bounds', () => {
+    // The parser emits "2025" as a string. It doesn't match yyyy-mm-dd,
+    // so it stays on the cast path and keeps numeric ordering.
+    const tokens = [{ type: TokenType.GREATER_THAN, field: 'year', value: '2025' }];
+    const { whereClauses } = tokensToSqlConditions(tokens, []);
+    assertEqual(whereClauses[0], "CAST(json_extract(data, '$.year') AS REAL) > ?");
+  });
+
   test('generates IN clause SQL', () => {
     const tokens = [{ type: TokenType.IN, field: 'status', value: ['a', 'b'] }];
     const { whereClauses, params } = tokensToSqlConditions(tokens, []);

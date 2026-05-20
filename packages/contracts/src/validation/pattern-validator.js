@@ -68,16 +68,37 @@ export function validateForeignKeys(spec, errors) {
   const schemas = spec.components?.schemas;
   if (!schemas) return;
 
+  const localSchemaNames = new Set(Object.keys(schemas));
+  const reservedResources = new Set(['External', 'Polymorphic']);
+
   for (const [schemaName, schema] of Object.entries(schemas)) {
     for (const { propName, propSchema, propPath } of walkProperties(schema)) {
       if (!isFkField(propName, propSchema)) continue;
 
-      if (!propSchema['x-relationship']?.resource) {
+      const rel = propSchema['x-relationship'];
+
+      if (!rel?.resource) {
         errors.push({
           path: `components/schemas/${schemaName}/${propPath}`,
           rule: 'fk-x-relationship-required',
           message: `Schema "${schemaName}": "${propName}" is a UUID FK field and must declare x-relationship: { resource: ResourceName }. Use resource: External for external system references. Use resource: Polymorphic for polymorphic associations paired with a *Type discriminator field.`,
           severity: 'error'
+        });
+        continue;
+      }
+
+      // Warn when the referenced resource is not defined in this spec and no
+      // domain qualifier is present — likely a cross-domain FK missing domain:.
+      if (
+        !reservedResources.has(rel.resource) &&
+        !localSchemaNames.has(rel.resource) &&
+        !rel.domain
+      ) {
+        errors.push({
+          path: `components/schemas/${schemaName}/${propPath}`,
+          rule: 'fk-x-relationship-missing-domain',
+          message: `Schema "${schemaName}": "${propName}" references resource "${rel.resource}" which is not defined in this spec. If this is a cross-domain reference, add domain: <domain> to the x-relationship annotation (e.g., domain: intake).`,
+          severity: 'warn'
         });
       }
     }

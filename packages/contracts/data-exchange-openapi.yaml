@@ -87,11 +87,6 @@ paths:
           description: Filter by service type.
           schema:
             $ref: "#/components/schemas/ServiceType"
-        - name: program
-          in: query
-          description: Filter by program (returns services that apply to this program or all programs).
-          schema:
-            $ref: "./components/common.yaml#/Program"
       responses:
         "200":
           description: A paginated list of external services.
@@ -561,7 +556,7 @@ components:
         - timed_out
 
     ServiceType:
-      $ref: "./schemas/common.yaml#/$defs/ServiceType"
+      $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
 
     # --- Events ---
     # Payload schemas live in schemas/data-exchange-events.yaml for reuse across

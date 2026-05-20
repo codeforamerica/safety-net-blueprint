@@ -13,7 +13,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `draft` → `submitted`
   - Record when the application was formally submitted (sets `submittedAt`)
   - Emit: `intake.application.submitted` — starts the regulatory clock; triggers caseworker task creation and confirmation notice
-    - Subscribed by: [Intake/Application](intake.md#application), [Workflow/Task](workflow.md)
+    - Subscribed by: [Eligibility/Determination](eligibility.md#determination), [Intake/Application](intake.md#application), [Workflow/Task](workflow.md)
 - **open** — System marks a submitted application as under active caseworker review
   - Actors: system only
   - Transition: `submitted` → `under_review`
@@ -22,6 +22,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Actors: caseworker, or supervisor
   - Transition: no state change
   - Emit: `intake.application.review_completed` — signals data collection is complete; triggers eligibility determination
+    - Subscribed by: [Eligibility/Determination](eligibility.md#determination)
 - **close** — Marks a reviewed application as closed after all determinations are complete
   - Actors: caseworker, supervisor, or system
   - Transition: `under_review` → `closed`
@@ -32,6 +33,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `submitted`/`under_review` → `withdrawn`
   - Record when the application was withdrawn (sets `withdrawnAt`)
   - Emit: `intake.application.withdrawn` — triggers open task cancellation and withdrawal notice
+    - Subscribed by: [Eligibility/Determination](eligibility.md#determination)
 
 ### Event subscriptions
 
@@ -48,13 +50,15 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition the Verification based on the service call result; on inconclusive, creates a document fallback per ex parte rules (42 CFR § 435.911)
 - **`scheduling.appointment.scheduled`**
   - Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.
-- **`document_management.version.uploaded`**
+- **`document_management.document_version.uploaded`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification
-- **`eligibility.application.determination_completed`**
+- **`eligibility.determination.created`**
+  - For each:
+- **`eligibility.application.decision_completed`**
   - Look up: member (from `event.data.memberId`)
   - Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
-- **`eligibility.application.all_determined`**
+- **`eligibility.application.determination_completed`**
   - Close the application when all program+member combinations are determined
 - **`eligibility.application.expedited`**
   - Set isExpedited on the application when eligibility screening confirms expedited criteria are met

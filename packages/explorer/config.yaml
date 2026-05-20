@@ -38,7 +38,7 @@ domains:
     label: Intake
     status: partial
     description: Application submission & intake processing
-    entities: [Application, ApplicationMember, Income, Expense, Resource]
+    entities: [Application, ApplicationMember, Income, Expense, Resource, Verification]
 
   - id: eligibility
     label: Eligibility
@@ -117,12 +117,10 @@ events:
   # updates and task lifecycle events
   - name: call.completed
     publisher: data_exchange
-    status: planned
+    status: implemented
     subscribers:
       - intake
-      - workflow
       - eligibility
-      - client_management
 
   - name: call.submitted
     publisher: data_exchange
@@ -149,11 +147,9 @@ events:
 
   # expedited screening result — intake sets isExpedited: true on the application;
   # workflow subscribes directly to assign the expedited SLA track (no re-publish needed)
-  # CONTRACT NOTE: workflow rules need a subscription to this event; intake-rules.yaml
-  # flag-expedited transition and application.expedited_flagged event can be removed
   - name: eligibility.application.expedited
     publisher: eligibility
-    status: planned
+    status: implemented
     subscribers:
       - intake
       - workflow
@@ -163,7 +159,7 @@ events:
   # may fire multiple times as individual Decisions resolve
   - name: eligibility.application.decision_completed
     publisher: eligibility
-    status: planned
+    status: implemented
     subscribers:
       - intake
 
@@ -171,7 +167,7 @@ events:
   # triggers intake to update final status and close the application
   - name: eligibility.application.determination_completed
     publisher: eligibility
-    status: planned
+    status: implemented
     subscribers:
       - intake
 
@@ -181,7 +177,7 @@ events:
   # carries metadata.intake.verificationId to satisfy the linked Verification
   - name: version.uploaded
     publisher: document_management
-    status: planned
+    status: implemented
     subscribers:
       - intake
 
@@ -191,13 +187,21 @@ events:
   # no event — intake knows exactly what it needs and who to call
 
   # emitted when a determination requires supervisor sign-off before the NOA is sent;
-  # workflow subscribes to create a supervisor approval task
+  # workflow subscribes to create a supervisor approval task and move the caseworker
+  # task to pending_review
   - name: determination.approval_needed
     publisher: intake
-    status: planned
+    status: implemented
     subscribers:
       - workflow
 
+  # emitted when a supervisor rejects a determination; workflow returns the
+  # caseworker task to in_progress via return-to-worker for revision
+  - name: determination.rejected
+    publisher: intake
+    status: implemented
+    subscribers:
+      - workflow
 
   # triggers case creation and workflow task cleanup on close
   - name: application.closed
@@ -212,7 +216,7 @@ events:
   # triggers the eligibility rules engine, no caseworker action needed
   - name: application.review_completed
     publisher: intake
-    status: planned
+    status: implemented
     subscribers:
       - eligibility
 
@@ -257,12 +261,14 @@ events:
 
   # ── Scheduling ────────────────────────────────────────────────────────────────
 
-  # appointment.scheduled creates the interview record in intake;
-  # appointment.completed records the outcome for regulatory tracking
+  # appointment.scheduled links the appointment to the Interview record in intake.
+  # appointment.completed is a scheduling-domain event; intake does not subscribe —
+  # interview completion is caseworker-attested (PATCH completedAt) per Decision 15.
   - name: appointment.scheduled
     publisher: scheduling
-    status: planned
-    subscribers: []
+    status: implemented
+    subscribers:
+      - intake
 
   - name: appointment.completed
     publisher: scheduling
@@ -488,8 +494,6 @@ flows:
           - label: Store documents
             from: intake
             to: document_management
-            gap: true
-            gap_description: Document storage API not yet designed
           - self: intake
             label: Documents linked to verification items
       - fragment: snap-processing
@@ -591,8 +595,6 @@ flows:
                             to: workflow
                           - self: workflow
                             label: Assign expedited SLA track
-                            gap: true
-                            gap_description: Expedited SLA type and workflow task switching not yet designed
                             overlay:
                               - note: "States configure expedited SLA duration and queue routing rules"
                                 mechanism: "sla-types config"
@@ -722,8 +724,6 @@ flows:
               - label: Store document
                 from: intake
                 to: document_management
-                gap: true
-                gap_description: Document storage API not yet designed
               - self: intake
                 label: Document linked to verification item as evidence
           - fragment: service-call-retry
@@ -781,7 +781,7 @@ flows:
             to: scheduling
             note: API call; may repeat for multi-session interviews
           - self: intake
-            label: Interview record updated
+            label: Caseworker attests interview complete (PATCH Interview.completedAt)
 
       # ── Escalation ───────────────────────────────────────────────────────────
       - fragment: escalation
@@ -835,7 +835,7 @@ flows:
             to: intake
             note: Available when all verification items are resolved
           - self: intake
-            label: Status updated to pending determination
+            label: Application stays under_review; review_completed emitted to eligibility
           - event: application.review_completed
             from: intake
             to: eligibility
@@ -848,8 +848,6 @@ flows:
             note: Per person per program; may fire multiple times as each resolves
           - self: intake
             label: Decision recorded per person per program
-            gap: true
-            gap_description: Intake has no per-person per-program status entity yet; design question open in #248
 
       # ── Shared convergence (both paths arrive here) ────────────────────────
       - event: eligibility.application.determination_completed
@@ -857,7 +855,7 @@ flows:
         to: intake
         note: Fires once all program+member combinations are determined
       - self: intake
-        label: Application status updated to determined
+        label: Application closed (or routed to pending_approval if state approval thresholds met)
 
       # ── Caseworker review of results (manual path only) ───────────────────
       - fragment: caseworker-reviews-determination
@@ -897,7 +895,7 @@ flows:
                 from: intake
                 to: workflow
               - self: workflow
-                label: Task created in supervisor review queue; SLA assigned
+                label: Caseworker task → pending_review; supervisor approval task created
               - label: Claims task from queue
                 from: supervisor
                 to: intake
@@ -907,11 +905,11 @@ flows:
                 to: workflow
                 note: API call to workflow
               - self: intake
-                label: Determination status → pending approval
-              - label: Reviews and approves determination
+                label: Application status → pending_approval
+              - label: Reviews and approves or rejects determination
                 from: supervisor
                 to: intake
-                note: If rejected, intake flags for revision and workflow reassigns caseworker task
+                note: "On approval: application closes, workflow completes both tasks. On rejection: intake returns application to under_review; workflow calls return-to-worker on caseworker task"
 
       # ── Shared close ───────────────────────────────────────────────────────
       - label: Send Notice of Action
@@ -929,13 +927,9 @@ flows:
         to: case_management
       - self: case_management
         label: Creates case
-      - fragment: workflow-task-cancel
-        type: opt
-        label: "Path A: cancel open intake task (never claimed — auto-determined at submission)"
-        steps:
-          - event: application.closed
-            from: intake
-            to: workflow
-          - self: workflow
-            label: Cancels open intake task for this application
+      - event: application.closed
+        from: intake
+        to: workflow
+      - self: workflow
+        label: "Completes or cancels open tasks: pending_review task → completed (approval path); in_progress task → completed (manual path); pending task → cancelled (auto-determination path)"
 

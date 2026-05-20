@@ -41,7 +41,8 @@ function findSmEntryForCollection(allStateMachines, domain, collection) {
     const kebabPlural = sm.object
       .replace(/([a-z])([A-Z])/g, '$1-$2')
       .toLowerCase() + 's';
-    return kebabPlural === collection;
+    // Also match sub-collection names like "application-verifications" → "verifications"
+    return kebabPlural === collection || collection.endsWith(`-${kebabPlural}`);
   }) || null;
 }
 
@@ -171,6 +172,12 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           }
           resource = { ...found };
           originalSnapshot = { ...found };
+        } else if (event.data && typeof event.data === 'object' && !Array.isArray(event.data)
+            && event.data.id != null && event.data.id === event.subject) {
+          // No transition, but the event carries the full resource as its data payload
+          // (e.g. *.resource.created events where data: { ...created }). Use it as the
+          // primary resource so $object resolves correctly in subscription steps.
+          resource = { ...event.data };
         }
 
         const baseContext = {
@@ -212,15 +219,15 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         }
 
         // Handle collection creates
-        for (const { entity, data } of pendingCreates) {
+        for (const { entity, domain: entDomain, eventObject, data } of pendingCreates) {
           try {
             const created = create(entity, data);
             emitEvent({
-              domain: smEntry.domain,
-              object: entity.replace(/s$/, ''),
+              domain: entDomain || smEntry.domain,
+              object: eventObject || entity.replace(/s$/, ''),
               action: 'created',
               resourceId: created.id,
-              source: `/${smEntry.domain}`,
+              source: `/${entDomain || smEntry.domain}`,
               data: { ...created },
               callerId: 'system',
               now,

@@ -87,13 +87,15 @@ export function resolveValue(value, context) {
 
 /**
  * Resolve a dot-notation path against an object.
+ * Supports bracket notation for array indexing (e.g., "data.candidates[0].personId").
  * @param {*} obj - The object to traverse
- * @param {string} path - Dot-notation path (e.g., "id", "data.memberId")
+ * @param {string} path - Dot-notation path, optionally with [n] array indexes
  * @returns {*} Resolved value, or null if any segment is missing
  */
 function resolveDotPath(obj, path) {
   if (obj == null || !path) return null;
-  return path.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
+  const normalized = path.replace(/\[(\d+)\]/g, '.$1');
+  return normalized.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
 }
 
 /**
@@ -155,20 +157,23 @@ function resolveBody(body, context) {
     if (val && typeof val === 'object' && '$push' in val) {
       result[key] = { $push: resolveBodyValue(val['$push'], context) };
     } else {
-      result[key] = resolveValue(val, context);
+      result[key] = resolveBodyValue(val, context);
     }
   }
   return result;
 }
 
 /**
- * Resolve a single body value that may be a string expression, literal, or nested object.
+ * Resolve a single body value that may be a string expression, literal, array, or nested object.
+ * Recurses into nested objects so expressions like { status: "confirmed", ids: "$this.data.ids" }
+ * have their string fields resolved.
  */
 function resolveBodyValue(val, context) {
   if (typeof val === 'string') return resolveValue(val, context);
-  if (val && typeof val === 'object' && !Array.isArray(val)) {
+  if (Array.isArray(val)) return val.map(item => resolveBodyValue(item, context));
+  if (val && typeof val === 'object') {
     const result = {};
-    for (const [k, v] of Object.entries(val)) result[k] = resolveValue(v, context);
+    for (const [k, v] of Object.entries(val)) result[k] = resolveBodyValue(v, context);
     return result;
   }
   return val;
@@ -221,8 +226,10 @@ function evaluateCEL(condition, celData) {
     let jsExpr = condition
       // Replace .size() with .length
       .replace(/\.size\(\)/g, '.length')
-      // Replace CEL 'str in arr' with arr.includes(str) — careful with complex expressions
+      // Replace CEL '"literal" in arr' with arr.includes("literal")
       .replace(/"([^"]+)"\s+in\s+([\w$\.]+)/g, '(Array.isArray($2) ? $2.includes("$1") : false)')
+      // Replace CEL '$var in arr' with arr.includes($var) — handles variable LHS
+      .replace(/([\$][\w$.]+)\s+in\s+([\$][\w$.]+)/g, '(Array.isArray($2) ? $2.includes($1) : false)')
       // Replace CEL list.exists(var, predicate) with list.some(var => (predicate))
       .replace(/\.exists\((\w+),\s*([^)]+(?:\([^)]*\)[^)]*)*)\)/g, '.some($1 => ($2))')
       // Replace bare variable references (no prefix) to ctx.variable
@@ -434,7 +441,11 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
       // Collection create: POST to domain/collection
       const domain = rawPath.split('/')[0];
       const entity = deriveCollectionName(rawPath, domain);
-      pendingCreates.push({ entity, data: body });
+      const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
+      const lastSeg = pathSegs[pathSegs.length - 1] || '';
+      const eventObject = lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg;
+      const stubUrl = '/' + rawPath.split('/').slice(1).join('/');
+      pendingCreates.push({ entity, domain, eventObject, stubUrl, data: body });
     }
   } else if (method === 'PATCH') {
     // Array append: PATCH to domain/collection/{alias.id}
@@ -600,7 +611,7 @@ export function applySteps(steps, resource, context) {
       for (const [key, value] of Object.entries(step.emit.data || {})) {
         data[key] = resolveValue(value, context);
       }
-      pendingEvents.push({ action: step.emit.event, data });
+      pendingEvents.push({ action: step.emit.event, data, subject: step.emit.subject ? resolveValue(step.emit.subject, context) : undefined });
     } else if (step.evaluate) {
       pendingProcedures.push({ procedureId: step.evaluate });
     } else if (step.call !== undefined) {
@@ -624,7 +635,10 @@ export function applySteps(steps, resource, context) {
         } else {
           const domain = rawPath.split('/')[0];
           const entity = deriveCollectionName(rawPath, domain);
-          pendingCreates.push({ entity, data: body });
+          const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
+          const lastSeg = pathSegs[pathSegs.length - 1] || '';
+          const eventObject = lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg;
+          pendingCreates.push({ entity, domain, eventObject, data: body });
         }
       } else {
         // Legacy object form: { POST: path, body: ... }

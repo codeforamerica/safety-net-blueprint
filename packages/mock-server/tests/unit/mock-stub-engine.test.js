@@ -9,9 +9,15 @@ import assert from 'node:assert';
 import {
   registerStub,
   matchAndPop,
+  registerHttpStub,
+  matchAndPopHttp,
   listStubs,
+  listHttpStubs,
   removeStub,
-  clearStubs
+  removeHttpStub,
+  clearStubs,
+  clearHttpStubs,
+  clearAllStubs,
 } from '../../src/mock-stub-engine.js';
 
 const PREFIX = 'org.codeforamerica.safety-net-blueprint.';
@@ -24,7 +30,7 @@ function makeEnvelope(type, data = {}) {
   return { specversion: '1.0', type, source: '/test', subject: 'sub-1', data };
 }
 
-beforeEach(() => clearStubs());
+beforeEach(() => clearAllStubs());
 
 // =============================================================================
 // registerStub
@@ -251,6 +257,163 @@ test('clearStubs — resets ID counters', () => {
   clearStubs();
   const stub = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
   assert.strictEqual(stub.id, 'service_call.created-1');
+});
+
+// =============================================================================
+// registerHttpStub
+// =============================================================================
+
+test('registerHttpStub — assigns human-readable ID from URL last segment', () => {
+  const stub = registerHttpStub({ match: { method: 'POST', url: '/evaluate/expedited-screening' } });
+  assert.strictEqual(stub.id, 'http.expedited-screening-1');
+});
+
+test('registerHttpStub — increments counter per URL segment', () => {
+  const a = registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  const b = registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  assert.strictEqual(a.id, 'http.expedited-screening-1');
+  assert.strictEqual(b.id, 'http.expedited-screening-2');
+});
+
+test('registerHttpStub — sets type: http on stored stub', () => {
+  const stub = registerHttpStub({ match: { url: '/evaluate/expedited-screening' }, response: { body: { expedited: true } } });
+  assert.strictEqual(stub.type, 'http');
+});
+
+test('registerHttpStub — throws when match.url is missing', () => {
+  assert.throws(
+    () => registerHttpStub({ match: { method: 'POST' } }),
+    /match\.url/
+  );
+});
+
+// =============================================================================
+// matchAndPopHttp
+// =============================================================================
+
+test('matchAndPopHttp — matches by method and URL', () => {
+  registerHttpStub({ match: { method: 'POST', url: '/evaluate/expedited-screening' }, response: { body: { expedited: true } } });
+  const stub = matchAndPopHttp('POST', '/evaluate/expedited-screening');
+  assert.ok(stub, 'should match');
+  assert.deepStrictEqual(stub.response.body, { expedited: true });
+});
+
+test('matchAndPopHttp — method matching is case-insensitive', () => {
+  registerHttpStub({ match: { method: 'POST', url: '/evaluate/expedited-screening' } });
+  const stub = matchAndPopHttp('post', '/evaluate/expedited-screening');
+  assert.ok(stub);
+});
+
+test('matchAndPopHttp — omitting method matches any method', () => {
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  const stub = matchAndPopHttp('GET', '/evaluate/expedited-screening');
+  assert.ok(stub);
+});
+
+test('matchAndPopHttp — returns null when URL does not match', () => {
+  registerHttpStub({ match: { method: 'POST', url: '/evaluate/expedited-screening' } });
+  const stub = matchAndPopHttp('POST', '/evaluate/determination');
+  assert.strictEqual(stub, null);
+});
+
+test('matchAndPopHttp — returns null when method does not match', () => {
+  registerHttpStub({ match: { method: 'POST', url: '/evaluate/expedited-screening' } });
+  const stub = matchAndPopHttp('GET', '/evaluate/expedited-screening');
+  assert.strictEqual(stub, null);
+});
+
+test('matchAndPopHttp — FIFO: consumes stubs in registration order', () => {
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' }, response: { body: { expedited: true } } });
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' }, response: { body: { expedited: false } } });
+  const first = matchAndPopHttp('POST', '/evaluate/expedited-screening');
+  const second = matchAndPopHttp('POST', '/evaluate/expedited-screening');
+  assert.deepStrictEqual(first.response.body, { expedited: true });
+  assert.deepStrictEqual(second.response.body, { expedited: false });
+});
+
+test('matchAndPopHttp — removes the matched stub', () => {
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  matchAndPopHttp('POST', '/evaluate/expedited-screening');
+  assert.strictEqual(matchAndPopHttp('POST', '/evaluate/expedited-screening'), null);
+});
+
+test('matchAndPopHttp — domain + url resolves to /<domain><url> for matching', () => {
+  registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/expedited-screening' } });
+  const stub = matchAndPopHttp('POST', '/eligibility-adapter/evaluate/expedited-screening');
+  assert.ok(stub, 'should match full path');
+});
+
+test('matchAndPopHttp — domain stub does not match without domain prefix in request path', () => {
+  registerHttpStub({ match: { domain: 'eligibility-adapter', url: '/evaluate/expedited-screening' } });
+  const stub = matchAndPopHttp('POST', '/evaluate/expedited-screening');
+  assert.strictEqual(stub, null, 'should not match path without domain prefix');
+});
+
+test('matchAndPopHttp — domain disambiguates same url across domains', () => {
+  registerHttpStub({ match: { domain: 'eligibility-adapter', url: '/evaluate/something' } });
+  registerHttpStub({ match: { domain: 'other-adapter', url: '/evaluate/something' } });
+  const stub = matchAndPopHttp('POST', '/other-adapter/evaluate/something');
+  assert.strictEqual(stub?.match.domain, 'other-adapter', 'should match the other-adapter stub');
+  assert.strictEqual(listHttpStubs().length, 1, 'eligibility-adapter stub should remain');
+});
+
+// =============================================================================
+// listStubs / listHttpStubs — separate registries
+// =============================================================================
+
+test('listStubs — returns only event stubs, not HTTP stubs', () => {
+  registerStub(makeStub('a.b.c', { type: 'd.e.f' }));
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  assert.strictEqual(listStubs().length, 1);
+});
+
+test('listHttpStubs — returns only HTTP stubs, not event stubs', () => {
+  registerStub(makeStub('a.b.c', { type: 'd.e.f' }));
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  assert.strictEqual(listHttpStubs().length, 1);
+});
+
+// =============================================================================
+// removeHttpStub
+// =============================================================================
+
+test('removeHttpStub — removes an HTTP stub by ID and returns true', () => {
+  const stub = registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  const result = removeHttpStub(stub.id);
+  assert.strictEqual(result, true);
+  assert.strictEqual(listHttpStubs().length, 0);
+});
+
+test('removeHttpStub — returns false for unknown ID', () => {
+  const result = removeHttpStub('nonexistent-id');
+  assert.strictEqual(result, false);
+});
+
+// =============================================================================
+// clearHttpStubs / clearAllStubs
+// =============================================================================
+
+test('clearHttpStubs — removes only HTTP stubs, leaves event stubs', () => {
+  registerStub(makeStub('a.b.c', { type: 'd.e.f' }));
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  clearHttpStubs();
+  assert.strictEqual(listHttpStubs().length, 0);
+  assert.strictEqual(listStubs().length, 1);
+});
+
+test('clearHttpStubs — resets HTTP ID counters', () => {
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  clearHttpStubs();
+  const stub = registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  assert.strictEqual(stub.id, 'http.expedited-screening-1');
+});
+
+test('clearAllStubs — removes all event and HTTP stubs', () => {
+  registerStub(makeStub('a.b.c', { type: 'd.e.f' }));
+  registerHttpStub({ match: { url: '/evaluate/expedited-screening' } });
+  clearAllStubs();
+  assert.strictEqual(listStubs().length, 0);
+  assert.strictEqual(listHttpStubs().length, 0);
 });
 
 console.log('\n✓ All mock-stub-engine tests passed\n');

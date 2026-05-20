@@ -106,7 +106,7 @@ export function executeTransition({
 
   // Request body validation: runs after authorization (403) and guard checks (409)
   if (operation?.schema?.request) {
-    const { valid, errors } = validate(requestBody, operation.schema.request, `operation-${trigger}`);
+    const { valid, errors } = validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`);
     if (!valid) {
       return { success: false, status: 422, error: 'Request body validation failed', details: errors };
     }
@@ -151,7 +151,7 @@ export function executeTransition({
         emitEventEnvelope({
           type: CLOUDEVENTS_TYPE_PREFIX + event.action,
           source: `/${domain}`,
-          subject: resource.id,
+          subject: event.subject ?? resource.id,
           data: event.data || null,
           time: timestamp,
         });
@@ -161,6 +161,7 @@ export function executeTransition({
           object,
           action: event.action,
           resourceId: resource.id,
+          subject: event.subject,
           source: `/${domain}`,
           data: event.data || null,
           callerId,

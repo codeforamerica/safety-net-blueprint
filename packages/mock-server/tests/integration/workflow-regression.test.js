@@ -13,111 +13,19 @@
  * Run with: npm run test:integration
  */
 
-import http from 'http';
-import { URL } from 'url';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import assert from 'assert';
-import { startMockServer, stopServer, isServerRunning } from '../../scripts/server.js';
+import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, clearStubs, createTestRunner, setupServer, teardownServer } from './helpers.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const contractsDir = resolve(__dirname, '..', '..', '..', 'contracts');
-const BASE_URL = 'http://localhost:1080';
-const EVENT_PREFIX = 'org.codeforamerica.safety-net-blueprint.';
-
-let serverStartedByTests = false;
-let totalPassed = 0;
-let totalFailed = 0;
-
-// ---------------------------------------------------------------------------
-// HTTP helper
-// ---------------------------------------------------------------------------
-
-function fetch(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
-    const requestOptions = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || 80,
-      path: urlObj.pathname + urlObj.search,
-      method: options.method || 'GET',
-      headers: { 'Content-Type': 'application/json', ...options.headers }
-    };
-
-    if (options.body) {
-      const bodyStr = JSON.stringify(options.body);
-      requestOptions.headers['Content-Length'] = Buffer.byteLength(bodyStr);
-    }
-
-    const req = http.request(requestOptions, res => {
-      let data = '';
-      res.on('data', chunk => { data += chunk; });
-      res.on('end', () => resolve({
-        status: res.statusCode,
-        json: async () => JSON.parse(data),
-        text: async () => data,
-      }));
-    });
-    req.on('error', reject);
-    if (options.body) req.write(JSON.stringify(options.body));
-    req.end();
-  });
-}
-
-function caller(id, roles) {
-  return { 'X-Caller-Id': id, 'X-Caller-Roles': Array.isArray(roles) ? roles.join(',') : roles };
-}
-
-// ---------------------------------------------------------------------------
-// Test runner helpers
-// ---------------------------------------------------------------------------
-
-async function test(label, fn) {
-  try {
-    await fn();
-    console.log(`  ✓ ${label}`);
-    totalPassed++;
-  } catch (err) {
-    console.log(`  ✗ ${label}`);
-    console.log(`      ${err.message}`);
-    totalFailed++;
-  }
-}
-
-function section(title) {
-  console.log(`\n${'─'.repeat(60)}`);
-  console.log(title);
-  console.log('─'.repeat(60));
-}
-
-// ---------------------------------------------------------------------------
-// Event / stub helpers
-// ---------------------------------------------------------------------------
-
-async function injectEvent(type, data = {}, subject = 'sub-test-1') {
-  return fetch(`${BASE_URL}/platform/events`, {
-    method: 'POST',
-    body: {
-      specversion: '1.0',
-      type: EVENT_PREFIX + type,
-      source: '/test',
-      subject,
-      data,
-    },
-  });
-}
-
-async function clearStubs() {
-  await fetch(`${BASE_URL}/mock/stubs/events`, { method: 'DELETE' });
-}
+const { test, section, results } = createTestRunner();
 
 async function registerStub(stub) {
   const res = await fetch(`${BASE_URL}/mock/stubs/events`, { method: 'POST', body: stub });
   return res.json();
 }
 
-async function allEvents() {
-  const res = await fetch(`${BASE_URL}/platform/events?sort=-time&limit=100`);
+async function allEvents(subject = null) {
+  const qs = subject ? `?subject=${subject}&sort=-time&limit=100` : `?sort=-time&limit=100`;
+  const res = await fetch(`${BASE_URL}/platform/events${qs}`);
   return ((await res.json()).items) || [];
 }
 
@@ -647,7 +555,7 @@ async function testWorkflowEventEmission() {
   await test('claim emits workflow.task.claimed with assignedToId', async () => {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
-    const e = findEvent(await allEvents(), 'workflow.task.claimed', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.claimed', id);
     assert.ok(e, 'workflow.task.claimed should be emitted');
     assert.strictEqual(e.data?.assignedToId, 'worker-aaa');
   });
@@ -658,7 +566,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/complete`, {
       method: 'POST', headers: CASEWORKER, body: { outcome: 'approved' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.completed', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.completed', id);
     assert.ok(e, 'workflow.task.completed should be emitted');
     assert.strictEqual(e.data?.outcome, 'approved');
   });
@@ -669,7 +577,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/release`, {
       method: 'POST', headers: CASEWORKER, body: { reason: 'reassigning' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.released', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.released', id);
     assert.ok(e, 'workflow.task.released should be emitted');
     assert.strictEqual(e.data?.reason, 'reassigning');
   });
@@ -679,7 +587,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/escalate`, {
       method: 'POST', headers: SUPERVISOR, body: { reason: 'urgent' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.escalated', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.escalated', id);
     assert.ok(e, 'workflow.task.escalated should be emitted');
     assert.strictEqual(e.data?.reason, 'urgent');
   });
@@ -688,7 +596,7 @@ async function testWorkflowEventEmission() {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/escalate`, { method: 'POST', headers: CASEWORKER, body: { reason: 'urgent' } });
-    const e = findEvent(await allEvents(), 'workflow.task.escalated', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.escalated', id);
     assert.ok(e, 'workflow.task.escalated should be emitted from in_progress');
   });
 
@@ -696,7 +604,7 @@ async function testWorkflowEventEmission() {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/escalate`, { method: 'POST', headers: SUPERVISOR, body: { reason: 'urgent' } });
     await fetch(`${BASE_URL}${TASK}/${id}/de-escalate`, { method: 'POST', headers: SUPERVISOR });
-    const e = findEvent(await allEvents(), 'workflow.task.de-escalated', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.de-escalated', id);
     assert.ok(e, 'workflow.task.de-escalated should be emitted');
   });
 
@@ -705,7 +613,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/cancel`, {
       method: 'POST', headers: SUPERVISOR, body: { reason: 'duplicate' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.cancelled', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.cancelled', id);
     assert.ok(e, 'workflow.task.cancelled should be emitted');
     assert.strictEqual(e.data?.reason, 'duplicate');
   });
@@ -718,7 +626,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/reopen`, {
       method: 'POST', headers: SUPERVISOR, body: { reason: 'was not a duplicate' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.reopened', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.reopened', id);
     assert.ok(e, 'workflow.task.reopened should be emitted');
     assert.strictEqual(e.data?.reason, 'was not a duplicate');
   });
@@ -727,7 +635,7 @@ async function testWorkflowEventEmission() {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
-    const e = findEvent(await allEvents(), 'workflow.task.awaiting_client', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.awaiting_client', id);
     assert.ok(e, 'workflow.task.awaiting_client should be emitted');
   });
 
@@ -735,7 +643,7 @@ async function testWorkflowEventEmission() {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-verification`, { method: 'POST', headers: CASEWORKER });
-    const e = findEvent(await allEvents(), 'workflow.task.awaiting_verification', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.awaiting_verification', id);
     assert.ok(e, 'workflow.task.awaiting_verification should be emitted');
   });
 
@@ -744,7 +652,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/resume`, { method: 'POST', headers: CASEWORKER });
-    const e = findEvent(await allEvents(), 'workflow.task.resumed', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.resumed', id);
     assert.ok(e, 'workflow.task.resumed should be emitted');
   });
 
@@ -756,7 +664,7 @@ async function testWorkflowEventEmission() {
       method: 'POST', headers: SYSTEM,
       body: { source: 'verification_result', result: 'conclusive' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.system_resumed', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.system_resumed', id);
     assert.ok(e, 'workflow.task.system_resumed should be emitted');
     assert.strictEqual(e.data?.source, 'verification_result');
     assert.strictEqual(e.data?.result, 'conclusive');
@@ -767,7 +675,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'deadline_exceeded' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.auto_escalated', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.auto_escalated', id);
     assert.ok(e, 'workflow.task.auto_escalated should be emitted');
     assert.strictEqual(e.data?.reason, 'deadline_exceeded');
   });
@@ -777,7 +685,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'sla_deadline_exceeded' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.sla_breached', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.sla_breached', id);
     assert.ok(e, 'workflow.task.sla_breached should be emitted');
     assert.strictEqual(e.data?.reason, 'sla_deadline_exceeded');
   });
@@ -787,7 +695,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/auto-cancel`, { method: 'POST', headers: SYSTEM });
-    const e = findEvent(await allEvents(), 'workflow.task.auto_cancelled', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.auto_cancelled', id);
     assert.ok(e, 'workflow.task.auto_cancelled should be emitted');
     assert.strictEqual(e.data?.reason, 'client_unresponsive');
   });
@@ -796,7 +704,7 @@ async function testWorkflowEventEmission() {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/submit-for-review`, { method: 'POST', headers: CASEWORKER });
-    const e = findEvent(await allEvents(), 'workflow.task.submitted_for_review', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.submitted_for_review', id);
     assert.ok(e, 'workflow.task.submitted_for_review should be emitted');
   });
 
@@ -807,7 +715,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/approve`, {
       method: 'POST', headers: SUPERVISOR, body: { outcome: 'denied' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.approved', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.approved', id);
     assert.ok(e, 'workflow.task.approved should be emitted');
     assert.strictEqual(e.data?.outcome, 'denied');
   });
@@ -819,7 +727,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/return-to-worker`, {
       method: 'POST', headers: SUPERVISOR, body: { reason: 'needs more detail' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.returned_to_worker', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.returned_to_worker', id);
     assert.ok(e, 'workflow.task.returned_to_worker should be emitted');
     assert.strictEqual(e.data?.reason, 'needs more detail');
   });
@@ -831,7 +739,7 @@ async function testWorkflowEventEmission() {
       method: 'POST', headers: SUPERVISOR,
       body: { assignedToId: '00000000-0000-0000-0000-000000000002', queueId },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.assigned', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.assigned', id);
     assert.ok(e, 'workflow.task.assigned should be emitted');
     assert.strictEqual(e.data?.assignedToId, '00000000-0000-0000-0000-000000000002');
     assert.strictEqual(e.data?.queueId, queueId);
@@ -842,7 +750,7 @@ async function testWorkflowEventEmission() {
     await fetch(`${BASE_URL}${TASK}/${id}/set-priority`, {
       method: 'POST', headers: SUPERVISOR, body: { priority: 'high' },
     });
-    const e = findEvent(await allEvents(), 'workflow.task.priority_changed', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.priority_changed', id);
     assert.ok(e, 'workflow.task.priority_changed should be emitted');
     assert.strictEqual(e.data?.priority, 'high');
   });
@@ -880,7 +788,7 @@ async function testWorkflowTimerBehavior() {
     assert.strictEqual(task.status, 'escalated', 'task should be auto-escalated after creation_deadline fires');
     assert.ok(task.escalatedAt, 'escalatedAt should be set');
 
-    const e = findEvent(await allEvents(), 'workflow.task.auto_escalated', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.auto_escalated', id);
     assert.ok(e, 'workflow.task.auto_escalated should be emitted');
     assert.strictEqual(e.data?.reason, 'deadline_exceeded');
 
@@ -903,7 +811,7 @@ async function testWorkflowTimerBehavior() {
     assert.strictEqual(task.status, 'cancelled', 'task should be auto-cancelled after client_timeout fires');
     assert.ok(task.cancelledAt, 'cancelledAt should be set');
 
-    const e = findEvent(await allEvents(), 'workflow.task.auto_cancelled', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.auto_cancelled', id);
     assert.ok(e, 'workflow.task.auto_cancelled should be emitted');
     assert.strictEqual(e.data?.reason, 'client_unresponsive');
 
@@ -926,7 +834,7 @@ async function testWorkflowTimerBehavior() {
     assert.strictEqual(task.status, 'in_progress', 'task should be auto-resumed after verification_timeout fires');
     assert.strictEqual(task.blockedAt, null, 'blockedAt should be cleared');
 
-    const e = findEvent(await allEvents(), 'workflow.task.system_resumed', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.system_resumed', id);
     assert.ok(e, 'workflow.task.system_resumed should be emitted');
     assert.strictEqual(e.data?.source, 'timeout');
     assert.strictEqual(e.data?.result, 'verification_timeout');
@@ -951,7 +859,7 @@ async function testWorkflowTimerBehavior() {
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'escalated', 'task should be escalated on sla_warning');
 
-    const e = findEvent(await allEvents(), 'workflow.task.auto_escalated', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.auto_escalated', id);
     assert.ok(e, 'workflow.task.auto_escalated should be emitted for sla_warning');
     assert.strictEqual(e.data?.reason, 'sla_deadline_approaching');
 
@@ -975,7 +883,7 @@ async function testWorkflowTimerBehavior() {
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'escalated', 'task should be escalated on sla_breach');
 
-    const e = findEvent(await allEvents(), 'workflow.task.sla_breached', id);
+    const e = findEvent(await allEvents(id), 'workflow.task.sla_breached', id);
     assert.ok(e, 'workflow.task.sla_breached should be emitted');
     assert.strictEqual(e.data?.reason, 'sla_deadline_exceeded');
 
@@ -1077,16 +985,7 @@ async function runTests() {
   console.log('Workflow State Machine Regression Tests\n');
   console.log('='.repeat(60));
 
-  const isRunning = await isServerRunning().catch(() => false);
-  if (!isRunning) {
-    console.log('Starting mock server...');
-    await startMockServer([contractsDir]);
-    serverStartedByTests = true;
-    await new Promise(res => setTimeout(res, 1500));
-    console.log('Mock server started\n');
-  } else {
-    console.log('Using existing mock server\n');
-  }
+  const serverStartedByTests = await setupServer();
 
   try {
     await testWorkflowLifecycle();
@@ -1095,13 +994,14 @@ async function runTests() {
     await testWorkflowEventSubscriptions();
   } finally {
     await clearStubs();
-    if (serverStartedByTests) await stopServer();
+    await teardownServer(serverStartedByTests);
   }
 
+  const { passed, failed } = results();
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`Results: ${totalPassed} passed, ${totalFailed} failed`);
+  console.log(`Results: ${passed} passed, ${failed} failed`);
 
-  if (totalFailed > 0) {
+  if (failed > 0) {
     console.log('\n❌ Workflow regression tests FAILED\n');
     process.exit(1);
   } else {

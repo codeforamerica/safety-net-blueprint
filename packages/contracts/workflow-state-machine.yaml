@@ -26,9 +26,12 @@ machines:
           - set: {field: assignedToId, value: $caller.id, description: Assign task to the claiming worker}
           - emit: {event: claimed, data: {assignedToId: $caller.id}, description: Emit a domain event recording the claim and who claimed the task}
       - id: complete
+        description: "POST /tasks/{taskId}/complete — Marks an in-progress task done with an outcome and optional notes"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: in_progress, to: completed}
         schema:
           request:
@@ -41,6 +44,7 @@ machines:
           - if: $request.createFollowUp == true
             then: [{call: {POST: workflow/tasks, body: {$merge: $object, status: pending}}, description: Create a follow-up task when caller requests one}]
       - id: release
+        description: "POST /tasks/{taskId}/release — Returns an in-progress task to the queue, clearing the assignment"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
@@ -69,6 +73,7 @@ machines:
           - call: setPriority
           - emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
       - id: de-escalate
+        description: "POST /tasks/{taskId}/de-escalate — Returns an escalated task to the pending queue"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -81,9 +86,12 @@ machines:
           - call: setPriority
           - emit: {event: de-escalated, description: Emit a domain event recording the de-escalation}
       - id: cancel
+        description: "POST /tasks/{taskId}/cancel — Supervisor cancels a task from any active state"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: [pending, in_progress, escalated], to: cancelled}
         schema:
           request:
@@ -92,6 +100,7 @@ machines:
           - set: {field: cancelledAt, value: $now, description: Record when the task was cancelled}
           - emit: {event: cancelled, data: {reason: $request.reason}, description: Emit a domain event recording the cancellation}
       - id: reopen
+        description: "POST /tasks/{taskId}/reopen — Supervisor returns a cancelled task to the pending queue"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -105,6 +114,7 @@ machines:
           - call: setPriority
           - emit: {event: reopened, data: {reason: $request.reason}, description: Emit a domain event recording the reopen}
       - id: await-client
+        description: "POST /tasks/{taskId}/await-client — Pauses an in-progress task while waiting for a client response"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
@@ -117,6 +127,7 @@ machines:
           - call: scheduleClientTimeout
           - emit: {event: awaiting_client, description: Emit a domain event recording the block}
       - id: await-verification
+        description: "POST /tasks/{taskId}/await-verification — Pauses an in-progress task while waiting for a verification result"
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
@@ -182,13 +193,18 @@ machines:
         guards:
           - actors: [caseworker, supervisor]
             conditions: [callerIsAssignedWorker]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: [in_progress, escalated], to: pending_review}
         steps:
           - emit: {event: submitted_for_review, description: Emit a domain event recording the submission for review}
       - id: approve
+        description: "POST /tasks/{taskId}/approve — Supervisor approves a submitted task and records the final outcome"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: pending_review, to: completed}
         schema:
           request:
@@ -199,9 +215,12 @@ machines:
           - set: {field: completionNotes, value: $request.notes, description: Store optional notes from the supervisor}
           - emit: {event: approved, data: {outcome: $request.outcome}, description: Emit a domain event recording the approval}
       - id: return-to-worker
+        description: "POST /tasks/{taskId}/return-to-worker — Supervisor sends a review-pending task back to the worker with feedback"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
+          - actors: [system]
+            conditions: [callerIsSystem]
         transition: {from: pending_review, to: in_progress}
         schema:
           request:
@@ -209,6 +228,7 @@ machines:
         steps:
           - emit: {event: returned_to_worker, data: {reason: $request.reason}, description: Emit a domain event recording the return for revision}
       - id: assign
+        description: "POST /tasks/{taskId}/assign — Supervisor reassigns a task to a specific caseworker or moves it to a different queue"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -222,6 +242,7 @@ machines:
           - set: {field: queueId, value: $request.queueId, description: Optionally move the task to a different queue}
           - emit: {event: assigned, data: {assignedToId: $request.assignedToId, queueId: $request.queueId}, description: Emit a domain event recording the assignment}
       - id: set-priority
+        description: "POST /tasks/{taskId}/set-priority — Supervisor manually overrides the task priority"
         guards:
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -271,10 +292,95 @@ machines:
         description: Auto-resume after 7 calendar days waiting on verification
         steps:
           - call: {POST: workflow/tasks/$this.subject/auto-resume, body: {source: timeout, result: verification_timeout}, description: Auto-resume after 7 days verification timeout}
+      - name: eligibility.application.expedited
+        description: Flag the intake review task as expedited and switch it to the 7-day SLA when SNAP expedited criteria are confirmed (7 CFR § 273.2(i))
+        context:
+          - task: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
+        steps:
+          - if: $task.id != null
+            then:
+              - call:
+                  PATCH: workflow/tasks/$task.id
+                  body:
+                    isExpedited: true
+                    slaType: snap_expedited
       - name: intake.application.submitted
         description: Create an application review task when a new application is submitted
         steps:
           - call: {POST: workflow/tasks, body: {taskType: application_review, name: Application review, status: pending, subjectType: application, subjectId: $this.subject}, description: Create an intake review task when an application is submitted}
+      - name: intake.application.closed
+        description: Complete open tasks for the application when intake closes; handles direct close, supervisor-approved close, and auto-determination paths
+        context:
+          - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
+          - approvalTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: determination_approval}}
+        steps:
+          - if: $reviewTask.id != null && $reviewTask.status == "pending_review"
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/approve
+                  body:
+                    outcome: application_closed
+                  description: Complete the caseworker task that was awaiting supervisor approval
+          - if: $reviewTask.id != null && $reviewTask.status == "in_progress"
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/complete
+                  body:
+                    outcome: application_closed
+                  description: Complete the active caseworker task on application close
+          - if: $reviewTask.id != null && $reviewTask.status == "pending"
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/cancel
+                  body:
+                    reason: application_closed
+                  description: Cancel the unclaimed caseworker task when the application was auto-determined at submission
+          - if: $approvalTask.id != null
+            then:
+              - call:
+                  POST: workflow/tasks/$approvalTask.id/complete
+                  body:
+                    outcome: application_closed
+                  description: Complete the supervisor approval task
+      - name: intake.determination.approval_needed
+        description: Move the caseworker's review task to pending_review and create a supervisor approval task when a determination requires sign-off
+        context:
+          - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
+        steps:
+          - if: $reviewTask.id != null
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/submit-for-review
+                  description: Move caseworker task to pending_review while supervisor reviews the determination
+          - call:
+              POST: workflow/tasks
+              body:
+                taskType: determination_approval
+                name: Determination approval
+                status: pending
+                subjectType: application
+                subjectId: $this.subject
+              description: Create a supervisor approval task
+      - name: intake.determination.rejected
+        description: Return the caseworker's review task to in_progress and complete the supervisor approval task when a determination is rejected
+        context:
+          - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
+          - approvalTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: determination_approval}}
+        steps:
+          - if: $reviewTask.id != null
+            then:
+              - call:
+                  POST: workflow/tasks/$reviewTask.id/return-to-worker
+                  body:
+                    reason: determination_rejected
+                  description: Return the caseworker task to in_progress for revision
+          - if: $approvalTask.id != null
+            then:
+              - call:
+                  POST: workflow/tasks/$approvalTask.id/complete
+                  body:
+                    outcome: determination_rejected
+                  description: Complete the supervisor approval task with a rejected outcome
     timers:
       - id: creation_deadline
         description: 72-business-hour deadline to act on a newly created task before auto-escalation

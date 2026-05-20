@@ -4,6 +4,7 @@
 
 import { findById, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
+import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
@@ -68,6 +69,11 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
   const paramName = extractPathParam(endpoint.path);
   return (req, res) => {
     try {
+      const httpStub = matchAndPopHttp(req.method, req.path);
+      if (httpStub) {
+        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+      }
+
       const resourceId = req.params[paramName] || req.params.id;
 
       // Check if resource exists

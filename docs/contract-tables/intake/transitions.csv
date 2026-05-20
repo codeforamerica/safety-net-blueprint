@@ -2,6 +2,9 @@ Machine,ID,From,To,Actors,Conditions,Steps
 Application,submit,draft,submitted,applicant; caseworker,"any: callerIsApplicant, callerIsCaseworker",Set `submittedAt` → current time; Emit `submitted` event
 Application,open,submitted,under_review,system,callerIsSystem,Emit `opened` event
 Application,complete-review,under_review,,caseworker; supervisor,"any: callerIsCaseworker, callerIsSupervisor",Emit `review_completed` event
+Application,submit-for-approval,under_review,pending_approval,system,callerIsSystem,Emit `determination.approval_needed` event
+Application,approve-determination,pending_approval,closed,supervisor,callerIsSupervisor,Set `closedAt` → current time; Emit `closed` event
+Application,reject-determination,pending_approval,under_review,supervisor,callerIsSupervisor,Emit `determination.rejected` event
 Application,close,under_review,closed,caseworker; supervisor; system,"any: callerIsCaseworker, callerIsSupervisor, callerIsSystem",Set `closedAt` → current time; Emit `closed` event
 Application,withdraw,submitted | under_review,withdrawn,applicant; caseworker; supervisor,"any: callerIsApplicant, callerIsCaseworker, callerIsSupervisor",Set `withdrawnAt` → current time; Emit `withdrawn` event
 Verification,satisfy,pending | inconclusive,satisfied,system,callerIsSystem,Set `satisfiedAt` → current time; Emit `satisfied` event

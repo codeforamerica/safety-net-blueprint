@@ -6,4 +6,8 @@ Task,workflow.sla_warning,POST `workflow/tasks/$this.subject/system-escalate`
 Task,workflow.sla_breach,POST `workflow/tasks/$this.subject/system-escalate`
 Task,workflow.client_timeout,POST `workflow/tasks/$this.subject/system-auto-cancel`
 Task,workflow.verification_timeout,POST `workflow/tasks/$this.subject/system-resume`
+Task,eligibility.application.expedited,If ($task.id != null): PATCH `workflow/tasks/$task.id`
 Task,intake.application.submitted,POST `workflow/tasks`
+Task,intake.application.closed,"If ($reviewTask.id != null && $reviewTask.status == ""pending_review""): POST `workflow/tasks/$reviewTask.id/approve`; If ($reviewTask.id != null && $reviewTask.status == ""in_progress""): POST `workflow/tasks/$reviewTask.id/complete`; If ($reviewTask.id != null && $reviewTask.status == ""pending""): POST `workflow/tasks/$reviewTask.id/cancel`; If ($approvalTask.id != null): POST `workflow/tasks/$approvalTask.id/complete`"
+Task,intake.determination.approval_needed,If ($reviewTask.id != null): POST `workflow/tasks/$reviewTask.id/submit-for-review`; POST `workflow/tasks`
+Task,intake.determination.rejected,If ($reviewTask.id != null): POST `workflow/tasks/$reviewTask.id/return-to-worker`; If ($approvalTask.id != null): POST `workflow/tasks/$approvalTask.id/complete`

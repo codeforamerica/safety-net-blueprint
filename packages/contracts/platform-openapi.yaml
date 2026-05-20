@@ -257,7 +257,6 @@ components:
         - subject
         - time
         - datacontenttype
-        - data
       properties:
         specversion:
           type: string

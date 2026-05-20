@@ -7,13 +7,16 @@ import jsonLogic from 'json-logic-js';
 import { create, update, findAll, findById } from '../database-manager.js';
 import { deriveCollectionName } from '../collection-utils.js';
 import { applySteps, resolveValue } from '../state-machine-engine.js';
+import { emitEvent } from '../emit-event.js';
+import { matchAndPopHttp } from '../mock-stub-engine.js';
 
 /**
  * Resolve a dot-notation path against an object.
  */
 function resolveDotPath(obj, path) {
   if (obj == null || !path) return null;
-  return path.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
+  const normalized = path.replace(/\[(\d+)\]/g, '.$1');
+  return normalized.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
 }
 
 /**
@@ -284,9 +287,28 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
 
     const allPendingEvents = [...(pendingEvents || [])];
 
-    for (const { entity, data: createData } of pendingCreates) {
+    for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
+      if (stubUrl) {
+        const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
+        const httpStub = matchAndPopHttp('POST', fullPath);
+        if (httpStub) {
+          console.log(`[stub] matched ${httpStub.id} → intercepted POST ${fullPath}`);
+          continue;
+        }
+      }
       try {
-        create(entity, createData);
+        const created = create(entity, createData);
+        if (domain && eventObject) {
+          emitEvent({
+            domain,
+            object: eventObject,
+            action: 'created',
+            resourceId: created.id,
+            source: `/${domain}`,
+            data: { ...created },
+            callerId: 'system',
+          });
+        }
       } catch (e) {
         console.error(`Procedure "${procedureId}": create "${entity}" failed: ${e.message}`);
       }
@@ -331,9 +353,28 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
       const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
         applySteps(cond.then || [], resource, stepContext);
 
-      for (const { entity, data: createData } of pendingCreates) {
+      for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
+        if (stubUrl) {
+          const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
+          const httpStub = matchAndPopHttp('POST', fullPath);
+          if (httpStub) {
+            console.log(`[stub] matched ${httpStub.id} → intercepted POST ${fullPath}`);
+            continue;
+          }
+        }
         try {
-          create(entity, createData);
+          const created = create(entity, createData);
+          if (domain && eventObject) {
+            emitEvent({
+              domain,
+              object: eventObject,
+              action: 'created',
+              resourceId: created.id,
+              source: `/${domain}`,
+              data: { ...created },
+              callerId: 'system',
+            });
+          }
         } catch (e) {
           console.error(`executeProcedure: create "${entity}" failed: ${e.message}`);
         }
