@@ -29,24 +29,24 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Clear assignment so task returns to queue (sets `assignedToId`)
   - Emit: `workflow.task.released` — Emit a domain event recording the release and its reason
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
-  - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+  - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
 - **escalate** — Flags an in-progress task for supervisor attention
   - Actors: caseworker, or supervisor
   - Transition: `in_progress` → `escalated`
   - Record when the task was escalated (sets `escalatedAt`)
-  - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+  - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Emit: `workflow.task.escalated` — Emit a domain event recording the escalation
 - **escalate** — Supervisor escalates a pending task without claiming it first
   - Actors: supervisor
   - Transition: `pending` → `escalated`
   - Record when the task was escalated (sets `escalatedAt`)
-  - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+  - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Emit: `workflow.task.escalated` — Emit a domain event recording the escalation
 - **de-escalate** — Returns an escalated task to the pending queue
   - Actors: supervisor
   - Transition: `escalated` → `pending`
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
-  - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+  - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Emit: `workflow.task.de-escalated` — Emit a domain event recording the de-escalation
 - **cancel** — Supervisor cancels a task from any active state
   - Actors: supervisor
@@ -58,7 +58,7 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Transition: `cancelled` → `pending`
   - Clear the cancellation timestamp on reopen (sets `cancelledAt`)
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
-  - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+  - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Emit: `workflow.task.reopened` — Emit a domain event recording the reopen
 - **await-client** — Pauses an in-progress task while waiting for a client response
   - Actors: caseworker, or supervisor
@@ -90,7 +90,7 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Transition: `pending`/`in_progress`/`escalated` → `escalated`
   - If `escalatedAt is not set`:
     - Record first escalation time; not overwritten on subsequent timer-triggered escalations (sets `escalatedAt`)
-  - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+  - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - If `reason is "sla_deadline_exceeded"`:
     - Emit: `workflow.task.sla_breached` — Emit a domain event recording the SLA deadline breach for federal compliance reporting
   - Else:
@@ -131,11 +131,11 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
 
 - **`workflow.task.created`**
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
-  - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+  - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Schedule auto-escalation 72 business hours after task creation.
 - **`workflow.task.updated`**
   - If `$this.data.changes.exists(c, c.field is "isExpedited" || c.field is "programType")`:
-    - Set expedited priority when the task is flagged as expedited; otherwise set normal priority.
+    - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - If `$this.data.changes.exists(c, c.field is "programType" || c.field is "queueId")`:
     - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
   - If `$this.data.changes.exists(c, c.field is "slaDeadline") and slaDeadline is set`:
@@ -157,3 +157,24 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
     - `PATCH workflow/tasks/$task.id`
 - **`intake.application.submitted`** *(emitted by [Intake/Application](intake.md#application))*
   - Create an intake review task when an application is submitted
+- **`intake.application.closed`** *(emitted by [Intake/Application](intake.md#application))*
+  - Look up: reviewTask, approvalTask
+  - If `id is set and status is "pending_review"`:
+    - Complete the caseworker task that was awaiting supervisor approval
+  - If `id is set and status is "in_progress"`:
+    - Complete the active caseworker task on application close
+  - If `id is set and status is "pending"`:
+    - Cancel the unclaimed caseworker task when the application was auto-determined at submission
+  - If `id is set`:
+    - Complete the supervisor approval task
+- **`intake.determination.approval_needed`**
+  - Look up: reviewTask
+  - If `id is set`:
+    - Move caseworker task to pending_review while supervisor reviews the determination
+  - Create a supervisor approval task
+- **`intake.determination.rejected`**
+  - Look up: reviewTask, approvalTask
+  - If `id is set`:
+    - Return the caseworker task to in_progress for revision
+  - If `id is set`:
+    - Complete the supervisor approval task with a rejected outcome

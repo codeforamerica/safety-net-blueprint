@@ -347,7 +347,7 @@
         {
           "type": "system",
           "domain": "intake",
-          "text": "Interview record updated"
+          "text": "Caseworker attests interview complete (PATCH Interview.completedAt)"
         }
       ]
     },
