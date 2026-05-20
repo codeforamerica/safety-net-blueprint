@@ -118,7 +118,7 @@ export function buildEventIndex(allStateMachines) {
 
   for (const sm of allStateMachines) {
     for (const machine of sm.machines) {
-      for (const op of machine.transitions || []) {
+      for (const op of (machine.actions || [])) {
         for (const eventId of collectEmitSteps(getSteps(op))) {
           const canonical = `${sm.domain}.${machine.object.toLowerCase()}.${eventId}`;
           emitters[canonical] = { domain: sm.domain, object: machine.object };
@@ -411,10 +411,10 @@ export function generate(inputPath, outputDir, eventIndex, allStateMachines) {
     lines.push(`## ${machine.object}`);
     lines.push('');
 
-    if (machine.transitions?.length) {
-      lines.push('### Transitions');
+    if (machine.actions?.length) {
+      lines.push('### Actions');
       lines.push('');
-      for (const op of machine.transitions) {
+      for (const op of machine.actions) {
         lines.push(renderOpLine(op, sm, machine, eventIndex, allStateMachines));
       }
       lines.push('');

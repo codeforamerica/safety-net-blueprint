@@ -21,10 +21,10 @@ function makeStateMachine() {
   };
 }
 
-function makeMachine(transitions) {
+function makeMachine(actions) {
   return {
     object: 'Testresource',
-    transitions,
+    actions,
     guards: [],
     rules: [],
   };
@@ -128,6 +128,96 @@ test('executeTransition — skips validation when no schema.request defined', ()
 });
 
 // =============================================================================
+// executeTransition — OR semantics guard evaluation
+// =============================================================================
+
+test('executeTransition — caller role absent from all clauses → 403', () => {
+  insertResource('testresources', { id: 'res-or-1', status: 'pending', assignedToId: null });
+
+  const machine = makeMachine([{
+    id: 'claim',
+    transition: { from: 'pending', to: 'in_progress' },
+    guards: [
+      { actors: ['caseworker'], conditions: ['taskIsUnassigned'] },
+      { actors: ['supervisor'], conditions: [] },
+    ],
+    steps: []
+  }]);
+
+  const result = executeTransition({
+    resourceName: 'testresources',
+    resourceId: 'res-or-1',
+    trigger: 'claim',
+    callerId: 'applicant-1',
+    callerRoles: ['applicant'],
+    stateMachine: { ...makeStateMachine(), guards: [{ id: 'taskIsUnassigned', condition: 'object.assignedToId == null' }] },
+    machine,
+    rules: []
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.status, 403);
+  assert.ok(result.error.includes('claim'), `expected error to mention action name, got: ${result.error}`);
+  assert.strictEqual(findById('testresources', 'res-or-1').status, 'pending');
+});
+
+test('executeTransition — first clause fails, second clause passes → 200', () => {
+  insertResource('testresources', { id: 'res-or-2', status: 'pending', assignedToId: 'other-worker' });
+
+  const machine = makeMachine([{
+    id: 'escalate',
+    transition: { from: 'pending', to: 'escalated' },
+    guards: [
+      { actors: ['caseworker'], conditions: ['callerIsAssignedWorker'] },
+      { actors: ['supervisor'], conditions: [] },
+    ],
+    steps: []
+  }]);
+
+  const result = executeTransition({
+    resourceName: 'testresources',
+    resourceId: 'res-or-2',
+    trigger: 'escalate',
+    callerId: 'sup-1',
+    callerRoles: ['supervisor'],
+    stateMachine: { ...makeStateMachine(), guards: [{ id: 'callerIsAssignedWorker', condition: 'object.assignedToId == caller.id' }] },
+    machine,
+    rules: []
+  });
+
+  assert.strictEqual(result.success, true);
+  assert.strictEqual(findById('testresources', 'res-or-2').status, 'escalated');
+});
+
+test('executeTransition — caller role matches but all conditions fail → 409', () => {
+  insertResource('testresources', { id: 'res-or-3', status: 'pending', assignedToId: 'other-worker' });
+
+  const machine = makeMachine([{
+    id: 'escalate',
+    transition: { from: 'pending', to: 'escalated' },
+    guards: [
+      { actors: ['caseworker'], conditions: ['callerIsAssignedWorker'] },
+    ],
+    steps: []
+  }]);
+
+  const result = executeTransition({
+    resourceName: 'testresources',
+    resourceId: 'res-or-3',
+    trigger: 'escalate',
+    callerId: 'worker-1',
+    callerRoles: ['caseworker'],
+    stateMachine: { ...makeStateMachine(), guards: [{ id: 'callerIsAssignedWorker', condition: 'object.assignedToId == caller.id' }] },
+    machine,
+    rules: []
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.status, 409);
+  assert.strictEqual(findById('testresources', 'res-or-3').status, 'pending');
+});
+
+// =============================================================================
 // executeTransition — CEL condition guards (new format)
 // =============================================================================
 
@@ -179,7 +269,7 @@ test('executeTransition — CEL condition guard fails → 409, resource unchange
 
   assert.strictEqual(result.success, false);
   assert.strictEqual(result.status, 409);
-  assert.ok(result.error.includes('taskIsUnassigned'));
+  assert.ok(result.error.includes('claim'), `expected error to mention action name, got: ${result.error}`);
   assert.strictEqual(findById('testresources', 'res-cel-2').status, 'pending');
 });
 

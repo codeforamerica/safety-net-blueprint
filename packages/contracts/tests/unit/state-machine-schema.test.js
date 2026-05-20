@@ -121,7 +121,7 @@ test('state-machine-schema structural requirements', async (t) => {
     assert.equal(valid, false);
   });
 
-  await t.test('machine with no events or transitions is valid', () => {
+  await t.test('machine with no events or actions is valid', () => {
     const { valid, errors } = validate(base);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
@@ -189,25 +189,25 @@ test('state-machine-schema trigger types', async (t) => {
 });
 
 // ---------------------------------------------------------------------------
-// Transitions
+// Actions
 // ---------------------------------------------------------------------------
 
-test('state-machine-schema transition types', async (t) => {
+test('state-machine-schema action types', async (t) => {
 
-  function withTransitions(transitions) {
+  function withActions(actions) {
     return {
       version: '1.0', domain: 'test', apiSpec: 'test-openapi.yaml',
       machines: [{
         object: 'Widget',
         states: [{ id: 'draft', slaClock: 'stopped' }, { id: 'active', slaClock: 'running' }],
         initialState: 'draft',
-        transitions,
+        actions,
       }],
     };
   }
 
-  await t.test('operation with full transition and guards', () => {
-    const doc = withTransitions([{
+  await t.test('action with full transition and guards', () => {
+    const doc = withActions([{
       id: 'activate',
       guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
       transition: { from: 'draft', to: 'active' },
@@ -220,8 +220,8 @@ test('state-machine-schema transition types', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('operation without transition (in-place)', () => {
-    const doc = withTransitions([{
+  await t.test('action without transition (in-place)', () => {
+    const doc = withActions([{
       id: 'flag',
       steps: [{ set: { field: 'flagged', value: true, description: 'Flag it' } }],
     }]);
@@ -229,8 +229,8 @@ test('state-machine-schema transition types', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('operation with multi-state from', () => {
-    const doc = withTransitions([{
+  await t.test('action with multi-state from', () => {
+    const doc = withActions([{
       id: 'withdraw',
       transition: { from: ['draft', 'active'], to: 'draft' },
       steps: [{ emit: { event: 'withdrawn', description: 'Emit event' } }],
@@ -239,8 +239,8 @@ test('state-machine-schema transition types', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('operation with transition from only (no state change)', () => {
-    const doc = withTransitions([{
+  await t.test('action with transition from only (no state change)', () => {
+    const doc = withActions([{
       id: 'complete-review',
       transition: { from: 'active' },
       guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
@@ -250,8 +250,8 @@ test('state-machine-schema transition types', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('operation with schema.request', () => {
-    const doc = withTransitions([{
+  await t.test('action with schema.request', () => {
+    const doc = withActions([{
       id: 'withdraw',
       transition: { from: 'active', to: 'draft' },
       schema: {
@@ -268,7 +268,7 @@ test('state-machine-schema transition types', async (t) => {
   });
 
   await t.test('operation with evaluate step', () => {
-    const doc = withTransitions([{
+    const doc = withActions([{
       id: 'release',
       transition: { from: 'active', to: 'draft' },
       steps: [
@@ -281,7 +281,7 @@ test('state-machine-schema transition types', async (t) => {
   });
 
   await t.test('operation with call step (object form, create)', () => {
-    const doc = withTransitions([{
+    const doc = withActions([{
       id: 'complete',
       transition: { from: 'active', to: 'draft' },
       steps: [{
@@ -297,7 +297,7 @@ test('state-machine-schema transition types', async (t) => {
   });
 
   await t.test('operation with call step (object form, PATCH append)', () => {
-    const doc = withTransitions([{
+    const doc = withActions([{
       id: 'add-note',
       transition: { from: 'active' },
       steps: [{
@@ -324,7 +324,7 @@ test('state-machine-schema guards composition', async (t) => {
         object: 'Widget',
         states: [{ id: 'draft', slaClock: 'stopped' }],
         initialState: 'draft',
-        transitions: [{
+        actions: [{
           id: 'do-thing',
           guards: [{ actors: ['caseworker'], conditions }],
           steps: [{ emit: { event: 'done', description: 'Done' } }],
@@ -508,7 +508,7 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
           object: 'WidgetDocument',
           states: [{ id: 'requested', slaClock: 'stopped' }, { id: 'verified', slaClock: 'stopped' }],
           initialState: 'requested',
-          transitions: [{
+          actions: [{
             id: 'verify',
             guards: [{ actors: ['system'], conditions: ['callerIsSystem'] }],
             transition: { from: 'requested', to: 'verified' },
@@ -521,7 +521,7 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('machine with both events and transitions', () => {
+  await t.test('machine with both events and actions', () => {
     const doc = {
       ...base,
       machines: [{
@@ -532,7 +532,7 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
           name: 'domain.widget.created',
           steps: [{ call: 'routing-rule', description: 'Route on create' }],
         }],
-        transitions: [{
+        actions: [{
           id: 'activate',
           guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
           transition: { from: 'draft', to: 'active' },

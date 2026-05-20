@@ -226,7 +226,7 @@ function renderTransitions(doc) {
   const rows = [];
 
   for (const machine of doc.machines || []) {
-    for (const t of machine.transitions || []) {
+    for (const t of (machine.actions || [])) {
       const { actors, conditions } = flattenGuards(t.guards);
       const from = t.transition ? formatFrom(t.transition.from) : '';
       const to = t.transition?.to || '';
@@ -730,24 +730,24 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
     lines.push('');
   }
 
-  // ── Transitions / Events ────────────────────────────────────────────────
+  // ── Actions / Events ────────────────────────────────────────────────────
   lines.push('---');
   lines.push('');
 
   if (isMachines) {
-    lines.push('## Transitions');
+    lines.push('## Actions');
     lines.push('');
-    lines.push('Transitions are actor- or system-triggered actions. Each lists who can trigger it, what state change it causes, and what steps run.');
+    lines.push('Actions are actor- or system-triggered operations. Each lists who can trigger it, what state change it causes, and what steps run.');
     lines.push('');
 
     for (const machine of smDoc.machines || []) {
-      const transitions = machine.transitions || [];
-      if (transitions.length === 0) continue;
+      const actions = machine.actions || [];
+      if (actions.length === 0) continue;
       lines.push(`### ${machine.object}`);
       lines.push('');
       lines.push('| ID | From | To | Actors | Conditions | Steps |');
       lines.push('|----|------|----|--------|------------|-------|');
-      for (const t of transitions) {
+      for (const t of actions) {
         const from = t.transition ? mdCell(formatFrom(t.transition.from)) : '—';
         const to = t.transition?.to ? mdCell(t.transition.to) : '—';
         const { actors, conditions } = flattenGuards(t.guards);

@@ -90,194 +90,106 @@ function loadExamples(resourceName) {
 // =============================================================================
 
 /**
- * Load a state machine definition for an API (if one exists).
+ * Load and normalize a state machine definition for an API (if one exists).
+ * Returns a flat object with domain, object, initialState, actions, guards.
  */
 function loadStateMachine(apiName) {
   const smPath = join(specsDir, `${apiName}-state-machine.yaml`);
   if (!existsSync(smPath)) return null;
   try {
-    return yaml.load(readFileSync(smPath, 'utf8'));
+    const doc = yaml.load(readFileSync(smPath, 'utf8'));
+    if (!doc) return null;
+    if (Array.isArray(doc.machines) && doc.machines.length > 0) {
+      const machine = doc.machines[0];
+      return {
+        domain: doc.domain,
+        object: machine.object,
+        initialState: machine.initialState,
+        actions: machine.actions || [],
+        guards: [...(doc.guards || []), ...(machine.guards || [])],
+      };
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
+function actionFromStates(action) {
+  const from = action.transition?.from;
+  if (!from) return [];
+  return Array.isArray(from) ? from : [from];
+}
+
 /**
- * Compute a valid ordering of transition triggers given an initial state.
- * Uses BFS to find a path that covers every trigger at least once.
- *
- * Returns an array of trigger names in execution order, or null if no
- * valid ordering exists.
+ * BFS over actions to find an ordering that covers every action at least once.
+ * Returns an array of action ids in execution order.
  */
-function computeTransitionOrder(stateMachine) {
-  const transitions = stateMachine.transitions || [];
-  if (transitions.length === 0) return [];
+function computeActionOrder(stateMachine, startState) {
+  const actions = stateMachine.actions || [];
+  if (actions.length === 0) return [];
 
-  const allTriggers = new Set(transitions.map(t => t.trigger));
-  const initialState = stateMachine.initialState;
+  const allIds = new Set(actions.filter(a => a.transition?.from).map(a => a.id));
+  if (allIds.size === 0) return [];
 
-  // BFS: state = { currentState, path: [trigger, ...], covered: Set }
-  const queue = [{ currentState: initialState, path: [], covered: new Set() }];
-  const visited = new Map(); // "state|coveredKey" → true
+  const queue = [{ currentState: startState, path: [], covered: new Set() }];
+  const visited = new Map();
   let bestPath = [];
 
   while (queue.length > 0) {
     const { currentState, path, covered } = queue.shift();
 
-    if (covered.size === allTriggers.size) {
-      return path;
-    }
+    if (covered.size === allIds.size) return path;
+    if (covered.size > bestPath.length) bestPath = path;
 
-    // Track the longest path found so far
-    if (covered.size > bestPath.length) {
-      bestPath = path;
-    }
+    for (const a of actions) {
+      const froms = actionFromStates(a);
+      if (froms.length === 0 || !froms.includes(currentState)) continue;
 
-    // Try each transition from current state
-    for (const t of transitions) {
-      if (t.from !== currentState) continue;
-
+      const nextState = a.transition?.to ?? currentState;
       const newCovered = new Set(covered);
-      newCovered.add(t.trigger);
+      newCovered.add(a.id);
 
-      const key = `${t.to}|${[...newCovered].sort().join(',')}`;
+      const key = `${nextState}|${[...newCovered].sort().join(',')}`;
       if (visited.has(key)) continue;
       visited.set(key, true);
 
-      queue.push({
-        currentState: t.to,
-        path: [...path, t.trigger],
-        covered: newCovered
-      });
+      queue.push({ currentState: nextState, path: [...path, a.id], covered: newCovered });
     }
   }
 
-  // Return the longest reachable path; unreachable triggers become leftovers
   return bestPath;
 }
 
 /**
- * Derive a caller ID that satisfies guard definitions.
- * Scans guards used by the transition ordering for a $caller.id check and
- * returns the expected value so the Postman tests pass.  Falls back to the
- * example's assignedToId or a generic test user ID.
- */
-function deriveCallerId(stateMachine, transitionOrder, fallback) {
-  const guardDefs = Object.fromEntries((stateMachine.guards || []).map(g => [g.id, g]));
-  const transitions = stateMachine.transitions || [];
-
-  // Collect guard names referenced by the ordered transitions
-  const guardNames = new Set();
-  for (const trigger of transitionOrder) {
-    const t = transitions.find(tr => tr.trigger === trigger);
-    if (t) {
-      for (const g of t.guards || []) {
-        guardNames.add(g);
-      }
-    }
-  }
-
-  // Look for a guard that checks $caller.id
-  for (const name of guardNames) {
-    const def = guardDefs[name];
-    if (def && def.field === '$caller.id' && def.value) {
-      return String(def.value);
-    }
-  }
-
-  return fallback;
-}
-
-/**
- * Pick the best example for RPC transitions and determine the caller ID.
- *
- * If the state machine's initial state matches an example's status, prefer
- * that example (the transition ordering starts from initialState). Otherwise
- * we need to find an example whose current state can reach all triggers via
- * a modified ordering.
- *
+ * Pick the best example for RPC execution and determine the caller ID.
  * Returns { example, callerId, transitionOrder }.
  */
 function planRpcExecution(stateMachine, examples) {
-  const transitions = stateMachine.transitions || [];
+  const actions = stateMachine.actions || [];
   const initialState = stateMachine.initialState;
+  const standardOrder = computeActionOrder(stateMachine, initialState);
 
-  // Standard ordering assumes we start from initialState
-  const standardOrder = computeTransitionOrder(stateMachine);
-
-  // Try to find an example in the initial state
   const initialExample = examples.find(e => e.data.status === initialState);
   if (initialExample) {
-    const fallback = initialExample.data.assignedToId || 'postman-test-user';
-    const callerId = deriveCallerId(stateMachine, standardOrder, fallback);
+    const callerId = initialExample.data.assignedToId || 'postman-test-user';
     return { example: initialExample, callerId, transitionOrder: standardOrder };
   }
 
-  // No example in initial state. Find one whose state appears as a "from" in
-  // some transition, and compute an ordering from that state.
   for (const example of examples) {
     const exState = example.data.status;
     if (!exState) continue;
-
-    // Check if any transition starts from this state
-    const hasTransition = transitions.some(t => t.from === exState);
-    if (!hasTransition) continue;
-
-    // Compute ordering starting from example's current state
-    const order = computeTransitionOrderFrom(stateMachine, exState);
+    const hasAction = actions.some(a => actionFromStates(a).includes(exState));
+    if (!hasAction) continue;
+    const order = computeActionOrder(stateMachine, exState);
     if (order && order.length > 0) {
-      const fallback = example.data.assignedToId || 'postman-test-user';
-      const callerId = deriveCallerId(stateMachine, order, fallback);
+      const callerId = example.data.assignedToId || 'postman-test-user';
       return { example, callerId, transitionOrder: order };
     }
   }
 
-  // Last resort: use first example with standard ordering
-  const fallback = examples[0]?.data?.assignedToId || 'postman-test-user';
-  const callerId = deriveCallerId(stateMachine, standardOrder, fallback);
+  const callerId = examples[0]?.data?.assignedToId || 'postman-test-user';
   return { example: examples[0], callerId, transitionOrder: standardOrder };
-}
-
-/**
- * Compute transition order starting from an arbitrary state (not necessarily
- * the initial state). Same BFS as computeTransitionOrder but with a custom
- * start state.
- */
-function computeTransitionOrderFrom(stateMachine, startState) {
-  const transitions = stateMachine.transitions || [];
-  if (transitions.length === 0) return [];
-
-  const allTriggers = new Set(transitions.map(t => t.trigger));
-
-  const queue = [{ currentState: startState, path: [], covered: new Set() }];
-  const visited = new Map();
-
-  while (queue.length > 0) {
-    const { currentState, path, covered } = queue.shift();
-
-    if (covered.size === allTriggers.size) {
-      return path;
-    }
-
-    for (const t of transitions) {
-      if (t.from !== currentState) continue;
-
-      const newCovered = new Set(covered);
-      newCovered.add(t.trigger);
-
-      const key = `${t.to}|${[...newCovered].sort().join(',')}`;
-      if (visited.has(key)) continue;
-      visited.set(key, true);
-
-      queue.push({
-        currentState: t.to,
-        path: [...path, t.trigger],
-        covered: newCovered
-      });
-    }
-  }
-
-  return null; // Can't cover all triggers from this state
 }
 
 // =============================================================================

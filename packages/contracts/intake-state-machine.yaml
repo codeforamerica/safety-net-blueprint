@@ -17,7 +17,7 @@ machines:
       - id: closed
         slaClock: stopped
     initialState: draft
-    transitions:
+    actions:
       - id: submit
         description: POST /applications/{applicationId}/submit — Formally submits a draft application, starting the regulatory processing clock
         guards:
@@ -385,7 +385,7 @@ machines:
           from: data-exchange/services
           where:
             serviceType: uib
-    transitions:
+    actions:
       - id: satisfy
         description: POST /applications/verifications/{verificationId}/satisfy — System marks an obligation as satisfied after receiving conclusive service call or document evidence
         guards:

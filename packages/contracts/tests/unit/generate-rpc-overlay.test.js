@@ -48,7 +48,7 @@ const sampleStateMachine = {
         { id: 'completed' }
       ],
       initialState: 'pending',
-      transitions: [
+      actions: [
         {
           id: 'claim',
           transition: { from: 'pending', to: 'in_progress' },
@@ -254,7 +254,7 @@ test('generateOverlay — includes tags from API spec', () => {
   assert.deepStrictEqual(claimOp.tags, ['Tasks']);
 });
 
-test('generateOverlay — includes requestBody for transitions with body', () => {
+test('generateOverlay — includes requestBody for actions with body', () => {
   const overlay = generateOverlay(sampleStateMachine, sampleEndpointInfo);
   const paths = overlay.actions[0].update;
 

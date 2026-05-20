@@ -169,7 +169,6 @@ async function startMockServer(specDirs = null, seedDir = null) {
     console.log('  POST   /platform/events - Inject external domain event (testing)');
 
     // Event stub registry — pre-program event responses for integration tests.
-    // See packages/mock-server/mock-rules/README.md for full usage documentation.
     app.post('/mock/stubs/events', (req, res) => {
       try {
         const stub = registerStub(req.body);

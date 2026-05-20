@@ -801,8 +801,8 @@ async function main() {
       allWarnings = allWarnings.concat(rpcWarnings);
       currentResults = rpcResults;
 
-      const transitionCount = stateMachine.transitions?.length || 0;
-      console.log(`  \u2713 Auto-generated: ${stateMachine.domain} RPC Overlay (${transitionCount} transitions)`);
+      const actionCount = (stateMachine.machines || []).flatMap(m => m.actions || []).length;
+      console.log(`  \u2713 Auto-generated: ${stateMachine.domain} RPC Overlay (${actionCount} actions)`);
     }
   }
 

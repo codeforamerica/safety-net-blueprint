@@ -186,7 +186,7 @@ function findYamlForDomain(outDir, domain, schemaKeyword, csvs) {
   if (matches.length === 0) return null;
   if (matches.length === 1) return matches[0];
 
-  // Multiple state machines for this domain — use transition trigger names to find the right one.
+  // Multiple state machines for this domain — use action IDs to find the right one.
   const transitionsCsv = (csvs || []).find(c => c.section === 'transitions');
   if (transitionsCsv) {
     const csvContent = readFileSync(transitionsCsv.csvPath, 'utf8');
@@ -196,8 +196,8 @@ function findYamlForDomain(outDir, domain, schemaKeyword, csvs) {
 
     if (csvTriggers.size > 0) {
       const scored = matches.map(m => {
-        const existingTriggers = new Set((m.doc.transitions || []).map(t => t.trigger));
-        const overlap = [...csvTriggers].filter(t => existingTriggers.has(t)).length;
+        const existingIds = new Set((m.doc.machines || []).flatMap(machine => (machine.actions || []).map(t => t.id)).concat((m.doc.transitions || []).map(t => t.trigger)));
+        const overlap = [...csvTriggers].filter(t => existingIds.has(t)).length;
         return { ...m, overlap };
       });
       scored.sort((a, b) => b.overlap - a.overlap);
@@ -205,8 +205,9 @@ function findYamlForDomain(outDir, domain, schemaKeyword, csvs) {
     }
   }
 
-  // Fallback: prefer the YAML with more transitions (the richer/primary one)
-  return matches.sort((a, b) => (b.doc.transitions?.length || 0) - (a.doc.transitions?.length || 0))[0];
+  // Fallback: prefer the YAML with more actions (the richer/primary one)
+  const countActions = doc => (doc.machines || []).reduce((n, m) => n + (m.actions || []).length, doc.transitions?.length || 0);
+  return matches.sort((a, b) => countActions(b.doc) - countActions(a.doc))[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -763,7 +764,7 @@ function importSmRules(csvData, existingDoc) {
 }
 
 /**
- * Merge transition guard metadata from transitions.csv into machines[].transitions.
+ * Merge action guard metadata from transitions.csv into machines[].actions.
  * Columns: Machine | ID | From | To | Actors | Conditions | Steps
  * Steps are preserved from the existing YAML — the CSV captures only a summary.
  */
@@ -782,7 +783,7 @@ function importSmTransitions(csvData, existingDoc) {
     const rows = csvData.data.filter(r => r[I.machine] === machine.object);
     if (rows.length === 0) return machine;
 
-    const transitions = (machine.transitions || []).map(t => {
+    const actions = (machine.actions || []).map(t => {
       const existingFrom = Array.isArray(t.transition?.from)
         ? t.transition.from.join(' | ')
         : (t.transition?.from || '');
@@ -794,11 +795,13 @@ function importSmTransitions(csvData, existingDoc) {
       const actors = parseActors(row[I.actors]);
       const conditions = parseConditions(row[I.conditions]);
       if (actors !== null || conditions !== null) {
-        // Guards is an array of guard sets — update the first set, or create one
+        // Guards is an array of guard sets — update the first set, or create one.
+        // Multi-clause guards are not faithfully representable in the flat CSV;
+        // skip updating conditions when more than one clause exists to avoid corruption.
         const existingGuards = t.guards || [];
         const firstGuard = { ...(existingGuards[0] || {}) };
         if (actors !== null) firstGuard.actors = actors;
-        if (conditions !== null) firstGuard.conditions = conditions;
+        if (conditions !== null && existingGuards.length <= 1) firstGuard.conditions = conditions;
         updated.guards = [firstGuard, ...existingGuards.slice(1)];
       }
       if (row[I.from] || row[I.to]) {
@@ -809,7 +812,7 @@ function importSmTransitions(csvData, existingDoc) {
       return updated;
     });
 
-    return { ...machine, transitions };
+    return { ...machine, actions };
   });
 
   return doc;

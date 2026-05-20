@@ -5,7 +5,7 @@
  */
 
 import { findById, update, create } from './database-manager.js';
-import { findTransition, findOperation, evaluateGuards, applyEffects, applySteps } from './state-machine-engine.js';
+import { findOperation, evaluateGuards, applySteps } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
@@ -23,6 +23,7 @@ import { validate } from './validator.js';
  * @param {string[]} options.callerRoles    - Caller roles (e.g., ["system"])
  * @param {string} [options.now]            - ISO timestamp; defaults to current time
  * @param {Object} options.stateMachine     - State machine contract
+ * @param {Object} options.machine          - Machine entry (from stateMachine.machines[])
  * @param {Array}  [options.slaTypes]       - SLA types from discoverSlaTypes()
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
@@ -36,7 +37,7 @@ export function executeTransition({
   callerRoles,
   now,
   stateMachine,
-  machine = null,
+  machine,
   slaTypes = [],
   requestBody = {},
   traceparent = null
@@ -48,46 +49,14 @@ export function executeTransition({
     return { success: false, status: 404, error: `Resource not found: ${resourceId}` };
   }
 
-  // New format: machine entry has transitions; old format: stateMachine has transitions
-  const isNewFormat = machine && Array.isArray(machine.transitions);
-
-  let actors, guardConditions, steps, transitionTo;
-  let operation = null;
-
-  if (isNewFormat) {
-    const found = findOperation(machine, trigger, resource);
-    if (!found.operation) {
-      return { success: false, status: 409, error: found.error };
-    }
-    operation = found.operation;
-    const guardItems = Array.isArray(operation.guards) ? operation.guards : [];
-    actors = guardItems.flatMap(g => g.actors || []);
-    guardConditions = guardItems.flatMap(g => g.conditions || []);
-    steps = operation.steps || [];
-    transitionTo = operation.transition?.to ?? null;
-  } else {
-    const { transition, error } = findTransition(stateMachine, trigger, resource);
-    if (!transition) {
-      return { success: false, status: 409, error };
-    }
-    actors = transition.actors || [];
-    guardConditions = transition.guards || [];
-    steps = null;
-    transitionTo = transition.to ?? null;
-    // store for applyEffects below
-    var legacyEffects = transition.effects;
+  const found = findOperation(machine, trigger, resource);
+  if (!found.operation) {
+    return { success: false, status: 409, error: found.error };
   }
-
-  // Authorization check before request body validation — return 403 before 422
-  if (actors.length > 0) {
-    if (!callerRoles.some(r => actors.includes(r))) {
-      return {
-        success: false,
-        status: 403,
-        error: `Transition "${trigger}" requires one of: ${actors.join(', ')}`
-      };
-    }
-  }
+  const operation = found.operation;
+  const guardItems = Array.isArray(operation.guards) ? operation.guards : [];
+  const steps = operation.steps || [];
+  const transitionTo = operation.transition?.to ?? null;
 
   const baseContext = {
     caller: { id: callerId, roles: callerRoles },
@@ -96,9 +65,7 @@ export function executeTransition({
     now: timestamp
   };
 
-  const operationContext = isNewFormat
-    ? (machine.transitions || []).find(op => op.id === trigger)?.context
-    : null;
+  const operationContext = (machine.actions || []).find(op => op.id === trigger)?.context;
 
   const entities = resolveContextLayers(
     [stateMachine.context, machine?.context, operationContext],
@@ -106,24 +73,39 @@ export function executeTransition({
     baseContext
   );
   if (entities === null) {
-    return { success: false, status: 409, error: `Context binding failed for operation "${trigger}"` };
+    return { success: false, status: 409, error: `Context binding failed for action "${trigger}"` };
   }
   const context = { ...baseContext, entities };
 
-  const guardsMap = Object.fromEntries(
-    [...(stateMachine._platformGuards || []), ...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
-  );
-  const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
-  if (!guardResult.pass) {
-    return {
-      success: false,
-      status: 409,
-      error: `Guard "${guardResult.failedGuard}" failed: ${guardResult.reason}`
-    };
+  // OR semantics: caller passes if ANY guard clause is satisfied.
+  // Within a clause: actors AND conditions must both pass.
+  if (guardItems.length > 0) {
+    const guardsMap = Object.fromEntries(
+      [...(stateMachine._platformGuards || []), ...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
+    );
+
+    const allActors = guardItems.flatMap(g => g.actors || []);
+    const callerHasAnyRole = allActors.length === 0 || callerRoles.some(r => allActors.includes(r));
+    if (!callerHasAnyRole) {
+      const uniqueActors = [...new Set(allActors)];
+      return { success: false, status: 403, error: `Action "${trigger}" requires one of: ${uniqueActors.join(', ')}` };
+    }
+
+    const clausePassed = guardItems.some(g => {
+      const clauseActors = g.actors || [];
+      if (clauseActors.length > 0 && !callerRoles.some(r => clauseActors.includes(r))) return false;
+      const clauseConditions = g.conditions || [];
+      if (clauseConditions.length === 0) return true;
+      return evaluateGuards(clauseConditions, guardsMap, resource, context).pass;
+    });
+
+    if (!clausePassed) {
+      return { success: false, status: 409, error: `No guard clause passed for action "${trigger}"` };
+    }
   }
 
   // Request body validation: runs after authorization (403) and guard checks (409)
-  if (isNewFormat && operation?.schema?.request) {
+  if (operation?.schema?.request) {
     const { valid, errors } = validate(requestBody, operation.schema.request, `operation-${trigger}`);
     if (!valid) {
       return { success: false, status: 422, error: 'Request body validation failed', details: errors };
@@ -133,9 +115,8 @@ export function executeTransition({
   const updated = { ...resource };
   if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
 
-  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = isNewFormat
-    ? applySteps(steps, updated, context)
-    : { ...applyEffects(legacyEffects, updated, context), pendingOperations: [], pendingAppends: [] };
+  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
+    applySteps(steps, updated, context);
 
   if (transitionTo != null && transitionTo !== '') {
     updated.status = transitionTo;

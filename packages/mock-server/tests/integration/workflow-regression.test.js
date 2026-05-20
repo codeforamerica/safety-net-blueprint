@@ -117,7 +117,7 @@ async function registerStub(stub) {
 }
 
 async function allEvents() {
-  const res = await fetch(`${BASE_URL}/platform/events?limit=1000`);
+  const res = await fetch(`${BASE_URL}/platform/events?sort=-time&limit=100`);
   return ((await res.json()).items) || [];
 }
 
@@ -198,7 +198,7 @@ async function testWorkflowLifecycle() {
     assert.strictEqual(data.blockedAt, null);
   });
 
-  // ── await-verification / system-resume ────────────────────────────────────
+  // ── await-verification / auto-resume ────────────────────────────────────
 
   await test('await-verification (in_progress → awaiting_verification) — sets blockedAt', async () => {
     const res = await fetch(`${BASE_URL}${TASK}/${taskId}/await-verification`, { method: 'POST', headers: CASEWORKER });
@@ -218,8 +218,8 @@ async function testWorkflowLifecycle() {
     assert.strictEqual(res.status, 409);
   });
 
-  await test('system-resume (awaiting_verification → in_progress) — clears blockedAt', async () => {
-    const res = await fetch(`${BASE_URL}${TASK}/${taskId}/system-resume`, {
+  await test('auto-resume (awaiting_verification → in_progress) — clears blockedAt', async () => {
+    const res = await fetch(`${BASE_URL}${TASK}/${taskId}/auto-resume`, {
       method: 'POST', headers: SYSTEM,
       body: { source: 'verification_result', result: 'conclusive' },
     });
@@ -229,12 +229,12 @@ async function testWorkflowLifecycle() {
     assert.strictEqual(data.blockedAt, null);
   });
 
-  await test('system-resume (callerIsSystem guard) — caseworker → 403 FORBIDDEN', async () => {
+  await test('auto-resume (callerIsSystem guard) — caseworker → 403 FORBIDDEN', async () => {
     await fetch(`${BASE_URL}${TASK}/${taskId}/await-verification`, { method: 'POST', headers: CASEWORKER });
-    const res = await fetch(`${BASE_URL}${TASK}/${taskId}/system-resume`, { method: 'POST', headers: CASEWORKER });
+    const res = await fetch(`${BASE_URL}${TASK}/${taskId}/auto-resume`, { method: 'POST', headers: CASEWORKER });
     assert.strictEqual(res.status, 403);
     assert.strictEqual((await res.json()).code, 'FORBIDDEN');
-    await fetch(`${BASE_URL}${TASK}/${taskId}/system-resume`, { method: 'POST', headers: SYSTEM, body: { source: 'test' } });
+    await fetch(`${BASE_URL}${TASK}/${taskId}/auto-resume`, { method: 'POST', headers: SYSTEM, body: { source: 'test' } });
   });
 
   // ── submit-for-review / approve / return-to-worker ────────────────────────
@@ -386,7 +386,7 @@ async function testWorkflowLifecycle() {
     assert.ok(data.escalatedAt, 'escalatedAt should be set');
   });
 
-  await test('caseworker can escalate from in_progress (any[callerIsAssignedWorker, callerIsSupervisor])', async () => {
+  await test('caseworker can escalate from in_progress (callerIsAssignedWorker clause passes)', async () => {
     const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'CW escalation', programType: 'snap' },
@@ -399,13 +399,13 @@ async function testWorkflowLifecycle() {
     assert.strictEqual((await res.json()).status, 'escalated');
   });
 
-  await test('caseworker cannot escalate from pending → 403 FORBIDDEN', async () => {
+  await test('caseworker cannot escalate from pending → 409 CONFLICT (role accepted, no clause passes)', async () => {
     const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'Pending escalation guard', programType: 'snap' },
     })).json();
     const res = await fetch(`${BASE_URL}${TASK}/${id}/escalate`, { method: 'POST', headers: CASEWORKER });
-    assert.strictEqual(res.status, 403);
+    assert.strictEqual(res.status, 409);
   });
 
   await test('submit-for-review from escalated → pending_review', async () => {
@@ -428,14 +428,14 @@ async function testWorkflowLifecycle() {
     assert.ok(data.queueId, 'queueId should be reassigned by assignToQueue procedure');
   });
 
-  // ── system-escalate ───────────────────────────────────────────────────────
+  // ── sla-escalate ───────────────────────────────────────────────────────
 
-  await test('system-escalate from pending — auto_escalated event', async () => {
+  await test('sla-escalate from pending — auto_escalated event', async () => {
     const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'System escalate test', programType: 'snap' },
     })).json();
-    const res = await fetch(`${BASE_URL}${TASK}/${id}/system-escalate`, {
+    const res = await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'deadline_exceeded' },
     });
     assert.strictEqual(res.status, 200, `expected 200, got ${res.status}`);
@@ -444,57 +444,57 @@ async function testWorkflowLifecycle() {
     assert.ok(data.escalatedAt, 'escalatedAt should be set');
   });
 
-  await test('system-escalate from in_progress → escalated', async () => {
+  await test('sla-escalate from in_progress → escalated', async () => {
     const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'System escalate in_progress', programType: 'snap' },
     })).json();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
-    const res = await fetch(`${BASE_URL}${TASK}/${id}/system-escalate`, {
+    const res = await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'sla_deadline_approaching' },
     });
     assert.strictEqual(res.status, 200, `expected 200, got ${res.status}`);
     assert.strictEqual((await res.json()).status, 'escalated');
   });
 
-  await test('system-escalate from escalated — escalatedAt not overwritten', async () => {
+  await test('sla-escalate from escalated — escalatedAt not overwritten', async () => {
     const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'Double escalation test', programType: 'snap' },
     })).json();
-    await fetch(`${BASE_URL}${TASK}/${id}/system-escalate`, {
+    await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'deadline_exceeded' },
     });
     const first = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     const firstEscalatedAt = first.escalatedAt;
-    await fetch(`${BASE_URL}${TASK}/${id}/system-escalate`, {
+    await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'sla_deadline_approaching' },
     });
     const second = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(second.escalatedAt, firstEscalatedAt, 'escalatedAt should not be overwritten on subsequent escalations');
   });
 
-  await test('system-escalate (callerIsSystem guard) — caseworker → 403 FORBIDDEN', async () => {
+  await test('sla-escalate (callerIsSystem guard) — caseworker → 403 FORBIDDEN', async () => {
     const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'System escalate guard test', programType: 'snap' },
     })).json();
-    const res = await fetch(`${BASE_URL}${TASK}/${id}/system-escalate`, {
+    const res = await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: CASEWORKER, body: { reason: 'deadline_exceeded' },
     });
     assert.strictEqual(res.status, 403);
   });
 
-  // ── system-auto-cancel ────────────────────────────────────────────────────
+  // ── auto-cancel ────────────────────────────────────────────────────
 
-  await test('system-auto-cancel (awaiting_client → cancelled) — sets cancelledAt', async () => {
+  await test('auto-cancel (awaiting_client → cancelled) — sets cancelledAt', async () => {
     const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'Auto cancel test', programType: 'snap' },
     })).json();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
-    const res = await fetch(`${BASE_URL}${TASK}/${id}/system-auto-cancel`, { method: 'POST', headers: SYSTEM });
+    const res = await fetch(`${BASE_URL}${TASK}/${id}/auto-cancel`, { method: 'POST', headers: SYSTEM });
     assert.strictEqual(res.status, 200, `expected 200, got ${res.status}`);
     const data = await res.json();
     assert.strictEqual(data.status, 'cancelled');
@@ -748,11 +748,11 @@ async function testWorkflowEventEmission() {
     assert.ok(e, 'workflow.task.resumed should be emitted');
   });
 
-  await test('system-resume emits workflow.task.system_resumed with source and result', async () => {
+  await test('auto-resume emits workflow.task.system_resumed with source and result', async () => {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-verification`, { method: 'POST', headers: CASEWORKER });
-    await fetch(`${BASE_URL}${TASK}/${id}/system-resume`, {
+    await fetch(`${BASE_URL}${TASK}/${id}/auto-resume`, {
       method: 'POST', headers: SYSTEM,
       body: { source: 'verification_result', result: 'conclusive' },
     });
@@ -762,9 +762,9 @@ async function testWorkflowEventEmission() {
     assert.strictEqual(e.data?.result, 'conclusive');
   });
 
-  await test('system-escalate (non-sla reason) emits workflow.task.auto_escalated', async () => {
+  await test('sla-escalate (non-sla reason) emits workflow.task.auto_escalated', async () => {
     const id = await createTask();
-    await fetch(`${BASE_URL}${TASK}/${id}/system-escalate`, {
+    await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'deadline_exceeded' },
     });
     const e = findEvent(await allEvents(), 'workflow.task.auto_escalated', id);
@@ -772,9 +772,9 @@ async function testWorkflowEventEmission() {
     assert.strictEqual(e.data?.reason, 'deadline_exceeded');
   });
 
-  await test('system-escalate (sla_deadline_exceeded) emits workflow.task.sla_breached', async () => {
+  await test('sla-escalate (sla_deadline_exceeded) emits workflow.task.sla_breached', async () => {
     const id = await createTask();
-    await fetch(`${BASE_URL}${TASK}/${id}/system-escalate`, {
+    await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'sla_deadline_exceeded' },
     });
     const e = findEvent(await allEvents(), 'workflow.task.sla_breached', id);
@@ -782,11 +782,11 @@ async function testWorkflowEventEmission() {
     assert.strictEqual(e.data?.reason, 'sla_deadline_exceeded');
   });
 
-  await test('system-auto-cancel emits workflow.task.auto_cancelled with client_unresponsive', async () => {
+  await test('auto-cancel emits workflow.task.auto_cancelled with client_unresponsive', async () => {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
-    await fetch(`${BASE_URL}${TASK}/${id}/system-auto-cancel`, { method: 'POST', headers: SYSTEM });
+    await fetch(`${BASE_URL}${TASK}/${id}/auto-cancel`, { method: 'POST', headers: SYSTEM });
     const e = findEvent(await allEvents(), 'workflow.task.auto_cancelled', id);
     assert.ok(e, 'workflow.task.auto_cancelled should be emitted');
     assert.strictEqual(e.data?.reason, 'client_unresponsive');
@@ -866,7 +866,7 @@ async function testWorkflowTimerBehavior() {
     return (await res.json()).id;
   }
 
-  // creation_deadline fires on task creation → system-escalate(deadline_exceeded) → auto_escalated
+  // creation_deadline fires on task creation → sla-escalate(deadline_exceeded) → auto_escalated
   await test('creation_deadline: task auto-escalates on creation when stub fires', async () => {
     await clearStubs();
     await registerStub({
@@ -887,7 +887,7 @@ async function testWorkflowTimerBehavior() {
     await clearStubs();
   });
 
-  // client_timeout fires from await-client → system-auto-cancel → auto_cancelled
+  // client_timeout fires from await-client → auto-cancel → auto_cancelled
   await test('client_timeout: awaiting_client task auto-cancels when stub fires', async () => {
     await clearStubs();
     const id = await createTask();
@@ -910,7 +910,7 @@ async function testWorkflowTimerBehavior() {
     await clearStubs();
   });
 
-  // verification_timeout fires from await-verification → system-resume(source:timeout)
+  // verification_timeout fires from await-verification → auto-resume(source:timeout)
   await test('verification_timeout: awaiting_verification task auto-resumes when stub fires', async () => {
     await clearStubs();
     const id = await createTask();
@@ -934,7 +934,7 @@ async function testWorkflowTimerBehavior() {
     await clearStubs();
   });
 
-  // sla_warning fires when slaDeadline is set → system-escalate(approaching)
+  // sla_warning fires when slaDeadline is set → sla-escalate(approaching)
   await test('sla_warning: task auto-escalates with approaching reason when slaDeadline set', async () => {
     await clearStubs();
     const id = await createTask();
@@ -958,7 +958,7 @@ async function testWorkflowTimerBehavior() {
     await clearStubs();
   });
 
-  // sla_breach fires when slaDeadline is set → system-escalate(exceeded) → sla_breached
+  // sla_breach fires when slaDeadline is set → sla-escalate(exceeded) → sla_breached
   await test('sla_breach: task escalates and emits sla_breached when slaDeadline set', async () => {
     await clearStubs();
     const id = await createTask();
