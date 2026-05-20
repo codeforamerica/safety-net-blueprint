@@ -15,7 +15,7 @@ machines:
       - {id: awaiting_verification, slaClock: paused}
       - {id: pending_review, slaClock: running}
     initialState: pending
-    transitions:
+    actions:
       - id: claim
         description: "POST /tasks/{taskId}/claim — Caseworker takes ownership of an unassigned pending task"
         guards:
@@ -58,24 +58,13 @@ machines:
           - call: assignToQueue
           - call: setPriority
       - id: escalate
-        description: "POST /tasks/{taskId}/escalate — Flags an in-progress task for supervisor attention"
+        description: "POST /tasks/{taskId}/escalate — Escalate a task; assigned workers can escalate in-progress tasks, supervisors can escalate from any state"
         guards:
           - actors: [caseworker, supervisor]
-            conditions: [{any: [callerIsAssignedWorker, callerIsSupervisor]}]
-        transition: {from: in_progress, to: escalated}
-        schema:
-          request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
-        steps:
-          - set: {field: escalatedAt, value: $now, description: Record when the task was escalated}
-          - call: setPriority
-          - emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
-      - id: escalate
-        description: "POST /tasks/{taskId}/escalate — Supervisor escalates a pending task without claiming it first"
-        guards:
+            conditions: [callerIsAssignedWorker]
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
-        transition: {from: pending, to: escalated}
+        transition: {from: [pending, in_progress], to: escalated}
         schema:
           request:
             $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
@@ -161,8 +150,8 @@ machines:
           - call: cancelClientTimeout
           - call: cancelVerificationTimeout
           - emit: {event: resumed, description: Emit a domain event recording the resumption}
-      - id: system-resume
-        description: "POST /tasks/{taskId}/system-resume — System resumes a verification-blocked task after a timeout or result arrives"
+      - id: auto-resume
+        description: "POST /tasks/{taskId}/auto-resume — System resumes a verification-blocked task when the timeout fires or a verification result arrives"
         guards:
           - actors: [system]
             conditions: [callerIsSystem]
@@ -174,8 +163,8 @@ machines:
           - set: {field: blockedAt, value: null, description: Clear the block timestamp on system resume}
           - call: cancelVerificationTimeout
           - emit: {event: system_resumed, data: {source: $request.source, result: $request.result}, description: Emit a domain event recording the automated resumption and its result}
-      - id: system-escalate
-        description: "POST /tasks/{taskId}/system-escalate — System auto-escalates a task when an SLA deadline is approaching or exceeded"
+      - id: sla-escalate
+        description: "POST /tasks/{taskId}/sla-escalate — System escalates a task when an SLA timer fires (creation deadline, warning, or breach)"
         guards:
           - actors: [system]
             conditions: [callerIsSystem]
@@ -190,8 +179,8 @@ machines:
           - if: $request.reason == "sla_deadline_exceeded"
             then: [{emit: {event: sla_breached, data: {reason: $request.reason}, description: Emit a domain event recording the SLA deadline breach for federal compliance reporting}}]
             else: [{emit: {event: auto_escalated, data: {reason: $request.reason}, description: Emit a domain event recording the automatic escalation}}]
-      - id: system-auto-cancel
-        description: "POST /tasks/{taskId}/system-auto-cancel — System cancels a client-blocked task after 30 days without a response"
+      - id: auto-cancel
+        description: "POST /tasks/{taskId}/auto-cancel — System cancels a client-blocked task after 30 days without a response"
         guards:
           - actors: [system]
             conditions: [callerIsSystem]
@@ -286,23 +275,23 @@ machines:
       - name: workflow.creation_deadline
         description: Auto-escalate after 72-business-hour creation deadline
         steps:
-          - call: {POST: workflow/tasks/$this.subject/system-escalate, body: {reason: deadline_exceeded}, description: Auto-escalate after 72h creation deadline}
+          - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: deadline_exceeded}, description: Auto-escalate after 72h creation deadline}
       - name: workflow.sla_warning
         description: Auto-escalate 48 hours before SLA deadline
         steps:
-          - call: {POST: workflow/tasks/$this.subject/system-escalate, body: {reason: sla_deadline_approaching}, description: Auto-escalate 48h before SLA deadline}
+          - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: sla_deadline_approaching}, description: Auto-escalate 48h before SLA deadline}
       - name: workflow.sla_breach
         description: Escalate and record SLA breach at deadline
         steps:
-          - call: {POST: workflow/tasks/$this.subject/system-escalate, body: {reason: sla_deadline_exceeded}, description: Escalate and record SLA breach at deadline}
+          - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: sla_deadline_exceeded}, description: Escalate and record SLA breach at deadline}
       - name: workflow.client_timeout
         description: Auto-cancel after 30 calendar days of client unresponsiveness
         steps:
-          - call: {POST: workflow/tasks/$this.subject/system-auto-cancel, body: {reason: client_unresponsive}, description: Auto-cancel after 30 days client unresponsive}
+          - call: {POST: workflow/tasks/$this.subject/auto-cancel, body: {reason: client_unresponsive}, description: Auto-cancel after 30 days client unresponsive}
       - name: workflow.verification_timeout
         description: Auto-resume after 7 calendar days waiting on verification
         steps:
-          - call: {POST: workflow/tasks/$this.subject/system-resume, body: {source: timeout, result: verification_timeout}, description: Auto-resume after 7 days verification timeout}
+          - call: {POST: workflow/tasks/$this.subject/auto-resume, body: {source: timeout, result: verification_timeout}, description: Auto-resume after 7 days verification timeout}
       - name: eligibility.application.expedited
         description: Flag the intake review task as expedited and switch it to the 7-day SLA when SNAP expedited criteria are confirmed (7 CFR § 273.2(i))
         context:

@@ -393,11 +393,11 @@ export function evaluateGuards(guardNames, guardsMap, resource, context) {
  * @returns {{ operation: Object|null, error: string|null }}
  */
 export function findOperation(machine, transitionName, resource) {
-  const transitions = machine.transitions || [];
+  const actions = machine.actions || [];
 
-  const operation = transitions.find(op => {
+  const operation = actions.find(op => {
     if (op.id !== transitionName) return false;
-    // In-place transition with no transition.from — valid from any state
+    // In-place action with no transition.from — valid from any state
     if (!op.transition?.from) return true;
     const from = op.transition.from;
     return Array.isArray(from) ? from.includes(resource.status) : from === resource.status;
@@ -407,9 +407,9 @@ export function findOperation(machine, transitionName, resource) {
     return { operation, error: null };
   }
 
-  const opExists = transitions.some(op => op.id === transitionName);
+  const opExists = actions.some(op => op.id === transitionName);
   if (!opExists) {
-    return { operation: null, error: `Unknown transition: ${transitionName}` };
+    return { operation: null, error: `Unknown action: ${transitionName}` };
   }
 
   return {
@@ -654,37 +654,6 @@ export function applySteps(steps, resource, context) {
   }
 
   return { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents };
-}
-
-/**
- * Find a valid transition for a trigger given the resource's current status.
- * @param {Object} stateMachine - The state machine contract
- * @param {string} trigger - The trigger name (e.g., "claim")
- * @param {Object} resource - The resource (must have a status field)
- * @returns {{ transition: Object|null, error: string|null }}
- */
-export function findTransition(stateMachine, trigger, resource) {
-  const transition = stateMachine.transitions.find(t => {
-    if (t.trigger !== trigger) return false;
-    return Array.isArray(t.from)
-      ? t.from.includes(resource.status)
-      : t.from === resource.status;
-  });
-
-  if (transition) {
-    return { transition, error: null };
-  }
-
-  // Check if the trigger exists at all (for better error messages)
-  const triggerExists = stateMachine.transitions.some(t => t.trigger === trigger);
-  if (!triggerExists) {
-    return { transition: null, error: `Unknown trigger: ${trigger}` };
-  }
-
-  return {
-    transition: null,
-    error: `Cannot ${trigger}: task is currently "${resource.status}"`
-  };
 }
 
 /**

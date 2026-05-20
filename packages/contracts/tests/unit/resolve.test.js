@@ -704,7 +704,7 @@ test('resolve-overlay tests', async (t) => {
           object: 'Item',
           states: [{ id: 'draft' }, { id: 'published' }],
           initialState: 'draft',
-          transitions: [
+          actions: [
             { id: 'publish', transition: { from: 'draft', to: 'published' } }
           ]
         }]
@@ -773,7 +773,7 @@ test('resolve-overlay tests', async (t) => {
           object: 'Item',
           states: [{ id: 'draft' }, { id: 'published' }],
           initialState: 'draft',
-          transitions: [
+          actions: [
             { id: 'publish', transition: { from: 'draft', to: 'published' } },
             { id: 'archive', transition: { from: 'published', to: 'draft' } }
           ]
@@ -814,7 +814,7 @@ test('resolve-overlay tests', async (t) => {
         object: 'Item',
         states: [{ id: 'draft' }, { id: 'published' }],
         initialState: 'draft',
-        transitions: []
+        actions: []
       };
       writeYaml(dir, 'test-state-machine.yaml', stateMachineYaml);
 
@@ -894,7 +894,7 @@ test('resolve-overlay tests', async (t) => {
           object: 'Item',
           states: [{ id: 'draft' }, { id: 'published' }],
           initialState: 'draft',
-          transitions: [
+          actions: [
             { id: 'publish', transition: { from: 'draft', to: 'published' } }
           ]
         }]

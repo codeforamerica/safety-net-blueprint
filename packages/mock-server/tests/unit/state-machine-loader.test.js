@@ -137,9 +137,9 @@ test('discoverStateMachines — new format: returns one entry per machine', () =
 domain: intake
 machines:
   - object: Application
-    transitions: []
+    actions: []
   - object: Verification
-    transitions: []
+    actions: []
 `, 'utf8');
 
     const results = discoverStateMachines(tmpDir);
@@ -163,8 +163,8 @@ test('discoverStateMachines — new format: skips machine entry missing object',
 domain: test
 machines:
   - object: Task
-    transitions: []
-  - transitions: []
+    actions: []
+  - actions: []
 `, 'utf8');
 
     const results = discoverStateMachines(tmpDir);
@@ -196,7 +196,7 @@ domain: workflow
 extends: ./platform-state-machine.yaml
 machines:
   - object: Task
-    transitions: []
+    actions: []
 `, 'utf8');
 
     const results = discoverStateMachines(tmpDir);
@@ -220,7 +220,7 @@ domain: workflow
 extends: ./nonexistent-platform.yaml
 machines:
   - object: Task
-    transitions: []
+    actions: []
 `, 'utf8');
 
     const results = discoverStateMachines(tmpDir);
@@ -254,7 +254,7 @@ $defs:
 domain: workflow
 machines:
   - object: Task
-    transitions:
+    actions:
       - id: close
         schema:
           request:
@@ -266,10 +266,10 @@ machines:
 
     const results = discoverStateMachines(tmpDir);
     assert.strictEqual(results.length, 1);
-    const transition = results[0].machine.transitions[0];
-    assert.strictEqual(transition.schema.request.type, 'object');
-    assert.deepStrictEqual(transition.schema.request.required, ['reason']);
-    assert.ok(!transition.schema.request.$ref, '$ref should be replaced by resolved schema');
+    const action = results[0].machine.actions[0];
+    assert.strictEqual(action.schema.request.type, 'object');
+    assert.deepStrictEqual(action.schema.request.required, ['reason']);
+    assert.ok(!action.schema.request.$ref, '$ref should be replaced by resolved schema');
   } finally {
     removeTempDir(tmpDir);
   }
@@ -282,7 +282,7 @@ test('discoverStateMachines — resolveRequestBodyRefs: unresolvable $ref is lef
 domain: workflow
 machines:
   - object: Task
-    transitions:
+    actions:
       - id: close
         schema:
           request:
@@ -294,8 +294,8 @@ machines:
 
     const results = discoverStateMachines(tmpDir);
     assert.strictEqual(results.length, 1);
-    const transition = results[0].machine.transitions[0];
-    assert.ok(transition.schema.request.$ref, '$ref should remain when file is missing');
+    const action = results[0].machine.actions[0];
+    assert.ok(action.schema.request.$ref, '$ref should remain when file is missing');
   } finally {
     removeTempDir(tmpDir);
   }
@@ -308,7 +308,7 @@ test('discoverStateMachines — resolveRequestBodyRefs: inline schema is not mod
 domain: workflow
 machines:
   - object: Task
-    transitions:
+    actions:
       - id: close
         schema:
           request:
@@ -321,9 +321,9 @@ machines:
 
     const results = discoverStateMachines(tmpDir);
     assert.strictEqual(results.length, 1);
-    const transition = results[0].machine.transitions[0];
-    assert.strictEqual(transition.schema.request.type, 'object');
-    assert.deepStrictEqual(transition.schema.request.required, ['reason']);
+    const action = results[0].machine.actions[0];
+    assert.strictEqual(action.schema.request.type, 'object');
+    assert.deepStrictEqual(action.schema.request.required, ['reason']);
   } finally {
     removeTempDir(tmpDir);
   }

@@ -16,8 +16,8 @@ description: >
                 machine-level guards and procedures override domain-level ones.
     machines  — one per governed entity type; each machine defines states,
                 events (reactions to named domain events),
-                and transitions (actor- or system-triggered actions). Events
-                and transitions are machine-level — they are bound to a
+                and actions (actor- or system-triggered operations). Events
+                and actions are machine-level — they are bound to a
                 specific entity's lifecycle and cannot be shared across
                 machines. Omit for platform files that only define shared
                 guards and procedures.
@@ -94,10 +94,12 @@ $defs:
         object       — the entity type this machine governs (e.g., Task, Application).
         states       — the valid lifecycle states for this entity type.
         initialState — the state assigned on creation.
-        context      — stable data available to all events, transitions, and procedures
+        context      — stable data available to all events, actions, and procedures
                        in this machine (e.g., named queues, config records).
-        transitions  — actor- or system-triggered actions; each becomes a
-                       POST /{resource}/{id}/{transitionId} endpoint.
+        actions      — actor- or system-triggered operations; each becomes a
+                       POST /{resource}/{id}/{actionId} endpoint.
+                       Guards are evaluated with OR semantics across clauses: the caller
+                       passes if ANY clause satisfies (actors AND conditions within a clause).
         events       — reactions to named domain events arriving on a subscription.
                        Array — one entry per subscribed event name.
         guards       — named conditions scoped to this machine; take precedence over
@@ -123,9 +125,9 @@ $defs:
         description: The state an object starts in after creation.
       context:
         $ref: "#/$defs/ContextProperty"
-      transitions:
+      actions:
         type: array
-        description: Actor- or system-triggered transitions. Each becomes a POST /{resource}/{id}/{transitionId} endpoint.
+        description: Actor- or system-triggered operations. Each becomes a POST /{resource}/{id}/{actionId} endpoint.
         items:
           $ref: "#/$defs/Transition"
       events:
@@ -237,26 +239,25 @@ $defs:
           $ref: "#/$defs/StepItem"
 
   # ---------------------------------------------------------------------------
-  # Transition
+  # Transition (action entry)
   # ---------------------------------------------------------------------------
   # Steps and procedures inherit all context already bound at the machine level.
-  # Define context: here only for lookups specific to this transition.
-  # Omit transition: for in-place transitions that don't change state.
-  # Use guards.actors: to restrict which roles can call the transition.
+  # Define context: here only for lookups specific to this action.
+  # Omit transition: for in-place actions that don't change state.
+  # Use guards: as an array of clauses; the caller passes if ANY clause is satisfied
+  # (actors AND conditions within a clause, OR across clauses).
   # Use schema.request: to define and validate the POST body; fields are
   # accessible in steps as $request.field.
   #
   # Example:
-  #   transitions:
+  #   actions:
   #     - id: claim
   #       transition:
   #         from: pending
   #         to: in_progress
   #       guards:
-  #         actors:
-  #           - caseworker
-  #         conditions:
-  #           - taskIsUnassigned
+  #         - actors: [caseworker]
+  #           conditions: [taskIsUnassigned]
   #       steps:
   #         - set:
   #             field: assignedToId
@@ -265,15 +266,15 @@ $defs:
   Transition:
     type: object
     description: >
-      An actor- or system-triggered transition. Becomes a POST /{resource}/{id}/{transitionId} endpoint.
+      An actor- or system-triggered action. Becomes a POST /{resource}/{id}/{actionId} endpoint.
 
 
-      Transition structure:
-        id          — URL path segment for this transition.
-        description — human-readable summary of what the transition does; used as the OpenAPI operation description.
+      Action structure:
+        id          — URL path segment for this action.
+        description — human-readable summary of what the action does; used as the OpenAPI operation description.
         schema      — request and response schemas; both optional. Fields in schema.request are accessible as $request.field.
-        transition  — source and target states; omit for in-place transitions.
-        guards      — actor roles and conditions that must pass before steps run.
+        transition  — source and target states; omit for in-place actions.
+        guards      — array of guard clauses; caller passes if ANY clause satisfies (actors AND conditions within a clause, OR across clauses).
         context     — data available to all steps; inherits machine context.
         steps       — steps to execute.
     required:

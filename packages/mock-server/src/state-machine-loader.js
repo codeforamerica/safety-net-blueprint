@@ -64,14 +64,14 @@ function resolveExtends(stateMachine, filePath) {
  */
 function resolveRequestBodyRefs(stateMachine, filePath) {
   for (const machine of (stateMachine.machines || [])) {
-    for (const transition of (machine.transitions || [])) {
-      if (transition.schema?.request?.$ref) {
-        const resolved = resolveRef(transition.schema.request.$ref, filePath);
-        if (resolved) transition.schema.request = resolved;
+    for (const action of (machine.actions || [])) {
+      if (action.schema?.request?.$ref) {
+        const resolved = resolveRef(action.schema.request.$ref, filePath);
+        if (resolved) action.schema.request = resolved;
       }
-      if (transition.schema?.response?.$ref) {
-        const resolved = resolveRef(transition.schema.response.$ref, filePath);
-        if (resolved) transition.schema.response = resolved;
+      if (action.schema?.response?.$ref) {
+        const resolved = resolveRef(action.schema.response.$ref, filePath);
+        if (resolved) action.schema.response = resolved;
       }
     }
   }
@@ -114,7 +114,7 @@ export function discoverStateMachines(specsDir) {
         continue;
       }
 
-      // New format: machines: [{ object, states, transitions, events, ... }]
+      // New format: machines: [{ object, states, actions, events, ... }]
       if (Array.isArray(stateMachine.machines)) {
         resolveExtends(stateMachine, filePath);
         resolveRequestBodyRefs(stateMachine, filePath);

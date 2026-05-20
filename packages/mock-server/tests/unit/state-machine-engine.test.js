@@ -9,7 +9,6 @@ import {
   resolveValue,
   evaluateGuard,
   evaluateGuards,
-  findTransition,
   applySetEffect,
   applyCreateEffect,
   applyEffects,
@@ -384,85 +383,6 @@ test('evaluateGuards — all composition fails when any guard fails', () => {
   const resource = { assignedToId: 'worker-1', status: 'in_progress' };
   const result = evaluateGuards([{ all: ['isUnassigned', 'isActive'] }], guardsMap, resource, {});
   assert.strictEqual(result.pass, false);
-});
-
-// =============================================================================
-// findTransition
-// =============================================================================
-
-const sampleStateMachine = {
-  transitions: [
-    { trigger: 'claim', from: 'pending', to: 'in_progress' },
-    { trigger: 'complete', from: 'in_progress', to: 'completed' },
-    { trigger: 'release', from: 'in_progress', to: 'pending' }
-  ]
-};
-
-test('findTransition — finds matching transition', () => {
-  const { transition, error } = findTransition(sampleStateMachine, 'claim', { status: 'pending' });
-  assert.ok(transition);
-  assert.strictEqual(transition.to, 'in_progress');
-  assert.strictEqual(error, null);
-});
-
-test('findTransition — returns error for wrong status', () => {
-  const { transition, error } = findTransition(sampleStateMachine, 'claim', { status: 'in_progress' });
-  assert.strictEqual(transition, null);
-  assert.ok(error.includes('Cannot claim'));
-  assert.ok(error.includes('in_progress'));
-});
-
-test('findTransition — returns error for unknown trigger', () => {
-  const { transition, error } = findTransition(sampleStateMachine, 'unknown', { status: 'pending' });
-  assert.strictEqual(transition, null);
-  assert.ok(error.includes('Unknown trigger'));
-});
-
-test('findTransition — matches when from is an array and status is in it', () => {
-  const sm = {
-    transitions: [
-      { trigger: 'cancel', from: ['pending', 'in_progress', 'escalated'], to: 'cancelled', guards: [], effects: [] }
-    ]
-  };
-  const { transition, error } = findTransition(sm, 'cancel', { status: 'in_progress' });
-  assert.ok(transition);
-  assert.strictEqual(error, null);
-});
-
-test('findTransition — returns error when from is an array and status is not in it', () => {
-  const sm = {
-    transitions: [
-      { trigger: 'cancel', from: ['pending', 'in_progress', 'escalated'], to: 'cancelled', guards: [], effects: [] }
-    ]
-  };
-  const { transition, error } = findTransition(sm, 'cancel', { status: 'completed' });
-  assert.strictEqual(transition, null);
-  assert.ok(error);
-});
-
-test('findTransition — finds transition with no to field (in-place action)', () => {
-  const sm = {
-    transitions: [
-      { trigger: 'assign', from: ['pending', 'in_progress'], guards: [], effects: [] }
-    ]
-  };
-  const { transition, error } = findTransition(sm, 'assign', { status: 'pending' });
-  assert.ok(transition);
-  assert.strictEqual(transition.to, undefined);
-  assert.strictEqual(error, null);
-});
-
-test('findTransition — in-place action works from any listed state', () => {
-  const sm = {
-    transitions: [
-      { trigger: 'assign', from: ['pending', 'in_progress', 'escalated'], guards: [], effects: [] }
-    ]
-  };
-  for (const status of ['pending', 'in_progress', 'escalated']) {
-    const { transition, error } = findTransition(sm, 'assign', { status });
-    assert.ok(transition, `expected transition for status=${status}`);
-    assert.strictEqual(error, null);
-  }
 });
 
 // =============================================================================

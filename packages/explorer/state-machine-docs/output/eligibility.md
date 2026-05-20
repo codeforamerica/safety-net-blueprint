@@ -6,7 +6,7 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
 
 ## Determination
 
-### Transitions
+### Actions
 
 - **flag-expedited** — System flags a Determination as qualifying for expedited SNAP processing
   - Actors: system only
@@ -44,7 +44,7 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
 
 ## Decision
 
-### Transitions
+### Actions
 
 - **approve** — System approves a Decision after automatic or caseworker review
   - Actors: system only

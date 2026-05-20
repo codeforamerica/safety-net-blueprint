@@ -35,7 +35,7 @@ platform-state-machine.yaml          domain-state-machine.yaml
                                       │       ├── states:       valid lifecycle positions
                                       │       ├── initialState: state on creation
                                       │       ├── context:      named data bindings
-                                      │       ├── transitions:  actor/system-triggered state changes
+                                      │       ├── actions:      actor/system-triggered state changes
                                       │       ├── events:       event subscriptions
                                       │       ├── guards:       conditions scoped to this machine
                                       │       └── procedures:   step sequences scoped to this machine
@@ -51,7 +51,7 @@ platform-state-machine.yaml          domain-state-machine.yaml
 
 **Events** — the machine's subscriptions to named domain events. When an event arrives with a matching `name:`, the machine runs the associated steps. Object creation, field changes, and timer callbacks all arrive as events — see [Decision 4](#decision-4-fully-event-driven-model). Event subscriptions can load additional context (e.g., look up the application referenced in the event payload) before running their steps.
 
-**Transitions** — actor- or system-triggered state changes. Each transition is an action a caller can explicitly request — it becomes a `POST /{domain}/{resource}/{id}/{transitionId}` endpoint. A transition declares a human-readable `description:` for the generated endpoint, optional `schema:` with `request:` and `response:` sub-schemas for the POST body and 200 response, who can call it (`guards:`), what state the entity must currently be in (`from:`), what state it moves to (`to:`), and what steps run. Transitions without a `to:` are in-place actions that don't change the entity's state. Request body fields are available in steps as `$request.fieldName`.
+**Actions** — actor- or system-triggered state changes. Each action is an operation a caller can explicitly request — it becomes a `POST /{domain}/{resource}/{id}/{actionId}` endpoint. An action declares a human-readable `description:` for the generated endpoint, optional `schema:` with `request:` and `response:` sub-schemas for the POST body and 200 response, who can call it (`guards:`), what state the entity must currently be in (`from:`), what state it moves to (`to:`), and what steps run. Actions without a `to:` are in-place operations that don't change the entity's state. Request body fields are available in steps as `$request.fieldName`.
 
 **Procedures** — named step sequences that can be called from events, transitions, or other procedures via `call:`. Procedures keep complex logic from being duplicated across multiple call sites. A procedure inherits all context already in scope at the call site; parameterized procedures accept additional arguments via `with:`, referenced as `$params.name` inside the procedure.
 
@@ -71,7 +71,7 @@ The DSL consists of three conceptually distinct layers. No single external stand
 
 ### Domain lifecycle layer
 
-Declares what domain objects are, what states they can be in, and who can act on them. This is the `machines:`, `states:`, `transitions:`, and `guards:` sections. The vocabulary is aligned with statechart concepts (SCXML, XState): named states, guarded transitions, and initial state declarations.
+Declares what domain objects are, what states they can be in, and who can act on them. This is the `machines:`, `states:`, `actions:`, and `guards:` sections. The vocabulary is aligned with statechart concepts (SCXML, XState): named states, guarded transitions, and initial state declarations.
 
 ### Execution layer
 
@@ -96,7 +96,7 @@ Condition expressions appear in guards, `if:` and `match:` steps, SLA pause/resu
 | Any in list satisfies | `object.programs.exists(p, p == "snap")` |
 | All in list satisfy | `object.programs.all(p, p != null)` |
 
-Guards are named conditions declared in a `guards:` section and referenced by name from transitions:
+Guards are named conditions declared in a `guards:` section and referenced by name from actions:
 
 ```yaml
 guards:

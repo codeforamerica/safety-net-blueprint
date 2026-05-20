@@ -469,20 +469,11 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
 
     console.log(`  Registering state machine routes for ${sm.domain}/${sm.object}...`);
 
-    // New format: transitions on the machine entry (with id + transition.from/to)
-    // Old format: transitions on stateMachine directly (with trigger + from/to)
-    const isNewFormat = sm.machine && Array.isArray(sm.machine.transitions);
-    const entries = isNewFormat
-      ? sm.machine.transitions.map(op => ({
-          id: op.id,
-          from: op.transition?.from,
-          to: op.transition?.to
-        }))
-      : (sm.stateMachine.transitions || []).map(t => ({
-          id: t.trigger,
-          from: t.from,
-          to: t.to
-        }));
+    const entries = sm.machine.actions.map(op => ({
+      id: op.id,
+      from: op.transition?.from,
+      to: op.transition?.to
+    }));
 
     // Deduplicate by id — same operation id may appear with different from-states
     // (e.g., escalate from pending vs in_progress). Register the route once; the runner
@@ -503,7 +494,7 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
         entry.id,
         paramName,
         domainSlaTypes,
-        isNewFormat ? sm.machine : null
+        sm.machine
       );
 
       app.post(expressPath, handler);

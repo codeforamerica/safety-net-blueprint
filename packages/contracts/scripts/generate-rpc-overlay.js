@@ -184,7 +184,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
   for (const machine of (stateMachine.machines || [])) {
     const objectName = machine.object || stateMachine.object;
 
-    for (const transition of (machine.transitions || [])) {
+    for (const transition of (machine.actions || [])) {
       // Deduplicate — same id may appear for different from-states (e.g. escalate)
       if (seenIds.has(transition.id)) continue;
       seenIds.add(transition.id);
@@ -300,7 +300,8 @@ function main() {
     const outPath = join(outDir, `${stateMachine.domain}-rpc.yaml`);
     writeFileSync(outPath, overlayYaml, 'utf8');
 
-    console.log(`  ✓ ${stateMachine.domain}-rpc.yaml (${stateMachine.transitions.length} transition(s))`);
+    const actionCount = (stateMachine.machines || []).flatMap(m => m.actions || []).length;
+    console.log(`  ✓ ${stateMachine.domain}-rpc.yaml (${actionCount} action(s))`);
   }
 
   console.log('✓ RPC overlay generation complete');

@@ -13,7 +13,7 @@ machines:
       - {id: withdrawn, slaClock: stopped}
       - {id: closed, slaClock: stopped}
     initialState: draft
-    transitions:
+    actions:
       - id: submit
         description: POST /applications/{applicationId}/submit — Formally submits a draft application, starting the regulatory processing clock
         context:
@@ -284,13 +284,31 @@ machines:
       - {id: cannot_verify, slaClock: stopped}
     initialState: pending
     context:
-      - fdshSsaService: {from: data-exchange/services, where: {serviceType: fdsh_ssa}}
-      - fdshVlpService: {from: data-exchange/services, where: {serviceType: fdsh_vlp}}
-      - ssaIevsService: {from: data-exchange/services, where: {serviceType: ssa_ievs}}
-      - irsIevsService: {from: data-exchange/services, where: {serviceType: irs_ievs}}
-      - swicaService: {from: data-exchange/services, where: {serviceType: swica}}
-      - uibService: {from: data-exchange/services, where: {serviceType: uib}}
-    transitions:
+      - fdshSsaService:
+          from: data-exchange/services
+          where:
+            serviceType: fdsh_ssa
+      - fdshVlpService:
+          from: data-exchange/services
+          where:
+            serviceType: fdsh_vlp
+      - ssaIevsService:
+          from: data-exchange/services
+          where:
+            serviceType: ssa_ievs
+      - irsIevsService:
+          from: data-exchange/services
+          where:
+            serviceType: irs_ievs
+      - swicaService:
+          from: data-exchange/services
+          where:
+            serviceType: swica
+      - uibService:
+          from: data-exchange/services
+          where:
+            serviceType: uib
+    actions:
       - id: satisfy
         description: POST /applications/verifications/{verificationId}/satisfy — System marks an obligation as satisfied after receiving conclusive service call or document evidence
         guards:

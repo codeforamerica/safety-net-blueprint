@@ -6,7 +6,7 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
 
 ## Task
 
-### Transitions
+### Actions
 
 - **claim** — Caseworker takes ownership of an unassigned pending task
   - Actors: caseworker, or supervisor
@@ -30,15 +30,9 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Emit: `workflow.task.released` — Emit a domain event recording the release and its reason
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
-- **escalate** — Flags an in-progress task for supervisor attention
+- **escalate** — Escalate a task; assigned workers can escalate in-progress tasks, supervisors can escalate from any state
   - Actors: caseworker, or supervisor
-  - Transition: `in_progress` → `escalated`
-  - Record when the task was escalated (sets `escalatedAt`)
-  - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
-  - Emit: `workflow.task.escalated` — Emit a domain event recording the escalation
-- **escalate** — Supervisor escalates a pending task without claiming it first
-  - Actors: supervisor
-  - Transition: `pending` → `escalated`
+  - Transition: `pending`/`in_progress` → `escalated`
   - Record when the task was escalated (sets `escalatedAt`)
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Emit: `workflow.task.escalated` — Emit a domain event recording the escalation
@@ -79,13 +73,13 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Cancel the client unresponsive timer; idempotent.
   - Cancel the verification timeout timer; idempotent, safe to call even if already fired.
   - Emit: `workflow.task.resumed` — Emit a domain event recording the resumption
-- **system-resume** — System resumes a verification-blocked task after a timeout or result arrives
+- **auto-resume** — System resumes a verification-blocked task when the timeout fires or a verification result arrives
   - Actors: system only
   - Transition: `awaiting_verification` → `in_progress`
   - Clear the block timestamp on system resume (sets `blockedAt`)
   - Cancel the verification timeout timer; idempotent, safe to call even if already fired.
   - Emit: `workflow.task.system_resumed` — Emit a domain event recording the automated resumption and its result
-- **system-escalate** — System auto-escalates a task when an SLA deadline is approaching or exceeded
+- **sla-escalate** — System escalates a task when an SLA timer fires (creation deadline, warning, or breach)
   - Actors: system only
   - Transition: `pending`/`in_progress`/`escalated` → `escalated`
   - If `escalatedAt is not set`:
@@ -95,7 +89,7 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
     - Emit: `workflow.task.sla_breached` — Emit a domain event recording the SLA deadline breach for federal compliance reporting
   - Else:
     - Emit: `workflow.task.auto_escalated` — Emit a domain event recording the automatic escalation
-- **system-auto-cancel** — System cancels a client-blocked task after 30 days without a response
+- **auto-cancel** — System cancels a client-blocked task after 30 days without a response
   - Actors: system only
   - Transition: `awaiting_client` → `cancelled`
   - Record when the task was automatically cancelled (sets `cancelledAt`)

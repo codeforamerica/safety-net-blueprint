@@ -6,7 +6,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
 
 ## Application
 
-### Transitions
+### Actions
 
 - **submit** — Formally submits a draft application, starting the regulatory processing clock
   - Actors: applicant, or caseworker
@@ -91,7 +91,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
 
 ## Verification
 
-### Transitions
+### Actions
 
 - **satisfy** — System marks an obligation as satisfied after receiving conclusive service call or document evidence
   - Actors: system only

@@ -14,7 +14,7 @@ machines:
       - {id: completed, slaClock: stopped}
       - {id: withdrawn, slaClock: stopped}
     initialState: in_progress
-    transitions:
+    actions:
       - id: flag-expedited
         description: "POST /determinations/{determinationId}/flag-expedited — System flags a Determination as qualifying for expedited SNAP processing"
         guards:
@@ -82,7 +82,7 @@ machines:
       - {id: denied, slaClock: stopped}
       - {id: ineligible, slaClock: stopped}
     initialState: pending
-    transitions:
+    actions:
       - id: approve
         description: "POST /determinations/{determinationId}/decisions/{decisionId}/approve — System approves a Decision after automatic or caseworker review"
         schema:
