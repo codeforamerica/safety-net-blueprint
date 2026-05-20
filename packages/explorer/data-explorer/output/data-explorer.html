@@ -1733,89 +1733,10 @@ UUIDs upon submission.
       <td class="action-endpoint"><span class="action-method method-patch">PATCH</span> <code>/applications/{applicationId}</code></td>
       <td class="action-notes">Partial updates</td>
     </tr>
-    <tr>
-      <td class="action-name">submit</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/{applicationId}/submit</code></td>
-      <td class="action-notes">Formally submits a draft application, starting the regulatory processing clock</td>
-    </tr>
-    <tr>
-      <td class="action-name">open</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/{applicationId}/open</code></td>
-      <td class="action-notes">System marks a submitted application as under active caseworker review</td>
-    </tr>
-    <tr>
-      <td class="action-name">complete-review</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/{applicationId}/complete-review</code></td>
-      <td class="action-notes">Caseworker signals data collection is complete and the application is ready for determination</td>
-    </tr>
-    <tr>
-      <td class="action-name">submit-for-approval</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/{applicationId}/submit-for-approval</code></td>
-      <td class="action-notes">System routes the application to supervisor review when state-configured approval thresholds are met</td>
-    </tr>
-    <tr>
-      <td class="action-name">approve-determination</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/{applicationId}/approve-determination</code></td>
-      <td class="action-notes">Supervisor approves the determination; closes the application and triggers NOA and case creation</td>
-    </tr>
-    <tr>
-      <td class="action-name">reject-determination</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/{applicationId}/reject-determination</code></td>
-      <td class="action-notes">Supervisor rejects the determination and returns the application to the caseworker for revision</td>
-    </tr>
-    <tr>
-      <td class="action-name">close</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/{applicationId}/close</code></td>
-      <td class="action-notes">Marks a reviewed application as closed after all determinations are complete</td>
-    </tr>
-    <tr>
-      <td class="action-name">withdraw</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/{applicationId}/withdraw</code></td>
-      <td class="action-notes">Applicant or caseworker withdraws the application before a decision is made</td>
-    </tr>
   </tbody>
 </table>
     </div>
     <div class="orca-panel" data-tab="events">
-<h5 class="transitions-heading">Publishes</h5>
-<table class="actions-table">
-  <thead>
-    <tr>
-      <th>Event</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="action-name"><code>intake.application.closed</code></td>
-      <td class="action-notes">Emit application.closed — signals intake is complete; triggers case creation</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>intake.application.determination.approval_needed</code></td>
-      <td class="action-notes">Emit determination.approval_needed — triggers supervisor approval task creation; states configure approval thresholds via rules overlay</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>intake.application.determination.rejected</code></td>
-      <td class="action-notes">Emit determination.rejected — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>intake.application.opened</code></td>
-      <td class="action-notes">Emit application.opened — signals caseworker has begun active review</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>intake.application.review_completed</code></td>
-      <td class="action-notes">Emit application.review_completed — signals data collection is complete; triggers eligibility determination</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>intake.application.submitted</code></td>
-      <td class="action-notes">Emit application.submitted — starts the regulatory clock; triggers caseworker task creation, confirmation notice, and person matching</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>intake.application.withdrawn</code></td>
-      <td class="action-notes">Emit application.withdrawn — triggers open task cancellation and withdrawal notice</td>
-    </tr>
-  </tbody>
-</table>
 <h5 class="transitions-heading">Subscribes</h5>
 <table class="actions-table">
   <thead>
@@ -2326,53 +2247,10 @@ UUIDs upon submission.
       <td class="action-endpoint"><span class="action-method method-patch">PATCH</span> <code>/applications/{applicationId}/verifications/{verificationId}</code></td>
       <td class="action-notes">Partial updates</td>
     </tr>
-    <tr>
-      <td class="action-name">satisfy</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/verifications/{verificationId}/satisfy</code></td>
-      <td class="action-notes">System marks an obligation as satisfied after receiving conclusive service call or document evidence</td>
-    </tr>
-    <tr>
-      <td class="action-name">mark-inconclusive</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/verifications/{verificationId}/mark-inconclusive</code></td>
-      <td class="action-notes">System records that a service call returned inconclusive, triggering document fallback</td>
-    </tr>
-    <tr>
-      <td class="action-name">waive</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/verifications/{verificationId}/waive</code></td>
-      <td class="action-notes">Caseworker grants a waiver for an obligation that cannot be satisfied through normal means</td>
-    </tr>
-    <tr>
-      <td class="action-name">mark-cannot-verify</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/applications/verifications/{verificationId}/mark-cannot-verify</code></td>
-      <td class="action-notes">Caseworker closes an obligation when all available verification methods are exhausted</td>
-    </tr>
   </tbody>
 </table>
     </div>
     <div class="orca-panel" data-tab="events">
-<h5 class="transitions-heading">Publishes</h5>
-<table class="actions-table">
-  <thead>
-    <tr>
-      <th>Event</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="action-name"><code>intake.verification.inconclusive</code></td>
-      <td class="action-notes">Emit verification.inconclusive — triggers document fallback creation via intake rule subscription</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>intake.verification.satisfied</code></td>
-      <td class="action-notes">Emit verification.satisfied — signals the obligation is fulfilled</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>intake.verification.waived</code></td>
-      <td class="action-notes">Emit verification.waived — signals the obligation is resolved without evidence</td>
-    </tr>
-  </tbody>
-</table>
 <h5 class="transitions-heading">Subscribes</h5>
 <table class="actions-table">
   <thead>
@@ -2538,40 +2416,10 @@ UUIDs upon submission.
       <td class="action-endpoint"><span class="action-method method-get">GET</span> <code>/determinations/{determinationId}/decisions/{decisionId}</code></td>
       <td class="action-notes">By ID</td>
     </tr>
-    <tr>
-      <td class="action-name">approve</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/determinations/{determinationId}/decisions/{decisionId}/approve</code></td>
-      <td class="action-notes">System approves a Decision after automatic or caseworker review</td>
-    </tr>
-    <tr>
-      <td class="action-name">deny</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/determinations/{determinationId}/decisions/{decisionId}/deny</code></td>
-      <td class="action-notes">System denies a Decision based on failing eligibility criteria</td>
-    </tr>
-    <tr>
-      <td class="action-name">mark-ineligible</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/determinations/{determinationId}/decisions/{decisionId}/mark-ineligible</code></td>
-      <td class="action-notes">System marks a Decision as categorically ineligible</td>
-    </tr>
   </tbody>
 </table>
     </div>
     <div class="orca-panel" data-tab="events">
-<h5 class="transitions-heading">Publishes</h5>
-<table class="actions-table">
-  <thead>
-    <tr>
-      <th>Event</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="action-name"><code>eligibility.decision.eligibility.application.decision_completed</code></td>
-      <td class="action-notes">Emit eligibility.application.decision_completed — Intake records the outcome per member; Determination checks if all Decisions are resolved</td>
-    </tr>
-  </tbody>
-</table>
 <h5 class="transitions-heading">Subscribes</h5>
 <table class="actions-table">
   <thead>
@@ -2705,48 +2553,10 @@ UUIDs upon submission.
       <td class="action-endpoint"><span class="action-method method-get">GET</span> <code>/determinations/{determinationId}</code></td>
       <td class="action-notes">By ID</td>
     </tr>
-    <tr>
-      <td class="action-name">flag-expedited</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/determinations/{determinationId}/flag-expedited</code></td>
-      <td class="action-notes">System flags a Determination as qualifying for expedited SNAP processing</td>
-    </tr>
-    <tr>
-      <td class="action-name">complete</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/determinations/{determinationId}/complete</code></td>
-      <td class="action-notes">System marks a Determination as complete after all program Decisions are resolved</td>
-    </tr>
-    <tr>
-      <td class="action-name">withdraw</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/determinations/{determinationId}/withdraw</code></td>
-      <td class="action-notes">System withdraws a Determination when the associated application is withdrawn</td>
-    </tr>
   </tbody>
 </table>
     </div>
     <div class="orca-panel" data-tab="events">
-<h5 class="transitions-heading">Publishes</h5>
-<table class="actions-table">
-  <thead>
-    <tr>
-      <th>Event</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="action-name"><code>eligibility.determination.eligibility.application.determination_completed</code></td>
-      <td class="action-notes">Emit eligibility.application.determination_completed — signals all program Decisions are resolved; Intake subscribes to close the application</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>eligibility.determination.eligibility.application.expedited</code></td>
-      <td class="action-notes">Emit eligibility.application.expedited — Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>eligibility.determination.withdrawn</code></td>
-      <td class="action-notes"></td>
-    </tr>
-  </tbody>
-</table>
 <h5 class="transitions-heading">Subscribes</h5>
 <table class="actions-table">
   <thead>
@@ -3439,179 +3249,10 @@ years, multiple applications, and multiple programs.
       <td class="action-endpoint"><span class="action-method method-patch">PATCH</span> <code>/tasks/{taskId}</code></td>
       <td class="action-notes">Partial updates</td>
     </tr>
-    <tr>
-      <td class="action-name">claim</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/claim</code></td>
-      <td class="action-notes">Caseworker takes ownership of an unassigned pending task</td>
-    </tr>
-    <tr>
-      <td class="action-name">complete</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/complete</code></td>
-      <td class="action-notes">Marks an in-progress task done with an outcome and optional notes</td>
-    </tr>
-    <tr>
-      <td class="action-name">release</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/release</code></td>
-      <td class="action-notes">Returns an in-progress task to the queue, clearing the assignment</td>
-    </tr>
-    <tr>
-      <td class="action-name">escalate</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/escalate</code></td>
-      <td class="action-notes">Flags an in-progress task for supervisor attention</td>
-    </tr>
-    <tr>
-      <td class="action-name">de-escalate</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/de-escalate</code></td>
-      <td class="action-notes">Returns an escalated task to the pending queue</td>
-    </tr>
-    <tr>
-      <td class="action-name">cancel</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/cancel</code></td>
-      <td class="action-notes">Supervisor cancels a task from any active state</td>
-    </tr>
-    <tr>
-      <td class="action-name">reopen</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/reopen</code></td>
-      <td class="action-notes">Supervisor returns a cancelled task to the pending queue</td>
-    </tr>
-    <tr>
-      <td class="action-name">await-client</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/await-client</code></td>
-      <td class="action-notes">Pauses an in-progress task while waiting for a client response</td>
-    </tr>
-    <tr>
-      <td class="action-name">await-verification</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/await-verification</code></td>
-      <td class="action-notes">Pauses an in-progress task while waiting for a verification result</td>
-    </tr>
-    <tr>
-      <td class="action-name">resume</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/resume</code></td>
-      <td class="action-notes">Resumes a blocked task, cancelling any active wait timers</td>
-    </tr>
-    <tr>
-      <td class="action-name">system-resume</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/system-resume</code></td>
-      <td class="action-notes">System resumes a verification-blocked task after a timeout or result arrives</td>
-    </tr>
-    <tr>
-      <td class="action-name">system-escalate</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/system-escalate</code></td>
-      <td class="action-notes">System auto-escalates a task when an SLA deadline is approaching or exceeded</td>
-    </tr>
-    <tr>
-      <td class="action-name">system-auto-cancel</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/system-auto-cancel</code></td>
-      <td class="action-notes">System cancels a client-blocked task after 30 days without a response</td>
-    </tr>
-    <tr>
-      <td class="action-name">submit-for-review</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/submit-for-review</code></td>
-      <td class="action-notes">Worker submits a completed task to a supervisor for review and approval</td>
-    </tr>
-    <tr>
-      <td class="action-name">approve</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/approve</code></td>
-      <td class="action-notes">Supervisor approves a submitted task and records the final outcome</td>
-    </tr>
-    <tr>
-      <td class="action-name">return-to-worker</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/return-to-worker</code></td>
-      <td class="action-notes">Supervisor sends a review-pending task back to the worker with feedback</td>
-    </tr>
-    <tr>
-      <td class="action-name">assign</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/assign</code></td>
-      <td class="action-notes">Supervisor reassigns a task to a specific caseworker or moves it to a different queue</td>
-    </tr>
-    <tr>
-      <td class="action-name">set-priority</td>
-      <td class="action-endpoint"><span class="action-method method-post">POST</span> <code>/tasks/{taskId}/set-priority</code></td>
-      <td class="action-notes">Supervisor manually overrides the task priority</td>
-    </tr>
   </tbody>
 </table>
     </div>
     <div class="orca-panel" data-tab="events">
-<h5 class="transitions-heading">Publishes</h5>
-<table class="actions-table">
-  <thead>
-    <tr>
-      <th>Event</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="action-name"><code>workflow.task.approved</code></td>
-      <td class="action-notes">Emit a domain event recording the approval</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.assigned</code></td>
-      <td class="action-notes">Emit a domain event recording the assignment</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.auto_cancelled</code></td>
-      <td class="action-notes">Emit a domain event recording the automatic cancellation</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.awaiting_client</code></td>
-      <td class="action-notes">Emit a domain event recording the block</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.awaiting_verification</code></td>
-      <td class="action-notes">Emit a domain event recording the block</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.cancelled</code></td>
-      <td class="action-notes">Emit a domain event recording the cancellation</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.claimed</code></td>
-      <td class="action-notes">Emit a domain event recording the claim and who claimed the task</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.completed</code></td>
-      <td class="action-notes">Emit a domain event recording the completion and its outcome</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.de-escalated</code></td>
-      <td class="action-notes">Emit a domain event recording the de-escalation</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.escalated</code></td>
-      <td class="action-notes">Emit a domain event recording the escalation</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.priority_changed</code></td>
-      <td class="action-notes">Emit a domain event recording the priority change</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.released</code></td>
-      <td class="action-notes">Emit a domain event recording the release and its reason</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.reopened</code></td>
-      <td class="action-notes">Emit a domain event recording the reopen</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.resumed</code></td>
-      <td class="action-notes">Emit a domain event recording the resumption</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.returned_to_worker</code></td>
-      <td class="action-notes">Emit a domain event recording the return for revision</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.submitted_for_review</code></td>
-      <td class="action-notes">Emit a domain event recording the submission for review</td>
-    </tr>
-    <tr>
-      <td class="action-name"><code>workflow.task.system_resumed</code></td>
-      <td class="action-notes">Emit a domain event recording the automated resumption and its result</td>
-    </tr>
-  </tbody>
-</table>
 <h5 class="transitions-heading">Subscribes</h5>
 <table class="actions-table">
   <thead>
