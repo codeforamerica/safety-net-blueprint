@@ -3,8 +3,9 @@
 
 AppointmentExample1:
   id: b898e306-ecca-57f5-85c9-b7bcf00e5f9f
-  startAt: '2024-01-01T00:00:00.000Z'
-  endAt: '2024-01-01T00:00:00.000Z'
+  # Demo-friendly: upcoming appointment relative to seed load (#302).
+  startAt: '{{now + 1 hour}}'
+  endAt: '{{now + 8 hours}}'
   appointmentType: standard
   status: scheduled
   personId: b3945614-c6d6-5214-82c4-c6b90114f0eb

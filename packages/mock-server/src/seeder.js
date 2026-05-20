@@ -2,24 +2,10 @@
  * Data seeder - loads example data from YAML files into SQLite
  */
 
-import { readFileSync, existsSync } from 'fs';
-import yaml from 'js-yaml';
 import { insertResource, clearAll } from './database-manager.js';
 import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/safety-net-blueprint-contracts/loader';
-import { join } from 'path';
-
-/**
- * Load examples from YAML file
- * @param {string} examplesPath - Path to examples YAML file
- * @returns {Object} Examples object
- */
-function loadExamples(examplesPath) {
-  if (!existsSync(examplesPath)) {
-    return {};
-  }
-  const content = readFileSync(examplesPath, 'utf8');
-  return yaml.load(content) || {};
-}
+import { loadResolvedSeed } from './seed-loader.js';
+import { SeedTemplateError } from './seed-template-resolver.js';
 
 /**
  * Seed database with examples from a seed YAML file.
@@ -31,7 +17,7 @@ function loadExamples(examplesPath) {
 export function seedDatabase(collectionName, seedDir, apiName) {
   const resourceName = apiName || collectionName;
   try {
-    const examples = loadExamples(join(seedDir, `${resourceName}.yaml`));
+    const examples = loadResolvedSeed(seedDir, resourceName, new Date());
 
     if (Object.keys(examples).length === 0) {
       console.log(`  No seed file found for ${resourceName}, database will be empty`);
@@ -66,6 +52,9 @@ export function seedDatabase(collectionName, seedDir, apiName) {
     console.log(`  Seeded ${seededCount} ${collectionName}`);
     return seededCount;
   } catch (error) {
+    // Fail-loud on seed-template errors (#302) — don't let the load proceed
+    // with an empty collection if the fixtures themselves are malformed.
+    if (error instanceof SeedTemplateError) throw error;
     console.error(`  Error seeding ${collectionName}:`, error.message);
     return 0;
   }
@@ -138,6 +127,9 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
   console.log('\nSeeding databases from seed files...');
 
   const summary = {};
+  // Single seed-load instant — every {{now}} token in this load resolves
+  // against this timestamp, so paired fields like startAt/endAt stay aligned.
+  const now = new Date();
 
   for (const api of apiSpecs) {
     try {
@@ -147,7 +139,7 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
         clearAll(name);
       }
 
-      const examples = loadExamples(join(seedDir, `${api.name}.yaml`));
+      const examples = loadResolvedSeed(seedDir, api.name, now);
 
       if (Object.keys(examples).length === 0) {
         console.log(`  No seed file found for ${api.name}, databases will be empty`);
@@ -186,6 +178,8 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
         summary[collectionName] = seededCount;
       }
     } catch (error) {
+      // Fail-loud on seed-template errors (#302) — abort the whole load.
+      if (error instanceof SeedTemplateError) throw error;
       console.warn(`  Warning: Could not seed ${api.name}:`, error.message);
       summary[api.name] = 0;
     }
