@@ -140,3 +140,7 @@ overrides:
   - files: ["packages/contracts/eligibility-adapter-openapi.yaml"]
     rules:
       post-must-return-201: off
+  # Temporary: disable duplicated-entry-in-enum to isolate a nimma crash on Linux
+  - files: ["packages/contracts/case-management-openapi.yaml", "packages/contracts/intake-openapi.yaml", "packages/contracts/workflow-openapi.yaml"]
+    rules:
+      duplicated-entry-in-enum: off
