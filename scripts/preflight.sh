@@ -35,7 +35,7 @@ else
 fi
 
 step "Running Spectral lint"
-if npx spectral lint 'packages/contracts/*-openapi.yaml' --ignore-unknown-format --verbose 2>&1; then
+if npx spectral lint 'packages/contracts/*-openapi.yaml' --ignore-unknown-format 2>&1; then
   pass "Spectral lint passed"
 else
   fail "Spectral lint failed"
