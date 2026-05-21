@@ -1,1 +1,4 @@
 dist/
+
+# Active data staged for Figma plugin builds (written by build.js, not committed)
+_current*.json

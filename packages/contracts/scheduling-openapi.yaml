@@ -23,8 +23,6 @@ servers:
 tags:
 - name: Appointments
   description: Manage appointments.
-x-events: {}
-
 paths:
   "/appointments":
     get:

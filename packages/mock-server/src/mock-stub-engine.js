@@ -17,7 +17,7 @@
  * See docs/guides/mock-server.md for usage patterns.
  */
 
-import { CLOUDEVENTS_TYPE_PREFIX, emitEventEnvelope } from './emit-event.js';
+import { emitEventEnvelope } from './emit-event.js';
 import { eventBus } from './event-bus.js';
 import { resolveTimeTokens } from './time-tokens.js';
 
@@ -53,10 +53,7 @@ function nextHttpId(url) {
  * "data_exchange.service_call.created" → "service_call.created-1"
  */
 function nextId(on) {
-  const short = on.startsWith(CLOUDEVENTS_TYPE_PREFIX)
-    ? on.slice(CLOUDEVENTS_TYPE_PREFIX.length)
-    : on;
-  const parts = short.split('.');
+  const parts = (on || '').split('.');
   const prefix = parts.slice(-2).join('.');
   const n = (idCounters.get(prefix) ?? 0) + 1;
   idCounters.set(prefix, n);
@@ -73,12 +70,10 @@ function getPath(obj, path) {
 
 /**
  * Test whether a stub's `on` value matches the given CloudEvents type.
- * Accepts the full type or a short suffix (same logic as eventTypeMatches).
  */
 function onMatches(eventType, on) {
   if (!on || !eventType) return false;
-  if (eventType === on) return true;
-  return eventType === CLOUDEVENTS_TYPE_PREFIX + on;
+  return eventType === on;
 }
 
 /**
@@ -258,32 +253,27 @@ export function clearAllStubs() {
  * data with stub-specified overrides.
  */
 function dispatchStubResponse(stub, envelope) {
-  const shortType = envelope.type?.startsWith(CLOUDEVENTS_TYPE_PREFIX)
-    ? envelope.type.slice(CLOUDEVENTS_TYPE_PREFIX.length)
-    : (envelope.type || '');
+  const eventType = envelope.type || '';
 
-  if (shortType === TIMER_REQUESTED) {
+  if (eventType === TIMER_REQUESTED) {
     const callbackEvent = envelope.data?.callback?.event;
     const callbackData = envelope.data?.callback?.data ?? null;
     if (!callbackEvent) {
       console.warn(`[stub] matched ${stub.id} — scheduling.timer.requested missing callback.event`);
       return;
     }
-    const fullCallbackType = callbackEvent.startsWith(CLOUDEVENTS_TYPE_PREFIX)
-      ? callbackEvent
-      : CLOUDEVENTS_TYPE_PREFIX + callbackEvent;
     const timerId = envelope.data?.timerId;
     const firedData = {
       ...(callbackData && typeof callbackData === 'object' ? callbackData : {}),
       timerId,
     };
     emitEventEnvelope({
-      type: fullCallbackType,
+      type: callbackEvent,
       source: '/scheduler',
       subject: envelope.subject,
       data: firedData,
     });
-    console.log(`[stub] matched ${stub.id} → fired ${fullCallbackType} (timer callback)`);
+    console.log(`[stub] matched ${stub.id} → fired ${callbackEvent} (timer callback)`);
     return;
   }
 
@@ -291,11 +281,11 @@ function dispatchStubResponse(stub, envelope) {
 
   const { type, subject, source, data: rawStubData } = stub.respond;
   const stubData = rawStubData ? resolveTimeTokens(rawStubData) : rawStubData;
-  const fullType = type.startsWith(CLOUDEVENTS_TYPE_PREFIX) ? type : CLOUDEVENTS_TYPE_PREFIX + type;
+  const fullType = type;
 
   // Derive entity ID field name from trigger event type.
   // "data_exchange.service_call.created" → "serviceCallId"
-  const parts = shortType.split('.');
+  const parts = eventType.split('.');
   const entitySnake = parts.length >= 2 ? parts[parts.length - 2] : '';
   const entityCamel = entitySnake.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
   const entityIdField = entityCamel ? entityCamel + 'Id' : null;

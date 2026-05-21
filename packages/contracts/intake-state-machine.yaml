@@ -3,6 +3,7 @@ extends: ./platform-state-machine.yaml
 version: "1.0"
 domain: intake
 apiSpec: intake-openapi.yaml
+eventsSpec: intake-asyncapi.yaml
 machines:
   - object: Application
     states:
@@ -24,7 +25,7 @@ machines:
         transition: {from: draft, to: submitted}
         steps:
           - set: {field: submittedAt, value: $now, description: Record when the application was formally submitted}
-          - emit: {event: submitted, data: {submittedAt: $now, programs: $object.programs, channel: $object.channel, memberIds: $members.*.id}, description: "Emit application.submitted — starts the regulatory clock; triggers caseworker task creation, confirmation notice, and person matching"}
+          - emit: {type: intake.application.submitted, data: {programs: $object.programs, channel: $object.channel, memberIds: $members.*.id}, description: "Emit intake.application.submitted — starts the regulatory clock; triggers caseworker task creation, confirmation notice, and person matching"}
       - id: open
         description: POST /applications/{applicationId}/open — System marks a submitted application as under active caseworker review
         guards:
@@ -32,7 +33,7 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: submitted, to: under_review}
         steps:
-          - emit: {event: opened, data: {openedAt: $now, programs: $object.programs}, description: Emit application.opened — signals caseworker has begun active review}
+          - emit: {type: intake.application.opened, data: {programs: $object.programs}, description: Emit intake.application.opened — signals caseworker has begun active review}
       - id: complete-review
         description: POST /applications/{applicationId}/complete-review — Caseworker signals data collection is complete and the application is ready for determination
         guards:
@@ -40,7 +41,7 @@ machines:
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: under_review}
         steps:
-          - emit: {event: review_completed, data: {reviewCompletedAt: $now}, description: Emit application.review_completed — signals data collection is complete; triggers eligibility determination}
+          - emit: {type: intake.application.review_completed, description: Emit intake.application.review_completed — signals data collection is complete; triggers eligibility determination}
       - id: submit-for-approval
         description: POST /applications/{applicationId}/submit-for-approval — System routes the application to supervisor review when state-configured approval thresholds are met
         guards:
@@ -48,7 +49,7 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: under_review, to: pending_approval}
         steps:
-          - emit: {event: determination.approval_needed, description: Emit determination.approval_needed — triggers supervisor approval task creation; states configure approval thresholds via rules overlay}
+          - emit: {type: intake.determination.approval_needed, description: Emit intake.determination.approval_needed — triggers supervisor approval task creation; states configure approval thresholds via rules overlay}
       - id: approve-determination
         description: POST /applications/{applicationId}/approve-determination — Supervisor approves the determination; closes the application and triggers NOA and case creation
         guards:
@@ -57,7 +58,7 @@ machines:
         transition: {from: pending_approval, to: closed}
         steps:
           - set: {field: closedAt, value: $now, description: Record when the intake phase closed}
-          - emit: {event: closed, data: {closedAt: $now}, description: Emit application.closed — signals intake is complete; triggers case creation}
+          - emit: {type: intake.application.closed, description: Emit intake.application.closed — signals intake is complete; triggers case creation}
       - id: reject-determination
         description: POST /applications/{applicationId}/reject-determination — Supervisor rejects the determination and returns the application to the caseworker for revision
         guards:
@@ -65,7 +66,7 @@ machines:
             conditions: [callerIsSupervisor]
         transition: {from: pending_approval, to: under_review}
         steps:
-          - emit: {event: determination.rejected, description: Emit determination.rejected — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker}
+          - emit: {type: intake.determination.rejected, description: Emit intake.determination.rejected — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker}
       - id: close
         description: POST /applications/{applicationId}/close — Marks a reviewed application as closed after all determinations are complete
         guards:
@@ -74,28 +75,28 @@ machines:
         transition: {from: under_review, to: closed}
         steps:
           - set: {field: closedAt, value: $now, description: Record when the intake phase closed}
-          - emit: {event: closed, data: {closedAt: $now}, description: Emit application.closed — signals intake is complete; triggers case creation}
+          - emit: {type: intake.application.closed, description: Emit intake.application.closed — signals intake is complete; triggers case creation}
       - id: withdraw
         description: POST /applications/{applicationId}/withdraw — Applicant or caseworker withdraws the application before a decision is made
         schema:
           request:
-            $ref: ./schemas/intake-state-machine-schema.yaml#/$defs/WithdrawApplicationRequest
+            $ref: '#/$defs/WithdrawApplicationRequest'
         guards:
           - actors: [applicant, caseworker, supervisor]
             conditions: [{any: [callerIsApplicant, callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [submitted, under_review], to: withdrawn}
         steps:
           - set: {field: withdrawnAt, value: $now, description: Record when the application was withdrawn}
-          - emit: {event: withdrawn, data: {withdrawnAt: $now, reason: $request.reason}, description: Emit application.withdrawn — triggers open task cancellation and withdrawal notice}
+          - emit: {type: intake.application.withdrawn, data: {reason: $request.reason}, description: Emit intake.application.withdrawn — triggers open task cancellation and withdrawal notice}
     events:
-      - name: workflow.task.claimed
+      - type: workflow.task.claimed
         description: Open the application for review and create an interview record when a caseworker claims the intake review task
         context:
           - task: {from: workflow/tasks, where: {id: $this.subject}}
         steps:
           - call: openApplication
           - call: createInterview
-      - name: intake.application.submitted
+      - type: intake.application.submitted
         description: Initiate electronic verification requests for each applicable program when an application is submitted
         context:
           - application: {from: intake/applications, where: {id: $this.subject}}
@@ -104,23 +105,23 @@ machines:
             with: {program: snap, memberCategories: [income, identity], householdCategories: [residency]}
           - call: createProgramVerifications
             with: {program: medicaid, memberCategories: [citizenship, immigration], householdCategories: []}
-      - name: data_exchange.call.completed
+      - type: data_exchange.call.completed
         description: Update the verification status based on the service call result; create a document fallback if the result is inconclusive
         context:
           - verification: {from: intake/applications/verifications, where: {id: $this.data.metadata.intake.verificationId}}
         steps:
           - call: updateVerificationOnCallResult
-      - name: scheduling.appointment.scheduled
+      - type: scheduling.appointment.scheduled
         description: Link a scheduled appointment to the associated interview record
         steps:
           - call: linkAppointment
-      - name: document_management.document_version.uploaded
+      - type: document_management.document_version.uploaded
         description: Satisfy the verification obligation and record the uploaded document as evidence when a document is uploaded
         context:
           - verification: {from: intake/applications/verifications, where: {id: $this.data.metadata.intake.verificationId}}
         steps:
           - call: satisfyVerificationOnDocumentUpload
-      - name: eligibility.determination.created
+      - type: eligibility.determination.created
         description: Create one Decision per household member per applied-for program when an eligibility Determination is created for this application
         steps:
           - forEach:
@@ -133,13 +134,13 @@ machines:
                   as: program
                 do:
                   - call: {POST: eligibility/determinations/decisions, body: {determinationId: $this.subject, applicationId: $this.data.applicationId, memberId: $member.id, program: $program, status: pending}}
-      - name: eligibility.application.decision_completed
+      - type: eligibility.application.decision_completed
         description: Write the eligibility outcome back to the application member record when a per-member program decision is completed
         context:
           - member: {from: intake/application-members, where: {id: $this.data.memberId}}
         steps:
           - call: recordDetermination
-      - name: eligibility.application.determination_completed
+      - type: eligibility.application.determination_completed
         description: Close the application or route to supervisor approval when all program and member combinations have received a determination
         steps:
           - if: "false"
@@ -147,17 +148,17 @@ machines:
               - call: {POST: intake/applications/$this.subject/submit-for-approval, description: Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay}
             else:
               - call: {POST: intake/applications/$this.subject/close, description: Close the application when all determinations are in and no supervisor approval is required}
-      - name: eligibility.application.expedited
+      - type: eligibility.application.expedited
         description: Flag the application as expedited when eligibility screening confirms the applicant meets expedited processing criteria
         steps:
           - call: {PATCH: intake/applications/$this.subject, body: {isExpedited: true}, description: Set isExpedited on the application when eligibility screening confirms expedited criteria are met}
-      - name: client_management.person.match_resolved
+      - type: client_management.person.match_resolved
         description: Write person match results back to the ApplicationMember when Client Management resolves a match
         context:
-          - member: {from: intake/application-members, where: {id: $this.data.memberId}}
+          - member: {from: intake/application-members, where: {id: $this.subject}}
         steps:
           - call: recordPersonMatch
-      - name: communication.notice.sent
+      - type: communication.notice.sent
         description: Append the document request notice to the Verification's documentRequests when Communication sends a notice
         context:
           - verification: {from: intake/applications/verifications, where: {id: $this.data.metadata.intake.verificationId}}
@@ -166,7 +167,7 @@ machines:
               PATCH: intake/applications/verifications/$verification.id
               body:
                 documentRequests:
-                  $push: {noticeId: $this.data.noticeId, type: $this.data.type, sentAt: $this.data.sentAt}
+                  $push: {noticeId: $this.subject, type: $this.data.type, sentAt: $this.time}
     procedures:
       - id: openApplication
         description: Transition the application from submitted to under_review when a caseworker claims the intake review task
@@ -213,7 +214,7 @@ machines:
                     PATCH: intake/applications/verifications/$verification.id
                     body:
                       evidence:
-                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.data.serviceCallId, receivedAt: $now}
+                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
                     description: Record the electronic verification result as evidence
                 - call: {POST: intake/applications/verifications/$verification.id/satisfy}
               inconclusive:
@@ -221,7 +222,7 @@ machines:
                     PATCH: intake/applications/verifications/$verification.id
                     body:
                       evidence:
-                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.data.serviceCallId, receivedAt: $now}
+                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
                     description: Record the electronic verification result as evidence
                 - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
                 - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, memberId: $verification.memberId, category: $verification.category, verificationType: document}}
@@ -252,7 +253,7 @@ machines:
               PATCH: intake/application-members/$member.id
               body:
                 programDeterminations:
-                  $push: {program: $this.data.program, outcome: $this.data.status, determinedAt: $this.data.decidedAt}
+                  $push: {program: $this.data.program, outcome: $this.data.status, determinedAt: $this.time}
       - id: recordPersonMatch
         description: Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches
         if: $member.id != null
@@ -317,7 +318,7 @@ machines:
         transition: {from: [pending, inconclusive], to: satisfied}
         steps:
           - set: {field: satisfiedAt, value: $now, description: Record when the obligation was satisfied}
-          - emit: {event: satisfied, data: {satisfiedAt: $now}, description: Emit verification.satisfied — signals the obligation is fulfilled}
+          - emit: {type: intake.verification.satisfied, description: Emit intake.verification.satisfied — signals the obligation is fulfilled}
       - id: mark-inconclusive
         description: POST /applications/verifications/{verificationId}/mark-inconclusive — System records that a service call returned inconclusive, triggering document fallback
         guards:
@@ -325,24 +326,24 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: pending, to: inconclusive}
         steps:
-          - emit: {event: inconclusive, data: {markedAt: $now}, description: Emit verification.inconclusive — triggers document fallback creation via intake rule subscription}
+          - emit: {type: intake.verification.inconclusive, description: Emit intake.verification.inconclusive — triggers document fallback creation via intake rule subscription}
       - id: waive
         description: POST /applications/verifications/{verificationId}/waive — Caseworker grants a waiver for an obligation that cannot be satisfied through normal means
         schema:
           request:
-            $ref: ./schemas/intake-state-machine-schema.yaml#/$defs/WaiveVerificationRequest
+            $ref: '#/$defs/WaiveVerificationRequest'
         guards:
           - actors: [caseworker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: waived}
         steps:
           - set: {field: waivedAt, value: $now, description: Record when the waiver was granted}
-          - emit: {event: waived, data: {waivedAt: $now, reason: $request.reason}, description: Emit verification.waived — signals the obligation is resolved without evidence}
+          - emit: {type: intake.verification.waived, data: {reason: $request.reason}, description: Emit intake.verification.waived — signals the obligation is resolved without evidence}
       - id: mark-cannot-verify
         description: POST /applications/verifications/{verificationId}/mark-cannot-verify — Caseworker closes an obligation when all available verification methods are exhausted
         schema:
           request:
-            $ref: ./schemas/intake-state-machine-schema.yaml#/$defs/MarkCannotVerifyRequest
+            $ref: '#/$defs/MarkCannotVerifyRequest'
         guards:
           - actors: [caseworker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
@@ -350,7 +351,7 @@ machines:
         steps:
           - set: {field: closedAt, value: $now, description: Record when the obligation was closed as cannot-verify}
     events:
-      - name: intake.verification.created
+      - type: intake.verification.created
         description: Initiate the appropriate service calls for a newly created electronic verification
         context:
           - application: {from: intake/applications, where: {id: $this.data.applicationId}}
@@ -381,3 +382,31 @@ machines:
 guards:
   - id: callerIsApplicant
     condition: "\"applicant\" in caller.roles"
+
+$defs:
+  MarkCannotVerifyRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the obligation cannot be satisfied after exhausting available options
+
+  WaiveVerificationRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the verification requirement is being waived
+
+  WithdrawApplicationRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the application is being withdrawn

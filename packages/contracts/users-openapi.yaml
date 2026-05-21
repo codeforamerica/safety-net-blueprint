@@ -38,8 +38,6 @@ tags:
 security:
   - bearerAuth: []
 
-x-events: {}
-
 paths:
   # ─────────────────────────────────────────────────────────────────────────────
   # User Management

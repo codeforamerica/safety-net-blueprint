@@ -39,6 +39,7 @@ All blueprint events use the [CloudEvents 1.0](https://cloudevents.io/) envelope
 | `time` | When the event occurred |
 | `data` | Event payload (domain-specific) |
 | `traceparent` *(optional)* | W3C Trace Context header propagated from the triggering request or event; carries a trace ID (stable across the full causal chain) and parent ID (immediate parent) |
+| `causationid` *(optional)* | CloudEvents Causation extension. The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event — e.g., a task auto-resumed because a timer fired. Complements `traceparent`: `traceparent` covers the full distributed trace; `causationid` names the immediate parent event specifically. |
 | `authtype` *(optional)* | CloudEvents Auth Context extension. Principal type of the actor who triggered the event. Required when `authid` is present. Values: `user`, `service_account`, `api_key`, `system`, `unauthenticated`, `unknown`. Required for FTI-governed events per IRS Pub. 1075. |
 | `authid` *(optional)* | CloudEvents Auth Context extension. Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. |
 
@@ -115,6 +116,14 @@ Conforming implementations must propagate the W3C Trace Context `traceparent` he
 Clients must forward the `traceparent` header on all requests to enable end-to-end tracing. When an inbound request carries no `traceparent`, the implementation omits the attribute from emitted events rather than generating a synthetic value.
 
 The trace ID is stable across the entire chain — every event emitted from a single HTTP request shares the same trace ID, so the complete causal trail for any operation is recoverable by filtering events on `traceparent` prefix or by querying an OTLP-compatible backend.
+
+#### Event causation
+
+When an event is emitted directly in response to another event, producers set the `causationid` extension attribute to the `id` of the triggering event. This is distinct from `traceparent`: `traceparent` links the entire distributed trace; `causationid` names the specific event that caused this one.
+
+Use `causationid` when a consumer needs to identify the immediate trigger without parsing the full trace — for example, a task auto-resumed by a timer carries the timer event ID in `causationid`, allowing a subscriber to look up the original timer context without domain-specific payload fields in the workflow event.
+
+`causationid` is optional. Producers set it only when the event is causally linked to another event. Events triggered by direct user action (HTTP requests) do not set `causationid` — use `traceparent` for those.
 
 ---
 

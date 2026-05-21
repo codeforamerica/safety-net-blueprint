@@ -39,28 +39,6 @@ tags:
   - name: ServiceCalls
     description: External service call lifecycle — submission through resolution.
 
-x-events:
-  call.submitted:
-    type: org.codeforamerica.safety-net-blueprint.data_exchange.call.submitted
-    summary: Emitted when an async service call is submitted and enters the pending state
-    payload:
-      $ref: "#/components/schemas/CallSubmittedEvent"
-  call.completed:
-    type: org.codeforamerica.safety-net-blueprint.data_exchange.call.completed
-    summary: Emitted when an external service responds successfully; carries the full result payload
-    payload:
-      $ref: "#/components/schemas/CallCompletedEvent"
-  call.failed:
-    type: org.codeforamerica.safety-net-blueprint.data_exchange.call.failed
-    summary: Emitted when an external service returns an error or rejection
-    payload:
-      $ref: "#/components/schemas/CallFailedEvent"
-  call.timed_out:
-    type: org.codeforamerica.safety-net-blueprint.data_exchange.call.timed_out
-    summary: Emitted when no response is received within the configured window
-    payload:
-      $ref: "#/components/schemas/CallTimedOutEvent"
-
 paths:
   /services:
     get:
@@ -558,18 +536,3 @@ components:
     ServiceType:
       $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
 
-    # --- Events ---
-    # Payload schemas live in schemas/data-exchange-events.yaml for reuse across
-    # OpenAPI and future AsyncAPI specs. These are passthroughs.
-
-    CallCompletedEvent:
-      $ref: "./schemas/data-exchange-events.yaml#/$defs/CallCompletedEvent"
-
-    CallFailedEvent:
-      $ref: "./schemas/data-exchange-events.yaml#/$defs/CallFailedEvent"
-
-    CallSubmittedEvent:
-      $ref: "./schemas/data-exchange-events.yaml#/$defs/CallSubmittedEvent"
-
-    CallTimedOutEvent:
-      $ref: "./schemas/data-exchange-events.yaml#/$defs/CallTimedOutEvent"

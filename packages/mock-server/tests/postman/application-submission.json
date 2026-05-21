@@ -468,7 +468,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-residency-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0001-0001-0001-000000000001\",\n    \"type\": \"document_request_residency_verification\",\n    \"sentAt\": \"2026-01-15T09:00:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{residencyVerifId}}\" } }\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-residency-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0001-0001-0001-000000000001\",\n    \"type\": \"document_request_residency_verification\",\n    \"sentAt\": \"2026-01-15T09:00:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{residencyVerifId}}\" } }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -554,7 +554,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-conclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{identityVerifIdA}}\" } },\n    \"result\": \"conclusive\",\n    \"serviceCallId\": \"sc-conclusive-001\",\n    \"serviceType\": \"fdsh_ssa\"\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-conclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{identityVerifIdA}}\" } },\n    \"result\": \"conclusive\",\n    \"serviceCallId\": \"sc-conclusive-001\",\n    \"serviceType\": \"fdsh_ssa\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -646,7 +646,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-inconclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeVerifIdA}}\" } },\n    \"result\": \"inconclusive\",\n    \"serviceCallId\": \"sc-inconclusive-001\",\n    \"serviceType\": \"ssa_ievs\"\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-inconclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeVerifIdA}}\" } },\n    \"result\": \"inconclusive\",\n    \"serviceCallId\": \"sc-inconclusive-001\",\n    \"serviceType\": \"ssa_ievs\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -781,7 +781,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-income-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0002-0002-0002-000000000002\",\n    \"type\": \"document_request_income_verification\",\n    \"sentAt\": \"2026-01-15T09:30:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeDocFallbackVerifId}}\" } }\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-income-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0002-0002-0002-000000000002\",\n    \"type\": \"document_request_income_verification\",\n    \"sentAt\": \"2026-01-15T09:30:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeDocFallbackVerifId}}\" } }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -867,7 +867,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.eligibility.application.expedited\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {}\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"eligibility.application.expedited\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -946,7 +946,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.eligibility.application.decision_completed\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"program\": \"snap\",\n    \"status\": \"approved\",\n    \"decidedAt\": \"2026-01-15T10:00:00Z\",\n    \"decisionId\": \"dec-snap-001\",\n    \"determinationId\": \"det-001\",\n    \"applicationId\": \"{{appId}}\"\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"eligibility.application.decision_completed\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"program\": \"snap\",\n    \"status\": \"approved\",\n    \"decidedAt\": \"2026-01-15T10:00:00Z\",\n    \"decisionId\": \"dec-snap-001\",\n    \"determinationId\": \"det-001\",\n    \"applicationId\": \"{{appId}}\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1033,7 +1033,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberAId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"matchType\": \"confirmed\",\n    \"candidates\": [\n      { \"personId\": \"aaaaaaaa-0001-0001-0001-000000000001\", \"confidenceScore\": 0.99 }\n    ]\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberAId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"matchType\": \"confirmed\",\n    \"candidates\": [\n      { \"personId\": \"aaaaaaaa-0001-0001-0001-000000000001\", \"confidenceScore\": 0.99 }\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1120,7 +1120,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberBId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberBId}}\",\n    \"matchType\": \"no_match\",\n    \"candidates\": []\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberBId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberBId}}\",\n    \"matchType\": \"no_match\",\n    \"candidates\": []\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1213,7 +1213,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"org.codeforamerica.safety-net-blueprint.client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberCId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberCId}}\",\n    \"matchType\": \"review_required\",\n    \"candidates\": [\n      { \"personId\": \"cccccccc-0001-0001-0001-000000000001\", \"confidenceScore\": 0.82 },\n      { \"personId\": \"cccccccc-0002-0002-0002-000000000002\", \"confidenceScore\": 0.74 }\n    ]\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberCId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberCId}}\",\n    \"matchType\": \"review_required\",\n    \"candidates\": [\n      { \"personId\": \"cccccccc-0001-0001-0001-000000000001\", \"confidenceScore\": 0.82 },\n      { \"personId\": \"cccccccc-0002-0002-0002-000000000002\", \"confidenceScore\": 0.74 }\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"

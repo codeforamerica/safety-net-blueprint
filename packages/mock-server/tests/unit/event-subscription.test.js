@@ -39,7 +39,7 @@ test('machine onEvent — runs when guards pass', (t, done) => {
     guards: [{ id: 'isUrgent', field: 'isUrgent', operator: 'equals', value: true }],
     triggers: {
       onEvent: [{
-        name: 'intake.application.submitted',
+        type: 'intake.application.submitted',
         guards: { conditions: ['isUrgent'] },
         then: [{ set: { field: 'priority', value: 'high' } }]
       }]
@@ -54,7 +54,7 @@ test('machine onEvent — runs when guards pass', (t, done) => {
 
   registerEventSubscriptions(smEntries);
   eventBus.emit('domain-event', makeEvent(
-    'org.codeforamerica.safety-net-blueprint.intake.application.submitted',
+    'intake.application.submitted',
     APP_ID
   ));
 
@@ -77,7 +77,7 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
     guards: [{ id: 'isUrgent', field: 'isUrgent', operator: 'equals', value: true }],
     triggers: {
       onEvent: [{
-        name: 'intake.application.submitted',
+        type: 'intake.application.submitted',
         guards: { conditions: ['isUrgent'] },
         then: [{ set: { field: 'priority', value: 'high' } }]
       }]
@@ -92,7 +92,7 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
 
   registerEventSubscriptions(smEntries);
   eventBus.emit('domain-event', makeEvent(
-    'org.codeforamerica.safety-net-blueprint.intake.application.submitted',
+    'intake.application.submitted',
     APP_ID
   ));
 
@@ -116,7 +116,7 @@ test('machine onEvent — applies transition and persists resource mutations', (
   const machine = {
     object: 'Application',
     events: [{
-      name: 'intake.application.submitted',
+      type: 'intake.application.submitted',
       transition: { from: 'submitted', to: 'under_review' },
       steps: [{ set: { field: 'reviewedAt', value: '$now' } }]
     }]
@@ -130,7 +130,7 @@ test('machine onEvent — applies transition and persists resource mutations', (
 
   registerEventSubscriptions(smEntries);
   eventBus.emit('domain-event', makeEvent(
-    'org.codeforamerica.safety-net-blueprint.intake.application.submitted',
+    'intake.application.submitted',
     APP_ID
   ));
 
@@ -148,7 +148,7 @@ test('machine onEvent — skipped when resource not found', (t, done) => {
   const machine = {
     object: 'Application',
     events: [{
-      name: 'intake.application.submitted',
+      type: 'intake.application.submitted',
       transition: { from: 'submitted', to: 'under_review' },
       steps: []
     }],
@@ -164,7 +164,7 @@ test('machine onEvent — skipped when resource not found', (t, done) => {
 
   // No crash when subject doesn't exist
   eventBus.emit('domain-event', makeEvent(
-    'org.codeforamerica.safety-net-blueprint.intake.application.submitted',
+    'intake.application.submitted',
     'nonexistent-id'
   ));
 
@@ -179,7 +179,7 @@ test('machine onEvent — skipped when resource in wrong from state', (t, done) 
   const machine = {
     object: 'Application',
     events: [{
-      name: 'intake.application.submitted',
+      type: 'intake.application.submitted',
       transition: { from: 'submitted', to: 'under_review' },
       steps: [{ set: { field: 'flag', value: 'set' } }]
     }],
@@ -193,7 +193,7 @@ test('machine onEvent — skipped when resource in wrong from state', (t, done) 
 
   registerEventSubscriptions(smEntries);
   eventBus.emit('domain-event', makeEvent(
-    'org.codeforamerica.safety-net-blueprint.intake.application.submitted',
+    'intake.application.submitted',
     APP_ID
   ));
 

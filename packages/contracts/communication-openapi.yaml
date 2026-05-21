@@ -18,18 +18,7 @@ servers:
   - url: http://localhost:1080/communication
     description: Local development server
 
-x-events:
-  notice.sent:
-    type: org.codeforamerica.safety-net-blueprint.communication.notice.sent
-    summary: >
-      Emitted when Communication sends a notice to a client. Intake subscribes
-      to append a documentRequests entry to the relevant Verification.
-    payload:
-      $ref: "./schemas/communication-events.yaml#/$defs/NoticeSentEvent"
-
 paths: {}
 
 components:
-  schemas:
-    NoticeSentEvent:
-      $ref: "./schemas/communication-events.yaml#/$defs/NoticeSentEvent"
+  schemas: {}

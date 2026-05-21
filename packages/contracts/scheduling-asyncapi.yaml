@@ -1,0 +1,106 @@
+asyncapi: 3.0.0
+info:
+  title: Scheduling Domain Events
+  version: 1.0.0
+  description: |
+    Event catalog for the Scheduling domain. Covers appointment lifecycle events
+    and timer infrastructure events used by the platform scheduling service.
+
+    Event types follow the convention: scheduling.{entity}.{action}.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+
+channels:
+  scheduling.appointment.scheduled:
+    address: scheduling.appointment.scheduled
+    messages:
+      appointmentScheduled:
+        $ref: '#/components/messages/AppointmentScheduledMessage'
+
+  scheduling.timer.cancelled:
+    address: scheduling.timer.cancelled
+    messages:
+      timerCancelled:
+        $ref: '#/components/messages/TimerCancelledMessage'
+
+  scheduling.timer.requested:
+    address: scheduling.timer.requested
+    messages:
+      timerRequested:
+        $ref: '#/components/messages/TimerRequestedMessage'
+
+components:
+  messages:
+    AppointmentScheduledMessage:
+      name: scheduling.appointment.scheduled
+      summary: Emitted when an appointment is booked; intake subscribes to store the appointment reference on the application.
+      payload:
+        $ref: '#/components/schemas/AppointmentScheduledEvent'
+
+    TimerCancelledMessage:
+      name: scheduling.timer.cancelled
+      summary: Emitted by the platform cancelTimer procedure to cancel a pending timer; no-op if the timer has already fired.
+      payload:
+        $ref: '#/components/schemas/TimerCancelledEvent'
+
+    TimerRequestedMessage:
+      name: scheduling.timer.requested
+      summary: Emitted by the platform requestTimer procedure; the scheduling service registers the timer and fires the callback event on expiry.
+      payload:
+        $ref: '#/components/schemas/TimerRequestedEvent'
+
+  schemas:
+    # subject: appointmentId
+    AppointmentScheduledEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: scheduling.appointment.scheduled
+            data:
+              $ref: '#/components/schemas/AppointmentScheduledData'
+
+    AppointmentScheduledData:
+      type: object
+      additionalProperties: false
+      required:
+        - appointmentId
+        - scheduledAt
+      properties:
+        appointmentId:
+          type: string
+          format: uuid
+          description: The scheduled appointment identifier.
+          x-relationship:
+            resource: Appointment
+        scheduledAt:
+          type: string
+          format: date-time
+          description: When the appointment is scheduled to occur.
+
+    # subject: timerId
+    TimerCancelledEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: scheduling.timer.cancelled
+            data:
+              $ref: './schemas/platform-events.yaml#/SchedulingTimerCancelledEvent'
+
+    # subject: timerId
+    TimerRequestedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: scheduling.timer.requested
+            data:
+              $ref: './schemas/platform-events.yaml#/SchedulingTimerRequestedEvent'

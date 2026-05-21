@@ -508,7 +508,7 @@ events_endpoint:
     body: |
       Standard paginated list response (items, total, limit, offset, hasNext)
       where each item is a CloudEvents 1.0 envelope. The envelope schema is
-      defined in platform-openapi.yaml#/components/schemas/DomainEvent.
+      defined in platform-openapi.yaml#/components/schemas/Event.
 
   notes:
     - The /events endpoint is read-only for consumers. Events are written

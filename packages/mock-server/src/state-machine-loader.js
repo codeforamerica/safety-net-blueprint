@@ -10,14 +10,15 @@ import yaml from 'js-yaml';
  * Resolve a JSON Schema-style $ref to an external YAML file.
  * Supports fragment pointers like ./schemas/foo.yaml#/$defs/Bar.
  */
-function resolveRef(ref, baseFilePath) {
+function resolveRef(ref, baseFilePath, baseDoc = null) {
   const hashIdx = ref.indexOf('#');
   const filePart = hashIdx >= 0 ? ref.slice(0, hashIdx) : ref;
   const hashPart = hashIdx >= 0 ? ref.slice(hashIdx + 1) : '';
-  if (!filePart) return null;
   try {
-    const fullPath = resolve(dirname(baseFilePath), filePart);
-    const doc = yaml.load(readFileSync(fullPath, 'utf8'));
+    const doc = filePart
+      ? yaml.load(readFileSync(resolve(dirname(baseFilePath), filePart), 'utf8'))
+      : baseDoc;
+    if (!doc) return null;
     if (!hashPart) return doc;
     const parts = hashPart.split('/').filter(Boolean);
     let cur = doc;
@@ -66,11 +67,11 @@ function resolveRequestBodyRefs(stateMachine, filePath) {
   for (const machine of (stateMachine.machines || [])) {
     for (const action of (machine.actions || [])) {
       if (action.schema?.request?.$ref) {
-        const resolved = resolveRef(action.schema.request.$ref, filePath);
+        const resolved = resolveRef(action.schema.request.$ref, filePath, stateMachine);
         if (resolved) action.schema.request = resolved;
       }
       if (action.schema?.response?.$ref) {
-        const resolved = resolveRef(action.schema.response.$ref, filePath);
+        const resolved = resolveRef(action.schema.response.$ref, filePath, stateMachine);
         if (resolved) action.schema.response = resolved;
       }
     }

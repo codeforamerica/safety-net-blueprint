@@ -59,6 +59,10 @@ properties:
     type: string
     description: Filename of the associated OpenAPI spec.
 
+  eventsSpec:
+    type: string
+    description: Filename of the associated AsyncAPI spec listing domain events.
+
   machines:
     type: array
     description: State machines for this domain, one per governed entity type. Omit for platform files.
@@ -81,6 +85,12 @@ properties:
       Shared across all machines in the domain.
     items:
       $ref: "#/$defs/Procedure"
+
+  $defs:
+    type: object
+    description: Named request body schemas for state machine actions. Referenced via $ref '#/$defs/MySchema'.
+    additionalProperties:
+      type: object
 
 $defs:
 
@@ -203,40 +213,38 @@ $defs:
   #         - call: open-application
   # ---------------------------------------------------------------------------
   OnEvent:
-    type: object
     description: >
       A reaction to an external domain event arriving on a subscription.
+      Typed as EventRef — type identifies which event to subscribe to;
+      description annotates what the handler does. Handler-specific fields
+      (transition, guards, context, steps) are additive.
 
 
       onEvent structure:
-        name        — fully qualified event name (e.g., intake.application.submitted).
+        type        — fully qualified event type (e.g., intake.application.submitted).
         description — human-readable summary of what this subscription does.
         transition  — if present, requires an existing instance; from limits source states.
         guards      — conditions that must pass before steps run.
         context     — data available to all steps; inherits machine context.
         steps       — steps to execute.
-    required:
-      - name
-      - steps
-    additionalProperties: false
-    properties:
-      name:
-        type: string
-        description: Fully qualified event name (e.g., intake.application.submitted).
-      description:
-        type: string
-        description: Human-readable summary of what triggers this subscription and what it does.
-      transition:
-        $ref: "#/$defs/TransitionBlock"
-      guards:
-        $ref: "#/$defs/Guards"
-      context:
-        $ref: "#/$defs/ContextProperty"
-      steps:
-        type: array
-        minItems: 1
-        items:
-          $ref: "#/$defs/StepItem"
+    allOf:
+      - $ref: 'schemas/platform-events.yaml#/$defs/EventRef'
+      - type: object
+        required:
+          - steps
+        properties:
+          transition:
+            $ref: "#/$defs/TransitionBlock"
+          guards:
+            $ref: "#/$defs/Guards"
+          context:
+            $ref: "#/$defs/ContextProperty"
+          steps:
+            type: array
+            minItems: 1
+            items:
+              $ref: "#/$defs/StepItem"
+    unevaluatedProperties: false
 
   # ---------------------------------------------------------------------------
   # Transition (action entry)
@@ -533,24 +541,20 @@ $defs:
           value: {description: Value expression ($now, $caller.field, $object.field, $request.field, or a literal).}
           description: {type: string}
 
+  # EmitStep.emit is typed as EventBase from schemas/platform-events.yaml.
+  # EventBase defines: type (required), subject, causationid, data, description.
+  # The emit.type value must match a channel address in the domain's eventsSpec AsyncAPI file.
+  # This is enforced by validate-events.js at validation time.
   EmitStep:
     type: object
-    description: Emit a domain event. The platform prefixes the full CloudEvents type automatically from domain and object.
+    description: Emit a domain event. The type must match a channel in the domain's eventsSpec AsyncAPI file.
     required: [emit]
     additionalProperties: false
     properties:
       emit:
-        type: object
-        required: [event]
-        additionalProperties: false
-        properties:
-          event: {type: string, description: "Event action name (e.g. submitted, completed)."}
-          subject: {type: string, description: "CloudEvents subject override. Value expression. Defaults to the emitting resource's own id."}
-          data:
-            type: object
-            additionalProperties: true
-            description: Event data fields. Values are value expressions.
-          description: {type: string}
+        allOf:
+          - $ref: 'schemas/platform-events.yaml#/$defs/EventBase'
+        unevaluatedProperties: false
 
   CallStep:
     type: object

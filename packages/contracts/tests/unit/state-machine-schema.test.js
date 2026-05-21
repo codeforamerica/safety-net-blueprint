@@ -24,6 +24,10 @@ function loadSchema() {
 function makeValidator() {
   const schema = loadSchema();
   const ajv = new Ajv2020({ strict: false, allErrors: true });
+  // Preload platform-events.yaml so $ref: 'schemas/platform-events.yaml#/$defs/EventBase' resolves.
+  const platformEventsPath = join(contractsRoot, 'schemas/platform-events.yaml');
+  const platformEvents = yaml.load(readFileSync(platformEventsPath, 'utf8'));
+  ajv.addSchema(platformEvents, 'schemas/platform-events.yaml');
   return ajv.compile(schema);
 }
 
@@ -160,7 +164,7 @@ test('state-machine-schema trigger types', async (t) => {
 
   await t.test('events list (replaces triggers.onEvent)', () => {
     const doc = withEvents([{
-      name: 'domain.widget.created',
+      type: 'domain.widget.created',
       steps: [{ call: 'assignToQueue', description: 'Route on create' }],
     }]);
     const { valid, errors } = validate(doc);
@@ -169,8 +173,8 @@ test('state-machine-schema trigger types', async (t) => {
 
   await t.test('events list with name:', () => {
     const doc = withEvents([{
-      name: 'external.domain.thing_happened',
-      steps: [{ emit: { event: 'reacted', description: 'React' } }],
+      type: 'external.domain.thing_happened',
+      steps: [{ emit: { type: 'domain.test.reacted', description: 'React' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
@@ -178,9 +182,9 @@ test('state-machine-schema trigger types', async (t) => {
 
   await t.test('events list with transition', () => {
     const doc = withEvents([{
-      name: 'external.domain.thing_happened',
+      type: 'external.domain.thing_happened',
       transition: { from: 'draft', to: 'active' },
-      steps: [{ emit: { event: 'activated', description: 'Activate' } }],
+      steps: [{ emit: { type: 'domain.test.activated', description: 'Activate' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
@@ -213,7 +217,7 @@ test('state-machine-schema action types', async (t) => {
       transition: { from: 'draft', to: 'active' },
       steps: [
         { set: { field: 'activatedAt', value: '$now', description: 'Record activation time' } },
-        { emit: { event: 'activated', description: 'Emit event' } },
+        { emit: { type: 'domain.test.activated', description: 'Emit event' } },
       ],
     }]);
     const { valid, errors } = validate(doc);
@@ -233,7 +237,7 @@ test('state-machine-schema action types', async (t) => {
     const doc = withActions([{
       id: 'withdraw',
       transition: { from: ['draft', 'active'], to: 'draft' },
-      steps: [{ emit: { event: 'withdrawn', description: 'Emit event' } }],
+      steps: [{ emit: { type: 'domain.test.withdrawn', description: 'Emit event' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
@@ -244,7 +248,7 @@ test('state-machine-schema action types', async (t) => {
       id: 'complete-review',
       transition: { from: 'active' },
       guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
-      steps: [{ emit: { event: 'review_completed', description: 'Signal review done' } }],
+      steps: [{ emit: { type: 'domain.test.review_completed', description: 'Signal review done' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
@@ -261,7 +265,7 @@ test('state-machine-schema action types', async (t) => {
           properties: { reason: { type: 'string' } },
         },
       },
-      steps: [{ emit: { event: 'withdrawn', data: { reason: '$request.reason' }, description: 'Emit' } }],
+      steps: [{ emit: { type: 'domain.test.withdrawn', data: { reason: '$request.reason' }, description: 'Emit' } }],
     }]);
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
@@ -327,7 +331,7 @@ test('state-machine-schema guards composition', async (t) => {
         actions: [{
           id: 'do-thing',
           guards: [{ actors: ['caseworker'], conditions }],
-          steps: [{ emit: { event: 'done', description: 'Done' } }],
+          steps: [{ emit: { type: 'domain.test.done', description: 'Done' } }],
         }],
       }],
     };
@@ -512,7 +516,7 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
             id: 'verify',
             guards: [{ actors: ['system'], conditions: ['callerIsSystem'] }],
             transition: { from: 'requested', to: 'verified' },
-            steps: [{ emit: { event: 'verified', description: 'Mark verified' } }],
+            steps: [{ emit: { type: 'domain.test.verified', description: 'Mark verified' } }],
           }],
         },
       ],
@@ -529,14 +533,14 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
         states: [{ id: 'draft', slaClock: 'stopped' }, { id: 'active', slaClock: 'running' }],
         initialState: 'draft',
         events: [{
-          name: 'domain.widget.created',
+          type: 'domain.widget.created',
           steps: [{ call: 'routing-rule', description: 'Route on create' }],
         }],
         actions: [{
           id: 'activate',
           guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
           transition: { from: 'draft', to: 'active' },
-          steps: [{ emit: { event: 'activated', description: 'Activate' } }],
+          steps: [{ emit: { type: 'domain.test.activated', description: 'Activate' } }],
         }],
       }],
     };

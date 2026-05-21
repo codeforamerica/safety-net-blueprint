@@ -37,6 +37,9 @@ const CONFIG_SCHEMA = {
     properties: {
       style: { values: ['links-only', 'expand', 'include', 'embed'], default: 'links-only' }
     }
+  },
+  'x-event-type-prefix': {
+    type: 'string'
   }
 };
 
@@ -113,7 +116,9 @@ function validateConfig(config) {
     }
 
     if (schemaDef.type === 'string') {
-      if (typeof value !== 'string' || !schemaDef.values.includes(value)) {
+      if (typeof value !== 'string') {
+        errors.push(`"${key}" must be a string`);
+      } else if (schemaDef.values && !schemaDef.values.includes(value)) {
         errors.push(
           `Invalid value for "${key}": "${value}". Must be one of: ${schemaDef.values.join(', ')}`
         );
@@ -154,7 +159,7 @@ function getConfigDefaults() {
 
   for (const [key, schemaDef] of Object.entries(CONFIG_SCHEMA)) {
     if (schemaDef.type === 'string') {
-      defaults[key] = schemaDef.default;
+      if (schemaDef.default !== undefined) defaults[key] = schemaDef.default;
     } else if (schemaDef.type === 'object') {
       const obj = {};
       for (const [prop, propDef] of Object.entries(schemaDef.properties)) {

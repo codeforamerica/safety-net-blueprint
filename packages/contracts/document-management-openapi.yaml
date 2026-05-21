@@ -46,18 +46,6 @@ tags:
   - name: DocumentLinks
     description: Associations between documents and program records (applications, cases, etc.).
 
-x-events:
-  document.created:
-    type: org.codeforamerica.safety-net-blueprint.document_management.document.created
-    summary: Emitted when a document and its first version are created atomically via POST /documents
-    payload:
-      $ref: "#/components/schemas/DocumentCreatedEvent"
-  document_version.uploaded:
-    type: org.codeforamerica.safety-net-blueprint.document_management.document_version.uploaded
-    summary: Emitted when a subsequent version is uploaded via POST /documents/{documentId}/document-versions
-    payload:
-      $ref: "#/components/schemas/DocumentVersionUploadedEvent"
-
 paths:
 
   # ---------------------------------------------------------------------------
@@ -991,75 +979,3 @@ components:
         hasNext:
           type: boolean
 
-    # -------------------------------------------------------------------------
-    # Events
-    # -------------------------------------------------------------------------
-
-    DocumentCreatedEvent:
-      type: object
-      description: Payload for document_management.document.created — emitted when a document and its first version are created atomically.
-      additionalProperties: false
-      required:
-        - documentId
-        - documentTypeId
-        - title
-        - latestVersionId
-        - metadata
-      properties:
-        documentId:
-          type: string
-          format: uuid
-          x-relationship:
-            resource: document-management/documents
-            field: id
-        documentTypeId:
-          type: string
-          format: uuid
-          x-relationship:
-            resource: document-management/document-types
-            field: id
-        title:
-          type: string
-        latestVersionId:
-          type: string
-          format: uuid
-          x-relationship:
-            resource: document-management/document-versions
-            field: id
-        metadata:
-          type: object
-          additionalProperties:
-            type: object
-            additionalProperties: true
-          description: Echoed verbatim from Document.metadata so consumers can correlate without additional lookups.
-
-    DocumentVersionUploadedEvent:
-      type: object
-      description: Payload for document_management.document_version.uploaded — emitted when a subsequent version is uploaded.
-      additionalProperties: false
-      required:
-        - documentId
-        - documentVersionId
-        - versionNumber
-        - metadata
-      properties:
-        documentId:
-          type: string
-          format: uuid
-          x-relationship:
-            resource: document-management/documents
-            field: id
-        documentVersionId:
-          type: string
-          format: uuid
-          x-relationship:
-            resource: document-management/document-versions
-            field: id
-        versionNumber:
-          type: integer
-        metadata:
-          type: object
-          additionalProperties:
-            type: object
-            additionalProperties: true
-          description: Echoed verbatim from Document.metadata.

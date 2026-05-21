@@ -19,13 +19,6 @@ servers:
 tags:
 - name: Persons
   description: Manage person records.
-x-events:
-  person.match_resolved:
-    type: org.codeforamerica.safety-net-blueprint.client-management.person.match_resolved
-    summary: Emitted once per applying member after person matching completes; intake subscribes to update ApplicationMember with match results
-    payload:
-      $ref: "./schemas/client-management-events.yaml#/$defs/PersonMatchResolvedEvent"
-
 paths:
   "/persons":
     get:

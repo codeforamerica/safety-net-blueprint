@@ -3,6 +3,7 @@ extends: ./platform-state-machine.yaml
 version: "1.0"
 domain: workflow
 apiSpec: workflow-openapi.yaml
+eventsSpec: workflow-asyncapi.yaml
 machines:
   - object: Task
     states:
@@ -24,7 +25,7 @@ machines:
         transition: {from: pending, to: in_progress}
         steps:
           - set: {field: assignedToId, value: $caller.id, description: Assign task to the claiming worker}
-          - emit: {event: claimed, data: {assignedToId: $caller.id}, description: Emit a domain event recording the claim and who claimed the task}
+          - emit: {type: workflow.task.claimed, data: {assignedToId: $caller.id}, description: Emit a domain event recording the claim and who claimed the task}
       - id: complete
         description: "POST /tasks/{taskId}/complete — Marks an in-progress task done with an outcome and optional notes"
         guards:
@@ -35,12 +36,12 @@ machines:
         transition: {from: in_progress, to: completed}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/CompleteTaskRequest"
+            $ref: "#/$defs/CompleteTaskRequest"
         steps:
           - set: {field: completedAt, value: $now, description: Record when work finished}
           - set: {field: outcome, value: $request.outcome, description: Store the completion outcome from the request}
           - set: {field: completionNotes, value: $request.notes, description: Store optional completion notes from the request}
-          - emit: {event: completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
+          - emit: {type: workflow.task.completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
           - if: $request.createFollowUp == true
             then: [{call: {POST: workflow/tasks, body: {$merge: $object, status: pending}}, description: Create a follow-up task when caller requests one}]
       - id: release
@@ -51,10 +52,10 @@ machines:
         transition: {from: in_progress, to: pending}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReleaseTaskRequest"
+            $ref: "#/$defs/ReleaseTaskRequest"
         steps:
           - set: {field: assignedToId, value: null, description: Clear assignment so task returns to queue}
-          - emit: {event: released, data: {reason: $request.reason}, description: Emit a domain event recording the release and its reason}
+          - emit: {type: workflow.task.released, data: {reason: $request.reason}, description: Emit a domain event recording the release and its reason}
           - call: assignToQueue
           - call: setPriority
       - id: escalate
@@ -67,11 +68,11 @@ machines:
         transition: {from: [pending, in_progress], to: escalated}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/EscalateTaskRequest"
+            $ref: "#/$defs/EscalateTaskRequest"
         steps:
           - set: {field: escalatedAt, value: $now, description: Record when the task was escalated}
           - call: setPriority
-          - emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
+          - emit: {type: workflow.task.escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
       - id: de-escalate
         description: "POST /tasks/{taskId}/de-escalate — Returns an escalated task to the pending queue"
         guards:
@@ -80,11 +81,11 @@ machines:
         transition: {from: escalated, to: pending}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/DeEscalateTaskRequest"
+            $ref: "#/$defs/DeEscalateTaskRequest"
         steps:
           - call: assignToQueue
           - call: setPriority
-          - emit: {event: de-escalated, description: Emit a domain event recording the de-escalation}
+          - emit: {type: workflow.task.de-escalated, description: Emit a domain event recording the de-escalation}
       - id: cancel
         description: "POST /tasks/{taskId}/cancel — Supervisor cancels a task from any active state"
         guards:
@@ -95,10 +96,10 @@ machines:
         transition: {from: [pending, in_progress, escalated], to: cancelled}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/CancelTaskRequest"
+            $ref: "#/$defs/CancelTaskRequest"
         steps:
           - set: {field: cancelledAt, value: $now, description: Record when the task was cancelled}
-          - emit: {event: cancelled, data: {reason: $request.reason}, description: Emit a domain event recording the cancellation}
+          - emit: {type: workflow.task.cancelled, data: {reason: $request.reason}, description: Emit a domain event recording the cancellation}
       - id: reopen
         description: "POST /tasks/{taskId}/reopen — Supervisor returns a cancelled task to the pending queue"
         guards:
@@ -107,12 +108,12 @@ machines:
         transition: {from: cancelled, to: pending}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReopenTaskRequest"
+            $ref: "#/$defs/ReopenTaskRequest"
         steps:
           - set: {field: cancelledAt, value: null, description: Clear the cancellation timestamp on reopen}
           - call: assignToQueue
           - call: setPriority
-          - emit: {event: reopened, data: {reason: $request.reason}, description: Emit a domain event recording the reopen}
+          - emit: {type: workflow.task.reopened, data: {reason: $request.reason}, description: Emit a domain event recording the reopen}
       - id: await-client
         description: "POST /tasks/{taskId}/await-client — Pauses an in-progress task while waiting for a client response"
         guards:
@@ -121,11 +122,11 @@ machines:
         transition: {from: in_progress, to: awaiting_client}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AwaitClientRequest"
+            $ref: "#/$defs/AwaitClientRequest"
         steps:
           - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
           - call: scheduleClientTimeout
-          - emit: {event: awaiting_client, description: Emit a domain event recording the block}
+          - emit: {type: workflow.task.awaiting_client, description: Emit a domain event recording the block}
       - id: await-verification
         description: "POST /tasks/{taskId}/await-verification — Pauses an in-progress task while waiting for a verification result"
         guards:
@@ -134,11 +135,11 @@ machines:
         transition: {from: in_progress, to: awaiting_verification}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AwaitVerificationRequest"
+            $ref: "#/$defs/AwaitVerificationRequest"
         steps:
           - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
           - call: scheduleVerificationTimeout
-          - emit: {event: awaiting_verification, description: Emit a domain event recording the block}
+          - emit: {type: workflow.task.awaiting_verification, description: Emit a domain event recording the block}
       - id: resume
         description: "POST /tasks/{taskId}/resume — Resumes a blocked task, cancelling any active wait timers"
         guards:
@@ -149,7 +150,7 @@ machines:
           - set: {field: blockedAt, value: null, description: Clear the block timestamp on resume}
           - call: cancelClientTimeout
           - call: cancelVerificationTimeout
-          - emit: {event: resumed, description: Emit a domain event recording the resumption}
+          - emit: {type: workflow.task.resumed, description: Emit a domain event recording the resumption}
       - id: auto-resume
         description: "POST /tasks/{taskId}/auto-resume — System resumes a verification-blocked task when the timeout fires or a verification result arrives"
         guards:
@@ -158,11 +159,11 @@ machines:
         transition: {from: awaiting_verification, to: in_progress}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SystemResumeTaskRequest"
+            $ref: "#/$defs/SystemResumeTaskRequest"
         steps:
           - set: {field: blockedAt, value: null, description: Clear the block timestamp on system resume}
           - call: cancelVerificationTimeout
-          - emit: {event: system_resumed, data: {source: $request.source, result: $request.result}, description: Emit a domain event recording the automated resumption and its result}
+          - emit: {type: workflow.task.resumed, causationid: $request.causationid, description: Emit a domain event recording the automated resumption; causationid links to the triggering event}
       - id: sla-escalate
         description: "POST /tasks/{taskId}/sla-escalate — System escalates a task when an SLA timer fires (creation deadline, warning, or breach)"
         guards:
@@ -171,14 +172,14 @@ machines:
         transition: {from: [pending, in_progress, escalated], to: escalated}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SystemEscalateTaskRequest"
+            $ref: "#/$defs/SystemEscalateTaskRequest"
         steps:
           - if: $object.escalatedAt == null
             then: [{set: {field: escalatedAt, value: $now, description: "Record first escalation time; not overwritten on subsequent timer-triggered escalations"}}]
           - call: setPriority
           - if: $request.reason == "sla_deadline_exceeded"
-            then: [{emit: {event: sla_breached, data: {reason: $request.reason}, description: Emit a domain event recording the SLA deadline breach for federal compliance reporting}}]
-            else: [{emit: {event: auto_escalated, data: {reason: $request.reason}, description: Emit a domain event recording the automatic escalation}}]
+            then: [{emit: {type: workflow.task.sla_breached, data: {reason: $request.reason}, description: Emit a domain event recording the SLA deadline breach for federal compliance reporting}}]
+            else: [{emit: {type: workflow.task.escalated, data: {reason: $request.reason}, description: Emit a domain event recording the automatic escalation}}]
       - id: auto-cancel
         description: "POST /tasks/{taskId}/auto-cancel — System cancels a client-blocked task after 30 days without a response"
         guards:
@@ -187,7 +188,7 @@ machines:
         transition: {from: awaiting_client, to: cancelled}
         steps:
           - set: {field: cancelledAt, value: $now, description: Record when the task was automatically cancelled}
-          - emit: {event: auto_cancelled, data: {reason: client_unresponsive}, description: Emit a domain event recording the automatic cancellation}
+          - emit: {type: workflow.task.cancelled, data: {reason: client_unresponsive}, description: Emit a domain event recording the automatic cancellation}
       - id: submit-for-review
         description: "POST /tasks/{taskId}/submit-for-review — Worker submits a completed task to a supervisor for review and approval"
         guards:
@@ -197,7 +198,7 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: [in_progress, escalated], to: pending_review}
         steps:
-          - emit: {event: submitted_for_review, description: Emit a domain event recording the submission for review}
+          - emit: {type: workflow.task.submitted_for_review, description: Emit a domain event recording the submission for review}
       - id: approve
         description: "POST /tasks/{taskId}/approve — Supervisor approves a submitted task and records the final outcome"
         guards:
@@ -208,12 +209,12 @@ machines:
         transition: {from: pending_review, to: completed}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ApproveTaskRequest"
+            $ref: "#/$defs/ApproveTaskRequest"
         steps:
           - set: {field: completedAt, value: $now, description: Record when work was approved and completed}
           - set: {field: outcome, value: $request.outcome, description: Store the outcome from the supervisor's approval}
           - set: {field: completionNotes, value: $request.notes, description: Store optional notes from the supervisor}
-          - emit: {event: approved, data: {outcome: $request.outcome}, description: Emit a domain event recording the approval}
+          - emit: {type: workflow.task.approved, data: {outcome: $request.outcome}, description: Emit a domain event recording the approval}
       - id: return-to-worker
         description: "POST /tasks/{taskId}/return-to-worker — Supervisor sends a review-pending task back to the worker with feedback"
         guards:
@@ -224,9 +225,9 @@ machines:
         transition: {from: pending_review, to: in_progress}
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/ReturnToWorkerRequest"
+            $ref: "#/$defs/ReturnToWorkerRequest"
         steps:
-          - emit: {event: returned_to_worker, data: {reason: $request.reason}, description: Emit a domain event recording the return for revision}
+          - emit: {type: workflow.task.returned_to_worker, data: {reason: $request.reason}, description: Emit a domain event recording the return for revision}
       - id: assign
         description: "POST /tasks/{taskId}/assign — Supervisor reassigns a task to a specific caseworker or moves it to a different queue"
         guards:
@@ -236,11 +237,11 @@ machines:
           from: [pending, in_progress, escalated, awaiting_client, awaiting_verification, pending_review]
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/AssignTaskRequest"
+            $ref: "#/$defs/AssignTaskRequest"
         steps:
           - set: {field: assignedToId, value: $request.assignedToId, description: Assign the task to the specified caseworker}
           - set: {field: queueId, value: $request.queueId, description: Optionally move the task to a different queue}
-          - emit: {event: assigned, data: {assignedToId: $request.assignedToId, queueId: $request.queueId}, description: Emit a domain event recording the assignment}
+          - emit: {type: workflow.task.assigned, data: {assignedToId: $request.assignedToId, queueId: $request.queueId}, description: Emit a domain event recording the assignment}
       - id: set-priority
         description: "POST /tasks/{taskId}/set-priority — Supervisor manually overrides the task priority"
         guards:
@@ -250,19 +251,19 @@ machines:
           from: [pending, in_progress, escalated, awaiting_client, awaiting_verification, pending_review]
         schema:
           request:
-            $ref: "./schemas/workflow-state-machine-schema.yaml#/$defs/SetPriorityRequest"
+            $ref: "#/$defs/SetPriorityRequest"
         steps:
           - set: {field: priority, value: $request.priority, description: Override the task priority}
-          - emit: {event: priority_changed, data: {priority: $request.priority, reason: $request.reason}, description: Emit a domain event recording the priority change}
+          - emit: {type: workflow.task.priority_changed, data: {priority: $request.priority, reason: $request.reason}, description: Emit a domain event recording the priority change}
     events:
-      - name: workflow.task.created
+      - type: workflow.task.created
         description: Route and prioritize a new task, then schedule its 72-hour creation deadline
         transition: {}
         steps:
           - call: assignToQueue
           - call: setPriority
           - call: scheduleCreationDeadline
-      - name: workflow.task.updated
+      - type: workflow.task.updated
         description: Re-evaluate priority and queue assignment when relevant fields change; reschedule SLA timers when the SLA deadline is set
         transition: {}
         steps:
@@ -272,27 +273,27 @@ machines:
             then: [{call: assignToQueue}]
           - if: $this.data.changes.exists(c, c.field == "slaDeadline") && $object.slaDeadline != null
             then: [{call: scheduleSlaWarning}, {call: scheduleSlaBreachTimer}]
-      - name: workflow.creation_deadline
+      - type: workflow.creation_deadline
         description: Auto-escalate after 72-business-hour creation deadline
         steps:
           - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: deadline_exceeded}, description: Auto-escalate after 72h creation deadline}
-      - name: workflow.sla_warning
+      - type: workflow.sla_warning
         description: Auto-escalate 48 hours before SLA deadline
         steps:
           - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: sla_deadline_approaching}, description: Auto-escalate 48h before SLA deadline}
-      - name: workflow.sla_breach
+      - type: workflow.sla_breach
         description: Escalate and record SLA breach at deadline
         steps:
           - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: sla_deadline_exceeded}, description: Escalate and record SLA breach at deadline}
-      - name: workflow.client_timeout
+      - type: workflow.client_timeout
         description: Auto-cancel after 30 calendar days of client unresponsiveness
         steps:
           - call: {POST: workflow/tasks/$this.subject/auto-cancel, body: {reason: client_unresponsive}, description: Auto-cancel after 30 days client unresponsive}
-      - name: workflow.verification_timeout
+      - type: workflow.verification_timeout
         description: Auto-resume after 7 calendar days waiting on verification
         steps:
-          - call: {POST: workflow/tasks/$this.subject/auto-resume, body: {source: timeout, result: verification_timeout}, description: Auto-resume after 7 days verification timeout}
-      - name: eligibility.application.expedited
+          - call: {POST: workflow/tasks/$this.subject/auto-resume, body: {causationid: $this.id}, description: Auto-resume after 7 days verification timeout; passes timer event ID as causationid}
+      - type: eligibility.application.expedited
         description: Flag the intake review task as expedited and switch it to the 7-day SLA when SNAP expedited criteria are confirmed (7 CFR § 273.2(i))
         context:
           - task: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
@@ -304,11 +305,11 @@ machines:
                   body:
                     isExpedited: true
                     slaType: snap_expedited
-      - name: intake.application.submitted
+      - type: intake.application.submitted
         description: Create an application review task when a new application is submitted
         steps:
           - call: {POST: workflow/tasks, body: {taskType: application_review, name: Application review, status: pending, subjectType: application, subjectId: $this.subject}, description: Create an intake review task when an application is submitted}
-      - name: intake.application.closed
+      - type: intake.application.closed
         description: Complete open tasks for the application when intake closes; handles direct close, supervisor-approved close, and auto-determination paths
         context:
           - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
@@ -342,7 +343,7 @@ machines:
                   body:
                     outcome: application_closed
                   description: Complete the supervisor approval task
-      - name: intake.determination.approval_needed
+      - type: intake.determination.approval_needed
         description: Move the caseworker's review task to pending_review and create a supervisor approval task when a determination requires sign-off
         context:
           - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
@@ -361,7 +362,7 @@ machines:
                 subjectType: application
                 subjectId: $this.subject
               description: Create a supervisor approval task
-      - name: intake.determination.rejected
+      - type: intake.determination.rejected
         description: Return the caseworker's review task to in_progress and complete the supervisor approval task when a determination is rejected
         context:
           - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
@@ -453,3 +454,145 @@ procedures:
     description: "Cancel the verification timeout timer; idempotent, safe to call even if already fired."
     call: cancelWorkflowTimer
     with: {timerType: verification_timeout}
+
+$defs:
+  ApproveTaskRequest:
+    type: object
+    required:
+      - outcome
+    properties:
+      outcome:
+        type: string
+        description: Completion outcome (e.g., approved, denied)
+      notes:
+        type: string
+        description: Optional notes from the supervisor
+
+  AssignTaskRequest:
+    type: object
+    required:
+      - assignedToId
+    properties:
+      assignedToId:
+        type: string
+        format: uuid
+        description: ID of the caseworker to assign the task to
+      queueId:
+        type: string
+        format: uuid
+        description: Optional queue to move the task to
+
+  AwaitClientRequest:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional context about what action is being awaited from the client
+
+  AwaitVerificationRequest:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional context about what external verification is pending
+
+  CancelTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the task is being cancelled
+
+  CompleteTaskRequest:
+    type: object
+    required:
+      - outcome
+    properties:
+      outcome:
+        type: string
+        description: Completion outcome (e.g., approved, denied)
+      notes:
+        type: string
+        description: Optional notes about the completion
+      createFollowUp:
+        type: boolean
+        description: When true, a follow-up task is automatically created
+
+  DeEscalateTaskRequest:
+    type: object
+    properties:
+      notes:
+        type: string
+        description: Optional notes about the de-escalation
+
+  EscalateTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the task is being escalated
+
+  ReleaseTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the task is being released
+
+  ReopenTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the cancelled task is being reopened
+
+  ReturnToWorkerRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the work is being returned for revision
+
+  SetPriorityRequest:
+    type: object
+    required:
+      - priority
+    properties:
+      priority:
+        type: integer
+        minimum: 1
+        maximum: 4
+        description: "New priority level (1=expedited, 2=high, 3=normal, 4=low)"
+      reason:
+        type: string
+        description: Optional reason for the priority change
+
+  SystemEscalateTaskRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the task is being automatically escalated (deadline_exceeded, sla_deadline_approaching, sla_deadline_exceeded)
+
+  SystemResumeTaskRequest:
+    type: object
+    properties:
+      causationid:
+        type: string
+        format: uuid
+        description: >
+          ID of the event that triggered this resumption (e.g., the
+          workflow.verification_timeout or data_exchange.call.completed event).
+          Propagated to the emitted workflow.task.resumed event envelope.

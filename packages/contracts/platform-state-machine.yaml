@@ -16,7 +16,7 @@ procedures:
     description: "Request a time-based callback from the scheduling service. Pass fireAfter (duration) or fireAt (absolute timestamp); add fireOffset to fire before a target time; add calendarType: business to count business days."
     parameters: [timerId, callback, fireAfter, fireAt, fireOffset, calendarType]
     emit:
-      event: scheduling.timer.requested
+      type: scheduling.timer.requested
       data:
         timerId: $params.timerId
         fireAfter: $params.fireAfter
@@ -28,4 +28,4 @@ procedures:
   - id: cancelTimer
     description: Cancel a pending timer by its ID. No-ops if the timer has already fired or does not exist.
     parameters: [timerId]
-    emit: {event: scheduling.timer.cancelled, data: {timerId: $params.timerId}}
+    emit: {type: scheduling.timer.cancelled, data: {timerId: $params.timerId}}

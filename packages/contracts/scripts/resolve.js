@@ -112,6 +112,95 @@ Examples:
 }
 
 // =============================================================================
+// Event Type Prefix Injection
+// =============================================================================
+
+/**
+ * Prepend a state-specific prefix to all event type strings in a state machine spec.
+ * Updates emit.type in steps and type in events[] entries.
+ */
+function injectPrefixInStateMachine(spec, prefix) {
+  const copy = JSON.parse(JSON.stringify(spec));
+  if (!Array.isArray(copy.machines)) return copy;
+
+  for (const machine of copy.machines) {
+    if (Array.isArray(machine.events)) {
+      for (const evt of machine.events) {
+        if (typeof evt.type === 'string') evt.type = prefix + evt.type;
+      }
+    }
+    prefixEmitStepsInItems(machine.actions || [], prefix);
+    prefixEmitStepsInItems(machine.events || [], prefix);
+    prefixEmitStepsInItems(machine.procedures || [], prefix);
+  }
+  return copy;
+}
+
+function prefixEmitStepsInItems(items, prefix) {
+  for (const item of items) {
+    prefixEmitInSteps(item.steps || [], prefix);
+    if (item.then) prefixEmitInSteps(item.then, prefix);
+    if (item.do) prefixEmitInSteps(item.do, prefix);
+  }
+}
+
+function prefixEmitInSteps(steps, prefix) {
+  for (const step of steps) {
+    if (step.emit && typeof step.emit.type === 'string') {
+      step.emit.type = prefix + step.emit.type;
+    }
+    if (step.then) prefixEmitInSteps(step.then, prefix);
+    if (step.else) prefixEmitInSteps(step.else, prefix);
+    if (step.do) prefixEmitInSteps(step.do, prefix);
+    if (step.forEach?.do) prefixEmitInSteps(step.forEach.do, prefix);
+    if (step.match && typeof step.match === 'object') {
+      for (const matchBranch of Object.values(step.match)) {
+        if (Array.isArray(matchBranch)) prefixEmitInSteps(matchBranch, prefix);
+      }
+    }
+  }
+}
+
+/**
+ * Prepend a state-specific prefix to all event type strings in an AsyncAPI spec.
+ * Updates channel addresses, message names, and payload type consts.
+ */
+function injectPrefixInAsyncApi(spec, prefix) {
+  const copy = JSON.parse(JSON.stringify(spec));
+
+  if (copy.channels && typeof copy.channels === 'object') {
+    const updatedChannels = {};
+    for (const [addr, channel] of Object.entries(copy.channels)) {
+      const newAddr = prefix + addr;
+      if (typeof channel.address === 'string') channel.address = prefix + channel.address;
+      updatedChannels[newAddr] = channel;
+    }
+    copy.channels = updatedChannels;
+  }
+
+  if (copy.components?.messages && typeof copy.components.messages === 'object') {
+    for (const msg of Object.values(copy.components.messages)) {
+      if (typeof msg.name === 'string') msg.name = prefix + msg.name;
+    }
+  }
+
+  if (copy.components?.schemas && typeof copy.components.schemas === 'object') {
+    for (const schema of Object.values(copy.components.schemas)) {
+      if (Array.isArray(schema.allOf)) {
+        for (const allOfItem of schema.allOf) {
+          const typeConst = allOfItem?.properties?.type?.const;
+          if (typeof typeConst === 'string') {
+            allOfItem.properties.type.const = prefix + typeConst;
+          }
+        }
+      }
+    }
+  }
+
+  return copy;
+}
+
+// =============================================================================
 // File Collection
 // =============================================================================
 
@@ -885,6 +974,20 @@ async function main() {
     allWarnings = allWarnings.concat(enumWarnings);
   }
 
+  // Inject x-event-type-prefix into event type strings in state machine and AsyncAPI files
+  if (overlayConfig?.['x-event-type-prefix']) {
+    const prefix = overlayConfig['x-event-type-prefix'];
+    for (const [relativePath, spec] of currentResults) {
+      if (relativePath.endsWith('-state-machine.yaml')) {
+        currentResults.set(relativePath, injectPrefixInStateMachine(spec, prefix));
+        console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
+      } else if (relativePath.match(/.*-asyncapi\.yaml$/)) {
+        currentResults.set(relativePath, injectPrefixInAsyncApi(spec, prefix));
+        console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
+      }
+    }
+  }
+
   // Resolve x-relationship annotations (after overlays, before env filtering)
   {
     const schemaIndex = buildSchemaIndex(currentResults);
@@ -1033,7 +1136,9 @@ export {
   buildEnumSourceIndex,
   findEnumSources,
   parseEnumSource,
-  applyEnumSourceInjections
+  applyEnumSourceInjections,
+  injectPrefixInStateMachine,
+  injectPrefixInAsyncApi
 };
 
 // Run main when executed directly

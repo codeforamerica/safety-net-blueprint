@@ -157,6 +157,24 @@ test('config tests', async (t) => {
     assert.strictEqual(warnings.length, 0);
   });
 
+  await t.test('validateConfig - accepts x-event-type-prefix as a string', () => {
+    const { errors, warnings } = validateConfig({ 'x-event-type-prefix': 'org.example.' });
+    assert.strictEqual(errors.length, 0);
+    assert.strictEqual(warnings.length, 0);
+  });
+
+  await t.test('validateConfig - accepts x-event-type-prefix with empty string', () => {
+    const { errors, warnings } = validateConfig({ 'x-event-type-prefix': '' });
+    assert.strictEqual(errors.length, 0);
+    assert.strictEqual(warnings.length, 0);
+  });
+
+  await t.test('validateConfig - errors when x-event-type-prefix is not a string', () => {
+    const { errors } = validateConfig({ 'x-event-type-prefix': 42 });
+    assert.strictEqual(errors.length, 1);
+    assert.ok(errors[0].includes('x-event-type-prefix'));
+  });
+
   // ===========================================================================
   // getConfigDefaults
   // ===========================================================================
@@ -169,5 +187,10 @@ test('config tests', async (t) => {
       'x-search': { style: 'simple' },
       'x-relationship': { style: 'links-only' }
     });
+  });
+
+  await t.test('getConfigDefaults - does not include x-event-type-prefix (no default means no prefix)', () => {
+    const defaults = getConfigDefaults();
+    assert.strictEqual('x-event-type-prefix' in defaults, false);
   });
 });

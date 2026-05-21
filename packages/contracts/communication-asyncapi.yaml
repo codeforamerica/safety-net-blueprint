@@ -1,0 +1,70 @@
+asyncapi: 3.0.0
+info:
+  title: Communication Domain Events
+  version: 1.0.0
+  description: |
+    Event catalog for the Communication domain. All events are CloudEvents 1.0
+    envelopes extending the base Event schema.
+
+    Event types follow the convention: communication.{entity}.{action}.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+
+channels:
+  communication.notice.sent:
+    address: communication.notice.sent
+    messages:
+      noticeSent:
+        $ref: '#/components/messages/NoticeSentMessage'
+
+components:
+  messages:
+    NoticeSentMessage:
+      name: communication.notice.sent
+      summary: Emitted when Communication sends a notice to a client.
+      payload:
+        $ref: '#/components/schemas/NoticeSentEvent'
+
+  schemas:
+    # subject: noticeId
+    NoticeSentEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: communication.notice.sent
+            data:
+              $ref: '#/components/schemas/NoticeSentData'
+
+    NoticeSentData:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: >
+            Template identifier for the notice. Determines which template Communication
+            used to generate the notice content. States may overlay the enum to add
+            program-specific notice types.
+          enum:
+            - document_request_citizenship_verification
+            - document_request_identity_verification
+            - document_request_immigration_verification
+            - document_request_income_verification
+            - document_request_residency_verification
+        metadata:
+          type: object
+          description: >
+            Domain-keyed correlation context. Keys are domain names; values are
+            arbitrary objects defined by the triggering domain. Treated as opaque
+            by Communication — echoed back verbatim from the triggering event.
+            Example: {"intake": {"verificationId": "uuid-of-the-verification"}}
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          nullable: true
