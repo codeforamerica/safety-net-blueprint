@@ -35,7 +35,11 @@ else
 fi
 
 step "Running Spectral lint"
-if npx spectral lint 'packages/contracts/*-openapi.yaml' --ignore-unknown-format 2>&1; then
+for f in packages/contracts/*-openapi.yaml; do
+  echo "  Linting $f..."
+  npx spectral lint "$f" --ignore-unknown-format --verbose 2>&1 | grep -E "Error running|Cannot read" || true
+done
+if npx spectral lint 'packages/contracts/*-openapi.yaml' --ignore-unknown-format --verbose 2>&1; then
   pass "Spectral lint passed"
 else
   fail "Spectral lint failed"
