@@ -1,27 +1,24 @@
 # Validation Guide
 
-> **Status: Draft**
-
 ## Quick Start
 
 ```bash
-npm run validate              # Run all validations (base specs)
+npm run validate              # Run all validations (base specs: syntax, lint, patterns)
 npm run validate:syntax       # OpenAPI syntax and examples only
 npm run validate:patterns     # API design patterns only
+npm run validate:lint         # Redocly lint only
+npm run validate:resolved     # Validate resolved output (run after npm run resolve)
 ```
+
+For a description of all validation layers and the tools used, see [Contracts Build and Validation Pipeline](../architecture/contracts-pipeline.md).
 
 ## State-Specific Validation
 
-When working with state overlays, resolve the overlay and check for target warnings:
+When working with state overlays, resolve the overlay and validate the resolved output:
 
 ```bash
 npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
-```
-
-The resolver warns about invalid targets (e.g., paths that don't exist in the base schema). After resolving, validate the base specs to ensure no regressions:
-
-```bash
-npm run validate
+npm run validate:resolved
 ```
 
 ## Three Validation Layers
@@ -32,7 +29,7 @@ npm run validate
 - All `$ref` references resolve
 - Examples match their schemas
 
-### 2. Spectral Linting
+### 2. Lint (`validate:lint`)
 
 Run from the schemas package: `npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts`
 
@@ -88,12 +85,12 @@ Error: price must be number
 
 ## Customizing Rules
 
-### Spectral (`.spectral.yaml`)
+### Lint (`.redocly.yaml`)
 
 ```yaml
 rules:
   info-contact: off              # Disable rule
-  post-must-return-201: warn     # Change severity
+  rule/post-must-return-201: warn  # Change severity
 ```
 
 ### Pattern Validation

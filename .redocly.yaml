@@ -1,0 +1,137 @@
+# Redocly CLI OpenAPI Linting Configuration
+# Enforces API design patterns and consistency across all specs.
+# See docs/architecture/contracts-pipeline.md for the rationale behind tool choice.
+
+rules:
+  # =============================================================================
+  # HTTP Method Response Codes
+  # =============================================================================
+
+  # POST must return 201 Created
+  # Checks Object.keys(responses) for POST operations
+  rule/post-must-return-201:
+    subject:
+      type: Responses
+    where:
+      - subject:
+          type: Operation
+          matchParentKeys: '^post$'
+        assertions:
+          defined: true
+    assertions:
+      required: ['201']
+    message: POST operations must return 201 Created
+    severity: error
+
+  # DELETE must return 204 No Content
+  rule/delete-must-return-204:
+    subject:
+      type: Responses
+    where:
+      - subject:
+          type: Operation
+          matchParentKeys: '^delete$'
+        assertions:
+          defined: true
+    assertions:
+      required: ['204']
+    message: DELETE operations must return 204 No Content
+    severity: error
+
+  # =============================================================================
+  # Operation ID Conventions
+  # =============================================================================
+
+  # Operation IDs should use camelCase
+  rule/operation-id-camel-case:
+    subject:
+      type: Operation
+      property: operationId
+    assertions:
+      pattern: /^[a-z][a-zA-Z0-9]*$/
+    message: Operation IDs must use camelCase
+    severity: error
+
+  # =============================================================================
+  # Request/Response Content Type
+  # =============================================================================
+
+  # All request bodies should use application/json
+  rule/request-body-json-only:
+    subject:
+      type: MediaTypesMap
+    where:
+      - subject:
+          type: RequestBody
+        assertions:
+          defined: true
+    assertions:
+      required: ['application/json']
+    message: Request bodies must use application/json
+    severity: error
+
+  # All responses with a body should use application/json
+  # Note: 204 responses have no content field, so this rule never fires for them.
+  # /events/stream (SSE) is excluded via filterOutParentKeys on PathItem.
+  rule/response-body-json-only:
+    subject:
+      type: MediaTypesMap
+    where:
+      - subject:
+          type: Response
+        assertions:
+          defined: true
+      - subject:
+          type: PathItem
+          filterOutParentKeys: ['/events/stream']
+        assertions:
+          defined: true
+    assertions:
+      required: ['application/json']
+    message: Response bodies must use application/json
+    severity: error
+
+apis:
+  # All base OpenAPI specs — default rules apply
+  applications:
+    root: packages/contracts/applications-openapi.yaml
+  case-management:
+    root: packages/contracts/case-management-openapi.yaml
+  communication:
+    root: packages/contracts/communication-openapi.yaml
+  data-exchange-adapter:
+    root: packages/contracts/data-exchange-adapter-openapi.yaml
+  data-exchange:
+    root: packages/contracts/data-exchange-openapi.yaml
+  eligibility-adapter:
+    root: packages/contracts/eligibility-adapter-openapi.yaml
+    rules:
+      # All POST operations are RPC-style evaluation endpoints (not resource creation)
+      # and correctly return 200 with a computation result, not 201.
+      rule/post-must-return-201: off
+  eligibility:
+    root: packages/contracts/eligibility-openapi.yaml
+  households:
+    root: packages/contracts/households-openapi.yaml
+  incomes:
+    root: packages/contracts/incomes-openapi.yaml
+  intake:
+    root: packages/contracts/intake-openapi.yaml
+  persons:
+    root: packages/contracts/persons-openapi.yaml
+  platform:
+    root: packages/contracts/platform-openapi.yaml
+  scheduling:
+    root: packages/contracts/scheduling-openapi.yaml
+  search:
+    root: packages/contracts/search-openapi.yaml
+  users:
+    root: packages/contracts/users-openapi.yaml
+  workflow:
+    root: packages/contracts/workflow-openapi.yaml
+  document-management:
+    root: packages/contracts/document-management-openapi.yaml
+    rules:
+      # Upload endpoints use multipart/form-data; content endpoint returns raw bytes.
+      rule/request-body-json-only: off
+      rule/response-body-json-only: off
