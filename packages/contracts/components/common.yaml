@@ -2,6 +2,8 @@
 #
 # Schemas: EmployerInfo, Language, Program, Signature
 #
+# See also: schemas/common/employment.yaml (canonical EmployerInfo definition)
+#
 # See also:
 #   contact.yaml  — Address, Email, PhoneNumber
 #   identity.yaml — Name, SocialSecurityNumber
@@ -11,24 +13,7 @@ Domain:
   $ref: "../schemas/common/enums.yaml#/$defs/Domain"
 
 EmployerInfo:
-  type: object
-  description: Employer identification and contact information.
-  additionalProperties: false
-  properties:
-    name:
-      type: string
-      description: Employer or business name.
-      maxLength: 200
-    phone:
-      $ref: "./contact.yaml#/PhoneNumber"
-      description: Employer phone number.
-    address:
-      $ref: "./contact.yaml#/Address"
-      description: Employer address.
-    identificationNumber:
-      type: string
-      description: Employer Identification Number (EIN).
-      maxLength: 50
+  $ref: "../schemas/common/employment.yaml#/$defs/EmployerInfo"
 
 Language:
   $ref: "../schemas/common/enums.yaml#/$defs/Language"

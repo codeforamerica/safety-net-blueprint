@@ -144,8 +144,8 @@ components:
     MemberContext:
       description: >
         A household member with their demographic data and associated income,
-        expenses, and assets. Used as the evaluation payload passed to the
-        adapter for each member.
+        expenses, assets, employment, and health coverage. Used as the evaluation
+        payload passed to the adapter for each member.
       allOf:
         - $ref: "./schemas/common/member.yaml"
         - type: object
@@ -165,6 +165,16 @@ components:
               items:
                 $ref: "./schemas/common/assets.yaml"
               description: Asset records for this member.
+            employment:
+              type: array
+              items:
+                $ref: "./schemas/common/employment.yaml"
+              description: Employment records for this member.
+            healthCoverage:
+              type: array
+              items:
+                $ref: "./schemas/common/health-coverage.yaml"
+              description: Health coverage records for this member.
 
     ElectronicCheckResult:
       $ref: "./schemas/common/data-exchange.yaml#/$defs/ServiceCallResult"
