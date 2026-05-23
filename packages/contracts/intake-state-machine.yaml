@@ -130,7 +130,7 @@ machines:
               as: member
             do:
               - forEach:
-                  in: $member.programsApplyingFor
+                  in: $member.programs
                   as: program
                 do:
                   - call: {POST: eligibility/determinations/decisions, body: {determinationId: $this.subject, applicationId: $this.data.applicationId, memberId: $member.id, program: $program, status: pending}}

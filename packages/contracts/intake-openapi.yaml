@@ -625,49 +625,30 @@ components:
     # ---------------------------------------------------------------------------
 
     ApplicationMemberWritable:
-      type: object
       description: Client-writable fields for an application member.
-      properties:
-        roles:
-          type: array
-          description: Roles this person plays in the application.
-          items:
-            type: string
-            enum:
-              - primary_applicant
-              - household_member
-              - non_applying_member
-              - authorized_representative
-              - absent_parent
-        programsApplyingFor:
-          type: array
-          description: Programs this member is applying for. Subset of the application's programs.
-          items:
-            type: string
-            enum:
-              - snap
-              - medicaid
-              - tanf
-        citizenshipStatus:
-          type: string
-          description: Citizenship or immigration status for this member.
-          enum:
-            - citizen
-            - permanent_resident
-            - qualified_non_citizen
-            - undocumented
-            - other
-        immigrationInfo:
-          $ref: "./components/identity.yaml#/ImmigrationInfo"
-          description: Immigration document details. Required when citizenshipStatus is not citizen and the member is applying for Medicaid.
-        personId:
-          type: string
-          format: uuid
-          nullable: true
-          description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
-          x-relationship:
-            resource: Person
-            domain: client-management
+      allOf:
+        - $ref: "./schemas/common/member.yaml"
+        - type: object
+          properties:
+            roles:
+              type: array
+              description: Roles this person plays in the application.
+              items:
+                type: string
+                enum:
+                  - primary_applicant
+                  - household_member
+                  - non_applying_member
+                  - authorized_representative
+                  - absent_parent
+            personId:
+              type: string
+              format: uuid
+              nullable: true
+              description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
+              x-relationship:
+                resource: Person
+                domain: client-management
 
     ApplicationMember:
       allOf:
@@ -1103,10 +1084,10 @@ components:
         applicationId: 00000004-0000-4000-8000-000000000001
         roles:
           - primary_applicant
-        programsApplyingFor:
+        programs:
           - snap
           - medicaid
-        citizenshipStatus: citizen
+        citizenshipStatus: us_citizen
         createdAt: "2026-04-01T09:00:00Z"
         updatedAt: "2026-04-01T09:00:00Z"
 
