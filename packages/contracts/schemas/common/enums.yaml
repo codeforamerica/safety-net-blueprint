@@ -35,6 +35,11 @@ $defs:
       Not all values apply to all contexts — hourly and daily are typical
       for income; weekly through yearly are typical for expenses.
 
+  Language:
+    type: string
+    description: Preferred language (BCP 47 language tag).
+    pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+
   Program:
     type: string
     enum:

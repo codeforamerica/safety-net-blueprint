@@ -56,7 +56,7 @@ $defs:
         maxLength: 200
         description: Human-readable name (e.g., "SSA Composite via FDSH").
       serviceType:
-        $ref: "schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+        $ref: "schemas/common/data-exchange.yaml#/$defs/ServiceType"
       defaultCallMode:
         type: string
         description: Default call mode for submissions against this service. Can be overridden per call.

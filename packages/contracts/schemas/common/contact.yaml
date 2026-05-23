@@ -1,0 +1,57 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/contact.yaml"
+title: Contact
+description: >
+  Shared contact schemas used across domains. Referenced by OpenAPI specs,
+  state machine schemas, and event schemas.
+
+$defs:
+  Address:
+    type: object
+    description: Residential or mailing address used to determine eligibility.
+    additionalProperties: false
+    required:
+      - addressLine1
+      - city
+      - stateProvince
+      - postalCode
+    properties:
+      addressLine1:
+        type: string
+        description: Primary street address line.
+        minLength: 1
+        maxLength: 150
+      addressLine2:
+        type: string
+        description: Secondary address line such as apartment or unit.
+        maxLength: 150
+      city:
+        type: string
+        description: City or locality of residence.
+        minLength: 1
+        maxLength: 100
+      stateProvince:
+        type: string
+        description: State, province, or region of residence.
+        minLength: 1
+        maxLength: 100
+      postalCode:
+        type: string
+        description: Postal or ZIP code.
+        minLength: 3
+        maxLength: 20
+      county:
+        type: string
+        description: County or equivalent administrative region.
+        maxLength: 100
+
+  Email:
+    type: string
+    format: email
+    description: Email address.
+    maxLength: 320
+
+  PhoneNumber:
+    type: string
+    description: Phone number in international or local format.
+    pattern: "^\\+?[0-9 .\\-()]{7,20}$"

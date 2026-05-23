@@ -534,5 +534,5 @@ components:
         - timed_out
 
     ServiceType:
-      $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+      $ref: "./schemas/common/data-exchange.yaml#/$defs/ServiceType"
 

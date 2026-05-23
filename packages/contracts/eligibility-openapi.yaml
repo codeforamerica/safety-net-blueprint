@@ -304,10 +304,10 @@ components:
         the application was withdrawn before determination completed.
 
     DecisionStatus:
-      $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionStatus"
+      $ref: "./schemas/common/eligibility.yaml#/$defs/DecisionStatus"
 
     DecisionPath:
-      $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionPath"
+      $ref: "./schemas/common/eligibility.yaml#/$defs/DecisionPath"
 
     ElectronicCheckSummary:
       type: object

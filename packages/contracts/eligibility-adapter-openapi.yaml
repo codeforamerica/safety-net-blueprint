@@ -167,14 +167,14 @@ components:
               description: Asset records for this member.
 
     ElectronicCheckResult:
-      $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceCallResult"
+      $ref: "./schemas/common/data-exchange.yaml#/$defs/ServiceCallResult"
 
     VerificationSummary:
       description: >
         A verification summary as passed by the intake domain. Extends the common
         shape with the member identifier from the intake domain.
       allOf:
-        - $ref: "./schemas/common/intake-common.yaml#/$defs/VerificationSummary"
+        - $ref: "./schemas/common/intake.yaml#/$defs/VerificationSummary"
         - type: object
           properties:
             memberId:
@@ -257,10 +257,10 @@ components:
               $ref: "./components/common.yaml#/Program"
               description: The program this decision applies to.
             status:
-              $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionStatus"
+              $ref: "./schemas/common/eligibility.yaml#/$defs/DecisionStatus"
               description: The eligibility outcome.
             path:
-              $ref: "./schemas/common/eligibility-common.yaml#/$defs/DecisionPath"
+              $ref: "./schemas/common/eligibility.yaml#/$defs/DecisionPath"
               description: How the decision was reached.
             denialReasonCode:
               type: string

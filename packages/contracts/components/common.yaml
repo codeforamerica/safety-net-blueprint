@@ -1,6 +1,6 @@
 # Common domain schemas shared across multiple APIs
 #
-# Schemas: EmployerInfo, Language, PlatformEvent, Program, Signature
+# Schemas: EmployerInfo, Language, Program, Signature
 #
 # See also:
 #   contact.yaml  — Address, Email, PhoneNumber
@@ -31,9 +31,7 @@ EmployerInfo:
       maxLength: 50
 
 Language:
-  type: string
-  description: Preferred language (BCP 47 language tag).
-  pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+  $ref: "../schemas/common/enums.yaml#/$defs/Language"
 
 Program:
   $ref: "../schemas/common/enums.yaml#/$defs/Program"
