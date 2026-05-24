@@ -28,6 +28,8 @@ tags:
     description: Manage public assistance applications.
   - name: Application Review
     description: Composite read-only context view assembled server-side for the caseworker review workflow.
+  - name: Application Review Progress
+    description: Per-section review progress tracking. Upsert entries to track caseworker progress through each section.
   - name: Household Info
     description: Household-level data for an application (shelter costs, utilities, composition).
   - name: Interviews
@@ -384,6 +386,83 @@ paths:
                 $ref: "#/components/schemas/ReviewContext"
         "404":
           $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/review-progress:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: List review progress
+      description: >
+        Returns all review-progress entries for this application. Optionally filter
+        by section and/or memberId. Always returns the full list — no pagination.
+      operationId: listApplicationReviewProgress
+      tags:
+        - Application Review Progress
+      parameters:
+        - name: section
+          in: query
+          schema:
+            type: string
+            enum:
+              - assets
+              - contact
+              - demographics
+              - employment
+              - expenses
+              - health-coverage
+              - household
+              - identity
+              - income
+          description: Filter by review section.
+        - name: memberId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by member ID.
+      responses:
+        "200":
+          description: Review progress entries retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgressList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Upsert a review progress entry
+      description: >
+        Creates or updates the review-progress entry identified by the (section, memberId)
+        composite key. If no matching entry exists it is created; if one exists it is updated.
+        Omit memberId for household-level sections.
+      operationId: upsertApplicationReviewProgress
+      tags:
+        - Application Review Progress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewProgressEntry"
+      responses:
+        "200":
+          description: Review progress entry upserted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgressEntry"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
@@ -2196,6 +2275,16 @@ components:
         - status
       additionalProperties: true
       properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        applicationId:
+          type: string
+          format: uuid
+          readOnly: true
+          x-relationship:
+            resource: Application
         section:
           type: string
           description: The review section this entry covers. Baseline taxonomy is extensible via overlay.
@@ -2224,6 +2313,25 @@ components:
             - in_progress
             - complete
             - flagged
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    ReviewProgressList:
+      type: object
+      description: A non-paginated list of review-progress entries for an application.
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewProgressEntry"
 
     VerificationDocumentEvidence:
       type: object
