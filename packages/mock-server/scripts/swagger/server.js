@@ -212,7 +212,9 @@ async function startSwaggerServer() {
           url: `/${api.name}/spec.json`,
           displayRequestDuration: true,
           persistAuthorization: true,
-          tryItOutEnabled: true
+          tryItOutEnabled: true,
+          tagsSorter: 'original',
+          operationsSorter: 'alpha'
         }
       };
       

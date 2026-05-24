@@ -14,9 +14,10 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
-import { findAll, update, registerCollectionDefaults } from './database-manager.js';
+import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName } from './collection-utils.js';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Determine if a path is a flat collection endpoint (no path parameters).
@@ -69,23 +70,27 @@ function isSingletonSubResource(path) {
 }
 
 /**
- * Extract the parent path parameter name from a sub-resource path.
+ * Extract the immediate parent path parameter name from a sub-resource path.
+ * Uses the last {param} in the path, which is the direct parent's ID.
  * e.g., /intake/applications/{applicationId}/documents → 'applicationId'
+ * e.g., /intake/applications/{applicationId}/members/{memberId}/incomes → 'memberId'
  */
 function extractParentParam(path) {
-  const match = path.match(/\{([^}]+)\}/);
-  return match ? match[1] : null;
+  const matches = [...path.matchAll(/\{([^}]+)\}/g)];
+  return matches.length > 0 ? matches[matches.length - 1][1] : null;
 }
 
 /**
  * Derive the parent collection name from a sub-resource path.
- * Returns the last non-param segment BEFORE the sub-resource segment.
+ * Strips the sub-resource segment and applies deriveCollectionName to the parent path,
+ * so nested sub-resources resolve to the correct DB collection.
  * e.g., /intake/applications/{applicationId}/documents → 'applications'
+ * e.g., /intake/applications/{applicationId}/members/{memberId}/incomes → 'application-members'
  */
 function deriveParentCollection(path, basePath) {
-  const resourcePath = basePath && path.startsWith(basePath) ? path.slice(basePath.length) : path;
-  const segments = resourcePath.split('/').filter(s => s && !s.startsWith('{'));
-  return segments.length >= 2 ? segments[segments.length - 2] : '';
+  const lastSlash = path.lastIndexOf('/');
+  const parentPath = path.slice(0, lastSlash);
+  return deriveCollectionName(parentPath, basePath);
 }
 
 /**
@@ -114,18 +119,15 @@ function createSingletonGetHandler(endpoint, parentParam, parentField) {
 
 /**
  * Create a PATCH handler for a singleton sub-resource.
- * Resolves the resource by parent field, then applies the standard update.
+ * Upsert semantics: creates the record if it doesn't exist, updates it if it does.
+ * Singleton sub-resources have no POST endpoint, so PATCH must serve as the creation
+ * path for resources not auto-created by the rules engine (e.g., household-info).
  */
 function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parentField) {
   const resourceLabel = endpoint.collectionName.replace(/s$/, '');
   return (req, res) => {
     try {
       const parentId = req.params[parentParam];
-      const { items } = findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
-      if (items.length === 0) {
-        return res.status(404).json({ code: 'NOT_FOUND', message: `${capitalize(resourceLabel)} not found` });
-      }
-      const existing = items[0];
 
       if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
         return res.status(400).json({ code: 'BAD_REQUEST', message: 'Request body must be a JSON object', details: [{ field: 'body', message: 'must be object' }] });
@@ -134,24 +136,37 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
         return res.status(400).json({ code: 'BAD_REQUEST', message: 'Request body must contain at least one field to update', details: [{ field: 'body', message: 'minProperties: 1' }] });
       }
 
-      const updated = update(endpoint.collectionName, existing.id, req.body);
+      const { items } = findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
+      let result;
+      let action;
+
+      if (items.length === 0) {
+        // No record yet — create one (upsert)
+        const newRecord = { id: randomUUID(), [parentField]: parentId, ...req.body };
+        insertResource(endpoint.collectionName, newRecord);
+        result = findAll(endpoint.collectionName, { id: newRecord.id }, { limit: 1 }).items[0];
+        action = 'created';
+      } else {
+        result = update(endpoint.collectionName, items[0].id, req.body);
+        action = 'updated';
+      }
 
       try {
         const domain = apiMetadata.serverBasePath.replace(/^\//, '');
         emitEvent({
           domain,
           object: resourceLabel,
-          action: 'updated',
-          resourceId: existing.id,
+          action,
+          resourceId: result.id,
           source: apiMetadata.serverBasePath,
           data: { changes: [] },
           callerId: req.headers['x-caller-id'] || null,
           traceparent: req.headers['traceparent'] || null,
-          now: updated.updatedAt,
+          now: result.updatedAt,
         });
       } catch (e) { /* non-fatal */ }
 
-      res.json(updated);
+      res.json(result);
     } catch (error) {
       console.error('Singleton update handler error:', error);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
@@ -189,6 +204,46 @@ function extractRequiredArrayDefaults(responseSchema) {
     }
   }
   return defaults;
+}
+
+/**
+ * Create a composite handler for GET /applications/{applicationId}/review-context.
+ * Assembles application, household, all members with their sub-resources,
+ * review-progress entries, and notes into a single response.
+ */
+function createReviewContextHandler() {
+  return (req, res) => {
+    try {
+      const { applicationId } = req.params;
+
+      const application = findById('applications', applicationId);
+      if (!application) {
+        return res.status(404).json({ code: 'NOT_FOUND', message: 'Application not found' });
+      }
+
+      const { items: householdItems } = findAll('household-infos', { applicationId }, { limit: 1 });
+      const household = householdItems.length > 0 ? householdItems[0] : null;
+
+      const { items: members } = findAll('application-members', { applicationId }, { limit: 1000 });
+      const enrichedMembers = members.map(member => {
+        const memberId = member.id;
+        const { items: incomes } = findAll('member-incomes', { memberId }, { limit: 1000 });
+        const { items: expenses } = findAll('member-expenses', { memberId }, { limit: 1000 });
+        const { items: assets } = findAll('member-assets', { memberId }, { limit: 1000 });
+        const { items: employmentRecords } = findAll('member-employment-records', { memberId }, { limit: 1000 });
+        const { items: healthCoverages } = findAll('member-health-coverages', { memberId }, { limit: 1000 });
+        return { ...member, incomes, expenses, assets, employmentRecords, healthCoverages };
+      });
+
+      const { items: reviewProgress } = findAll('application-review-progress', { applicationId }, { limit: 1000 });
+      const { items: notes } = findAll('application-notes', { applicationId }, { limit: 1000 });
+
+      res.json({ application, householdInfo: household, members: enrichedMembers, reviewProgress, notes });
+    } catch (error) {
+      console.error('Review context handler error:', error);
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+    }
+  };
 }
 
 /**
@@ -237,6 +292,15 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       registeredEndpoints.push({ method: 'GET', path: expressPath, description: 'Get document version file content' });
       console.log(`    GET    ${expressPath} - Get document version file content`);
       continue;
+    } else if (endpoint.operationId === 'getApplicationReviewContext') {
+      handler = createReviewContextHandler();
+      description = 'Get application review context (composite view)';
+      // Read-only endpoint — pre-register 405 for write methods before the global 404 handler
+      for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
+        app[writeMethod](expressPath, (req, res) => {
+          res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
+        });
+      }
     } else if (endpoint.operationId === 'search') {
       // Cross-resource search endpoint — custom handler
       handler = createSearchHandler(apiMetadata);
