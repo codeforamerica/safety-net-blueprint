@@ -49,8 +49,15 @@ function prepareSchemaForValidation(schema) {
   if (!schema || typeof schema !== 'object') {
     return schema;
   }
-  
+
   const prepared = { ...schema };
+
+  // Strip $id and $schema so AJV doesn't try to register shared sub-schemas
+  // (e.g., schemas/common/income.yaml) multiple times when the same file is
+  // referenced by more than one OpenAPI spec. The validator only needs to check
+  // structure, not resolve cross-schema $refs by ID.
+  delete prepared.$id;
+  delete prepared.$schema;
   
   // If schema has properties, check for readOnly fields
   if (prepared.properties) {
@@ -75,6 +82,13 @@ function prepareSchemaForValidation(schema) {
   // Handle array items
   if (prepared.items && typeof prepared.items === 'object') {
     prepared.items = prepareSchemaForValidation(prepared.items);
+  }
+
+  // Recurse into $defs
+  if (prepared.$defs && typeof prepared.$defs === 'object') {
+    prepared.$defs = Object.fromEntries(
+      Object.entries(prepared.$defs).map(([k, v]) => [k, prepareSchemaForValidation(v)])
+    );
   }
 
   // Handle allOf (common in Create/Update schemas)

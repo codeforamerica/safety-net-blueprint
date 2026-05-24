@@ -9,14 +9,10 @@ description: >
   domain-specific fields.
 
 type: object
-required:
-  - dateOfBirth
 
 properties:
   dateOfBirth:
-    type: string
-    format: date
-    description: Member's date of birth. Used in age-based program eligibility criteria.
+    $ref: "./identity.yaml#/$defs/DateOfBirth"
   relationshipToHead:
     $ref: "#/$defs/HouseholdRelationship"
   citizenshipStatus:

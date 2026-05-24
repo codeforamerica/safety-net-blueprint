@@ -49,6 +49,13 @@ $defs:
         maxLength: 2
         pattern: "^[A-Z]{2}$"
 
+  DateOfBirth:
+    type: string
+    format: date
+    description: >
+      Date of birth. Used in age-based program eligibility criteria and as a
+      core identity-matching field for FDSH verification calls.
+
   Name:
     type: object
     description: Legal name of a person.
