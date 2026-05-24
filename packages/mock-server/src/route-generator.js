@@ -247,29 +247,9 @@ function createReviewContextHandler() {
 }
 
 /**
- * Create a GET handler for GET /applications/{applicationId}/review-progress.
- * Returns the full list of entries, with optional ?section= and ?memberId= filters.
+ * Create a GET handler for GET /applications/{applicationId}/notes.
+ * Applies optional ?scope=, ?section=, ?memberId= filters in addition to applicationId.
  */
-function createReviewProgressListHandler() {
-  return (req, res) => {
-    try {
-      const { applicationId } = req.params;
-      const application = findById('applications', applicationId);
-      if (!application) {
-        return res.status(404).json({ code: 'NOT_FOUND', message: 'Application not found' });
-      }
-      const filter = { applicationId };
-      if (req.query.section) filter.section = req.query.section;
-      if (req.query.memberId) filter.memberId = req.query.memberId;
-      const { items } = findAll('application-review-progress', filter, { limit: 10000 });
-      res.json({ items });
-    } catch (error) {
-      console.error('Review progress list handler error:', error);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-    }
-  };
-}
-
 /**
  * Create a PATCH handler for PATCH /applications/{applicationId}/review-progress.
  * Upserts an entry identified by the (section, memberId) composite key.
@@ -388,9 +368,6 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
         });
       }
-    } else if (endpoint.operationId === 'listApplicationReviewProgress') {
-      handler = createReviewProgressListHandler();
-      description = 'List review progress entries';
     } else if (endpoint.operationId === 'upsertApplicationReviewProgress') {
       handler = createReviewProgressUpsertHandler(apiMetadata);
       description = 'Upsert review progress entry';
@@ -452,13 +429,17 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
                   return res.status(404).json({ code: 'NOT_FOUND', message: `${label} not found` });
                 }
               }
-              // List sub-resources filtered by parent ID
+              // List sub-resources filtered by parent ID plus any extra query field filters.
               // Note: req.query mutation does not work reliably in Express 5 (getter re-evaluates),
               // so we call findAll directly rather than routing through createListHandler.
               const limit = Math.min(parseInt(req.query.limit) || pagination.limitDefault || 25, pagination.limitMax || 100);
               const offset = parseInt(req.query.offset) || 0;
-              const result = findAll(endpointWithCollection.collectionName, { [parentField]: parentId }, { limit, offset });
-              return res.json({ items: result.items || [], total: result.total || 0, limit, offset, hasNext: result.hasNext || false });
+              const reservedParams = new Set(['limit', 'offset', 'q', 'sort']);
+              const extraFilters = Object.fromEntries(
+                Object.entries(req.query).filter(([k]) => !reservedParams.has(k))
+              );
+              const { items, total } = findAll(endpointWithCollection.collectionName, { [parentField]: parentId, ...extraFilters }, { limit, offset });
+              return res.json({ items, total, limit, offset, hasNext: offset + items.length < total });
             } catch (error) {
               res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
             }

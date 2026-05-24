@@ -777,6 +777,33 @@ Transitions: `pending → satisfied | inconclusive | waived | cannot_verify`; `i
 
 ---
 
+## Customization
+
+### Baseline constraints
+
+| Element | Reason | Decision |
+|---|---|---|
+| `Application.submittedAt` | Regulatory clock anchor — SNAP 30-day and Medicaid 45-day processing deadlines are measured from this timestamp; removing it breaks SLA tracking | [Decision 6](#decision-6-intake-phase-end--lifecycle-state) |
+| `Application.status` lifecycle states | Governs when data becomes immutable and when downstream domains (eligibility, case management) receive handoff events; removing states breaks cross-domain coordination | [Decision 6](#decision-6-intake-phase-end--lifecycle-state) |
+| `ApplicationMember.role` | Determines authorized representative legal authority and non-applying member handling; required for regulated benefit unit composition | [Decision 1](#decision-1-role-vs-relationship-on-applicationmember) |
+| `Verification.status` lifecycle | The verification checklist is a federal regulatory obligation (SNAP 7 CFR § 273.2(f)); removing status tracking collapses the ex parte and document-fallback resolution paths | [Decision 14](#decision-14-verification-checklist-generation) |
+| `Interview.status` lifecycle | Tracks the SNAP interview regulatory obligation (7 CFR § 273.2(e)(1)); removing it makes the obligation untrackable | [Decision 15](#decision-15-interview-entity-model) |
+
+### Note text format
+
+`ApplicationNote.textFormat` accepts `plain`, `markdown`, or `html`. The baseline default is `plain`. States using a WYSIWYG note editor set `textFormat: html`; states using Markdown-native tooling set `textFormat: markdown`. No overlay change is needed — the field and all three values are present in the baseline. States that want to restrict the permitted formats can narrow the `textFormat` enum via overlay.
+
+### Note attachments
+
+The baseline `ApplicationNote` schema has no attachment support. States that need caseworkers to attach documents to notes have two approaches:
+
+- **Reference-based** — add an `attachments` array to `ApplicationNote` via overlay, where each entry is a `documentId` referencing a record in the Document Management domain. The caseworker uploads the document first via the document management API, then includes the returned ID when creating or updating the note. No new intake endpoint is required.
+- **Sub-resource** — add a `POST /applications/{applicationId}/notes/{noteId}/attachments` endpoint that accepts a multipart upload, proxies it to the document management domain, and appends the resulting document ID to `ApplicationNote.attachments`. More convenient for single-step UX but requires an additional endpoint and cross-domain adapter wiring.
+
+The reference-based approach is consistent with how intake handles other document references (the `Verification` entity links to documents by ID rather than embedding them). The sub-resource approach trades simplicity for UX — appropriate when state portals want inline file attachment without a separate document upload step.
+
+---
+
 ## Out of scope
 
 The following are explicitly not intake domain concerns:

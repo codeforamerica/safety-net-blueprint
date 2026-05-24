@@ -30,6 +30,8 @@ tags:
     description: Composite read-only context view assembled server-side for the caseworker review workflow.
   - name: Application Review Progress
     description: Per-section review progress tracking. Upsert entries to track caseworker progress through each section.
+  - name: Application Notes
+    description: Caseworker notes recorded against an application, member, or section.
   - name: Household Info
     description: Household-level data for an application (shelter costs, utilities, composition).
   - name: Interviews
@@ -396,26 +398,19 @@ paths:
     get:
       summary: List review progress
       description: >
-        Returns all review-progress entries for this application. Optionally filter
-        by section and/or memberId. Always returns the full list — no pagination.
+        Returns review-progress entries for this application. Optionally filter
+        by section and/or memberId.
       operationId: listApplicationReviewProgress
       tags:
         - Application Review Progress
       parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
         - name: section
           in: query
           schema:
-            type: string
-            enum:
-              - assets
-              - contact
-              - demographics
-              - employment
-              - expenses
-              - health-coverage
-              - household
-              - identity
-              - income
+            $ref: "#/components/schemas/ReviewSection"
           description: Filter by review section.
         - name: memberId
           in: query
@@ -449,7 +444,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReviewProgressEntry"
+              $ref: "#/components/schemas/ReviewProgressEntryUpsert"
       responses:
         "200":
           description: Review progress entry upserted successfully.
@@ -463,6 +458,145 @@ paths:
           $ref: "./components/responses.yaml#/NotFound"
         "422":
           $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/notes:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: List application notes
+      description: Retrieve notes recorded against this application, with optional filters.
+      operationId: listApplicationNotes
+      tags:
+        - Application Notes
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum:
+              - application
+              - member
+              - section
+          description: Filter by note scope.
+        - name: section
+          in: query
+          schema:
+            $ref: "#/components/schemas/ReviewSection"
+          description: Filter by section.
+        - name: memberId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by member ID.
+      responses:
+        "200":
+          description: A paginated list of notes for this application.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationNoteList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create an application note
+      description: Record a new caseworker note against this application.
+      operationId: createApplicationNote
+      tags:
+        - Application Notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationNoteCreate"
+      responses:
+        "201":
+          description: Note created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationNote"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/notes/{noteId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/NoteIdParam"
+
+    get:
+      summary: Get a note
+      description: Retrieve a single application note by identifier.
+      operationId: getApplicationNote
+      tags:
+        - Application Notes
+      responses:
+        "200":
+          description: Note retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationNote"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update a note
+      description: Apply partial updates to an application note.
+      operationId: updateApplicationNote
+      tags:
+        - Application Notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationNoteUpdate"
+      responses:
+        "200":
+          description: Note updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationNote"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Delete a note
+      description: Remove an application note.
+      operationId: deleteApplicationNote
+      tags:
+        - Application Notes
+      responses:
+        "204":
+          description: Note deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
@@ -1343,6 +1477,15 @@ components:
         type: string
         format: uuid
 
+    NoteIdParam:
+      name: noteId
+      in: path
+      required: true
+      description: Unique identifier of the application note.
+      schema:
+        type: string
+        format: uuid
+
   schemas:
     ApplicationWritable:
       type: object
@@ -1943,31 +2086,14 @@ components:
     # Application Notes
     # ---------------------------------------------------------------------------
 
-    ApplicationNote:
+    ApplicationNoteWritable:
       type: object
       description: >
-        A caseworker observation recorded against an application, member, or section.
-        additionalProperties allows states to extend with note types, visibility
-        controls, or other attributes via overlay without changing the baseline schema.
-      required:
-        - id
-        - applicationId
-        - scope
-        - text
-        - createdAt
-        - updatedAt
+        Client-writable fields for an application note. additionalProperties allows
+        states to extend with note types, visibility controls, or other attributes
+        via overlay without changing the baseline schema.
       additionalProperties: true
       properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        applicationId:
-          type: string
-          format: uuid
-          readOnly: true
-          x-relationship:
-            resource: Application
         scope:
           type: string
           description: >
@@ -1986,32 +2112,81 @@ components:
           x-relationship:
             resource: ApplicationMember
         section:
-          type: string
-          nullable: true
           description: Section this note is about. Required when scope is section.
-          enum:
-            - assets
-            - contact
-            - demographics
-            - employment
-            - expenses
-            - health-coverage
-            - household
-            - identity
-            - income
+          oneOf:
+            - $ref: "#/components/schemas/ReviewSection"
+            - type: "null"
         text:
           type: string
-          description: The note text.
+          description: The note text. Interpret according to textFormat.
           minLength: 1
           maxLength: 5000
-        createdAt:
+        textFormat:
           type: string
-          format: date-time
-          readOnly: true
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
+          description: Format of the text field. Consumers must render accordingly. Absent or plain means unformatted text.
+          default: plain
+          enum:
+            - plain
+            - markdown
+            - html
+
+    ApplicationNote:
+      description: A caseworker observation recorded against an application, member, or section.
+      allOf:
+        - $ref: "#/components/schemas/ApplicationNoteWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - scope
+            - text
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    ApplicationNoteCreate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationNoteWritable"
+        - type: object
+          required:
+            - scope
+            - text
+
+    ApplicationNoteList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApplicationNote"
+
+    ApplicationNoteUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationNoteWritable"
+        - type: object
+          minProperties: 1
 
     # ---------------------------------------------------------------------------
     # Verification
@@ -2264,40 +2439,14 @@ components:
               items:
                 $ref: "#/components/schemas/MemberHealthCoverage"
 
-    ReviewProgressEntry:
+    ReviewProgressEntryWritable:
       type: object
-      description: >
-        Tracks caseworker review progress for one section, optionally scoped to a
-        specific member. Section-only entries (memberId absent) cover household-level
-        sections; member-scoped entries cover per-member sections.
-      required:
-        - section
-        - status
+      description: Client-writable fields for a review-progress entry.
       additionalProperties: true
       properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        applicationId:
-          type: string
-          format: uuid
-          readOnly: true
-          x-relationship:
-            resource: Application
         section:
-          type: string
+          $ref: "#/components/schemas/ReviewSection"
           description: The review section this entry covers. Baseline taxonomy is extensible via overlay.
-          enum:
-            - assets
-            - contact
-            - demographics
-            - employment
-            - expenses
-            - health-coverage
-            - household
-            - identity
-            - income
         memberId:
           type: string
           format: uuid
@@ -2313,25 +2462,75 @@ components:
             - in_progress
             - complete
             - flagged
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
+
+    ReviewProgressEntry:
+      description: >
+        Tracks caseworker review progress for one section, optionally scoped to a
+        specific member. Section-only entries (memberId absent) cover household-level
+        sections; member-scoped entries cover per-member sections.
+      allOf:
+        - $ref: "#/components/schemas/ReviewProgressEntryWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - section
+            - status
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    ReviewProgressEntryUpsert:
+      allOf:
+        - $ref: "#/components/schemas/ReviewProgressEntryWritable"
+        - type: object
+          required:
+            - section
+            - status
 
     ReviewProgressList:
-      type: object
-      description: A non-paginated list of review-progress entries for an application.
-      required:
-        - items
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/ReviewProgressEntry"
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ReviewProgressEntry"
+
+    ReviewSection:
+      type: string
+      description: Taxonomy of review sections in the caseworker workflow. Extensible via overlay.
+      enum:
+        - assets
+        - contact
+        - demographics
+        - employment
+        - expenses
+        - health-coverage
+        - household
+        - identity
+        - income
 
     VerificationDocumentEvidence:
       type: object
