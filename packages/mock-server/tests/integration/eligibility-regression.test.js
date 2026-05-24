@@ -26,7 +26,7 @@ const SERVICE_CALLS = '/data-exchange/service-calls';
 async function createApplicationMember(appId, programs = []) {
   return fetch(`${BASE_URL}/intake/applications/${appId}/members`, {
     method: 'POST',
-    body: { roles: ['primary_applicant'], programsApplyingFor: programs },
+    body: { roles: ['primary_applicant'], programs },
   });
 }
 

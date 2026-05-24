@@ -914,6 +914,261 @@ async function testSubCollectionPaginationEnvelope() {
 }
 
 // ---------------------------------------------------------------------------
+// Caseworker review context
+// ---------------------------------------------------------------------------
+
+async function testReviewContext() {
+  section('Review context — GET /applications/{id}/review-context');
+
+  const app = await createOpenApp();
+  const appId = app.id;
+
+  await test('200 — returns required top-level keys', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/${appId}/review-context`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok('application' in data, 'application key present');
+    assert.ok('members' in data, 'members key present');
+    assert.ok('reviewProgress' in data, 'reviewProgress key present');
+    assert.ok('notes' in data, 'notes key present');
+  });
+
+  await test('application sub-object matches the application resource', async () => {
+    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
+    assert.strictEqual(data.application.id, appId);
+    assert.strictEqual(data.application.status, 'under_review');
+  });
+
+  await test('members is an array', async () => {
+    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
+    assert.ok(Array.isArray(data.members));
+  });
+
+  await test('reviewProgress and notes are arrays', async () => {
+    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
+    assert.ok(Array.isArray(data.reviewProgress));
+    assert.ok(Array.isArray(data.notes));
+  });
+
+  await test('404 for unknown application', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-context`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  await test('405 for POST (read-only endpoint)', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/${appId}/review-context`, { method: 'POST', body: {} });
+    assert.strictEqual(res.status, 405);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Review progress
+// ---------------------------------------------------------------------------
+
+async function testReviewProgress() {
+  section('Review progress — GET + PATCH /applications/{id}/review-progress');
+
+  const app = await createOpenApp();
+  const appId = app.id;
+  const BASE_PROGRESS = `${BASE_URL}${APP}/${appId}/review-progress`;
+
+  await test('GET — returns paginated shape with empty items initially', async () => {
+    const res = await fetch(BASE_PROGRESS);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok('items' in data, 'items present');
+    assert.ok('total' in data, 'total present');
+    assert.ok('limit' in data, 'limit present');
+    assert.ok('offset' in data, 'offset present');
+    assert.ok('hasNext' in data, 'hasNext present');
+    assert.ok(Array.isArray(data.items));
+    assert.strictEqual(data.total, 0);
+  });
+
+  await test('PATCH — creates entry (upsert)', async () => {
+    const res = await fetch(BASE_PROGRESS, {
+      method: 'PATCH', headers: CASEWORKER,
+      body: { section: 'income', status: 'in_progress' },
+    });
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.section, 'income');
+    assert.strictEqual(data.status, 'in_progress');
+    assert.ok(data.id, 'id assigned');
+    assert.strictEqual(data.applicationId, appId);
+  });
+
+  await test('PATCH — updates existing entry by composite key', async () => {
+    const res = await fetch(BASE_PROGRESS, {
+      method: 'PATCH', headers: CASEWORKER,
+      body: { section: 'income', status: 'complete' },
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual((await res.json()).status, 'complete');
+
+    const list = await (await fetch(BASE_PROGRESS)).json();
+    const incomeEntries = list.items.filter(e => e.section === 'income');
+    assert.strictEqual(incomeEntries.length, 1, 'upsert should not duplicate');
+  });
+
+  await test('PATCH — member-scoped entry is separate from household entry', async () => {
+    const memberId = '00000000-0000-0000-0000-000000000099';
+    const res = await fetch(BASE_PROGRESS, {
+      method: 'PATCH', headers: CASEWORKER,
+      body: { section: 'income', status: 'not_started', memberId },
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual((await res.json()).memberId, memberId);
+
+    const list = await (await fetch(BASE_PROGRESS)).json();
+    const incomeEntries = list.items.filter(e => e.section === 'income');
+    assert.strictEqual(incomeEntries.length, 2, 'household and member entries are distinct');
+  });
+
+  await test('GET ?section= — filters to matching entries only', async () => {
+    await fetch(BASE_PROGRESS, {
+      method: 'PATCH', headers: CASEWORKER,
+      body: { section: 'assets', status: 'not_started' },
+    });
+    const res = await fetch(`${BASE_PROGRESS}?section=income`);
+    const data = await res.json();
+    assert.ok(data.items.every(e => e.section === 'income'), 'all items match section filter');
+  });
+
+  await test('PATCH — missing section → 422', async () => {
+    const res = await fetch(BASE_PROGRESS, {
+      method: 'PATCH', headers: CASEWORKER,
+      body: { status: 'complete' },
+    });
+    assert.strictEqual(res.status, 422);
+  });
+
+  await test('PATCH — missing status → 422', async () => {
+    const res = await fetch(BASE_PROGRESS, {
+      method: 'PATCH', headers: CASEWORKER,
+      body: { section: 'income' },
+    });
+    assert.strictEqual(res.status, 422);
+  });
+
+  await test('404 for unknown application', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-progress`);
+    assert.strictEqual(res.status, 404);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Application notes
+// ---------------------------------------------------------------------------
+
+async function testApplicationNotes() {
+  section('Application notes — /applications/{id}/notes');
+
+  const app = await createOpenApp();
+  const appId = app.id;
+  const BASE_NOTES = `${BASE_URL}${APP}/${appId}/notes`;
+
+  await test('GET — returns paginated shape with empty items initially', async () => {
+    const res = await fetch(BASE_NOTES);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items));
+    assert.ok('total' in data && 'limit' in data && 'offset' in data && 'hasNext' in data);
+    assert.strictEqual(data.total, 0);
+  });
+
+  let noteId;
+
+  await test('POST — creates a note → 201 with id and applicationId', async () => {
+    const res = await fetch(BASE_NOTES, {
+      method: 'POST', headers: CASEWORKER,
+      body: { scope: 'section', section: 'income', text: 'Check pay stubs', textFormat: 'plain' },
+    });
+    assert.strictEqual(res.status, 201);
+    const data = await res.json();
+    assert.ok(data.id, 'id assigned');
+    assert.strictEqual(data.applicationId, appId);
+    assert.strictEqual(data.scope, 'section');
+    assert.strictEqual(data.section, 'income');
+    assert.strictEqual(data.text, 'Check pay stubs');
+    noteId = data.id;
+  });
+
+  await test('GET — lists created note in paginated response', async () => {
+    const data = await (await fetch(BASE_NOTES)).json();
+    assert.strictEqual(data.total, 1);
+    assert.strictEqual(data.items[0].id, noteId);
+  });
+
+  await test('GET /{noteId} — retrieves note by id', async () => {
+    const res = await fetch(`${BASE_NOTES}/${noteId}`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.id, noteId);
+    assert.strictEqual(data.text, 'Check pay stubs');
+  });
+
+  await test('GET ?scope=section — filters by scope', async () => {
+    await fetch(BASE_NOTES, {
+      method: 'POST', headers: CASEWORKER,
+      body: { scope: 'application', text: 'General observation' },
+    });
+    const data = await (await fetch(`${BASE_NOTES}?scope=section`)).json();
+    assert.ok(data.items.every(n => n.scope === 'section'), 'all items match scope filter');
+  });
+
+  await test('GET ?section=income — filters by section', async () => {
+    const data = await (await fetch(`${BASE_NOTES}?section=income`)).json();
+    assert.ok(data.items.every(n => n.section === 'income'), 'all items match section filter');
+  });
+
+  await test('PATCH /{noteId} — updates text', async () => {
+    const res = await fetch(`${BASE_NOTES}/${noteId}`, {
+      method: 'PATCH', headers: CASEWORKER,
+      body: { text: 'Updated: reviewed pay stubs, verified' },
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual((await res.json()).text, 'Updated: reviewed pay stubs, verified');
+  });
+
+  await test('PATCH /{noteId} — non-text fields unchanged after text update', async () => {
+    const data = await (await fetch(`${BASE_NOTES}/${noteId}`)).json();
+    assert.strictEqual(data.section, 'income', 'section unchanged after partial update');
+    assert.strictEqual(data.scope, 'section', 'scope unchanged after partial update');
+  });
+
+  await test('DELETE /{noteId} — 204', async () => {
+    const res = await fetch(`${BASE_NOTES}/${noteId}`, { method: 'DELETE', headers: CASEWORKER });
+    assert.strictEqual(res.status, 204);
+  });
+
+  await test('GET /{noteId} after DELETE — 404', async () => {
+    const res = await fetch(`${BASE_NOTES}/${noteId}`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  await test('POST — application-scoped note (no section)', async () => {
+    const res = await fetch(BASE_NOTES, {
+      method: 'POST', headers: CASEWORKER,
+      body: { scope: 'application', text: 'Household seems stable' },
+    });
+    assert.strictEqual(res.status, 201);
+    const data = await res.json();
+    assert.strictEqual(data.scope, 'application');
+  });
+
+  await test('404 for unknown application', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/notes`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  await test('GET /{noteId} 404 for unknown note', async () => {
+    const res = await fetch(`${BASE_NOTES}/00000000-0000-0000-0000-000000000000`);
+    assert.strictEqual(res.status, 404);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -956,6 +1211,9 @@ async function runTests() {
     await testCloseOnAllDeterminedRule();
     await testTaskClaimedRules();
     await testSubCollectionPaginationEnvelope();
+    await testReviewContext();
+    await testReviewProgress();
+    await testApplicationNotes();
   } finally {
     await teardownServer(serverStartedByTests);
   }
