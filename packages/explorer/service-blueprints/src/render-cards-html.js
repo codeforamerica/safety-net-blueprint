@@ -11,7 +11,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const distDir      = resolve(__dirname, '..', 'dist');
+const distDir      = resolve(__dirname, '..', 'output');
 const pluginSrcDir = resolve(__dirname, 'figma-plugin', 'src');
 
 export function renderCardsHtml(domain) {
