@@ -1,0 +1,60 @@
+asyncapi: 3.0.0
+info:
+  title: Document Management Domain Events
+  version: 1.0.0
+  description: |
+    Event catalog for the Document Management domain. Covers document and version
+    lifecycle events.
+
+    Event types follow the convention: document_management.{entity}.{action}.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+
+channels:
+  document_management.document_version.uploaded:
+    address: document_management.document_version.uploaded
+    messages:
+      documentVersionUploaded:
+        $ref: '#/components/messages/DocumentVersionUploadedMessage'
+
+components:
+  messages:
+    DocumentVersionUploadedMessage:
+      name: document_management.document_version.uploaded
+      summary: Emitted when a new document version is uploaded; intake subscribes to check whether the upload satisfies a pending verification obligation.
+      payload:
+        $ref: '#/components/schemas/DocumentVersionUploadedEvent'
+
+  schemas:
+    # subject: documentVersionId
+    DocumentVersionUploadedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: document_management.document_version.uploaded
+            data:
+              $ref: '#/components/schemas/DocumentVersionUploadedData'
+
+    DocumentVersionUploadedData:
+      type: object
+      additionalProperties: false
+      required:
+        - documentId
+        - documentVersionId
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          description: The parent document identifier.
+          x-relationship:
+            resource: Document
+        documentVersionId:
+          type: string
+          format: uuid
+          description: The newly created document version identifier.
+          x-relationship:
+            resource: DocumentVersion

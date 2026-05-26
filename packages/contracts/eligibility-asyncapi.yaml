@@ -1,0 +1,193 @@
+asyncapi: 3.0.0
+info:
+  title: Eligibility Domain Events
+  version: 1.0.0
+  description: |
+    Event catalog for the Eligibility domain. All events are CloudEvents 1.0
+    envelopes extending the base Event schema.
+
+    Event types follow the convention: eligibility.{entity}.{action}.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+
+channels:
+  eligibility.application.decision_completed:
+    address: eligibility.application.decision_completed
+    messages:
+      decisionCompleted:
+        $ref: '#/components/messages/DecisionCompletedMessage'
+
+  eligibility.application.determination_completed:
+    address: eligibility.application.determination_completed
+    messages:
+      determinationCompleted:
+        $ref: '#/components/messages/DeterminationCompletedMessage'
+
+  eligibility.application.expedited:
+    address: eligibility.application.expedited
+    messages:
+      applicationExpedited:
+        $ref: '#/components/messages/ApplicationExpeditedMessage'
+
+  eligibility.decision.created:
+    address: eligibility.decision.created
+    messages:
+      decisionCreated:
+        $ref: '#/components/messages/DecisionCreatedMessage'
+
+  eligibility.determination.created:
+    address: eligibility.determination.created
+    messages:
+      determinationCreated:
+        $ref: '#/components/messages/DeterminationCreatedMessage'
+
+  eligibility.determination.withdrawn:
+    address: eligibility.determination.withdrawn
+    messages:
+      determinationWithdrawn:
+        $ref: '#/components/messages/DeterminationWithdrawnMessage'
+
+components:
+  messages:
+    DecisionCompletedMessage:
+      name: eligibility.application.decision_completed
+      summary: Intake records the outcome per member; Determination checks if all Decisions are resolved.
+      payload:
+        $ref: '#/components/schemas/DecisionCompletedEvent'
+
+    DeterminationCompletedMessage:
+      name: eligibility.application.determination_completed
+      summary: Signals all program Decisions are resolved; Intake subscribes to close the application.
+      payload:
+        $ref: '#/components/schemas/DeterminationCompletedEvent'
+
+    ApplicationExpeditedMessage:
+      name: eligibility.application.expedited
+      summary: Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i)).
+      payload:
+        $ref: '#/components/schemas/ApplicationExpeditedEvent'
+
+    DecisionCreatedMessage:
+      name: eligibility.decision.created
+      summary: Triggers expedited SNAP screening or Medicaid data exchange initiation.
+      payload:
+        $ref: '#/components/schemas/DecisionCreatedEvent'
+
+    DeterminationCreatedMessage:
+      name: eligibility.determination.created
+      summary: Emitted when a Determination record is first created (auto-emitted on POST).
+      payload:
+        $ref: '#/components/schemas/DeterminationCreatedEvent'
+
+    DeterminationWithdrawnMessage:
+      name: eligibility.determination.withdrawn
+      summary: Emitted when a Determination is withdrawn; already-resolved Decisions are preserved as the audit record.
+      payload:
+        $ref: '#/components/schemas/DeterminationWithdrawnEvent'
+
+  schemas:
+    # subject: applicationId
+    ApplicationExpeditedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: eligibility.application.expedited
+
+    # subject: decisionId
+    DecisionCompletedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: eligibility.application.decision_completed
+            data:
+              $ref: '#/components/schemas/DecisionCompletedData'
+
+    DecisionCompletedData:
+      type: object
+      additionalProperties: false
+      required:
+        - determinationId
+        - memberId
+        - program
+        - status
+        - path
+      properties:
+        determinationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Determination
+        memberId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: ApplicationMember
+            domain: intake
+        program:
+          type: string
+          enum:
+            - snap
+            - medicaid
+            - tanf
+        status:
+          type: string
+          enum:
+            - approved
+            - denied
+            - ineligible
+        path:
+          type: string
+          description: Whether the Decision was reached automatically or by a caseworker.
+          enum:
+            - automatic
+            - caseworker
+        denialReasonCode:
+          type: string
+          description: Machine-readable denial reason. Required for the Notice of Action and appeal basis. Present when status is denied or ineligible.
+
+    # subject: determinationId
+    DeterminationCreatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: eligibility.determination.created
+
+    # subject: decisionId
+    DecisionCreatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: eligibility.decision.created
+
+    # subject: applicationId
+    DeterminationCompletedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: eligibility.application.determination_completed
+
+    # subject: determinationId
+    DeterminationWithdrawnEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: eligibility.determination.withdrawn

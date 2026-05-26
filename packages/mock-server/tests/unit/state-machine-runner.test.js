@@ -362,7 +362,7 @@ test('executeTransition — emit: step stores event in database', () => {
     id: 'submit',
     transition: { from: 'pending', to: 'submitted' },
     guards: [],
-    steps: [{ emit: { event: 'submitted', data: { resourceId: '$object.id' } } }]
+    steps: [{ emit: { type: 'test.testresource.submitted', data: { resourceId: '$object.id' } } }]
   }]);
 
   const result = executeTransition({
@@ -379,7 +379,7 @@ test('executeTransition — emit: step stores event in database', () => {
 
   assert.strictEqual(result.success, true);
   const { items: events } = findAll('events', {});
-  const emitted = events.find(e => e.type && e.type.endsWith('.testresource.submitted'));
+  const emitted = events.find(e => e.type === 'test.testresource.submitted');
   assert.ok(emitted, 'submitted event should be stored in events collection');
   assert.strictEqual(emitted.subject, 'res-steps-2');
   assert.strictEqual(emitted.data.resourceId, 'res-steps-2');
@@ -392,7 +392,7 @@ test('executeTransition — emit: subject override uses value expression instead
     id: 'complete',
     transition: { from: 'pending', to: 'completed' },
     guards: [],
-    steps: [{ emit: { event: 'eligibility.application.determination_completed', subject: '$object.parentId', data: {} } }]
+    steps: [{ emit: { type: 'eligibility.application.determination_completed', subject: '$object.parentId', data: {} } }]
   }]);
 
   const result = executeTransition({

@@ -338,7 +338,7 @@ async function testWorkflowLifecycle() {
 
   // ── sla-escalate ───────────────────────────────────────────────────────
 
-  await test('sla-escalate from pending — auto_escalated event', async () => {
+  await test('sla-escalate from pending — escalated event', async () => {
     const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'System escalate test', programType: 'snap' },
@@ -656,27 +656,27 @@ async function testWorkflowEventEmission() {
     assert.ok(e, 'workflow.task.resumed should be emitted');
   });
 
-  await test('auto-resume emits workflow.task.system_resumed with source and result', async () => {
+  await test('auto-resume emits workflow.task.resumed with causationid', async () => {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-verification`, { method: 'POST', headers: CASEWORKER });
+    const causeId = '00000000-0000-0000-0000-000000000001';
     await fetch(`${BASE_URL}${TASK}/${id}/auto-resume`, {
       method: 'POST', headers: SYSTEM,
-      body: { source: 'verification_result', result: 'conclusive' },
+      body: { causationid: causeId },
     });
-    const e = findEvent(await allEvents(id), 'workflow.task.system_resumed', id);
-    assert.ok(e, 'workflow.task.system_resumed should be emitted');
-    assert.strictEqual(e.data?.source, 'verification_result');
-    assert.strictEqual(e.data?.result, 'conclusive');
+    const e = findEvent(await allEvents(id), 'workflow.task.resumed', id);
+    assert.ok(e, 'workflow.task.resumed should be emitted');
+    assert.strictEqual(e.causationid, causeId);
   });
 
-  await test('sla-escalate (non-sla reason) emits workflow.task.auto_escalated', async () => {
+  await test('sla-escalate (non-sla reason) emits workflow.task.escalated', async () => {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/sla-escalate`, {
       method: 'POST', headers: SYSTEM, body: { reason: 'deadline_exceeded' },
     });
-    const e = findEvent(await allEvents(id), 'workflow.task.auto_escalated', id);
-    assert.ok(e, 'workflow.task.auto_escalated should be emitted');
+    const e = findEvent(await allEvents(id), 'workflow.task.escalated', id);
+    assert.ok(e, 'workflow.task.escalated should be emitted');
     assert.strictEqual(e.data?.reason, 'deadline_exceeded');
   });
 
@@ -690,13 +690,13 @@ async function testWorkflowEventEmission() {
     assert.strictEqual(e.data?.reason, 'sla_deadline_exceeded');
   });
 
-  await test('auto-cancel emits workflow.task.auto_cancelled with client_unresponsive', async () => {
+  await test('auto-cancel emits workflow.task.cancelled with client_unresponsive', async () => {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/auto-cancel`, { method: 'POST', headers: SYSTEM });
-    const e = findEvent(await allEvents(id), 'workflow.task.auto_cancelled', id);
-    assert.ok(e, 'workflow.task.auto_cancelled should be emitted');
+    const e = findEvent(await allEvents(id), 'workflow.task.cancelled', id);
+    assert.ok(e, 'workflow.task.cancelled should be emitted');
     assert.strictEqual(e.data?.reason, 'client_unresponsive');
   });
 
@@ -774,7 +774,7 @@ async function testWorkflowTimerBehavior() {
     return (await res.json()).id;
   }
 
-  // creation_deadline fires on task creation → sla-escalate(deadline_exceeded) → auto_escalated
+  // creation_deadline fires on task creation → sla-escalate(deadline_exceeded) → escalated
   await test('creation_deadline: task auto-escalates on creation when stub fires', async () => {
     await clearStubs();
     await registerStub({
@@ -788,14 +788,14 @@ async function testWorkflowTimerBehavior() {
     assert.strictEqual(task.status, 'escalated', 'task should be auto-escalated after creation_deadline fires');
     assert.ok(task.escalatedAt, 'escalatedAt should be set');
 
-    const e = findEvent(await allEvents(id), 'workflow.task.auto_escalated', id);
-    assert.ok(e, 'workflow.task.auto_escalated should be emitted');
+    const e = findEvent(await allEvents(id), 'workflow.task.escalated', id);
+    assert.ok(e, 'workflow.task.escalated should be emitted');
     assert.strictEqual(e.data?.reason, 'deadline_exceeded');
 
     await clearStubs();
   });
 
-  // client_timeout fires from await-client → auto-cancel → auto_cancelled
+  // client_timeout fires from await-client → auto-cancel → cancelled
   await test('client_timeout: awaiting_client task auto-cancels when stub fires', async () => {
     await clearStubs();
     const id = await createTask();
@@ -811,8 +811,8 @@ async function testWorkflowTimerBehavior() {
     assert.strictEqual(task.status, 'cancelled', 'task should be auto-cancelled after client_timeout fires');
     assert.ok(task.cancelledAt, 'cancelledAt should be set');
 
-    const e = findEvent(await allEvents(id), 'workflow.task.auto_cancelled', id);
-    assert.ok(e, 'workflow.task.auto_cancelled should be emitted');
+    const e = findEvent(await allEvents(id), 'workflow.task.cancelled', id);
+    assert.ok(e, 'workflow.task.cancelled should be emitted');
     assert.strictEqual(e.data?.reason, 'client_unresponsive');
 
     await clearStubs();
@@ -834,10 +834,9 @@ async function testWorkflowTimerBehavior() {
     assert.strictEqual(task.status, 'in_progress', 'task should be auto-resumed after verification_timeout fires');
     assert.strictEqual(task.blockedAt, null, 'blockedAt should be cleared');
 
-    const e = findEvent(await allEvents(id), 'workflow.task.system_resumed', id);
-    assert.ok(e, 'workflow.task.system_resumed should be emitted');
-    assert.strictEqual(e.data?.source, 'timeout');
-    assert.strictEqual(e.data?.result, 'verification_timeout');
+    const e = findEvent(await allEvents(id), 'workflow.task.resumed', id);
+    assert.ok(e, 'workflow.task.resumed should be emitted');
+    assert.ok(e.causationid, 'causationid should be set to the triggering timer event id');
 
     await clearStubs();
   });
@@ -859,8 +858,8 @@ async function testWorkflowTimerBehavior() {
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'escalated', 'task should be escalated on sla_warning');
 
-    const e = findEvent(await allEvents(id), 'workflow.task.auto_escalated', id);
-    assert.ok(e, 'workflow.task.auto_escalated should be emitted for sla_warning');
+    const e = findEvent(await allEvents(id), 'workflow.task.escalated', id);
+    assert.ok(e, 'workflow.task.escalated should be emitted for sla_warning');
     assert.strictEqual(e.data?.reason, 'sla_deadline_approaching');
 
     await clearStubs();

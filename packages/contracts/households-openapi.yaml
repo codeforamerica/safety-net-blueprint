@@ -19,8 +19,6 @@ servers:
 tags:
 - name: Households
   description: Manage household records.
-x-events: {}
-
 paths:
   "/households":
     get:

@@ -26,7 +26,9 @@ import {
   buildEnumSourceIndex,
   findEnumSources,
   parseEnumSource,
-  applyEnumSourceInjections
+  applyEnumSourceInjections,
+  injectPrefixInStateMachine,
+  injectPrefixInAsyncApi
 } from '../../scripts/resolve.js';
 
 // Use checkPathExists from the overlay module (same as the script does)
@@ -1097,6 +1099,104 @@ test('x-enum-source injection', async (t) => {
     // Annotation should remain untouched since there's nothing to inject
     const field = currentResults.get('some-openapi.yaml').Schema.properties.code;
     assert.strictEqual(field['x-enum-source'], 'slaTypes[].id');
+  });
+
+  // ===========================================================================
+  // injectPrefixInStateMachine
+  // ===========================================================================
+
+  await t.test('injectPrefixInStateMachine - prepends prefix to machine events and emit steps', () => {
+    const spec = {
+      machines: [{
+        object: 'Application',
+        events: [{ type: 'intake.application.submitted', steps: [] }],
+        actions: [{
+          id: 'submit',
+          steps: [{ emit: { type: 'intake.application.submitted', data: {} } }]
+        }]
+      }]
+    };
+
+    const result = injectPrefixInStateMachine(spec, 'org.example.');
+
+    assert.strictEqual(result.machines[0].events[0].type, 'org.example.intake.application.submitted');
+    assert.strictEqual(result.machines[0].actions[0].steps[0].emit.type, 'org.example.intake.application.submitted');
+  });
+
+  await t.test('injectPrefixInStateMachine - passes through unchanged when no machines array', () => {
+    const spec = { domain: 'intake', context: null };
+    const result = injectPrefixInStateMachine(spec, 'org.example.');
+    assert.deepStrictEqual(result, spec);
+  });
+
+  await t.test('injectPrefixInStateMachine - does not mutate the original spec', () => {
+    const spec = {
+      machines: [{ object: 'Application', actions: [{ id: 'submit', steps: [{ emit: { type: 'intake.application.submitted' } }] }] }]
+    };
+    injectPrefixInStateMachine(spec, 'org.example.');
+    assert.strictEqual(spec.machines[0].actions[0].steps[0].emit.type, 'intake.application.submitted');
+  });
+
+  await t.test('injectPrefixInStateMachine - prepends prefix to emit steps nested in then/do/forEach.do', () => {
+    const spec = {
+      machines: [{
+        object: 'Application',
+        actions: [{
+          id: 'route',
+          steps: [{
+            if: '$object.isExpedited == true',
+            then: [{ emit: { type: 'intake.application.expedited' } }],
+            else: [{ emit: { type: 'intake.application.standard' } }]
+          }]
+        }]
+      }]
+    };
+
+    const result = injectPrefixInStateMachine(spec, 'org.example.');
+    const ifStep = result.machines[0].actions[0].steps[0];
+    assert.strictEqual(ifStep.then[0].emit.type, 'org.example.intake.application.expedited');
+    assert.strictEqual(ifStep.else[0].emit.type, 'org.example.intake.application.standard');
+  });
+
+  // ===========================================================================
+  // injectPrefixInAsyncApi
+  // ===========================================================================
+
+  await t.test('injectPrefixInAsyncApi - prepends prefix to channel addresses and message names', () => {
+    const spec = {
+      channels: {
+        'intake.application.submitted': {
+          address: 'intake.application.submitted',
+          messages: {}
+        }
+      },
+      components: {
+        messages: {
+          ApplicationSubmitted: { name: 'intake.application.submitted' }
+        },
+        schemas: {}
+      }
+    };
+
+    const result = injectPrefixInAsyncApi(spec, 'org.example.');
+
+    assert.ok('org.example.intake.application.submitted' in result.channels);
+    assert.strictEqual(result.channels['org.example.intake.application.submitted'].address, 'org.example.intake.application.submitted');
+    assert.strictEqual(result.components.messages.ApplicationSubmitted.name, 'org.example.intake.application.submitted');
+  });
+
+  await t.test('injectPrefixInAsyncApi - passes through unchanged when no channels', () => {
+    const spec = { asyncapi: '3.0.0', info: { title: 'Test', version: '1.0.0' } };
+    const result = injectPrefixInAsyncApi(spec, 'org.example.');
+    assert.deepStrictEqual(result, spec);
+  });
+
+  await t.test('injectPrefixInAsyncApi - does not mutate the original spec', () => {
+    const spec = {
+      channels: { 'intake.application.submitted': { address: 'intake.application.submitted' } }
+    };
+    injectPrefixInAsyncApi(spec, 'org.example.');
+    assert.ok('intake.application.submitted' in spec.channels);
   });
 
 });

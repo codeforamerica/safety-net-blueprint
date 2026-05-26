@@ -1,0 +1,398 @@
+asyncapi: 3.0.0
+info:
+  title: Intake Domain Events
+  version: 1.0.0
+  description: |
+    Event catalog for the Intake domain. All events are CloudEvents 1.0 envelopes
+    extending the base Event schema. The type field in each event schema carries a
+    const value with the fully qualified event type.
+
+    Event types follow the convention: intake.{entity}.{action}.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+
+channels:
+  intake.application.closed:
+    address: intake.application.closed
+    messages:
+      applicationClosed:
+        $ref: '#/components/messages/ApplicationClosedMessage'
+
+  intake.application.created:
+    address: intake.application.created
+    messages:
+      applicationCreated:
+        $ref: '#/components/messages/ApplicationCreatedMessage'
+
+  intake.application.deleted:
+    address: intake.application.deleted
+    messages:
+      applicationDeleted:
+        $ref: '#/components/messages/ApplicationDeletedMessage'
+
+  intake.application.opened:
+    address: intake.application.opened
+    messages:
+      applicationOpened:
+        $ref: '#/components/messages/ApplicationOpenedMessage'
+
+  intake.application.review_completed:
+    address: intake.application.review_completed
+    messages:
+      applicationReviewCompleted:
+        $ref: '#/components/messages/ApplicationReviewCompletedMessage'
+
+  intake.application.submitted:
+    address: intake.application.submitted
+    messages:
+      applicationSubmitted:
+        $ref: '#/components/messages/ApplicationSubmittedMessage'
+
+  intake.application.updated:
+    address: intake.application.updated
+    messages:
+      applicationUpdated:
+        $ref: '#/components/messages/ApplicationUpdatedMessage'
+
+  intake.application.withdrawn:
+    address: intake.application.withdrawn
+    messages:
+      applicationWithdrawn:
+        $ref: '#/components/messages/ApplicationWithdrawnMessage'
+
+  intake.determination.approval_needed:
+    address: intake.determination.approval_needed
+    messages:
+      determinationApprovalNeeded:
+        $ref: '#/components/messages/DeterminationApprovalNeededMessage'
+
+  intake.determination.rejected:
+    address: intake.determination.rejected
+    messages:
+      determinationRejected:
+        $ref: '#/components/messages/DeterminationRejectedMessage'
+
+  intake.verification.created:
+    address: intake.verification.created
+    messages:
+      verificationCreated:
+        $ref: '#/components/messages/VerificationCreatedMessage'
+
+  intake.verification.inconclusive:
+    address: intake.verification.inconclusive
+    messages:
+      verificationInconclusive:
+        $ref: '#/components/messages/VerificationInconclusiveMessage'
+
+  intake.verification.satisfied:
+    address: intake.verification.satisfied
+    messages:
+      verificationSatisfied:
+        $ref: '#/components/messages/VerificationSatisfiedMessage'
+
+  intake.verification.waived:
+    address: intake.verification.waived
+    messages:
+      verificationWaived:
+        $ref: '#/components/messages/VerificationWaivedMessage'
+
+components:
+  messages:
+    ApplicationClosedMessage:
+      name: intake.application.closed
+      summary: Signals intake is complete; triggers case creation.
+      payload:
+        $ref: '#/components/schemas/ApplicationClosedEvent'
+
+    ApplicationCreatedMessage:
+      name: intake.application.created
+      summary: Emitted when an application record is first created (auto-emitted on POST).
+      payload:
+        $ref: '#/components/schemas/ApplicationCreatedEvent'
+
+    ApplicationDeletedMessage:
+      name: intake.application.deleted
+      summary: Emitted when an application is permanently removed (auto-emitted on DELETE).
+      payload:
+        $ref: '#/components/schemas/ApplicationDeletedEvent'
+
+    ApplicationOpenedMessage:
+      name: intake.application.opened
+      summary: Signals caseworker has begun active review.
+      payload:
+        $ref: '#/components/schemas/ApplicationOpenedEvent'
+
+    ApplicationReviewCompletedMessage:
+      name: intake.application.review_completed
+      summary: Signals data collection is complete; triggers eligibility determination. No state change.
+      payload:
+        $ref: '#/components/schemas/ApplicationReviewCompletedEvent'
+
+    ApplicationSubmittedMessage:
+      name: intake.application.submitted
+      summary: Starts the regulatory clock; triggers caseworker task creation, confirmation notice, and person matching.
+      payload:
+        $ref: '#/components/schemas/ApplicationSubmittedEvent'
+
+    ApplicationUpdatedMessage:
+      name: intake.application.updated
+      summary: Emitted when application fields are updated via PATCH (auto-emitted).
+      payload:
+        $ref: '#/components/schemas/ApplicationUpdatedEvent'
+
+    ApplicationWithdrawnMessage:
+      name: intake.application.withdrawn
+      summary: Triggers open task cancellation and withdrawal notice.
+      payload:
+        $ref: '#/components/schemas/ApplicationWithdrawnEvent'
+
+    DeterminationApprovalNeededMessage:
+      name: intake.determination.approval_needed
+      summary: Triggers supervisor approval task creation; states configure approval thresholds via rules overlay.
+      payload:
+        $ref: '#/components/schemas/DeterminationApprovalNeededEvent'
+
+    DeterminationRejectedMessage:
+      name: intake.determination.rejected
+      summary: Signals the determination was rejected; workflow returns the caseworker task to in_progress.
+      payload:
+        $ref: '#/components/schemas/DeterminationRejectedEvent'
+
+    VerificationCreatedMessage:
+      name: intake.verification.created
+      summary: Emitted when a Verification record is first created (auto-emitted on POST).
+      payload:
+        $ref: '#/components/schemas/VerificationCreatedEvent'
+
+    VerificationInconclusiveMessage:
+      name: intake.verification.inconclusive
+      summary: Triggers document fallback creation via intake rule subscription.
+      payload:
+        $ref: '#/components/schemas/VerificationInconclusiveEvent'
+
+    VerificationSatisfiedMessage:
+      name: intake.verification.satisfied
+      summary: Signals the obligation is fulfilled.
+      payload:
+        $ref: '#/components/schemas/VerificationSatisfiedEvent'
+
+    VerificationWaivedMessage:
+      name: intake.verification.waived
+      summary: Signals the obligation is resolved without evidence.
+      payload:
+        $ref: '#/components/schemas/VerificationWaivedEvent'
+
+  schemas:
+    # Primary schemas (alphabetical by event type)
+
+    # subject: applicationId
+    ApplicationClosedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.closed
+
+    # ApplicationCreatedEvent payload is the full Application resource snapshot.
+    # subject: applicationId; data is the full resource at creation time.
+    ApplicationCreatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.created
+
+    # subject: applicationId
+    ApplicationDeletedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.deleted
+
+    # subject: applicationId
+    ApplicationOpenedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.opened
+            data:
+              $ref: '#/components/schemas/ApplicationOpenedData'
+
+    ApplicationOpenedData:
+      type: object
+      additionalProperties: false
+      required: [programs]
+      properties:
+        programs:
+          type: array
+          description: Programs the household is applying for. Included so downstream systems can fan out per-program work after intake screening (see Decision 15).
+          items:
+            type: string
+            enum:
+              - snap
+              - medicaid
+              - tanf
+
+    # subject: applicationId
+    ApplicationReviewCompletedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.review_completed
+
+    # subject: applicationId
+    ApplicationSubmittedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.submitted
+            data:
+              $ref: '#/components/schemas/ApplicationSubmittedData'
+
+    ApplicationSubmittedData:
+      type: object
+      additionalProperties: false
+      required: [programs]
+      properties:
+        programs:
+          type: array
+          description: Programs the household is applying for. Consumers route per program type — not all programs generate caseworker tasks at submission.
+          items:
+            type: string
+            enum:
+              - snap
+              - medicaid
+              - tanf
+        channel:
+          type: string
+          description: How the application was filed.
+          enum:
+            - online
+            - in_person
+            - phone
+            - mail
+        memberIds:
+          type: array
+          description: IDs of all household members at submission time. Client Management fetches each member record to determine which are applying for benefits and should be matched against person records.
+          items:
+            type: string
+            format: uuid
+
+    # subject: applicationId
+    ApplicationUpdatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.updated
+            data:
+              $ref: './schemas/platform-events.yaml#/ResourceUpdatedEvent'
+
+    # subject: applicationId
+    ApplicationWithdrawnEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.withdrawn
+            data:
+              $ref: '#/components/schemas/ApplicationWithdrawnData'
+
+    ApplicationWithdrawnData:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          description: Why the application was withdrawn.
+
+    # subject: determinationId
+    DeterminationApprovalNeededEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.determination.approval_needed
+
+    # subject: determinationId
+    DeterminationRejectedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.determination.rejected
+
+    # subject: verificationId
+    VerificationCreatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.verification.created
+
+    # subject: verificationId
+    VerificationInconclusiveEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.verification.inconclusive
+
+    # subject: verificationId
+    VerificationSatisfiedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.verification.satisfied
+
+    # subject: verificationId
+    VerificationWaivedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.verification.waived
+            data:
+              $ref: '#/components/schemas/VerificationWaivedData'
+
+    VerificationWaivedData:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          description: Why the verification obligation was waived.

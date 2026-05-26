@@ -11,7 +11,9 @@ import { startMockServer, stopServer, isServerRunning } from '../../scripts/serv
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const BASE_URL = 'http://localhost:1080';
-export const EVENT_PREFIX = 'org.codeforamerica.safety-net-blueprint.';
+// Event types are short-form (no org prefix). The x-event-type-prefix overlay config
+// adds org prefixes at resolve time for state deployments.
+export const EVENT_PREFIX = '';
 export const contractsDir = resolve(__dirname, '..', '..', '..', 'contracts');
 
 export function fetch(url, options = {}) {

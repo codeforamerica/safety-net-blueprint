@@ -20,7 +20,8 @@ import {
   clearAllStubs,
 } from '../../src/mock-stub-engine.js';
 
-const PREFIX = 'org.codeforamerica.safety-net-blueprint.';
+// Event types are short-form (no org prefix) in the current design.
+// The x-event-type-prefix overlay config adds prefixes at resolve time for state deployments.
 
 function makeStub(on, respond, match) {
   return match ? { on, match, respond } : { on, respond };
@@ -58,9 +59,9 @@ test('registerStub — different suffixes use independent counters', () => {
   assert.strictEqual(b.id, 'call.completed-1');
 });
 
-test('registerStub — accepts full CloudEvents type prefix in on field', () => {
+test('registerStub — ID uses last two dot-segments of on field', () => {
   const stub = registerStub(makeStub(
-    PREFIX + 'data_exchange.service_call.created',
+    'data_exchange.service_call.created',
     { type: 'data_exchange.call.completed' }
   ));
   assert.ok(stub.id.startsWith('service_call.created-'));
@@ -90,29 +91,28 @@ test('registerStub — allows stub without respond (timer stub format)', () => {
 // matchAndPop — type matching
 // =============================================================================
 
-test('matchAndPop — matches by short suffix form', () => {
+test('matchAndPop — matches by exact type', () => {
   registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
-  const fullType = PREFIX + 'data_exchange.service_call.created';
-  const stub = matchAndPop(fullType, makeEnvelope(fullType));
+  const stub = matchAndPop('data_exchange.service_call.created', makeEnvelope('data_exchange.service_call.created'));
   assert.ok(stub, 'should match');
   assert.strictEqual(listStubs().length, 0);
 });
 
-test('matchAndPop — matches by full type in on field', () => {
-  const fullType = PREFIX + 'data_exchange.service_call.created';
-  registerStub(makeStub(fullType, { type: 'data_exchange.call.completed' }));
-  const stub = matchAndPop(fullType, makeEnvelope(fullType));
+test('matchAndPop — matches exact type in on field', () => {
+  const eventType = 'data_exchange.service_call.created';
+  registerStub(makeStub(eventType, { type: 'data_exchange.call.completed' }));
+  const stub = matchAndPop(eventType, makeEnvelope(eventType));
   assert.ok(stub);
 });
 
 test('matchAndPop — returns null when no stub registered', () => {
-  const result = matchAndPop(PREFIX + 'data_exchange.service_call.created', makeEnvelope(PREFIX + 'data_exchange.service_call.created'));
+  const result = matchAndPop('data_exchange.service_call.created', makeEnvelope('data_exchange.service_call.created'));
   assert.strictEqual(result, null);
 });
 
 test('matchAndPop — returns null when type does not match', () => {
   registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
-  const result = matchAndPop(PREFIX + 'intake.application.submitted', makeEnvelope(PREFIX + 'intake.application.submitted'));
+  const result = matchAndPop('intake.application.submitted', makeEnvelope('intake.application.submitted'));
   assert.strictEqual(result, null);
   assert.strictEqual(listStubs().length, 1);
 });
@@ -124,8 +124,8 @@ test('matchAndPop — returns null when type does not match', () => {
 test('matchAndPop — pops first matching stub (FIFO)', () => {
   const a = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }));
   const b = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } }));
-  const fullType = PREFIX + 'data_exchange.service_call.created';
-  const first = matchAndPop(fullType, makeEnvelope(fullType));
+  const eventType = 'data_exchange.service_call.created';
+  const first = matchAndPop(eventType, makeEnvelope(eventType));
   assert.strictEqual(first.id, a.id);
   assert.strictEqual(listStubs().length, 1);
   assert.strictEqual(listStubs()[0].id, b.id);
@@ -134,9 +134,9 @@ test('matchAndPop — pops first matching stub (FIFO)', () => {
 test('matchAndPop — second pop returns second stub', () => {
   registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }));
   const b = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } }));
-  const fullType = PREFIX + 'data_exchange.service_call.created';
-  matchAndPop(fullType, makeEnvelope(fullType));
-  const second = matchAndPop(fullType, makeEnvelope(fullType));
+  const eventType = 'data_exchange.service_call.created';
+  matchAndPop(eventType, makeEnvelope(eventType));
+  const second = matchAndPop(eventType, makeEnvelope(eventType));
   assert.strictEqual(second.id, b.id);
   assert.strictEqual(listStubs().length, 0);
 });
@@ -151,8 +151,8 @@ test('matchAndPop — matches when all match criteria satisfied', () => {
     { type: 'data_exchange.call.completed' },
     { 'data.serviceType': 'fdsh_ssa' }
   ));
-  const fullType = PREFIX + 'data_exchange.service_call.created';
-  const stub = matchAndPop(fullType, makeEnvelope(fullType, { serviceType: 'fdsh_ssa' }));
+  const eventType = 'data_exchange.service_call.created';
+  const stub = matchAndPop(eventType, makeEnvelope(eventType, { serviceType: 'fdsh_ssa' }));
   assert.ok(stub);
 });
 
@@ -162,8 +162,8 @@ test('matchAndPop — skips stub when match criteria not satisfied', () => {
     { type: 'data_exchange.call.completed' },
     { 'data.serviceType': 'fdsh_ssa' }
   ));
-  const fullType = PREFIX + 'data_exchange.service_call.created';
-  const stub = matchAndPop(fullType, makeEnvelope(fullType, { serviceType: 'save' }));
+  const eventType = 'data_exchange.service_call.created';
+  const stub = matchAndPop(eventType, makeEnvelope(eventType, { serviceType: 'save' }));
   assert.strictEqual(stub, null);
   assert.strictEqual(listStubs().length, 1);
 });
@@ -179,8 +179,8 @@ test('matchAndPop — skips non-matching stub and returns next matching one', ()
     { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
     // no match filter — matches any
   ));
-  const fullType = PREFIX + 'data_exchange.service_call.created';
-  const stub = matchAndPop(fullType, makeEnvelope(fullType, { serviceType: 'save' }));
+  const eventType = 'data_exchange.service_call.created';
+  const stub = matchAndPop(eventType, makeEnvelope(eventType, { serviceType: 'save' }));
   assert.strictEqual(stub.id, b.id);
   assert.strictEqual(listStubs().length, 1);
 });
@@ -191,8 +191,8 @@ test('matchAndPop — empty match object matches any event of that type', () => 
     { type: 'data_exchange.call.completed' },
     {}
   ));
-  const fullType = PREFIX + 'data_exchange.service_call.created';
-  const stub = matchAndPop(fullType, makeEnvelope(fullType, { serviceType: 'save' }));
+  const eventType = 'data_exchange.service_call.created';
+  const stub = matchAndPop(eventType, makeEnvelope(eventType, { serviceType: 'save' }));
   assert.ok(stub);
 });
 

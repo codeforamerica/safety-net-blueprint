@@ -30,18 +30,6 @@ tags:
   - name: Search
     description: Cross-resource search across all domains.
 
-x-events:
-  scheduling.timer.requested:
-    type: org.codeforamerica.safety-net-blueprint.scheduling.timer.requested
-    summary: Emitted by any domain procedure to request a time-based callback from the scheduling service
-    payload:
-      $ref: "./schemas/platform-events.yaml#/SchedulingTimerRequestedEvent"
-  scheduling.timer.cancelled:
-    type: org.codeforamerica.safety-net-blueprint.scheduling.timer.cancelled
-    summary: Emitted by any domain procedure to cancel a pending timer
-    payload:
-      $ref: "./schemas/platform-events.yaml#/SchedulingTimerCancelledEvent"
-
 paths:
   /events:
     get:
@@ -69,11 +57,12 @@ paths:
           in: query
           description: >
             Filter by CloudEvents type. Supports prefix matching with a
-            trailing wildcard (e.g.,
-            `org.codeforamerica.safety-net-blueprint.intake.*`).
+            trailing wildcard (e.g., `intake.*`). When states apply an
+            x-event-type-prefix overlay, the resolved prefix is prepended
+            to all event types (e.g., `org.example.intake.*`).
           schema:
             type: string
-          example: org.codeforamerica.safety-net-blueprint.intake.application.submitted
+          example: intake.application.submitted
         - name: source
           in: query
           description: Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
@@ -117,7 +106,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DomainEventList"
+                $ref: "#/components/schemas/EventList"
         "400":
           $ref: "./components/responses.yaml#/BadRequest"
         "500":
@@ -136,7 +125,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DomainEvent"
+              $ref: "#/components/schemas/Event"
       responses:
         "201":
           description: Event published successfully.
@@ -149,7 +138,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DomainEvent"
+                $ref: "#/components/schemas/Event"
         "400":
           $ref: "./components/responses.yaml#/BadRequest"
         "422":
@@ -164,7 +153,7 @@ paths:
         Real-time stream of domain events delivered as Server-Sent Events (SSE).
 
         Connect with `Accept: text/event-stream`. Each event is delivered as a
-        `data:` line containing a JSON-encoded `DomainEvent` object.
+        `data:` line containing a JSON-encoded `Event` object.
 
         The stream stays open until the client disconnects. A `: heartbeat` comment
         is sent every 30 seconds to prevent proxy timeouts.
@@ -178,7 +167,7 @@ paths:
             text/event-stream:
               schema:
                 type: string
-                description: Newline-delimited SSE frames, each containing a JSON DomainEvent.
+                description: Newline-delimited SSE frames, each containing a JSON Event.
 
   /events/{eventId}:
     parameters:
@@ -202,7 +191,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DomainEvent"
+                $ref: "#/components/schemas/Event"
         "404":
           $ref: "./components/responses.yaml#/NotFound"
         "500":
@@ -246,61 +235,8 @@ components:
   schemas:
     # Primary schemas
 
-    DomainEvent:
-      type: object
-      description: A CloudEvents 1.0 envelope.
-      required:
-        - specversion
-        - id
-        - type
-        - source
-        - subject
-        - time
-        - datacontenttype
-      properties:
-        specversion:
-          type: string
-          description: CloudEvents specification version.
-          enum:
-            - "1.0"
-        id:
-          type: string
-          format: uuid
-          description: Unique event identifier.
-        type:
-          type: string
-          description: >
-            Fully qualified CloudEvents event type following the convention
-            `org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}`.
-          example: org.codeforamerica.safety-net-blueprint.intake.application.submitted
-        source:
-          type: string
-          description: Domain base path that produced the event (e.g., `/intake`, `/workflow`).
-          example: /intake
-        subject:
-          type: string
-          format: uuid
-          description: Entity ID the event pertains to.
-        time:
-          type: string
-          format: date-time
-          description: When the event occurred.
-        datacontenttype:
-          type: string
-          description: Media type of the event payload.
-          enum:
-            - application/json
-        traceparent:
-          type:
-            - string
-            - "null"
-          description: >
-            W3C Trace Context header (optional). Propagated from the triggering
-            request or event. The trace ID component is stable across the full
-            causal chain.
-        data:
-          type: object
-          description: Event payload. Schema is defined per event type in each domain's x-events section.
+    Event:
+      $ref: "./schemas/platform-events.yaml#/$defs/Event"
 
     SearchResult:
       type: object
@@ -353,7 +289,7 @@ components:
 
     # Ancillary schemas (alphabetical)
 
-    DomainEventList:
+    EventList:
       description: Paginated list of domain events.
       allOf:
         - $ref: "./components/pagination.yaml#/Pagination"
@@ -364,7 +300,7 @@ components:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/DomainEvent"
+                $ref: "#/components/schemas/Event"
 
     SearchFacet:
       type: object

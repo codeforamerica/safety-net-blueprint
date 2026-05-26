@@ -16,17 +16,15 @@ import { create, update, findById } from './database-manager.js';
 import { executeTransition } from './state-machine-runner.js';
 import { applySteps, evaluateGuards } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
-import { emitEvent, emitEventEnvelope, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
+import { emitEvent, emitEventEnvelope } from './emit-event.js';
 import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
- * Accepts the full type or a short suffix (last three dot-segments).
  */
 function eventTypeMatches(eventType, onValue) {
   if (!onValue || !eventType) return false;
-  if (eventType === onValue) return true;
-  return eventType === CLOUDEVENTS_TYPE_PREFIX + onValue;
+  return eventType === onValue;
 }
 
 /**
@@ -129,7 +127,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     const onEvents = smEntry.machine?.events;
     if (!Array.isArray(onEvents)) continue;
     for (const entry of onEvents) {
-      if (entry.name && Array.isArray(entry.steps)) {
+      if (entry.type && Array.isArray(entry.steps)) {
         machineEventSubs.push({ smEntry, entry });
       }
     }
@@ -139,13 +137,13 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
 
   console.log(`\n✓ Registered ${machineEventSubs.length} machine onEvent subscription(s):`);
   for (const { smEntry, entry } of machineEventSubs) {
-    console.log(`  - ${smEntry.domain}/${smEntry.machine.object} onEvent → on: ${entry.name}`);
+    console.log(`  - ${smEntry.domain}/${smEntry.machine.object} onEvent → on: ${entry.type}`);
   }
 
   eventBus.on('domain-event', (event) => {
     // Machine event subscriptions
     for (const { smEntry, entry } of machineEventSubs) {
-      if (!eventTypeMatches(event.type, entry.name)) continue;
+      if (!eventTypeMatches(event.type, entry.type)) continue;
 
       try {
         const now = new Date().toISOString();
@@ -162,7 +160,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
             .toLowerCase() + 's';
           const found = findById(targetCollection, event.subject);
           if (!found) {
-            console.error(`Machine onEvent "${entry.name}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
+            console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
             continue;
           }
           const from = entry.transition.from;
@@ -194,7 +192,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           baseContext
         );
         if (entities === null) {
-          console.error(`Machine onEvent "${entry.name}": required context binding failed — skipping`);
+          console.error(`Machine onEvent "${entry.type}": required context binding failed — skipping`);
           continue;
         }
         const context = { ...baseContext, entities };
@@ -296,32 +294,19 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
 
         for (const evt of allPendingEvents) {
           try {
-            if (evt.action.includes('.')) {
-              emitEventEnvelope({
-                type: CLOUDEVENTS_TYPE_PREFIX + evt.action,
-                source: `/${domain}`,
-                subject: subjectId,
-                data: evt.data || null,
-                time: now,
-              });
-            } else {
-              emitEvent({
-                domain,
-                object,
-                action: evt.action,
-                resourceId: subjectId,
-                source: `/${domain}`,
-                data: evt.data || null,
-                callerId: 'system',
-                now,
-              });
-            }
+            emitEventEnvelope({
+              type: evt.type,
+              source: `/${domain}`,
+              subject: evt.subject ?? subjectId,
+              data: evt.data || null,
+              time: now,
+            });
           } catch (e) {
-            console.error(`onEvent emit "${evt.action}" failed:`, e.message);
+            console.error(`onEvent emit "${evt.type}" failed:`, e.message);
           }
         }
       } catch (e) {
-        console.error(`Machine onEvent "${entry.name}" failed:`, e.message);
+        console.error(`Machine onEvent "${entry.type}" failed:`, e.message);
       }
     }
   });

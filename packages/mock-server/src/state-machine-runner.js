@@ -8,7 +8,7 @@ import { findById, update, create } from './database-manager.js';
 import { findOperation, evaluateGuards, applySteps } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
-import { emitEvent, emitEventEnvelope, CLOUDEVENTS_TYPE_PREFIX } from './emit-event.js';
+import { emitEventEnvelope } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { validate } from './validator.js';
 
@@ -143,34 +143,20 @@ export function executeTransition({
   }
 
   const domain = stateMachine.domain;
-  const object = (machine?.object || stateMachine.object).toLowerCase();
   const allEvents = [...pendingEvents, ...(ruleEvents || [])];
   for (const event of allEvents) {
     try {
-      if (event.action.includes('.')) {
-        emitEventEnvelope({
-          type: CLOUDEVENTS_TYPE_PREFIX + event.action,
-          source: `/${domain}`,
-          subject: event.subject ?? resource.id,
-          data: event.data || null,
-          time: timestamp,
-        });
-      } else {
-        emitEvent({
-          domain,
-          object,
-          action: event.action,
-          resourceId: resource.id,
-          subject: event.subject,
-          source: `/${domain}`,
-          data: event.data || null,
-          callerId,
-          traceparent,
-          now: timestamp
-        });
-      }
+      emitEventEnvelope({
+        type: event.type,
+        source: `/${domain}`,
+        subject: event.subject ?? resource.id,
+        data: event.data || null,
+        time: timestamp,
+        traceparent,
+        causationid: event.causationid || undefined,
+      });
     } catch (e) {
-      console.error(`Failed to emit event "${event.action}":`, e.message);
+      console.error(`Failed to emit event "${event.type}":`, e.message);
     }
   }
 

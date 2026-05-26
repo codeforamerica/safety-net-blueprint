@@ -32,54 +32,6 @@ tags:
   - name: Members
     description: Household members included in an application.
 
-x-events:
-  application.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.created
-    summary: Emitted when an application record is first created (auto-emitted on POST)
-    payload:
-      $ref: "#/components/schemas/ApplicationCreatedEvent"
-  application.submitted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
-    summary: Emitted when an applicant formally submits their application; starts the regulatory clock
-    payload:
-      $ref: "#/components/schemas/ApplicationSubmittedEvent"
-  application.opened:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.opened
-    summary: Emitted when a caseworker begins active review of the application
-    payload:
-      $ref: "#/components/schemas/ApplicationOpenedEvent"
-  application.withdrawn:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
-    summary: Emitted when an application is withdrawn; triggers open task cancellation
-    payload:
-      $ref: "#/components/schemas/ApplicationWithdrawnEvent"
-  application.closed:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.closed
-    summary: Emitted when intake is complete and the application is ready for eligibility determination
-    payload:
-      $ref: "#/components/schemas/ApplicationClosedEvent"
-  application.review_completed:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.review_completed
-    summary: Emitted when a caseworker signals data collection is complete; triggers eligibility determination. No state change.
-    payload:
-      $ref: "#/components/schemas/ApplicationReviewCompletedEvent"
-  application.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.updated
-    summary: Emitted when application fields are updated via PATCH (auto-emitted)
-    payload:
-      $ref: "#/components/schemas/ApplicationUpdatedEvent"
-  application.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.deleted
-    summary: Emitted when an application is deleted (auto-emitted on DELETE)
-    payload:
-      $ref: "#/components/schemas/ApplicationDeletedEvent"
-  determination.approval_needed:
-    type: org.codeforamerica.safety-net-blueprint.intake.determination.approval_needed
-    summary: Emitted when a determination requires supervisor sign-off before the application can be closed; states configure approval thresholds via rules overlay
-  determination.rejected:
-    type: org.codeforamerica.safety-net-blueprint.intake.determination.rejected
-    summary: Emitted when a supervisor rejects a determination, returning the application to caseworker review
-
 paths:
   /applications:
     get:
@@ -1018,38 +970,6 @@ components:
         - $ref: "#/components/schemas/InterviewWritable"
         - type: object
           minProperties: 1
-
-    # Event payload schemas — referenced by x-events section above
-
-    # --- Events ---
-    # Payload schemas live in schemas/intake-events.yaml for reuse across
-    # OpenAPI and future AsyncAPI specs. These are passthroughs.
-    # ApplicationCreatedEvent is a resource snapshot — see Application schema above.
-
-    ApplicationClosedEvent:
-      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationClosedEvent"
-
-    ApplicationCreatedEvent:
-      description: Snapshot of the newly created application resource.
-      $ref: "#/components/schemas/Application"
-
-    ApplicationDeletedEvent:
-      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationDeletedEvent"
-
-    ApplicationOpenedEvent:
-      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationOpenedEvent"
-
-    ApplicationReviewCompletedEvent:
-      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationReviewCompletedEvent"
-
-    ApplicationSubmittedEvent:
-      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationSubmittedEvent"
-
-    ApplicationUpdatedEvent:
-      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationUpdatedEvent"
-
-    ApplicationWithdrawnEvent:
-      $ref: "./schemas/intake-events.yaml#/$defs/ApplicationWithdrawnEvent"
 
     VerificationDocumentEvidence:
       type: object

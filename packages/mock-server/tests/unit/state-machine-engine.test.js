@@ -659,10 +659,10 @@ test('applySteps — emit step queues pendingEvent with resolved data', () => {
   const resource = { id: 'app-1' };
   const context = { object: resource, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingEvents } = applySteps([{
-    emit: { event: 'submitted', data: { submittedAt: '$now', appId: '$object.id' } }
+    emit: { type: 'intake.application.submitted', data: { submittedAt: '$now', appId: '$object.id' } }
   }], resource, context);
   assert.strictEqual(pendingEvents.length, 1);
-  assert.strictEqual(pendingEvents[0].action, 'submitted');
+  assert.strictEqual(pendingEvents[0].type, 'intake.application.submitted');
   assert.strictEqual(pendingEvents[0].data.submittedAt, '2025-01-01T00:00:00Z');
   assert.strictEqual(pendingEvents[0].data.appId, 'app-1');
 });
@@ -941,10 +941,10 @@ test('applySteps — if: propagates pendingEvents from branch', () => {
   const context = { object: { id: 'app-1', status: 'pending' }, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingEvents } = applySteps([{
     if: "$object.status == 'pending'",
-    then: [{ emit: { event: 'activated', data: { appId: '$object.id' } } }]
+    then: [{ emit: { type: 'intake.application.activated', data: { appId: '$object.id' } } }]
   }], resource, context);
   assert.strictEqual(pendingEvents.length, 1);
-  assert.strictEqual(pendingEvents[0].action, 'activated');
+  assert.strictEqual(pendingEvents[0].type, 'intake.application.activated');
   assert.strictEqual(pendingEvents[0].data.appId, 'app-1');
 });
 

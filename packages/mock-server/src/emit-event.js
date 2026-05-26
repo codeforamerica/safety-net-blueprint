@@ -5,14 +5,12 @@
  * collection, and broadcasts it over the SSE event bus.
  *
  * Event type follows the convention:
- *   org.codeforamerica.safety-net-blueprint.{domain}.{object}.{action}
+ *   {domain}.{object}.{action}
  */
 
 import { randomUUID } from 'crypto';
 import { create, insertResource } from './database-manager.js';
 import { eventBus } from './event-bus.js';
-
-export const CLOUDEVENTS_TYPE_PREFIX = 'org.codeforamerica.safety-net-blueprint.';
 
 /**
  * Emit a pre-built CloudEvents 1.0 envelope directly to the event bus.
@@ -36,7 +34,7 @@ export function emitEventEnvelope(envelope) {
   };
   // Infrastructure events (scheduling, etc.) are broadcast for stub interception
   // but not persisted — they are not domain events observable via /platform/events.
-  const isInfrastructureEvent = record.type?.includes(`${CLOUDEVENTS_TYPE_PREFIX}scheduling.`);
+  const isInfrastructureEvent = record.type?.startsWith('scheduling.');
   if (!isInfrastructureEvent) {
     insertResource('events', record);
   }
@@ -63,7 +61,7 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
   const timestamp = now || new Date().toISOString();
   const normalizedDomain = domain.replace(/-/g, '_');
   const normalizedObject = object.replace(/-/g, '_');
-  const type = `${CLOUDEVENTS_TYPE_PREFIX}${normalizedDomain}.${normalizedObject}.${action}`;
+  const type = `${normalizedDomain}.${normalizedObject}.${action}`;
 
   const envelope = {
     specversion: '1.0',

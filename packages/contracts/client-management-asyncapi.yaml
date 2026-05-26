@@ -1,0 +1,91 @@
+asyncapi: 3.0.0
+info:
+  title: Client Management Domain Events
+  version: 1.0.0
+  description: |
+    Event catalog for the Client Management domain. All events are CloudEvents 1.0
+    envelopes extending the base Event schema.
+
+    Event types follow the convention: client_management.{entity}.{action}.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+
+channels:
+  client_management.person.match_resolved:
+    address: client_management.person.match_resolved
+    messages:
+      personMatchResolved:
+        $ref: '#/components/messages/PersonMatchResolvedMessage'
+
+components:
+  messages:
+    PersonMatchResolvedMessage:
+      name: client_management.person.match_resolved
+      summary: Emitted once per applying member after Client Management attempts to match against existing person records.
+      payload:
+        $ref: '#/components/schemas/PersonMatchResolvedEvent'
+
+  schemas:
+    # subject: memberId
+    PersonMatchResolvedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: client_management.person.match_resolved
+            data:
+              $ref: '#/components/schemas/PersonMatchResolvedData'
+
+    # subject: memberId (the ApplicationMember this result applies to)
+    PersonMatchResolvedData:
+      type: object
+      description: |
+        Emitted once per applying member after Client Management attempts to match
+        against existing person records. Members with an empty programsApplyingFor
+        are skipped; no event is emitted for them.
+      additionalProperties: false
+      required:
+        - matchType
+        - candidates
+      properties:
+        matchType:
+          type: string
+          description: Outcome of the matching attempt.
+          enum:
+            - confirmed
+            - review_required
+            - no_match
+        candidates:
+          type: array
+          description: |
+            Match candidates. Single entry for confirmed; one or more for review_required;
+            empty for no_match. Carries no PII — call the Client Management API for
+            display details when rendering the caseworker review UI.
+          items:
+            $ref: '#/components/schemas/PersonMatchCandidate'
+
+    # Ancillary schemas (alphabetical)
+
+    PersonMatchCandidate:
+      type: object
+      description: A candidate person record returned by the matching process.
+      additionalProperties: false
+      required:
+        - personId
+        - confidenceScore
+      properties:
+        personId:
+          type: string
+          format: uuid
+          description: The candidate person record ID.
+          x-relationship:
+            resource: Person
+        confidenceScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Match confidence score from 0 (no confidence) to 1 (certain).

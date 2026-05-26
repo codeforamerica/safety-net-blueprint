@@ -1,18 +1,145 @@
-# Platform event payload schemas — the event catalog for cross-platform events.
+# Platform event schemas — CloudEvents base envelope and shared platform event payloads.
 #
-# These schemas define the data payloads for:
+# $defs/EventBase — the author-specified fields of a CloudEvents envelope.
+#   Used as the schema for state machine emit steps (EmitStep.emit).
+#   Required: type. Optional: subject, causationid, data, description.
+#   Platform-generated fields (id, specversion, source, time, datacontenttype)
+#   are intentionally absent — emitEventEnvelope populates them at runtime.
+#
+# $defs/Event — the full CloudEvents 1.0 envelope. Extends EventBase with
+#   platform-generated fields. All domain AsyncAPI event schemas extend this.
+#
+# All other schemas here define the data payloads for:
 #   - CRUD lifecycle events (updated, deleted) emitted automatically by all REST handlers
 #   - Scheduling service contract events (timer request, cancellation, callback)
 #
-# This file is the event catalog for the platform layer. Both OpenAPI specs and
-# JSON Schema contracts (state machine files, SLA types, etc.) reference it.
-#
 # ResourceCreatedEvent is intentionally NOT defined here — its payload is the
 # full resource snapshot, which varies by domain. Each domain defines a
-# {Resource}CreatedEvent that $ref's its own resource schema.
+# {Resource}CreatedEvent schema in its own AsyncAPI file.
 #
-# Used by: workflow-openapi.yaml, platform-openapi.yaml, and any domain
-# OpenAPI spec that emits CRUD lifecycle or scheduling events.
+# Used by: workflow-openapi.yaml, platform-openapi.yaml, domain *-asyncapi.yaml files,
+# and any domain OpenAPI spec that emits CRUD lifecycle or scheduling events.
+
+$defs:
+  # Minimum event reference — just the type identifier and an optional annotation.
+  # Used as the schema for state machine onEvent handlers (OnEvent.type).
+  # Also the base for EventBase and Event.
+  #
+  # Example (onEvent subscription):
+  #   - type: intake.application.submitted
+  #     description: Start the regulatory clock when an application is submitted.
+  #     steps: [...]
+  EventRef:
+    type: object
+    required:
+      - type
+    properties:
+      type:
+        type: string
+        description: >
+          Fully qualified CloudEvents event type following the convention
+          {domain}.{entity}.{action} (e.g., intake.application.submitted).
+          Must match a channel address declared in the domain's eventsSpec AsyncAPI file.
+      description:
+        type: string
+        description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+
+  # The author-specified fields of a CloudEvents envelope.
+  # Extends EventRef with optional emit-time overrides.
+  # Used as the schema for state machine emit steps (EmitStep.emit).
+  # Platform-generated fields are absent — emitEventEnvelope populates them at runtime.
+  #
+  # Example (emit step):
+  #   - emit:
+  #       type: intake.application.submitted
+  #       subject: $object.applicationId   # optional; overrides default resourceId
+  #       data:
+  #         programs: $object.programs
+  EventBase:
+    allOf:
+      - $ref: './platform-events.yaml#/$defs/EventRef'
+      - type: object
+        properties:
+          subject:
+            type: string
+            description: >
+              CloudEvents subject override. The entity ID the event pertains to.
+              Defaults to the emitting resource's own id when omitted.
+          causationid:
+            type: string
+            description: >
+              CloudEvents Causation extension (optional). Value expression resolving to the id
+              of the event that directly caused this one. Use when an event is emitted in
+              response to another event (e.g., auto-resume triggered by a timer callback).
+          data:
+            type: object
+            additionalProperties: true
+            description: Event-specific payload. Field values are value expressions resolved at emit time.
+
+  # Full CloudEvents 1.0 envelope. Extends EventBase with platform-generated fields.
+  # All domain AsyncAPI event schemas extend this via allOf.
+  # The `type` field in each concrete event carries a `const` value with
+  # the fully qualified event type (e.g., intake.application.submitted).
+  # The org-specific prefix is never written in source — the resolver adds
+  # it at resolve time via the x-event-type-prefix overlay config.
+  Event:
+    allOf:
+      - $ref: './platform-events.yaml#/$defs/EventBase'
+      - type: object
+        required:
+          - specversion
+          - id
+          - source
+          - subject
+          - time
+          - datacontenttype
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+            description: CloudEvents specification version.
+          id:
+            type: string
+            format: uuid
+            description: Unique event identifier.
+          source:
+            type: string
+            description: Domain base path that produced the event (e.g., /intake, /workflow).
+            example: /intake
+          subject:
+            type: string
+            format: uuid
+            description: Entity ID the event pertains to.
+          time:
+            type: string
+            format: date-time
+            description: When the event occurred.
+          datacontenttype:
+            type: string
+            const: application/json
+            description: Media type of the event payload.
+          traceparent:
+            type:
+              - string
+              - "null"
+            description: >
+              W3C Trace Context header (optional). Propagated from the triggering
+              request or event. The trace ID component is stable across the full
+              causal chain.
+          causationid:
+            type:
+              - string
+              - "null"
+            format: uuid
+            description: >
+              CloudEvents Causation extension (optional). The `id` of the event
+              that directly caused this one. Use when an event is emitted in direct
+              response to another event (e.g., a task auto-resumed because a timer
+              fired). Allows consumers to trace the immediate cause without
+              inspecting the full distributed trace.
+          data:
+            type: object
+            description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
 
 FieldChange:
   type: object

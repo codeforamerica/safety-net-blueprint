@@ -27,8 +27,6 @@ servers:
 tags:
   - name: Evaluate
     description: Eligibility evaluation endpoints.
-x-events: {}
-
 paths:
   /evaluate/expedited-screening:
     post:

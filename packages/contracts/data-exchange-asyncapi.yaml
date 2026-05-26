@@ -1,0 +1,229 @@
+asyncapi: 3.0.0
+info:
+  title: Data Exchange Domain Events
+  version: 1.0.0
+  description: |
+    Event catalog for the Data Exchange domain. All events are CloudEvents 1.0
+    envelopes extending the base Event schema.
+
+    Event types follow the convention: data_exchange.{entity}.{action}.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+
+channels:
+  data_exchange.call.completed:
+    address: data_exchange.call.completed
+    messages:
+      callCompleted:
+        $ref: '#/components/messages/CallCompletedMessage'
+
+  data_exchange.call.failed:
+    address: data_exchange.call.failed
+    messages:
+      callFailed:
+        $ref: '#/components/messages/CallFailedMessage'
+
+  data_exchange.call.submitted:
+    address: data_exchange.call.submitted
+    messages:
+      callSubmitted:
+        $ref: '#/components/messages/CallSubmittedMessage'
+
+  data_exchange.call.timed_out:
+    address: data_exchange.call.timed_out
+    messages:
+      callTimedOut:
+        $ref: '#/components/messages/CallTimedOutMessage'
+
+components:
+  messages:
+    CallCompletedMessage:
+      name: data_exchange.call.completed
+      summary: Emitted when an external service call returns a conclusive, inconclusive, or partial result.
+      payload:
+        $ref: '#/components/schemas/CallCompletedEvent'
+
+    CallFailedMessage:
+      name: data_exchange.call.failed
+      summary: Emitted when an external service call fails due to a connection, service, or authentication error.
+      payload:
+        $ref: '#/components/schemas/CallFailedEvent'
+
+    CallSubmittedMessage:
+      name: data_exchange.call.submitted
+      summary: Emitted when a service call is submitted to an external service.
+      payload:
+        $ref: '#/components/schemas/CallSubmittedEvent'
+
+    CallTimedOutMessage:
+      name: data_exchange.call.timed_out
+      summary: Emitted when a service call exceeds its timeout threshold.
+      payload:
+        $ref: '#/components/schemas/CallTimedOutEvent'
+
+  schemas:
+    # subject: serviceCallId
+    CallCompletedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: data_exchange.call.completed
+            data:
+              $ref: '#/components/schemas/CallCompletedData'
+
+    # subject: serviceCallId
+    CallCompletedData:
+      type: object
+      description: |
+        Carries the full result from the external service. The `result` field is
+        polymorphic on `serviceType`. Calling domains subscribe to this event and
+        use `metadata.{domain}` fields to route the result to the correct record.
+      additionalProperties: false
+      required:
+        - serviceType
+        - requestingResourceId
+        - result
+      properties:
+        serviceType:
+          $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+        requestingResourceId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Polymorphic
+        result:
+          type: string
+          description: High-level outcome of the service call.
+          enum:
+            - conclusive
+            - inconclusive
+            - partial
+        metadata:
+          type: object
+          description: Domain-keyed metadata echoed back from the service call record. Enables calling domains to resume without querying the service call.
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          nullable: true
+        serviceResult:
+          type: object
+          description: Service-type-specific result payload. Polymorphic on `serviceType`.
+          additionalProperties: true
+          nullable: true
+
+    # subject: serviceCallId
+    CallFailedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: data_exchange.call.failed
+            data:
+              $ref: '#/components/schemas/CallFailedData'
+
+    # subject: serviceCallId
+    CallFailedData:
+      type: object
+      description: Payload for the data_exchange.call.failed event.
+      additionalProperties: false
+      required:
+        - serviceType
+        - requestingResourceId
+        - failureReason
+      properties:
+        serviceType:
+          $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+        requestingResourceId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Polymorphic
+        failureReason:
+          type: string
+          description: Classification of the failure to help calling domains decide whether to retry, escalate, or proceed without the data.
+          enum:
+            - connection_error
+            - service_error
+            - authentication_error
+        metadata:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          nullable: true
+
+    # subject: serviceCallId
+    CallSubmittedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: data_exchange.call.submitted
+            data:
+              $ref: '#/components/schemas/CallSubmittedData'
+
+    # subject: serviceCallId
+    CallSubmittedData:
+      type: object
+      description: Payload for the data_exchange.call.submitted event.
+      additionalProperties: false
+      required:
+        - serviceType
+        - requestingResourceId
+      properties:
+        serviceType:
+          $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+        requestingResourceId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Polymorphic
+        metadata:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          nullable: true
+
+    # subject: serviceCallId
+    CallTimedOutEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: data_exchange.call.timed_out
+            data:
+              $ref: '#/components/schemas/CallTimedOutData'
+
+    # subject: serviceCallId
+    CallTimedOutData:
+      type: object
+      description: Payload for the data_exchange.call.timed_out event.
+      additionalProperties: false
+      required:
+        - serviceType
+        - requestingResourceId
+      properties:
+        serviceType:
+          $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+        requestingResourceId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Polymorphic
+        metadata:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          nullable: true

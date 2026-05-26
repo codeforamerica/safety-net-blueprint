@@ -29,8 +29,7 @@ test('emitEvent', async (t) => {
     });
 
     assert.strictEqual(stored.specversion, '1.0');
-    assert.match(stored.type, /^org\.codeforamerica\.safety-net-blueprint\./);
-    assert.strictEqual(stored.type, 'org.codeforamerica.safety-net-blueprint.workflow.task.created');
+    assert.strictEqual(stored.type, 'workflow.task.created');
     assert.strictEqual(stored.source, '/workflow');
     assert.strictEqual(stored.subject, 'abc123');
     assert.strictEqual(stored.time, '2024-01-01T00:00:00.000Z');
@@ -51,7 +50,7 @@ test('emitEvent', async (t) => {
       now: '2024-01-01T00:00:00.000Z',
     });
 
-    assert.strictEqual(stored.type, 'org.codeforamerica.safety-net-blueprint.intake.application.submitted');
+    assert.strictEqual(stored.type, 'intake.application.submitted');
     console.log('  ✓ Derives type from domain + object + action');
   });
 
@@ -67,7 +66,7 @@ test('emitEvent', async (t) => {
       now: '2024-01-01T00:00:00.000Z',
     });
 
-    assert.strictEqual(stored.type, 'org.codeforamerica.safety-net-blueprint.data_exchange.service_call.created');
+    assert.strictEqual(stored.type, 'data_exchange.service_call.created');
     console.log('  ✓ Normalizes hyphenated domain/object to underscores');
   });
 
@@ -196,7 +195,7 @@ test('emitEvent', async (t) => {
     clearAll('events');
     const stored = emitEventEnvelope({
       specversion: '1.0',
-      type: 'org.codeforamerica.safety-net-blueprint.intake.interview.completed',
+      type: 'intake.interview.completed',
       source: '/intake',
       subject: 'interview-1',
       time: '2026-04-15T10:00:00.000Z',
@@ -204,7 +203,7 @@ test('emitEvent', async (t) => {
     });
 
     assert.strictEqual(stored.specversion, '1.0');
-    assert.strictEqual(stored.type, 'org.codeforamerica.safety-net-blueprint.intake.interview.completed');
+    assert.strictEqual(stored.type, 'intake.interview.completed');
     assert.strictEqual(stored.subject, 'interview-1');
     assert.strictEqual(stored.time, '2026-04-15T10:00:00.000Z');
     assert.ok(stored.id, 'Should have a generated id');

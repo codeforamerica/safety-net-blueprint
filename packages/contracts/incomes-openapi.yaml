@@ -19,8 +19,6 @@ servers:
 tags:
 - name: Income
   description: Manage income records.
-x-events: {}
-
 paths:
   "/incomes":
     get:

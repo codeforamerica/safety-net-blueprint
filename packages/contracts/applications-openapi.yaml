@@ -19,8 +19,6 @@ servers:
 tags:
 - name: Applications
   description: Manage public assistance applications.
-x-events: {}
-
 paths:
   "/applications":
     get:

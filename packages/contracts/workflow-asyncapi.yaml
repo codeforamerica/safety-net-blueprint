@@ -1,0 +1,535 @@
+asyncapi: 3.0.0
+info:
+  title: Workflow Domain Events
+  version: 1.0.0
+  description: |
+    Event catalog for the Workflow domain. All events are CloudEvents 1.0
+    envelopes extending the base Event schema.
+
+    Event types follow the convention: workflow.{entity}.{action}.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+
+channels:
+  workflow.task.approved:
+    address: workflow.task.approved
+    messages:
+      taskApproved:
+        $ref: '#/components/messages/TaskApprovedMessage'
+
+  workflow.task.assigned:
+    address: workflow.task.assigned
+    messages:
+      taskAssigned:
+        $ref: '#/components/messages/TaskAssignedMessage'
+
+  workflow.task.awaiting_client:
+    address: workflow.task.awaiting_client
+    messages:
+      taskAwaitingClient:
+        $ref: '#/components/messages/TaskAwaitingClientMessage'
+
+  workflow.task.awaiting_verification:
+    address: workflow.task.awaiting_verification
+    messages:
+      taskAwaitingVerification:
+        $ref: '#/components/messages/TaskAwaitingVerificationMessage'
+
+  workflow.task.cancelled:
+    address: workflow.task.cancelled
+    messages:
+      taskCancelled:
+        $ref: '#/components/messages/TaskCancelledMessage'
+
+  workflow.task.claimed:
+    address: workflow.task.claimed
+    messages:
+      taskClaimed:
+        $ref: '#/components/messages/TaskClaimedMessage'
+
+  workflow.task.completed:
+    address: workflow.task.completed
+    messages:
+      taskCompleted:
+        $ref: '#/components/messages/TaskCompletedMessage'
+
+  workflow.task.created:
+    address: workflow.task.created
+    messages:
+      taskCreated:
+        $ref: '#/components/messages/TaskCreatedMessage'
+
+  workflow.task.de-escalated:
+    address: workflow.task.de-escalated
+    messages:
+      taskDeEscalated:
+        $ref: '#/components/messages/TaskDeEscalatedMessage'
+
+  workflow.task.escalated:
+    address: workflow.task.escalated
+    messages:
+      taskEscalated:
+        $ref: '#/components/messages/TaskEscalatedMessage'
+
+  workflow.task.priority_changed:
+    address: workflow.task.priority_changed
+    messages:
+      taskPriorityChanged:
+        $ref: '#/components/messages/TaskPriorityChangedMessage'
+
+  workflow.task.released:
+    address: workflow.task.released
+    messages:
+      taskReleased:
+        $ref: '#/components/messages/TaskReleasedMessage'
+
+  workflow.task.reopened:
+    address: workflow.task.reopened
+    messages:
+      taskReopened:
+        $ref: '#/components/messages/TaskReopenedMessage'
+
+  workflow.task.resumed:
+    address: workflow.task.resumed
+    messages:
+      taskResumed:
+        $ref: '#/components/messages/TaskResumedMessage'
+
+  workflow.task.returned_to_worker:
+    address: workflow.task.returned_to_worker
+    messages:
+      taskReturnedToWorker:
+        $ref: '#/components/messages/TaskReturnedToWorkerMessage'
+
+  workflow.task.sla_breached:
+    address: workflow.task.sla_breached
+    messages:
+      taskSlaBreached:
+        $ref: '#/components/messages/TaskSlaBreachedMessage'
+
+  workflow.task.submitted_for_review:
+    address: workflow.task.submitted_for_review
+    messages:
+      taskSubmittedForReview:
+        $ref: '#/components/messages/TaskSubmittedForReviewMessage'
+
+  workflow.task.updated:
+    address: workflow.task.updated
+    messages:
+      taskUpdated:
+        $ref: '#/components/messages/TaskUpdatedMessage'
+
+components:
+  messages:
+    TaskApprovedMessage:
+      name: workflow.task.approved
+      summary: Records supervisor approval of a submitted-for-review task.
+      payload:
+        $ref: '#/components/schemas/TaskApprovedEvent'
+
+    TaskAssignedMessage:
+      name: workflow.task.assigned
+      summary: Records direct assignment of a task to a worker or queue.
+      payload:
+        $ref: '#/components/schemas/TaskAssignedEvent'
+
+    TaskAwaitingClientMessage:
+      name: workflow.task.awaiting_client
+      summary: Records that the task is blocked waiting on client action.
+      payload:
+        $ref: '#/components/schemas/TaskAwaitingClientEvent'
+
+    TaskAwaitingVerificationMessage:
+      name: workflow.task.awaiting_verification
+      summary: Records that the task is blocked waiting on a verification result.
+      payload:
+        $ref: '#/components/schemas/TaskAwaitingVerificationEvent'
+
+    TaskCancelledMessage:
+      name: workflow.task.cancelled
+      summary: Records cancellation of a task. When system-triggered (e.g., client unresponsive), `causationid` carries the ID of the triggering event and `reason` is `client_unresponsive`.
+      payload:
+        $ref: '#/components/schemas/TaskCancelledEvent'
+
+    TaskClaimedMessage:
+      name: workflow.task.claimed
+      summary: Records the claim and who claimed the task.
+      payload:
+        $ref: '#/components/schemas/TaskClaimedEvent'
+
+    TaskCompletedMessage:
+      name: workflow.task.completed
+      summary: Records the completion and its outcome.
+      payload:
+        $ref: '#/components/schemas/TaskCompletedEvent'
+
+    TaskCreatedMessage:
+      name: workflow.task.created
+      summary: Emitted when a new task record is created (auto-emitted on POST).
+      payload:
+        $ref: '#/components/schemas/TaskCreatedEvent'
+
+    TaskDeEscalatedMessage:
+      name: workflow.task.de-escalated
+      summary: Records de-escalation of a task.
+      payload:
+        $ref: '#/components/schemas/TaskDeEscalatedEvent'
+
+    TaskEscalatedMessage:
+      name: workflow.task.escalated
+      summary: Records the escalation and its reason.
+      payload:
+        $ref: '#/components/schemas/TaskEscalatedEvent'
+
+    TaskPriorityChangedMessage:
+      name: workflow.task.priority_changed
+      summary: Records the priority change.
+      payload:
+        $ref: '#/components/schemas/TaskPriorityChangedEvent'
+
+    TaskReleasedMessage:
+      name: workflow.task.released
+      summary: Records the release and its reason.
+      payload:
+        $ref: '#/components/schemas/TaskReleasedEvent'
+
+    TaskReopenedMessage:
+      name: workflow.task.reopened
+      summary: Records the reopen and its reason.
+      payload:
+        $ref: '#/components/schemas/TaskReopenedEvent'
+
+    TaskResumedMessage:
+      name: workflow.task.resumed
+      summary: Records resumption from an awaiting state. When system-triggered (timer or verification result), `causationid` carries the ID of the triggering event.
+      payload:
+        $ref: '#/components/schemas/TaskResumedEvent'
+
+    TaskReturnedToWorkerMessage:
+      name: workflow.task.returned_to_worker
+      summary: Records the return for revision and its reason.
+      payload:
+        $ref: '#/components/schemas/TaskReturnedToWorkerEvent'
+
+    TaskSlaBreachedMessage:
+      name: workflow.task.sla_breached
+      summary: Records an SLA deadline breach for federal compliance reporting.
+      payload:
+        $ref: '#/components/schemas/TaskSlaBreachedEvent'
+
+    TaskSubmittedForReviewMessage:
+      name: workflow.task.submitted_for_review
+      summary: Records submission for supervisor review.
+      payload:
+        $ref: '#/components/schemas/TaskSubmittedForReviewEvent'
+
+    TaskUpdatedMessage:
+      name: workflow.task.updated
+      summary: Emitted when task fields are updated via PATCH (auto-emitted).
+      payload:
+        $ref: '#/components/schemas/TaskUpdatedEvent'
+
+  schemas:
+    # Primary schemas (alphabetical by event type)
+
+    TaskApprovedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.approved
+            data:
+              $ref: '#/components/schemas/TaskApprovedData'
+
+    TaskApprovedData:
+      type: object
+      additionalProperties: false
+      required: [outcome]
+      properties:
+        outcome:
+          type: string
+          description: The outcome recorded with the approval.
+
+    TaskAssignedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.assigned
+            data:
+              $ref: '#/components/schemas/TaskAssignedData'
+
+    TaskAssignedData:
+      type: object
+      additionalProperties: false
+      properties:
+        assignedToId:
+          type: string
+          format: uuid
+          description: The worker the task was assigned to.
+          x-relationship:
+            resource: User
+            domain: platform
+        queueId:
+          type: string
+          format: uuid
+          description: The queue the task was assigned to.
+          x-relationship:
+            resource: Queue
+
+    TaskAwaitingClientEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.awaiting_client
+
+    TaskAwaitingVerificationEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.awaiting_verification
+
+    TaskCancelledEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.cancelled
+            data:
+              $ref: '#/components/schemas/TaskCancelledData'
+
+    TaskCancelledData:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          description: Why the task was cancelled.
+          enum:
+            - client_unresponsive
+
+    TaskClaimedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.claimed
+            data:
+              $ref: '#/components/schemas/TaskClaimedData'
+
+    TaskClaimedData:
+      type: object
+      additionalProperties: false
+      required: [assignedToId]
+      properties:
+        assignedToId:
+          type: string
+          format: uuid
+          description: The worker who claimed the task.
+          x-relationship:
+            resource: User
+            domain: platform
+
+    TaskCompletedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.completed
+            data:
+              $ref: '#/components/schemas/TaskCompletedData'
+
+    TaskCompletedData:
+      type: object
+      additionalProperties: false
+      required: [outcome]
+      properties:
+        outcome:
+          type: string
+          description: The outcome recorded with the completion.
+
+    # TaskCreatedEvent payload is the full Task resource snapshot.
+    TaskCreatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.created
+
+    TaskDeEscalatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.de-escalated
+
+    TaskEscalatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.escalated
+            data:
+              $ref: '#/components/schemas/TaskEscalatedData'
+
+    TaskEscalatedData:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          description: Why the task was escalated.
+
+    TaskPriorityChangedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.priority_changed
+            data:
+              $ref: '#/components/schemas/TaskPriorityChangedData'
+
+    TaskPriorityChangedData:
+      type: object
+      additionalProperties: false
+      required: [priority]
+      properties:
+        priority:
+          type: integer
+          description: The new priority value.
+        reason:
+          type: string
+          description: Why the priority was changed.
+
+    TaskReleasedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.released
+            data:
+              $ref: '#/components/schemas/TaskReleasedData'
+
+    TaskReleasedData:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          description: Why the task was released.
+
+    TaskReopenedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.reopened
+            data:
+              $ref: '#/components/schemas/TaskReopenedData'
+
+    TaskReopenedData:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          description: Why the task was reopened.
+
+    TaskResumedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.resumed
+
+    TaskReturnedToWorkerEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.returned_to_worker
+            data:
+              $ref: '#/components/schemas/TaskReturnedToWorkerData'
+
+    TaskReturnedToWorkerData:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          description: Why the task was returned for revision.
+
+    TaskSlaBreachedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.sla_breached
+            data:
+              $ref: '#/components/schemas/TaskSlaBreachedData'
+
+    TaskSlaBreachedData:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          description: Why the SLA was breached.
+
+    TaskSubmittedForReviewEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.submitted_for_review
+
+    TaskUpdatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: workflow.task.updated
+            data:
+              $ref: './schemas/platform-events.yaml#/ResourceUpdatedEvent'

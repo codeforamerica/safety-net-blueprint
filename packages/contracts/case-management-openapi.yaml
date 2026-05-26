@@ -19,8 +19,6 @@ servers:
 tags:
 - name: Cases
   description: Manage cases.
-x-events: {}
-
 paths:
   "/cases":
     get:
