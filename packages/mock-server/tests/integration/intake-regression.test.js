@@ -895,6 +895,24 @@ async function testTaskClaimedRules() {
   });
 }
 
+async function testSubCollectionPaginationEnvelope() {
+  section('Sub-collection list response — pagination envelope');
+
+  await test('GET sub-collection includes limit, offset, and hasNext in response', async () => {
+    const { id: appId } = await createAndSubmitApp(['snap']);
+
+    const res = await fetch(`${BASE_URL}${APP}/${appId}/members`);
+    assert.strictEqual(res.status, 200, 'sub-collection GET should return 200');
+
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items), 'response should have items array');
+    assert.strictEqual(typeof data.total, 'number', 'response should have numeric total');
+    assert.strictEqual(typeof data.limit, 'number', 'response should have numeric limit');
+    assert.strictEqual(typeof data.offset, 'number', 'response should have numeric offset');
+    assert.strictEqual(typeof data.hasNext, 'boolean', 'response should have boolean hasNext');
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -937,6 +955,7 @@ async function runTests() {
     if (membersAvailable) await testRecordDeterminationRule();
     await testCloseOnAllDeterminedRule();
     await testTaskClaimedRules();
+    await testSubCollectionPaginationEnvelope();
   } finally {
     await teardownServer(serverStartedByTests);
   }
