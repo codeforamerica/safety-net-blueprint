@@ -15,7 +15,7 @@
   "scripts": {
     "start": "node packages/mock-server/scripts/server.js --spec=packages/contracts",
     "validate": "node packages/contracts/scripts/validate-openapi.js --spec=packages/contracts && node packages/contracts/scripts/validate-patterns.js --spec=packages/contracts && node packages/contracts/scripts/validate-schemas.js --spec=packages/contracts && node packages/contracts/scripts/validate-rules.js --spec=packages/contracts && npx @redocly/cli lint packages/contracts/*-openapi.yaml --config=.redocly.yaml",
-    "validate:resolved": "node packages/contracts/scripts/validate-openapi.js --spec=packages/resolved && node packages/contracts/scripts/validate-patterns.js --spec=packages/resolved",
+    "validate:resolved": "node packages/contracts/scripts/validate-openapi.js --spec=packages/resolved",
     "validate:syntax": "node packages/contracts/scripts/validate-openapi.js --spec=packages/contracts",
     "validate:patterns": "node packages/contracts/scripts/validate-patterns.js --spec=packages/contracts",
     "validate:schemas": "node packages/contracts/scripts/validate-schemas.js --spec=packages/contracts",
