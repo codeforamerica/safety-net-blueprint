@@ -301,7 +301,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
               const limit = Math.min(parseInt(req.query.limit) || pagination.limitDefault || 25, pagination.limitMax || 100);
               const offset = parseInt(req.query.offset) || 0;
               const result = findAll(endpointWithCollection.collectionName, { [parentField]: parentId }, { limit, offset });
-              return res.json(result);
+              return res.json({ items: result.items || [], total: result.total || 0, limit, offset, hasNext: result.hasNext || false });
             } catch (error) {
               res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
             }
