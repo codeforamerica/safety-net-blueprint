@@ -27,22 +27,11 @@ fail() {
   failures+=("$1")
 }
 
-step "Validating OpenAPI specs (syntax + patterns)"
+step "Validating base specs"
 if npm run validate 2>&1; then
-  pass "Specs valid"
+  pass "Base specs valid"
 else
-  fail "Spec validation failed"
-fi
-
-step "Running Spectral lint"
-for f in packages/contracts/*-openapi.yaml; do
-  echo "  Linting $f..."
-  npx spectral lint "$f" --ignore-unknown-format --verbose 2>&1 | grep -E "Error running|Cannot read" || true
-done
-if npx spectral lint 'packages/contracts/*-openapi.yaml' --ignore-unknown-format --verbose 2>&1; then
-  pass "Spectral lint passed"
-else
-  fail "Spectral lint failed"
+  fail "Base spec validation failed"
 fi
 
 step "Running unit tests"
@@ -57,6 +46,22 @@ if npm run resolve 2>&1; then
   pass "Overlay resolution succeeded"
 else
   fail "Overlay resolution failed"
+fi
+
+step "Validating resolved specs"
+if npm run validate:resolved 2>&1; then
+  pass "Resolved specs valid"
+else
+  fail "Resolved spec validation failed"
+fi
+
+step "Validating client generation"
+if npm run clients:typescript -- --spec=packages/resolved --out=/tmp/preflight-clients-check 2>&1; then
+  rm -rf /tmp/preflight-clients-check
+  pass "Client generation succeeded"
+else
+  rm -rf /tmp/preflight-clients-check
+  fail "Client generation failed"
 fi
 
 step "Validating seed data"

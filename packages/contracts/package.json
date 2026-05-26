@@ -28,11 +28,11 @@
   "scripts": {
     "prepack": "npm run design:reference && node ../../scripts/build-package-readme.js",
     "test": "node --test tests/unit/",
-    "validate": "npm run validate:syntax && npm run validate:patterns && npm run validate:schemas && npm run validate:rules && npm run validate:events",
+    "validate": "npm run validate:syntax && npm run validate:lint && npm run validate:patterns && npm run validate:schemas && npm run validate:rules && npm run validate:events",
     "validate:rules": "node scripts/validate-rules.js --spec=.",
     "validate:schemas": "node scripts/validate-schemas.js --spec=.",
     "validate:syntax": "node scripts/validate-openapi.js --spec=.",
-    "validate:lint": "npx spectral lint '*-openapi.yaml' --ignore-unknown-format",
+    "validate:lint": "npx @redocly/cli lint *-openapi.yaml --config=../../.redocly.yaml",
     "validate:patterns": "node scripts/validate-patterns.js --spec=.",
     "validate:events": "node scripts/validate-events.js --spec=.",
     "resolve": "node scripts/resolve.js --spec=. --out=../resolved",
@@ -63,6 +63,6 @@
     "access": "public"
   },
   "devDependencies": {
-    "@stoplight/spectral-cli": "^6.15.0"
+    "@redocly/cli": "^2.31.3"
   }
 }
