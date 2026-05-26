@@ -57,7 +57,7 @@ $defs:
   #         programs: $object.programs
   EventBase:
     allOf:
-      - $ref: './platform-events.yaml#/$defs/EventRef'
+      - $ref: '#/$defs/EventRef'
       - type: object
         properties:
           subject:
@@ -84,7 +84,7 @@ $defs:
   # it at resolve time via the x-event-type-prefix overlay config.
   Event:
     allOf:
-      - $ref: './platform-events.yaml#/$defs/EventBase'
+      - $ref: '#/$defs/EventBase'
       - type: object
         required:
           - specversion

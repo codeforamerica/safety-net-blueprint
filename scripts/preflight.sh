@@ -55,6 +55,15 @@ else
   fail "Resolved spec validation failed"
 fi
 
+step "Validating client generation"
+if npm run clients:typescript -- --spec=packages/resolved --out=/tmp/preflight-clients-check 2>&1; then
+  rm -rf /tmp/preflight-clients-check
+  pass "Client generation succeeded"
+else
+  rm -rf /tmp/preflight-clients-check
+  fail "Client generation failed"
+fi
+
 step "Validating seed data"
 if npm run validate:seed 2>&1; then
   pass "Seed data valid"
