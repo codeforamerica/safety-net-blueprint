@@ -401,6 +401,8 @@ paths:
         Returns review-progress entries for this application. Optionally filter
         by section and/or memberId.
       operationId: listApplicationReviewProgress
+      x-sortable:
+        fields: [section, status, updatedAt]
       tags:
         - Application Review Progress
       parameters:
@@ -469,6 +471,9 @@ paths:
       summary: List application notes
       description: Retrieve notes recorded against this application, with optional filters.
       operationId: listApplicationNotes
+      x-sortable:
+        fields: [createdAt, updatedAt, scope, section]
+        default: createdAt
       tags:
         - Application Notes
       parameters:
@@ -749,6 +754,8 @@ paths:
       summary: List member income
       description: Retrieve all income records for this application member.
       operationId: listMemberIncome
+      x-sortable:
+        fields: [type, startDate, createdAt, updatedAt]
       tags:
         - Member Income
       parameters:
@@ -871,6 +878,8 @@ paths:
       summary: List member expenses
       description: Retrieve all expense records for this application member.
       operationId: listMemberExpenses
+      x-sortable:
+        fields: [createdAt, updatedAt]
       tags:
         - Member Expenses
       parameters:
@@ -993,6 +1002,8 @@ paths:
       summary: List member assets
       description: Retrieve all asset records for this application member.
       operationId: listMemberAssets
+      x-sortable:
+        fields: [type, createdAt, updatedAt]
       tags:
         - Member Assets
       parameters:
@@ -1115,6 +1126,8 @@ paths:
       summary: List member employment
       description: Retrieve all employment records for this application member.
       operationId: listMemberEmployment
+      x-sortable:
+        fields: [startDate, endDate, createdAt, updatedAt]
       tags:
         - Member Employment
       parameters:
@@ -1237,6 +1250,8 @@ paths:
       summary: List member health coverage
       description: Retrieve all health coverage records for this application member.
       operationId: listMemberHealthCoverage
+      x-sortable:
+        fields: [coverageType, startDate, createdAt, updatedAt]
       tags:
         - Member Health Coverage
       parameters:

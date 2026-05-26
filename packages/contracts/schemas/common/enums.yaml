@@ -44,12 +44,13 @@ $defs:
     type: string
     enum:
       - snap          # Supplemental Nutrition Assistance Program
-      - medicaid      # Medicaid
-      - chip          # Children's Health Insurance Program
+      - medicaid      # Medicaid / MAGI Medicaid
+      - chip          # Children's Health Insurance Program (Title XXI)
       - tanf          # Temporary Assistance for Needy Families
-      - ccdf          # Child Care and Development Fund (child care subsidy)
     description: >
-      Public assistance program available through integrated online benefits
-      applications. Values use the federal program name; state-specific names
-      (e.g., "medical_assistance" for Medicaid) are overlay concerns. States
-      may extend this list via overlay.
+      Baseline public assistance programs. SNAP, Medicaid/MAGI, and CHIP are
+      first-class programs with full intake and eligibility support. TANF is a
+      thin baseline — federal requirements are minimal; state-specific intake
+      behavior is an overlay concern. Values use the federal program name;
+      state-specific names (e.g., "medical_assistance" for Medicaid) are
+      overlay concerns. States may extend this list via overlay.
