@@ -14,7 +14,9 @@ import {
   discoverStateMachines,
   extractItemEndpoint,
   generateOverlay,
-  buildOperationId
+  buildOperationId,
+  rewriteLocalDefsRefs,
+  hoistDefs
 } from '../../scripts/generate-rpc-overlay.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -289,4 +291,140 @@ test('generateOverlay — correct operationIds', () => {
   assert.strictEqual(paths['/tasks/{taskId}/claim'].post.operationId, 'claimTask');
   assert.strictEqual(paths['/tasks/{taskId}/complete'].post.operationId, 'completeTask');
   assert.strictEqual(paths['/tasks/{taskId}/release'].post.operationId, 'releaseTask');
+});
+
+// =============================================================================
+// rewriteLocalDefsRefs / hoistDefs (state-machine $defs leak fix)
+// =============================================================================
+
+test('rewriteLocalDefsRefs — rewrites local #/$defs/<Name> refs in place', () => {
+  const node = {
+    foo: { $ref: '#/$defs/Foo' },
+    nested: { bar: { $ref: '#/$defs/Bar' } }
+  };
+  const collected = new Set();
+  rewriteLocalDefsRefs(node, collected);
+  assert.strictEqual(node.foo.$ref, '#/components/schemas/Foo');
+  assert.strictEqual(node.nested.bar.$ref, '#/components/schemas/Bar');
+  assert.deepStrictEqual([...collected].sort(), ['Bar', 'Foo']);
+});
+
+test('rewriteLocalDefsRefs — leaves cross-file and non-$defs refs alone', () => {
+  const node = {
+    a: { $ref: './other.yaml#/$defs/X' },
+    b: { $ref: '#/components/schemas/Y' },
+    c: { $ref: './components/responses.yaml#/BadRequest' }
+  };
+  const collected = new Set();
+  rewriteLocalDefsRefs(node, collected);
+  assert.strictEqual(node.a.$ref, './other.yaml#/$defs/X');
+  assert.strictEqual(node.b.$ref, '#/components/schemas/Y');
+  assert.strictEqual(node.c.$ref, './components/responses.yaml#/BadRequest');
+  assert.strictEqual(collected.size, 0);
+});
+
+test('hoistDefs — pulls referenced entries from $defs and rewrites their inner refs', () => {
+  const defs = {
+    Outer: {
+      type: 'object',
+      properties: { inner: { $ref: '#/$defs/Inner' } },
+      required: ['inner']
+    },
+    Inner: {
+      type: 'string',
+      enum: ['a', 'b']
+    },
+    Unused: {
+      type: 'object'
+    }
+  };
+  const hoisted = hoistDefs(defs, new Set(['Outer']), 'test-domain');
+
+  // Transitive: Inner pulled in even though only Outer was named
+  assert.ok(hoisted.Outer);
+  assert.ok(hoisted.Inner);
+  // Unreferenced entries are not hoisted
+  assert.strictEqual(hoisted.Unused, undefined);
+  // Inner ref inside Outer is rewritten to components.schemas form
+  assert.strictEqual(hoisted.Outer.properties.inner.$ref, '#/components/schemas/Inner');
+  // Source defs unchanged (deep-cloned)
+  assert.strictEqual(defs.Outer.properties.inner.$ref, '#/$defs/Inner');
+});
+
+test('hoistDefs — missing $defs entry yields a warning and skips, without throwing', () => {
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (msg) => warnings.push(msg);
+  try {
+    const hoisted = hoistDefs({}, new Set(['DoesNotExist']), 'test-domain');
+    assert.deepStrictEqual(hoisted, {});
+    assert.strictEqual(warnings.length, 1);
+    assert.ok(warnings[0].includes('DoesNotExist'));
+    assert.ok(warnings[0].includes('test-domain'));
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+test('generateOverlay — hoists state-machine $defs into components.schemas and rewrites refs', () => {
+  const stateMachine = {
+    domain: 'eligibility',
+    object: 'Decision',
+    apiSpec: 'eligibility-openapi.yaml',
+    machines: [
+      {
+        object: 'Decision',
+        states: [{ id: 'pending' }, { id: 'approved' }],
+        initialState: 'pending',
+        actions: [
+          {
+            id: 'approve',
+            transition: { from: 'pending', to: 'approved' },
+            schema: { request: { $ref: '#/$defs/ApproveDecisionRequest' } }
+          }
+        ]
+      }
+    ],
+    $defs: {
+      ApproveDecisionRequest: {
+        type: 'object',
+        required: ['path'],
+        properties: { path: { type: 'string', enum: ['auto', 'manual'] } }
+      }
+    }
+  };
+  const endpointInfo = {
+    itemPath: '/decisions/{decisionId}',
+    paramRefs: [{ $ref: '#/components/parameters/DecisionIdParam' }],
+    tag: 'Decisions',
+    schemaRef: '#/components/schemas/Decision'
+  };
+
+  const overlay = generateOverlay(stateMachine, endpointInfo);
+
+  // Two actions: paths update + components.schemas hoist
+  assert.strictEqual(overlay.actions.length, 2);
+  assert.strictEqual(overlay.actions[0].target, '$.paths');
+  assert.strictEqual(overlay.actions[1].target, '$.components.schemas');
+
+  // requestBody ref in the paths update is rewritten to the components form
+  const approveBody = overlay.actions[0].update['/decisions/{decisionId}/approve']
+    .post.requestBody.content['application/json'].schema;
+  assert.strictEqual(approveBody.$ref, '#/components/schemas/ApproveDecisionRequest');
+
+  // The hoist action carries the matching $defs entry under its original name
+  const hoisted = overlay.actions[1].update;
+  assert.ok(hoisted.ApproveDecisionRequest);
+  assert.strictEqual(hoisted.ApproveDecisionRequest.type, 'object');
+  assert.deepStrictEqual(hoisted.ApproveDecisionRequest.required, ['path']);
+
+  // file: scoping carries over so the overlay applies to the right spec
+  assert.strictEqual(overlay.actions[1].file, 'eligibility-openapi.yaml');
+});
+
+test('generateOverlay — no second action when no $defs refs are present', () => {
+  // Sample state machine uses inline request schemas (no $defs refs)
+  const overlay = generateOverlay(sampleStateMachine, sampleEndpointInfo);
+  assert.strictEqual(overlay.actions.length, 1);
+  assert.strictEqual(overlay.actions[0].target, '$.paths');
 });
