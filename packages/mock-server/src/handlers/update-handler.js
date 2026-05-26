@@ -9,15 +9,8 @@ import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
+import { extractAuthContext } from '../auth-context.js';
 
-/**
- * Deep equality check for change detection.
- * Handles scalars, arrays, and objects so unchanged non-scalar fields
- * are not falsely reported as changed.
- * @param {*} a
- * @param {*} b
- * @returns {boolean}
- */
 export function deepEqual(a, b) {
   if (a === b) return true;
   if (a === null || b === null) return false;
@@ -35,14 +28,6 @@ export function deepEqual(a, b) {
   return false;
 }
 
-/**
- * Build a field-level changes array by comparing two snapshots.
- * Excludes system-managed fields (id, createdAt, updatedAt).
- * Uses deep equality so unchanged arrays/objects are not reported.
- * @param {Object} before - Snapshot before mutations
- * @param {Object} after - Snapshot after all mutations have settled
- * @returns {Array<{ field: string, before: *, after: * }>}
- */
 export function buildChanges(before, after) {
   const excluded = new Set(['id', 'createdAt', 'updatedAt']);
   const allFields = new Set([...Object.keys(before), ...Object.keys(after)]);
@@ -74,7 +59,18 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
       }
 
-      const resourceId = req.params[paramName] || req.params.id;
+      let resourceId = req.params[paramName] || req.params.id;
+
+      if (resourceId === 'me') {
+        const auth = extractAuthContext(req);
+        if (!auth) {
+          return res.status(401).json({
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required'
+          });
+        }
+        resourceId = auth.userId;
+      }
 
       // Check if resource exists
       const existing = findById(endpoint.collectionName, resourceId);
