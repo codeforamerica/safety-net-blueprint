@@ -170,6 +170,73 @@ function buildRequestBody(requestSchema) {
 }
 
 /**
+ * Walk a JSON value in place. For every local `#/$defs/<Name>` $ref encountered,
+ * rewrite it to `#/components/schemas/<Name>` and add `<Name>` to `collected`.
+ * Cross-file refs (e.g. `./foo.yaml#/$defs/X`) and non-$defs refs are left alone.
+ *
+ * The state-machine YAML is a JSON Schema document with a root `$defs` block, so
+ * actions reference request/response shapes as `#/$defs/<Name>`. When those refs
+ * are inlined verbatim into an OpenAPI spec they dangle, because OpenAPI specs
+ * don't carry a root `$defs` block — schemas live under `#/components/schemas`.
+ *
+ * @param {*} node - The JSON value to walk (mutated in place)
+ * @param {Set<string>} collected - Set to add hoisted schema names to
+ */
+function rewriteLocalDefsRefs(node, collected) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const item of node) rewriteLocalDefsRefs(item, collected);
+    return;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === '$ref' && typeof value === 'string' && value.startsWith('#/$defs/')) {
+      const name = value.slice('#/$defs/'.length);
+      collected.add(name);
+      node[key] = `#/components/schemas/${name}`;
+    } else {
+      rewriteLocalDefsRefs(value, collected);
+    }
+  }
+}
+
+/**
+ * Build the transitive closure of `$defs` entries needed to satisfy `rootNames`
+ * against the state-machine's `$defs` block. Each hoisted entry is deep-cloned
+ * and has its own local `#/$defs/...` refs rewritten to `#/components/schemas/...`
+ * form before being added to the result.
+ *
+ * @param {Object|undefined} defs - The state machine's `$defs` object
+ * @param {Set<string>} rootNames - Initial set of needed schema names (from action ops)
+ * @param {string} domain - State machine domain (for warning messages)
+ * @returns {Object} Plain object (name → schema) suitable as an overlay `update` payload
+ */
+function hoistDefs(defs, rootNames, domain) {
+  const hoisted = {};
+  const queue = [...rootNames];
+  while (queue.length > 0) {
+    const name = queue.shift();
+    if (Object.prototype.hasOwnProperty.call(hoisted, name)) continue;
+    const original = defs && defs[name];
+    if (!original) {
+      console.warn(
+        `  ${domain}: state-machine action references #/$defs/${name} but no matching entry exists; ref will dangle`
+      );
+      continue;
+    }
+    const clone = JSON.parse(JSON.stringify(original));
+    const nested = new Set();
+    rewriteLocalDefsRefs(clone, nested);
+    hoisted[name] = clone;
+    for (const nestedName of nested) {
+      if (!Object.prototype.hasOwnProperty.call(hoisted, nestedName)) {
+        queue.push(nestedName);
+      }
+    }
+  }
+  return hoisted;
+}
+
+/**
  * Generate an OpenAPI overlay for a single state machine.
  * @param {Object} stateMachine - The parsed state machine contract
  * @param {{ itemPath: string, paramRefs: Array, tag: string, schemaRef: string }} endpointInfo
@@ -233,6 +300,33 @@ export function generateOverlay(stateMachine, endpointInfo) {
     }
   }
 
+  // Walk the generated operations for local `#/$defs/<Name>` refs (carried over
+  // from the state-machine YAML's `$defs:` block) and rewrite them to
+  // `#/components/schemas/<Name>` so they resolve in the destination OpenAPI.
+  // Then build a second overlay action that hoists the referenced $defs entries
+  // (transitively) into `components.schemas`.
+  const neededDefs = new Set();
+  rewriteLocalDefsRefs(pathsUpdate, neededDefs);
+  const hoistedSchemas = hoistDefs(stateMachine.$defs, neededDefs, stateMachine.domain);
+
+  const actions = [
+    {
+      target: '$.paths',
+      file: stateMachine.apiSpec,
+      description: `Add state machine transition endpoints for ${stateMachine.domain}`,
+      update: pathsUpdate
+    }
+  ];
+
+  if (Object.keys(hoistedSchemas).length > 0) {
+    actions.push({
+      target: '$.components.schemas',
+      file: stateMachine.apiSpec,
+      description: `Hoist state-machine action $defs into components.schemas for ${stateMachine.domain}`,
+      update: hoistedSchemas
+    });
+  }
+
   return {
     overlay: '1.0.0',
     info: {
@@ -240,14 +334,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
       version: '1.0.0',
       description: `Auto-generated RPC endpoints from ${stateMachine.domain}-state-machine.yaml`
     },
-    actions: [
-      {
-        target: '$.paths',
-        file: stateMachine.apiSpec,
-        description: `Add state machine transition endpoints for ${stateMachine.domain}`,
-        update: pathsUpdate
-      }
-    ]
+    actions
   };
 }
 
@@ -308,7 +395,7 @@ function main() {
 }
 
 // Export for testing
-export { parseArgs, buildRequestBody };
+export { parseArgs, buildRequestBody, rewriteLocalDefsRefs, hoistDefs };
 
 // Run main when executed directly
 const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));
