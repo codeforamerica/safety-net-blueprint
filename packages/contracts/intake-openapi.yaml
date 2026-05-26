@@ -6,9 +6,10 @@ info:
   x-status: alpha
   x-visibility: public
   description: |
-    REST API for managing public assistance applications. This is the minimal
-    baseline — ApplicationMember, Income, Expense, and Asset sub-resources
-    are added incrementally as the intake domain is built out.
+    REST API for managing public assistance applications. Covers the full
+    intake lifecycle: applications, household members, member financial
+    sub-resources (income, expenses, assets, employment, health coverage),
+    household data, verifications, and interviews.
 
     > **Status: Alpha** — Breaking changes expected.
 
@@ -25,12 +26,30 @@ servers:
 tags:
   - name: Applications
     description: Manage public assistance applications.
-  - name: Verifications
-    description: Application verification obligations — electronic check results and document evidence.
+  - name: Application Review
+    description: Composite read-only context view assembled server-side for the caseworker review workflow.
+  - name: Application Review Progress
+    description: Per-section review progress tracking. Upsert entries to track caseworker progress through each section.
+  - name: Application Notes
+    description: Caseworker notes recorded against an application, member, or section.
+  - name: Household Info
+    description: Household-level data for an application (shelter costs, utilities, composition).
   - name: Interviews
     description: SNAP interview obligation tracking.
   - name: Members
     description: Household members included in an application.
+  - name: Member Assets
+    description: Asset records for an application member.
+  - name: Member Employment
+    description: Employment records for an application member.
+  - name: Member Expenses
+    description: Expense records for an application member.
+  - name: Member Health Coverage
+    description: Health coverage records for an application member.
+  - name: Member Income
+    description: Income records for an application member.
+  - name: Verifications
+    description: Application verification obligations — electronic check results and document evidence.
 
 paths:
   /applications:
@@ -345,6 +364,247 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
+  /applications/{applicationId}/review-context:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: Get review context
+      description: >
+        Read-only composite view of the application assembled server-side. Returns
+        the application, household, all members with their sub-resources (income,
+        expenses, assets, employment, health coverage), current review-progress
+        entries, and all notes. The front end organizes this data for whatever
+        caseworker review workflow the state uses.
+      operationId: getApplicationReviewContext
+      tags:
+        - Application Review
+      responses:
+        "200":
+          description: Review context retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewContext"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/review-progress:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: List review progress
+      description: >
+        Returns review-progress entries for this application. Optionally filter
+        by section and/or memberId.
+      operationId: listApplicationReviewProgress
+      x-sortable:
+        fields: [section, status, updatedAt]
+      tags:
+        - Application Review Progress
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: section
+          in: query
+          schema:
+            $ref: "#/components/schemas/ReviewSection"
+          description: Filter by review section.
+        - name: memberId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by member ID.
+      responses:
+        "200":
+          description: Review progress entries retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgressList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Upsert a review progress entry
+      description: >
+        Creates or updates the review-progress entry identified by the (section, memberId)
+        composite key. If no matching entry exists it is created; if one exists it is updated.
+        Omit memberId for household-level sections.
+      operationId: upsertApplicationReviewProgress
+      tags:
+        - Application Review Progress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewProgressEntryUpsert"
+      responses:
+        "200":
+          description: Review progress entry upserted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgressEntry"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/notes:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+
+    get:
+      summary: List application notes
+      description: Retrieve notes recorded against this application, with optional filters.
+      operationId: listApplicationNotes
+      x-sortable:
+        fields: [createdAt, updatedAt, scope, section]
+        default: createdAt
+      tags:
+        - Application Notes
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum:
+              - application
+              - member
+              - section
+          description: Filter by note scope.
+        - name: section
+          in: query
+          schema:
+            $ref: "#/components/schemas/ReviewSection"
+          description: Filter by section.
+        - name: memberId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by member ID.
+      responses:
+        "200":
+          description: A paginated list of notes for this application.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationNoteList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create an application note
+      description: Record a new caseworker note against this application.
+      operationId: createApplicationNote
+      tags:
+        - Application Notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationNoteCreate"
+      responses:
+        "201":
+          description: Note created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationNote"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/notes/{noteId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/NoteIdParam"
+
+    get:
+      summary: Get a note
+      description: Retrieve a single application note by identifier.
+      operationId: getApplicationNote
+      tags:
+        - Application Notes
+      responses:
+        "200":
+          description: Note retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationNote"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    patch:
+      summary: Update a note
+      description: Apply partial updates to an application note.
+      operationId: updateApplicationNote
+      tags:
+        - Application Notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationNoteUpdate"
+      responses:
+        "200":
+          description: Note updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationNote"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+    delete:
+      summary: Delete a note
+      description: Remove an application note.
+      operationId: deleteApplicationNote
+      tags:
+        - Application Notes
+      responses:
+        "204":
+          description: Note deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
   /applications/{applicationId}/members:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -482,6 +742,682 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
+  # ---------------------------------------------------------------------------
+  # Member sub-resources
+  # ---------------------------------------------------------------------------
+
+  /applications/{applicationId}/members/{memberId}/incomes:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+    get:
+      summary: List member income
+      description: Retrieve all income records for this application member.
+      operationId: listMemberIncome
+      x-sortable:
+        fields: [type, startDate, createdAt, updatedAt]
+      tags:
+        - Member Income
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A list of income records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberIncomeList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    post:
+      summary: Add income
+      description: Add an income record for this application member.
+      operationId: createMemberIncome
+      tags:
+        - Member Income
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberIncomeCreate"
+      responses:
+        "201":
+          description: Income record created successfully.
+          headers:
+            Location:
+              description: URL of the newly created income record.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberIncome"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/incomes/{incomeId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+      - $ref: "#/components/parameters/MemberIncomeIdParam"
+    get:
+      summary: Get income
+      description: Retrieve a single income record by identifier.
+      operationId: getMemberIncome
+      tags:
+        - Member Income
+      responses:
+        "200":
+          description: Income record retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberIncome"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update income
+      description: Apply partial updates to an income record.
+      operationId: updateMemberIncome
+      tags:
+        - Member Income
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberIncomeUpdate"
+      responses:
+        "200":
+          description: Income record updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberIncome"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete income
+      description: Permanently remove an income record.
+      operationId: deleteMemberIncome
+      tags:
+        - Member Income
+      responses:
+        "204":
+          description: Income record deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/expenses:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+    get:
+      summary: List member expenses
+      description: Retrieve all expense records for this application member.
+      operationId: listMemberExpenses
+      x-sortable:
+        fields: [createdAt, updatedAt]
+      tags:
+        - Member Expenses
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A list of expense records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberExpenseList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    post:
+      summary: Add expense
+      description: Add an expense record for this application member.
+      operationId: createMemberExpense
+      tags:
+        - Member Expenses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberExpenseCreate"
+      responses:
+        "201":
+          description: Expense record created successfully.
+          headers:
+            Location:
+              description: URL of the newly created expense record.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberExpense"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/expenses/{expenseId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+      - $ref: "#/components/parameters/MemberExpenseIdParam"
+    get:
+      summary: Get expense
+      description: Retrieve a single expense record by identifier.
+      operationId: getMemberExpense
+      tags:
+        - Member Expenses
+      responses:
+        "200":
+          description: Expense record retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberExpense"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update expense
+      description: Apply partial updates to an expense record.
+      operationId: updateMemberExpense
+      tags:
+        - Member Expenses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberExpenseUpdate"
+      responses:
+        "200":
+          description: Expense record updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberExpense"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete expense
+      description: Permanently remove an expense record.
+      operationId: deleteMemberExpense
+      tags:
+        - Member Expenses
+      responses:
+        "204":
+          description: Expense record deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/assets:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+    get:
+      summary: List member assets
+      description: Retrieve all asset records for this application member.
+      operationId: listMemberAssets
+      x-sortable:
+        fields: [type, createdAt, updatedAt]
+      tags:
+        - Member Assets
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A list of asset records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberAssetList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    post:
+      summary: Add asset
+      description: Add an asset record for this application member.
+      operationId: createMemberAsset
+      tags:
+        - Member Assets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberAssetCreate"
+      responses:
+        "201":
+          description: Asset record created successfully.
+          headers:
+            Location:
+              description: URL of the newly created asset record.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberAsset"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/assets/{assetId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+      - $ref: "#/components/parameters/MemberAssetIdParam"
+    get:
+      summary: Get asset
+      description: Retrieve a single asset record by identifier.
+      operationId: getMemberAsset
+      tags:
+        - Member Assets
+      responses:
+        "200":
+          description: Asset record retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberAsset"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update asset
+      description: Apply partial updates to an asset record.
+      operationId: updateMemberAsset
+      tags:
+        - Member Assets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberAssetUpdate"
+      responses:
+        "200":
+          description: Asset record updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberAsset"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete asset
+      description: Permanently remove an asset record.
+      operationId: deleteMemberAsset
+      tags:
+        - Member Assets
+      responses:
+        "204":
+          description: Asset record deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/employment-records:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+    get:
+      summary: List member employment
+      description: Retrieve all employment records for this application member.
+      operationId: listMemberEmployment
+      x-sortable:
+        fields: [startDate, endDate, createdAt, updatedAt]
+      tags:
+        - Member Employment
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A list of employment records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberEmploymentList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    post:
+      summary: Add employment
+      description: Add an employment record for this application member.
+      operationId: createMemberEmployment
+      tags:
+        - Member Employment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberEmploymentCreate"
+      responses:
+        "201":
+          description: Employment record created successfully.
+          headers:
+            Location:
+              description: URL of the newly created employment record.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberEmployment"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/employment-records/{employmentId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+      - $ref: "#/components/parameters/MemberEmploymentIdParam"
+    get:
+      summary: Get employment
+      description: Retrieve a single employment record by identifier.
+      operationId: getMemberEmployment
+      tags:
+        - Member Employment
+      responses:
+        "200":
+          description: Employment record retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberEmployment"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update employment
+      description: Apply partial updates to an employment record.
+      operationId: updateMemberEmployment
+      tags:
+        - Member Employment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberEmploymentUpdate"
+      responses:
+        "200":
+          description: Employment record updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberEmployment"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete employment
+      description: Permanently remove an employment record.
+      operationId: deleteMemberEmployment
+      tags:
+        - Member Employment
+      responses:
+        "204":
+          description: Employment record deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/health-coverages:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+    get:
+      summary: List member health coverage
+      description: Retrieve all health coverage records for this application member.
+      operationId: listMemberHealthCoverage
+      x-sortable:
+        fields: [coverageType, startDate, createdAt, updatedAt]
+      tags:
+        - Member Health Coverage
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: A list of health coverage records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberHealthCoverageList"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    post:
+      summary: Add health coverage
+      description: Add a health coverage record for this application member.
+      operationId: createMemberHealthCoverage
+      tags:
+        - Member Health Coverage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberHealthCoverageCreate"
+      responses:
+        "201":
+          description: Health coverage record created successfully.
+          headers:
+            Location:
+              description: URL of the newly created health coverage record.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberHealthCoverage"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /applications/{applicationId}/members/{memberId}/health-coverages/{healthCoverageId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+      - $ref: "#/components/parameters/MemberHealthCoverageIdParam"
+    get:
+      summary: Get health coverage
+      description: Retrieve a single health coverage record by identifier.
+      operationId: getMemberHealthCoverage
+      tags:
+        - Member Health Coverage
+      responses:
+        "200":
+          description: Health coverage record retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberHealthCoverage"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update health coverage
+      description: Apply partial updates to a health coverage record.
+      operationId: updateMemberHealthCoverage
+      tags:
+        - Member Health Coverage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberHealthCoverageUpdate"
+      responses:
+        "200":
+          description: Health coverage record updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberHealthCoverage"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete health coverage
+      description: Permanently remove a health coverage record.
+      operationId: deleteMemberHealthCoverage
+      tags:
+        - Member Health Coverage
+      responses:
+        "204":
+          description: Health coverage record deleted successfully.
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  # ---------------------------------------------------------------------------
+  # Household
+  # ---------------------------------------------------------------------------
+
+  /applications/{applicationId}/household-info:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get household
+      description: Retrieve household-level data for this application.
+      operationId: getHousehold
+      tags:
+        - Household Info
+      responses:
+        "200":
+          description: Household data retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationHousehold"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    patch:
+      summary: Update household
+      description: Apply partial updates to household data.
+      operationId: updateHousehold
+      tags:
+        - Household Info
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationHouseholdUpdate"
+      responses:
+        "200":
+          description: Household data updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationHousehold"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "422":
+          $ref: "./components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
 components:
   parameters:
     ApplicationIdParam:
@@ -507,6 +1443,60 @@ components:
       in: path
       required: true
       description: Unique identifier of the application member.
+      schema:
+        type: string
+        format: uuid
+
+    MemberIncomeIdParam:
+      name: incomeId
+      in: path
+      required: true
+      description: Unique identifier of the income record.
+      schema:
+        type: string
+        format: uuid
+
+    MemberExpenseIdParam:
+      name: expenseId
+      in: path
+      required: true
+      description: Unique identifier of the expense record.
+      schema:
+        type: string
+        format: uuid
+
+    MemberAssetIdParam:
+      name: assetId
+      in: path
+      required: true
+      description: Unique identifier of the asset record.
+      schema:
+        type: string
+        format: uuid
+
+    MemberEmploymentIdParam:
+      name: employmentId
+      in: path
+      required: true
+      description: Unique identifier of the employment record.
+      schema:
+        type: string
+        format: uuid
+
+    MemberHealthCoverageIdParam:
+      name: healthCoverageId
+      in: path
+      required: true
+      description: Unique identifier of the health coverage record.
+      schema:
+        type: string
+        format: uuid
+
+    NoteIdParam:
+      name: noteId
+      in: path
+      required: true
+      description: Unique identifier of the application note.
       schema:
         type: string
         format: uuid
@@ -625,49 +1615,30 @@ components:
     # ---------------------------------------------------------------------------
 
     ApplicationMemberWritable:
-      type: object
       description: Client-writable fields for an application member.
-      properties:
-        roles:
-          type: array
-          description: Roles this person plays in the application.
-          items:
-            type: string
-            enum:
-              - primary_applicant
-              - household_member
-              - non_applying_member
-              - authorized_representative
-              - absent_parent
-        programsApplyingFor:
-          type: array
-          description: Programs this member is applying for. Subset of the application's programs.
-          items:
-            type: string
-            enum:
-              - snap
-              - medicaid
-              - tanf
-        citizenshipStatus:
-          type: string
-          description: Citizenship or immigration status for this member.
-          enum:
-            - citizen
-            - permanent_resident
-            - qualified_non_citizen
-            - undocumented
-            - other
-        immigrationInfo:
-          $ref: "./components/identity.yaml#/ImmigrationInfo"
-          description: Immigration document details. Required when citizenshipStatus is not citizen and the member is applying for Medicaid.
-        personId:
-          type: string
-          format: uuid
-          nullable: true
-          description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
-          x-relationship:
-            resource: Person
-            domain: client-management
+      allOf:
+        - $ref: "./schemas/common/member.yaml"
+        - type: object
+          properties:
+            roles:
+              type: array
+              description: Roles this person plays in the application.
+              items:
+                type: string
+                enum:
+                  - primary_applicant
+                  - household_member
+                  - non_applying_member
+                  - authorized_representative
+                  - absent_parent
+            personId:
+              type: string
+              format: uuid
+              nullable: true
+              description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
+              x-relationship:
+                resource: Person
+                domain: client-management
 
     ApplicationMember:
       allOf:
@@ -791,6 +1762,446 @@ components:
           type: string
           format: date-time
           description: When the determination was recorded.
+
+    # ---------------------------------------------------------------------------
+    # Member sub-resource schemas
+    # ---------------------------------------------------------------------------
+
+    MemberIncome:
+      description: An income record for an application member.
+      allOf:
+        - $ref: "./schemas/common/income.yaml"
+        - type: object
+          required:
+            - id
+            - memberId
+            - applicationId
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            memberId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: ApplicationMember
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    MemberIncomeCreate:
+      $ref: "./schemas/common/income.yaml"
+
+    MemberIncomeUpdate:
+      allOf:
+        - $ref: "./schemas/common/income.yaml"
+        - type: object
+          minProperties: 1
+
+    MemberIncomeList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/MemberIncome"
+
+    MemberExpense:
+      description: An expense record for an application member.
+      allOf:
+        - $ref: "./schemas/common/expenses.yaml"
+        - type: object
+          required:
+            - id
+            - memberId
+            - applicationId
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            memberId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: ApplicationMember
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    MemberExpenseCreate:
+      $ref: "./schemas/common/expenses.yaml"
+
+    MemberExpenseUpdate:
+      allOf:
+        - $ref: "./schemas/common/expenses.yaml"
+        - type: object
+          minProperties: 1
+
+    MemberExpenseList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/MemberExpense"
+
+    MemberAsset:
+      description: An asset record for an application member.
+      allOf:
+        - $ref: "./schemas/common/assets.yaml"
+        - type: object
+          required:
+            - id
+            - memberId
+            - applicationId
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            memberId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: ApplicationMember
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    MemberAssetCreate:
+      $ref: "./schemas/common/assets.yaml"
+
+    MemberAssetUpdate:
+      allOf:
+        - $ref: "./schemas/common/assets.yaml"
+        - type: object
+          minProperties: 1
+
+    MemberAssetList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/MemberAsset"
+
+    MemberEmployment:
+      description: An employment record for an application member.
+      allOf:
+        - $ref: "./schemas/common/employment.yaml"
+        - type: object
+          required:
+            - id
+            - memberId
+            - applicationId
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            memberId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: ApplicationMember
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    MemberEmploymentCreate:
+      $ref: "./schemas/common/employment.yaml"
+
+    MemberEmploymentUpdate:
+      allOf:
+        - $ref: "./schemas/common/employment.yaml"
+        - type: object
+          minProperties: 1
+
+    MemberEmploymentList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/MemberEmployment"
+
+    MemberHealthCoverage:
+      description: A health coverage record for an application member.
+      allOf:
+        - $ref: "./schemas/common/health-coverage.yaml"
+        - type: object
+          required:
+            - id
+            - memberId
+            - applicationId
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            memberId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: ApplicationMember
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    MemberHealthCoverageCreate:
+      $ref: "./schemas/common/health-coverage.yaml"
+
+    MemberHealthCoverageUpdate:
+      allOf:
+        - $ref: "./schemas/common/health-coverage.yaml"
+        - type: object
+          minProperties: 1
+
+    MemberHealthCoverageList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/MemberHealthCoverage"
+
+    # ---------------------------------------------------------------------------
+    # Household
+    # ---------------------------------------------------------------------------
+
+    ApplicationHousehold:
+      description: Household-level data for an application.
+      allOf:
+        - $ref: "./schemas/common/household.yaml"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    ApplicationHouseholdUpdate:
+      allOf:
+        - $ref: "./schemas/common/household.yaml"
+        - type: object
+          minProperties: 1
+
+    # ---------------------------------------------------------------------------
+    # Application Notes
+    # ---------------------------------------------------------------------------
+
+    ApplicationNoteWritable:
+      type: object
+      description: >
+        Client-writable fields for an application note. additionalProperties allows
+        states to extend with note types, visibility controls, or other attributes
+        via overlay without changing the baseline schema.
+      additionalProperties: true
+      properties:
+        scope:
+          type: string
+          description: >
+            The scope at which this note was recorded. application — general note about
+            the application; member — note about a specific household member; section —
+            note about a data category, optionally for a specific member.
+          enum:
+            - application
+            - member
+            - section
+        memberId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Member this note is about. Required when scope is member or when scope is section and the note is member-specific.
+          x-relationship:
+            resource: ApplicationMember
+        section:
+          description: Section this note is about. Required when scope is section.
+          oneOf:
+            - $ref: "#/components/schemas/ReviewSection"
+            - type: "null"
+        text:
+          type: string
+          description: The note text. Interpret according to textFormat.
+          minLength: 1
+          maxLength: 5000
+        textFormat:
+          type: string
+          description: Format of the text field. Consumers must render accordingly. Absent or plain means unformatted text.
+          default: plain
+          enum:
+            - plain
+            - markdown
+            - html
+
+    ApplicationNote:
+      description: A caseworker observation recorded against an application, member, or section.
+      allOf:
+        - $ref: "#/components/schemas/ApplicationNoteWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - scope
+            - text
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    ApplicationNoteCreate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationNoteWritable"
+        - type: object
+          required:
+            - scope
+            - text
+
+    ApplicationNoteList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApplicationNote"
+
+    ApplicationNoteUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationNoteWritable"
+        - type: object
+          minProperties: 1
 
     # ---------------------------------------------------------------------------
     # Verification
@@ -971,6 +2382,171 @@ components:
         - type: object
           minProperties: 1
 
+    # ---------------------------------------------------------------------------
+    # Review context and progress
+    # ---------------------------------------------------------------------------
+
+    ReviewContext:
+      type: object
+      description: >
+        Read-only composite view of a complete application assembled server-side.
+        Returned by GET /applications/{id}/review-context. The front end organizes
+        this data for whatever review workflow the state uses. All sub-resource
+        mutations go through the individual sub-resource endpoints.
+      required:
+        - application
+        - members
+        - reviewProgress
+        - notes
+      properties:
+        application:
+          $ref: "#/components/schemas/Application"
+        householdInfo:
+          description: Household-level data for the application, or null if not yet recorded.
+          oneOf:
+            - $ref: "#/components/schemas/ApplicationHousehold"
+            - type: "null"
+        members:
+          type: array
+          description: All household members with their sub-resources embedded.
+          items:
+            $ref: "#/components/schemas/ReviewContextMember"
+        reviewProgress:
+          type: array
+          description: Current review-progress entries. Empty until the application transitions to under_review.
+          items:
+            $ref: "#/components/schemas/ReviewProgressEntry"
+        notes:
+          type: array
+          description: All notes recorded against this application.
+          items:
+            $ref: "#/components/schemas/ApplicationNote"
+
+    ReviewContextMember:
+      description: An application member with all sub-resources embedded for the caseworker review view.
+      allOf:
+        - $ref: "#/components/schemas/ApplicationMember"
+        - type: object
+          properties:
+            incomes:
+              type: array
+              description: Income records for this member.
+              items:
+                $ref: "#/components/schemas/MemberIncome"
+            expenses:
+              type: array
+              description: Expense records for this member.
+              items:
+                $ref: "#/components/schemas/MemberExpense"
+            assets:
+              type: array
+              description: Asset records for this member.
+              items:
+                $ref: "#/components/schemas/MemberAsset"
+            employmentRecords:
+              type: array
+              description: Employment records for this member.
+              items:
+                $ref: "#/components/schemas/MemberEmployment"
+            healthCoverages:
+              type: array
+              description: Health coverage records for this member.
+              items:
+                $ref: "#/components/schemas/MemberHealthCoverage"
+
+    ReviewProgressEntryWritable:
+      type: object
+      description: Client-writable fields for a review-progress entry.
+      additionalProperties: true
+      properties:
+        section:
+          $ref: "#/components/schemas/ReviewSection"
+          description: The review section this entry covers. Baseline taxonomy is extensible via overlay.
+        memberId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Member this entry is scoped to. Absent for household-level sections.
+          x-relationship:
+            resource: ApplicationMember
+        status:
+          type: string
+          description: Review status for this section.
+          enum:
+            - not_started
+            - in_progress
+            - complete
+            - flagged
+
+    ReviewProgressEntry:
+      description: >
+        Tracks caseworker review progress for one section, optionally scoped to a
+        specific member. Section-only entries (memberId absent) cover household-level
+        sections; member-scoped entries cover per-member sections.
+      allOf:
+        - $ref: "#/components/schemas/ReviewProgressEntryWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - section
+            - status
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    ReviewProgressEntryUpsert:
+      allOf:
+        - $ref: "#/components/schemas/ReviewProgressEntryWritable"
+        - type: object
+          required:
+            - section
+            - status
+
+    ReviewProgressList:
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ReviewProgressEntry"
+
+    ReviewSection:
+      type: string
+      description: Taxonomy of review sections in the caseworker workflow. Extensible via overlay.
+      enum:
+        - assets
+        - contact
+        - demographics
+        - employment
+        - expenses
+        - health-coverage
+        - household
+        - identity
+        - income
+
     VerificationDocumentEvidence:
       type: object
       description: A document submitted as evidence against a verification obligation.
@@ -1103,10 +2679,10 @@ components:
         applicationId: 00000004-0000-4000-8000-000000000001
         roles:
           - primary_applicant
-        programsApplyingFor:
+        programs:
           - snap
           - medicaid
-        citizenshipStatus: citizen
+        citizenshipStatus: us_citizen
         createdAt: "2026-04-01T09:00:00Z"
         updatedAt: "2026-04-01T09:00:00Z"
 

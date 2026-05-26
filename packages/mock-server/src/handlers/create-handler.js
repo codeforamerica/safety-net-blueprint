@@ -20,7 +20,7 @@ import { matchAndPopHttp } from '../mock-stub-engine.js';
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
  * @returns {Function} Express handler
  */
-export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null) {
+export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, options = {}) {
   return (req, res) => {
     try {
       // HTTP stub intercept — if a stub is registered for this method + path, return it
@@ -164,6 +164,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
           object,
           action: 'created',
           resourceId: resource.id,
+          subject: options.eventSubjectField ? (resource[options.eventSubjectField] ?? resource.id) : undefined,
           source: apiMetadata.serverBasePath,
           data: { ...resource },
           callerId,

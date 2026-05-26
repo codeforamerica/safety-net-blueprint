@@ -4,7 +4,6 @@
 PersonExample1:
   name:
     firstName: Lou
-    middleInitial: I
     middleName: Jessica Ziemann
     lastName: Balistreri
     maidenName: Alana Leffler
@@ -68,7 +67,6 @@ PersonExample1:
 PersonExample2:
   name:
     firstName: Gudrun
-    middleInitial: 'N'
     middleName: Willis Renner
     lastName: Will
     maidenName: Evelyn Cormier-Cummings

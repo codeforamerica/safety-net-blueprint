@@ -89,7 +89,7 @@ components:
         - result
       properties:
         serviceType:
-          $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+          $ref: "./schemas/common/data-exchange.yaml#/$defs/ServiceType"
         requestingResourceId:
           type: string
           format: uuid
@@ -138,7 +138,7 @@ components:
         - failureReason
       properties:
         serviceType:
-          $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+          $ref: "./schemas/common/data-exchange.yaml#/$defs/ServiceType"
         requestingResourceId:
           type: string
           format: uuid
@@ -180,7 +180,7 @@ components:
         - requestingResourceId
       properties:
         serviceType:
-          $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+          $ref: "./schemas/common/data-exchange.yaml#/$defs/ServiceType"
         requestingResourceId:
           type: string
           format: uuid
@@ -215,7 +215,7 @@ components:
         - requestingResourceId
       properties:
         serviceType:
-          $ref: "./schemas/common/data-exchange-common.yaml#/$defs/ServiceType"
+          $ref: "./schemas/common/data-exchange.yaml#/$defs/ServiceType"
         requestingResourceId:
           type: string
           format: uuid

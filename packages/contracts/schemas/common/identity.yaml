@@ -1,0 +1,93 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/identity.yaml"
+title: Identity
+description: >
+  Shared identity schemas used across domains. Referenced by OpenAPI specs,
+  state machine schemas, and event schemas.
+
+$defs:
+  ImmigrationInfo:
+    type: object
+    description: >
+      Immigration document details for a non-citizen member. Used to initiate
+      FDSH VLP or USCIS SAVE verification checks. Immigration status category
+      is on member.immigrationStatus (ImmigrationStatus enum); this object
+      carries only the document-level fields the VLP call requires.
+    properties:
+      documentType:
+        type: string
+        description: >
+          Type of immigration document presented. Determines which fields FDSH VLP requires
+          to initiate a verification check.
+        # Source: CMS FDSH Verify Lawful Presence (VLP) accepted document types
+        # https://www.medicaid.gov/medicaid/eligibility/downloads/fdsh-vlp-companion-guide.pdf
+        enum:
+          - i_551                       # Permanent Resident Card (Green Card)
+          - i_766                       # Employment Authorization Document
+          - i_94                        # Arrival/Departure Record
+          - i_327                       # Reentry Permit
+          - i_571                       # Refugee Travel Document
+          - foreign_passport            # Foreign passport with valid US visa stamp
+          - machine_readable_immigrant_visa  # MRIV with temporary I-551 stamp
+          - other
+      documentNumber:
+        type: string
+        description: Document number used to verify immigration status via FDSH VLP or USCIS SAVE.
+        maxLength: 100
+      alienOrI94Number:
+        type: string
+        description: Alien registration number or I-94 admission number.
+        maxLength: 100
+      documentExpirationDate:
+        type: string
+        format: date
+        description: Expiration date of the immigration document.
+      countryOfIssuance:
+        type: string
+        description: ISO 3166-1 alpha-2 country code of the country that issued the immigration document.
+        minLength: 2
+        maxLength: 2
+        pattern: "^[A-Z]{2}$"
+
+  DateOfBirth:
+    type: string
+    format: date
+    description: >
+      Date of birth. Used in age-based program eligibility criteria and as a
+      core identity-matching field for FDSH verification calls.
+
+  Name:
+    type: object
+    description: Legal name of a person.
+    additionalProperties: false
+    required:
+      - firstName
+      - lastName
+    properties:
+      firstName:
+        type: string
+        description: First name.
+        minLength: 1
+        maxLength: 100
+      middleName:
+        type: string
+        description: Middle name.
+        maxLength: 100
+      lastName:
+        type: string
+        description: Last name.
+        minLength: 1
+        maxLength: 100
+      maidenName:
+        type: string
+        description: Maiden name if applicable.
+        maxLength: 100
+      suffix:
+        type: string
+        description: Name suffix such as Jr., Sr., III, etc.
+        maxLength: 20
+
+  SocialSecurityNumber:
+    type: string
+    description: Social Security Number for identity verification.
+    pattern: "^\\d{3}-\\d{2}-\\d{4}$"

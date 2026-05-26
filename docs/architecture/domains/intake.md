@@ -1,16 +1,12 @@
 # Intake Domain: Design Reference
 
-Industry research and design decisions for the intake domain, covering process, regulations, data model, events, and lifecycle. Informed by how major government benefits platforms implement intake for SNAP, Medicaid, TANF, and WIC, and by the federal regulations that govern each program.
+Industry research and design decisions for the intake domain, covering process, regulations, data model, events, and lifecycle. Informed by how major government benefits platforms implement intake for SNAP, Medicaid, and TANF, and by the federal regulations that govern each program.
 
 See [Intake Domain](intake.md) for the architecture overview and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
-**Systems compared:** IBM Cúram (Merative), Salesforce Public Sector Solutions, Pega Government Platform, CalSAWS/BenefitsCal, MAGI-in-the-Cloud (HHS), 18F SNAP API prototype, CMS Marketplace API, WIC MIS systems (HANDS, Crossroads) and the FNS FReD functional reference
+**Systems compared:** IBM Cúram (Merative), Salesforce Public Sector Solutions, Pega Government Platform, CalSAWS/BenefitsCal, MAGI-in-the-Cloud (HHS), 18F SNAP API prototype, CMS Marketplace API
 
-**Regulatory standards referenced:** 7 CFR Part 273 (SNAP), 42 CFR Part 435 (Medicaid/MAGI), 45 CFR Part 246 (WIC), 45 CFR Part 261 (TANF), ACA/MAGI household composition rules
-
-> **Note on WIC:** WIC uses the term "certification" rather than "application." It is a clinical eligibility determination requiring a Competent Professional Authority (CPA) to assess nutritional risk. There is no federal processing deadline equivalent to SNAP's 30 days. WIC has no single dominant platform: states build or procure their own Management Information Systems (MIS). FNS publishes the **FReD** (Functional Requirements Document for a Model WIC System) as the functional reference — it is a requirements document, not a software product.
-
-> **Note on recertification:** Recertification is triggered by an existing case nearing expiration, not by a new applicant. It belongs in the Case Management domain, not Intake. It is noted in [Out of scope](#out-of-scope) with a pointer to where it will be designed.
+**Regulatory standards referenced:** 7 CFR Part 273 (SNAP), 42 CFR Part 435 (Medicaid/MAGI), 45 CFR Part 261 (TANF), ACA/MAGI household composition rules
 
 ---
 
@@ -18,16 +14,31 @@ See [Intake Domain](intake.md) for the architecture overview and [Contract-Drive
 
 The intake domain is responsible for capturing and structuring the data a household submits when applying for benefits. It does not determine eligibility, manage ongoing cases, or deliver benefits — those are downstream domain concerns. The intake phase begins when an application is filed (starting the regulatory clock) and ends when the application data is complete enough to submit for eligibility determination — after data collection is finished (interviews conducted, documents received, verification complete), not when the applicant first clicks submit. This boundary follows the regulatory processing clock (7 CFR § 273.2, 42 CFR § 435.912), which starts at filing and runs until determination regardless of who collects the data — federal regulations make no distinction between client-submitted and caseworker-entered data for purposes of defining the application processing period.
 
-**Entities owned by this domain:**
-
-- **Application** — the root record representing one submission by a household
-- **ApplicationMember** — a person linked to the application (applying or counted in household)
-- **Verification** — a unified checklist record covering paper document requirements and electronic service check results
-- Income, expenses, and assets — financial facts collected per person or household
-
-**What this domain produces:** a structured, verified data record that downstream domains (eligibility, workflow, case management) can act on.
-
 All major platforms draw a hard boundary between the intake phase and the case management phase — the blueprint follows the same pattern: the intake domain owns the application record; eligibility and case management own what happens after.
+
+---
+
+## Core design elements
+
+**Hard domain boundary.** Intake owns data collection and structuring; eligibility owns evaluation. The handoff is an event (`application.review_completed`), not a direct call — neither domain controls the other's state or calls the other's API at runtime.
+
+**Cross-domain data alignment.** `ApplicationMember` composes from `member.yaml` via `allOf`; financial sub-resource schemas live in `schemas/common/`. Eligibility reads the same shapes intake produces without field-mapping at the adapter layer.
+
+**State machine-driven behavior.** Actions (explicit transitions) and event handlers (reactive logic triggered by events from other domains) drive all intake behavior — verification record creation, service call fan-outs, task creation, write-backs. Behavior is declared in the state machine configuration and customized via overlay, not hardcoded in the domain service.
+
+**Unified verification.** A single `Verification` entity and lifecycle covers both electronic checks and paper document requirements. This directly encodes the ex parte two-phase flow: electronic check first, document request only if inconclusive.
+
+**Neutral caseworker review surface.** The `ReviewContext` composite view assembles current application state server-side. The front end organizes it for whatever review workflow the state uses; writes go through individual sub-resource endpoints.
+
+---
+
+## Program scope
+
+The baseline covers programs administered through state human services agencies that share a common MAGI/income-maintenance intake pipeline. **SNAP**, **Medicaid/MAGI**, and **CHIP** are first-class programs — all three carry substantial federal intake requirements (processing deadlines, verification obligations, interview or ex parte rules) and are commonly administered together through a joint application. CHIP follows the same MAGI household composition methodology as Medicaid and is typically co-processed on the same application.
+
+**TANF** is supported as a thin baseline. Federal requirements are minimal (45 CFR Part 261): states have broad discretion over intake procedures, there is no federal interview requirement, and there is no prescribed processing deadline. TANF-specific intake customization is a state overlay concern.
+
+Programs administered by federal agencies or separate state agency systems are out of scope: SSI and SSDI are administered by SSA; Medicare by CMS; unemployment insurance by state labor departments; housing assistance by housing authorities. Programs in the same administrative lane but using materially different intake models are also out of scope for the baseline — WIC uses clinical certification requiring a licensed professional; CCDF involves provider selection and provider agreements. These may be addressed in future domain designs.
 
 ---
 
@@ -37,7 +48,7 @@ The intake phase spans from filing through caseworker review and data collection
 
 1. **Filing** — applicant submits a minimally complete application; regulatory clock starts; the application enters the caseworker queue for review covering all programs applied for
 2. **Confirmation notice** — the agency sends an acknowledgment to the household confirming receipt of the application and the filing date; many states are required to provide this notice
-3. **Identity matching** — the agency attempts to match the applicant and household members to existing person records to prevent duplicate records and link to prior application history; see [Decision 10](#decision-10-person-identity-matching)
+3. **Identity matching** — the agency attempts to match the applicant and household members to existing person records to prevent duplicate records and link to prior application history; see [Decision 7](#decision-7-person-identity-matching)
 4. **Queue assignment and routing** — the application is routed to the appropriate caseworker based on program type, geography, workload, or other agency-configured rules
 5. **Automated eligibility determination (Medicaid)** — for MAGI Medicaid, the agency immediately attempts real-time eligibility (RTE) via the Federal Data Services Hub (FDSH) using SSA income data, IRS tax data, and citizenship/immigration status; if RTE succeeds, Medicaid is auto-approved or auto-denied with no caseworker involvement; if inconclusive, Medicaid proceeds to caseworker review; this runs before any caseworker action (45 CFR § 435.911–435.916)
 6. **Electronic data source checks** — in parallel with or shortly after filing, the agency queries electronic data sources to pre-populate or verify applicant-reported data: IEVS/The Work Number for income and employment, SAVE for immigration and citizenship status, SSA for disability and benefit receipt; results inform the caseworker's review but do not replace it
@@ -47,8 +58,6 @@ The intake phase spans from filing through caseworker review and data collection
 10. **Document collection and verification** — the caseworker requests supporting documents; the applicant has at least 10 days to provide them (SNAP); documents may trigger further data corrections
 11. **Data completion** — once the caseworker is satisfied that the application data is accurate and complete, the application is ready for eligibility determination; this is when the intake phase ends
 
-**What intake does not cover:** eligibility rules, approval/denial decisions, and service delivery case creation. Those are downstream domain concerns.
-
 ---
 
 ## Regulatory requirements
@@ -57,50 +66,62 @@ The intake phase spans from filing through caseworker review and data collection
 
 Federal law sets maximum processing timelines that begin at application receipt — not when a caseworker picks up the application. The clock starts at filing regardless of how long it takes to assign the application to a worker.
 
-**SNAP (7 CFR § 273.2):** The 30-day processing clock starts on the *date of application receipt* — the date the household submits a minimally complete application (name, address, signature). For online applications submitted after hours, the filing date is the next business day. States must process within 30 days (7 days for expedited households).
+**SNAP (7 CFR § 273.2(g)):** States must complete the eligibility determination within 30 calendar days of application receipt. The receipt date is the date the household submits a minimally complete application — one that includes at minimum the household's name, address, and a signature. For applications submitted through online portals after business hours, the receipt date is the next business day. Households that meet the expedited criteria (§ 273.2(i)) must be determined within 7 calendar days.
 
-**Medicaid (42 CFR § 435.912):** The 45-day clock (90 days for disability-based Medicaid) starts on the application receipt date.
+**Medicaid and CHIP (42 CFR § 435.912):** States must complete the eligibility determination within 45 calendar days of application receipt. When a disability determination is required before Medicaid eligibility can be established, the deadline extends to 90 days. CHIP does not carry a separate federal deadline; states administer Medicaid and CHIP on a joint application and process both on the same timeline.
 
-**WIC (45 CFR Part 246):** No federal processing deadline. Certification period varies by participant category (see Out of scope).
+**TANF:** No federal processing deadline. States define their own timelines.
 
 ### Program-specific requirements
 
 **SNAP (7 CFR § 273.2):**
-- Caseworker interview required before determination (§ 273.2(e)) — cannot be waived for initial certification
-- Expedited screening must occur within 1 business day for households that may qualify for the 7-day track (§ 273.2(i))
-- Applicant has at least 10 days to provide requested verification documents (§ 273.2(f))
-- All household members must be listed regardless of whether they are individually applying (§ 273.1)
 
-**Medicaid/MAGI (45 CFR § 435.911–435.916):**
-- States must attempt automated real-time eligibility determination via FDSH before routing to a caseworker (§ 435.911)
-- If RTE is inconclusive or unavailable, the application routes to a caseworker for manual review
-- No caseworker interview is federally required for Medicaid (unlike SNAP)
+The agency must conduct an in-person or telephone interview with the household before making an eligibility determination (§ 273.2(e)). This requirement cannot be waived at initial certification — even if all income and household data can be verified electronically, the interview must still occur. The agency must notify the household of the interview date and time in writing, and document that the interview was completed before issuing any determination.
+
+Within 1 business day of receiving the application, the agency must determine whether the household qualifies for expedited processing (§ 273.2(i)). Households that qualify must receive benefits within 7 days. The expedited determination uses only the data the household provided at submission — no verification or interview is required before making the expedited determination. Standard verification and the full caseworker interview proceed in parallel with benefit issuance for expedited cases.
+
+If the agency requests verification documents, the applicant must be given at least 10 days to provide them (§ 273.2(f)). The agency may not deny the application solely for failure to provide documents until that period has passed.
+
+All household members must be listed on the application regardless of whether they are individually applying for benefits (§ 273.1). Members who are ineligible — for example, non-citizens who do not qualify for SNAP — must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household.
+
+**Medicaid and CHIP (42 CFR § 435.911–435.916):**
+
+Before routing a Medicaid or CHIP application to a caseworker, the agency must attempt to make an eligibility determination using data available from federal electronic sources — IRS tax records, SSA income and citizenship data, and federal hub data for immigration status (§ 435.911). This is the ex parte rule: if the electronic data is sufficient to support a favorable determination, the agency must approve the applicant without requesting any additional information or documents. Requesting documents or involving a caseworker is only permitted when electronic sources are unavailable, return inconclusive data, or the available data is insufficient for a determination.
+
+No caseworker interview is federally required for Medicaid or CHIP. When the ex parte process cannot resolve the application, it routes to a caseworker for manual review — but no interview requirement attaches to that review.
+
+When an electronic check returns an inconclusive result, the agency must document the result and advance to the next step — requesting a document or routing for caseworker review — within the 45-day processing deadline (§ 435.916).
 
 **TANF (45 CFR Part 261):**
-- Federal requirements are minimal; states have broad discretion over intake procedures
-- No federal automated determination requirement; no prescribed interview structure
+
+Federal requirements for TANF intake are minimal. States have broad discretion over application procedures, interview requirements, and verification obligations. There is no federal mandate for automated determination, no prescribed interview structure, and no federal processing deadline. TANF-specific intake requirements are a state overlay concern.
 
 ### Verification requirements
 
-Federal regulations prescribe which verification categories must be established and whether electronic checks must be attempted before requesting paper documents.
+Federal regulations prescribe which categories of information must be verified before certification and, for Medicaid and CHIP, whether electronic checks must be attempted before paper documents can be requested.
 
-**SNAP (7 CFR § 273.2(f)):** States must verify the following before certification:
-- **Identity** — of the primary applicant
-- **Residency** — household resides in the state (document-only; no electronic check exists)
-- **Citizenship/immigration status** — for each member applying for SNAP; non-citizens must provide immigration status documentation
-- **Income** — all sources of earned and unearned income
+**SNAP (7 CFR § 273.2(f)):**
 
-**Medicaid (42 CFR § 435.956):** States must attempt electronic verification through federal data sources before requesting paper documents (ex parte rule). Required verifications:
-- **Citizenship** — electronic check required first (fdsh_ssa); paper documents requested only if inconclusive
-- **Immigration status** — electronic check required first (fdsh_vlp, then save if inconclusive); paper documents requested only if inconclusive
-- **Income** — electronic checks via fdsh_fti (tax data) and ssa_ievs (SSA benefit income)
-- **Identity** — electronic check via fdsh_ssa
+Before certifying a household, the agency must verify: the identity of the primary applicant; that the household resides in the state (verification is document-only — no electronic check exists for residency); citizenship or immigration status for each member applying for SNAP (non-citizens must document their immigration category); and income from all sources for all household members. States may not require verification of items beyond those listed in § 273.2(f)(1).
 
-**IEVS (7 CFR § 272.8):** The Income and Eligibility Verification System mandate requires states to query multiple federal income sources. Timing varies by source:
-- **ssa_ievs (SOLQ)** — real-time; can run at submission
-- **irs_ievs, swica (wage/employment), uib (unemployment)** — batch-quarterly; these run as ongoing case management checks, not at initial intake submission
+**Medicaid and CHIP (42 CFR § 435.940–435.965):**
 
-**Domain boundary:** Intake initiates all verification-related electronic checks at submission. Eligibility subscribes to the results and uses them for determination. See [Decision 20](#decision-20-existing-coverage-check-ownership) for why existing coverage checks (fdsh_medicare, fdsh_vci) are owned by eligibility rather than intake.
+The ex parte verification rule requires states to attempt electronic verification through designated federal data sources before requesting paper documents from the applicant. If an electronic source returns a conclusive result, the agency must use it — requesting a document when an electronic check is available and conclusive is not permitted. Only when an electronic source is unavailable or returns an inconclusive result may the agency request a paper document, and the agency must document that the electronic attempt was made.
+
+Required electronic checks, in order of precedence:
+- **Citizenship** — FDSH/SSA (`fdsh_ssa`) must be checked first; paper documents may be requested only if the check is inconclusive or unavailable
+- **Immigration status** — FDSH VLP (`fdsh_vlp`) must be checked first; if inconclusive, USCIS SAVE (`save`) is checked next; paper documents are a last resort
+- **Income** — IRS FDSH FTI (`fdsh_fti`) for tax-reported income; SSA IEVS (`ssa_ievs`) for Social Security and SSI benefit income
+- **Identity** — FDSH/SSA (`fdsh_ssa`)
+
+**IEVS (7 CFR § 272.8):**
+
+The Income and Eligibility Verification System mandate requires states to query multiple federal income sources, but not all sources are real-time. The timing of each source determines whether it can be used at intake or only for ongoing case management:
+
+- **SSA IEVS (SOLQ)** — real-time query; can run at application submission
+- **IRS IEVS, SWICA (wage and employment records), UIB (unemployment benefits)** — batch-processed by the federal agencies on a quarterly cycle; results are not available at submission and are used for ongoing verification during case management, not initial certification
+
+**Domain boundary:** Intake initiates all verification-related electronic checks at submission. Eligibility subscribes to the results and uses them for determination. See [Decision 14](#decision-14-existing-coverage-check-ownership) for why existing coverage checks (fdsh_medicare, fdsh_vci) are owned by eligibility rather than intake.
 
 ---
 
@@ -110,9 +131,12 @@ Federal regulations prescribe which verification categories must be established 
 
 The root entity representing one submitted application from a household. All major platforms have an equivalent concept — an application-scoped record that is distinct from the downstream case or benefit assignment. No platform tracks the final determination (approved/denied) on the application itself; that lives on the program delivery case created after eligibility determination.
 
-**Key fields:** `id`, `status`, `programs`, `channel`, `submittedAt`, `withdrawnAt`, `closedAt`, `createdAt`, `updatedAt`
+Key fields:
+- `status` — `draft` (regulatory clock not running) | `submitted` (clock starts; triggers queue entry and automated Medicaid screening) | `under_review` (caseworker active) | `withdrawn` (all open tasks must be cancelled and the household notified) | `closed` (intake complete; case management creates a case if approved). Terminal states: `withdrawn`, `closed`.
+- `programs` — which programs the household intends to apply for, assessed at submission for queue routing, expedited SNAP screening, and automated Medicaid determination. Distinct from `ApplicationMember.programs`, which records which members are applying for which programs — the two must be kept consistent (a member cannot apply for a program not listed at the application level).
+- `submittedAt` — the regulatory clock anchor. SNAP's 30-day and Medicaid's 45-day processing deadlines run from this timestamp (7 CFR § 273.2, 42 CFR § 435.912). Not `createdAt` — a draft can be started and abandoned without starting the clock; the deadline starts when the application is formally filed.
 
-See [Decision 2](#decision-2-programs-applied-for--placement), [Decision 4](#decision-4-authorized-representative--modeling), [Decision 6](#decision-6-intake-phase-end--lifecycle-state).
+See [Decision 2](#decision-2-programs-applied-for--placement), [Decision 3](#decision-3-authorized-representative--modeling), [Decision 4](#decision-4-intake-phase-end--lifecycle-state).
 
 ---
 
@@ -122,41 +146,30 @@ A person linked to an application. May be the primary applicant, a household mem
 
 SNAP requires all household members to be listed regardless of whether they are individually applying (7 CFR § 273.1).
 
-**Key fields:** `firstName`, `lastName`, `dateOfBirth`, `sex`, `SSN`, `relationship`, `roles`, `programsApplyingFor`, `resolvedPersonId`
+Member data is organized by category — identity, eligibility attributes, financial data, household — and shared with the eligibility domain via common schemas, so states can overlay the parts relevant to their programs without touching everything else. See [Decision 15](#decision-15-applicationmember-composes-from-memberyaml).
 
-See [Decision 1](#decision-1-role-vs-relationship-on-applicationmember), [Decision 2](#decision-2-programs-applied-for--placement), [Decision 4](#decision-4-authorized-representative--modeling), [Decision 10](#decision-10-person-identity-matching).
+Key fields:
+- `roles` (array) — supports multiple simultaneous roles. An authorized representative who lives in the household holds `[authorized_representative, household_member]`; a SNAP-only authorized rep (who must be a non-household-member per 7 CFR § 273.2(n)) holds `[authorized_representative]` alone. A single `role` value cannot represent both roles on one record and would require a separate representative entity. See [Decision 3](#decision-3-authorized-representative--modeling).
+- `programs` — per-member intent: which programs this specific member is applying for. Eligibility creates one Decision per member per program using this field — it determines who gets evaluated for what. Distinct from `Application.programs`, which is a household-level routing flag used at submission before member-level intent is relevant.
+- `personId` — nullable foreign key to the Persons domain, populated by identity matching at submission. Null means unmatched or matching is still pending. Once set, downstream domains (eligibility, case management) can link to prior application history and existing case records for this person. See [Decision 7](#decision-7-person-identity-matching).
 
----
-
-### Program-specific eligibility attributes
-
-Facts about a household member relevant to eligibility determination — citizenship status, immigration status, pregnancy, student status, disability, tax filing status. All are flat fields on `ApplicationMember`. See [Decision 3](#decision-3-program-specific-eligibility-attributes--structure).
-
-**Tax filing status (MAGI Medicaid):** MAGI Medicaid determines eligibility based on tax filing status and dependency relationships, not physical household membership. This requires fields not needed for SNAP-only applications: `taxFilingStatus`, `claimedAsDependentBy`, `expectToFileTaxes`, `marriedFilingJointly`. See [Decision 12](#decision-12-magi-tax-filing-status-fields).
-
----
-
-### Income, expenses, and assets
-
-Financial facts collected to support eligibility determination.
-
-- **Income**: per-person, by source (employment, self-employment, Social Security, SSI, TANF, child support, etc.) with `amount`, `frequency`, `startDate`, optionally `employer`
-- **Expenses**: household-level for shelter and utilities; per-person for child care, medical (elderly/disabled), court-ordered child support paid
-- **Assets**: per-person, by type (bank account, vehicle, real property, life insurance) with `amount` and `description`
-
-See [Decision 11](#decision-11-income-and-expense-detail-at-intake).
+See [Decision 1](#decision-1-role-vs-relationship-on-applicationmember), [Decision 2](#decision-2-programs-applied-for--placement), [Decision 3](#decision-3-authorized-representative--modeling), [Decision 7](#decision-7-person-identity-matching).
 
 ---
 
 ### Verification
 
-A unified record representing one item on the household's verification checklist — covering both paper document requirements (e.g., provide a pay stub) and electronic service check results (e.g., an FDSH citizenship check). All major platforms converge on a unified verification concept that covers both types. See [Decision 19](#decision-19-unified-verification-entity) for the choice.
+A unified record representing one item on the household's verification checklist — covering both paper document requirements (e.g., provide a pay stub) and electronic service check results (e.g., an FDSH citizenship check). All major platforms converge on a unified verification concept that covers both types. See [Decision 13](#decision-13-unified-verification-entity) for the choice.
 
-Verification records are created by the rules engine in response to intake events, not manually by caseworkers under normal circumstances. Household-level obligations (e.g., proof of residency) are linked to the application only. Member-level obligations (e.g., proof of income, citizenship) are linked to both the application and the specific member.
+Verification records are created by state machine event handlers in response to intake events, not manually by caseworkers under normal circumstances. Household-level obligations (e.g., proof of residency) are linked to the application only. Member-level obligations (e.g., proof of income, citizenship) are linked to both the application and the specific member.
 
-**Key fields:** `id`, `applicationId`, `memberId` (nullable — null for household-level obligations), `category` (`income | identity | residency | citizenship | immigration`), `status` (`pending | inconclusive | satisfied | waived | cannot_verify`), `evidence[]` (typed sub-items: electronic items carry `source` (`fdsh_ssa | fdsh_vlp | fdsh_fti | ssa_ievs | save`), `result`, `serviceCallId`, `receivedAt`; document items carry `documentId`, `receivedAt`, `reviewedAt`, `reviewedBy`), `documentRequests[]` (sub-items: `noticeId`, `sentAt`, `dueAt`, `channel`), `createdAt`, `updatedAt`
+Key fields:
+- `memberId` — nullable. Null for household-level obligations (e.g., proof of residency, which applies to the household as a unit); set for member-level obligations (income, citizenship, immigration — each member is verified individually). The same entity and endpoint represent both scopes via this single nullable field.
+- `category` — the obligation type: `income | identity | residency | citizenship | immigration`. Determines which electronic service to call first (if any) and what documents to request as a fallback. `residency` is document-only — no electronic check exists (7 CFR § 273.2(f)(1)(iii)). `citizenship` and `immigration` trigger FDSH service calls before any document request is made.
+- `status` — `pending` (not yet resolved) | `inconclusive` (electronic check returned insufficient data; document fallback triggered) | `satisfied` (verified) | `waived` | `cannot_verify`. The `pending → inconclusive → satisfied` path is the two-phase flow that ex parte rules mandate for citizenship and immigration (42 CFR § 435.911): electronic check first, document request only if inconclusive.
+- `evidence[]` — sub-items accumulating both electronic results (service called, result received, timestamp) and document submissions (documentId, receivedAt) on the same record. A split model — electronic checks tracked separately from documents — would require caseworkers to consult two data structures to see the full verification state and would prevent a single lifecycle from covering both obligation types.
 
-See [Decision 14](#decision-14-verification-checklist-generation), [Decision 19](#decision-19-unified-verification-entity).
+See [Decision 9](#decision-9-verification-checklist-generation), [Decision 13](#decision-13-unified-verification-entity).
 
 ---
 
@@ -166,11 +179,44 @@ A regulatory tracking entity representing the required SNAP interview obligation
 
 Intake owns this entity because the obligation is regulatory (7 CFR § 273.2(e)) and tied to the application lifecycle. The scheduling domain owns the appointment mechanics (time, location, confirmation, reminders). Intake tracks whether the regulatory requirement is satisfied, not the scheduling details.
 
-**Key fields:** `id`, `applicationId`, `appointments` (array of appointmentIds from the scheduling domain — one-to-many to accommodate reschedules), `waiverGranted`, `waiverReason`, `completedAt`
+Key fields:
+- `appointments` (array) — IDs of scheduling-domain appointments linked to this interview obligation. One-to-many: an interview requirement may span multiple appointments due to reschedules, no-shows, or missed connections. The Interview entity exists to track the obligation across these attempts — without it, there is no way to know whether the regulatory requirement has been satisfied when multiple appointments exist.
+- `completedAt` — the caseworker's explicit attestation that the SNAP interview requirement (7 CFR § 273.2(e)) is satisfied. Not set automatically when an appointment ends — the caseworker designates which appointment completed the obligation. The scheduling domain tracks appointment end times; intake tracks regulatory compliance via this field.
 
 **Linkage constraint:** The `scheduling.appointment.scheduled` subscription can link an appointment to the correct Interview only when the caseworker schedules from within the application context, so the scheduling system can populate `subjectType: interview` and `subjectId: {interviewId}` on the appointment automatically. Scheduling from a standalone module without that context produces an unlinked appointment.
 
-See [Decision 15](#decision-15-interview-entity-model), [Decision 16](#decision-16-interview-task-creation-timing).
+See [Decision 10](#decision-10-interview-entity-model).
+
+---
+
+### Review progress
+
+A per-section tracking record for the caseworker's review of an application. Upsert-by-composite-key (`applicationId` + `section`) — one entry per section, optionally scoped to a specific member for member-level sections. Records are informational: they do not gate the `complete-review` transition, which states can optionally enforce via overlay. See [Decision 17](#decision-17-review-progress-is-a-separate-queryable-resource).
+
+Key fields:
+- `section` + `memberId` (composite key) — upsert semantics: submitting progress for the same section and member replaces the existing entry rather than creating a duplicate. `memberId` is nullable; sections without a member context (e.g., household expenses) use `section` alone as the key.
+- `status` — `not_started | in_progress | complete | flagged`. The enum is overlay-extensible: states can add values like `needs_supervisor_review` for exception workflows without modifying the baseline contract. Status is navigation state only — `complete` does not gate the `complete-review` state machine transition in the baseline.
+
+---
+
+### Notes
+
+A caseworker-entered note on an application. Notes are scoped to the application as a whole (`scope: application`) or to a specific section (`scope: section`), with an optional `memberId` for member-specific observations. The `textFormat` field controls rendering: `plain`, `markdown`, or `html`. Notes are standalone records — they do not affect application lifecycle and are preserved after the application is closed for audit purposes.
+
+Key fields:
+- `scope` — `application` (note applies to the whole application) or `section` (note applies to a specific review section). Both `section` and `memberId` are nullable: a note can target the whole application, a specific section, a specific member, or a specific member within a specific section — all through the same resource and endpoint, filtered by query params (`?scope=`, `?section=`, `?memberId=`). Per-scope endpoints would fragment the query interface across multiple paths and make cross-scope note queries impossible without multiple calls.
+
+See [Customization — Note text format](#note-text-format) and [Customization — Note attachments](#note-attachments).
+
+---
+
+### ReviewContext
+
+A read-only composite view assembled server-side for the caseworker review surface. Not a stored entity — assembled on request from the application's sub-resources. Returns the application, household, all members with their sub-resources (demographics, income, expenses, assets, employment, health coverage), current review-progress entries, and notes. The structure is neutral: it carries the data; the front end organizes it for whatever review workflow the state uses — per member, per section, or filtered by program.
+
+Writes do not go through this endpoint. Each sub-resource retains its own write path. `ReviewContext` is always current state; change history is via `GET /platform/events?subject={applicationId}`.
+
+See [Decision 16](#decision-16-review-surface-uses-the-composite-view-pattern).
 
 ---
 
@@ -188,14 +234,14 @@ Based on regulatory requirements and vendor consensus:
 | `withdrawn` | Applicant voluntarily withdrew before determination |
 | `closed` | Processing complete; determination made by eligibility domain |
 
-**Implication for the data model:** Application data is mutable during `under_review`. The intake domain must support caseworker-initiated updates to application records, not just the applicant's initial submission. This has audit trail implications — changes made by caseworkers after submission should be distinguishable from the original submitted data. See [Decision 7](#decision-7-application-data-mutability-and-audit-trail).
+**Implication for the data model:** Application data is mutable during `under_review`. The intake domain must support caseworker-initiated updates to application records, not just the applicant's initial submission. This has audit trail implications — changes made by caseworkers after submission should be distinguishable from the original submitted data. See [Audit trail pattern](../inter-domain-communication.md#audit-trail-pattern).
 
 ### Key transitions
 
 - **submit**: `draft` → `submitted` — applicant files; regulatory clock starts; triggers caseworker task creation and confirmation notice
-- **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; assignment may happen separately and does not necessarily trigger this transition; see [Decision 8](#decision-8-submitted--under_review-transition-trigger)
+- **open**: `submitted` → `under_review` — caseworker begins actively reviewing the application; assignment may happen separately and does not necessarily trigger this transition; see [Decision 5](#decision-5-submitted--under_review-transition-trigger)
 - **withdraw**: `submitted` | `under_review` → `withdrawn` — applicant-initiated; triggers open task cancellation
-- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination; see [Decision 6](#decision-6-intake-phase-end--lifecycle-state)
+- **close**: `under_review` → `closed` — caseworker signals the application is ready for eligibility determination; see [Decision 4](#decision-4-intake-phase-end--lifecycle-state)
 
 ---
 
@@ -209,7 +255,7 @@ The intake domain emits two kinds of events:
 
 **Lifecycle transition events** — named, semantic events tied to application state changes or significant caseworker actions (e.g., submission, withdrawal, expedited flag). Each carries a specific payload relevant to the transition.
 
-**Generic resource events** — emitted on any create, update, or delete of the application or its sub-resources. These support audit and change-tracking consumers without requiring a named event for every data change. Sub-resource-level events are addressed when those sub-resources are designed. See [Decision 5](#decision-5-domain-events--scope).
+**Generic resource events** — emitted on any create, update, or delete of the application or its sub-resources. These support audit and change-tracking consumers without requiring a named event for every data change. Sub-resource-level events are addressed when those sub-resources are designed. See [Domain events — scope](../inter-domain-communication.md#domain-events--scope).
 
 ### Event catalog
 
@@ -217,7 +263,7 @@ Events are listed with the operational or regulatory need that drives them — t
 
 | Event | Why it's needed | Trigger | Primary consumers |
 |---|---|---|---|
-| `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. See [Decision 13](#decision-13-post-submission-program-routing--task-creation-and-automated-eligibility) for how routing differs by program. | `draft` → `submitted` | Workflow, Communication (confirmation notice), Eligibility (automated determination for applicable programs) |
+| `application.submitted` | Submission starts the regulatory clock (SNAP 30-day, Medicaid 45-day). Downstream domains cannot begin work until they know an application has been filed and when. See [Decision 8](#decision-8-post-submission-program-routing--task-creation-and-automated-eligibility) for how routing differs by program. | `draft` → `submitted` | Workflow, Communication (confirmation notice), Eligibility (automated determination for applicable programs) |
 | `application.opened` | Signals that a caseworker has begun active review. Workflow needs to update the task state; supervisors tracking queue throughput need to know when review started vs. when it was filed. | `submitted` → `under_review` | Workflow (update task to in_progress) |
 | `application.expedited_flagged` | SNAP requires a determination within 7 days for expedited households. The workflow domain needs to immediately escalate to a higher-priority SLA track — the standard 30-day task SLA is wrong for these cases. This is a named trigger effect, not a generic field update. | `flag-expedited` trigger | Workflow (escalate to expedited SLA) |
 | `application.withdrawn` | A withdrawn application must stop all in-flight processing immediately. Open workflow tasks must be cancelled; any scheduled interview or document request must be voided; communication must notify the household. Failing to act on this event risks processing an application the household has abandoned. | any → `withdrawn` | Workflow (cancel open tasks), Communication (withdrawal notice) |
@@ -230,11 +276,11 @@ Events from other domains that intake reacts to:
 
 | Event | Why intake subscribes | Action |
 |---|---|---|
-| `workflow.task.claimed` | A caseworker claiming the intake review task signals they have begun active review — intake should reflect this in the application lifecycle. See [Decision 8](#decision-8-submitted--under_review-transition-trigger). | Trigger `submitted → under_review` on the linked application |
-| `eligibility.determination_complete` | Eligibility publishes outcomes per program; intake subscribes to determine when all programs are resolved and the application can be closed. See [Decision 6](#decision-6-intake-phase-end--lifecycle-state). | Trigger `close` when all programs are determined |
-| `data-exchange.service-call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns a result, the rules engine transitions the affected `Verification` and appends an electronic evidence item — satisfied if conclusive, inconclusive if not; a document request entry is appended to `documentRequests[]` when inconclusive. See [Decision 14](#decision-14-verification-checklist-generation), [Decision 17](#decision-17-external-service-verification-write-backs), [Decision 18](#decision-18-data-exchange-orchestration). | Rules engine transitions `Verification`; appends electronic evidence item; appends to `documentRequests[]` if inconclusive |
-| `scheduling.appointment.scheduled` | Intake must link each scheduled appointment to the correct Interview entity so the appointments array stays current. Required for caseworkers to see appointment history and for the interview completion flow to be traceable. See [Decision 15](#decision-15-interview-entity-model). | Rules engine appends the appointmentId to `Interview.appointments` for the linked interview |
-| `document_management.document_version.uploaded` | When a new document version is uploaded, intake's rules engine evaluates whether the upload satisfies a pending verification obligation. Without this event, intake has no trigger to mark the `Verification` as satisfied when a document is received. | Rules engine transitions the matching `Verification` record to `satisfied` and records the document ID in its `evidence` list |
+| `workflow.task.claimed` | A caseworker claiming the intake review task signals they have begun active review — intake should reflect this in the application lifecycle. See [Decision 5](#decision-5-submitted--under_review-transition-trigger). | Trigger `submitted → under_review` on the linked application |
+| `eligibility.determination_complete` | Eligibility publishes outcomes per program; intake subscribes to determine when all programs are resolved and the application can be closed. See [Decision 4](#decision-4-intake-phase-end--lifecycle-state). | Trigger `close` when all programs are determined |
+| `data-exchange.service-call.completed` | Ex parte rules require electronic verification before requesting paper documents. When an external service call returns a result, the state machine event handler transitions the affected `Verification` and appends an electronic evidence item — satisfied if conclusive, inconclusive if not; a document request entry is appended to `documentRequests[]` when inconclusive. See [Decision 9](#decision-9-verification-checklist-generation), [Decision 11](#decision-11-external-service-verification-write-backs), [Decision 12](#decision-12-data-exchange-orchestration). | State machine event handler transitions `Verification`; appends electronic evidence item; appends to `documentRequests[]` if inconclusive |
+| `scheduling.appointment.scheduled` | Intake must link each scheduled appointment to the correct Interview entity so the appointments array stays current. Required for caseworkers to see appointment history and for the interview completion flow to be traceable. See [Decision 10](#decision-10-interview-entity-model). | State machine event handler appends the appointmentId to `Interview.appointments` for the linked interview |
+| `document_management.document_version.uploaded` | When a new document version is uploaded, intake's state machine evaluates whether the upload satisfies a pending verification obligation. Without this event, intake has no trigger to mark the `Verification` as satisfied when a document is received. | State machine event handler transitions the matching `Verification` record to `satisfied` and records the document ID in its `evidence` list |
 
 ---
 
@@ -246,24 +292,22 @@ Quick reference — each decision is detailed in the section below.
 |---|---|---|
 | 1 | [Role vs. relationship on ApplicationMember](#decision-1-role-vs-relationship-on-applicationmember) | Separate `role` and `relationship` fields — no vendor conflates them. |
 | 2 | [Programs applied for — placement](#decision-2-programs-applied-for--placement) | Both application-level and member-level programs lists. |
-| 3 | [Program-specific eligibility attributes — structure](#decision-3-program-specific-eligibility-attributes--structure) | Flat facts on ApplicationMember — person facts don't change per program. |
-| 4 | [Authorized representative — modeling](#decision-4-authorized-representative--modeling) | `roles` array on ApplicationMember — supports multiple simultaneous roles. |
-| 5 | [Domain events — scope](#decision-5-domain-events--scope) | Both lifecycle and resource events; specific events determined per-domain. |
-| 6 | [Intake phase end — lifecycle state](#decision-6-intake-phase-end--lifecycle-state) | Caseworker-triggered event, no new state — each domain owns its own transitions. |
-| 7 | [Application data mutability and audit trail](#decision-7-application-data-mutability-and-audit-trail) | Cross-cutting audit domain — audit logic lives once, not duplicated per domain. |
-| 8 | [submitted → under_review transition trigger](#decision-8-submitted--under_review-transition-trigger) | Intake subscribes to `task.claimed` — one caseworker action triggers both domains. |
-| 9 | [Member-to-member relationship matrix (MAGI)](#decision-9-member-to-member-relationship-matrix-magi) | Relationship to primary applicant only — sufficient for SNAP and most MAGI cases; full pairwise matrix is a known gap. |
-| 10 | [Person identity matching](#decision-10-person-identity-matching) | Matching triggered at submission; synchronous vs. asynchronous is an implementation choice. |
-| 11 | [Income and expense detail at intake](#decision-11-income-and-expense-detail-at-intake) | Full schema, only gross income required — implementations decide how much detail to collect. |
-| 12 | [MAGI tax filing status fields](#decision-12-magi-tax-filing-status-fields) | Flat fields in the baseline — required by the MAGI household composition logic from [Decision 9](#decision-9-member-to-member-relationship-matrix-magi). |
-| 13 | [Post-submission program routing — task creation and automated eligibility](#decision-13-post-submission-program-routing--task-creation-and-automated-eligibility) | One intake task per application with per-program status — programs under automated processing marked at task creation. |
-| 14 | [Verification checklist generation](#decision-14-verification-checklist-generation) | Rules-driven `Verification` records cover both paper document requirements and electronic check obligations. |
-| 15 | [Interview entity model](#decision-15-interview-entity-model) | Dedicated Interview entity in intake — not a generic appointment type; scheduling owns mechanics, intake owns regulatory tracking. |
-| 16 | [Interview task creation timing](#decision-16-interview-task-creation-timing) | Interview task created at task claim time (when caseworker is known), not at submission. |
-| 17 | [External service verification write-backs](#decision-17-external-service-verification-write-backs) | Obligation status → `Verification` record; verified facts → `ApplicationMember` fields. |
-| 18 | [Data exchange orchestration](#decision-18-data-exchange-orchestration) | Intake rules create `data-exchange/service-calls` resources — data exchange stays generic; field mapping lives in rules. |
-| 19 | [Unified Verification entity](#decision-19-unified-verification-entity) | Obligation-centric `Verification` entity — evidence accumulates as sub-items; replaces `ApplicationDocument` and `ApplicationMember.verifications[]`. |
-| 20 | [Existing coverage check ownership](#decision-20-existing-coverage-check-ownership) | fdsh_medicare and fdsh_vci are eligibility's calls — not intake Verification obligations. |
+| 3 | [Authorized representative — modeling](#decision-3-authorized-representative--modeling) | `roles` array on ApplicationMember — supports multiple simultaneous roles. |
+| 4 | [Intake phase end — lifecycle state](#decision-4-intake-phase-end--lifecycle-state) | Caseworker-triggered event, no new state — each domain owns its own transitions. |
+| 5 | [submitted → under_review transition trigger](#decision-5-submitted--under_review-transition-trigger) | Intake subscribes to `task.claimed` — one caseworker action triggers both domains. |
+| 6 | [Member-to-member relationship matrix (MAGI)](#decision-6-member-to-member-relationship-matrix-magi) | Relationship to primary applicant only — sufficient for SNAP and most MAGI cases; full pairwise matrix is a known gap. |
+| 7 | [Person identity matching](#decision-7-person-identity-matching) | Matching triggered at submission; synchronous vs. asynchronous is an implementation choice. |
+| 8 | [Post-submission program routing — task creation and automated eligibility](#decision-8-post-submission-program-routing--task-creation-and-automated-eligibility) | One intake task per application with per-program status — programs under automated processing marked at task creation. |
+| 9 | [Verification checklist generation](#decision-9-verification-checklist-generation) | Rules-driven `Verification` records cover both paper document requirements and electronic check obligations. |
+| 10 | [Interview entity model](#decision-10-interview-entity-model) | Dedicated Interview entity in intake — not a generic appointment type; scheduling owns mechanics, intake owns regulatory tracking. |
+| 11 | [External service verification write-backs](#decision-11-external-service-verification-write-backs) | Obligation status → `Verification` record; verified facts → `ApplicationMember` fields. |
+| 12 | [Data exchange orchestration](#decision-12-data-exchange-orchestration) | Intake rules create `data-exchange/service-calls` resources — data exchange stays generic; field mapping lives in rules. |
+| 13 | [Unified Verification entity](#decision-13-unified-verification-entity) | Obligation-centric `Verification` entity — evidence accumulates as sub-items; replaces `ApplicationDocument` and `ApplicationMember.verifications[]`. |
+| 14 | [Existing coverage check ownership](#decision-14-existing-coverage-check-ownership) | fdsh_medicare and fdsh_vci are eligibility's calls — not intake Verification obligations. |
+| 15 | [ApplicationMember composes from member.yaml](#decision-15-applicationmember-composes-from-memberyaml) | `allOf` composition — structural alignment with eligibility's MemberContext enforced by the schema hierarchy. |
+| 16 | [Review surface uses the composite view pattern](#decision-16-review-surface-uses-the-composite-view-pattern) | Server-assembled neutral composite — front end organizes for its workflow; writes still use sub-resource endpoints. |
+| 17 | [Review-progress is a separate queryable resource](#decision-17-review-progress-is-a-separate-queryable-resource) | Dedicated resource with bounded dataset — navigation state kept separate from application and workflow entities. |
+| 18 | [Notes are a first-class resource](#decision-18-notes-are-a-first-class-resource) | Standalone resource with scope field — decoupled from review-progress, independently queryable at all scoping levels. |
 
 ---
 
@@ -271,16 +315,14 @@ Quick reference — each decision is detailed in the section below.
 
 **Status:** Decided: B
 
-**What's being decided:** Whether the member's role in the application process (primary applicant, household member, authorized representative) and their family relationship to the primary applicant (spouse, child, parent) are one field or two.
+**What's being decided:** An `ApplicationMember` record captures two distinct attributes: the person's role in the application process (primary applicant, household member, authorized representative) and their family relationship to the primary applicant (spouse, child, parent). These can overlap — an authorized representative may also be a family member; a non-applying household member has no application role but does have a family relationship that matters for MAGI tax-household composition. A single field cannot represent both simultaneously. The decision is whether to encode both in one field or maintain them as separate fields.
 
 **Considerations:**
 - No major vendor conflates these — Cúram, Salesforce, and Pega all have separate fields for application-process role and family relationship
-- An authorized representative may also be a family member — a single field can't represent both accurately
-- A non-applying household member has no meaningful application-process role but does have a family relationship that matters for MAGI Medicaid tax-household composition
 
 **Options:**
 - **(A)** Single `relationship` field encoding both application role and family relationship
-- **(B)** ✓ Separate `role` field (application process role: primary_applicant, household_member, non_applying_member, authorized_representative, absent_parent) and `relationship` field (family relationship to primary applicant: spouse, child, parent, etc.). Note: [Decision 4](#decision-4-authorized-representative--modeling) extends this to a `roles` array to support multiple simultaneous roles.
+- **(B)** ✓ Separate `role` field (application process role: primary_applicant, household_member, non_applying_member, authorized_representative, absent_parent) and `relationship` field (family relationship to primary applicant: spouse, child, parent, etc.). Note: [Decision 3](#decision-3-authorized-representative--modeling) extends this to a `roles` array to support multiple simultaneous roles.
 
 ---
 
@@ -288,52 +330,28 @@ Quick reference — each decision is detailed in the section below.
 
 **Status:** Decided: C
 
-**What's being decided:** Where in the data model to track which programs are being applied for — at the application level, the member level, or both.
+**What's being decided:** Programs-applied-for serves two distinct purposes that operate at different levels. At submission, the agency needs a household-level list — which programs the household intends to apply for — to route the application and trigger program-specific automated processing (SNAP expedited screening, Medicaid real-time eligibility). After submission, eligibility determination operates per person per program — Medicaid evaluates each member individually, and SNAP allows individual members to be excluded. Tracking only at the application level loses individual intent; tracking only at the member level removes the household-level routing flag needed at submission. The decision is whether to maintain one list, the other, or both.
 
 **Considerations:**
-- All major vendors track programs at the application level (a list of which programs the household is applying for) — this part is universal
-- Per-member, per-program tracking is less standardized: Cúram and CalSAWS use a simple `isApplyingForBenefit` boolean on the member; Pega pushes the distinction entirely to the eligibility rules engine
-- Vendors that rely on the eligibility engine to infer per-member intent can exclude ineligible members using rules, but have no way to distinguish an ineligible member from a member who voluntarily opted out of a program — that distinction is lost at intake
-- Regulation requires per-member clarity: Medicaid determines eligibility individually per member; SNAP allows individual member exclusions even within the same household; WIC is fully individual certification
-- Tracking at both levels requires consistency validation — a member can't be applying for a program that isn't on the application's programs list; this is a UI/API concern, not a data model flaw
+- All major vendors track programs at the application level — this part is universal. Per-member tracking is less standardized: Cúram and CalSAWS use a boolean on the member; Pega infers member intent from eligibility rules.
+- Vendors that rely on the eligibility engine cannot distinguish an ineligible member from one who voluntarily opted out — that distinction is lost at intake
 
 **Options:**
 - **(A)** Application level only — one programs list on Application, member-level distinction inferred downstream
-- **(B)** Member level only — each ApplicationMember has a `programsApplyingFor` list; application-level programs list derived from member data
-- **(C)** ✓ Both — Application has a programs list (screening/routing flag — which programs the household intends to apply for, used at submission for queue routing, expedited screening, and automated eligibility triggering), ApplicationMember has a `programsApplyingFor` list (individual intent — which members are applying for which programs); eligibility determination operates at the member level via `programsApplyingFor`; makes voluntary non-application explicit; gives eligibility a clean input
+- **(B)** Member level only — each ApplicationMember has a `programs` list; application-level programs list derived from member data
+- **(C)** ✓ Both — Application has a programs list (screening/routing flag — which programs the household intends to apply for, used at submission for queue routing, expedited screening, and automated eligibility triggering), ApplicationMember has a `programs` list (individual intent — which members are applying for which programs); eligibility determination operates at the member level via `member.programs`; makes voluntary non-application explicit; gives eligibility a clean input
 
 ---
 
-### Decision 3: Program-specific eligibility attributes — structure
-
-**Status:** Decided: A
-
-**What's being decided:** Whether eligibility-relevant attributes (citizenship, immigration status, pregnancy, student status, disability) are flat fields on ApplicationMember or nested inside a per-program structure.
-
-**Considerations:**
-- No major vendor nests eligibility attributes per-program at intake — Cúram, Pega, MAGI-in-the-Cloud, CMS Marketplace, and CalSAWS all use flat facts on the member entity
-- These are facts about the person, not the program: citizenship status doesn't change depending on which program is being applied for; the same fact is evaluated independently by each program's rules
-- Per-program nesting would duplicate data (same citizenship status entered once per program) and complicate data entry
-- The one genuinely per-program attribute is which programs the member is applying for — handled separately in [Decision 2](#decision-2-programs-applied-for--placement)
-
-**Options:**
-- **(A)** ✓ Flat on ApplicationMember — citizenship, immigration status, pregnancy, student status, disability as direct fields; consistent with all major vendors
-- **(B)** Per-program nested — each program entry on the member has its own sub-object with program-specific fields
-- **(C)** Hybrid — flat for shared person facts, per-program only for attributes that are genuinely program-specific (e.g., work registration exemption reason, which has different rules per program)
-
----
-
-### Decision 4: Authorized representative — modeling
+### Decision 3: Authorized representative — modeling
 
 **Status:** Decided: C
 
-**What's being decided:** Whether the authorized representative is a role on an ApplicationMember record or a separate reference from the Application entity.
+**What's being decided:** An authorized representative participates in the application but the role is federally constrained differently per program. SNAP (7 CFR § 273.2(n)) requires the authorized rep to be a non-household-member — they cannot also appear as a regular household member. Medicaid (42 CFR § 435.923) is less restrictive — a household member may act as authorized representative, meaning one person legitimately holds both roles simultaneously. The data model must represent both: a SNAP-only authorized rep who is not in the household, and a Medicaid authorized rep who is also a household member.
 
 **Considerations:**
-- Salesforce and Cúram both model the authorized representative as a role on the member junction record — no separate entity. Pega uses a separate reference from the Application to a person record.
-- SNAP regulations (7 CFR § 273.2(n)) require the authorized representative to be a non-household-member — modeling them as a single role on `ApplicationMember` is conceptually imprecise: they are not a member
-- Medicaid (42 CFR § 435.923) is less restrictive — a household member could act as authorized representative for Medicaid purposes, meaning the same person legitimately holds two roles
-- A `roles` array resolves both: a SNAP authorized rep is an ApplicationMember with `roles: [authorized_representative]` only; a Medicaid authorized rep who lives in the household has `roles: [household_member, authorized_representative]`
+- Salesforce and Cúram model the authorized representative as a role on the member record — no separate entity. Pega uses a separate reference from the Application.
+- A `roles` array resolves the SNAP/Medicaid conflict: a SNAP-only authorized rep carries `[authorized_representative]`; a Medicaid authorized rep who lives in the household carries `[household_member, authorized_representative]`
 
 **Options:**
 - **(A)** Single `role` value on ApplicationMember (`role: authorized_representative`) — consistent with Salesforce and Cúram; simpler; conceptually imprecise for SNAP
@@ -342,47 +360,16 @@ Quick reference — each decision is detailed in the section below.
 
 ---
 
-### Decision 5: Domain events — scope
-
-**Status:** Decided: publish as needed
-
-**What's being decided:** Whether to limit events to lifecycle state transitions or also publish events for significant data changes within a stable state.
-
-**Considerations:**
-- Salesforce CDC automatically publishes externally accessible change events for any enabled object via the Pub/Sub API — a genuine CDC subscription model. Cúram and Pega both require explicit developer instrumentation per event (outbound SOAP calls or Kafka publish steps wired into flows); they do not offer automatic data mutation event streams.
-- Transition events have stable, minimal payloads. Data mutation events carry more model detail and require more care to evolve.
-- The main governance concern with data mutation events is **semantic coupling**: consumers depend on the event payload shape; renaming or restructuring fields is a breaking change. Mitigations: additive-only payload evolution, event type versioning (`v1`/`v2`), a schema registry, consumer-driven contract testing, or defining event schemas using the same canonical types as the API specs (already overlayable in the blueprint).
-- Adding a new event type is additive and non-breaking — events can be introduced per-domain as integration needs emerge, without a blanket upfront decision.
-
-**Decision:** Both transition and data mutation events are supported. Which specific events to emit is determined per-domain based on real integration needs, governed by the schema evolution practices above.
-
----
-
-### Decision 6: Intake phase end — lifecycle state
+### Decision 4: Intake phase end — lifecycle state
 
 **Status:** Decided: C
 
-**What's being decided:** Whether the caseworker's completion of intake review is signaled by a lifecycle state change, a domain event, or not at all — and how the application record reaches its terminal state without coupling intake to the eligibility domain.
+**What's being decided:** The intake application reaches `closed` only after eligibility has determined all programs — but intake shouldn't depend on eligibility to write that transition; each domain owns its own state. The caseworker also has a meaningful completion moment ("my part is done, ready for determination") that downstream systems need to react to. The decision is how to surface that signal and how the application reaches `closed` without coupling intake's lifecycle to the eligibility domain.
 
 **Considerations:**
-
-Regulatory factors:
-- Federal processing clocks (30 days for SNAP, 45 days for Medicaid) start at **submission**, not at "intake complete" — neither option creates a compliance problem on its own
-- SNAP requires an interview before determination (7 CFR § 273.2(e)); the interview is part of intake — the caseworker's completion signal is a natural point to record that the interview occurred
-- Federal quality control reviews (SNAP, Medicaid) audit application processing timeliness; a clean timestamp for when the caseworker considered intake complete aids QC reporting
-- SNAP expedited screening (7 CFR § 273.2(i)) runs on a 7-day clock starting at submission — it proceeds during intake, not after, so it doesn't conflict with any of these options
-
-Domain ownership:
-- Each domain should own its own state transitions. Having the eligibility domain directly close the application creates coupling — intake's lifecycle would be controlled by another domain.
-- The cleaner model: intake subscribes to eligibility events and decides when the application is done based on its own logic (e.g., all programs determined → `closed`). Eligibility publishes what it knows; intake decides what "done" means.
-- A `pending_determination` state implies eligibility can't begin until intake signals it's ready — but eligibility could reasonably begin earlier for some programs, and expedited screening already does
-
-Arguments for an explicit state (`pending_determination`):
-- Adds a transition to manage and a caseworker step; creates multi-program ambiguity (complete for SNAP but still awaiting Medicaid verification?)
-
-Arguments for a caseworker-triggered event with no new state:
-- The caseworker's completion is a meaningful signal regardless of what the application's lifecycle state is; downstream systems subscribe if relevant
-- No new state to manage; the application stays `under_review` until intake's own logic closes it based on eligibility events received
+- Processing clocks start at submission, not at "intake complete" — the caseworker completion signal is an audit point, not a compliance trigger
+- Each domain should own its own state transitions; having eligibility close the application directly couples intake's lifecycle to another domain
+- A `pending_determination` state creates multi-program ambiguity (SNAP review may be complete while Medicaid automated processing is still running) and implies eligibility can't begin until intake signals ready — but expedited screening already runs before caseworker review
 
 **Options:**
 - **(A)** No explicit signal — application moves to `closed` when intake's logic determines all programs are resolved; fluid boundary similar to Cúram
@@ -391,58 +378,31 @@ Arguments for a caseworker-triggered event with no new state:
 
 ---
 
-### Decision 7: Application data mutability and audit trail
-
-**Status:** Decided: C
-
-**What's being decided:** How changes to application data made by caseworkers during `under_review` are tracked — and whether the intake domain owns the audit trail or delegates it.
-
-**Considerations:**
-- All major vendors implement audit internally — Cúram versions each evidence update; Pega's case audit framework captures who changed what and when; Salesforce uses field history tracking. None delegate to a separate audit domain, but all are monolithic systems where the concept doesn't exist. The blueprint's domain separation creates the opportunity to do this differently.
-- Application data at determination may differ materially from the applicant's original submission — caseworkers correct entries from the interview, reconcile documents, and add information the applicant couldn't provide; SNAP regulations require documentation of how eligibility was determined
-- Caseworkers need to see version history for an application — which option is chosen determines where that history lives and how it's queried
-- **Option A/B (audit in intake domain)**: Each domain with mutable data would independently implement audit logic — duplicated across intake, case management, eligibility, etc.
-- **Option C (cross-cutting audit domain)**: Audit logic lives once; all domains get the same treatment; cross-domain queries ("all changes by this caseworker this week") are possible from one place; intake stays focused on capturing application data. Requires mutation events to carry enough payload to reconstruct version history — either the full record at each point (fat events, easy to compare) or changed fields with before/after values (thin events, smaller payloads, audit domain reconstructs state by replaying). Either approach is established; Salesforce CDC uses the thin approach.
-
-**Options:**
-- **(A)** Field-level change tracking in intake — each update records who changed what field, from what value; intake owns the audit trail; duplicated in every other domain that needs auditing
-- **(B)** Version snapshots in intake — each caseworker save creates a full record snapshot; simpler than field-level but coarser; still duplicated across domains
-- **(C)** ✓ Cross-cutting audit domain — intake emits mutation events; a dedicated audit domain subscribes and maintains version history across all domains; caseworker history views draw from the audit domain; intake stays simple
-
----
-
-### Decision 8: submitted → under_review transition trigger
+### Decision 5: submitted → under_review transition trigger
 
 **Status:** Decided: B
 
-**What's being decided:** Whether the `submitted → under_review` transition is triggered by an explicit intake domain action or by intake subscribing to the workflow domain's `task.claimed` event.
+**What's being decided:** In the blueprint, workflow and intake are separate domains. When a caseworker claims the intake review task, two things should happen: the workflow task moves to in-progress, and the application transitions from `submitted` to `under_review`. Because they're separate domains, this doesn't happen automatically — either the caseworker (or the UI) makes two calls, or intake subscribes to the workflow event and transitions itself. The decision is whether the `submitted → under_review` transition requires an explicit intake API call or is driven by intake reacting to `workflow.task.claimed`.
 
 **Considerations:**
-- All major vendors handle this within a single system — the intake/case system and the task/workflow system are one; the cross-domain question doesn't arise. The blueprint separates them.
-- The event-driven approach is consistent with [Decision 6](#decision-6-intake-phase-end--lifecycle-state): intake owns its own state transitions but reacts to events from other domains. Subscribing to `task.claimed` is not tight coupling — intake still decides to transition itself; the event is the trigger.
-- The explicit-action approach requires the caseworker (or the UI) to make two calls — claim the task in workflow, then separately open the application in intake. The event-driven approach reduces this to one caseworker action.
-- Assignment (routing to a queue) and opening (caseworker begins review) may be two distinct moments — the task `claim` event maps to opening, not just assignment
+- All major vendors handle this within a single system — the cross-domain question doesn't arise. The blueprint separates them.
+- Subscribing to `task.claimed` is not tight coupling — intake still owns the transition; the event is the trigger, consistent with [Decision 4](#decision-4-intake-phase-end--lifecycle-state)
 
 **Options:**
 - **(A)** Explicit intake action — caseworker calls the intake domain API to open the application; intake owns the state change; requires an extra step
-- **(B)** ✓ Intake subscribes to `task.claimed` — intake reacts to the workflow event and transitions the application to `under_review`; one caseworker action; consistent with the event-driven pattern established in Decision 7
+- **(B)** ✓ Intake subscribes to `task.claimed` — intake reacts to the workflow event and transitions the application to `under_review`; one caseworker action; consistent with the event-driven pattern established in [the audit trail pattern](../inter-domain-communication.md#audit-trail-pattern)
 
 ---
 
-### Decision 9: Member-to-member relationship matrix (MAGI)
+### Decision 6: Member-to-member relationship matrix (MAGI)
 
 **Status:** Decided: A
 
-**What's being decided:** Whether the data model captures relationships between any two household members or only the relationship of each member to the primary applicant.
+**What's being decided:** [Decision 1](#decision-1-role-vs-relationship-on-applicationmember) established that each `ApplicationMember` carries a `relationship` field recording their family relationship to the primary applicant. This decision asks whether that field is sufficient or whether a full pairwise matrix — capturing relationships between any two household members — is required. MAGI Medicaid determines household composition from tax filing relationships, and most cases are covered by per-member fields (`claimedAsDependentBy`, `taxFilingStatus`) combined with relationship to the primary. But one edge case requires knowing the relationship between two non-primary members: a child not claimed as a tax dependent by anyone must be counted in the household of a parent also living in the household — a link that relationship-to-primary doesn't capture. The decision is whether to add a pairwise relationship matrix to cover this case or accept it as a known gap in the baseline.
 
 **Considerations:**
-- Cúram and MAGI-in-the-Cloud both capture full pairwise relationships between any two members. Pega and CalSAWS capture only relationship to the head/primary applicant.
-- MAGI household composition is determined by tax filing relationships, not physical co-habitation. The critical inputs are: who files taxes, who is claimed as a dependent by whom (`claimedAsDependentBy`), and who files jointly (spouse relationship). These fields cover the vast majority of MAGI household composition cases without a pairwise matrix.
-- The remaining gap: if a child has no `claimedAsDependentBy` set (not claimed by anyone) but has a non-primary parent in the household, MAGI rules require counting the child in that parent's household — but Option A doesn't capture that parent-child relationship explicitly. States implementing MAGI who encounter this edge case would need to extend the schema with a pairwise relationship entity.
-- A pairwise matrix grows in complexity with household size (N×(N-1) directed pairs); most intake forms guide applicants through dependency questions in a way that populates `claimedAsDependentBy` correctly anyway
-- A relationship-to-primary field is sufficient for SNAP (SNAP uses physical co-habitation, not tax relationships)
-
-**Known gap:** The baseline does not support the edge case where a non-primary adult is the parent of a household child who is not claimed as a tax dependent by anyone. States needing to handle this must extend the schema with a pairwise member relationship entity.
+- Cúram and MAGI-in-the-Cloud capture full pairwise relationships; Pega and CalSAWS capture only relationship to the primary applicant
+- A pairwise matrix grows as N×(N-1) directed pairs; most intake forms guide applicants through dependency questions in a way that populates `claimedAsDependentBy` correctly, covering the gap in practice
 
 **Options:**
 - **(A)** ✓ Relationship to primary applicant only — `relationship` field on ApplicationMember; sufficient for SNAP and most MAGI cases when combined with `claimedAsDependentBy` and tax filing status fields; lean baseline
@@ -450,195 +410,66 @@ Arguments for a caseworker-triggered event with no new state:
 
 ---
 
-### Decision 10: Person identity matching
+### Decision 7: Person identity matching
 
 **Status:** Decided
 
-**What's being decided:** Whether identity matching is part of intake's contract and when it is triggered.
+**What's being decided:** When a household submits an application, the people in it may have prior application history or existing case records in the system. Without matching submitted applicants to existing person records, each application creates new person records — leading to duplicates, broken links to prior history, and eligibility determinations that can't account for prior benefit receipt. The question is whether to build identity matching into the intake contract (making `personId` a defined field on `ApplicationMember`) and when in the process to trigger it.
 
 **Considerations:**
-- Without matching, the same person applying multiple times creates duplicate records leading to data quality problems and incorrect eligibility determinations — matching is necessary
-- All major vendors match within the same system; Cúram creates unresolved `PROSPECTPERSON` records at submission and resolves them afterward; Salesforce and Pega match at record creation
-- The contract is the same regardless of whether the implementation matches synchronously (during the submission request) or asynchronously (after); the field exists and gets populated either way — timing is an implementation choice
-- Triggering at submission is the right moment: the caseworker should see prior history when they open the application for review; deferring to eligibility loses that context
+- All major vendors match within the same system; Cúram creates unresolved records at submission and resolves them afterward; Salesforce and Pega match at record creation
+- Triggering at submission is the right moment: the caseworker should see prior history when they open the application for review; deferring loses that context
 
-**Decision:** Identity matching is triggered at submission. `ApplicationMember` carries a nullable `resolvedPersonId` field populated by the matching process. Whether the implementation calls the identity service synchronously or asynchronously is left to the implementor.
+**Decision:** Identity matching is triggered at submission. `ApplicationMember` carries a nullable `personId` field populated by the matching process. Whether the implementation calls the identity service synchronously or asynchronously is left to the implementor.
 
 ---
 
-### Decision 11: Income and expense detail at intake
-
-**Status:** Decided: D
-
-**What's being decided:** Whether the intake form collects full income and expense detail or a summary that is refined during caseworker review.
-
-**Considerations:**
-- Full-featured intake systems (CalSAWS, Cúram, Pega) collect full line-item income detail. Simplified portals like GetCalFresh (Code for America) collect totals only, prioritizing applicant completion rate over data completeness.
-- SNAP expedited eligibility screening (7-day track) requires income information at filing — without at least a gross income figure, expedited screening cannot run immediately after submission
-- Full detail at intake is more burdensome for applicants — amounts, employer names, and frequencies may not be known at filing; applicants may estimate or leave blank
-- Summary-only intake reduces applicant burden but adds a caseworker data-entry step and depends on documents for completeness
-- The contract and the intake form are separate concerns — the schema can support full detail while allowing implementations to only require what they collect
-
-**Options:**
-- **(A)** Full detail at intake — income by source, employer, amount, frequency per person; expenses by type and amount; matches eligibility needs directly
-- **(B)** Summary only at intake — gross monthly income and total expense figures; detail collected during caseworker review or via verification
-- **(C)** Defer to state overlay — baseline schema omits income detail; states add fields to match their portal's collection strategy
-- **(D)** Full schema, configurable required fields — the contract defines the complete income schema (all fields for source, employer, amount, frequency, type) but only marks gross income as required at submission. All other fields are optional. Implementations decide how much the intake form collects; states with simplified portals leave detail for later; states with full-featured portals collect everything upfront. The contract is the same either way.
-
-**Decision:** Option D. The contract defines the full income schema with only gross income required at submission — the minimum needed for SNAP expedited screening. All additional detail (source, employer, frequency, type) is optional. Implementations decide how much to collect at intake; the contract does not constrain that choice.
-
----
-
-### Decision 12: MAGI tax filing status fields
-
-**Status:** Decided: A
-
-**What's being decided:** Whether MAGI Medicaid-specific tax filing status fields (`taxFilingStatus`, `claimedAsDependentBy`, `expectToFileTaxes`, `marriedFilingJointly`) are in the baseline ApplicationMember schema or added via overlay when Medicaid support is in scope.
-
-**Considerations:**
-- MAGI-in-the-Cloud and CalSAWS include tax filing status fields directly on the member record. Cúram groups them in a separate evidence entity.
-- These fields are only needed when Medicaid eligibility is in scope — a SNAP-only implementation has no use for them
-- Baseline inclusion ensures any state adding Medicaid doesn't need to overlay the schema first — the fields are there and left empty for non-Medicaid cases
-- Omitting from baseline keeps the schema leaner, but risks states adding in inconsistent ways (different names, types, or structure) across implementations
-- The MAGI household composition logic from [Decision 9](#decision-9-member-to-member-relationship-matrix-magi) depends on `claimedAsDependentBy` and tax filing status fields — omitting them from the baseline would leave that logic without the fields it requires
-
-**Options:**
-- **(A)** Flat fields on ApplicationMember in the baseline — consistent with MAGI-in-the-Cloud and CalSAWS; multi-program-ready out of the box; adds fields irrelevant to SNAP-only states
-- **(B)** Separate `TaxFilingStatus` sub-entity on ApplicationMember in the baseline — consistent with Cúram; groups MAGI-specific fields; adds a sub-object irrelevant to SNAP-only states
-- **(C)** Omit from baseline — added via state overlay when Medicaid support is scoped; keeps baseline lean; risks inconsistent implementations across states
-
-**Decision:** Option A. The MAGI household composition approach (Decision 11) already depends on `claimedAsDependentBy` and tax filing status fields in the baseline. Flat fields on `ApplicationMember` are consistent with MAGI-in-the-Cloud and CalSAWS. States without Medicaid leave them empty.
-
-### Decision 13: Post-submission program routing — task creation and automated eligibility
+### Decision 8: Post-submission program routing — task creation and automated eligibility
 
 **Status:** Decided: B
 
-**What's being decided:** When `application.submitted` fires, what happens for each program in the application? Specifically: does every program generate a caseworker task immediately, or does routing depend on program type? And if multiple programs are on one application, how many tasks are created?
-
-**Background:**
-
-Each program has distinct federal requirements that govern whether and when a caseworker must be involved after submission:
-
-**SNAP (7 CFR § 273.2):** Caseworker involvement is mandatory. § 273.2(e) requires the agency to conduct an interview with the household before making an eligibility determination — this cannot be bypassed by automated processing. § 273.2(i) requires the agency to determine within 1 business day of application receipt whether the household qualifies for the expedited 7-day track. The 30-day processing clock starts at application receipt. A caseworker intake task must be created immediately at submission; delay risks missing the expedited screening deadline.
-
-**Medicaid/MAGI (45 CFR § 435.911–435.916):** Automated determination is required before caseworker involvement. The ACA (§ 435.911) requires states to attempt real-time eligibility determination using the Federal Data Services Hub (FDSH) — SSA income data, IRS tax data, and citizenship/immigration status via SAVE — before routing to a caseworker. If real-time eligibility (RTE) succeeds, the applicant is auto-approved or auto-denied with no caseworker involvement. Only when RTE is inconclusive or returns a denial does the application require human review. The 45-day processing clock (90 days for disability-based Medicaid) starts at application receipt. Creating a caseworker task before RTE runs is premature — the caseworker task may never be needed.
-
-**TANF (45 CFR Part 261):** Federal requirements are minimal. TANF gives states broad discretion over intake procedures. There is no federal automated determination requirement and no prescribed interview structure. Most states use caseworker-driven intake; specifics are state overlay concerns.
-
-This means routing at `application.submitted` is not uniform across programs:
-- **SNAP** → caseworker intake task immediately (interview required; expedited screening deadline starts at submission)
-- **Medicaid (MAGI)** → RTE system first; caseworker involvement only if inconclusive or denied (federal law requires automated determination attempt before human review)
-- **TANF** → caseworker intake task (state-defined; generally caseworker-driven)
-
-**One task per application, not per program:**
-
-For multi-program applications (e.g., SNAP + Medicaid), the correct model is one intake task per application — not one per program. The caseworker interview covers all programs simultaneously; household composition, income, and documents are shared across programs. Creating separate per-program tasks would have the same caseworker review the same application data multiple times.
-
-This is consistent with how integrated eligibility systems handle multi-program applications: CalSAWS, CBMS (Colorado), IBM Cúram, and Salesforce PSS all treat intake review as an application-scoped activity. Programs are attributes of the task, not the unit of task creation.
-
-The intake task carries the full programs list from the application. Per-program status on the task (e.g., SNAP: pending review, Medicaid: pending automated check) tells the caseworker the current state of each program — which they need to act on and which are being handled by a system actor.
-
-**Caseworker visibility into automated processing:**
-
-For async RTE implementations, the caseworker needs to know that Medicaid is under automated processing when they open the task — otherwise they may conduct a broader interview than necessary or take action on a program that is about to be resolved automatically.
-
-The mechanism: the workflow subscription wiring (#163) knows at task creation time — from configuration — that Medicaid goes through RTE before caseworker review. When creating the intake task from `application.submitted` where programs includes `medicaid`, the task's per-program status for Medicaid is set to "pending automated check" immediately. The caseworker sees this from the moment the task is created; no additional event from the eligibility domain is required to signal that processing has started.
-
-When the eligibility domain resolves RTE, it emits an event (e.g., `medicaid.rte_resolved`) that the workflow domain subscribes to, updating the Medicaid per-program status on the task: either resolved (no caseworker action needed) or inconclusive/denied (caseworker action required).
-
-States running RTE synchronously — completing it before the intake task is created — avoid this coordination entirely. The intake task is created with a definitive Medicaid status from the start.
-
-**Open questions for #163 (cross-domain event wiring):**
-- What per-program status values does the intake task expose, and where in the task schema do they live?
-- What is the eligibility domain event schema for RTE resolution, and what does the workflow domain do in response to each outcome?
-- How does RTE failure (FDSH unavailable) surface on the task?
+**What's being decided:** After submission, each program on a multi-program application has a different federally-mandated processing path. SNAP requires a caseworker immediately — the interview cannot be bypassed and expedited screening must happen within 1 business day of receipt. Medicaid requires automated determination via FDSH before a caseworker may be involved — creating a caseworker task before RTE runs is premature and may be entirely unnecessary if automated processing resolves the application. A model that treats all programs identically at submission either creates unnecessary caseworker tasks for Medicaid or misses the expedited SNAP screening deadline. The decision is how to route each program correctly at submission and how many intake tasks to create for a multi-program application.
 
 **Considerations:**
-- Creating a caseworker task for Medicaid at submission duplicates work — the caseworker task is unnecessary if RTE resolves the application automatically
-- A subscription mechanism that creates one task per program ignores program-specific automation and would have caseworkers reviewing the same application data in separate tasks
-- The blueprint cannot implement RTE (it requires access to FDSH, which is a federal data hub), but it must not preclude it — the architecture leaves room for a system actor to handle Medicaid before the caseworker scope is confirmed
-- Hardcoding "one caseworker task per program at submission" would require states to work around the blueprint rather than extend it
+- All major integrated eligibility systems (CalSAWS, CBMS, Cúram, Salesforce PSS) treat intake review as application-scoped — one caseworker reviews all programs on one application; per-program tasks would duplicate that work
+- Creating a caseworker task for Medicaid at submission is premature — the task may be unnecessary if RTE resolves the application automatically
+- The blueprint cannot implement RTE (requires FDSH access), but must not preclude it; hardcoding "one task per program at submission" forces states to work around the baseline
 
 **Options:**
 - **(A)** One task per program at submission — simple, but incorrect for Medicaid and creates redundant caseworker work for multi-program applications
 - **(B)** ✓ One intake task per application; program-type-aware per-program status — single task covers all programs; per-program status tells the caseworker what's pending automated processing; configurable routing in #163 sets the initial status and subscribes to eligibility resolution events
 - **(C)** Two-phase routing — one shared intake task at submission; program-specific tasks fan out after intake closes — avoids duplication but delays program-specific processing and doesn't reflect how RTE actually works (Medicaid RTE runs before intake screening, not after)
 
-**Decision:** Option B. One intake task per application is created at submission. The task carries the full programs list. Per-program status is set at task creation based on each program's known processing path — programs going through automated processing (Medicaid) are marked accordingly so the caseworker knows from the start. The subscription wiring (#163) must be program-type-aware and configurable; it cannot assume all programs go directly to caseworker review. The detailed per-program status schema and eligibility domain event contracts are open questions for #163.
 
 ---
 
-### Decision 14: Verification checklist generation
+### Decision 9: Verification checklist generation
 
 **Status:** Decided: B
 
-**What's being decided:** How verification obligations are generated for a submitted application — and whether they are modeled as a document-only checklist or a unified checklist covering both document and electronic verification needs.
+**What's being decided:** Federal regulations require states to verify specific facts before certifying a household, but what must be verified, how (electronic first or document-only), and whether a document can even be requested varies by program, member attributes, and state policy. For citizenship and immigration, ex parte rules (42 CFR § 435.911) prohibit requesting a document until an electronic check has been attempted — the obligation has two phases: electronic check first, document request only if inconclusive. The verification checklist must track both phases as part of the same obligation, not as separate structures. The question is how obligations are generated at submission — hardcoded in domain logic or driven by a configurable rules layer — and whether electronic and document obligations share one entity type or are split.
 
 **Considerations:**
-- Verification requirements vary by program, household composition, member-level attributes, and state policy. Hardcoding requirements creates tight coupling between the domain and state policy; states cannot customize without modifying intake logic.
-- All major platforms (Cúram, Pega, Salesforce) support configurable verification checklists — Pega uses dynamic "document request" case objects driven by rules; Cúram uses configurable evidence-gathering scripts; Salesforce uses Flow rules to create document checklist items. None hardcode requirements in the intake entity.
-- Ex parte rules (42 CFR § 435.911) prohibit requesting paper documents for citizenship/immigration status until electronic sources (FDSH/SAVE) have been checked. Electronic checks and document requests are therefore two phases of the same obligation — they should share a unified tracking entity rather than two separate concepts.
-- A document-only checklist cannot represent electronic verification obligations or their outcomes. When FDSH returns verified, there is no document to track — but the obligation is still satisfied. Electronic results need a home in the checklist.
-- Two trigger points for obligation creation: (1) `application.submitted` — baseline obligations from the programs applied for; (2) `data-exchange.service-call.completed` — conditional document-based obligations when electronic checks return inconclusive.
-
-**Rules engine design:**
-
-`Verification` records are created by `all-match` rule sets (all matching rules fire, not just the first). Each rule set binds the application and, where member-level obligations are needed, iterates over members using a collection binding.
-
-Household-level obligations (one per application): rule sets without collection iteration — a single `createResource` per matching rule.
-
-Member-level obligations (one per qualifying member): rule sets with a collection binding on `application.members`, using `for/in/if` iteration to create one `Verification` per member.
-
-Example structure (per-member income obligation, SNAP):
-```yaml
-context:
-  - as: application
-    from: subject
-  - as: members
-    from: application.members
-rules:
-  - condition:
-      in: [snap, {var: application.programs}]
-    action:
-      for: member
-      in: members
-      if:
-        and:
-          - in: [snap, {var: member.programs}]
-          - "!=": [{var: member.hasIncome}, false]
-      createResource:
-        entity: intake/applications/verifications
-        fields:
-          applicationId: {var: application.id}
-          memberId: {var: member.id}
-          category: income
-          status: pending
-```
-
-Citizenship obligations illustrate the two-phase pattern: at submission, a `Verification` with `category: citizenship` is created and an fdsh_ssa service call is initiated; when `data-exchange.service-call.completed` fires with `result: conclusive`, the Verification transitions to `satisfied` and an electronic evidence item is appended; if inconclusive, a document request is created and appended to `documentRequests[]`. Citizenship and immigration Verifications are created only for SNAP applicants — Medicaid defers citizenship/immigration verification to the eligibility domain (see #250).
+- All major platforms (Cúram, Pega, Salesforce) support configurable verification checklists driven by rules; none hardcode requirements in the intake entity
+- A document-only checklist can't represent the ex parte two-phase flow: when FDSH returns verified, there is no document to track — the obligation is still satisfied; electronic results need a home in the checklist
 
 **Options:**
 - **(A)** Hardcoded in intake — requirements defined as static program-to-document mappings; simpler but not state-customizable
 - **(B)** ✓ Rules-driven unified checklist — `all-match` rule sets generate `Verification` records covering both document and electronic obligations; states customize via overlay; intake domain has no verification requirement logic; consistent with Pega, Cúram, and Salesforce patterns; supports ex parte two-phase flow without a separate entity type
 
-**Note on rules condition language:** JSON Logic (an open spec) is the condition layer for rule set expressions. DMN (Decision Model and Notation, OMG standard) was considered — it is supported by Camunda, Red Hat Decision Manager, and Flowable — but ruled out: DMN is XML-table-based and too heavyweight for a YAML-native format. The action vocabulary (`createResource`, `triggerTransition`, `for/in` iteration) is necessarily domain-specific regardless of condition language.
-
 **Verification categories:** `income`, `identity`, `residency`, `citizenship`, `immigration`. Residency is SNAP-required (7 CFR § 273.2(f)(1)(iii)) and document-only — no electronic check exists. Citizenship and immigration are created per member, SNAP only.
 
 ---
 
-### Decision 15: Interview entity model
+### Decision 10: Interview entity model
 
 **Status:** Decided: B
 
-**What's being decided:** Whether the regulatory interview requirement is modeled as a dedicated `Interview` entity in intake or as a generic appointment with `type: interview` in the scheduling domain.
+**What's being decided:** SNAP requires the agency to conduct an interview with the household before making an eligibility determination (7 CFR § 273.2(e)). This is a regulatory obligation tied to the application — it must be satisfied before the application can close, regardless of how many scheduling attempts are needed. An application may have three canceled appointments and still have an unsatisfied interview obligation. The interview obligation (has the SNAP requirement been satisfied?) is distinct from the scheduling mechanics (when and where is the appointment). If the obligation lives in the scheduling domain as a generic appointment type, scheduling must understand SNAP intake requirements. The decision is whether to model the regulatory obligation as a dedicated entity in intake or as a generic appointment record in the scheduling domain.
 
 **Considerations:**
-- SNAP requires an interview before eligibility determination (7 CFR § 273.2(e)). The regulatory obligation is tied to the application — not to a specific appointment slot. An application that has had three canceled appointments has not yet satisfied the interview requirement.
-- The interview obligation and the appointment mechanics are separable concerns: intake owns whether the interview is satisfied; scheduling owns when and where it happens.
 - Pega Government Platform models the interview as a dedicated case type ("Interview") linked to the application — not a generic appointment. Cúram tracks interview completion as a milestone on the application record with separate scheduling for the meeting. Neither conflates the regulatory requirement with the scheduling event.
 - A generic `appointment` entity with `type: interview` in the scheduling domain would require scheduling to know about SNAP regulatory requirements — coupling scheduling to intake policy. Scheduling should not need to know that a particular appointment type satisfies a federal regulatory obligation.
-- One interview requirement may involve multiple appointments (rescheduled or no-show appointments) — one-to-many between Interview and appointments. The `Interview` entity carries an `appointments` array of appointment IDs from the scheduling domain.
 - The scheduling domain does not reference back to `Interview` — the dependency is one-directional (intake → scheduling). Scheduling creates appointments without knowing whether they are tied to an interview.
 
 **Options:**
@@ -647,133 +478,150 @@ Citizenship obligations illustrate the two-phase pattern: at submission, a `Veri
 
 ---
 
-### Decision 16: Interview task creation timing
-
-**Status:** Decided: B
-
-**What's being decided:** When the caseworker interview task is created — at submission or when the caseworker claims the intake review task.
-
-**Considerations:**
-- SNAP interview is required before determination (7 CFR § 273.2(e)), but the regulation does not prescribe when the interview task must be created — only that the interview must occur before determination.
-- Creating the interview task at submission assigns it before a caseworker is known. Queue assignment happens after submission; the caseworker who will conduct the interview is not determined until the intake review task is claimed.
-- Creating the interview task when the review task is claimed means the interview task can be assigned to the claiming caseworker immediately — no unassigned floating tasks, and the interview task is linked to the caseworker's work context.
-- This is consistent with how Pega and Cúram handle interview task creation: the interview obligation exists from submission, but the scheduling artifact is created when the caseworker begins active review and a worker identity is available to assign it to.
-
-**Options:**
-- **(A)** At submission — interview task created alongside the review task; unassigned until a caseworker claims the review; interview task must be re-assigned when the review task is claimed
-- **(B)** ✓ At review task claim — intake subscribes to `workflow.task.claimed` for the review task; at claim time, a rule set creates the interview task assigned to the claiming caseworker; consistent with Pega and Cúram; matches the moment when a worker identity is known
-
----
-
-### Decision 17: External service verification write-backs
+### Decision 11: External service verification write-backs
 
 **Status:** Decided
 
-**What's being decided:** When an external service call (FDSH, IEVS, SAVE) returns a result, where does the outcome go — to a verification obligation record, to the member entity directly, or to the application?
+**What's being decided:** When an external service call (e.g., FDSH citizenship check) completes, the result carries two distinct kinds of information: whether the verification obligation is satisfied (was the check conclusive?) and the verified fact (the confirmed citizenship status). These are different concerns: obligation status determines whether a document fallback is needed and belongs on the `Verification` checklist entry; verified facts are person attributes that eligibility will use for determination and belong on `ApplicationMember`. The question is how to split these on write-back — and whether any verification status belongs on `ApplicationMember` at all once `Verification` exists as a unified checklist entity.
 
 **Considerations:**
 - All federal external verification services operate per-person: fdsh_ssa checks citizenship and identity per SSN; fdsh_fti and ssa_ievs check income per SSN; fdsh_vlp and save check immigration status per person. None return household-level aggregate results.
-- The result carries two distinct kinds of information: (1) **whether the obligation is satisfied** (was citizenship verified? was income verified?) and (2) **verified facts** (the confirmed income amount, the confirmed citizenship status). These are different concerns — one is a checklist status, the other is a data update to the member record.
-- Writing the obligation outcome directly to `ApplicationMember` as a status field blends checklist management with member data. It also doesn't generalize: once `Verification` exists as a unified checklist entity (see [Decision 14](#decision-14-verification-checklist-generation)), the obligation status naturally belongs there, not as a separate field on `ApplicationMember`.
-- Writing verified facts (e.g., confirmed income amount, confirmed citizenship status) to `ApplicationMember` is correct — those are person facts that belong on the member record and are used by the eligibility domain for determination.
+- Writing the obligation outcome directly to `ApplicationMember` as a status field blends checklist management with member data. Once `Verification` exists as a unified checklist entity (see [Decision 9](#decision-9-verification-checklist-generation)), obligation status naturally belongs there, not as a separate field on `ApplicationMember`.
+- Writing verified facts (confirmed income amount, confirmed citizenship status) to `ApplicationMember` is correct — those are person facts that belong on the member record and are used by the eligibility domain for determination.
 
-**Decision:** Write-backs split by concern:
-- **Obligation status** → `Verification`. When `data-exchange.service-call.completed` fires, the rules engine transitions the corresponding `Verification` (`satisfy` for conclusive, `mark_inconclusive` for inconclusive), appends an electronic evidence item to `evidence[]`, and if inconclusive appends a document request entry to `documentRequests[]`.
-- **Verified facts** → `ApplicationMember`. Facts confirmed by the external service (confirmed income amount, confirmed citizenship status, confirmed immigration category) are written to the member record via `triggerTransition` or field updates — available to eligibility for determination.
+**Decision:** Obligation status → `Verification`; verified facts → `ApplicationMember`. No verification status fields live on `ApplicationMember` — those belong on `Verification`.
 
-No verification obligation fields live on `Application`. No verification status fields live on `ApplicationMember` — those moved to `Verification`.
-
-**Deferred:** The specific `ApplicationMember` fields updated per service (fdsh_ssa, fdsh_fti, fdsh_vlp, ssa_ievs, save) — names, types, and allowed values — are defined in the `ApplicationMember` contract implementation issue.
 
 ---
 
-### Decision 18: Data exchange orchestration
+### Decision 12: Data exchange orchestration
 
 **Status:** Decided: Rules-engine-driven via createResource
 
-**What's being decided:** How intake triggers external service calls (FDSH, IEVS, SAVE) — specifically, who is responsible for transforming ApplicationMember data into each external service's request format, and how those calls are initiated without coupling intake to the data exchange domain.
+**What's being decided:** Electronic verification service calls (FDSH, IEVS, SAVE) require intake's `ApplicationMember` data to be transformed into each service's specific request format. If data exchange handles that transformation, it must understand `ApplicationMember` schemas — coupling two domains that should be independent. If intake fires calls directly, it must know the data exchange API surface. The question is where the field mapping and service selection logic lives, and how to keep data exchange as a generic, domain-agnostic service while still giving it the correct payload for each member.
 
 **Considerations:**
-- Data exchange should not need to know about intake's data model. If data exchange handled the transformation, it would need to understand `ApplicationMember` schemas — coupling domains in a way that makes each harder to evolve independently.
-- The same challenge exists for workflow task creation and document checklist generation: those domains (workflow, intake's document requirements) also needed intake data transformed into their own resource shapes. The rules engine solved both problems with `createResource`.
-- Intake rules already have access to `ApplicationMember` fields via context bindings. The rules engine can map member fields into the data exchange request payload as part of the `createResource` action — no separate orchestration layer needed.
-- This keeps data exchange as a generic platform service: it accepts `data-exchange/service-calls` resources with a `service` identifier and a `payload`, executes the call, and emits `data-exchange.service-call.completed`. It does not know what domain triggered the call or how the payload was assembled.
-- Defining the fan-out in intake rules means the behavior is a contracted artifact — visible in `intake-rules.yaml`, auditable, and state-customizable via overlay. If the fan-out lived in a data exchange adapter, the logic would be opaque to the blueprint and each state would have to re-implement it without a baseline to start from.
-- States can customize which fields are mapped and which services are called via overlay — the mapping lives in rules, which are overlay-configurable.
+- Data exchange should not need to know about intake's data model — coupling domains makes each harder to evolve independently
+- The rules engine already solves this pattern for workflow task creation and checklist generation; `createResource` with field mappings handles orchestration without a dedicated layer
+- Defining the fan-out in intake rules makes it a contracted, auditable, state-customizable artifact; hidden in a data exchange adapter it would be opaque and un-overlayable
 
-**Decision:** Intake rules create `data-exchange/service-calls` resources via `forEach` over the application's members, with member fields mapped into the service-specific request payload. Data exchange executes the call and emits a completion event. Data exchange has no knowledge of intake entities. The field mapping, service selection, and per-member fan-out live entirely in the rules contract, making them state-customizable.
-
-Example (per-member fdsh_ssa citizenship check, SNAP only):
-```yaml
-context:
-  - as: members
-    entity: intake/application-members
-    where:
-      "==": [{var: applicationId}, {var: application.id}]
-action:
-  forEach:
-    in: {var: members}
-    as: member
-    createResource:
-      entity: data-exchange/service-calls
-      fields:
-        applicationId: {var: application.id}
-        memberId: {var: member.id}
-        serviceType: fdsh_ssa
-        requestedAt: {var: this.time}
-```
-
-The `metadata.intake.verificationId` context passthrough allows the `data-exchange.service-call.completed` handler to correlate the result back to the pre-created Verification record without querying for it. See `packages/contracts/patterns/api-patterns.yaml#context_passthrough`.
+**Decision:** Intake rules create `data-exchange/service-calls` resources via `forEach` over the application's members, with member fields mapped into the service-specific request payload. Data exchange executes the call and emits a completion event. It has no knowledge of intake entities. The field mapping, service selection, and per-member fan-out live entirely in the rules contract, making them state-customizable.
 
 ---
 
-### Decision 19: Unified Verification entity
+### Decision 13: Unified Verification entity
 
 **Status:** Decided: B
 
-**What's being decided:** Whether paper document requirements and electronic service check results are tracked in a single `Verification` entity or in separate structures.
+**What's being decided:** Verification at intake covers two types of obligations: electronic data source checks (FDSH, SAVE, IEVS) and requests for paper documents. For citizenship and immigration, these are two phases of the same obligation — ex parte rules require the electronic check first; a document can only be requested if the check is inconclusive. If electronic check results and document requests are tracked in separate structures, there's no single lifecycle covering both phases, caseworkers must consult two data structures to see the full verification state, and the two-phase ex parte flow can't be modeled as one obligation progressing through states. The question is whether to unify these into a single `Verification` entity.
 
 **Considerations:**
-- Pega uses `VerificationRequest` for both paper and electronic; Salesforce PSS uses `VerificationRequest` with a `Type` field (`Document`, `DataCheck`, or `Both`); Cúram tracks document evidence and electronic evidence under a single evidence framework — the industry converges on unified
-- 42 CFR § 435.940–960 requires states to document electronic verification attempts and their results; a unified entity provides a complete regulatory audit trail in one place
-- A split model (`ApplicationDocument` for paper + `ApplicationMember.verifications[]` for electronic) forces caseworkers to consult two data structures to see the full verification state and prevents a single lifecycle from applying to both obligation types
-- `ApplicationMember.verifications[]` is an array with no independent lifecycle — electronic results cannot be individually queried or transitioned through states
+- Pega, Salesforce PSS, and Cúram all converge on a unified verification entity covering both paper and electronic — the industry has settled this
+- A split model (`ApplicationDocument` for paper + `ApplicationMember.verifications[]` for electronic) prevents a single lifecycle from applying to both types and forces caseworkers to consult two structures for one obligation
 
 **Options:**
 - **(A)** Separate entities — `ApplicationDocument` for paper requirements; `ApplicationMember.verifications[]` for electronic results; two structures, two query paths, no shared lifecycle
-- **(B)** ✓ Unified `Verification` entity — obligation-centric; a single API endpoint (`/applications/{id}/verifications`) covers the full checklist; electronic and document evidence accumulate as sub-items on the same record; a shared lifecycle applies to both
-
-**Lifecycle:**
-
-| State | Description |
-|---|---|
-| `pending` | Obligation exists, not yet resolved |
-| `inconclusive` | Check or document returned an inconclusive result; transitional — caseworker must take further action |
-| `satisfied` | Verification complete — document verified or electronic check confirmed |
-| `waived` | Caseworker granted a waiver |
-| `cannot_verify` | Unable to satisfy the obligation after exhausting available options |
-
-Transitions: `pending → satisfied | inconclusive | waived | cannot_verify`; `inconclusive → satisfied | waived | cannot_verify`. Terminal states: `satisfied`, `waived`, `cannot_verify`.
-
-**Customization:** The `category` enum (`income | identity | residency | citizenship | immigration`) and `evidence.source` enum (`fdsh_ssa | fdsh_vlp | fdsh_fti | ssa_ievs | save`) are overlay-extensible. States may add program-specific verification categories or additional electronic source identifiers.
+- **(B)** ✓ Unified `Verification` entity — single endpoint covers the full checklist; electronic and document evidence accumulate as sub-items on the same record; shared lifecycle applies to both
 
 ---
 
-### Decision 20: Existing coverage check ownership
+### Decision 14: Existing coverage check ownership
 
 **Status:** Decided: B
 
-**What's being decided:** Whether checks for existing health coverage (Medicare enrollment via fdsh_medicare, employer-sponsored insurance via fdsh_vci) are initiated by intake as Verification obligations or by the eligibility domain as determination inputs.
+**What's being decided:** Intake initiates electronic checks for facts applicants declare — citizenship, income, immigration status. If a check is inconclusive, the caseworker requests a supporting document from the applicant. The `Verification` checklist models this two-phase obligation. Existing coverage checks (Medicare enrollment via fdsh_medicare, employer-sponsored insurance via fdsh_vci) are different: the applicant does not declare existing coverage — the system proactively checks. If inconclusive, there is no document an applicant can provide and no caseworker action to take. The result is a determination input, not an applicant-facing obligation. The question is whether to model these checks as intake Verification entries (keeping all electronic checks in one domain) or as eligibility inputs (matching their actual purpose).
 
 **Considerations:**
-- Every other electronic check intake initiates corresponds to something the applicant declared — citizenship, immigration status, income. If the check is inconclusive, there is a document fallback path: intake creates a document request and the caseworker follows up with the applicant. The Verification obligation has an applicant-facing resolution path.
-- Existing coverage is different: the applicant does not declare "I have Medicare" or "I have employer-sponsored insurance." The system proactively checks. There is no document fallback if the result is inconclusive — there is no document an applicant can provide to prove they don't have existing coverage.
 - The result informs the eligibility determination directly (existing coverage affects Medicaid eligibility) rather than resolving an applicant obligation. Caseworkers do not need to act on existing coverage results in intake — the outcome flows to the eligibility determination.
 - Modeling existing coverage as an intake Verification would create a Verification with no document request path and no applicant-facing action, which is inconsistent with what the Verification checklist represents.
 
 **Options:**
 - **(A)** Intake initiates fdsh_medicare and fdsh_vci at submission, stores results as `existing_coverage` Verifications — keeps all electronic checks in one domain; but requires a Verification category with no applicant-facing resolution path
 - **(B)** ✓ Eligibility initiates fdsh_medicare and fdsh_vci as part of its determination process — existing coverage is a determination input, not a verification obligation; intake has no `existing_coverage` Verification category; the results belong to eligibility's domain
+
+---
+
+### Decision 15: ApplicationMember composes from member.yaml
+
+**Status:** Decided
+
+**What's being decided:** `ApplicationMember` and the eligibility domain's `MemberContext` both describe the same person at different pipeline stages and share a substantial set of demographic fields. Without a shared base schema, these definitions are maintained independently and can drift: a field added to one must be manually added to the other to stay aligned. The question is whether `ApplicationMember` should duplicate those fields inline — accepting the drift risk — or compose from a shared `member.yaml` schema, making the alignment mechanically enforced.
+
+**Considerations:**
+- `allOf` composition makes the alignment mechanically enforced: fields added to `member.yaml` propagate to all consuming schemas automatically; the pattern is already established for `household.yaml`
+
+---
+
+### Decision 16: Review surface uses the composite view pattern
+
+**Status:** Decided: B
+
+**What's being decided:** The caseworker review surface needs a complete picture of the application in one place — members with demographics, income, expenses, assets, verification status, interview tracking, and notes — data spread across multiple sub-resources. Fetching it client-side requires sequential API calls and pushes assembly logic into every consumer. Fetching it server-side in one call is efficient, but if the endpoint prescribes a particular presentation structure (organized by program, by section, by verification status), it constrains how states can organize their review workflow. The decision is how to serve the complete application picture without prescribing how it should be displayed.
+
+**Considerations:**
+- Salesforce uses composite record page endpoints for case review surfaces; ServiceNow uses a neutral UI API; Cúram assembles case summary views server-side — the industry converges on server-side assembly with client-side presentation
+- A display-organized endpoint prescribes one structure, constraining every consumer; client-side assembly multiplies round trips and duplicates assembly logic in every consumer
+
+**Options:**
+- **(A)** Display-organized endpoint — prescribes one review workflow; constrains all consumers
+- **(B)** ✓ Server-assembled neutral composite (`GET /applications/{id}/review-context`) — all sub-resource data in one response; presentation is the front end's concern; writes still go through individual sub-resource endpoints; program-based and section-based views derived client-side
+- **(C)** Client-assembled — maximum flexibility; multiplied round trips; assembly logic duplicated in every consumer
+
+---
+
+### Decision 17: Review-progress is a separate queryable resource
+
+**Status:** Decided
+
+**What's being decided:** As a caseworker moves through an application, they need to track completion status per section (household, income, verification, etc.) — navigation state that lets them resume where they left off and signals to supervisors which sections have been reviewed. This state needs to live somewhere in the data model. Adding it to the `Application` entity conflates application data with caseworker navigation; adding it to the workflow task conflates work assignment state with review progress. A dedicated resource keeps concerns separated but adds API surface area. The question is where per-section review status belongs.
+
+**Considerations:**
+- The application entity represents a benefit application; the workflow task represents a work assignment. Adding caseworker navigation state to either mixes concerns across resources with different owners and different state machines.
+- Progress entries are bounded by `sections × members` — a small, stable dataset initialized at `under_review` transition. This makes full-dataset return without pagination practical, unlike open-ended resource collections.
+- Review-progress is navigation state: it can be reset without consequence. Notes ([Decision 18](#decision-18-notes-are-a-first-class-resource)) must persist regardless of reset. Coupling them would cause notes to be lost on reset.
+
+**Decision:** `ReviewProgressEntry` is a dedicated resource initialized at `submitted → under_review`. Status values (`not_started`, `in_progress`, `complete`, `flagged`) are navigation state only and overlay-extensible. Applicant-reported data is program-agnostic — program context is already on `ApplicationMember.programs`; no program dimension on review-progress.
+
+---
+
+### Decision 18: Notes are a first-class resource
+
+**Status:** Decided
+
+**What's being decided:** Caseworkers need to add narrative notes during review — interview observations, supervisor escalations, explanations of unusual income situations. Notes have different persistence requirements than review-progress: review-progress is navigation state that can be reset when application data changes; notes are audit documentation that must persist regardless of any reset. Notes also need to be queryable at multiple scoping levels — whole application, specific section, specific member — in ways that don't fit naturally on either the member entity or the review-progress resource. The question is whether to attach notes to an existing resource or treat them as a standalone resource with their own endpoint.
+
+**Considerations:**
+- Notes have authorship semantics states will want to extend — visibility controls, note types, use in external communications — which require independent addressability
+- Cúram's case narrative system and Salesforce's Activity model both treat notes as a first-class resource, not a field on a process tracking object
+
+**Decision:** Notes are a standalone resource (`GET /applications/{id}/notes`, `POST /applications/{id}/notes`). `additionalProperties: true` on `ApplicationNote` allows states to add note types or visibility controls via overlay without changing the baseline contract.
+
+---
+
+## Customization
+
+### Baseline constraints
+
+| Element | Reason | Decision |
+|---|---|---|
+| `Application.submittedAt` | Regulatory clock anchor — SNAP 30-day and Medicaid 45-day processing deadlines are measured from this timestamp; removing it breaks SLA tracking | [Decision 4](#decision-4-intake-phase-end--lifecycle-state) |
+| `Application.status` lifecycle states | Governs when data becomes immutable and when downstream domains (eligibility, case management) receive handoff events; removing states breaks cross-domain coordination | [Decision 4](#decision-4-intake-phase-end--lifecycle-state) |
+| `ApplicationMember.role` | Determines authorized representative legal authority and non-applying member handling; required for regulated benefit unit composition | [Decision 1](#decision-1-role-vs-relationship-on-applicationmember) |
+| `Verification.status` lifecycle | The verification checklist is a federal regulatory obligation (SNAP 7 CFR § 273.2(f)); removing status tracking collapses the ex parte and document-fallback resolution paths | [Decision 9](#decision-9-verification-checklist-generation) |
+| `Interview.status` lifecycle | Tracks the SNAP interview regulatory obligation (7 CFR § 273.2(e)(1)); removing it makes the obligation untrackable | [Decision 10](#decision-10-interview-entity-model) |
+
+### Note text format
+
+`ApplicationNote.textFormat` accepts `plain`, `markdown`, or `html`. The baseline default is `plain`. States using a WYSIWYG note editor set `textFormat: html`; states using Markdown-native tooling set `textFormat: markdown`. No overlay change is needed — the field and all three values are present in the baseline. States that want to restrict the permitted formats can narrow the `textFormat` enum via overlay.
+
+### Note attachments
+
+The baseline `ApplicationNote` schema has no attachment support. States that need caseworkers to attach documents to notes have two approaches:
+
+- **Reference-based** — add an `attachments` array to `ApplicationNote` via overlay, where each entry is a `documentId` referencing a record in the Document Management domain. The caseworker uploads the document first via the document management API, then includes the returned ID when creating or updating the note. No new intake endpoint is required.
+- **Sub-resource** — add a `POST /applications/{applicationId}/notes/{noteId}/attachments` endpoint that accepts a multipart upload, proxies it to the document management domain, and appends the resulting document ID to `ApplicationNote.attachments`. More convenient for single-step UX but requires an additional endpoint and cross-domain adapter wiring.
+
+The reference-based approach is consistent with how intake handles other document references (the `Verification` entity links to documents by ID rather than embedding them). The sub-resource approach trades simplicity for UX — appropriate when state portals want inline file attachment without a separate document upload step.
 
 ---
 
@@ -788,9 +636,8 @@ The following are explicitly not intake domain concerns:
 | Notices and communications | Communication | The Communication domain subscribes to intake events (`application.submitted`, `application.withdrawn`) and sends notices; intake does not own notice generation |
 | Document file storage and retrieval | Document Management | Intake owns verification obligation records (`Verification`); document management owns the actual file storage, retrieval, and retention lifecycle |
 | Pre-screening / eligibility screening | Portal / UI layer | Pre-screening does not start the regulatory clock and is a portal concern; the intake domain lifecycle starts at application submission |
-| Appointment scheduling mechanics | Scheduling | Intake owns the `Interview` entity (regulatory obligation); the scheduling domain owns appointments (time, location, confirmation, reminders). See [Decision 15](#decision-15-interview-entity-model). |
-| WIC certification | Future — WIC domain | WIC uses a clinical certification model requiring a CPA, with no federal processing deadline and participant categories not present in SNAP/Medicaid. The WIC model departs significantly enough from the intake domain model to warrant its own design when WIC support is scoped. |
-| TANF-specific intake | State overlay | Federal TANF requirements are minimal; TANF-specific intake customization is a state overlay concern |
+| Appointment scheduling mechanics | Scheduling | Intake owns the `Interview` entity (regulatory obligation); the scheduling domain owns appointments (time, location, confirmation, reminders). See [Decision 10](#decision-10-interview-entity-model). |
+| TANF-specific intake | State overlay | Federal TANF requirements are minimal; TANF-specific intake customization is a state overlay concern. |
 | Benefit delivery | Case Management | Created when eligibility is determined; owned by the case management domain |
 
 ---
@@ -802,7 +649,6 @@ The following are explicitly not intake domain concerns:
 - [7 CFR § 273.1 — SNAP household definition](https://www.law.cornell.edu/cfr/text/7/273.1)
 - [42 CFR § 435.912 — Medicaid application processing timelines](https://www.law.cornell.edu/cfr/text/42/435.912)
 - [42 CFR Part 435 Subpart I — MAGI eligibility and household composition](https://www.law.cornell.edu/cfr/text/42/part-435/subpart-I)
-- [45 CFR Part 246 — WIC program](https://www.law.cornell.edu/cfr/text/45/part-246)
 - [CMS MAGI Conversion Methodology](https://www.medicaid.gov/medicaid/eligibility/downloads/magi-conversion-guide.pdf)
 
 **Vendor documentation:**
@@ -822,4 +668,3 @@ The following are explicitly not intake domain concerns:
 
 **Standards:**
 - [CloudEvents 1.0 specification](https://cloudevents.io/)
-- [FNS FReD — Functional Requirements Document for a Model WIC System](https://www.fns.usda.gov/wic/fred-functional-requirements-document-model-wic-system)

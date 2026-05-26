@@ -44,7 +44,7 @@ components:
       type: object
       description: |
         Emitted once per applying member after Client Management attempts to match
-        against existing person records. Members with an empty programsApplyingFor
+        against existing person records. Members with an empty programs list
         are skipped; no event is emitted for them.
       additionalProperties: false
       required:

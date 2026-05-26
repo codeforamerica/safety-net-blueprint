@@ -183,6 +183,39 @@ States are responsible for:
 
 ---
 
+## Design Decisions
+
+### Domain events — scope
+
+**Status:** Decided: publish as needed
+
+**What's being decided:** Whether to limit events to lifecycle state transitions only, or also publish events for significant data changes within a stable state.
+
+**Considerations:**
+- Salesforce CDC automatically publishes externally accessible change events for any enabled object via the Pub/Sub API — a genuine CDC subscription model. Cúram and Pega both require explicit developer instrumentation per event (outbound SOAP calls or Kafka publish steps wired into flows); they do not offer automatic data mutation event streams.
+- Transition events have stable, minimal payloads. Data mutation events carry more model detail and require more care to evolve.
+- The main governance concern with data mutation events is **semantic coupling**: consumers depend on the event payload shape; renaming or restructuring fields is a breaking change. Mitigations: additive-only payload evolution, event type versioning (`v1`/`v2`), a schema registry, consumer-driven contract testing, or defining event schemas using the same canonical types as the API specs (already overlayable in the blueprint).
+- Adding a new event type is additive and non-breaking — events can be introduced per-domain as integration needs emerge, without a blanket upfront decision.
+
+**Decision:** Both transition and data mutation events are supported. Which specific events to emit is determined per-domain based on real integration needs, governed by the schema evolution practices above.
+
+---
+
+### Audit trail pattern
+
+**Status:** Decided: cross-cutting audit domain
+
+**What's being decided:** How changes to resource data made during active case processing are tracked — and whether each domain owns its own audit trail or delegates to a shared cross-cutting domain.
+
+**Considerations:**
+- All major vendors implement audit internally — Cúram versions each evidence update; Pega's case audit framework captures who changed what and when; Salesforce uses field history tracking. None delegate to a separate audit domain, but all are monolithic systems where the concept doesn't exist. The blueprint's domain separation creates the opportunity to do this differently.
+- **Option A/B (audit per domain)**: Each domain with mutable data independently implements audit logic — duplicated across intake, case management, eligibility, etc.
+- **Option C (cross-cutting audit domain)**: Audit logic lives once; all domains get the same treatment; cross-domain queries ("all changes by this caseworker this week") are possible from one place. Requires mutation events to carry enough payload to reconstruct version history — either the full record at each point (fat events, easy to compare) or changed fields with before/after values (thin events, smaller payloads, audit domain reconstructs state by replaying). Salesforce CDC uses the thin approach.
+
+**Decision:** Cross-cutting audit domain — domains emit mutation events (see CRUD auto-emit above); a dedicated audit domain subscribes and maintains version history across all domains. Cross-domain audit queries are possible from one place without domain-specific implementation.
+
+---
+
 ## Further Reading
 
 - [ADR: Inter-Domain Communication](../decisions/inter-domain-communication.md)

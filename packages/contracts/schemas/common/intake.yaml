@@ -1,6 +1,6 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schemas/common/intake-common.yaml"
-title: IntakeCommon
+$id: "schemas/common/intake.yaml"
+title: Intake
 description: >
   Shared intake types passed to external systems (e.g., eligibility adapter).
   Referenced by the eligibility adapter interface and by the intake OpenAPI spec

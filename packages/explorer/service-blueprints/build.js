@@ -6,7 +6,7 @@
  * in sequence.
  *
  * Usage:
- *   node build.js                     # baseline → data/intake.json + output/figma-plugin-dist/
+ *   node build.js                     # baseline → data/intake.json + output/
  *   node build.js <input-dir>         # state-specific — reads from <input-dir>
  *   node build.js <input-dir> <out>   # state-specific with separate Figma plugin output dir
  *   node build.js --watch             # watch mode (Figma only)
@@ -48,9 +48,9 @@ execFileSync('node', [path.join(__dirname, 'src', 'figma-plugin', 'build.js'), .
 // Skip in watch mode — renders are one-shot debug outputs.
 
 if (!args.includes('--watch')) {
-  mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
+  mkdirSync(path.join(__dirname, 'output'), { recursive: true });
   const blueprintJson = path.join(__dirname, 'data', 'intake.json');
-  const distDir       = path.join(__dirname, 'dist');
+  const distDir       = path.join(__dirname, 'output');
 
   const { exportHtmlPng } = await import('./src/export-png.js');
 

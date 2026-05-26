@@ -1,0 +1,74 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/employment.yaml"
+title: Employment
+description: >
+  A single employment record for a household member. Used across domains wherever
+  employment data is collected, evaluated, or passed to the rules engine adapter.
+  Employment status and hours affect TANF work participation requirements
+  (45 CFR § 261.22) and CCDF eligibility (child care subsidy requires parent
+  employment, education, or training activity).
+
+type: object
+required:
+  - status
+
+properties:
+  status:
+    $ref: "#/$defs/EmploymentStatus"
+  employerInfo:
+    $ref: "#/$defs/EmployerInfo"
+    description: Employer details. Present when status is full_time, part_time, seasonal, or self_employed.
+  jobTitle:
+    type: string
+    description: Job title or position.
+    maxLength: 200
+  hoursPerWeek:
+    type: number
+    format: float
+    minimum: 0
+    description: Average hours worked per week. Used in TANF work participation rate calculations and CCDF activity eligibility.
+  startDate:
+    type: string
+    format: date
+    description: Date employment began.
+  endDate:
+    type: string
+    format: date
+    description: Date employment ended or is expected to end.
+
+additionalProperties: true
+
+$defs:
+  EmployerInfo:
+    type: object
+    description: Employer identification and contact information.
+    additionalProperties: false
+    properties:
+      name:
+        type: string
+        description: Employer or business name.
+        maxLength: 200
+      phone:
+        $ref: "./contact.yaml#/$defs/PhoneNumber"
+        description: Employer phone number.
+      address:
+        $ref: "./contact.yaml#/$defs/Address"
+        description: Employer address.
+      identificationNumber:
+        type: string
+        description: Employer Identification Number (EIN).
+        maxLength: 50
+
+  EmploymentStatus:
+    type: string
+    enum:
+      - full_time
+      - part_time
+      - seasonal
+      - self_employed
+      - not_employed
+    description: >
+      Current employment status. full_time and part_time are wage or salary
+      employment; self_employed covers self-employment and gig work; seasonal
+      for employment expected to end within the season; not_employed for those
+      without current employment.

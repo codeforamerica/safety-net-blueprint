@@ -1,6 +1,8 @@
 # Common domain schemas shared across multiple APIs
 #
-# Schemas: EmployerInfo, Language, PlatformEvent, Program, Signature
+# Schemas: EmployerInfo, Language, Program, Signature
+#
+# See also: schemas/common/employment.yaml (canonical EmployerInfo definition)
 #
 # See also:
 #   contact.yaml  — Address, Email, PhoneNumber
@@ -11,29 +13,10 @@ Domain:
   $ref: "../schemas/common/enums.yaml#/$defs/Domain"
 
 EmployerInfo:
-  type: object
-  description: Employer identification and contact information.
-  additionalProperties: false
-  properties:
-    name:
-      type: string
-      description: Employer or business name.
-      maxLength: 200
-    phone:
-      $ref: "./contact.yaml#/PhoneNumber"
-      description: Employer phone number.
-    address:
-      $ref: "./contact.yaml#/Address"
-      description: Employer address.
-    identificationNumber:
-      type: string
-      description: Employer Identification Number (EIN).
-      maxLength: 50
+  $ref: "../schemas/common/employment.yaml#/$defs/EmployerInfo"
 
 Language:
-  type: string
-  description: Preferred language (BCP 47 language tag).
-  pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+  $ref: "../schemas/common/enums.yaml#/$defs/Language"
 
 Program:
   $ref: "../schemas/common/enums.yaml#/$defs/Program"

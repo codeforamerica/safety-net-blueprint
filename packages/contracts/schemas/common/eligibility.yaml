@@ -1,6 +1,6 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schemas/common/eligibility-common.yaml"
-title: EligibilityCommon
+$id: "schemas/common/eligibility.yaml"
+title: Eligibility
 description: >
   Shared eligibility types used by the eligibility domain and the eligibility
   adapter interface. Referenced by both so states can overlay the adapter spec

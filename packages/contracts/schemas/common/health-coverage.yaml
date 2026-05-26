@@ -1,0 +1,71 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/health-coverage.yaml"
+title: HealthCoverage
+description: >
+  A single health coverage record for a household member. Used across domains
+  wherever health coverage data is collected, evaluated, or passed to the rules
+  engine adapter. Coverage type and premium amount drive Medicaid and CHIP
+  eligibility — specifically the employer-sponsored insurance affordability test
+  (45 CFR § 155.305(f)) and cost-sharing reduction determinations.
+
+type: object
+required:
+  - coverageType
+
+properties:
+  coverageType:
+    $ref: "#/$defs/CoverageType"
+  planName:
+    type: string
+    description: Name of the insurance plan or program.
+    maxLength: 200
+  policyNumber:
+    type: string
+    description: Policy or member ID number.
+    maxLength: 100
+  coverageScope:
+    $ref: "#/$defs/CoverageScope"
+  premiumAmount:
+    type: number
+    format: float
+    minimum: 0
+    description: Premium amount paid by the member for this coverage.
+  premiumFrequency:
+    $ref: "./enums.yaml#/$defs/Frequency"
+  startDate:
+    type: string
+    format: date
+    description: Date coverage began.
+  endDate:
+    type: string
+    format: date
+    description: Date coverage ended or is expected to end.
+
+additionalProperties: true
+
+$defs:
+  CoverageScope:
+    type: string
+    enum:
+      - self_only
+      - family
+    description: Whether the coverage is for the member only or includes dependents.
+
+  CoverageType:
+    type: string
+    enum:
+      - employer_sponsored
+      - marketplace
+      - medicaid
+      - medicare
+      - chip
+      - tricare
+      - va
+      - other_public
+      - other_private
+      - uninsured
+    description: >
+      Type of health coverage. employer_sponsored and marketplace coverage
+      affects Medicaid eligibility under the ACA affordability test
+      (45 CFR § 155.305(f)). medicaid and chip indicate current enrollment
+      in a public program. uninsured indicates no coverage.

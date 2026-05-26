@@ -9,20 +9,22 @@ description: >
   domain-specific fields.
 
 type: object
-required:
-  - dateOfBirth
 
 properties:
   dateOfBirth:
-    type: string
-    format: date
-    description: Member's date of birth. Used in age-based program eligibility criteria.
+    $ref: "./identity.yaml#/$defs/DateOfBirth"
   relationshipToHead:
     $ref: "#/$defs/HouseholdRelationship"
   citizenshipStatus:
     $ref: "#/$defs/CitizenshipStatus"
   immigrationStatus:
     $ref: "#/$defs/ImmigrationStatus"
+  immigrationInfo:
+    $ref: "./identity.yaml#/$defs/ImmigrationInfo"
+    description: >
+      Immigration document details. Present when citizenshipStatus is non_citizen
+      and document verification is required. Used to initiate FDSH VLP or USCIS
+      SAVE checks (42 CFR § 435.956(c)).
   isDisabled:
     type: boolean
     description: >
@@ -38,6 +40,18 @@ properties:
 additionalProperties: true
 
 $defs:
+  CitizenshipStatus:
+    type: string
+    enum:
+      - us_citizen
+      - us_national
+      - non_citizen
+    description: >
+      The member's citizenship status. Determines whether immigration status
+      checks are required. Affects eligibility for SNAP (non-citizens face a
+      5-year bar in most cases, 8 U.S.C. § 1612) and Medicaid
+      (42 CFR § 435.406).
+
   HouseholdRelationship:
     type: string
     enum:
@@ -53,32 +67,27 @@ $defs:
       - non_relative
     description: The member's relationship to the head of household.
 
-  CitizenshipStatus:
-    type: string
-    enum:
-      - us_citizen
-      - us_national
-      - non_citizen
-    description: >
-      The member's citizenship status. Affects eligibility for SNAP
-      (non-citizens face a 5-year bar in most cases, 8 U.S.C. § 1612) and
-      Medicaid (42 CFR § 435.406).
-
   ImmigrationStatus:
     type: string
+    # Source: 8 U.S.C. § 1641 — Definitions of "qualified alien"
+    # https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title8-section1641
+    # temporary_protected_status is not a PRWORA qualified alien category but is tracked
+    # by states because TPS holders may be eligible under state-funded programs.
     enum:
-      - qualified_alien
-      - lawful_permanent_resident
-      - refugee
-      - asylee
-      - cuban_haitian_entrant
-      - amerasian
-      - victim_of_trafficking
-      - parolee
-      - undocumented
-      - not_applicable
+      - lawful_permanent_resident  # INA § 101(a)(20)
+      - refugee                    # INA § 207
+      - asylee                     # INA § 208
+      - deportation_withheld       # INA § 241(b)(3) / former § 243(h)
+      - parolee                    # INA § 212(d)(5), paroled for at least 1 year
+      - conditional_entrant        # INA § 203(a)(7), pre-1980 refugee program
+      - cuban_haitian_entrant      # RHCA § 501(e)
+      - amerasian                  # Immigration Act of 1990, Pub. L. 101-649 § 124
+      - battered_non_citizen       # 8 U.S.C. § 1641(c), VAWA
+      - trafficking_victim         # TVPA § 107(b)(1), 22 U.S.C. § 7105
+      - temporary_protected_status # INA § 244; not a qualified alien but tracked by states
+      - other
     description: >
-      The member's immigration status. Required for non-citizens to determine
-      qualified alien status under 8 U.S.C. § 1641. Verified electronically
-      via FDSH VLP or SAVE (42 CFR § 435.956(c)).
-
+      The member's immigration status per 8 U.S.C. § 1641 (PRWORA qualified
+      alien categories). Present only when citizenshipStatus is non_citizen.
+      Drives benefit waiting-period rules and determines the FDSH VLP or USCIS
+      SAVE verification path. Absent for US citizens and nationals.
