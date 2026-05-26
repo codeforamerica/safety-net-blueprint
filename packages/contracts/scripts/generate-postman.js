@@ -852,6 +852,11 @@ function generateApiRequests(apiMetadata) {
       continue;
     }
 
+    // Skip /me singleton endpoints — they require auth context not available in the generic collection
+    if (endpoint.path.endsWith('/me')) {
+      continue;
+    }
+
     const endpointCollection = endpoint.path.split('/').filter(s => s)[0];
     if (!resourceGroups.has(endpointCollection)) {
       resourceGroups.set(endpointCollection, { items: [], rpcEndpoints: [] });
