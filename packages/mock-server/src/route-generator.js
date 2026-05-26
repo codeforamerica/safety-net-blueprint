@@ -297,6 +297,7 @@ function createReviewProgressUpsertHandler(apiMetadata) {
           object: 'review-progress-entry',
           action,
           resourceId: result.id,
+          subject: applicationId,
           source: apiMetadata.serverBasePath,
           data: { changes: [] },
           callerId: req.headers['x-caller-id'] || null,
@@ -458,7 +459,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           const subArrayDefaults = extractRequiredArrayDefaults(endpoint.responseSchema);
           if (subMachineForEndpoint?.initialState) subArrayDefaults.status = subMachineForEndpoint.initialState;
           if (Object.keys(subArrayDefaults).length > 0) registerCollectionDefaults(collectionName, subArrayDefaults);
-          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint);
+          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, { eventSubjectField: parentField });
           handler = (req, res) => {
             req.body = { ...(req.body || {}), [parentField]: req.params[parentParam] };
             return baseCreateHandler(req, res);

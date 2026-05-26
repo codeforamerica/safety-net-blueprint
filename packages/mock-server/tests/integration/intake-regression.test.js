@@ -1055,6 +1055,14 @@ async function testReviewProgress() {
     const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-progress`);
     assert.strictEqual(res.status, 404);
   });
+
+  await test('PATCH emits event with application ID as subject', async () => {
+    const eventsRes = await fetch(`${BASE_URL}/platform/events?subject=${appId}`);
+    const data = await eventsRes.json();
+    const progressEvents = data.items.filter(e => e.type.includes('review_progress'));
+    assert.ok(progressEvents.length > 0, 'at least one review_progress event emitted');
+    assert.ok(progressEvents.every(e => e.subject === appId), 'all review_progress events use application ID as subject');
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1165,6 +1173,14 @@ async function testApplicationNotes() {
   await test('GET /{noteId} 404 for unknown note', async () => {
     const res = await fetch(`${BASE_NOTES}/00000000-0000-0000-0000-000000000000`);
     assert.strictEqual(res.status, 404);
+  });
+
+  await test('POST emits event with application ID as subject', async () => {
+    const eventsRes = await fetch(`${BASE_URL}/platform/events?subject=${appId}`);
+    const data = await eventsRes.json();
+    const noteEvents = data.items.filter(e => e.type.includes('note'));
+    assert.ok(noteEvents.length > 0, 'at least one note event emitted');
+    assert.ok(noteEvents.every(e => e.subject === appId), 'all note events use application ID as subject');
   });
 }
 
