@@ -6,6 +6,7 @@ import { readFileSync, existsSync } from 'fs';
 import yaml from 'js-yaml';
 import { insertResource, clearAll } from './database-manager.js';
 import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/safety-net-blueprint-contracts/loader';
+import { deriveCollectionName as deriveCollectionNameFromPath } from './collection-utils.js';
 import { join } from 'path';
 import { resolveTimeTokens } from './time-tokens.js';
 
@@ -93,18 +94,29 @@ function deriveCollectionName(api) {
 
 /**
  * Derive all unique collection names from an API's endpoints.
+ *
+ * Uses the path-based `deriveCollectionName` from collection-utils.js (the
+ * same helper the route generator uses) so sub-resource paths map to their
+ * proper sub-collection names rather than collapsing to the top-level
+ * segment. Examples:
+ *   /applications                                       → "applications"
+ *   /applications/{id}/members                          → "application-members"
+ *   /applications/{id}/members/{memberId}/incomes       → "member-incomes"
+ *   /applications/{id}/household-info                   → "household-infos"
+ *
+ * Without this, an API whose paths are all under `/applications/...` would
+ * yield only `applications`, leaving every sub-collection the route handlers
+ * actually query (`application-members`, `member-incomes`, etc.) empty.
+ *
  * @param {Object} api - API metadata object
  * @returns {string[]} Array of collection names
  */
-function deriveAllCollectionNames(api) {
+export function deriveAllCollectionNames(api) {
   const names = new Set();
   const basePath = api.serverBasePath || '';
   for (const endpoint of api.endpoints || []) {
-    const path = basePath && endpoint.path.startsWith(basePath)
-      ? endpoint.path.slice(basePath.length)
-      : endpoint.path;
-    const segment = path.split('/')[1];
-    if (segment) names.add(segment);
+    const name = deriveCollectionNameFromPath(endpoint.path, basePath);
+    if (name) names.add(name);
   }
   // Fallback for APIs with no endpoints
   if (names.size === 0) names.add(deriveCollectionName(api));
