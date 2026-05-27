@@ -22,14 +22,16 @@ contracts, or consumable by UX clients at runtime.
 
 The system has two distinct layers:
 
-- **Policies** — standalone regulatory and program rules, defined independently of any contract
-  element, managed in a platform-level registry. A policy exists whether or not any element
-  references it.
+- **Registry** — a platform-level store of standalone reference data with stable IDs, defined
+  independently of any contract element. The baseline registry holds policies (regulatory citations
+  and program rules), and is designed to accommodate additional reference data types — programs,
+  document types, agencies — without structural change. A registry entry exists whether or not any
+  element references it.
 - **Annotations** — element-keyed metadata that attaches information to a specific contract
-  element. An annotation can reference a policy, carry a data classification, or include other
-  metadata. Annotations belong to a domain.
+  element. An annotation can reference a registry entry by ID, carry a data classification, or
+  include other metadata. Annotations belong to a domain.
 
-A policy becomes an annotation when it is attached to an element.
+A registry entry becomes relevant to a contract element when an annotation references it.
 
 ## Contract files
 
@@ -102,11 +104,11 @@ Standard annotation properties at the baseline:
 | Property | Type | Description |
 |----------|------|-------------|
 | `policies` | `string[]` | Policy IDs from the registry that apply to this element |
-| `dataClassification` | `string[]` | Data sensitivity classifications from the baseline vocabulary (e.g., `pii`, `fti`, `phi`). See [Decision 8](#decision-8-dataclassification-vocabulary). |
-| `programs` | `string[] \| object` | Programs this field or operation is relevant to. Shorthand array form defaults all entries to `required`. Map form allows per-program strength: `required`, `preferred`, or `optional`. See [Decision 9](#decision-9-programs-property-and-strength). |
+| `dataClassification` | `string[]` | Data sensitivity classifications from the baseline vocabulary (e.g., `pii`, `fti`, `phi`). See [Decision 7](#decision-7-dataclassification-vocabulary-and-inheritance). |
+| `programs` | `string[] \| object` | Programs this field or operation is relevant to. Shorthand array form defaults all entries to `required`. Map form allows per-program strength: `required`, `preferred`, or `optional`. See [Decision 8](#decision-8-programs-property-and-strength). |
 
-Additional annotation properties can be added by states via overlay without schema changes — the
-leaf level is open by design. See [Decision 4](#decision-4-open-annotation-vocabulary).
+Annotation leaf objects use `additionalProperties: true` in the schema, so states can add
+properties via overlay without schema changes and without failing `npm run validate`.
 
 ## Policy file format
 
@@ -182,7 +184,7 @@ Examples of what states can do via overlay:
   file: intake-annotations.yaml
   update:
     dataClassification: [pii]
-    requiredForPrograms: [snap]
+    programs: [snap]
 
 # Add a state-specific policy
 - target: $.policies.state-county-residency
@@ -227,10 +229,12 @@ generation time, so a state's generated client reflects their customized annotat
 `IntakeAnnotations` mirrors the annotation file structure with `schema`, `operations`, and `events`
 sub-objects. `Policies` is a flat map across all policy files.
 
-## Runtime API
+## Runtime API *(planned)*
 
-Runtime endpoints serve resolved annotation and policy data for tooling that cannot bundle the
-compiled client.
+Runtime endpoints will serve resolved annotation and policy data for tooling that cannot bundle the
+compiled client. The TypeScript static export is the primary consumption pattern for the initial
+implementation; the runtime API is designed now to ensure the endpoint shape is consistent with
+the static export, but implementation is deferred.
 
 **Policies** are served at the platform level, since they are not domain-scoped:
 
@@ -249,7 +253,7 @@ GET /intake/annotations?section=schema&element=ApplicationMember.ssn
 > **Future decision:** annotation endpoint placement at the domain level is an initial assertion.
 > If a cross-domain use case emerges — for example, a compliance dashboard querying annotations
 > across all domains — the endpoint may move to a platform-level location. See
-> [Decision 5](#decision-5-annotation-endpoint-placement).
+> [Decision 4](#decision-4-annotation-endpoint-placement).
 
 > **Future capability:** reverse-lookup — querying from the policy direction ("what elements
 > reference this policy?") — is not defined in the initial implementation. The current design
@@ -268,12 +272,11 @@ matches the structure of the TypeScript static exports so access patterns are co
 | 1 | [Separate policy and annotation files](#decision-1-separate-policy-and-annotation-files) | Policies are standalone; annotations reference them by ID |
 | 2 | [Annotation file sections](#decision-2-annotation-file-sections) | Three sections map to artifact types: schema, operations, events |
 | 3 | [Multiple file support](#decision-3-multiple-file-support) | Both policy and annotation files support splitting for scale |
-| 4 | [Open annotation vocabulary](#decision-4-open-annotation-vocabulary) | Leaf level is open; states add properties via overlay without schema changes |
-| 5 | [Annotation endpoint placement](#decision-5-annotation-endpoint-placement) | Domain-scoped initially; platform-level is a future option |
-| 6 | [Element path format](#decision-6-element-path-format) | FHIR-style dot notation; no array brackets; applies to the field wherever it appears |
-| 7 | [Citation URL](#decision-7-citation-url) | Optional `citationUrl` alongside the display `citation` string |
-| 8 | [dataClassification vocabulary](#decision-8-dataclassification-vocabulary) | Extensible baseline vocabulary; baseline values schema-enforced, states can extend |
-| 9 | [programs property and strength](#decision-9-programs-property-and-strength) | Renamed from `requiredForPrograms`; map form with per-program strength; shorthand defaults to `required` |
+| 4 | [Annotation endpoint placement](#decision-4-annotation-endpoint-placement) | Domain-scoped initially; platform-level is a future option |
+| 5 | [Element path format](#decision-5-element-path-format) | FHIR-style dot notation; no array brackets; applies to the field wherever it appears |
+| 6 | [Citation URL](#decision-6-citation-url) | Optional `citationUrl` alongside the display `citation` string |
+| 7 | [dataClassification vocabulary](#decision-7-dataclassification-vocabulary) | Extensible baseline vocabulary; baseline values schema-enforced, states can extend |
+| 8 | [programs property and strength](#decision-8-programs-property-and-strength) | Renamed from `requiredForPrograms`; map form with per-program strength; shorthand defaults to `required` |
 
 ---
 
@@ -298,9 +301,9 @@ referenced from multiple elements across multiple domains without duplication.
   relations connect a Policy asset to a Column asset — the same policy object can be connected to
   many columns across many tables without duplication.
 - IBM Cúram embeds policy logic inside Rule Sets and Rule Classes — there are no stable reference
-  IDs for individual rules, making cross-domain citation impossible. Cúram rules are executable
-  logic, not metadata. This is the pattern to avoid: once a regulation is encoded as executable
-  logic without a stable ID, it cannot be referenced by ID, queried, or displayed to users.
+  IDs for individual rules. Because rules are executable logic rather than standalone metadata
+  objects, they cannot be queried by ID, referenced across domains, or surfaced directly to users
+  as regulatory citations.
 - A policy like "7 CFR § 273.2(g)" applies to multiple elements (the `submit` operation, the
   `submittedAt` field, the `application.submitted` event) and potentially across multiple domains.
   Defining it once and referencing it by ID avoids drift between copies and enables a registry API.
@@ -385,38 +388,7 @@ or topic without changing how tooling consumes them.
 
 ---
 
-### Decision 4: Open annotation vocabulary
-
-**Status:** Decided: additionalProperties open
-
-**What's being decided:** Whether the annotation vocabulary is closed (only baseline-defined
-properties allowed) or open (states can add domain-specific properties without schema changes),
-given that the baseline cannot anticipate every annotation type states will need.
-
-**Considerations:**
-- FHIR's extensibility model is built on an open vocabulary: any element can carry any extension
-  identified by a canonical URL. Profiles define expected extensions but do not prohibit others.
-  This is the foundational design principle behind FHIR's wide adoption in a fragmented healthcare
-  ecosystem — implementers can extend without forking.
-- Apache Atlas allows users to register custom Classification types with user-defined attributes at
-  any time, without schema changes. Existing classifications and their attachments are unaffected
-  when a new attribute is added to the type definition.
-- Collibra allows custom attribute types to be added to any asset type without schema changes.
-  Custom attributes are addable at any level of the governance model, from domain down to column.
-- All three of these systems treat the base vocabulary as a starting point, not a ceiling. Closing
-  the vocabulary would create adoption friction for states — they would need to propose baseline
-  changes for every state-specific annotation type, and blueprint upgrades could conflict with their
-  custom properties.
-
-**Options:**
-- **(A)** Closed vocabulary; states must propose new annotation types for inclusion in the baseline.
-- **(B)** ✓ Open vocabulary; annotation leaf objects use `additionalProperties: true`. States add
-  properties via overlay. The baseline defines standard properties; extensions are valid without
-  schema changes.
-
----
-
-### Decision 5: Annotation endpoint placement
+### Decision 4: Annotation endpoint placement
 
 **Status:** Decided: B (initial assertion; subject to revision)
 
@@ -445,7 +417,7 @@ to platform-level is a breaking change to the API surface.
 
 ---
 
-### Decision 6: Element path format
+### Decision 5: Element path format
 
 **Status:** Decided: B
 
@@ -478,7 +450,7 @@ field wherever it appears within an array, consistent with how FHIR handles repe
 
 ---
 
-### Decision 7: Citation URL
+### Decision 6: Citation URL
 
 **Status:** Decided: B
 
@@ -505,7 +477,7 @@ regulation text.
 
 ---
 
-### Decision 8: dataClassification vocabulary and inheritance
+### Decision 7: dataClassification vocabulary and inheritance
 
 **Status:** Decided: C / override model
 
@@ -525,8 +497,9 @@ that decision.
   binding strength. `extensible` strength means: use the defined vocabulary; only extend it if it
   does not cover your case. This is the established pattern for classification metadata in
   interoperability specifications.
-- NIEM IC-ISM uses a closed enum (`U`, `C`, `S`, `TS`) defined by the Intelligence Community.
-  No extensions allowed — appropriate for national security but too rigid for benefits programs.
+- NIEM IC-ISM uses a closed enum (`U`, `C`, `S`, `TS`) defined by the Intelligence Community
+  for national security contexts. No extensions allowed — the vocabulary is defined by the IC and
+  not designed for extension by implementing agencies.
 - Apache Atlas allows organizations to register custom Classification types freely, with
   propagation to child entities through lineage. No baseline vocabulary is enforced; propagation
   is lineage-based, not schema-structural.
@@ -538,7 +511,15 @@ that decision.
   for objects where every field shares the parent's classification.
 
 **Baseline vocabulary:** `pii`, `fti`, `phi`, `phi-behavioral`, `cjis`. States may add values via
-overlay per [Decision 4](#decision-4-open-annotation-vocabulary).
+overlay via overlay without schema changes.
+
+**Vocabulary note:** The baseline vocabulary is benefits-program-specific, not the HL7 Healthcare
+Privacy and Security Classification System used by FHIR (DS4P). FHIR's coded values (`ETH`, `HIV`,
+`PSY`, confidentiality levels `N`/`R`/`V`, etc.) are healthcare-specific and do not cover the
+classifications most relevant to benefits programs: `fti` (Federal Tax Information under IRC §
+6103) and `cjis` (FBI Criminal Justice Information Services) have no FHIR equivalents. The
+structural pattern — extensible binding against a defined vocabulary — is borrowed from FHIR; the
+vocabulary itself is not.
 
 **Inheritance and override:** A `dataClassification` on a parent schema key (e.g.,
 `ApplicationMember`) propagates to all sub-properties. A sub-property with its own explicit
@@ -557,7 +538,7 @@ most specific annotation wins.
 
 ---
 
-### Decision 9: programs property and strength
+### Decision 8: programs property and strength
 
 **Status:** Decided: B
 
@@ -573,20 +554,27 @@ is part of the annotation.
   mandates from recommendations — mandatory controls fail compliance checks while advisory controls
   generate warnings. A caseworker UX client needs the same distinction to know whether to mark a
   field as required.
-- The original property name `requiredForPrograms` conflates two concerns: which programs care
-  about this field, and how much they require it. Renaming to `programs` makes the strength
-  explicit rather than implied by the property name.
+- A property named only for which programs apply (`programs: [snap]`) leaves enforcement strength
+  implicit. Making strength explicit separates two distinct concerns: which programs care about
+  this field, and how strongly they require it — mirroring how FHIR separates binding target from
+  binding strength, and how ServiceNow GRC separates mandatory from advisory controls.
 
 **Shorthand form:** A flat array (`programs: [snap, medicaid]`) is equivalent to all entries at
 `required` strength. The shorthand is for the common case; the map form is used when strengths differ.
 
 **Baseline strength vocabulary:** `required` (regulatory mandate), `preferred` (strong baseline
 recommendation), `optional` (relevant to the program but not required). Default when omitted is
-`required`. States may add strength values per [Decision 4](#decision-4-open-annotation-vocabulary).
+`required`. States may add strength values via overlay without schema changes.
+
+**Programs registry compatibility:** Program IDs in this property (`snap`, `medicaid`) will
+reference entries in a future programs registry, following the same resolution pattern as policy
+IDs referencing the policies registry. Adding the programs registry is additive — it does not
+change annotation file structure. The cross-reference validator should be extended at that point
+to validate program IDs against the registry, the same way it validates policy IDs today.
 
 **Options:**
-- **(A)** Flat array `requiredForPrograms: [snap]` — simple; no strength distinction; name implies
-  all entries are required.
-- **(B)** ✓ Renamed to `programs`; map form with per-program strength; shorthand array defaults to
-  `required`. Aligns with FHIR binding strength and ServiceNow mandatory/advisory distinction.
+- **(A)** Flat array only: `programs: [snap]` — simple; no strength distinction; all entries
+  implied as required.
+- **(B)** ✓ `programs` as map with per-program strength; shorthand array defaults to `required`.
+  Aligns with FHIR binding strength and ServiceNow mandatory/advisory distinction.
 
