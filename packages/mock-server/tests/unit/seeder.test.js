@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { seedDatabase, seedAllDatabases, deriveAllCollectionNames } from '../../src/seeder.js';
 import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
-import { count, findAll, clearAll } from '../../src/database-manager.js';
+import { count, findAll, clearAll, insertResource } from '../../src/database-manager.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -177,6 +177,47 @@ test('Database Seeder Tests', async (t) => {
     };
     const names = deriveAllCollectionNames(api);
     assert.deepStrictEqual(names.sort(), ['application-members', 'applications']);
+  });
+
+  await t.test('seedAllDatabases - clears sub-collections at boot (not just top-level)', async () => {
+    // Before the discovery fix, only top-level collections were cleared on
+    // boot because deriveAllCollectionNames returned only the first path
+    // segment. Stale sub-collection rows from a previous run could leak into
+    // the next boot. Now that sub-collections are discovered, they should
+    // also be cleared. Guard against regression.
+    const apiSpecs = await loadAllSpecs({ specsDir });
+    const intakeApi = apiSpecs.find((a) => a.name === 'intake');
+    if (!intakeApi) {
+      console.log('  ℹ intake API not present — skipping');
+      return;
+    }
+    const subCollections = deriveAllCollectionNames(intakeApi)
+      .filter((name) => name !== 'applications');
+    if (subCollections.length === 0) {
+      console.log('  ℹ no sub-collections discovered — skipping');
+      return;
+    }
+
+    const sentinelId = '00000000-dead-beef-0000-000000000001';
+    const target = subCollections[0];
+    insertResource(target, {
+      id: sentinelId,
+      applicationId: '00000000-0000-0000-0000-000000000000',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    });
+    assert.strictEqual(
+      findAll(target, { id: sentinelId }).total, 1,
+      'Sentinel should be present before reseed'
+    );
+
+    seedAllDatabases(apiSpecs, specsDir, seedDir);
+
+    assert.strictEqual(
+      findAll(target, { id: sentinelId }).total, 0,
+      `Sub-collection "${target}" should be cleared at boot`
+    );
+    console.log(`  ✓ Sub-collection "${target}" cleared on reseed`);
   });
 
   await t.test('deriveAllCollectionNames - falls back to api object for APIs with no endpoints', () => {
