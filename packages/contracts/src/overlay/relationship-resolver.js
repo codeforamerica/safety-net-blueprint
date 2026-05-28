@@ -196,6 +196,138 @@ function resourceNameToPath(resource) {
 }
 
 // =============================================================================
+// Direction detection
+// =============================================================================
+
+const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'];
+
+/**
+ * Find all URL paths in the spec that directly serve the given schema name.
+ *
+ * "Directly serves" means the schema is referenced by a `$ref` on an
+ * operation's request body or response body (including inline array `items`).
+ * Schemas reached only transitively — e.g., a `Member` referenced from inside
+ * a `MemberList` wrapper served at a list endpoint — are not counted here.
+ * The caller's intent is to find the path(s) that represent the schema's own
+ * hierarchical position in the URL tree, not every place its bytes can appear.
+ *
+ * @param {object} spec - Parsed OpenAPI spec
+ * @param {string} schemaName - Schema component name to locate
+ * @returns {string[]} Distinct paths serving the schema (declaration order)
+ */
+function findPathsForSchema(spec, schemaName) {
+  if (!spec || !spec.paths || typeof spec.paths !== 'object') return [];
+  const refTarget = `#/components/schemas/${schemaName}`;
+  const matches = [];
+  for (const [path, pathItem] of Object.entries(spec.paths)) {
+    if (!pathItem || typeof pathItem !== 'object') continue;
+    if (pathItemReferencesSchema(pathItem, refTarget)) {
+      matches.push(path);
+    }
+  }
+  return matches;
+}
+
+function pathItemReferencesSchema(pathItem, refTarget) {
+  for (const method of HTTP_METHODS) {
+    const op = pathItem[method];
+    if (!op || typeof op !== 'object') continue;
+    if (op.requestBody && operationBodyMatches(op.requestBody, refTarget)) return true;
+    if (op.responses) {
+      for (const response of Object.values(op.responses)) {
+        if (response && typeof response === 'object' && operationBodyMatches(response, refTarget)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function operationBodyMatches(bodyOrResponse, refTarget) {
+  if (!bodyOrResponse?.content || typeof bodyOrResponse.content !== 'object') return false;
+  for (const mediaType of Object.values(bodyOrResponse.content)) {
+    if (!mediaType?.schema || typeof mediaType.schema !== 'object') continue;
+    const schema = mediaType.schema;
+    if (schema.$ref === refTarget) return true;
+    if (schema.items && typeof schema.items === 'object' && schema.items.$ref === refTarget) return true;
+  }
+  return false;
+}
+
+/**
+ * Determine whether `<containingSchema>.<fkField> → <targetResource>` is a
+ * back-reference (child → parent) by URL-hierarchy inspection.
+ *
+ * A back-reference exists when the target's served path is a strict
+ * structural prefix of the containing schema's served path — i.e., the
+ * containing schema sits below the target in the URL tree, separated by at
+ * least one path parameter segment. Path parameters are compared structurally,
+ * so `{applicationId}` and `{appId}` are treated as equivalent.
+ *
+ * Defaults to forward (false) when either schema has no served path, when
+ * they share the same path, when they are siblings or unrelated, or when
+ * the schemas reference each other (self-reference).
+ *
+ * @param {object} spec - Parsed OpenAPI spec
+ * @param {string} containingSchemaName - Schema that carries the FK field
+ * @param {string} targetResourceName - Resource the FK points at
+ * @param {string[]} [warnings] - Optional accumulator for ambiguity warnings
+ * @returns {boolean} true when classification is a back-reference
+ */
+function isBackReference(spec, containingSchemaName, targetResourceName, warnings) {
+  if (containingSchemaName === targetResourceName) return false;
+  const containingPaths = findPathsForSchema(spec, containingSchemaName);
+  const targetPaths = findPathsForSchema(spec, targetResourceName);
+  if (containingPaths.length === 0 || targetPaths.length === 0) return false;
+
+  if (Array.isArray(warnings)) {
+    if (targetPaths.length > 1) {
+      warnings.push(
+        `${targetResourceName} is served at multiple paths (${targetPaths.join(', ')}); direction detection picked the shortest.`
+      );
+    }
+    if (containingPaths.length > 1) {
+      warnings.push(
+        `${containingSchemaName} is served at multiple paths (${containingPaths.join(', ')}); direction detection picked the shortest.`
+      );
+    }
+  }
+
+  const targetPath = pickCanonicalPath(targetPaths);
+  const containingPath = pickCanonicalPath(containingPaths);
+  return pathIsStrictPrefix(targetPath, containingPath);
+}
+
+function pickCanonicalPath(paths) {
+  return [...paths].sort((a, b) => {
+    if (a.length !== b.length) return a.length - b.length;
+    return a < b ? -1 : a > b ? 1 : 0;
+  })[0];
+}
+
+function pathIsStrictPrefix(maybePrefix, fullPath) {
+  const prefixSegs = pathSegments(maybePrefix);
+  const fullSegs = pathSegments(fullPath);
+  if (prefixSegs.length === 0 || fullSegs.length <= prefixSegs.length) return false;
+  for (let i = 0; i < prefixSegs.length; i++) {
+    if (!segmentMatches(prefixSegs[i], fullSegs[i])) return false;
+  }
+  return true;
+}
+
+function pathSegments(path) {
+  if (typeof path !== 'string') return [];
+  return path.split('/').filter(Boolean);
+}
+
+function segmentMatches(a, b) {
+  if (a === b) return true;
+  if (a.startsWith('{') && a.endsWith('}') && b.startsWith('{') && b.endsWith('}')) return true;
+  return false;
+}
+
+// =============================================================================
 // Style Transforms
 // =============================================================================
 
@@ -733,5 +865,7 @@ export {
   deriveLinkName,
   resolveRelationships,
   buildExamplesIndex,
-  resolveExampleRelationships
+  resolveExampleRelationships,
+  findPathsForSchema,
+  isBackReference
 };
