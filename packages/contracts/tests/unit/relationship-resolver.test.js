@@ -10,7 +10,9 @@ import {
   deriveLinkName,
   resolveRelationships,
   buildExamplesIndex,
-  resolveExampleRelationships
+  resolveExampleRelationships,
+  findPathsForSchema,
+  isBackReference
 } from '../../src/overlay/relationship-resolver.js';
 
 test('relationship-resolver tests', async (t) => {
@@ -163,6 +165,308 @@ test('relationship-resolver tests', async (t) => {
     const index = buildSchemaIndex(specs);
     assert.strictEqual(index.size, 1);
     assert.strictEqual(index.get('Foo').specFile, 'has-schemas.yaml');
+  });
+
+  // ===========================================================================
+  // findPathsForSchema
+  // ===========================================================================
+
+  await t.test('findPathsForSchema - finds path serving the schema as direct response', () => {
+    const spec = {
+      paths: {
+        '/users/{userId}': {
+          get: {
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: { $ref: '#/components/schemas/User' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+    assert.deepStrictEqual(findPathsForSchema(spec, 'User'), ['/users/{userId}']);
+  });
+
+  await t.test('findPathsForSchema - finds path serving the schema as inline array response', () => {
+    const spec = {
+      paths: {
+        '/users': {
+          get: {
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: { type: 'array', items: { $ref: '#/components/schemas/User' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+    assert.deepStrictEqual(findPathsForSchema(spec, 'User'), ['/users']);
+  });
+
+  await t.test('findPathsForSchema - finds path via requestBody', () => {
+    const spec = {
+      paths: {
+        '/users': {
+          post: {
+            requestBody: {
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/UserCreate' }
+                }
+              }
+            },
+            responses: { '201': {} }
+          }
+        }
+      }
+    };
+    assert.deepStrictEqual(findPathsForSchema(spec, 'UserCreate'), ['/users']);
+  });
+
+  await t.test('findPathsForSchema - returns multiple paths when schema served at several', () => {
+    const spec = {
+      paths: {
+        '/users/{userId}': {
+          get: {
+            responses: {
+              '200': {
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } }
+              }
+            }
+          }
+        },
+        '/admin/users/{userId}': {
+          get: {
+            responses: {
+              '200': {
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } }
+              }
+            }
+          }
+        }
+      }
+    };
+    const paths = findPathsForSchema(spec, 'User');
+    assert.strictEqual(paths.length, 2);
+    assert.ok(paths.includes('/users/{userId}'));
+    assert.ok(paths.includes('/admin/users/{userId}'));
+  });
+
+  await t.test('findPathsForSchema - returns empty when schema not referenced by any path', () => {
+    const spec = {
+      paths: {
+        '/users': {
+          get: {
+            responses: {
+              '200': {
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } }
+              }
+            }
+          }
+        }
+      },
+      components: { schemas: { OrphanSchema: { type: 'object' } } }
+    };
+    assert.deepStrictEqual(findPathsForSchema(spec, 'OrphanSchema'), []);
+  });
+
+  await t.test('findPathsForSchema - returns empty for spec with no paths', () => {
+    assert.deepStrictEqual(findPathsForSchema({}, 'Foo'), []);
+    assert.deepStrictEqual(findPathsForSchema({ components: {} }, 'Foo'), []);
+    assert.deepStrictEqual(findPathsForSchema(null, 'Foo'), []);
+  });
+
+  await t.test('findPathsForSchema - does not follow through wrapper schemas', () => {
+    // The list path serves MemberList (the wrapper), not Member directly. Only
+    // the item path serves Member. findPathsForSchema only inspects the direct
+    // request/response schemas declared on each operation, not the transitive
+    // contents of those schemas.
+    const spec = {
+      paths: {
+        '/members': {
+          get: {
+            responses: {
+              '200': {
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/MemberList' } } }
+              }
+            }
+          }
+        },
+        '/members/{memberId}': {
+          get: {
+            responses: {
+              '200': {
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/Member' } } }
+              }
+            }
+          }
+        }
+      },
+      components: {
+        schemas: {
+          Member: { type: 'object' },
+          MemberList: {
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { $ref: '#/components/schemas/Member' } }
+            }
+          }
+        }
+      }
+    };
+    assert.deepStrictEqual(findPathsForSchema(spec, 'Member'), ['/members/{memberId}']);
+  });
+
+  // ===========================================================================
+  // isBackReference
+  // ===========================================================================
+
+  await t.test('isBackReference - parent-child inversion is a back-reference', () => {
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      }
+    };
+    assert.strictEqual(isBackReference(spec, 'ApplicationMember', 'Application'), true);
+  });
+
+  await t.test('isBackReference - siblings under shared parent are not back-references', () => {
+    const spec = {
+      paths: {
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        },
+        '/applications/{applicationId}/verifications/{verificationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Verification' } } } } } }
+        }
+      }
+    };
+    assert.strictEqual(isBackReference(spec, 'Verification', 'ApplicationMember'), false);
+  });
+
+  await t.test('isBackReference - top-level to top-level is not a back-reference', () => {
+    const spec = {
+      paths: {
+        '/tasks/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } } } } }
+        },
+        '/users/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } } } }
+        }
+      }
+    };
+    assert.strictEqual(isBackReference(spec, 'Task', 'User'), false);
+  });
+
+  await t.test('isBackReference - target with no served path defaults to forward', () => {
+    // Cross-spec FK: Person is not served in this spec (it lives in client-management).
+    const spec = {
+      paths: {
+        '/incomes/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Income' } } } } } }
+        }
+      }
+    };
+    assert.strictEqual(isBackReference(spec, 'Income', 'Person'), false);
+  });
+
+  await t.test('isBackReference - containing schema with no served path defaults to forward', () => {
+    // Inline composite or anonymous shapes can't be classified; default to forward.
+    const spec = {
+      paths: {
+        '/users/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } } } }
+        }
+      }
+    };
+    assert.strictEqual(isBackReference(spec, 'InlineSchema', 'User'), false);
+  });
+
+  await t.test('isBackReference - self-reference is not a back-reference', () => {
+    const spec = {
+      paths: {
+        '/persons/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Person' } } } } } }
+        }
+      }
+    };
+    assert.strictEqual(isBackReference(spec, 'Person', 'Person'), false);
+  });
+
+  await t.test('isBackReference - works across different path-param naming', () => {
+    // Parent path uses {applicationId}, child path uses {appId}. Different names,
+    // same hierarchical position. Direction detection canonicalizes path params.
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{appId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      }
+    };
+    assert.strictEqual(isBackReference(spec, 'ApplicationMember', 'Application'), true);
+  });
+
+  await t.test('isBackReference - polymorphic per-target classification', () => {
+    // A single containing schema can have multiple targets; each is classified independently.
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        },
+        '/persons/{personId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Person' } } } } } }
+        }
+      }
+    };
+    // ApplicationMember → Application: back-ref (true)
+    assert.strictEqual(isBackReference(spec, 'ApplicationMember', 'Application'), true);
+    // ApplicationMember → Person: forward (top-level person, not above member in hierarchy)
+    assert.strictEqual(isBackReference(spec, 'ApplicationMember', 'Person'), false);
+  });
+
+  await t.test('isBackReference - emits warning when target served at multiple paths', () => {
+    // Target served at two unrelated paths — direction detection picks the
+    // shortest/most-specific and warns about the ambiguity.
+    const spec = {
+      paths: {
+        '/users/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } } } }
+        },
+        '/admin/users/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } } } }
+        },
+        '/tasks/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } } } } }
+        }
+      }
+    };
+    const warnings = [];
+    assert.strictEqual(isBackReference(spec, 'Task', 'User', warnings), false);
+    assert.ok(
+      warnings.some(w => w.includes('User') && w.toLowerCase().includes('multiple')),
+      `Expected a warning about multiple paths for User; got: ${JSON.stringify(warnings)}`
+    );
   });
 
   // ===========================================================================
