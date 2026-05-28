@@ -16,6 +16,17 @@
  * Planned (not yet implemented):
  *   include     — JSON:API-style sideloading
  *   embed       — always inline related resources
+ *
+ * Direction-aware expand:
+ *   `expand` is for forward navigation (a resource pulling in its dependencies).
+ *   When the global style is `expand`, the resolver detects back-references
+ *   (child schemas pointing up at their parent in the URL hierarchy) and
+ *   silently downgrades them to `links-only` so the scalar FK is preserved and
+ *   the parent object is not inlined into every child. Authors can still opt
+ *   in to upward inlining by setting `style: expand` per-field on a specific
+ *   back-reference; the resolver honors that override and emits a warning so
+ *   the choice is visible. See safety-net-blueprint#324 for the design intent
+ *   and `isBackReference`/`resolveRelationships` for the implementation.
  */
 
 // =============================================================================
