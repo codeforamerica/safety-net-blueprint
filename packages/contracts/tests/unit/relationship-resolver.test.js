@@ -1052,6 +1052,119 @@ test('relationship-resolver tests', async (t) => {
     assert.strictEqual(memberProps.application, undefined, 'no embedded application — cascade stopped');
   });
 
+  await t.test('direction gate - ApplicationNote lateral expansion stops cascade', () => {
+    // ApplicationNote.memberId points sideways to ApplicationMember (both children
+    // of Application). Under global expand: note.member is inlined; the inlined
+    // ApplicationMember.applicationId stays scalar.
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        },
+        '/applications/{applicationId}/notes/{noteId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationNote' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application' }
+              }
+            }
+          },
+          ApplicationNote: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              memberId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'ApplicationMember' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    const noteProps = result.components.schemas.ApplicationNote.properties;
+    assert.strictEqual(noteProps.memberId, undefined, 'memberId removed by lateral expansion');
+    assert.ok(noteProps.member, 'ApplicationNote.member should be inlined');
+
+    const memberProps = result.components.schemas.ApplicationMember.properties;
+    assert.ok(memberProps.applicationId, 'inlined ApplicationMember.applicationId stays scalar');
+    assert.strictEqual(memberProps.application, undefined, 'no embedded application — cascade stopped');
+  });
+
+  await t.test('direction gate - ReviewProgressEntry lateral expansion stops cascade', () => {
+    // Same shape as the ApplicationNote case: ReviewProgressEntry is a sibling of
+    // ApplicationMember under the application URL tree.
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        },
+        '/applications/{applicationId}/review-progress/{entryId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ReviewProgressEntry' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application' }
+              }
+            }
+          },
+          ReviewProgressEntry: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              memberId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'ApplicationMember' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    const entryProps = result.components.schemas.ReviewProgressEntry.properties;
+    assert.strictEqual(entryProps.memberId, undefined, 'memberId removed by lateral expansion');
+    assert.ok(entryProps.member, 'ReviewProgressEntry.member should be inlined');
+
+    const memberProps = result.components.schemas.ApplicationMember.properties;
+    assert.ok(memberProps.applicationId, 'inlined ApplicationMember.applicationId stays scalar');
+    assert.strictEqual(memberProps.application, undefined, 'no embedded application — cascade stopped');
+  });
+
   // ===========================================================================
   // Dot notation — spec transform
   // ===========================================================================
