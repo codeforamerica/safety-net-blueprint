@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `resolveRelationships` is now direction-aware: when the global style is `expand`, back-references (child schemas pointing up at their parent in the URL hierarchy) are silently downgraded to `links-only` so the scalar FK is preserved instead of inlining the parent into every child. Per-field `style: expand` overrides on back-references are still honored and emit a warning so the upward-inlining choice is visible. See [safety-net-blueprint#324](https://github.com/codeforamerica/safety-net-blueprint/issues/324).
+
+### Added
+
+- `--verbose` flag on `scripts/resolve.js` prints a per-schema relationship-resolution summary (forward expansions, explicit upward expansions, back-refs kept scalar, links-only fields).
+- New exported helpers from `src/overlay/relationship-resolver.js`: `findPathsForSchema`, `isBackReference`, `summarizeResolverDecisions`.
+- `resolveRelationships` now returns a `decisions` field on its result alongside `expandRenames` and `linksData`, recording per-schema decision categories suitable for verbose reporting.
+
 ## [1.2.0] - 2026-03-17
 
 ### Added
