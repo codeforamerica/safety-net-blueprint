@@ -640,12 +640,33 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     const expandFields = [];
 
     for (const field of fields) {
-      const effectiveStyle = field.relationship.style || globalStyle;
+      const isExplicitStyle = !!field.relationship.style;
+      let effectiveStyle = field.relationship.style || globalStyle;
 
       if (PLANNED_STYLES.includes(effectiveStyle)) {
         throw new Error(
           `Style "${effectiveStyle}" is not yet implemented. Supported styles: ${SUPPORTED_STYLES.join(', ')}.`
         );
+      }
+
+      // Direction gate: `expand` is for forward navigation (resource → its
+      // dependencies). Applying it to a back-reference (child → parent) would
+      // inline the parent object into the child and, transitively, into every
+      // place the child appears — never the design intent. When the global
+      // default would expand a back-reference, silently downgrade to
+      // `links-only`. When an author explicitly opted into expand on a
+      // back-reference, honor it but emit a warning so reviewers see the choice.
+      if (effectiveStyle === 'expand') {
+        const isBackRef = isBackReference(spec, field.schemaName, field.relationship.resource, warnings);
+        if (isBackRef) {
+          if (isExplicitStyle) {
+            warnings.push(
+              `Explicit expand on back-reference ${field.schemaName}.${field.propertyName} → ${field.relationship.resource}; upward inlining was opted into by author.`
+            );
+          } else {
+            effectiveStyle = 'links-only';
+          }
+        }
       }
 
       if (effectiveStyle === 'expand') {
