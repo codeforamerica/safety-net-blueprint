@@ -12,7 +12,8 @@ import {
   buildExamplesIndex,
   resolveExampleRelationships,
   findPathsForSchema,
-  isBackReference
+  isBackReference,
+  summarizeResolverDecisions
 } from '../../src/overlay/relationship-resolver.js';
 
 test('relationship-resolver tests', async (t) => {
@@ -443,6 +444,31 @@ test('relationship-resolver tests', async (t) => {
     assert.strictEqual(isBackReference(spec, 'ApplicationMember', 'Application'), true);
     // ApplicationMember → Person: forward (top-level person, not above member in hierarchy)
     assert.strictEqual(isBackReference(spec, 'ApplicationMember', 'Person'), false);
+  });
+
+  await t.test('isBackReference - item/collection variants of a path do not trigger multi-path warning', () => {
+    // The common REST convention serves a resource at both its collection path
+    // (/foo) and its item path (/foo/{id}). They represent the same
+    // hierarchical position and should not be treated as ambiguous.
+    const spec = {
+      paths: {
+        '/applications/{applicationId}/members': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        },
+        '/applications/{applicationId}/notes/{noteId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationNote' } } } } } }
+        }
+      }
+    };
+    const warnings = [];
+    isBackReference(spec, 'ApplicationNote', 'ApplicationMember', warnings);
+    assert.ok(
+      !warnings.some(w => w.toLowerCase().includes('multiple paths')),
+      `Did not expect multi-path warning for item/collection variants; got: ${JSON.stringify(warnings)}`
+    );
   });
 
   await t.test('isBackReference - emits warning when target served at multiple paths', () => {
@@ -1163,6 +1189,185 @@ test('relationship-resolver tests', async (t) => {
     const memberProps = result.components.schemas.ApplicationMember.properties;
     assert.ok(memberProps.applicationId, 'inlined ApplicationMember.applicationId stays scalar');
     assert.strictEqual(memberProps.application, undefined, 'no embedded application — cascade stopped');
+  });
+
+  // ===========================================================================
+  // Resolver decisions
+  // ===========================================================================
+
+  await t.test('resolver decisions - tracks per-schema field categorization under global expand', () => {
+    const spec = {
+      paths: {
+        '/persons/{personId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Person' } } } } } }
+        },
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Person: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              personId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Person' }
+              },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { decisions } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    assert.ok(decisions, 'decisions should be returned');
+    const memberDecisions = decisions['ApplicationMember'];
+    assert.ok(memberDecisions, 'decisions for ApplicationMember should exist');
+    assert.deepStrictEqual(
+      memberDecisions.expandedForward,
+      [{ propertyName: 'personId', resource: 'Person' }],
+      'forward expansion tracked'
+    );
+    assert.deepStrictEqual(
+      memberDecisions.backRefsDowngraded,
+      [{ propertyName: 'applicationId', resource: 'Application' }],
+      'back-ref downgrade tracked'
+    );
+    assert.deepStrictEqual(memberDecisions.expandedExplicitBackRef, [], 'no explicit overrides');
+    assert.deepStrictEqual(memberDecisions.linksOnly, [], 'no links-only fields under global expand');
+  });
+
+  await t.test('resolver decisions - tracks explicit back-reference override', () => {
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application', style: 'expand' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { decisions } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    const memberDecisions = decisions['ApplicationMember'];
+    assert.deepStrictEqual(
+      memberDecisions.expandedExplicitBackRef,
+      [{ propertyName: 'applicationId', resource: 'Application' }],
+      'explicit back-ref override tracked'
+    );
+    assert.deepStrictEqual(memberDecisions.backRefsDowngraded, [], 'no downgrade (override won)');
+    assert.deepStrictEqual(memberDecisions.expandedForward, [], 'no forward expansions');
+  });
+
+  await t.test('resolver decisions - tracks links-only fields under global links-only', () => {
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { decisions } = resolveRelationships(spec, 'links-only', schemaIndex);
+
+    const memberDecisions = decisions['ApplicationMember'];
+    assert.deepStrictEqual(
+      memberDecisions.linksOnly,
+      [{ propertyName: 'applicationId', resource: 'Application' }],
+      'links-only field tracked under global links-only'
+    );
+    assert.deepStrictEqual(memberDecisions.backRefsDowngraded, [], 'no downgrades when global is already links-only');
+  });
+
+  await t.test('summarizeResolverDecisions - produces per-schema counts', () => {
+    const decisions = {
+      MemberIncome: {
+        expandedForward: [{ propertyName: 'personId', resource: 'Person' }],
+        expandedExplicitBackRef: [],
+        backRefsDowngraded: [
+          { propertyName: 'applicationId', resource: 'Application' },
+          { propertyName: 'memberId', resource: 'ApplicationMember' }
+        ],
+        linksOnly: []
+      },
+      Task: {
+        expandedForward: [],
+        expandedExplicitBackRef: [],
+        backRefsDowngraded: [],
+        linksOnly: [{ propertyName: 'assignedToId', resource: 'User' }]
+      }
+    };
+
+    const summary = summarizeResolverDecisions(decisions);
+
+    assert.deepStrictEqual(summary.MemberIncome, {
+      expandedForward: 1,
+      expandedExplicitBackRef: 0,
+      backRefsDowngraded: 2,
+      linksOnly: 0,
+      total: 3
+    });
+    assert.deepStrictEqual(summary.Task, {
+      expandedForward: 0,
+      expandedExplicitBackRef: 0,
+      backRefsDowngraded: 0,
+      linksOnly: 1,
+      total: 1
+    });
   });
 
   // ===========================================================================
