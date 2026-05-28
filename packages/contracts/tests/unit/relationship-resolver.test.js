@@ -2041,4 +2041,135 @@ test('relationship-resolver tests', async (t) => {
 
     assert.deepStrictEqual(result.QueueExample1, { id: 'queue-001', name: 'SNAP intake' });
   });
+
+  // ===========================================================================
+  // Integration: real intake spec under global expand
+  // ===========================================================================
+
+  await t.test('integration - intake spec under global expand keeps all 16 back-refs scalar', async () => {
+    // Loads the real packages/contracts/intake-openapi.yaml and confirms the
+    // direction gate behaves correctly against the full spec. Acts as a
+    // regression guard for the design intent documented in the GH issue.
+    const { readFileSync } = await import('fs');
+    const { join, dirname } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const yaml = (await import('js-yaml')).default;
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const contractsDir = join(__dirname, '../..');
+    const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+
+    // Build a minimal schema index from intake only. Cross-spec targets (Person,
+    // External) will warn during expand but the field-rename happens regardless,
+    // which is what the assertions below check.
+    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const schemas = result.components.schemas;
+
+    // The 16 back-references documented in safety-net-blueprint#324.
+    // Each tuple: [containingSchema, scalarFieldName].
+    const backRefs = [
+      ['ApplicationMember', 'applicationId'],
+      ['MemberIncome', 'memberId'],
+      ['MemberIncome', 'applicationId'],
+      ['MemberExpense', 'memberId'],
+      ['MemberExpense', 'applicationId'],
+      ['MemberAsset', 'memberId'],
+      ['MemberAsset', 'applicationId'],
+      ['MemberEmployment', 'memberId'],
+      ['MemberEmployment', 'applicationId'],
+      ['MemberHealthCoverage', 'memberId'],
+      ['MemberHealthCoverage', 'applicationId'],
+      ['ApplicationHousehold', 'applicationId'],
+      ['ApplicationNote', 'applicationId'],
+      ['Verification', 'applicationId'],
+      ['Interview', 'applicationId'],
+      ['ReviewProgressEntry', 'applicationId']
+    ];
+
+    for (const [schemaName, fieldName] of backRefs) {
+      const props = gatherSchemaProperties(schemas[schemaName]);
+      assert.ok(
+        props[fieldName],
+        `${schemaName}.${fieldName} should remain a scalar field (back-ref kept scalar)`
+      );
+      const renamed = fieldName.replace(/Id$/, '');
+      assert.strictEqual(
+        props[renamed], undefined,
+        `${schemaName}.${renamed} should NOT exist — back-ref was incorrectly expanded`
+      );
+    }
+  });
+
+  await t.test('integration - intake spec expands forward references on member writable schemas', async () => {
+    const { readFileSync } = await import('fs');
+    const { join, dirname } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const yaml = (await import('js-yaml')).default;
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const contractsDir = join(__dirname, '../..');
+    const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+
+    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const schemas = result.components.schemas;
+
+    // ApplicationMemberWritable.personId is a forward reference (Person is a
+    // top-level resource in its own URL tree, not above ApplicationMember).
+    // Under global expand it should be renamed to `person`.
+    const writableProps = gatherSchemaProperties(schemas.ApplicationMemberWritable);
+    assert.strictEqual(writableProps.personId, undefined, 'personId should be renamed by forward expansion');
+    assert.ok(writableProps.person, 'ApplicationMemberWritable.person should be inlined');
+  });
+
+  await t.test('integration - intake spec expands laterals but cascade stops at one level', async () => {
+    const { readFileSync } = await import('fs');
+    const { join, dirname } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const yaml = (await import('js-yaml')).default;
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const contractsDir = join(__dirname, '../..');
+    const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+
+    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const schemas = result.components.schemas;
+
+    // Lateral expansions: VerificationWritable, ApplicationNoteWritable,
+    // ReviewProgressEntryWritable each have memberId → ApplicationMember.
+    // Under global expand they should be renamed to `member`.
+    for (const laterName of ['VerificationWritable', 'ApplicationNoteWritable', 'ReviewProgressEntryWritable']) {
+      const props = gatherSchemaProperties(schemas[laterName]);
+      assert.strictEqual(props.memberId, undefined, `${laterName}.memberId should be renamed by lateral expansion`);
+      assert.ok(props.member, `${laterName}.member should be inlined`);
+    }
+
+    // Cascade stops: the local ApplicationMember (referenced by the lateral's
+    // `member` $ref) still has its applicationId as a scalar. Any consumer
+    // following the $ref reaches an ApplicationMember whose applicationId
+    // never expanded into the full Application object.
+    const memberProps = gatherSchemaProperties(schemas.ApplicationMember);
+    assert.ok(memberProps.applicationId, 'ApplicationMember.applicationId still scalar (cascade stopped)');
+    assert.strictEqual(memberProps.application, undefined, 'no embedded Application — cascade stopped');
+  });
 });
+
+// Walk a schema (possibly allOf-composed) and return the merged properties
+// from all branches. Used by the integration tests to inspect the resolved
+// shape regardless of where the property lives.
+function gatherSchemaProperties(schema) {
+  const merged = {};
+  if (!schema) return merged;
+  if (schema.properties) Object.assign(merged, schema.properties);
+  if (Array.isArray(schema.allOf)) {
+    for (const branch of schema.allOf) {
+      Object.assign(merged, gatherSchemaProperties(branch));
+    }
+  }
+  return merged;
+}
