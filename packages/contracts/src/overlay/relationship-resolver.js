@@ -282,12 +282,12 @@ function isBackReference(spec, containingSchemaName, targetResourceName, warning
   if (containingPaths.length === 0 || targetPaths.length === 0) return false;
 
   if (Array.isArray(warnings)) {
-    if (targetPaths.length > 1) {
+    if (targetPaths.length > 1 && !pathsAreItemCollectionVariants(targetPaths)) {
       warnings.push(
         `${targetResourceName} is served at multiple paths (${targetPaths.join(', ')}); direction detection picked the shortest.`
       );
     }
-    if (containingPaths.length > 1) {
+    if (containingPaths.length > 1 && !pathsAreItemCollectionVariants(containingPaths)) {
       warnings.push(
         `${containingSchemaName} is served at multiple paths (${containingPaths.join(', ')}); direction detection picked the shortest.`
       );
@@ -304,6 +304,34 @@ function pickCanonicalPath(paths) {
     if (a.length !== b.length) return a.length - b.length;
     return a < b ? -1 : a > b ? 1 : 0;
   })[0];
+}
+
+/**
+ * Decide whether all paths in the set represent the same hierarchical
+ * position. A resource is commonly served at several related paths — its
+ * collection (`/foo`), its item (`/foo/{id}`), and any number of action
+ * endpoints attached to the item (`/foo/{id}/submit`, `/foo/{id}/close`).
+ * Because `findPathsForSchema` only returns paths whose request/response
+ * directly $refs the same schema, all paths in the input list serve the same
+ * resource by construction; the only question is whether they share a common
+ * hierarchical root.
+ *
+ * Returns true when the paths share at least one common initial segment
+ * (so they're related representations of the same resource); false when they
+ * diverge at the root (genuinely separate access points, e.g. `/users/{id}`
+ * vs `/admin/users/{id}`).
+ */
+function pathsAreItemCollectionVariants(paths) {
+  if (paths.length < 2) return false;
+  const allSegs = paths.map(pathSegments);
+  const minLen = Math.min(...allSegs.map(s => s.length));
+  for (let i = 0; i < minLen; i++) {
+    const seg = allSegs[0][i];
+    for (let j = 1; j < allSegs.length; j++) {
+      if (!segmentMatches(allSegs[j][i], seg)) return false;
+    }
+  }
+  return true;
 }
 
 function pathIsStrictPrefix(maybePrefix, fullPath) {
@@ -592,14 +620,17 @@ const PLANNED_STYLES = ['include', 'embed'];
  * @param {object} spec - Parsed OpenAPI spec (deep-cloned before calling)
  * @param {string} globalStyle - Default style from config (default: 'links-only')
  * @param {Map} schemaIndex - Schema index from buildSchemaIndex()
- * @returns {{ result: object, warnings: string[], expandRenames: Array, linksData: Array }}
+ * @returns {{ result: object, warnings: string[], expandRenames: Array, linksData: Array, decisions: object }}
  *   expandRenames: fields that were expanded, for use with resolveExampleRelationships
  *   linksData: fields that got links-only treatment, for use with resolveExampleRelationships
+ *   decisions: per-schema record of how each annotated FK was treated, suitable for
+ *     verbose summary reporting via summarizeResolverDecisions
  */
 function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = new Map()) {
   const warnings = [];
   const expandRenames = [];
   const linksData = [];
+  const decisions = {};
 
   // Validate global style
   if (PLANNED_STYLES.includes(globalStyle)) {
@@ -610,7 +641,7 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
   const relationships = discoverRelationships(spec);
   if (relationships.length === 0) {
-    return { result: spec, warnings, expandRenames };
+    return { result: spec, warnings, expandRenames, linksData, decisions };
   }
 
   // Warn about unknown resource references
@@ -639,9 +670,20 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     const linksOnlyFields = [];
     const expandFields = [];
 
+    if (!decisions[schemaName]) {
+      decisions[schemaName] = {
+        expandedForward: [],
+        expandedExplicitBackRef: [],
+        backRefsDowngraded: [],
+        linksOnly: []
+      };
+    }
+
     for (const field of fields) {
       const isExplicitStyle = !!field.relationship.style;
       let effectiveStyle = field.relationship.style || globalStyle;
+      let wasBackRefDowngrade = false;
+      let wasExplicitBackRefOverride = false;
 
       if (PLANNED_STYLES.includes(effectiveStyle)) {
         throw new Error(
@@ -663,10 +705,26 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
             warnings.push(
               `Explicit expand on back-reference ${field.schemaName}.${field.propertyName} → ${field.relationship.resource}; upward inlining was opted into by author.`
             );
+            wasExplicitBackRefOverride = true;
           } else {
             effectiveStyle = 'links-only';
+            wasBackRefDowngrade = true;
           }
         }
+      }
+
+      const decisionRecord = {
+        propertyName: field.propertyName,
+        resource: field.relationship.resource
+      };
+      if (wasBackRefDowngrade) {
+        decisions[schemaName].backRefsDowngraded.push(decisionRecord);
+      } else if (wasExplicitBackRefOverride) {
+        decisions[schemaName].expandedExplicitBackRef.push(decisionRecord);
+      } else if (effectiveStyle === 'expand') {
+        decisions[schemaName].expandedForward.push(decisionRecord);
+      } else {
+        decisions[schemaName].linksOnly.push(decisionRecord);
       }
 
       if (effectiveStyle === 'expand') {
@@ -703,7 +761,39 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     }
   }
 
-  return { result: spec, warnings, expandRenames, linksData };
+  return { result: spec, warnings, expandRenames, linksData, decisions };
+}
+
+/**
+ * Convert a `decisions` map (as returned by resolveRelationships) into a
+ * per-schema count summary suitable for verbose logging.
+ *
+ * Each schema entry reports:
+ *   - expandedForward: number of forward FK fields expanded
+ *   - expandedExplicitBackRef: number of back-refs expanded via per-field override
+ *   - backRefsDowngraded: number of back-refs the direction gate kept as scalar
+ *   - linksOnly: number of fields rendered as links-only
+ *   - total: sum of all four (equals the number of annotated fields on the schema)
+ *
+ * @param {object} decisions - Per-schema decision arrays
+ * @returns {object} Per-schema count summary keyed by schemaName
+ */
+function summarizeResolverDecisions(decisions) {
+  const summary = {};
+  for (const [schemaName, perSchema] of Object.entries(decisions || {})) {
+    const expandedForward = perSchema.expandedForward.length;
+    const expandedExplicitBackRef = perSchema.expandedExplicitBackRef.length;
+    const backRefsDowngraded = perSchema.backRefsDowngraded.length;
+    const linksOnly = perSchema.linksOnly.length;
+    summary[schemaName] = {
+      expandedForward,
+      expandedExplicitBackRef,
+      backRefsDowngraded,
+      linksOnly,
+      total: expandedForward + expandedExplicitBackRef + backRefsDowngraded + linksOnly
+    };
+  }
+  return summary;
 }
 
 // =============================================================================
@@ -888,5 +978,6 @@ export {
   buildExamplesIndex,
   resolveExampleRelationships,
   findPathsForSchema,
-  isBackReference
+  isBackReference,
+  summarizeResolverDecisions
 };
