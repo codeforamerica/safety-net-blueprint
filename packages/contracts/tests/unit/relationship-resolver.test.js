@@ -835,6 +835,224 @@ test('relationship-resolver tests', async (t) => {
   });
 
   // ===========================================================================
+  // resolveRelationships — direction gate
+  // ===========================================================================
+
+  await t.test('direction gate - global expand keeps back-references as scalar (links-only)', () => {
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    const props = result.components.schemas.ApplicationMember.properties;
+    assert.ok(props.applicationId, 'applicationId scalar should remain');
+    assert.strictEqual(props.application, undefined, 'no embedded application field should be created');
+    assert.strictEqual(props.applicationId['x-relationship'], undefined, 'x-relationship should be stripped (links-only treatment)');
+    assert.ok(props.links, 'links object should be added for the back-reference');
+    assert.ok(props.links.properties.application, 'links.application entry should exist');
+  });
+
+  await t.test('direction gate - global expand expands forward references', () => {
+    const spec = {
+      paths: {
+        '/persons/{personId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Person' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Person: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              personId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Person' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    const props = result.components.schemas.ApplicationMember.properties;
+    assert.strictEqual(props.personId, undefined, 'personId should be removed (forward expanded)');
+    assert.ok(props.person, 'person should be inlined');
+  });
+
+  await t.test('direction gate - per-field expand on back-reference overrides direction (with warning)', () => {
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application', style: 'expand' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result, warnings } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    const props = result.components.schemas.ApplicationMember.properties;
+    assert.strictEqual(props.applicationId, undefined, 'applicationId removed by explicit expand');
+    assert.ok(props.application, 'application should be inlined per explicit override');
+    assert.ok(
+      warnings.some(w => w.includes('ApplicationMember.applicationId') && w.toLowerCase().includes('back-reference')),
+      `Expected a back-reference override warning; got: ${JSON.stringify(warnings)}`
+    );
+  });
+
+  await t.test('direction gate - per-field links-only on back-reference keeps scalar (no warning)', () => {
+    // Existing behavior: explicit per-field links-only beats global expand regardless of direction.
+    // No back-reference-override warning should fire (the override is in the conservative direction).
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application', style: 'links-only' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result, warnings } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    const props = result.components.schemas.ApplicationMember.properties;
+    assert.ok(props.applicationId, 'applicationId scalar should remain');
+    assert.strictEqual(props.application, undefined, 'no embedded application field');
+    assert.ok(props.links, 'links object should be added');
+    assert.ok(
+      !warnings.some(w => w.toLowerCase().includes('back-reference')),
+      `Did not expect a back-reference warning; got: ${JSON.stringify(warnings)}`
+    );
+  });
+
+  await t.test('direction gate - global expand on a lateral expands but cascade stops at one level', () => {
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        },
+        '/applications/{applicationId}/verifications/{verificationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Verification' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application' }
+              }
+            }
+          },
+          Verification: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              memberId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'ApplicationMember' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    // Verification.memberId is a lateral (forward) → expand to Verification.member
+    const verificationProps = result.components.schemas.Verification.properties;
+    assert.strictEqual(verificationProps.memberId, undefined, 'memberId removed by lateral expansion');
+    assert.ok(verificationProps.member, 'Verification.member should be inlined');
+
+    // ApplicationMember.applicationId is a back-reference → stays scalar (cascade stops here)
+    const memberProps = result.components.schemas.ApplicationMember.properties;
+    assert.ok(memberProps.applicationId, 'inlined ApplicationMember.applicationId stays scalar');
+    assert.strictEqual(memberProps.application, undefined, 'no embedded application — cascade stopped');
+  });
+
+  // ===========================================================================
   // Dot notation — spec transform
   // ===========================================================================
 
