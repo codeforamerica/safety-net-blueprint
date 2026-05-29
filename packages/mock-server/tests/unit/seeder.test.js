@@ -220,6 +220,100 @@ test('Database Seeder Tests', async (t) => {
     console.log(`  ✓ Sub-collection "${target}" cleared on reseed`);
   });
 
+  await t.test('seedAllDatabases - does not assign sub-collection records to the parent collection when prefixes overlap', async () => {
+    // Regression test for: "Application" prefix matches "ApplicationMemberExample1"
+    // via startsWith, causing member records to be seeded into applications.db.
+    // After the fix, longest-prefix matching assigns each key to the most
+    // specific collection only.
+    clearAll('applications');
+    clearAll('application-members');
+
+    const api = {
+      name: 'intake',
+      serverBasePath: '/intake',
+      endpoints: [
+        { path: '/intake/applications' },
+        { path: '/intake/applications/{applicationId}' },
+        { path: '/intake/applications/{applicationId}/members' },
+        { path: '/intake/applications/{applicationId}/members/{memberId}' },
+      ],
+    };
+
+    const examples = {
+      ApplicationExample1: {
+        id: 'b0000001-0000-4000-8000-000000000001',
+        status: 'submitted',
+        programs: ['snap'],
+        channel: 'online',
+      },
+      ApplicationMemberExample1: {
+        id: 'c0000001-0000-4000-8000-000000000001',
+        applicationId: 'b0000001-0000-4000-8000-000000000001',
+        roles: ['primary_applicant'],
+      },
+    };
+
+    // Write a temporary seed file and use a local seedAllDatabases call
+    // by importing the internal function via a spy-friendly path.
+    // Instead: directly exercise extractResourcesForCollection behaviour via
+    // seedAllDatabases with a real tmp dir.
+    const { writeFileSync, mkdtempSync } = await import('fs');
+    const { join: pathJoin } = await import('path');
+    const { tmpdir } = await import('os');
+    const tmpSeedDir = mkdtempSync(pathJoin(tmpdir(), 'snb-test-'));
+    const yaml = (await import('js-yaml')).default;
+    writeFileSync(pathJoin(tmpSeedDir, 'intake.yaml'), yaml.dump(examples));
+
+    const { seedAllDatabases: seed } = await import('../../src/seeder.js');
+    seed([api], '', tmpSeedDir);
+
+    const appsInApplications = findAll('applications', {}).total;
+    const membersInApplications = findAll('applications', { id: 'c0000001-0000-4000-8000-000000000001' }).total;
+    const membersInMembers = findAll('application-members', {}).total;
+
+    assert.strictEqual(appsInApplications, 1, 'applications collection should have exactly 1 record');
+    assert.strictEqual(membersInApplications, 0, 'member record must not appear in applications collection');
+    assert.strictEqual(membersInMembers, 1, 'application-members collection should have exactly 1 record');
+    console.log('  ✓ Prefix collision: member records correctly isolated to application-members');
+
+    clearAll('applications');
+    clearAll('application-members');
+  });
+
+  await t.test('seedAllDatabases - seeds from seedDir when it differs from specsDir', async () => {
+    // Verifies that passing a separate seedDir causes seed data to be loaded
+    // from that directory rather than from specsDir. This is the behaviour that
+    // --seed=<dir> in setup.js exposes on the CLI.
+    clearAll('persons');
+
+    const { writeFileSync, mkdtempSync } = await import('fs');
+    const { join: pathJoin } = await import('path');
+    const { tmpdir } = await import('os');
+    const yaml = (await import('js-yaml')).default;
+
+    const tmpSeedDir = mkdtempSync(pathJoin(tmpdir(), 'snb-seed-test-'));
+    writeFileSync(pathJoin(tmpSeedDir, 'persons.yaml'), yaml.dump({
+      PersonExample1: {
+        id: 'f0000001-0000-4000-8000-000000000001',
+        givenName: 'Seed',
+        familyName: 'Dir Test',
+        dateOfBirth: '1990-01-01',
+      },
+    }));
+
+    // Use the real specs dir so API discovery works, but a custom seed dir
+    // that only has a persons entry — confirming seeds come from seedDir.
+    const apiSpecs = await loadAllSpecs({ specsDir });
+    const { seedAllDatabases: seed } = await import('../../src/seeder.js');
+    seed(apiSpecs, specsDir, tmpSeedDir);
+
+    const found = findAll('persons', { id: 'f0000001-0000-4000-8000-000000000001' });
+    assert.strictEqual(found.total, 1, 'record from custom seedDir should be present in persons');
+    console.log('  ✓ seedDir correctly overrides specsDir for seed loading');
+
+    clearAll('persons');
+  });
+
   await t.test('deriveAllCollectionNames - falls back to api object for APIs with no endpoints', () => {
     // The seeder-local deriveCollectionName(api) reads api.baseResource or
     // api.name. Endpoints absent → fallback path.
