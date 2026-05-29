@@ -20,7 +20,7 @@ machines:
         context:
           - members: {from: intake/application-members, where: {applicationId: $object.id}}
         guards:
-          - actors: [applicant, caseworker]
+          - actors: [applicant, case_worker]
             conditions: [{any: [callerIsApplicant, callerIsCaseworker]}]
         transition: {from: draft, to: submitted}
         steps:
@@ -37,7 +37,7 @@ machines:
       - id: complete-review
         description: POST /applications/{applicationId}/complete-review — Caseworker signals data collection is complete and the application is ready for determination
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: under_review}
         steps:
@@ -70,7 +70,7 @@ machines:
       - id: close
         description: POST /applications/{applicationId}/close — Marks a reviewed application as closed after all determinations are complete
         guards:
-          - actors: [caseworker, supervisor, system]
+          - actors: [case_worker, supervisor, system]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor, callerIsSystem]}]
         transition: {from: under_review, to: closed}
         steps:
@@ -82,7 +82,7 @@ machines:
           request:
             $ref: '#/$defs/WithdrawApplicationRequest'
         guards:
-          - actors: [applicant, caseworker, supervisor]
+          - actors: [applicant, case_worker, supervisor]
             conditions: [{any: [callerIsApplicant, callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [submitted, under_review], to: withdrawn}
         steps:
@@ -333,7 +333,7 @@ machines:
           request:
             $ref: '#/$defs/WaiveVerificationRequest'
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: waived}
         steps:
@@ -345,7 +345,7 @@ machines:
           request:
             $ref: '#/$defs/MarkCannotVerifyRequest'
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: cannot_verify}
         steps:

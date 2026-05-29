@@ -1,0 +1,27 @@
+# Role type definitions — shared across OpenAPI components and state machine schemas.
+#
+# This file is the canonical source for valid role values. It is referenced by:
+#   - schemas/state-machine-schema.yaml (actors.items) — enforces valid roles at validation time
+#   - components/auth.yaml (RoleType) — must be kept in sync manually (OpenAPI cannot $ref JSON Schema)
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: RoleType
+type: string
+description: |
+  Authorization roles that determine base permissions and data scoping.
+
+  - applicant: Self-service access to own applications (scoped by personId)
+  - case_worker: Process applications for assigned county
+  - supervisor: Oversee case workers, approve determinations (may span counties)
+  - county_admin: Administer county staff and configuration
+  - state_admin: Statewide oversight and administration (all counties)
+  - partner_readonly: External partner with limited read access
+  - system: Automated service account for background and inter-service operations
+enum:
+  - applicant
+  - case_worker
+  - supervisor
+  - county_admin
+  - state_admin
+  - partner_readonly
+  - system
