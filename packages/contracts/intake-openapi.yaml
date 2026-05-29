@@ -2211,13 +2211,25 @@ components:
       type: object
       description: Client-writable fields for a verification obligation record.
       properties:
-        memberId:
+        sourceId:
           type: string
           format: uuid
-          description: Member this obligation is for. Null for household-level obligations (e.g., proof of residency).
+          description: >
+            ID of the subject being verified. Points to an ApplicationMember when sourceType
+            is `member`, or to an income record when sourceType is `income`. Null for
+            household-level obligations (e.g., proof of residency).
           nullable: true
           x-relationship:
-            resource: ApplicationMember
+            resource: Polymorphic
+        sourceType:
+          type: string
+          description: >
+            Identifies what sourceId refers to. Required when sourceId is set; null for
+            household-level obligations.
+          nullable: true
+          enum:
+            - member
+            - income
         category:
           type: string
           description: Verification obligation category.
