@@ -60,6 +60,14 @@ async function createMember(applicationId, programs = ['snap']) {
   return res.json();
 }
 
+async function createIncome(applicationId, memberId, overrides = {}) {
+  const res = await fetch(`${BASE_URL}/intake/applications/${applicationId}/members/${memberId}/incomes`, {
+    method: 'POST', headers: CASEWORKER,
+    body: { type: 'employed', amount: 1500, frequency: 'monthly', ...overrides },
+  });
+  return res.json();
+}
+
 // ---------------------------------------------------------------------------
 // Application state machine — lifecycle operations
 // ---------------------------------------------------------------------------
@@ -351,40 +359,59 @@ async function testVerificationLifecycle() {
 async function testCreateVerificationChecklistRule() {
   section('create-verification-checklist-rule: submit → verifications created [REQUIRES: spec update]');
 
-  await test('SNAP submission creates income + identity (electronic) + residency (document) verifications', async () => {
-    const { id: appId } = await createAndSubmitApp(['snap']);
+  await test('SNAP submission creates income (per source) + identity (per member, electronic) + residency (household, document) verifications', async () => {
+    const createRes = await fetch(`${BASE_URL}${APP}`, {
+      method: 'POST', headers: APPLICANT,
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    const app = await createRes.json();
+    const member = await createMember(app.id, ['snap']);
+    const income = await createIncome(app.id, member.id);
+    await fetch(`${BASE_URL}${APP}/${app.id}/submit`, { method: 'POST', headers: APPLICANT });
 
-    const res = await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${appId}&limit=20`);
-    assert.strictEqual(res.status, 200, `expected 200, got ${res.status}`);
-    const { items } = await res.json();
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
 
-    const income = items.find(v => v.category === 'income');
-    assert.ok(income, 'income Verification should be created');
-    assert.strictEqual(income.verificationType, 'electronic');
+    const incomeV = items.find(v => v.category === 'income');
+    assert.ok(incomeV, 'income Verification should be created');
+    assert.strictEqual(incomeV.verificationType, 'electronic');
+    assert.strictEqual(incomeV.sourceType, 'income', 'income verification sourceType should be income');
+    assert.strictEqual(incomeV.sourceId, income.id, 'income verification sourceId should be the income record id');
 
     const identity = items.find(v => v.category === 'identity');
     assert.ok(identity, 'identity Verification should be created');
     assert.strictEqual(identity.verificationType, 'electronic');
+    assert.strictEqual(identity.sourceType, 'member', 'identity verification sourceType should be member');
+    assert.strictEqual(identity.sourceId, member.id, 'identity verification sourceId should be the member id');
 
     const residency = items.find(v => v.category === 'residency');
     assert.ok(residency, 'residency Verification should be created');
     assert.strictEqual(residency.verificationType, 'document');
+    assert.strictEqual(residency.sourceId, null, 'residency is household-level — sourceId should be null');
+    assert.strictEqual(residency.sourceType, null, 'residency is household-level — sourceType should be null');
   });
 
-  await test('Medicaid submission creates citizenship + immigration (electronic) verifications', async () => {
-    const { id: appId } = await createAndSubmitApp(['medicaid']);
+  await test('Medicaid submission creates citizenship + immigration (per member, electronic) verifications', async () => {
+    const createRes = await fetch(`${BASE_URL}${APP}`, {
+      method: 'POST', headers: APPLICANT,
+      body: { programs: ['medicaid'], channel: 'online' },
+    });
+    const app = await createRes.json();
+    const member = await createMember(app.id, ['medicaid']);
+    await fetch(`${BASE_URL}${APP}/${app.id}/submit`, { method: 'POST', headers: APPLICANT });
 
-    const res = await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${appId}&limit=20`);
-    assert.strictEqual(res.status, 200);
-    const { items } = await res.json();
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
 
     const citizenship = items.find(v => v.category === 'citizenship');
     assert.ok(citizenship, 'citizenship Verification should be created');
     assert.strictEqual(citizenship.verificationType, 'electronic');
+    assert.strictEqual(citizenship.sourceType, 'member');
+    assert.strictEqual(citizenship.sourceId, member.id);
 
     const immigration = items.find(v => v.category === 'immigration');
     assert.ok(immigration, 'immigration Verification should be created');
     assert.strictEqual(immigration.verificationType, 'electronic');
+    assert.strictEqual(immigration.sourceType, 'member');
+    assert.strictEqual(immigration.sourceId, member.id);
   });
 
   await test('SNAP + Medicaid submission creates all five categories', async () => {
@@ -568,6 +595,9 @@ async function testCallCompletedRules() {
     const docFallback = items.find(v => v.category === 'identity' && v.verificationType === 'document' && v.id !== verificationId);
     assert.ok(docFallback, 'a document-type identity Verification should be created as fallback');
     assert.strictEqual(docFallback.status, 'pending', 'fallback Verification should start pending');
+    const original = await (await fetch(`${BASE_URL}${VERIFICATIONS}/${verificationId}`)).json();
+    assert.strictEqual(docFallback.sourceId, original.sourceId, 'fallback should carry over sourceId from original');
+    assert.strictEqual(docFallback.sourceType, original.sourceType, 'fallback should carry over sourceType from original');
   });
 
   await test('call.completed for unknown verificationId — no error, no change', async () => {
@@ -1185,6 +1215,70 @@ async function testApplicationNotes() {
 }
 
 // ---------------------------------------------------------------------------
+// Income verification per source
+// Verifies that income verifications are created per income source, not per member
+// REQUIRES: /verifications, /application-members in spec, income sub-resource
+// ---------------------------------------------------------------------------
+
+async function testIncomeVerificationPerSource() {
+  section('Income verification: one per income source');
+
+  await test('member with two income records → two income verifications, each pointing to the correct source', async () => {
+    const createRes = await fetch(`${BASE_URL}${APP}`, {
+      method: 'POST', headers: APPLICANT,
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    const app = await createRes.json();
+    const member = await createMember(app.id, ['snap']);
+    const income1 = await createIncome(app.id, member.id, { type: 'employed', amount: 1500, frequency: 'monthly' });
+    const income2 = await createIncome(app.id, member.id, { type: 'self_employed', amount: 500, frequency: 'monthly' });
+    await fetch(`${BASE_URL}${APP}/${app.id}/submit`, { method: 'POST', headers: APPLICANT });
+
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
+    const incomeVerifications = items.filter(v => v.category === 'income');
+
+    assert.strictEqual(incomeVerifications.length, 2, 'should create one income verification per income source');
+    const sourceIds = incomeVerifications.map(v => v.sourceId);
+    assert.ok(sourceIds.includes(income1.id), 'verification for income1 should be created');
+    assert.ok(sourceIds.includes(income2.id), 'verification for income2 should be created');
+    incomeVerifications.forEach(v => {
+      assert.strictEqual(v.sourceType, 'income', 'income verification sourceType should be income');
+    });
+  });
+
+  await test('two members each with one income record → two income verifications', async () => {
+    const createRes = await fetch(`${BASE_URL}${APP}`, {
+      method: 'POST', headers: APPLICANT,
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    const app = await createRes.json();
+    const memberA = await createMember(app.id, ['snap']);
+    const memberB = await createMember(app.id, ['snap']);
+    await createIncome(app.id, memberA.id);
+    await createIncome(app.id, memberB.id);
+    await fetch(`${BASE_URL}${APP}/${app.id}/submit`, { method: 'POST', headers: APPLICANT });
+
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
+    const incomeVerifications = items.filter(v => v.category === 'income');
+    assert.strictEqual(incomeVerifications.length, 2, 'should create one income verification per income source across members');
+  });
+
+  await test('member with no income records → no income verifications created', async () => {
+    const createRes = await fetch(`${BASE_URL}${APP}`, {
+      method: 'POST', headers: APPLICANT,
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    const app = await createRes.json();
+    await createMember(app.id, ['snap']);
+    await fetch(`${BASE_URL}${APP}/${app.id}/submit`, { method: 'POST', headers: APPLICANT });
+
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
+    const incomeVerifications = items.filter(v => v.category === 'income');
+    assert.strictEqual(incomeVerifications.length, 0, 'no income verifications should be created when member has no income records');
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -1219,6 +1313,7 @@ async function runTests() {
     await testApplicationWithdraw();
     if (verificationsAvailable) await testVerificationLifecycle();
     if (verificationsAvailable && membersAvailable) await testCreateVerificationChecklistRule();
+    if (verificationsAvailable && membersAvailable) await testIncomeVerificationPerSource();
     if (verificationsAvailable) await testInitiateServiceCallsRule();
     if (verificationsAvailable) await testCallCompletedRules();
     if (verificationsAvailable) await testDocumentUploadRule();

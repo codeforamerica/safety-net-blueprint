@@ -102,7 +102,7 @@ machines:
           - application: {from: intake/applications, where: {id: $this.subject}}
         steps:
           - call: createProgramVerifications
-            with: {program: snap, memberCategories: [income, identity], householdCategories: [residency]}
+            with: {program: snap, memberCategories: [identity], householdCategories: [residency], incomeCategories: [income]}
           - call: createProgramVerifications
             with: {program: medicaid, memberCategories: [citizenship, immigration], householdCategories: []}
       - type: data_exchange.call.completed
@@ -183,9 +183,10 @@ machines:
           - call: {POST: intake/applications/interview, body: {applicationId: $task.subjectId}}
       - id: createProgramVerifications
         description: >
-          Create electronic Verifications per member and document Verifications at the household level for the given program.
+          Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income),
+          and document Verifications at the household level for the given program.
           Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
-        parameters: [program, memberCategories, householdCategories]
+        parameters: [program, memberCategories, householdCategories, incomeCategories]
         if: $params.program in $application.programs
         then:
           - forEach:
@@ -197,7 +198,22 @@ machines:
                   where: {applicationId: $application.id}
                   as: member
                 do:
-                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, memberId: $member.id, category: $params.category, verificationType: electronic}}
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $member.id, sourceType: member, category: $params.category, verificationType: electronic}}
+          - forEach:
+              in: $params.incomeCategories
+              as: category
+            do:
+              - forEach:
+                  from: intake/application-members
+                  where: {applicationId: $application.id}
+                  as: member
+                do:
+                  - forEach:
+                      from: intake/member-incomes
+                      where: {memberId: $member.id}
+                      as: income
+                    do:
+                      - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $income.id, sourceType: income, category: $params.category, verificationType: electronic}}
           - forEach:
               in: $params.householdCategories
               as: category
@@ -225,7 +241,7 @@ machines:
                         $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
                     description: Record the electronic verification result as evidence
                 - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
-                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, memberId: $verification.memberId, category: $verification.category, verificationType: document}}
+                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, sourceId: $verification.sourceId, sourceType: $verification.sourceType, category: $verification.category, verificationType: document}}
       - id: linkAppointment
         description: Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.
         if: $this.data.subjectType == "interview"
@@ -378,7 +394,7 @@ machines:
         parameters: [serviceId]
         if: $object.verificationType == "electronic"
         then:
-          - call: {POST: data-exchange/service-calls, body: {serviceId: $params.serviceId, requestingResourceId: $object.memberId, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}
+          - call: {POST: data-exchange/service-calls, body: {serviceId: $params.serviceId, requestingResourceId: $object.sourceId, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}
 guards:
   - id: callerIsApplicant
     condition: "\"applicant\" in caller.roles"

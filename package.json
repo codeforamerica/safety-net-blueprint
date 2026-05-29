@@ -38,6 +38,7 @@
     "test:integration": "node packages/mock-server/tests/run-all-tests.js --integration",
     "test:all": "node packages/mock-server/tests/run-all-tests.js --all",
     "preflight": "bash scripts/preflight.sh",
+    "setup:hooks": "git config core.hooksPath scripts/hooks && echo 'Git hooks installed. Pre-push hook will run preflight before every push. Use git push --no-verify to skip.'",
     "contract-tables:export": "node packages/contracts/scripts/export-contract-tables.js",
     "contract-tables:import": "node packages/contracts/scripts/import-contract-tables.js"
   },
