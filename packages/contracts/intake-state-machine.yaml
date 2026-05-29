@@ -102,7 +102,7 @@ machines:
           - application: {from: intake/applications, where: {id: $this.subject}}
         steps:
           - call: createProgramVerifications
-            with: {program: snap, memberCategories: [income, identity], householdCategories: [residency]}
+            with: {program: snap, memberCategories: [identity], householdCategories: [residency], incomeCategories: [income]}
           - call: createProgramVerifications
             with: {program: medicaid, memberCategories: [citizenship, immigration], householdCategories: []}
       - type: data_exchange.call.completed
@@ -209,7 +209,8 @@ machines:
                   as: member
                 do:
                   - forEach:
-                      from: intake/application-members/$member.id/incomes
+                      from: intake/member-incomes
+                      where: {memberId: $member.id}
                       as: income
                     do:
                       - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $income.id, sourceType: income, category: $params.category, verificationType: electronic}}

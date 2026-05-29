@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Pre-push hook: run preflight before every push.
+# Skip with: git push --no-verify
+
+echo ""
+echo "Running preflight before push..."
+echo ""
+
+npm run preflight

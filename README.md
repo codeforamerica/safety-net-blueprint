@@ -48,6 +48,16 @@ npm run mock:start:all
 
 Visit `http://localhost:3000` for interactive API docs.
 
+## Contributing
+
+After cloning, run the one-time setup to install the pre-push git hook:
+
+```bash
+npm run setup:hooks
+```
+
+This installs a hook that runs `npm run preflight` before every push. Preflight validates specs, runs tests, regenerates and stages any stale explorer outputs, and runs integration tests. Use `git push --no-verify` to skip for work-in-progress pushes.
+
 ## Commands
 
 | Command | Description |

@@ -40,6 +40,10 @@
     {
       "key": "incomeDocFallbackVerifId",
       "value": ""
+    },
+    {
+      "key": "incomeAId",
+      "value": ""
     }
   ],
   "item": [
@@ -270,6 +274,109 @@
           ]
         },
         {
+          "name": "Create income for member A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "X-Caller-Id", "value": "worker-aaa"},
+              {"key": "X-Caller-Roles", "value": "caseworker"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\": \"employed\", \"amount\": 2000, \"frequency\": \"monthly\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}/incomes",
+              "host": ["{{baseUrl}}"],
+              "path": ["intake", "applications", "{{appId}}", "members", "{{memberAId}}", "incomes"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('income for member A created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('incomeAId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create income for member B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "X-Caller-Id", "value": "worker-aaa"},
+              {"key": "X-Caller-Roles", "value": "caseworker"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\": \"employed\", \"amount\": 1500, \"frequency\": \"monthly\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberBId}}/incomes",
+              "host": ["{{baseUrl}}"],
+              "path": ["intake", "applications", "{{appId}}", "members", "{{memberBId}}", "incomes"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('income for member B created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create income for member C",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "X-Caller-Id", "value": "worker-aaa"},
+              {"key": "X-Caller-Roles", "value": "caseworker"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\": \"employed\", \"amount\": 1200, \"frequency\": \"monthly\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberCId}}/incomes",
+              "host": ["{{baseUrl}}"],
+              "path": ["intake", "applications", "{{appId}}", "members", "{{memberCId}}", "incomes"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('income for member C created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Submit application",
           "request": {
             "method": "POST",
@@ -371,14 +478,15 @@
                   "  });",
                   "});",
                   "",
-                  "pm.test('SNAP: 3 income (electronic) per member', () => {",
+                  "pm.test('SNAP: 3 income (electronic) per income source', () => {",
                   "  const { items } = pm.response.json();",
                   "  const income = items.filter(v => v.category === 'income');",
                   "  pm.expect(income.length).to.eql(3);",
                   "  income.forEach(v => pm.expect(v.verificationType).to.eql('electronic'));",
-                  "  income.forEach(v => pm.expect(v.memberId).to.be.a('string'));",
-                  "  const memberAId = pm.collectionVariables.get('memberAId');",
-                  "  pm.collectionVariables.set('incomeVerifIdA', (income.find(v => v.memberId === memberAId) || {}).id || '');",
+                  "  income.forEach(v => pm.expect(v.sourceType).to.eql('income'));",
+                  "  income.forEach(v => pm.expect(v.sourceId).to.be.a('string'));",
+                  "  const incomeAId = pm.collectionVariables.get('incomeAId');",
+                  "  pm.collectionVariables.set('incomeVerifIdA', (income.find(v => v.sourceId === incomeAId) || {}).id || '');",
                   "});",
                   "",
                   "pm.test('SNAP: 3 identity (electronic) per member', () => {",
@@ -386,16 +494,17 @@
                   "  const identity = items.filter(v => v.category === 'identity');",
                   "  pm.expect(identity.length).to.eql(3);",
                   "  identity.forEach(v => pm.expect(v.verificationType).to.eql('electronic'));",
+                  "  identity.forEach(v => pm.expect(v.sourceType).to.eql('member'));",
                   "  const memberAId = pm.collectionVariables.get('memberAId');",
-                  "  pm.collectionVariables.set('identityVerifIdA', (identity.find(v => v.memberId === memberAId) || {}).id || '');",
+                  "  pm.collectionVariables.set('identityVerifIdA', (identity.find(v => v.sourceId === memberAId) || {}).id || '');",
                   "});",
                   "",
-                  "pm.test('SNAP: 1 residency (document) at household level — no memberId', () => {",
+                  "pm.test('SNAP: 1 residency (document) at household level — no sourceId', () => {",
                   "  const { items } = pm.response.json();",
                   "  const residency = items.filter(v => v.category === 'residency');",
                   "  pm.expect(residency.length).to.eql(1);",
                   "  pm.expect(residency[0].verificationType).to.eql('document');",
-                  "  pm.expect(!residency[0].memberId).to.be.true;",
+                  "  pm.expect(!residency[0].sourceId).to.be.true;",
                   "  pm.collectionVariables.set('residencyVerifId', residency[0].id);",
                   "});",
                   "",
@@ -404,7 +513,8 @@
                   "  const citizenship = items.filter(v => v.category === 'citizenship');",
                   "  pm.expect(citizenship.length).to.eql(3);",
                   "  citizenship.forEach(v => pm.expect(v.verificationType).to.eql('electronic'));",
-                  "  citizenship.forEach(v => pm.expect(v.memberId).to.be.a('string'));",
+                  "  citizenship.forEach(v => pm.expect(v.sourceType).to.eql('member'));",
+                  "  citizenship.forEach(v => pm.expect(v.sourceId).to.be.a('string'));",
                   "});",
                   "",
                   "pm.test('Medicaid: 3 immigration (electronic) per member', () => {",
@@ -412,7 +522,8 @@
                   "  const immigration = items.filter(v => v.category === 'immigration');",
                   "  pm.expect(immigration.length).to.eql(3);",
                   "  immigration.forEach(v => pm.expect(v.verificationType).to.eql('electronic'));",
-                  "  immigration.forEach(v => pm.expect(v.memberId).to.be.a('string'));",
+                  "  immigration.forEach(v => pm.expect(v.sourceType).to.eql('member'));",
+                  "  immigration.forEach(v => pm.expect(v.sourceId).to.be.a('string'));",
                   "});"
                 ]
               }
@@ -752,13 +863,12 @@
                   "pm.test('AC 4 — document fallback income Verification created for member A', () => {",
                   "  pm.response.to.have.status(200);",
                   "  const { items } = pm.response.json();",
-                  "  const memberAId = pm.collectionVariables.get('memberAId');",
-                  "  const incomeVerifIdA = pm.collectionVariables.get('incomeVerifIdA');",
+                  "  const incomeAId = pm.collectionVariables.get('incomeAId');",
                   "  const fallback = items.find(v =>",
                   "    v.category === 'income' &&",
                   "    v.verificationType === 'document' &&",
-                  "    v.memberId === memberAId &&",
-                  "    v.id !== incomeVerifIdA",
+                  "    v.sourceType === 'income' &&",
+                  "    v.sourceId === incomeAId",
                   "  );",
                   "  pm.expect(fallback).to.exist;",
                   "  pm.expect(fallback.status).to.eql('pending');",
