@@ -53,11 +53,12 @@ export function emitEventEnvelope(envelope) {
  * @param {string} options.source      - Domain base path (e.g., '/workflow')
  * @param {Object|null} [options.data] - Event payload. Defaults to null.
  * @param {string|null} [options.callerId]    - X-Caller-Id from request header
- * @param {string|null} [options.traceparent] - W3C traceparent header, if present
+ * @param {string|null} [options.traceparent]  - W3C traceparent header, if present
+ * @param {string|null} [options.causationid]  - CloudEvents causation extension: id of the triggering event
  * @param {string|null} [options.now]  - ISO timestamp. Defaults to current time.
  * @returns {Object} The stored event record
  */
-export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, traceparent = null, now = null }) {
+export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, traceparent = null, causationid = null, now = null }) {
   const timestamp = now || new Date().toISOString();
   const normalizedDomain = domain.replace(/-/g, '_');
   const normalizedObject = object.replace(/-/g, '_');
@@ -72,6 +73,7 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
     time: timestamp,
     datacontenttype: 'application/json',
     traceparent: traceparent || null,
+    causationid: causationid || undefined,
     data: data ?? null,
   };
 

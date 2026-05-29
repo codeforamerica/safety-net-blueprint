@@ -1334,6 +1334,45 @@ async function testPostSubmissionAdditions() {
 }
 
 // ---------------------------------------------------------------------------
+// Traceparent propagation
+// ---------------------------------------------------------------------------
+
+async function testTraceparentPropagation() {
+  section('Traceparent propagation through event subscriptions');
+
+  const TRACEPARENT = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
+  const TRACEID = '4bf92f3577b34da6a3ce929d0e0e4736';
+
+  await test('traceparent propagates from submit to downstream workflow.task.created event', async () => {
+    const create = await fetch(`${BASE_URL}${APP}`, {
+      method: 'POST', headers: APPLICANT,
+      body: { programs: ['snap'], channel: 'online' },
+    });
+    const app = await create.json();
+
+    await fetch(`${BASE_URL}${APP}/${app.id}/submit`, {
+      method: 'POST',
+      headers: { ...APPLICANT, traceparent: TRACEPARENT },
+    });
+
+    const eventsRes = await fetch(`${BASE_URL}/platform/events?traceid=${TRACEID}`);
+    assert.strictEqual(eventsRes.status, 200);
+    const { items } = await eventsRes.json();
+
+    const types = items.map(e => e.type);
+    assert.ok(types.some(t => t === 'intake.application.submitted'), `Expected intake.application.submitted, got: ${types.join(', ')}`);
+    assert.ok(types.some(t => t === 'workflow.task.created'), `Expected workflow.task.created in traceid chain, got: ${types.join(', ')}`);
+    assert.ok(items.every(e => e.traceparent === TRACEPARENT), 'All events in chain must carry the original traceparent');
+
+    const submittedEvent = items.find(e => e.type === 'intake.application.submitted');
+    const taskCreatedEvent = items.find(e => e.type === 'workflow.task.created');
+    assert.ok(submittedEvent, 'intake.application.submitted event must exist');
+    assert.ok(taskCreatedEvent, 'workflow.task.created event must exist');
+    assert.strictEqual(taskCreatedEvent.causationid, submittedEvent.id, 'workflow.task.created must set causationid to the id of intake.application.submitted');
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -1381,6 +1420,7 @@ async function runTests() {
     await testReviewContext();
     await testReviewProgress();
     await testApplicationNotes();
+    await testTraceparentPropagation();
   } finally {
     await teardownServer(serverStartedByTests);
   }
