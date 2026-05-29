@@ -10,6 +10,7 @@
 
 import assert from 'assert';
 import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, createTestRunner, setupServer, teardownServer, clearHttpStubs, registerHttpStub } from './helpers.js';
+import { ROLES } from '../roles.js';
 
 const { test, section, results } = createTestRunner();
 
@@ -17,8 +18,8 @@ const { test, section, results } = createTestRunner();
 // Shared constants
 // ---------------------------------------------------------------------------
 
-const SYSTEM = caller('system-1', 'system');
-const CASEWORKER = caller('worker-1', 'caseworker');
+const SYSTEM = caller('system-1', ROLES.SYSTEM);
+const CASEWORKER = caller('worker-1', ROLES.CASE_WORKER);
 
 const DETERMINATIONS = '/eligibility/determinations';
 const SERVICE_CALLS = '/data-exchange/service-calls';
@@ -376,7 +377,7 @@ async function testCrossDomainWriteBack() {
     // Submit the application to trigger Determination creation via the state machine
     await fetch(`${BASE_URL}/intake/applications/${appId}/submit`, {
       method: 'POST',
-      headers: caller('applicant-1', 'applicant'),
+      headers: caller('applicant-1', ROLES.APPLICANT),
     });
 
     // Get the Determination created by the submission flow
@@ -410,7 +411,7 @@ async function testCrossDomainWriteBack() {
 
     await fetch(`${BASE_URL}/intake/applications/${appId}/submit`, {
       method: 'POST',
-      headers: caller('applicant-1', 'applicant'),
+      headers: caller('applicant-1', ROLES.APPLICANT),
     });
 
     // Move application to under_review so it can be closed (system-only transition)

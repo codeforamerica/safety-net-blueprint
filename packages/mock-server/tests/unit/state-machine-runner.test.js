@@ -6,6 +6,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { insertResource, clearAll, findById, findAll } from '../../src/database-manager.js';
 import { executeTransition } from '../../src/state-machine-runner.js';
+import { ROLES } from '../roles.js';
 
 beforeEach(() => {
   clearAll('testresources');
@@ -56,7 +57,7 @@ test('executeTransition — passes when request body matches schema', () => {
     resourceId: 'res-1',
     trigger: 'close',
     callerId: 'user-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: makeStateMachine(),
     machine,
     rules: [],
@@ -89,7 +90,7 @@ test('executeTransition — returns 422 when request body fails schema', () => {
     resourceId: 'res-2',
     trigger: 'close',
     callerId: 'user-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: makeStateMachine(),
     machine,
     rules: [],
@@ -117,7 +118,7 @@ test('executeTransition — skips validation when no schema.request defined', ()
     resourceId: 'res-3',
     trigger: 'close',
     callerId: 'user-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: makeStateMachine(),
     machine,
     rules: [],
@@ -138,7 +139,7 @@ test('executeTransition — caller role absent from all clauses → 403', () => 
     id: 'claim',
     transition: { from: 'pending', to: 'in_progress' },
     guards: [
-      { actors: ['caseworker'], conditions: ['taskIsUnassigned'] },
+      { actors: [ROLES.CASE_WORKER], conditions: ['taskIsUnassigned'] },
       { actors: ['supervisor'], conditions: [] },
     ],
     steps: []
@@ -168,7 +169,7 @@ test('executeTransition — first clause fails, second clause passes → 200', (
     id: 'escalate',
     transition: { from: 'pending', to: 'escalated' },
     guards: [
-      { actors: ['caseworker'], conditions: ['callerIsAssignedWorker'] },
+      { actors: [ROLES.CASE_WORKER], conditions: ['callerIsAssignedWorker'] },
       { actors: ['supervisor'], conditions: [] },
     ],
     steps: []
@@ -196,7 +197,7 @@ test('executeTransition — caller role matches but all conditions fail → 409'
     id: 'escalate',
     transition: { from: 'pending', to: 'escalated' },
     guards: [
-      { actors: ['caseworker'], conditions: ['callerIsAssignedWorker'] },
+      { actors: [ROLES.CASE_WORKER], conditions: ['callerIsAssignedWorker'] },
     ],
     steps: []
   }]);
@@ -206,7 +207,7 @@ test('executeTransition — caller role matches but all conditions fail → 409'
     resourceId: 'res-or-3',
     trigger: 'escalate',
     callerId: 'worker-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: { ...makeStateMachine(), guards: [{ id: 'callerIsAssignedWorker', condition: 'object.assignedToId == caller.id' }] },
     machine,
     rules: []
@@ -227,7 +228,7 @@ test('executeTransition — CEL condition guard passes, transition succeeds', ()
   const machine = makeMachine([{
     id: 'claim',
     transition: { from: 'pending', to: 'in_progress' },
-    guards: [{ actors: ['caseworker'], conditions: ['taskIsUnassigned'] }],
+    guards: [{ actors: [ROLES.CASE_WORKER], conditions: ['taskIsUnassigned'] }],
     steps: []
   }]);
 
@@ -236,7 +237,7 @@ test('executeTransition — CEL condition guard passes, transition succeeds', ()
     resourceId: 'res-cel-1',
     trigger: 'claim',
     callerId: 'worker-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: { ...makeStateMachine(), guards: [{ id: 'taskIsUnassigned', condition: 'object.assignedToId == null' }] },
     machine,
     rules: []
@@ -252,7 +253,7 @@ test('executeTransition — CEL condition guard fails → 409, resource unchange
   const machine = makeMachine([{
     id: 'claim',
     transition: { from: 'pending', to: 'in_progress' },
-    guards: [{ actors: ['caseworker'], conditions: ['taskIsUnassigned'] }],
+    guards: [{ actors: [ROLES.CASE_WORKER], conditions: ['taskIsUnassigned'] }],
     steps: []
   }]);
 
@@ -261,7 +262,7 @@ test('executeTransition — CEL condition guard fails → 409, resource unchange
     resourceId: 'res-cel-2',
     trigger: 'claim',
     callerId: 'worker-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: { ...makeStateMachine(), guards: [{ id: 'taskIsUnassigned', condition: 'object.assignedToId == null' }] },
     machine,
     rules: []
@@ -279,7 +280,7 @@ test('executeTransition — caller.id CEL guard passes when IDs match', () => {
   const machine = makeMachine([{
     id: 'complete',
     transition: { from: 'in_progress', to: 'completed' },
-    guards: [{ actors: ['caseworker'], conditions: ['callerIsAssignedWorker'] }],
+    guards: [{ actors: [ROLES.CASE_WORKER], conditions: ['callerIsAssignedWorker'] }],
     steps: []
   }]);
 
@@ -288,7 +289,7 @@ test('executeTransition — caller.id CEL guard passes when IDs match', () => {
     resourceId: 'res-cel-3',
     trigger: 'complete',
     callerId: 'worker-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: { ...makeStateMachine(), guards: [{ id: 'callerIsAssignedWorker', condition: 'object.assignedToId == caller.id' }] },
     machine,
     rules: []
@@ -304,7 +305,7 @@ test('executeTransition — caller.id CEL guard fails when different worker → 
   const machine = makeMachine([{
     id: 'complete',
     transition: { from: 'in_progress', to: 'completed' },
-    guards: [{ actors: ['caseworker'], conditions: ['callerIsAssignedWorker'] }],
+    guards: [{ actors: [ROLES.CASE_WORKER], conditions: ['callerIsAssignedWorker'] }],
     steps: []
   }]);
 
@@ -313,7 +314,7 @@ test('executeTransition — caller.id CEL guard fails when different worker → 
     resourceId: 'res-cel-4',
     trigger: 'complete',
     callerId: 'worker-2',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: { ...makeStateMachine(), guards: [{ id: 'callerIsAssignedWorker', condition: 'object.assignedToId == caller.id' }] },
     machine,
     rules: []
@@ -343,7 +344,7 @@ test('executeTransition — set: step mutates field on transition', () => {
     resourceId: 'res-steps-1',
     trigger: 'claim',
     callerId: 'worker-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: makeStateMachine(),
     machine,
     rules: []
@@ -370,7 +371,7 @@ test('executeTransition — emit: step stores event in database', () => {
     resourceId: 'res-steps-2',
     trigger: 'submit',
     callerId: 'user-1',
-    callerRoles: ['caseworker'],
+    callerRoles: [ROLES.CASE_WORKER],
     stateMachine: makeStateMachine(),
     machine,
     rules: [],
