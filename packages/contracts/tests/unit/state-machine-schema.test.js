@@ -216,7 +216,7 @@ test('state-machine-schema action types', async (t) => {
   await t.test('action with full transition and guards', () => {
     const doc = withActions([{
       id: 'activate',
-      guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
+      guards: [{ actors: ['case_worker'], conditions: ['callerIsCaseworker'] }],
       transition: { from: 'draft', to: 'active' },
       steps: [
         { set: { field: 'activatedAt', value: '$now', description: 'Record activation time' } },
@@ -250,7 +250,7 @@ test('state-machine-schema action types', async (t) => {
     const doc = withActions([{
       id: 'complete-review',
       transition: { from: 'active' },
-      guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
+      guards: [{ actors: ['case_worker'], conditions: ['callerIsCaseworker'] }],
       steps: [{ emit: { type: 'domain.test.review_completed', description: 'Signal review done' } }],
     }]);
     const { valid, errors } = validate(doc);
@@ -333,7 +333,7 @@ test('state-machine-schema guards composition', async (t) => {
         initialState: 'draft',
         actions: [{
           id: 'do-thing',
-          guards: [{ actors: ['caseworker'], conditions }],
+          guards: [{ actors: ['case_worker'], conditions }],
           steps: [{ emit: { type: 'domain.test.done', description: 'Done' } }],
         }],
       }],
@@ -541,7 +541,7 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
         }],
         actions: [{
           id: 'activate',
-          guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
+          guards: [{ actors: ['case_worker'], conditions: ['callerIsCaseworker'] }],
           transition: { from: 'draft', to: 'active' },
           steps: [{ emit: { type: 'domain.test.activated', description: 'Activate' } }],
         }],

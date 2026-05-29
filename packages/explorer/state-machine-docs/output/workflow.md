@@ -9,12 +9,12 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
 ### Actions
 
 - **claim** — Caseworker takes ownership of an unassigned pending task
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `pending` → `in_progress`
   - Assign task to the claiming worker (sets `assignedToId`)
   - Emit: `workflow.task.undefined` — Emit a domain event recording the claim and who claimed the task
 - **complete** — Marks an in-progress task done with an outcome and optional notes
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `in_progress` → `completed`
   - Record when work finished (sets `completedAt`)
   - Store the completion outcome from the request (sets `outcome`)
@@ -23,14 +23,14 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - If `$request.createFollowUp is true`:
     - Create a follow-up task when caller requests one
 - **release** — Returns an in-progress task to the queue, clearing the assignment
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `in_progress` → `pending`
   - Clear assignment so task returns to queue (sets `assignedToId`)
   - Emit: `workflow.task.undefined` — Emit a domain event recording the release and its reason
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
 - **escalate** — Escalate a task; assigned workers can escalate in-progress tasks, supervisors can escalate from any state
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `pending`/`in_progress` → `escalated`
   - Record when the task was escalated (sets `escalatedAt`)
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
@@ -54,19 +54,19 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Emit: `workflow.task.undefined` — Emit a domain event recording the reopen
 - **await-client** — Pauses an in-progress task while waiting for a client response
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `in_progress` → `awaiting_client`
   - Record when the task entered a waiting state (sets `blockedAt`)
   - Schedule auto-cancellation after 30 calendar days of client unresponsiveness.
   - Emit: `workflow.task.undefined` — Emit a domain event recording the block
 - **await-verification** — Pauses an in-progress task while waiting for a verification result
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `in_progress` → `awaiting_verification`
   - Record when the task entered a waiting state (sets `blockedAt`)
   - Schedule auto-resume after 7 calendar days waiting on verification.
   - Emit: `workflow.task.undefined` — Emit a domain event recording the block
 - **resume** — Resumes a blocked task, cancelling any active wait timers
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `awaiting_client`/`awaiting_verification` → `in_progress`
   - Clear the block timestamp on resume (sets `blockedAt`)
   - Cancel the client unresponsive timer; idempotent.
@@ -94,7 +94,7 @@ Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workfl
   - Record when the task was automatically cancelled (sets `cancelledAt`)
   - Emit: `workflow.task.undefined` — Emit a domain event recording the automatic cancellation
 - **submit-for-review** — Worker submits a completed task to a supervisor for review and approval
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `in_progress`/`escalated` → `pending_review`
   - Emit: `workflow.task.undefined` — Emit a domain event recording the submission for review
 - **approve** — Supervisor approves a submitted task and records the final outcome
