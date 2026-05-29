@@ -56,7 +56,7 @@ After cloning, run the one-time setup to install the pre-push git hook:
 npm run setup:hooks
 ```
 
-This installs a hook that runs `npm run preflight` before every push. Preflight validates specs, runs tests, regenerates and stages any stale explorer outputs, and runs integration tests. Use `git push --no-verify` to skip for work-in-progress pushes.
+This installs a hook that runs before every push. The hook rebuilds explorer outputs and commits them if stale, then runs `npm run preflight` — which validates specs, runs tests, and runs integration tests. Use `git push --no-verify` to skip for work-in-progress pushes.
 
 ## Commands
 
