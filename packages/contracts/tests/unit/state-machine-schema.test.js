@@ -24,10 +24,13 @@ function loadSchema() {
 function makeValidator() {
   const schema = loadSchema();
   const ajv = new Ajv2020({ strict: false, allErrors: true });
-  // Preload platform-events.yaml so $ref: 'schemas/platform-events.yaml#/$defs/EventBase' resolves.
+  // Preload referenced schemas so $ref paths resolve.
   const platformEventsPath = join(contractsRoot, 'schemas/platform-events.yaml');
   const platformEvents = yaml.load(readFileSync(platformEventsPath, 'utf8'));
   ajv.addSchema(platformEvents, 'schemas/platform-events.yaml');
+  const commonEnumsPath = join(contractsRoot, 'schemas/common/enums.yaml');
+  const commonEnums = yaml.load(readFileSync(commonEnumsPath, 'utf8'));
+  ajv.addSchema(commonEnums, 'schemas/common/enums.yaml');
   return ajv.compile(schema);
 }
 
