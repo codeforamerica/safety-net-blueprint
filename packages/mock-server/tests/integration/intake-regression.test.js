@@ -17,6 +17,7 @@
 
 import assert from 'assert';
 import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, createTestRunner, setupServer, teardownServer } from './helpers.js';
+import { ROLES } from '../roles.js';
 
 const { test, section, results } = createTestRunner();
 
@@ -24,10 +25,10 @@ const { test, section, results } = createTestRunner();
 // Shared setup helpers
 // ---------------------------------------------------------------------------
 
-const APPLICANT = caller('applicant-1', 'applicant');
-const CASEWORKER = caller('worker-aaa', 'caseworker');
-const SUPERVISOR = caller('sup-1', 'supervisor');
-const SYSTEM = caller('system-1', 'system');
+const APPLICANT = caller('applicant-1', ROLES.APPLICANT);
+const CASEWORKER = caller('worker-aaa', ROLES.CASE_WORKER);
+const SUPERVISOR = caller('sup-1', ROLES.SUPERVISOR);
+const SYSTEM = caller('system-1', ROLES.SYSTEM);
 
 const APP = '/intake/applications';
 const VERIFICATIONS = '/intake/applications/verifications';

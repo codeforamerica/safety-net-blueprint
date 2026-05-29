@@ -15,6 +15,7 @@
 
 import assert from 'assert';
 import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, clearStubs, createTestRunner, setupServer, teardownServer } from './helpers.js';
+import { ROLES } from '../roles.js';
 
 const { test, section, results } = createTestRunner();
 
@@ -41,10 +42,10 @@ async function testWorkflowLifecycle() {
   section('Workflow — Core lifecycle');
 
   const TASK = '/workflow/tasks';
-  const CASEWORKER = caller('worker-aaa', 'caseworker');
-  const OTHER_WORKER = caller('worker-bbb', 'caseworker');
-  const SUPERVISOR = caller('sup-1', 'supervisor');
-  const SYSTEM = caller('system-1', 'system');
+  const CASEWORKER = caller('worker-aaa', ROLES.CASE_WORKER);
+  const OTHER_WORKER = caller('worker-bbb', ROLES.CASE_WORKER);
+  const SUPERVISOR = caller('sup-1', ROLES.SUPERVISOR);
+  const SYSTEM = caller('system-1', ROLES.SYSTEM);
 
   // ── claim ─────────────────────────────────────────────────────────────────
 
@@ -540,9 +541,9 @@ async function testWorkflowEventEmission() {
   section('Workflow — Event emission');
 
   const TASK = '/workflow/tasks';
-  const CASEWORKER = caller('worker-aaa', 'caseworker');
-  const SUPERVISOR = caller('sup-1', 'supervisor');
-  const SYSTEM = caller('system-1', 'system');
+  const CASEWORKER = caller('worker-aaa', ROLES.CASE_WORKER);
+  const SUPERVISOR = caller('sup-1', ROLES.SUPERVISOR);
+  const SYSTEM = caller('system-1', ROLES.SYSTEM);
 
   async function createTask(name = 'Event test') {
     const res = await fetch(`${BASE_URL}${TASK}`, {
@@ -764,7 +765,7 @@ async function testWorkflowTimerBehavior() {
   section('Workflow — Timer-triggered behavior');
 
   const TASK = '/workflow/tasks';
-  const CASEWORKER = caller('worker-aaa', 'caseworker');
+  const CASEWORKER = caller('worker-aaa', ROLES.CASE_WORKER);
 
   async function createTask(name = 'Timer test') {
     const res = await fetch(`${BASE_URL}${TASK}`, {
@@ -900,8 +901,8 @@ async function testWorkflowEventSubscriptions() {
   section('Workflow — Event subscriptions');
 
   const TASK = '/workflow/tasks';
-  const CASEWORKER = caller('worker-aaa', 'caseworker');
-  const SUPERVISOR = caller('sup-1', 'supervisor');
+  const CASEWORKER = caller('worker-aaa', ROLES.CASE_WORKER);
+  const SUPERVISOR = caller('sup-1', ROLES.SUPERVISOR);
 
   // workflow.task.created → assignToQueue (SNAP path: snap-intake queue)
   await test('workflow.task.created: SNAP task routed to snap-intake queue', async () => {

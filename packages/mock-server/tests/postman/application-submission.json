@@ -121,7 +121,7 @@
               },
               {
                 "key": "X-Caller-Roles",
-                "value": "caseworker"
+                "value": "case_worker"
               }
             ],
             "body": {
@@ -178,7 +178,7 @@
               },
               {
                 "key": "X-Caller-Roles",
-                "value": "caseworker"
+                "value": "case_worker"
               }
             ],
             "body": {
@@ -233,7 +233,7 @@
               },
               {
                 "key": "X-Caller-Roles",
-                "value": "caseworker"
+                "value": "case_worker"
               }
             ],
             "body": {

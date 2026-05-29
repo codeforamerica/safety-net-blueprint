@@ -15,6 +15,7 @@ import {
   applySteps
 } from '../../src/state-machine-engine.js';
 import { insertResource, clearAll } from '../../src/database-manager.js';
+import { ROLES } from '../roles.js';
 
 // =============================================================================
 // resolveValue
@@ -126,7 +127,7 @@ test('evaluateGuard — condition: "applicant" in caller.roles passes when role 
 
 test('evaluateGuard — condition: "applicant" in caller.roles fails when role absent', () => {
   const guard = { id: 'callerIsApplicant', condition: '"applicant" in caller.roles' };
-  const result = evaluateGuard(guard, {}, { caller: { roles: ['caseworker'] } });
+  const result = evaluateGuard(guard, {}, { caller: { roles: [ROLES.CASE_WORKER] } });
   assert.strictEqual(result.pass, false);
 });
 
@@ -154,13 +155,13 @@ test('evaluateGuards — CEL condition guard fails', () => {
 test('evaluateGuards — multiple CEL guards all pass', () => {
   const guardsMap = {
     isUnassigned: { id: 'isUnassigned', condition: 'object.assignedToId == null' },
-    callerIsWorker: { id: 'callerIsWorker', condition: '"caseworker" in caller.roles' }
+    callerIsWorker: { id: 'callerIsWorker', condition: `"${ROLES.CASE_WORKER}" in caller.roles` }
   };
   const result = evaluateGuards(
     ['isUnassigned', 'callerIsWorker'],
     guardsMap,
     { assignedToId: null },
-    { caller: { roles: ['caseworker'] } }
+    { caller: { roles: [ROLES.CASE_WORKER] } }
   );
   assert.strictEqual(result.pass, true);
 });
@@ -168,13 +169,13 @@ test('evaluateGuards — multiple CEL guards all pass', () => {
 test('evaluateGuards — stops at first failing CEL guard', () => {
   const guardsMap = {
     isUnassigned: { id: 'isUnassigned', condition: 'object.assignedToId == null' },
-    callerIsWorker: { id: 'callerIsWorker', condition: '"caseworker" in caller.roles' }
+    callerIsWorker: { id: 'callerIsWorker', condition: `"${ROLES.CASE_WORKER}" in caller.roles` }
   };
   const result = evaluateGuards(
     ['isUnassigned', 'callerIsWorker'],
     guardsMap,
     { assignedToId: 'worker-1' },
-    { caller: { roles: ['caseworker'] } }
+    { caller: { roles: [ROLES.CASE_WORKER] } }
   );
   assert.strictEqual(result.pass, false);
   assert.strictEqual(result.failedGuard, 'isUnassigned');
@@ -217,14 +218,14 @@ test('evaluateGuard — contains_any passes when array contains one match', () =
 
 test('evaluateGuard — contains_any fails when array has no match', () => {
   const guard = { field: '$caller.roles', operator: 'contains_any', value: ['supervisor', 'state_admin'] };
-  const context = { caller: { roles: ['caseworker'] } };
+  const context = { caller: { roles: [ROLES.CASE_WORKER] } };
   const result = evaluateGuard(guard, {}, context);
   assert.strictEqual(result.pass, false);
 });
 
 test('evaluateGuard — contains_any passes when multiple roles and one matches', () => {
   const guard = { field: '$caller.roles', operator: 'contains_any', value: ['supervisor'] };
-  const context = { caller: { roles: ['caseworker', 'supervisor'] } };
+  const context = { caller: { roles: [ROLES.CASE_WORKER, ROLES.SUPERVISOR] } };
   const result = evaluateGuard(guard, {}, context);
   assert.strictEqual(result.pass, true);
 });
@@ -241,22 +242,22 @@ test('evaluateGuard — contains_any fails when caller has no roles', () => {
 // =============================================================================
 
 test('evaluateGuard — contains_all passes when array contains all values', () => {
-  const guard = { field: '$caller.roles', operator: 'contains_all', value: ['caseworker', 'supervisor'] };
-  const context = { caller: { roles: ['caseworker', 'supervisor'] } };
+  const guard = { field: '$caller.roles', operator: 'contains_all', value: [ROLES.CASE_WORKER, ROLES.SUPERVISOR] };
+  const context = { caller: { roles: [ROLES.CASE_WORKER, ROLES.SUPERVISOR] } };
   const result = evaluateGuard(guard, {}, context);
   assert.strictEqual(result.pass, true);
 });
 
 test('evaluateGuard — contains_all fails when missing one value', () => {
-  const guard = { field: '$caller.roles', operator: 'contains_all', value: ['caseworker', 'supervisor'] };
-  const context = { caller: { roles: ['caseworker'] } };
+  const guard = { field: '$caller.roles', operator: 'contains_all', value: [ROLES.CASE_WORKER, ROLES.SUPERVISOR] };
+  const context = { caller: { roles: [ROLES.CASE_WORKER] } };
   const result = evaluateGuard(guard, {}, context);
   assert.strictEqual(result.pass, false);
 });
 
 test('evaluateGuard — contains_all passes for single-value requirement', () => {
   const guard = { field: '$caller.roles', operator: 'contains_all', value: ['supervisor'] };
-  const context = { caller: { roles: ['caseworker', 'supervisor'] } };
+  const context = { caller: { roles: [ROLES.CASE_WORKER, ROLES.SUPERVISOR] } };
   const result = evaluateGuard(guard, {}, context);
   assert.strictEqual(result.pass, true);
 });

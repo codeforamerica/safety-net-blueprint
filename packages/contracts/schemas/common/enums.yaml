@@ -40,6 +40,28 @@ $defs:
     description: Preferred language (BCP 47 language tag).
     pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
 
+  RoleType:
+    type: string
+    description: >
+      Authorization roles that determine base permissions and data scoping.
+      Used in state machine actors arrays and JWT role claims.
+
+      - applicant: Self-service access to own applications (scoped by personId)
+      - case_worker: Process applications for assigned county
+      - supervisor: Oversee case workers, approve determinations (may span counties)
+      - county_admin: Administer county staff and configuration
+      - state_admin: Statewide oversight and administration (all counties)
+      - partner_readonly: External partner with limited read access
+      - system: Automated service account for background and inter-service operations
+    enum:
+      - applicant
+      - case_worker
+      - supervisor
+      - county_admin
+      - state_admin
+      - partner_readonly
+      - system
+
   Program:
     type: string
     enum:
