@@ -1,9 +1,19 @@
 #!/usr/bin/env bash
-# Pre-push hook: run preflight before every push.
+# Pre-push hook: rebuild explorer outputs and commit if stale, then run preflight.
 # Skip with: git push --no-verify
 
+set -e
+
 echo ""
-echo "Running preflight before push..."
+echo "Running pre-push checks..."
 echo ""
+
+# Rebuild explorer outputs and commit if stale
+npm run build --workspace=packages/explorer --silent
+if ! git diff --exit-code packages/explorer/ > /dev/null 2>&1; then
+  echo "Explorer outputs regenerated — committing..."
+  git add packages/explorer/
+  git commit -m "Regenerate explorer outputs"
+fi
 
 npm run preflight
