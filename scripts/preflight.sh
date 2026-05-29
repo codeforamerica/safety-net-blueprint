@@ -85,8 +85,8 @@ if npm run build --workspace=packages/explorer 2>&1; then
   if git diff --exit-code packages/explorer/ > /dev/null 2>&1; then
     pass "Explorer outputs are up to date"
   else
-    git add packages/explorer/
-    pass "Explorer outputs regenerated and staged"
+    fail "Explorer outputs are stale — run 'npm run build --workspace=packages/explorer', stage the results, and commit"
+    git diff --name-only packages/explorer/
   fi
 else
   fail "Explorer build failed"
