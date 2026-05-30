@@ -1,0 +1,75 @@
+# JSON Schema for policy registry YAML files.
+# Validates platform-registry-policies.yaml and platform-registry-policies-{name}.yaml files.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Policy Registry
+description: >
+  Schema for policy registry files (platform-registry-policies*.yaml).
+  Policy registry files define standalone regulatory and program rules keyed
+  by stable ID. Annotations reference policies by these IDs — citation text
+  is never duplicated inline in annotation files.
+
+  Multiple policy files are supported. The validator, TypeScript generator, and
+  mock server discover all matching files by glob and merge them. Policy IDs must
+  be unique across all files.
+
+  Policy IDs are stable across versions. Renaming a policy ID is a breaking
+  change — add a new ID and deprecate the old one rather than renaming.
+
+type: object
+required:
+  - version
+  - policies
+additionalProperties: false
+
+properties:
+  $schema:
+    type: string
+
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  policies:
+    type: object
+    description: >
+      Map of stable policy IDs to policy definitions.
+      IDs should be kebab-case and program-prefixed for clarity
+      (e.g., snap-processing-clock, medicaid-timeliness).
+    minProperties: 1
+    additionalProperties:
+      $ref: "#/$defs/Policy"
+
+$defs:
+  Policy:
+    type: object
+    required:
+      - citation
+      - description
+    additionalProperties: false
+    properties:
+      citation:
+        type: string
+        description: >
+          Display citation string (e.g., "7 CFR § 273.2(g)"). Used as card text
+          in the service blueprint and design reference.
+      citationUrl:
+        type: string
+        format: uri
+        description: >
+          Optional machine-resolvable URL to the regulation text (e.g., eCFR URL).
+          Enables tooling to link directly to the regulation without parsing the
+          citation string.
+      description:
+        type: string
+        description: >
+          Human-readable explanation of what this policy requires and why it matters.
+          Used as card subtext in the service blueprint and design reference.
+      programs:
+        type: array
+        description: >
+          Benefit programs this policy applies to.
+          Omit if the policy applies universally across programs.
+        items:
+          $ref: "schemas/common/enums.yaml#/$defs/Program"
+        minItems: 1
