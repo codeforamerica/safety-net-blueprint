@@ -581,6 +581,18 @@ function extractOperations(apiSpecs) {
             schemaName = schemaName.replace(/Create$|Update$|List$/, '');
           }
 
+          // If the normalized name doesn't exist as a schema, try to resolve the item type
+          // from the original List schema (e.g. ReviewProgressList → ReviewProgressEntry)
+          if (schemaName && !parsed.components?.schemas?.[schemaName]) {
+            const listSchema = parsed.components?.schemas?.[schemaName + 'List'];
+            if (listSchema) {
+              for (const part of listSchema.allOf || []) {
+                const itemRef = part.properties?.items?.items?.$ref;
+                if (itemRef) { schemaName = itemRef.split('/').pop(); break; }
+              }
+            }
+          }
+
           if (!schemaName) continue;
 
           if (!operations[schemaName]) {
@@ -1084,9 +1096,76 @@ function generateEventsTab(schemaName, events) {
 }
 
 /**
+ * Generate the Annotations tab for a primary schema.
+ * Shows data classification, programs, and policy citations from the annotations registry.
+ */
+function generateAnnotationsTab(schemaName, annotationsData, policies) {
+  const entry = annotationsData?.schemaAnnotations?.get(schemaName);
+  const hasOwn = entry?.own && (entry.own.dataClassification || entry.own.policies || entry.own.programs);
+  const hasFields = entry?.fields?.size > 0;
+
+  if (!hasOwn && !hasFields) {
+    return '<p class="no-actions">No annotations defined for this schema.</p>\n';
+  }
+
+  function renderPrograms(programs) {
+    const entries = Array.isArray(programs)
+      ? programs.map(p => [p, 'required'])
+      : programs && typeof programs === 'object' ? Object.entries(programs) : [];
+    return entries.map(([p, s]) => `<span class="program-badge">${escapeHtml(p)}<span class="program-strength">${escapeHtml(s)}</span></span>`).join(' ');
+  }
+
+  function renderClassification(classes) {
+    if (!Array.isArray(classes) || classes.length === 0) return '';
+    return classes.map(c => `<span class="classification-badge classification-${escapeHtml(c)}">${escapeHtml(c.toUpperCase())}</span>`).join(' ');
+  }
+
+  function renderPolicies(policyIds) {
+    if (!Array.isArray(policyIds) || policyIds.length === 0) return '';
+    return policyIds.map(id => {
+      const policy = policies?.get(id);
+      if (!policy) return `<code>${escapeHtml(id)}</code>`;
+      const text = escapeHtml(policy.citation);
+      const desc = escapeHtml(policy.description?.trim() || '');
+      const url = policy.citationUrl;
+      const link = url ? `<a href="${escapeHtml(url)}" target="_blank" class="policy-citation">${text}</a>` : `<span class="policy-citation">${text}</span>`;
+      return desc ? `${link}<span class="policy-description"> — ${desc}</span>` : link;
+    }).join('<br>');
+  }
+
+  let html = '';
+
+  if (hasOwn) {
+    const own = entry.own;
+    html += `<div class="annotations-schema-level">\n`;
+    if (own.dataClassification) html += `<div class="annotation-row"><span class="annotation-label">Classification</span><span>${renderClassification(own.dataClassification)}</span></div>\n`;
+    if (own.programs) html += `<div class="annotation-row"><span class="annotation-label">Programs</span><span>${renderPrograms(own.programs)}</span></div>\n`;
+    if (own.policies?.length) html += `<div class="annotation-row"><span class="annotation-label">Policies</span><span class="annotation-policies">${renderPolicies(own.policies)}</span></div>\n`;
+    html += `</div>\n`;
+  }
+
+  if (hasFields) {
+    if (hasOwn) html += `<h5 class="transitions-heading">Field Annotations</h5>\n`;
+    html += `<table class="actions-table">\n`;
+    html += `  <thead>\n    <tr>\n      <th>Field</th>\n      <th>Classification</th>\n      <th>Programs</th>\n      <th>Policies</th>\n    </tr>\n  </thead>\n  <tbody>\n`;
+    for (const [fieldName, annotation] of [...entry.fields.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+      html += `    <tr>\n`;
+      html += `      <td class="action-name"><code>${escapeHtml(fieldName)}</code></td>\n`;
+      html += `      <td>${renderClassification(annotation.dataClassification || [])}</td>\n`;
+      html += `      <td>${renderPrograms(annotation.programs)}</td>\n`;
+      html += `      <td>${renderPolicies(annotation.policies || [])}</td>\n`;
+      html += `    </tr>\n`;
+    }
+    html += `  </tbody>\n</table>\n`;
+  }
+
+  return html;
+}
+
+/**
  * Generate ORCA-structured HTML for a primary schema
  */
-function generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, domainKey, transitions, events) {
+function generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, domainKey, transitions, events, annotationsData, policies, lifecycleStates) {
   const { properties } = processSchema(schema, schemaName);
   const description = schema.description || '';
   const domain = DOMAIN_HIERARCHY[domainKey];
@@ -1106,6 +1185,7 @@ function generateOrcaSection(schemaName, schema, relationships, operations, stat
   html += `    <button class="orca-tab" data-tab="relationships">Relationships</button>\n`;
   html += `    <button class="orca-tab" data-tab="actions">Actions</button>\n`;
   html += `    <button class="orca-tab" data-tab="events">Events</button>\n`;
+  html += `    <button class="orca-tab" data-tab="annotations">Annotations</button>\n`;
   html += `  </div>\n`;
 
   // Tab Panels
@@ -1116,6 +1196,56 @@ function generateOrcaSection(schemaName, schema, relationships, operations, stat
   html += `      <div class="overview-content">\n`;
   html += `        <h4>What is ${schemaName}?</h4>\n`;
   html += `        <p class="description">${escapeHtml(description)}</p>\n`;
+
+  // Quick stats
+  const schemaRels = relationships[schemaName] || {};
+  const relCount = (schemaRels.contains || []).length + (schemaRels.references || []).length;
+  const actionCount = (transitions?.[schemaName]?.length || 0) + Object.keys(operations?.[schemaName] || {}).length;
+  const eventCount = (events?.[schemaName]?.published?.length || 0) + (events?.[schemaName]?.subscribed?.length || 0);
+  html += `        <div class="overview-stats">\n`;
+  html += `          <div class="stat-card"><span class="stat-num">${properties.length}</span><span class="stat-label">Attributes</span></div>\n`;
+  html += `          <div class="stat-card"><span class="stat-num">${relCount}</span><span class="stat-label">Relationships</span></div>\n`;
+  html += `          <div class="stat-card"><span class="stat-num">${actionCount}</span><span class="stat-label">Actions</span></div>\n`;
+  html += `          <div class="stat-card"><span class="stat-num">${eventCount}</span><span class="stat-label">Events</span></div>\n`;
+  html += `        </div>\n`;
+
+  // Lifecycle states
+  const objStates = lifecycleStates?.[schemaName];
+  if (objStates?.length) {
+    html += `        <h5 class="overview-section-heading">Lifecycle</h5>\n`;
+    html += `        <div class="lifecycle-states">\n`;
+    for (const s of objStates) {
+      const clockClass = s.slaClock === 'running' ? 'sla-running' : s.slaClock === 'paused' ? 'sla-paused' : 'sla-stopped';
+      const title = s.description ? ` title="${escapeHtml(s.description)}"` : '';
+      html += `          <div class="lifecycle-state ${clockClass}"${title}>\n`;
+      html += `            <span class="lifecycle-state-name">${escapeHtml(s.id)}</span>\n`;
+      html += `            <span class="lifecycle-sla-clock">${escapeHtml(s.slaClock)}</span>\n`;
+      if (s.description) html += `            <span class="lifecycle-state-desc">${escapeHtml(s.description)}</span>\n`;
+      html += `          </div>\n`;
+    }
+    html += `        </div>\n`;
+  }
+
+  // Annotation highlights — schema-level classification and programs
+  const annEntry = annotationsData?.schemaAnnotations?.get(schemaName);
+  const ownAnn = annEntry?.own;
+  if (ownAnn?.dataClassification?.length || ownAnn?.programs) {
+    html += `        <h5 class="overview-section-heading">Data &amp; Programs</h5>\n`;
+    html += `        <div class="overview-annotations">\n`;
+    if (ownAnn.dataClassification?.length) {
+      html += `          <div class="annotation-row"><span class="annotation-label">Classification</span><span>`;
+      html += ownAnn.dataClassification.map(c => `<span class="classification-badge classification-${escapeHtml(c)}">${escapeHtml(c.toUpperCase())}</span>`).join(' ');
+      html += `</span></div>\n`;
+    }
+    if (ownAnn.programs) {
+      const entries = Array.isArray(ownAnn.programs) ? ownAnn.programs.map(p => [p, 'required']) : Object.entries(ownAnn.programs);
+      html += `          <div class="annotation-row"><span class="annotation-label">Programs</span><span>`;
+      html += entries.map(([p, s]) => `<span class="program-badge">${escapeHtml(p)}<span class="program-strength">${escapeHtml(s)}</span></span>`).join(' ');
+      html += `</span></div>\n`;
+    }
+    html += `        </div>\n`;
+  }
+
   html += `      </div>\n`;
   html += `    </div>\n`;
 
@@ -1137,6 +1267,11 @@ function generateOrcaSection(schemaName, schema, relationships, operations, stat
   // Events Panel
   html += `    <div class="orca-panel" data-tab="events">\n`;
   html += generateEventsTab(schemaName, events);
+  html += `    </div>\n`;
+
+  // Annotations Panel
+  html += `    <div class="orca-panel" data-tab="annotations">\n`;
+  html += generateAnnotationsTab(schemaName, annotationsData, policies);
   html += `    </div>\n`;
 
   html += `  </div>\n`; // End orca-panels
@@ -1542,7 +1677,7 @@ function checkForVariations(schemaName, schemas, stateSchemas, states) {
 /**
  * Generate the full HTML document
  */
-function generateHtml(schemas, stateSchemas, states, relationships, operations, transitions, events) {
+function generateHtml(schemas, stateSchemas, states, relationships, operations, transitions, events, annotationsData, policies, lifecycleStates) {
   let contentHtml = '';
 
   // Group schemas by high-level domain
@@ -1616,7 +1751,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations, 
       const { domain: schemaDomain } = classifySchemaIntoDomain(schemaName);
 
       if (isPrimary) {
-        contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, schemaDomain, transitions, events);
+        contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, schemaDomain, transitions, events, annotationsData, policies, lifecycleStates);
       } else {
         contentHtml += generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, schemaDomain);
       }
@@ -1630,7 +1765,7 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations, 
 
     const isPrimary = PRIMARY_SCHEMAS.includes(schemaName);
     if (isPrimary) {
-      contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, 'unclassified', transitions, events);
+      contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, 'unclassified', transitions, events, annotationsData, policies, lifecycleStates);
     } else {
       contentHtml += generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, 'unclassified');
     }
@@ -2495,6 +2630,196 @@ function generateHtml(schemas, stateSchemas, states, relationships, operations, 
       font-style: italic;
     }
 
+    /* Overview panel */
+    .overview-stats {
+      display: flex;
+      gap: 12px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 80px;
+    }
+
+    .stat-num {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #2c3e50;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: #7f8c8d;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .overview-section-heading {
+      color: #2c3e50;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 20px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #ecf0f1;
+    }
+
+    .lifecycle-states {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .lifecycle-state {
+      display: flex;
+      flex-direction: column;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid;
+      min-width: 120px;
+      max-width: 220px;
+      cursor: default;
+    }
+
+    .lifecycle-state-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: monospace;
+    }
+
+    .lifecycle-sla-clock {
+      font-size: 0.7rem;
+      margin-top: 2px;
+      opacity: 0.75;
+    }
+
+    .lifecycle-state-desc {
+      font-size: 0.75rem;
+      margin-top: 6px;
+      line-height: 1.35;
+      opacity: 0.85;
+      border-top: 1px solid currentColor;
+      padding-top: 5px;
+    }
+
+    .sla-running {
+      background: #fef9e7;
+      border-color: #e67e22;
+      color: #7d4e00;
+    }
+
+    .sla-stopped {
+      background: #f8f9fa;
+      border-color: #bdc3c7;
+      color: #5d6d7e;
+    }
+
+    .sla-paused {
+      background: #fef9e7;
+      border-color: #f1c40f;
+      color: #7d6608;
+    }
+
+    .overview-annotations {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+
+    /* Annotations panel */
+    .annotations-schema-level {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+
+    .annotation-row {
+      display: flex;
+      gap: 16px;
+      padding: 6px 0;
+      border-bottom: 1px solid #ecf0f1;
+      align-items: flex-start;
+    }
+
+    .annotation-row:last-child {
+      border-bottom: none;
+    }
+
+    .annotation-label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #5d6d7e;
+      min-width: 110px;
+      padding-top: 2px;
+    }
+
+    .annotation-policies {
+      line-height: 1.8;
+    }
+
+    .program-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #e8f4fd;
+      color: #1a6fa8;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-right: 4px;
+      text-transform: uppercase;
+    }
+
+    .program-strength {
+      font-weight: 400;
+      font-size: 0.72rem;
+      color: #5d9dc7;
+    }
+
+    .classification-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      margin-right: 4px;
+    }
+
+    .classification-pii { background: #fdecea; color: #c0392b; }
+    .classification-fti { background: #fef9e7; color: #9a7d0a; }
+    .classification-phi { background: #f5eef8; color: #76448a; }
+    .classification-phi-behavioral { background: #f5eef8; color: #76448a; }
+    .classification-cjis { background: #eafaf1; color: #1e8449; }
+
+    .policy-citation {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #2980b9;
+      text-decoration: none;
+    }
+
+    a.policy-citation:hover {
+      text-decoration: underline;
+    }
+
+    .policy-description {
+      font-size: 0.82rem;
+      color: #7f8c8d;
+    }
+
     .read-only-section {
       margin-top: 25px;
       padding: 15px;
@@ -3159,7 +3484,29 @@ function loadStateMachineTransitions(specDir) {
 
       const normalized = [];
 
-      // New format: machine.transitions[] with id, description, guards[].actors, transition.from/to
+      // Current format: machine.actions[] with id, description ("METHOD /path — notes"), guards[].actors, transition.from/to
+      for (const a of machine.actions || []) {
+        const desc = a.description || '';
+        const dashIdx = desc.indexOf(' — ');
+        const endpoint = dashIdx >= 0 ? desc.slice(0, dashIdx).trim() : desc.trim();
+        const notes = dashIdx >= 0 ? desc.slice(dashIdx + 3).trim() : '';
+        const parts = endpoint.split(' ');
+        const method = parts[0] || '';
+        const path = parts[1] || '';
+        const actors = (a.guards || []).flatMap(g => g.actors || []);
+
+        normalized.push({
+          id: a.id || '',
+          method,
+          path,
+          actors,
+          from: a.transition?.from || '',
+          to: a.transition?.to || '',
+          description: notes,
+        });
+      }
+
+      // Legacy format: machine.transitions[] (kept for backward compat)
       for (const t of machine.transitions || []) {
         const desc = t.description || '';
         const dashIdx = desc.indexOf(' — ');
@@ -3181,7 +3528,7 @@ function loadStateMachineTransitions(specDir) {
         });
       }
 
-      // Old format: machine.operations[] with name, guards.actors, transition.from
+      // Legacy format: machine.operations[]
       for (const op of machine.operations || []) {
         const actors = Array.isArray(op.guards?.actors) ? op.guards.actors : [];
         normalized.push({
@@ -3243,11 +3590,11 @@ function loadStateMachineEvents(specDir) {
       const published = [];
       const subscribed = [];
 
-      // Published: emitted from transition steps
-      for (const t of machine.transitions || []) {
-        for (const step of t.steps || []) {
-          if (step.emit?.event) {
-            const name = `${domain}.${objectName.toLowerCase()}.${step.emit.event}`;
+      // Published: emitted from action steps (emit.type is the fully-qualified event name)
+      for (const a of machine.actions || []) {
+        for (const step of a.steps || []) {
+          if (step.emit?.type) {
+            const name = step.emit.type;
             const description = step.emit.description || '';
             if (!published.some(e => e.name === name)) {
               published.push({ name, description });
@@ -3256,9 +3603,9 @@ function loadStateMachineEvents(specDir) {
         }
       }
 
-      // Subscribed: from machine.events[]
+      // Subscribed: from machine.events[] (type is the fully-qualified event name)
       for (const e of machine.events || []) {
-        subscribed.push({ name: e.name || '', description: e.description || '' });
+        subscribed.push({ name: e.type || '', description: e.description || '' });
       }
 
       if (published.length > 0 || subscribed.length > 0) {
@@ -3268,6 +3615,93 @@ function loadStateMachineEvents(specDir) {
   }
 
   return result;
+}
+
+/**
+ * Load lifecycle states from all *-state-machine.yaml files.
+ * Returns a map of objectName -> [{ id, slaClock }]
+ */
+function loadStateMachineStates(specDir) {
+  const result = {};
+
+  let files;
+  try {
+    files = readdirSync(specDir).filter(f => f.endsWith('-state-machine.yaml'));
+  } catch {
+    return result;
+  }
+
+  for (const file of files) {
+    let sm;
+    try {
+      sm = yaml.load(readFileSync(join(specDir, file), 'utf8'));
+    } catch {
+      continue;
+    }
+
+    for (const machine of sm.machines || []) {
+      const objectName = machine.object;
+      if (!objectName || !machine.states?.length) continue;
+      result[objectName] = machine.states.map(s => ({ id: s.id || '', slaClock: s.slaClock || 'stopped', description: s.description || '' }));
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Load domain annotations and policy registry from *-annotations.yaml and platform-registry-policies*.yaml.
+ * Returns { schemaAnnotations, operationAnnotations, eventAnnotations, policies } where:
+ *   schemaAnnotations: Map<schemaName, { own: annotation|null, fields: Map<fieldName, annotation> }>
+ *   operationAnnotations: Map<"objectName.actionId", annotation>
+ *   eventAnnotations: Map<"event.type.name", annotation>
+ *   policies: Map<policyId, policy>
+ */
+function loadAnnotations(specDir) {
+  const schemaAnnotations = new Map();
+  const operationAnnotations = new Map();
+  const eventAnnotations = new Map();
+  const policies = new Map();
+
+  try {
+    const registryFiles = readdirSync(specDir).filter(f => /^platform-registry-policies.*\.yaml$/.test(f));
+    for (const file of registryFiles) {
+      const registry = yaml.load(readFileSync(join(specDir, file), 'utf8'));
+      for (const [id, policy] of Object.entries(registry.policies || {})) {
+        policies.set(id, policy);
+      }
+    }
+  } catch { /* ignore */ }
+
+  try {
+    const annotationFiles = readdirSync(specDir).filter(f => /^[a-z].*-annotations\.yaml$/.test(f));
+    for (const file of annotationFiles) {
+      const annotations = yaml.load(readFileSync(join(specDir, file), 'utf8'));
+
+      for (const [key, annotation] of Object.entries(annotations.schema || {})) {
+        const dotIdx = key.indexOf('.');
+        if (dotIdx === -1) {
+          if (!schemaAnnotations.has(key)) schemaAnnotations.set(key, { own: null, fields: new Map() });
+          schemaAnnotations.get(key).own = annotation;
+        } else {
+          const schemaName = key.slice(0, dotIdx);
+          const fieldName = key.slice(dotIdx + 1);
+          if (!schemaAnnotations.has(schemaName)) schemaAnnotations.set(schemaName, { own: null, fields: new Map() });
+          schemaAnnotations.get(schemaName).fields.set(fieldName, annotation);
+        }
+      }
+
+      for (const [key, annotation] of Object.entries(annotations.operations || {})) {
+        operationAnnotations.set(key, annotation);
+      }
+
+      for (const [key, annotation] of Object.entries(annotations.events || {})) {
+        eventAnnotations.set(key, annotation);
+      }
+    }
+  } catch { /* ignore */ }
+
+  return { schemaAnnotations, operationAnnotations, eventAnnotations, policies };
 }
 
 /**
@@ -3363,6 +3797,15 @@ async function main() {
     const events = loadStateMachineEvents(smSpecDir);
     console.log(`Loaded events for ${Object.keys(events).length} object(s): ${Object.keys(events).join(', ')}`);
 
+    // Load annotations and policy registry
+    const { schemaAnnotations, operationAnnotations, eventAnnotations, policies } = loadAnnotations(smSpecDir);
+    console.log(`Loaded annotations for ${schemaAnnotations.size} schema(s), ${policies.size} policies`);
+    const annotationsData = { schemaAnnotations, operationAnnotations, eventAnnotations };
+
+    // Load lifecycle states
+    const lifecycleStates = loadStateMachineStates(smSpecDir);
+    console.log(`Loaded lifecycle states for ${Object.keys(lifecycleStates).length} object(s): ${Object.keys(lifecycleStates).join(', ')}`);
+
     // Derive primary schemas: anything with a REST endpoint or a state machine gets full ORCA tabs
     PRIMARY_SCHEMAS = [...new Set([...Object.keys(operations), ...Object.keys(transitions)])];
     console.log(`Primary schemas: ${PRIMARY_SCHEMAS.join(', ')}`);
@@ -3370,7 +3813,7 @@ async function main() {
     // Generate HTML (no state overlays — states use resolve-overlay.js separately)
     const stateSchemas = {};
     const states = [];
-    const html = generateHtml(baseSchemas, stateSchemas, states, relationships, operations, transitions, events);
+    const html = generateHtml(baseSchemas, stateSchemas, states, relationships, operations, transitions, events, annotationsData, policies, lifecycleStates);
 
     // Write output
     if (!existsSync(outDir)) {
