@@ -99,7 +99,7 @@ schema:
 operations:
 
   application.submit:
-    policies: [snap-application-acceptance, snap-application-date-stamp, snap-processing-clock, medicaid-processing-clock, snap-right-to-apply, snap-household-composition]
+    policies: [snap-application-acceptance, snap-application-date-stamp, snap-processing-clock, snap-expedited-processing, medicaid-processing-clock, snap-right-to-apply, snap-household-composition]
     programs: [snap, medicaid]
 
   application.approve-determination:

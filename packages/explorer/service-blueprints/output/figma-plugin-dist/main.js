@@ -40,10 +40,10 @@
     });
   };
 
-  // service-blueprints/src/figma-plugin/src/_current_card_types.json
+  // src/figma-plugin/src/_current_card_types.json
   var current_card_types_default = { types: { "staff-action": { headerBg: "#2B1A78", bodyBg: "#EEEBFF", headerFg: "#FFFFFF", bodyFg: "#1A1040", label: "STAFF ACTION", icon: "person-single" }, "person-action": { headerBg: "#2B1A78", bodyBg: "#EEEBFF", headerFg: "#FFFFFF", bodyFg: "#1A1040", label: "PERSON", icon: "person-single" }, system: { headerBg: "#137C69", bodyBg: "#F1FFFD", headerFg: "#FFFFFF", bodyFg: "#0A3A2E", label: "SYSTEM", icon: "gear" }, "data-entity": { headerBg: "#154C21", bodyBg: "#E3F5E1", headerFg: "#FFFFFF", bodyFg: "#0A2E1E", label: "DATA", icon: "document" }, communications: { headerBg: "#2672DE", bodyBg: "#EDF5FF", headerFg: "#FFFFFF", bodyFg: "#0A1E40", label: "COMMUNICATIONS", icon: "mail" }, "domain-event": { headerBg: "#2E6276", bodyBg: "#E7F2F5", headerFg: "#FFFFFF", bodyFg: "#0A2E34", label: "EVENT", icon: "lightning" }, "pain-point": { headerBg: "#EB646B", bodyBg: "#F9E9EA", headerFg: "#1A0000", bodyFg: "#2A0A0A", label: "PAIN POINT", icon: "diamond-alert" }, opportunity: { headerBg: "#FDAF49", bodyBg: "#FEF1DD", headerFg: "#3D2800", bodyFg: "#3D2800", label: "OPPORTUNITY", icon: "lightbulb" }, note: { headerBg: "#FDDA40", bodyBg: "#FFFBE7", headerFg: "#333333", bodyFg: "#555555", label: "" }, policy: { rendersAs: "question", headerBg: "#EDD7CD", bodyBg: "#F8F6F5", headerFg: "#3D2B0E", bodyFg: "#3D2B0E", label: "POLICY", icon: "building" }, metrics: { headerBg: "#B9E5DF", bodyBg: "#F1FFFD", headerFg: "#1A3A36", bodyFg: "#1A3A36", label: "METRICS", icon: "bar-chart" }, question: { headerBg: "#686868", bodyBg: "#E3E3E3", headerFg: "#FFFFFF", bodyFg: "#1A1A1A", label: "QUESTION", icon: "help" }, touchpoint: { headerBg: "#434343", bodyBg: "#F1F1F1", headerFg: "#FFFFFF", bodyFg: "#1A1A1A", label: "TOUCHPOINT", icon: "diamond" } }, actors: { applicant: { headerBg: "#D97C20", bodyBg: "#FDECD4", headerFg: "#3D1800", bodyFg: "#3D1800", label: "APPLICANT", icon: "person-single" }, caseworker: { headerBg: "#2B1A78", bodyBg: "#EEEBFF", headerFg: "#FFFFFF", bodyFg: "#1A1040", label: "CASEWORKER", icon: "person-single" }, supervisor: { headerBg: "#4F41B2", bodyBg: "#EEEBFF", headerFg: "#FFFFFF", bodyFg: "#1A1040", label: "SUPERVISOR", icon: "person-group" }, system: { headerBg: "#137C69", bodyBg: "#F1FFFD", headerFg: "#FFFFFF", bodyFg: "#0A3A2E", label: "SYSTEM", icon: "gear" } } };
 
-  // service-blueprints/src/figma-plugin/src/renderer.ts
+  // src/figma-plugin/src/renderer.ts
   var PHASE_WIDTH = 280;
   var LANE_LABEL_WIDTH = 120;
   var HEADER_HEIGHT = 72;
@@ -784,7 +784,7 @@
     });
   }
 
-  // service-blueprints/src/figma-plugin/src/_current.json
+  // src/figma-plugin/src/_current.json
   var current_default = {
     id: "intake-blueprint",
     name: "Intake Service Blueprint",
@@ -868,48 +868,9 @@
     ],
     cells: [
       {
-        laneId: "applicant",
-        subPhaseId: "submitted",
-        cards: [
-          {
-            type: "person-action",
-            actor: "applicant",
-            text: "Submits application",
-            subtext: "Online or in person; caseworker may submit on behalf of applicant"
-          }
-        ]
-      },
-      {
-        laneId: "regulations",
-        subPhaseId: "submitted",
-        cards: [
-          {
-            type: "policy",
-            text: "SNAP: 30-day processing clock",
-            subtext: "7 CFR \xA7 273.2(g) \u2014 Clock starts at submission; determination must be completed within 30 days (7 days for expedited applications)."
-          },
-          {
-            type: "policy",
-            text: "Expedited SNAP: 7-day clock",
-            subtext: "7 CFR \xA7 273.2(i) \u2014 If expedited screening at submission returns positive, a 7-day processing deadline applies instead of the standard 30-day deadline. Expedited criteria include low income, low resources, or migrant/seasonal farm worker status."
-          },
-          {
-            type: "policy",
-            text: "Medicaid: 45-day processing clock starts at submission",
-            subtext: "42 CFR \xA7 435.912 \u2014 Determination must be completed within 45 days. 90 days if disability determination required \u2014 indicated by program type (e.g., Medicaid ABD vs. MAGI Medicaid)."
-          }
-        ]
-      },
-      {
         laneId: "system",
         subPhaseId: "submitted",
         cards: [
-          {
-            type: "system",
-            domain: "intake",
-            text: "Verifications created per program and household member",
-            subtext: "Income, identity, residency for SNAP; citizenship and immigration for Medicaid (per member)"
-          },
           {
             type: "system",
             domain: "intake",
@@ -1105,29 +1066,6 @@
         ]
       },
       {
-        laneId: "caseworker",
-        subPhaseId: "interview",
-        cards: [
-          {
-            type: "person-action",
-            actor: "caseworker",
-            text: "Conducts interview; resolves remaining verification items",
-            subtext: "May require multiple appointments"
-          }
-        ]
-      },
-      {
-        laneId: "regulations",
-        subPhaseId: "interview",
-        cards: [
-          {
-            type: "policy",
-            text: "SNAP: interview required before determination",
-            subtext: "7 CFR \xA7 273.2(e) \u2014 May be waived by state policy"
-          }
-        ]
-      },
-      {
         laneId: "system",
         subPhaseId: "interview",
         cards: [
@@ -1184,10 +1122,10 @@
     ]
   };
 
-  // service-blueprints/src/figma-plugin/src/_current_cards.json
-  var current_cards_default = { domain: "intake", name: "Intake", phases: [{ id: "flow-0", label: "Application Submission", subPhases: [{ id: "frag-0-0", label: "Application Submission", cards: [{ type: "policy", text: "SNAP: 30-day processing clock", subtext: "Clock starts at submission; determination must be completed within 30 days (7 days for expedited applications).", citation: "7 CFR \xA7 273.2(g)" }, { type: "policy", text: "Expedited SNAP: 7-day clock", subtext: "If expedited screening at submission returns positive, a 7-day processing deadline applies instead of the standard 30-day deadline. Expedited criteria include low income, low resources, or migrant/seasonal farm worker status.", citation: "7 CFR \xA7 273.2(i)" }, { type: "policy", text: "Medicaid: 45-day processing clock starts at submission", subtext: "Determination must be completed within 45 days. 90 days if disability determination required \u2014 indicated by program type (e.g., Medicaid ABD vs. MAGI Medicaid).", citation: "42 CFR \xA7 435.912" }, { type: "policy", text: "SNAP: income, identity, and residency must be verified before determination", subtext: "Completion may occur via electronic check, document review, or interview before determination is recorded.", citation: "7 CFR \xA7 273.2(f)" }, { type: "policy", text: "Medicaid: when verification is required, electronic checks must be completed before requesting paper documents", subtext: "Electronic data sources must be checked before requesting paper documentation from applicants. Electronic checks must be attempted first for all verification items; paper documents may only be requested when a check returns inconclusive. Applies to citizenship (FDSH SSA), immigration status (FDSH VLP / SAVE), and income (FDSH FTI).", citation: "42 CFR \xA7 435.940" }] }, { id: "frag-0-1", label: "if SNAP applied", cards: [{ type: "policy", text: "SSN must be verified via SSA", subtext: "Applicants must disclose their SSN; it is verified electronically via SSA before determination.", citation: "42 U.S.C. \xA7 1320b-7" }, { type: "policy", text: "IEVS: must query SSA, IRS, state wage records, and unemployment insurance separately", subtext: "Each source is a separate electronic query and must be queried independently \u2014 results cannot be satisfied by a single combined check. Sources: SSA (Social Security earnings), IRS (federal tax data), SWICA (state wage records), UIB (unemployment insurance).", citation: "7 CFR \xA7 272.8" }, { type: "policy", text: "SNAP: immigration status verified electronically via SAVE", subtext: "Non-qualified aliens are ineligible for federal public benefits. SNAP verifies immigration status electronically via SAVE before determination. When electronic verification is inconclusive, acceptable document proofs include green card (I-551), I-94, or employment authorization card (I-766/I-688B).", citation: "8 U.S.C. \xA7 1611" }] }, { id: "frag-0-2", label: "if Medicaid applied", cards: [{ type: "policy", text: "Citizenship verified electronically via FDSH SSA before requesting paper documents", subtext: "The federal data hub's Social Security Administration check is run first; if conclusive, no document request is needed. If inconclusive, paper documents (passport, birth certificate, U.S. certificate of naturalization) may be requested.", citation: "42 CFR \xA7 435.956(b)" }, { type: "policy", text: "Immigration status verified electronically via FDSH VLP", subtext: "The federal data hub's immigration status check (VLP) is run first; if inconclusive or document number unavailable, SAVE is tried next. Paper documents (I-551, I-94, I-766) are only requested after both electronic checks return inconclusive.", citation: "42 CFR \xA7 435.956(c)" }, { type: "policy", text: "Medicaid: MAGI income verified electronically before requesting paper documents", subtext: "Income is checked against federal tax data electronically (FDSH FTI) before requesting documentation from the applicant. Paper documentation (pay stubs, tax returns) may only be requested if the electronic check is inconclusive.", citation: "42 CFR \xA7 435.948" }, { type: "policy", text: "Check for existing Medicare or Medicaid enrollment before starting verification \u2014 active coverage may allow auto-approval", subtext: "Two federal data hub checks must be performed before requesting documents from the applicant: one for existing Medicare enrollment and one for existing Medicaid or other health coverage. If active coverage is found, the application may be auto-approved without further verification. Otherwise, standard electronic verification continues.", citation: "42 CFR \xA7 435.916" }] }] }, { id: "flow-1", label: "Caseworker Review", subPhases: [{ id: "frag-1-0", label: "Caseworker Review", cards: [{ type: "policy", text: "SNAP: interview required before determination", subtext: "May be waived by state policy", citation: "7 CFR \xA7 273.2(e)" }] }] }, { id: "flow-2", label: "Eligibility Determination", subPhases: [{ id: "frag-2-0", label: "Path B: caseworker reviews complete determination picture", cards: [{ type: "policy", text: "Medicaid: determination record must include the date, basis, and all supporting documents for each decision", subtext: "Each determination must be documented with the date of the decision, the regulatory basis, and all information and documents used to support it. Applies to approvals, denials, and terminations.", citation: "42 CFR \xA7 431.17(b)(1)" }] }, { id: "frag-2-1", label: "Eligibility Determination", cards: [{ type: "policy", text: "SNAP: written notice of eligibility or denial must be sent to each applicant household", subtext: "Notice must be sent within the 30-day processing deadline (7 days for expedited). Must include the eligibility decision, benefit amount if approved, or denial reason if denied.", citation: "7 CFR \xA7 273.2(h)" }, { type: "policy", text: "Medicaid: written notice of eligibility, denial, or termination required", subtext: "Notice must be sent within the 45-day processing deadline (90 days if disability determination required). Must state the decision, the reason, and the applicant's right to appeal.", citation: "42 CFR \xA7 435.917" }] }] }] };
+  // src/figma-plugin/src/_current_cards.json
+  var current_cards_default = { domain: "intake", name: "Intake", phases: [{ id: "flow-0", label: "Application Submission", subPhases: [{ id: "frag-0-0", label: "Application Submission", cards: [{ type: "policy", text: "7 CFR \xA7 273.2(g)", subtext: "Agency must accept any application on the date of first contact, even if incomplete. The date received is the application filing date and starts the processing clock.", citation: "7 CFR \xA7 273.2(g)" }, { type: "policy", text: "7 CFR \xA7 273.2(c)(1)", subtext: "Agency must date-stamp or otherwise record the date of receipt on every application. The date stamp establishes the filing date used for timeliness determinations.", citation: "7 CFR \xA7 273.2(c)(1)" }, { type: "policy", text: "7 CFR \xA7 273.2(i)(1)", subtext: "Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application.", citation: "7 CFR \xA7 273.2(i)(1)" }, { type: "policy", text: "7 CFR \xA7 273.2(i)(3)(i)", subtext: "Benefits must be issued within 7 days for households with gross monthly income below $150 and liquid resources at or below $100, or households whose combined monthly gross income and liquid resources are less than the monthly rent or mortgage and utilities.", citation: "7 CFR \xA7 273.2(i)(3)(i)" }, { type: "policy", text: "42 CFR \xA7 435.912", subtext: "States must make eligibility determinations within 45 days of application for most applicants and within 90 days for applicants who require a disability determination.", citation: "42 CFR \xA7 435.912" }, { type: "policy", text: "7 CFR \xA7 273.2(a)", subtext: "Any household may apply for SNAP benefits regardless of current participation in other programs. Agencies may not screen out applicants before accepting an application.", citation: "7 CFR \xA7 273.2(a)" }, { type: "policy", text: "7 CFR \xA7 273.1", subtext: "All household members must be listed on the application regardless of whether they are individually applying for SNAP. Members who are ineligible \u2014 such as non-citizens who do not qualify \u2014 must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household.", citation: "7 CFR \xA7 273.1" }, { type: "policy", text: "7 CFR \xA7 273.2(f)", subtext: "Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section.", citation: "7 CFR \xA7 273.2(f)" }, { type: "policy", text: "42 CFR \xA7 435.940", subtext: "When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.", citation: "42 CFR \xA7 435.940" }, { type: "policy", text: "42 U.S.C. \xA7 1320b-7", subtext: "Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.", citation: "42 U.S.C. \xA7 1320b-7" }, { type: "policy", text: "7 CFR \xA7 272.8", subtext: "Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.", citation: "7 CFR \xA7 272.8" }, { type: "policy", text: "42 CFR \xA7 435.956(b)", subtext: "States must use electronic data sources to verify citizenship before requesting paper documentation. FDSH SSA citizenship check satisfies this requirement.", citation: "42 CFR \xA7 435.956(b)" }, { type: "policy", text: "42 CFR \xA7 435.956(c)", subtext: "States must use electronic data sources to verify immigration status before requesting paper documentation. FDSH VLP satisfies this requirement.", citation: "42 CFR \xA7 435.956(c)" }, { type: "policy", text: "42 CFR \xA7 435.948", subtext: "States must use data from other agencies and programs to verify eligibility information electronically before requesting documentation from applicants.", citation: "42 CFR \xA7 435.948" }] }, { id: "frag-0-1", label: "if Medicaid applied", cards: [{ type: "policy", text: "Check for existing Medicare or Medicaid enrollment before starting verification \u2014 active coverage may allow auto-approval", subtext: "Two federal data hub checks must be performed before requesting documents from the applicant: one for existing Medicare enrollment and one for existing Medicaid or other health coverage. If active coverage is found, the application may be auto-approved without further verification. Otherwise, standard electronic verification continues.", citation: "42 CFR \xA7 435.916" }] }] }, { id: "flow-1", label: "Caseworker Review", subPhases: [{ id: "frag-1-0", label: "Caseworker Review", cards: [{ type: "policy", text: "7 CFR \xA7 273.2(e)", subtext: "SNAP applicants must complete an in-person or telephone interview before certification. The interview must be conducted by a qualified eligibility worker.", citation: "7 CFR \xA7 273.2(e)" }] }] }, { id: "flow-2", label: "Eligibility Determination", subPhases: [{ id: "frag-2-0", label: "Path B: caseworker reviews complete determination picture", cards: [{ type: "policy", text: "7 CFR \xA7 273.15", subtext: "Applicants have the right to a fair hearing if the agency delays or denies benefits. Supervisor review is a prerequisite for escalated cases prior to formal hearing proceedings.", citation: "7 CFR \xA7 273.15" }, { type: "policy", text: "7 CFR \xA7 273.2(h)", subtext: "Written notice of eligibility or denial must be sent to each applicant household within the 30-day processing deadline (7 days for expedited). Notice must include the eligibility decision, benefit amount if approved, or denial reason if denied.", citation: "7 CFR \xA7 273.2(h)" }, { type: "policy", text: "42 CFR \xA7 435.917", subtext: "Written notice of eligibility, denial, or termination must be sent within the 45-day processing deadline (90 days if a disability determination is required). Notice must state the decision, the reason, and the applicant's right to appeal.", citation: "42 CFR \xA7 435.917" }, { type: "policy", text: "7 CFR \xA7 273.15(a)", subtext: "Every household has the right to a fair hearing to contest any agency action affecting their benefits, including delays, denials, reductions, and terminations.", citation: "7 CFR \xA7 273.15(a)" }, { type: "policy", text: "42 CFR \xA7 431.17(b)(1)", subtext: "Each eligibility determination must be documented with the date of the decision, the regulatory basis for the decision, and all information and documents used to support it. Applies to approvals, denials, and terminations.", citation: "42 CFR \xA7 431.17(b)(1)" }] }] }] };
 
-  // service-blueprints/src/figma-plugin/src/main.ts
+  // src/figma-plugin/src/main.ts
   var BLUEPRINTS = {
     intake: current_default
   };

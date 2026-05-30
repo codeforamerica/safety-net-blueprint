@@ -7,12 +7,12 @@ eventsSpec: intake-asyncapi.yaml
 machines:
   - object: Application
     states:
-      - {id: draft, slaClock: stopped}
-      - {id: submitted, slaClock: running}
-      - {id: under_review, slaClock: running}
-      - {id: pending_approval, slaClock: stopped}
-      - {id: withdrawn, slaClock: stopped}
-      - {id: closed, slaClock: stopped}
+      - {id: draft, slaClock: stopped, description: "Created but not yet filed; regulatory clock has not started"}
+      - {id: submitted, slaClock: running, description: "Formally filed; regulatory clock starts; caseworker task and automated screening initiated"}
+      - {id: under_review, slaClock: running, description: "Caseworker is actively reviewing; clock is running toward the 30/45-day deadline"}
+      - {id: pending_approval, slaClock: stopped, description: "Determination awaiting supervisor approval; clock paused per agency policy"}
+      - {id: withdrawn, slaClock: stopped, description: "Household withdrew; open tasks cancelled and household notified. Terminal."}
+      - {id: closed, slaClock: stopped, description: "Intake complete; case management creates a benefit case if approved. Terminal."}
     initialState: draft
     actions:
       - id: submit
@@ -294,11 +294,11 @@ machines:
                       personMatch: {matchStatus: no_match, candidates: []}
   - object: Verification
     states:
-      - {id: pending, slaClock: stopped}
-      - {id: inconclusive, slaClock: stopped}
-      - {id: satisfied, slaClock: stopped}
-      - {id: waived, slaClock: stopped}
-      - {id: cannot_verify, slaClock: stopped}
+      - {id: pending, slaClock: stopped, description: "Verification item created; electronic check or document request not yet complete"}
+      - {id: inconclusive, slaClock: stopped, description: "Electronic check returned insufficient data; document fallback triggered (42 CFR § 435.940)"}
+      - {id: satisfied, slaClock: stopped, description: "Verified — via electronic check, document review, or interview. Terminal."}
+      - {id: waived, slaClock: stopped, description: "Verification requirement waived by state policy. Terminal."}
+      - {id: cannot_verify, slaClock: stopped, description: "Verification could not be completed after all attempts; caseworker decides next step. Terminal."}
     initialState: pending
     context:
       - fdshSsaService:

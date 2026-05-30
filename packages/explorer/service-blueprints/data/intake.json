@@ -81,48 +81,9 @@
   ],
   "cells": [
     {
-      "laneId": "applicant",
-      "subPhaseId": "submitted",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Submits application",
-          "subtext": "Online or in person; caseworker may submit on behalf of applicant"
-        }
-      ]
-    },
-    {
-      "laneId": "regulations",
-      "subPhaseId": "submitted",
-      "cards": [
-        {
-          "type": "policy",
-          "text": "SNAP: 30-day processing clock",
-          "subtext": "7 CFR § 273.2(g) — Clock starts at submission; determination must be completed within 30 days (7 days for expedited applications)."
-        },
-        {
-          "type": "policy",
-          "text": "Expedited SNAP: 7-day clock",
-          "subtext": "7 CFR § 273.2(i) — If expedited screening at submission returns positive, a 7-day processing deadline applies instead of the standard 30-day deadline. Expedited criteria include low income, low resources, or migrant/seasonal farm worker status."
-        },
-        {
-          "type": "policy",
-          "text": "Medicaid: 45-day processing clock starts at submission",
-          "subtext": "42 CFR § 435.912 — Determination must be completed within 45 days. 90 days if disability determination required — indicated by program type (e.g., Medicaid ABD vs. MAGI Medicaid)."
-        }
-      ]
-    },
-    {
       "laneId": "system",
       "subPhaseId": "submitted",
       "cards": [
-        {
-          "type": "system",
-          "domain": "intake",
-          "text": "Verifications created per program and household member",
-          "subtext": "Income, identity, residency for SNAP; citizenship and immigration for Medicaid (per member)"
-        },
         {
           "type": "system",
           "domain": "intake",
@@ -314,29 +275,6 @@
           "type": "domain-event",
           "text": "call.completed",
           "domain": "data_exchange"
-        }
-      ]
-    },
-    {
-      "laneId": "caseworker",
-      "subPhaseId": "interview",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "caseworker",
-          "text": "Conducts interview; resolves remaining verification items",
-          "subtext": "May require multiple appointments"
-        }
-      ]
-    },
-    {
-      "laneId": "regulations",
-      "subPhaseId": "interview",
-      "cards": [
-        {
-          "type": "policy",
-          "text": "SNAP: interview required before determination",
-          "subtext": "7 CFR § 273.2(e) — May be waived by state policy"
         }
       ]
     },
