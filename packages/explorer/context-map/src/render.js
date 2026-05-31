@@ -1,43 +1,17 @@
-#!/usr/bin/env node
 /**
  * render.js
  *
- * Generates per-domain detail SVGs and an overview SVG from config.yaml.
- * Output goes to dist/ (default) or the path provided as argv[2].
+ * Generates per-domain detail SVGs and an overview SVG from the enriched
+ * explorer config. Called by the consolidated packages/explorer/build.js.
  *
- * Usage:
- *   node render.js [outDir]
+ * Exports: renderContextMap(pkgConfig, mapConfig, outDir)
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
+import { writeFileSync, mkdirSync } from 'fs';
+import { resolve } from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Package-level: domain registry and event definitions
-const pkgConfig = yaml.load(readFileSync(resolve(__dirname, '..', '..', 'config.yaml'), 'utf8'));
-// Diagram-level: title, subtitle, overview layout positions
-const mapConfig = yaml.load(readFileSync(resolve(__dirname, '..', 'config', 'config.yaml'), 'utf8'));
-
-// Merged config: attach layout positions (x, y) to each domain
-const config = {
-  title:         mapConfig.title,
-  subtitle:      mapConfig.subtitle,
-  cross_cutting: pkgConfig.cross_cutting,
-  events:        pkgConfig.events,
-  apis:          pkgConfig.apis,
-  actors:        pkgConfig.actors,
-  flows:         pkgConfig.flows,
-  domains:       (pkgConfig.domains || []).map(d => ({
-    ...d,
-    ...(mapConfig.layout?.[d.id] || {}),
-  })),
-};
-
-const OUT_DIR = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, 'dist');
-mkdirSync(OUT_DIR, { recursive: true });
+// Set by renderContextMap() before any helper function is called.
+let config;
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -538,7 +512,7 @@ function renderFlowPage(flow) {
   flatSteps.forEach((step, idx) => {
     const y = arrowY[idx];
 
-    if (step.ref) {
+    if (step.ref && !step.ref.includes('/')) {
       const refFlow  = (config.flows || []).find(f => f.id === step.ref);
       const refLabel = refFlow?.label || step.label || step.ref;
       const flowIds  = (config.flows || []).map(f => f.id);
@@ -678,14 +652,13 @@ function renderFlowPage(flow) {
         `color:#6b7280;max-width:220px;white-space:normal;z-index:3;">${noteHtml}</div>`
       );
     }
-    if (step.regulatory && step.regulatory.length) {
+    if (step.policies && step.policies.length) {
       const id  = `r${regIdx++}`;
       const tipX = (parseFloat(midX) + Math.abs(tx - fx) * 0.3 + 4).toFixed(1);
-      const tipRows = step.regulatory.map((r, i) =>
+      const tipRows = step.policies.map((p, i) =>
         (i > 0 ? `<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>` : '') +
-        `<div style="font-size:7.5px;font-weight:700;color:#2B1A78;">${r.citation}</div>` +
-        `<div style="font-size:8px;color:#374151;">${r.summary}</div>` +
-        (r.detail ? `<div style="font-size:7.5px;color:#6b7280;font-style:italic;">${r.detail}</div>` : '')
+        `<div style="font-size:7.5px;font-weight:700;color:#2B1A78;">${p.citation}</div>` +
+        `<div style="font-size:8px;color:#374151;">${p.description}</div>`
       ).join('');
       labelDivs.push(
         `<div class="int-hit" data-int-id="${id}" style="position:absolute;` +
@@ -712,7 +685,7 @@ function renderFlowPage(flow) {
     }
     if (step.overlay && step.overlay.length) {
       const id      = `ov${ovIdx++}`;
-      const hasReg  = !!(step.regulatory && step.regulatory.length);
+      const hasReg  = !!(step.policies && step.policies.length);
       const tipX    = (parseFloat(midX) + Math.abs(tx - fx) * 0.3 + (hasReg ? 22 : 4)).toFixed(1);
       const tipRows = step.overlay.map((o, i) =>
         (i > 0 ? `<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;"></div>` : '') +
@@ -1061,21 +1034,44 @@ function renderDetail(domainId) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="display:block">\n${parts.join('\n')}\n</svg>`;
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────
+// ── Entry point ────────────────────────────────────────────────────────────
 
-const overviewHtml = renderOverview();
-writeFileSync(resolve(OUT_DIR, 'domains.html'), overviewHtml, 'utf8');
-console.log('Written: domains.html');
+/**
+ * @param {Object} pkgConfig  enriched explorer config (from resolveConfig())
+ * @param {Object} mapConfig  context-map layout config (context-map/config/config.yaml)
+ * @param {string} outDir     directory to write HTML fragment files into
+ */
+export function renderContextMap(pkgConfig, mapConfig, outDir) {
+  config = {
+    title:         mapConfig.title,
+    subtitle:      mapConfig.subtitle,
+    cross_cutting: pkgConfig.cross_cutting,
+    events:        pkgConfig.events,
+    apis:          pkgConfig.apis,
+    actors:        pkgConfig.actors,
+    flows:         pkgConfig.flows,
+    domains:       (pkgConfig.domains || []).map(d => ({
+      ...d,
+      ...(mapConfig.layout?.[d.id] || {}),
+    })),
+  };
 
-for (const d of config.domains) {
-  if (d.status === 'not-started') continue;
-  const html = renderDetail(d.id);
-  writeFileSync(resolve(OUT_DIR, `domain_${d.id}.html`), html, 'utf8');
-  console.log(`Written: domain_${d.id}.html`);
-}
+  mkdirSync(outDir, { recursive: true });
 
-for (const flow of (config.flows || [])) {
-  const html = renderFlowPage(flow);
-  writeFileSync(resolve(OUT_DIR, `flow_${flow.domain}_${flow.id}.html`), html, 'utf8');
-  console.log(`Written: flow_${flow.domain}_${flow.id}.html`);
+  const overviewHtml = renderOverview();
+  writeFileSync(resolve(outDir, 'domains.html'), overviewHtml, 'utf8');
+  console.log('Written: domains.html');
+
+  for (const d of config.domains) {
+    if (d.status === 'not-started') continue;
+    const html = renderDetail(d.id);
+    writeFileSync(resolve(outDir, `domain_${d.id}.html`), html, 'utf8');
+    console.log(`Written: domain_${d.id}.html`);
+  }
+
+  for (const flow of (config.flows || [])) {
+    const html = renderFlowPage(flow);
+    writeFileSync(resolve(outDir, `flow_${flow.domain}_${flow.id}.html`), html, 'utf8');
+    console.log(`Written: flow_${flow.domain}_${flow.id}.html`);
+  }
 }

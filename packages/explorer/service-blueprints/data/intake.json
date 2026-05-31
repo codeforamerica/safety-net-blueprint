@@ -81,9 +81,68 @@
   ],
   "cells": [
     {
+      "laneId": "applicant",
+      "subPhaseId": "submitted",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "applicant",
+          "text": "Submits application",
+          "subtext": "Online or in person; caseworker may submit on behalf of applicant"
+        }
+      ]
+    },
+    {
+      "laneId": "regulations",
+      "subPhaseId": "submitted",
+      "cards": [
+        {
+          "type": "policy",
+          "text": "Agency must accept any application on the date of first contact, even if incomplete. The date received is the application filing date and starts the processing clock.",
+          "subtext": "7 CFR § 273.2(g)"
+        },
+        {
+          "type": "policy",
+          "text": "Agency must date-stamp or otherwise record the date of receipt on every application. The date stamp establishes the filing date used for timeliness determinations.",
+          "subtext": "7 CFR § 273.2(c)(1)"
+        },
+        {
+          "type": "policy",
+          "text": "Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application.",
+          "subtext": "7 CFR § 273.2(i)(1)"
+        },
+        {
+          "type": "policy",
+          "text": "Benefits must be issued within 7 days for households with gross monthly income below $150 and liquid resources at or below $100, or households whose combined monthly gross income and liquid resources are less than the monthly rent or mortgage and utilities.",
+          "subtext": "7 CFR § 273.2(i)(3)(i)"
+        },
+        {
+          "type": "policy",
+          "text": "States must make eligibility determinations within 45 days of application for most applicants and within 90 days for applicants who require a disability determination.",
+          "subtext": "42 CFR § 435.912"
+        },
+        {
+          "type": "policy",
+          "text": "Any household may apply for SNAP benefits regardless of current participation in other programs. Agencies may not screen out applicants before accepting an application.",
+          "subtext": "7 CFR § 273.2(a)"
+        },
+        {
+          "type": "policy",
+          "text": "All household members must be listed on the application regardless of whether they are individually applying for SNAP. Members who are ineligible — such as non-citizens who do not qualify — must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household.",
+          "subtext": "7 CFR § 273.1"
+        }
+      ]
+    },
+    {
       "laneId": "system",
       "subPhaseId": "submitted",
       "cards": [
+        {
+          "type": "system",
+          "domain": "intake",
+          "text": "Verifications created per program and household member",
+          "subtext": "Income, identity, residency for SNAP; citizenship and immigration for Medicaid (per member)"
+        },
         {
           "type": "system",
           "domain": "intake",
@@ -275,6 +334,29 @@
           "type": "domain-event",
           "text": "call.completed",
           "domain": "data_exchange"
+        }
+      ]
+    },
+    {
+      "laneId": "caseworker",
+      "subPhaseId": "interview",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Conducts interview; resolves remaining verification items",
+          "subtext": "May require multiple appointments"
+        }
+      ]
+    },
+    {
+      "laneId": "regulations",
+      "subPhaseId": "interview",
+      "cards": [
+        {
+          "type": "policy",
+          "text": "SNAP applicants must complete an in-person or telephone interview before certification. The interview must be conducted by a qualified eligibility worker.",
+          "subtext": "7 CFR § 273.2(e)"
         }
       ]
     },

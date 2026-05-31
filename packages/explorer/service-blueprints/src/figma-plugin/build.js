@@ -54,7 +54,7 @@ console.log(`Blueprint: ${path.relative(__dirname, blueprintSrc)} → src/_curre
 // Groups by flow label (phase) → enclosing fragment label (sub-phase).
 // Deduplicates globally by policy ID / citation so each regulation appears once.
 
-const configSrc = path.join(__dirname, '..', '..', '..', 'config.yaml');
+const configSrc = path.join(__dirname, '..', '..', '..', 'src', 'config.yaml');
 const cardsCurrentPath = path.join(__dirname, 'src', '_current_cards.json');
 const contractsDir = path.join(__dirname, '..', '..', '..', '..', 'contracts');
 
