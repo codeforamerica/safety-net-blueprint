@@ -218,6 +218,7 @@ paths:
         - $ref: "./components/parameters.yaml#/SearchQueryParam"
         - $ref: "./components/parameters.yaml#/LimitParam"
         - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: Paginated list of policies.
