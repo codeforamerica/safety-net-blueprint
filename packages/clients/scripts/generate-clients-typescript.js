@@ -217,8 +217,6 @@ async function generateAnnotationsAndPolicies(specsDir, outputDir, annotationExp
   } else {
     console.log('  No annotation files found, skipping annotations.ts');
   }
-
-  return policyExportWritten;
 }
 
 /**
