@@ -25,11 +25,11 @@
  * flow-derived cards in each sub-phase's lane.
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, mkdirSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { execFileSync } from 'child_process';
 import yaml from 'js-yaml';
+import { renderBlueprintHtml } from './render-blueprint-html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -269,20 +269,9 @@ export function renderBlueprint(enrichedConfig, annotationsPath, outDir) {
     cells,
   };
 
-  // Write blueprint JSON
-  const dataDir = join(__dirname, '..', 'data');
-  mkdirSync(dataDir, { recursive: true });
-  const jsonPath = join(dataDir, `${annotations.domain}.json`);
-  writeFileSync(jsonPath, JSON.stringify(blueprint, null, 2) + '\n');
-  console.log(`Wrote ${jsonPath}`);
-
-  // Render HTML blueprint
   mkdirSync(outDir, { recursive: true });
   const htmlPath = join(outDir, `${annotations.domain}-blueprint.html`);
-  execFileSync(process.execPath, [
-    resolve(__dirname, 'render-blueprint-html.js'),
-    jsonPath, '--out', htmlPath,
-  ], { stdio: 'inherit' });
+  renderBlueprintHtml(blueprint, htmlPath);
 
   return htmlPath;
 }

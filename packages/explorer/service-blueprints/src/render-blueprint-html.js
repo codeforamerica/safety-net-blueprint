@@ -3,10 +3,11 @@
  * render-blueprint-html.js
  *
  * Renders a service blueprint JSON as an HTML swimlane diagram.
- * Reads a blueprint JSON file (same format as the Figma plugin input).
- * Writes to dist/<domain>-blueprint.html.
  *
- * Usage:
+ * Exported function (called by generate-blueprint.js):
+ *   renderBlueprintHtml(blueprint, outPath, themeDir?)
+ *
+ * CLI (standalone use):
  *   node render-blueprint-html.js <blueprint.json> [--out <output.html>]
  */
 
@@ -14,25 +15,6 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname, join, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// ── CLI args ──────────────────────────────────────────────────────────────────
-
-const args = process.argv.slice(2);
-const inputPath = args.find(a => !a.startsWith('--'));
-const outFlagIdx = args.indexOf('--out');
-const outArg = outFlagIdx !== -1 ? args[outFlagIdx + 1] : null;
-
-if (!inputPath) {
-  console.error('Usage: node render-blueprint-html.js <blueprint.json> [--out <output.html>]');
-  process.exit(1);
-}
-
-const blueprint = JSON.parse(readFileSync(resolve(inputPath), 'utf8'));
-const inputDir  = dirname(resolve(inputPath));
-const stem      = basename(inputPath, '.json');
-const outPath   = outArg ? resolve(outArg) : join(inputDir, `${stem}-blueprint.html`);
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
@@ -78,13 +60,11 @@ function loadTheme(dir) {
   }
 }
 
-const THEME = loadTheme(inputDir);
-
-function getPalette(card) {
-  if (card.type === 'person-action' && card.actor && THEME.actors[card.actor]) {
-    return THEME.actors[card.actor];
+function getPalette(card, theme) {
+  if (card.type === 'person-action' && card.actor && theme.actors[card.actor]) {
+    return theme.actors[card.actor];
   }
-  const p = THEME.cards[card.type] ?? THEME.cards['note'];
+  const p = theme.cards[card.type] ?? theme.cards['note'];
   if (card.type === 'system' && card.domain) return { ...p, label: `SYSTEM (${card.domain.toUpperCase()})` };
   if (card.type === 'domain-event' && card.domain) return { ...p, label: `EVENT (${card.domain.toUpperCase()})` };
   return p;
@@ -97,8 +77,8 @@ function esc(str) {
 
 // ── Card HTML ─────────────────────────────────────────────────────────────────
 
-function cardHtml(card) {
-  const p = getPalette(card);
+function cardHtml(card, theme) {
+  const p = getPalette(card, theme);
   const label = p.label || '';
   return `<div style="border-radius:6px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,0.15);">
     <div style="background:${p.headerBg};color:${p.headerFg};padding:7px 9px;">
@@ -114,8 +94,7 @@ function cardHtml(card) {
 
 // ── Blueprint HTML ────────────────────────────────────────────────────────────
 
-function renderBlueprint(bp) {
-  // Build sub-phase column list in order
+function buildHtml(bp, theme) {
   const columns = [];
   for (const phase of bp.phases) {
     for (const sub of phase.subPhases) {
@@ -130,29 +109,25 @@ function renderBlueprint(bp) {
 
   const LANE_W = 120;
   const COL_W  = 230;
-  const totalCols = 1 + columns.length; // lane label + sub-phase cols
   const gridTemplateColumns = `${LANE_W}px ${columns.map(() => `${COL_W}px`).join(' ')}`;
 
-  // Phase header row — span across their sub-phases
   let phaseHeaders = `<div style="background:#fff;border-right:1px solid #ddd;"></div>`;
   for (const phase of bp.phases) {
     const span = phase.subPhases.length;
     phaseHeaders += `<div style="grid-column:span ${span};background:#1a1a1a;color:#fff;font-size:13px;font-weight:800;padding:10px 12px;border-left:2px solid #fff;display:flex;align-items:center;">${esc(phase.label)}</div>`;
   }
 
-  // Sub-phase header row
   let subHeaders = `<div style="background:#f0f0f0;border-right:1px solid #ddd;font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.05em;padding:8px 10px;display:flex;align-items:center;">Sub-phase</div>`;
   for (const { sub } of columns) {
     subHeaders += `<div style="background:#f0f0f0;border-left:1px solid #ddd;font-size:11px;font-weight:700;color:#333;padding:8px 10px;display:flex;align-items:center;">${esc(sub.label)}</div>`;
   }
 
-  // Lane rows
   let laneRows = '';
   for (const lane of (bp.lanes || [])) {
     let row = `<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;font-size:11px;font-weight:700;color:#555;padding:10px 10px;display:flex;align-items:flex-start;justify-content:center;text-align:center;writing-mode:horizontal-lr;">${esc(lane.label)}</div>`;
     for (const { sub } of columns) {
       const cell = cellMap.get(`${lane.id}/${sub.id}`);
-      const cards = (cell?.cards || []).map(cardHtml).join('');
+      const cards = (cell?.cards || []).map(c => cardHtml(c, theme)).join('');
       row += `<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:8px;vertical-align:top;min-height:60px;">${cards}</div>`;
     }
     laneRows += `${row}`;
@@ -175,8 +150,37 @@ function renderBlueprint(bp) {
 </html>`;
 }
 
-// ── Write output ──────────────────────────────────────────────────────────────
+// ── Exported API ──────────────────────────────────────────────────────────────
 
-mkdirSync(dirname(outPath), { recursive: true });
-writeFileSync(outPath, renderBlueprint(blueprint));
-console.log(`Wrote ${outPath}`);
+/**
+ * @param {Object} blueprint  assembled blueprint object
+ * @param {string} outPath    absolute path to write the HTML file
+ * @param {string} [themeDir] directory to look for theme.yaml (optional)
+ */
+export function renderBlueprintHtml(blueprint, outPath, themeDir) {
+  const theme = loadTheme(themeDir || dirname(fileURLToPath(import.meta.url)));
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, buildHtml(blueprint, theme));
+  console.log(`Wrote ${outPath}`);
+}
+
+// ── CLI entry point ───────────────────────────────────────────────────────────
+
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
+  const args = process.argv.slice(2);
+  const inputPath = args.find(a => !a.startsWith('--'));
+  const outFlagIdx = args.indexOf('--out');
+  const outArg = outFlagIdx !== -1 ? args[outFlagIdx + 1] : null;
+
+  if (!inputPath) {
+    console.error('Usage: node render-blueprint-html.js <blueprint.json> [--out <output.html>]');
+    process.exit(1);
+  }
+
+  const absInput  = resolve(inputPath);
+  const blueprint = JSON.parse(readFileSync(absInput, 'utf8'));
+  const stem      = basename(inputPath, '.json');
+  const outPath   = outArg ? resolve(outArg) : join(dirname(absInput), `${stem}-blueprint.html`);
+
+  renderBlueprintHtml(blueprint, outPath, dirname(absInput));
+}
