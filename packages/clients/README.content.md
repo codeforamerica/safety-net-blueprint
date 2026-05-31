@@ -2,6 +2,8 @@
 
 Generates TypeScript SDK clients and JSON Schema files from resolved OpenAPI specs. Uses `@hey-api/openapi-ts` for TypeScript generation with Zod validation schemas.
 
+When annotation files (`*-annotations.yaml`) are present in the spec directory, `safety-net-generate-clients` also emits a typed `annotations.ts` alongside the API clients. Policies are served at runtime via `GET /platform/registry/policies` and are not baked into the generated client.
+
 ## CLI Commands
 
 These commands are installed as bin scripts. Run them via npm scripts in your `package.json` or with `npx`.

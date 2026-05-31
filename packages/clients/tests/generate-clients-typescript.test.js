@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { parseArgs, createOpenApiTsConfig } from '../scripts/generate-clients-typescript.js';
+import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName } from '../scripts/generate-clients-typescript.js';
 
 describe('Client Generation', () => {
   describe('parseArgs', () => {
@@ -147,6 +147,20 @@ describe('Client Generation', () => {
 
       assert(config.includes("input: './specs/persons-v2.yaml'"));
       assert(config.includes("path: './output/persons-v2'"));
+    });
+  });
+
+  describe('domainToAnnotationExportName', () => {
+    it('converts a single-word domain', () => {
+      assert.strictEqual(domainToAnnotationExportName('intake'), 'IntakeAnnotations');
+    });
+
+    it('converts a hyphenated domain', () => {
+      assert.strictEqual(domainToAnnotationExportName('case-management'), 'CaseManagementAnnotations');
+    });
+
+    it('converts a multi-segment domain', () => {
+      assert.strictEqual(domainToAnnotationExportName('data-exchange-adapter'), 'DataExchangeAdapterAnnotations');
     });
   });
 });

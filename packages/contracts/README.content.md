@@ -4,6 +4,8 @@
 - **Component schemas** (`components/`) — shared schemas, parameters, and responses
 - **Overlay files** (`overlays/`) — state-specific variations using [OpenAPI Overlay Specification 1.0.0](https://github.com/OAI/Overlay-Specification)
 - **API patterns** (`patterns/`) — design pattern rules for validation
+- **Policy registry** (`platform-registry-policies.yaml`) — regulatory citations keyed by stable ID
+- **Annotation files** (`*-annotations.yaml`) — per-domain annotations linking schema fields, operations, and events to policies and data classifications
 - **Validation** (`src/validation/`) — OpenAPI syntax and pattern validation
 - **Overlay resolver** (`src/overlay/`) — merges base specs with state overlays
 
@@ -34,6 +36,12 @@ Export an HTML design reference from OpenAPI specs.
 ## Programmatic API
 
 ```javascript
+// Annotations and policy registry (loaded from YAML at import time)
+import { IntakeAnnotations, Policies } from '@codeforamerica/safety-net-blueprint-contracts';
+import { IntakeAnnotations } from '@codeforamerica/safety-net-blueprint-contracts/annotations';
+import { Policies } from '@codeforamerica/safety-net-blueprint-contracts/policies';
+
+// Overlay, validation, and loader utilities
 import { applyOverlay } from '@codeforamerica/safety-net-blueprint-contracts/overlay';
 import { validateSpec } from '@codeforamerica/safety-net-blueprint-contracts/validation';
 import { discoverApiSpecs, loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
