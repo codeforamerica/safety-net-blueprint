@@ -85,13 +85,13 @@ if (buildServiceBP) {
   const blueprintHtmlPath = renderBlueprint(enrichedConfig, annotationsPath, outDir);
 
   if (browser) {
-    const { exportHtmlPng } = await import('./src/export-html.js');
+    const { htmlToPng } = await import('./src/html-to-png.js');
     const { renderCardsHtml } = await import('./service-blueprints/src/render-cards-html.js');
 
-    await exportHtmlPng(browser, blueprintHtmlPath, blueprintHtmlPath.replace('.html', '.png'));
+    await htmlToPng(browser, blueprintHtmlPath, blueprintHtmlPath.replace('.html', '.png'));
 
     const cardsHtmlPath = renderCardsHtml('intake');
-    await exportHtmlPng(browser, cardsHtmlPath, cardsHtmlPath.replace('.html', '.png'));
+    await htmlToPng(browser, cardsHtmlPath, cardsHtmlPath.replace('.html', '.png'));
   }
 }
 
