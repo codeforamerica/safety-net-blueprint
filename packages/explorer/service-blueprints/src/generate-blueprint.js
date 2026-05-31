@@ -141,6 +141,15 @@ export function renderBlueprint(enrichedConfig, annotationsPath, outDir) {
     // Cross-flow reference steps (no slash in ref) are inter-flow links — skip
     if (step.ref !== undefined && !step.ref.includes('/')) return;
 
+    // Policy cards — run unconditionally; self/event steps return early below
+    for (const policy of (step.policies || [])) {
+      getCell('regulations', subPhaseId).push({
+        type:    'policy',
+        text:    policy.description,
+        subtext: policy.citation || undefined,
+      });
+    }
+
     // Self-message step → system card (or note card if gap)
     if (step.self !== undefined) {
       const triggerEvent = lastEventTo.get(step.self);
@@ -194,14 +203,6 @@ export function renderBlueprint(enrichedConfig, annotationsPath, outDir) {
       getCell(laneId, subPhaseId).push(card);
     }
 
-    // Policy items on any step type → policy cards in the regulations lane
-    for (const policy of (step.policies || [])) {
-      getCell('regulations', subPhaseId).push({
-        type:    'policy',
-        text:    policy.description,
-        subtext: policy.citation || undefined,
-      });
-    }
   }
 
   // Assemble blueprint

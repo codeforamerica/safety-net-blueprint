@@ -56,7 +56,7 @@ phases:
       - id: automated-screening
         label: "Automated screening"
         flow: application_submission
-        sections: [verification-items, submission-fanout]
+        sections: [snap-processing, medicaid-processing, submission-fanout]
 
       - id: under-review
         label: "Task assignment"
@@ -87,19 +87,14 @@ phases:
       - id: submit-for-determination
         label: "Submit for determination"
         flow: determination
-        sections: [submit-for-determination]
+        sections: [manual-determination]
 
       - id: benefits-calculation
         label: "Determination"
         flow: determination
-        sections: [eligibility-calculation]
+        sections: [auto-determination]
 
       - id: decision
         label: "Closeout"
         flow: determination
-        sections: [determination-decision]
-        cards:
-          regulations:
-            - type: policy
-              text: "Notice of Action required"
-              subtext: "Adverse action notice required for denials and closures"
+        sections: [caseworker-reviews-determination, determination-closeout]

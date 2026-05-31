@@ -81,18 +81,6 @@
   ],
   "cells": [
     {
-      "laneId": "applicant",
-      "subPhaseId": "submitted",
-      "cards": [
-        {
-          "type": "person-action",
-          "actor": "applicant",
-          "text": "Submits application",
-          "subtext": "Online or in person; caseworker may submit on behalf of applicant"
-        }
-      ]
-    },
-    {
       "laneId": "regulations",
       "subPhaseId": "submitted",
       "cards": [
@@ -130,6 +118,53 @@
           "type": "policy",
           "text": "All household members must be listed on the application regardless of whether they are individually applying for SNAP. Members who are ineligible — such as non-citizens who do not qualify — must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household.",
           "subtext": "7 CFR § 273.1"
+        },
+        {
+          "type": "policy",
+          "text": "Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section.",
+          "subtext": "7 CFR § 273.2(f)"
+        },
+        {
+          "type": "policy",
+          "text": "When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.",
+          "subtext": "42 CFR § 435.940"
+        },
+        {
+          "type": "policy",
+          "text": "Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.",
+          "subtext": "42 U.S.C. § 1320b-7"
+        },
+        {
+          "type": "policy",
+          "text": "Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.",
+          "subtext": "7 CFR § 272.8"
+        },
+        {
+          "type": "policy",
+          "text": "States must use electronic data sources to verify citizenship before requesting paper documentation. FDSH SSA citizenship check satisfies this requirement.",
+          "subtext": "42 CFR § 435.956(b)"
+        },
+        {
+          "type": "policy",
+          "text": "States must use electronic data sources to verify immigration status before requesting paper documentation. FDSH VLP satisfies this requirement.",
+          "subtext": "42 CFR § 435.956(c)"
+        },
+        {
+          "type": "policy",
+          "text": "States must use data from other agencies and programs to verify eligibility information electronically before requesting documentation from applicants.",
+          "subtext": "42 CFR § 435.948"
+        }
+      ]
+    },
+    {
+      "laneId": "applicant",
+      "subPhaseId": "submitted",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "applicant",
+          "text": "Submits application",
+          "subtext": "Online or in person; caseworker may submit on behalf of applicant"
         }
       ]
     },
@@ -228,6 +263,22 @@
           "domain": "intake",
           "text": "⚠ Auto-confirm exact matches; queue fuzzy matches for caseworker review",
           "subtext": "Person match auto-confirmation behavior not yet designed in intake"
+        }
+      ]
+    },
+    {
+      "laneId": "regulations",
+      "subPhaseId": "automated-screening",
+      "cards": [
+        {
+          "type": "policy",
+          "text": "Medicaid: MAGI income verified electronically before requesting paper documents — Income is checked against federal tax data electronically (FDSH FTI) before requesting documentation from the applicant. Paper documentation (pay stubs, tax returns) may only be requested if the electronic check is inconclusive.",
+          "subtext": "42 CFR § 435.948"
+        },
+        {
+          "type": "policy",
+          "text": "Check for existing Medicare or Medicaid enrollment before starting verification — active coverage may allow auto-approval — Two federal data hub checks must be performed before requesting documents from the applicant: one for existing Medicare enrollment and one for existing Medicaid or other health coverage. If active coverage is found, the application may be auto-approved without further verification. Otherwise, standard electronic verification continues.",
+          "subtext": "42 CFR § 435.916"
         }
       ]
     },
@@ -338,6 +389,17 @@
       ]
     },
     {
+      "laneId": "regulations",
+      "subPhaseId": "interview",
+      "cards": [
+        {
+          "type": "policy",
+          "text": "SNAP applicants must complete an in-person or telephone interview before certification. The interview must be conducted by a qualified eligibility worker.",
+          "subtext": "7 CFR § 273.2(e)"
+        }
+      ]
+    },
+    {
       "laneId": "caseworker",
       "subPhaseId": "interview",
       "cards": [
@@ -346,17 +408,6 @@
           "actor": "caseworker",
           "text": "Conducts interview; resolves remaining verification items",
           "subtext": "May require multiple appointments"
-        }
-      ]
-    },
-    {
-      "laneId": "regulations",
-      "subPhaseId": "interview",
-      "cards": [
-        {
-          "type": "policy",
-          "text": "SNAP applicants must complete an in-person or telephone interview before certification. The interview must be conducted by a qualified eligibility worker.",
-          "subtext": "7 CFR § 273.2(e)"
         }
       ]
     },
@@ -404,13 +455,183 @@
       ]
     },
     {
+      "laneId": "caseworker",
+      "subPhaseId": "submit-for-determination",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Submits case for determination",
+          "subtext": "Available when all verification items are resolved"
+        }
+      ]
+    },
+    {
+      "laneId": "system",
+      "subPhaseId": "submit-for-determination",
+      "cards": [
+        {
+          "type": "system",
+          "domain": "intake",
+          "text": "Application stays under_review; review_completed emitted to eligibility"
+        },
+        {
+          "type": "system",
+          "domain": "eligibility",
+          "text": "Runs rules engine for all undetermined program+member combinations",
+          "subtext": "Skips any already auto-determined at submission; uses verification evidence and household data"
+        },
+        {
+          "type": "system",
+          "domain": "intake",
+          "text": "Decision recorded per person per program",
+          "subtext": "In response to event eligibility.application.decision_completed"
+        }
+      ]
+    },
+    {
+      "laneId": "data",
+      "subPhaseId": "submit-for-determination",
+      "cards": [
+        {
+          "type": "domain-event",
+          "text": "application.review_completed",
+          "domain": "intake"
+        },
+        {
+          "type": "domain-event",
+          "text": "eligibility.application.decision_completed",
+          "domain": "eligibility",
+          "subtext": "Per person per program; may fire multiple times as each resolves"
+        }
+      ]
+    },
+    {
+      "laneId": "caseworker",
+      "subPhaseId": "decision",
+      "cards": [
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Reviews all determination results"
+        },
+        {
+          "type": "person-action",
+          "actor": "caseworker",
+          "text": "Records determination and rationale"
+        },
+        {
+          "type": "person-action",
+          "actor": "supervisor",
+          "text": "Claims task from queue",
+          "subtext": "Supervisor selects from supervisor review queue"
+        },
+        {
+          "type": "person-action",
+          "actor": "supervisor",
+          "text": "Reviews and approves or rejects determination",
+          "subtext": "On approval: application closes, workflow completes both tasks. On rejection: intake returns application to under_review; workflow calls return-to-worker on caseworker task"
+        }
+      ]
+    },
+    {
       "laneId": "regulations",
       "subPhaseId": "decision",
       "cards": [
         {
           "type": "policy",
-          "text": "Notice of Action required",
-          "subtext": "Adverse action notice required for denials and closures"
+          "text": "Applicants have the right to a fair hearing if the agency delays or denies benefits. Supervisor review is a prerequisite for escalated cases prior to formal hearing proceedings.",
+          "subtext": "7 CFR § 273.15"
+        },
+        {
+          "type": "policy",
+          "text": "Written notice of eligibility or denial must be sent to each applicant household within the 30-day processing deadline (7 days for expedited). Notice must include the eligibility decision, benefit amount if approved, or denial reason if denied.",
+          "subtext": "7 CFR § 273.2(h)"
+        },
+        {
+          "type": "policy",
+          "text": "Written notice of eligibility, denial, or termination must be sent within the 45-day processing deadline (90 days if a disability determination is required). Notice must state the decision, the reason, and the applicant's right to appeal.",
+          "subtext": "42 CFR § 435.917"
+        },
+        {
+          "type": "policy",
+          "text": "Every household has the right to a fair hearing to contest any agency action affecting their benefits, including delays, denials, reductions, and terminations.",
+          "subtext": "7 CFR § 273.15(a)"
+        },
+        {
+          "type": "policy",
+          "text": "Each eligibility determination must be documented with the date of the decision, the regulatory basis for the decision, and all information and documents used to support it. Applies to approvals, denials, and terminations.",
+          "subtext": "42 CFR § 431.17(b)(1)"
+        },
+        {
+          "type": "policy",
+          "text": "Written notice of eligibility or denial must be sent to each applicant household within the 30-day processing deadline (7 days for expedited). Notice must include the eligibility decision, benefit amount if approved, or denial reason if denied.",
+          "subtext": "7 CFR § 273.2(h)"
+        },
+        {
+          "type": "policy",
+          "text": "Written notice of eligibility, denial, or termination must be sent within the 45-day processing deadline (90 days if a disability determination is required). Notice must state the decision, the reason, and the applicant's right to appeal.",
+          "subtext": "42 CFR § 435.917"
+        },
+        {
+          "type": "policy",
+          "text": "Every household has the right to a fair hearing to contest any agency action affecting their benefits, including delays, denials, reductions, and terminations.",
+          "subtext": "7 CFR § 273.15(a)"
+        },
+        {
+          "type": "policy",
+          "text": "Each eligibility determination must be documented with the date of the decision, the regulatory basis for the decision, and all information and documents used to support it. Applies to approvals, denials, and terminations.",
+          "subtext": "42 CFR § 431.17(b)(1)"
+        }
+      ]
+    },
+    {
+      "laneId": "system",
+      "subPhaseId": "decision",
+      "cards": [
+        {
+          "type": "system",
+          "domain": "intake",
+          "text": "Evaluates determination against supervisor approval thresholds"
+        },
+        {
+          "type": "system",
+          "domain": "workflow",
+          "text": "Caseworker task → pending_review; supervisor approval task created",
+          "subtext": "In response to event determination.approval_needed"
+        },
+        {
+          "type": "system",
+          "domain": "intake",
+          "text": "Application status → pending_approval"
+        },
+        {
+          "type": "system",
+          "domain": "case_management",
+          "text": "Creates case",
+          "subtext": "In response to event application.closed"
+        },
+        {
+          "type": "system",
+          "domain": "workflow",
+          "text": "Completes or cancels open tasks: pending_review task → completed (approval path); in_progress task → completed (manual path); pending task → cancelled (auto-determination path)",
+          "subtext": "In response to event application.closed"
+        }
+      ]
+    },
+    {
+      "laneId": "data",
+      "subPhaseId": "decision",
+      "cards": [
+        {
+          "type": "domain-event",
+          "text": "determination.approval_needed",
+          "domain": "intake"
+        },
+        {
+          "type": "domain-event",
+          "text": "application.closed",
+          "domain": "intake"
         }
       ]
     }

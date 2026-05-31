@@ -861,20 +861,22 @@ flows:
                 note: "On approval: application closes, workflow completes both tasks. On rejection: intake returns application to under_review; workflow calls return-to-worker on caseworker task"
 
       # ── Shared close ───────────────────────────────────────────────────────
-      - label: Send Notice of Action
-        from: intake
-        to: communications
-        ref: "operations/application.close"
-        gap: true
-        gap_description: Notice template catalog not yet designed
-      - event: application.closed
-        from: intake
-        to: case_management
-      - self: case_management
-        label: Creates case
-      - event: application.closed
-        from: intake
-        to: workflow
-      - self: workflow
-        label: "Completes or cancels open tasks: pending_review task → completed (approval path); in_progress task → completed (manual path); pending task → cancelled (auto-determination path)"
+      - fragment: determination-closeout
+        steps:
+          - label: Send Notice of Action
+            from: intake
+            to: communications
+            ref: "operations/application.close"
+            gap: true
+            gap_description: Notice template catalog not yet designed
+          - event: application.closed
+            from: intake
+            to: case_management
+          - self: case_management
+            label: Creates case
+          - event: application.closed
+            from: intake
+            to: workflow
+          - self: workflow
+            label: "Completes or cancels open tasks: pending_review task → completed (approval path); in_progress task → completed (manual path); pending task → cancelled (auto-determination path)"
 
