@@ -3725,7 +3725,7 @@ async function main() {
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const specDir = resolve(specArg ? specArg.split('=')[1] : join(__dirname, '../../contracts'));
   const outDir = resolve(outArg ? outArg.split('=')[1] : join(__dirname, 'output'));
-  const configPath = resolve(configArg ? configArg.split('=')[1] : join(__dirname, '../config.yaml'));
+  const configPath = resolve(configArg ? configArg.split('=')[1] : join(__dirname, '../src/config.yaml'));
   const isSingleFile = statSync(specDir).isFile();
 
   // Load domain list from config.yaml and build DOMAIN_HIERARCHY
