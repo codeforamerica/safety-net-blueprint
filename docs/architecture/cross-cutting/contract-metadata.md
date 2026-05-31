@@ -206,35 +206,30 @@ because the annotation leaf level uses `additionalProperties: true`.
 
 ## TypeScript client integration
 
-The contracts package generates typed static exports from annotation and policy files as part of
+The contracts package generates typed static exports from annotation files as part of
 `npm run clients:generate`. These exports are available alongside the generated API types:
 
 ```typescript
-import { IntakeAnnotations, Policies } from '@codeforamerica/safety-net-blueprint-contracts';
+import { IntakeAnnotations } from '@codeforamerica/safety-net-blueprint-contracts';
 
 // Element annotation lookup
 const ssn = IntakeAnnotations.schema['ApplicationMember.ssn'];
 // ssn.dataClassification → ['pii', 'fti']
 // ssn.policies → ['snap-ssn-disclosure']
-
-// Policy lookup
-const policy = Policies['snap-ssn-disclosure'];
-// policy.citation → '7 CFR § 273.2(g)'
-// policy.description → '...'
 ```
 
-The exports are typed `as const` objects — no runtime fetch required. Overlays are resolved at
-generation time, so a state's generated client reflects their customized annotations and policies.
+`IntakeAnnotations` is a typed `as const` object — no runtime fetch required. Overlays are resolved
+at generation time, so a state's generated client reflects their customized annotations.
 
 `IntakeAnnotations` mirrors the annotation file structure with `schema`, `operations`, and `events`
-sub-objects. `Policies` is a flat map across all policy files.
+sub-objects.
 
-## Runtime API *(planned)*
+For policy lookups, use the platform API (see below) rather than a baked-in static export.
 
-Runtime endpoints will serve resolved annotation and policy data for tooling that cannot bundle the
-compiled client. The TypeScript static export is the primary consumption pattern for the initial
-implementation; the runtime API is designed now to ensure the endpoint shape is consistent with
-the static export, but implementation is deferred.
+## Runtime API
+
+The platform registry endpoint serves policy data for UI clients, tooling, and any consumer that
+cannot bundle the static client or needs fresh data after overlay changes.
 
 **Policies** are served at the platform level, since they are not domain-scoped:
 
@@ -243,27 +238,18 @@ GET /platform/registry/policies
 GET /platform/registry/policies/{policyId}
 ```
 
-**Annotations** are served at the domain level, since they always belong to a domain:
-
-```
-GET /intake/annotations
-GET /intake/annotations?section=schema&element=ApplicationMember.ssn
-```
-
-> **Future decision:** annotation endpoint placement at the domain level is an initial assertion.
-> If a cross-domain use case emerges — for example, a compliance dashboard querying annotations
-> across all domains — the endpoint may move to a platform-level location. See
-> [Decision 4](#decision-4-annotation-endpoint-placement).
+See `platform-openapi.yaml` for the full schema. The `Policy` response shape has `id`, `citation`,
+`citationUrl`, `description`, and `programs` fields.
 
 > **Future capability:** reverse-lookup — querying from the policy direction ("what elements
-> reference this policy?") — is not defined in the initial implementation. The current design
-> accommodates it without breaking changes: it can be added as either an `expand=elements`
-> parameter on the existing policy endpoint, or a new platform-level annotation query endpoint.
-> The specific shape is an implementation decision deferred until a compliance dashboard use case
-> is in scope.
+> reference this policy?") — can be added as an `expand=elements` parameter on the existing
+> endpoint without breaking changes.
 
-Both endpoints return resolved data — baseline merged with active overlays. The response shape
-matches the structure of the TypeScript static exports so access patterns are consistent.
+**Annotations** as a runtime endpoint are deferred. The TypeScript static export covers the
+primary use case (domain implementations bundling their generated client). If a cross-domain
+compliance dashboard use case emerges that needs a live annotation query, an
+`/intake/annotations` endpoint (or platform-level equivalent) would be added at that time. See
+[Decision 4](#decision-4-annotation-endpoint-placement) for the placement rationale.
 
 ## Key design decisions
 
