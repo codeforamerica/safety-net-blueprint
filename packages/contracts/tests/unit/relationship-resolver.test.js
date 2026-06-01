@@ -985,6 +985,84 @@ test('relationship-resolver tests', async (t) => {
     );
   });
 
+  await t.test('direction gate - example data for back-ref expand with fields contains only the subset', () => {
+    // End-to-end check of the most complex direction-gated path: explicit
+    // back-reference override + fields subset, exercised through both
+    // resolveRelationships (which produces the expandRenames) and
+    // resolveExampleRelationships (which consumes them). Verifies that the
+    // example output for the back-reference contains exactly the requested
+    // fields — not the full related record, not just the id, and with no
+    // leakage from properties not listed in fields.
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              name: { type: 'string' },
+              status: { type: 'string' },
+              createdAt: { type: 'string', format: 'date-time' }
+            }
+          },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application', style: 'expand', fields: ['id', 'name'] }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { expandRenames } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    // Sanity-check: the rename produced by the schema resolver carries the
+    // fields subset through to whatever consumes it.
+    const memberRename = expandRenames.find(r => r.schemaName === 'ApplicationMember' && r.propertyName === 'applicationId');
+    assert.ok(memberRename, 'expandRenames should include the back-ref');
+    assert.deepStrictEqual(memberRename.fields, ['id', 'name'], 'fields subset should be preserved on the rename record');
+
+    const examplesData = {
+      MemberExample1: { id: 'member-001', applicationId: 'app-001' }
+    };
+    const examplesIndex = new Map([
+      ['app-001', {
+        id: 'app-001',
+        name: 'Leslie Trent — MAGI + SNAP',
+        status: 'submitted',
+        createdAt: '2026-05-01T12:00:00Z'
+      }]
+    ]);
+
+    const { result: examples, warnings } = resolveExampleRelationships(examplesData, expandRenames, examplesIndex);
+
+    assert.strictEqual(examples.MemberExample1.applicationId, undefined, 'FK field should be removed from example');
+    assert.ok(examples.MemberExample1.application, 'application field should be inlined in example');
+    assert.deepStrictEqual(
+      examples.MemberExample1.application,
+      { id: 'app-001', name: 'Leslie Trent — MAGI + SNAP' },
+      'inlined application should contain exactly the fields subset and no other properties'
+    );
+    assert.strictEqual(examples.MemberExample1.application.status, undefined, 'unrequested field "status" must not leak');
+    assert.strictEqual(examples.MemberExample1.application.createdAt, undefined, 'unrequested field "createdAt" must not leak');
+    assert.strictEqual(warnings.length, 0, `expected no warnings; got: ${JSON.stringify(warnings)}`);
+  });
+
   await t.test('direction gate - per-field expand on back-reference without fields throws', () => {
     // Without `fields`, example expansion takes the recursive path; combined
     // with a mutual-expand annotation it could hang. We require `fields` so
