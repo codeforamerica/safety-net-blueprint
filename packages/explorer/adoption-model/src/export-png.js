@@ -1,15 +1,15 @@
-#!/usr/bin/env node
 /**
  * export-png.js
  *
  * Exports slide-deck-ready PNGs from the adoption model SPA.
+ * Called by the consolidated packages/explorer/build.js with a shared browser.
  *
  * All animations are frozen at their fully-visible end state by injecting a
  * CSS override that fast-forwards every animation 9999s and pauses it.
  * Elements that loop indefinitely (s4 receipt, doc-row, status labels) get an
  * explicit opacity:1 override so they're always visible in the export.
  *
- * Requires puppeteer (optional dependency).
+ * Requires puppeteer (optional dependency — build.js handles graceful skip).
  */
 
 import { resolve, dirname } from 'path';
@@ -61,20 +61,10 @@ const SLIDES = [
   { id: 's5', png: 'slide-5-path-to-production.png'   },
 ];
 
-async function exportPng() {
-  if (process.env.CI) {
-    console.log('CI environment — skipping PNG export');
-    return;
-  }
-
-  let puppeteer;
-  try {
-    puppeteer = (await import('puppeteer')).default;
-  } catch {
-    console.warn('puppeteer not installed — skipping PNG export. Run: npm install puppeteer');
-    return;
-  }
-
+/**
+ * @param {import('puppeteer').Browser} browser  shared Puppeteer browser
+ */
+export async function exportAdoptionModelPngs(browser) {
   const htmlPath = resolve(outDir, 'adoption-model.html');
   if (!existsSync(htmlPath)) {
     console.warn('adoption-model.html not found in output/');
@@ -83,7 +73,6 @@ async function exportPng() {
 
   mkdirSync(distDir, { recursive: true });
 
-  const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
   // All slides are 1400×480; 2× scale for retina-quality PNGs
   await page.setViewport({ width: 1400, height: 480, deviceScaleFactor: 2 });
@@ -91,10 +80,8 @@ async function exportPng() {
 
   for (const { id, png } of SLIDES) {
     await page.evaluate((slideId) => window._navigate(slideId), id);
-    // Wait one rAF for the SVG to render
     await page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
 
-    // Inject freeze styles
     await page.evaluate((css) => {
       const existing = document.getElementById('__export-freeze');
       if (existing) existing.remove();
@@ -104,7 +91,6 @@ async function exportPng() {
       document.head.appendChild(style);
     }, FREEZE_CSS);
 
-    // One more rAF after style injection
     await page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
 
     const svgEl = await page.$('svg');
@@ -115,7 +101,5 @@ async function exportPng() {
     console.log(`Wrote ${pngPath}`);
   }
 
-  await browser.close();
+  await page.close();
 }
-
-exportPng();

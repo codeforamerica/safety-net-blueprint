@@ -1,0 +1,138 @@
+# JSON Schema for domain annotation YAML files.
+# Validates structural correctness. The leaf level (individual annotation objects)
+# is intentionally open — states add custom annotation keys via overlay without
+# schema changes.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Domain Annotations
+description: >
+  Schema for domain annotation files ({domain}-annotations.yaml).
+  Annotation files attach machine-readable metadata to specific elements in
+  contract artifacts. Three sections correspond to the three artifact types:
+
+    schema     — OpenAPI component schema fields, keyed by dot-notation path
+                 (e.g., ApplicationMember.ssn)
+    operations — State machine actions, keyed by {objectName}.{actionId}
+                 (e.g., application.submit, verification.satisfy)
+    events     — AsyncAPI event channels, keyed by event type
+                 (e.g., intake.application.submitted)
+
+  Annotations reference policies by ID from the policy registry. They never
+  embed citation text directly.
+
+type: object
+required:
+  - version
+  - domain
+additionalProperties: false
+
+properties:
+  $schema:
+    type: string
+
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  domain:
+    $ref: "schemas/common/enums.yaml#/$defs/Domain"
+
+  schema:
+    description: >
+      Annotations for OpenAPI component schema fields.
+      Keys use dot notation to identify the field path (e.g., ApplicationMember.ssn).
+      A key on a parent object (e.g., ApplicationMember) propagates to all sub-properties;
+      a sub-property annotation overrides the parent entirely.
+    $ref: "#/$defs/SchemaAnnotationMap"
+
+  operations:
+    description: >
+      Annotations for state machine actions and OpenAPI path operations.
+      A state machine action and its generated path operation share a key because
+      they represent the same behavioral event. Keys are qualified by the state
+      machine object name using dot notation (e.g., application.submit,
+      verification.satisfy).
+    $ref: "#/$defs/OperationAnnotationMap"
+
+  events:
+    description: >
+      Annotations for AsyncAPI event channels.
+      Keys are the event type identifier (e.g., intake.application.submitted).
+    $ref: "#/$defs/EventAnnotationMap"
+
+$defs:
+  SchemaAnnotationMap:
+    type: object
+    description: >
+      Map of schema field paths to annotation objects.
+      Keys are PascalCase schema name, optionally followed by a dot and camelCase
+      field name (e.g., ApplicationMember, ApplicationMember.dateOfBirth).
+    minProperties: 1
+    propertyNames:
+      pattern: "^[A-Z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)?$"
+    additionalProperties:
+      $ref: "#/$defs/Annotation"
+
+  OperationAnnotationMap:
+    type: object
+    description: >
+      Map of qualified action IDs to annotation objects.
+      Keys must be qualified by the state machine object name:
+      {objectName}.{actionId} (e.g., application.submit, verification.satisfy).
+    minProperties: 1
+    propertyNames:
+      pattern: "^[a-z][a-zA-Z0-9]*\\.[a-z][a-zA-Z0-9-]*$"
+    additionalProperties:
+      $ref: "#/$defs/Annotation"
+
+  EventAnnotationMap:
+    type: object
+    description: >
+      Map of AsyncAPI channel addresses to annotation objects.
+      Keys are dot-separated event type identifiers with at least two segments
+      (e.g., intake.application.submitted).
+    minProperties: 1
+    propertyNames:
+      pattern: "^[a-z][a-zA-Z0-9_]*(\\.[a-z][a-zA-Z0-9_]*){1,}$"
+    additionalProperties:
+      $ref: "#/$defs/Annotation"
+
+  Annotation:
+    type: object
+    description: >
+      Metadata for a specific contract element. Standard properties are defined
+      here; additional properties are allowed so states can add domain-specific
+      annotation types via overlay without schema changes.
+    additionalProperties: true
+    properties:
+      policies:
+        type: array
+        description: >
+          Policy IDs from the registry that apply to this element.
+          Referenced policies must exist in a platform-registry-policies*.yaml file.
+        items:
+          type: string
+        minItems: 1
+      dataClassification:
+        type: array
+        description: >
+          Data sensitivity classifications. Baseline vocabulary: pii, fti, phi,
+          phi-behavioral, cjis. States may add values via overlay.
+        items:
+          type: string
+          enum: [pii, fti, phi, phi-behavioral, cjis]
+        minItems: 1
+      programs:
+        description: >
+          Programs this element is relevant to. Shorthand array form (e.g., [snap])
+          defaults all entries to "required" strength. Map form allows per-program
+          strength: required, preferred, or optional.
+        oneOf:
+          - type: array
+            items:
+              $ref: "schemas/common/enums.yaml#/$defs/Program"
+            minItems: 1
+          - type: object
+            additionalProperties:
+              type: string
+              enum: [required, preferred, optional]

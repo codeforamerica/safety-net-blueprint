@@ -1525,6 +1525,13 @@ components:
             - mail
 
     Application:
+      description: >
+        The root entity representing one submitted application from a household.
+        Distinct from the downstream benefit case — no platform tracks the final
+        determination on the application itself; that lives on the case created
+        after eligibility determination. Drives the regulatory processing clock:
+        the 30-day SNAP deadline and 45-day Medicaid deadline both run from
+        submittedAt (7 CFR § 273.2, 42 CFR § 435.912).
       allOf:
         - $ref: "#/components/schemas/ApplicationWritable"
         - type: object
@@ -1641,6 +1648,12 @@ components:
                 domain: client-management
 
     ApplicationMember:
+      description: >
+        A person linked to an application. May be the primary applicant, a
+        household member applying for benefits, a member counted but not
+        applying (their income and resources still count toward the household),
+        or an authorized representative. SNAP requires all household members to
+        be listed regardless of individual eligibility (7 CFR § 273.1).
       allOf:
         - $ref: "#/components/schemas/ApplicationMemberWritable"
         - type: object
@@ -2247,6 +2260,13 @@ components:
             - electronic
 
     Verification:
+      description: >
+        One item on the household's verification checklist, covering both
+        electronic service check results and paper document requirements on a
+        single lifecycle. Created automatically by state machine event handlers
+        at submission — not manually by caseworkers. The two-phase flow (electronic
+        check first, document request only if inconclusive) directly encodes the
+        ex parte rule (42 CFR § 435.940).
       allOf:
         - $ref: "#/components/schemas/VerificationWritable"
         - type: object
@@ -2350,6 +2370,13 @@ components:
           nullable: true
 
     Interview:
+      description: >
+        Tracks the required SNAP interview obligation for an application
+        (7 CFR § 273.2(e)). Distinct from individual appointments — one
+        interview requirement may span multiple appointments due to rescheduling
+        or no-shows. The caseworker explicitly sets completedAt to attest
+        which appointment satisfied the regulatory obligation; this is not
+        set automatically when an appointment ends.
       allOf:
         - $ref: "#/components/schemas/InterviewWritable"
         - type: object

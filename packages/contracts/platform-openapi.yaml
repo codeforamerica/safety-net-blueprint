@@ -27,6 +27,8 @@ servers:
 tags:
   - name: Events
     description: Centralized event log across all domains.
+  - name: Registry
+    description: Platform-level metadata registries shared across all domains.
   - name: Search
     description: Cross-resource search across all domains.
 
@@ -197,6 +199,65 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
+  /registry/policies:
+    get:
+      summary: List policies
+      description: |
+        Returns all regulatory citations in the platform policy registry, keyed
+        by stable ID. Policies are shared platform-level metadata — not domain-
+        scoped — and serve as the canonical source for annotation displays,
+        compliance tooling, and caseworker UI.
+      operationId: listPolicies
+      tags:
+        - Registry
+      x-sortable:
+        fields: [id, citation]
+        default: id
+        tieBreaker: id
+      parameters:
+        - $ref: "./components/parameters.yaml#/SearchQueryParam"
+        - $ref: "./components/parameters.yaml#/LimitParam"
+        - $ref: "./components/parameters.yaml#/OffsetParam"
+        - $ref: "./components/parameters.yaml#/SortParam"
+      responses:
+        "200":
+          description: Paginated list of policies.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyList"
+        "400":
+          $ref: "./components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
+  /registry/policies/{policyId}:
+    parameters:
+      - name: policyId
+        in: path
+        required: true
+        description: Stable policy identifier (e.g., `snap-processing-clock`).
+        schema:
+          type: string
+
+    get:
+      summary: Get a policy
+      description: Retrieve a single policy from the registry by its stable identifier.
+      operationId: getPolicy
+      tags:
+        - Registry
+      responses:
+        "200":
+          description: Policy retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
   /search:
     get:
       summary: Search across resources
@@ -237,6 +298,42 @@ components:
 
     Event:
       $ref: "./schemas/platform-events.yaml#/$defs/Event"
+
+    Policy:
+      description: |
+        A regulatory citation in the platform policy registry. Policies are
+        contract artifacts defined in `platform-registry-policies*.yaml` files
+        and referenced by annotation files using their stable ID. They are not
+        mutable records — no createdAt/updatedAt fields.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - citation
+        - description
+      properties:
+        id:
+          type: string
+          description: Stable policy identifier (e.g., `snap-processing-clock`).
+          example: snap-processing-clock
+        citation:
+          type: string
+          description: The regulatory citation string (e.g., "7 CFR § 273.2(g)(1)").
+          example: "7 CFR § 273.2(g)(1)"
+        citationUrl:
+          type: string
+          format: uri
+          description: URL to the official regulatory text.
+          example: "https://www.ecfr.gov/current/title-7/section-273.2"
+        description:
+          type: string
+          description: Plain-language description of the regulatory requirement.
+        programs:
+          type: array
+          description: Programs this policy applies to.
+          items:
+            type: string
+          example: [snap]
 
     SearchResult:
       type: object
@@ -301,6 +398,19 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Event"
+
+    PolicyList:
+      description: Paginated list of policies from the platform registry.
+      allOf:
+        - $ref: "./components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Policy"
 
     SearchFacet:
       type: object

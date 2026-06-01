@@ -1,0 +1,166 @@
+$schema: "./schemas/annotations-schema.yaml"
+version: "1.0"
+domain: intake
+
+# ---------------------------------------------------------------------------
+# Schema annotations
+# Field paths use dot notation: SchemaName.fieldName
+# A parent annotation (e.g., ApplicationMember) propagates to all sub-properties.
+# A sub-property annotation overrides the parent entirely.
+# ---------------------------------------------------------------------------
+
+schema:
+
+  # ── Application ────────────────────────────────────────────────────────────
+
+  Application.programs:
+    programs: [snap, medicaid, tanf]
+
+  Application.channel:
+    programs: [snap, medicaid, tanf]
+
+  Application.submittedAt:
+    policies: [snap-processing-clock, medicaid-processing-clock]
+    programs: [snap, medicaid]
+
+  Application.isExpedited:
+    policies: [snap-expedited-processing]
+    programs: [snap]
+
+  # ── ApplicationMember ──────────────────────────────────────────────────────
+
+  ApplicationMember.dateOfBirth:
+    dataClassification: [pii]
+    programs: [snap, medicaid]
+
+  ApplicationMember.programs:
+    programs: [snap, medicaid, tanf]
+
+  ApplicationMember.roles:
+    policies: [snap-authorized-representative, medicaid-authorized-representative]
+    programs: [snap, medicaid]
+
+  ApplicationMember.citizenshipStatus:
+    dataClassification: [pii]
+    policies: [snap-citizenship-eligibility, qualified-alien-eligibility]
+    programs: [snap, medicaid]
+
+  ApplicationMember.immigrationStatus:
+    dataClassification: [pii]
+    policies: [qualified-alien-eligibility, medicaid-immigration-electronic-check, snap-citizenship-eligibility]
+    programs: [snap, medicaid]
+
+  ApplicationMember.immigrationInfo:
+    dataClassification: [pii]
+    policies: [medicaid-immigration-electronic-check]
+    programs: [medicaid]
+
+  # ── MemberIncome ───────────────────────────────────────────────────────────
+  # Income data is Federal Tax Information (FTI) under IRC § 6103 when sourced
+  # from IRS data matches (IEVS). It is also PII.
+
+  MemberIncome:
+    dataClassification: [pii, fti]
+    policies: [snap-income-verification]
+    programs: [snap, medicaid]
+
+  # ── MemberAsset ────────────────────────────────────────────────────────────
+
+  MemberAsset:
+    dataClassification: [pii]
+    policies: [snap-resource-limit]
+    programs: [snap]
+
+  # ── MemberEmployment ───────────────────────────────────────────────────────
+
+  MemberEmployment:
+    dataClassification: [pii, fti]
+    policies: [snap-income-verification]
+    programs: [snap, medicaid]
+
+  # ── Verification ───────────────────────────────────────────────────────────
+
+  Verification.category:
+    policies: [snap-verification-requirements, medicaid-electronic-verification-first]
+    programs: [snap, medicaid]
+
+  # ── Interview ──────────────────────────────────────────────────────────────
+
+  Interview.completedAt:
+    policies: [snap-interview-requirement]
+    programs: [snap]
+
+# ---------------------------------------------------------------------------
+# Operations annotations
+# Keys are qualified by state machine object name: {object}.{actionId}
+# (e.g., application.submit, verification.satisfy).
+# ---------------------------------------------------------------------------
+
+operations:
+
+  application.submit:
+    policies: [snap-application-acceptance, snap-application-date-stamp, snap-processing-clock, snap-expedited-processing, medicaid-processing-clock, snap-right-to-apply, snap-household-composition]
+    programs: [snap, medicaid]
+
+  application.approve-determination:
+    policies: [snap-supervisor-review, snap-notice-of-eligibility, medicaid-notice-of-eligibility, snap-fair-hearing-rights, medicaid-determination-documentation]
+    programs: [snap, medicaid]
+
+  application.reject-determination:
+    policies: [snap-supervisor-review, medicaid-determination-documentation]
+    programs: [snap, medicaid]
+
+  application.close:
+    policies: [snap-notice-of-eligibility, medicaid-notice-of-eligibility, snap-fair-hearing-rights, medicaid-determination-documentation]
+    programs: [snap, medicaid]
+
+  application.withdraw:
+    policies: [snap-notice-of-action]
+    programs: [snap]
+
+  verification.satisfy:
+    policies: [snap-verification-requirements, medicaid-ex-parte-determination]
+    programs: [snap, medicaid]
+
+  verification.mark-inconclusive:
+    policies: [medicaid-ex-parte-determination, medicaid-electronic-verification-first]
+    programs: [medicaid]
+
+# ---------------------------------------------------------------------------
+# Events annotations
+# Keys are AsyncAPI event channel addresses.
+# ---------------------------------------------------------------------------
+
+events:
+
+  intake.application.submitted:
+    policies: [snap-application-acceptance, snap-application-date-stamp, snap-processing-clock, medicaid-processing-clock, snap-household-composition]
+    programs: [snap, medicaid]
+
+  intake.application.closed:
+    policies: [snap-notice-of-eligibility, medicaid-notice-of-eligibility, snap-fair-hearing-rights, snap-notice-of-action]
+    programs: [snap, medicaid]
+
+  intake.application.withdrawn:
+    policies: [snap-notice-of-action]
+    programs: [snap]
+
+  intake.determination.approval_needed:
+    policies: [snap-supervisor-review]
+    programs: [snap]
+
+  intake.determination.rejected:
+    policies: [snap-supervisor-review]
+    programs: [snap]
+
+  intake.verification.created:
+    policies: [snap-verification-requirements, medicaid-electronic-verification-first, snap-ssa-identity-check, snap-income-verification, medicaid-citizenship-electronic-check, medicaid-immigration-electronic-check, medicaid-data-sharing]
+    programs: [snap, medicaid]
+
+  intake.verification.inconclusive:
+    policies: [medicaid-ex-parte-determination, medicaid-electronic-verification-first]
+    programs: [medicaid]
+
+  intake.verification.satisfied:
+    policies: [snap-verification-requirements, snap-ssa-identity-check]
+    programs: [snap, medicaid]
