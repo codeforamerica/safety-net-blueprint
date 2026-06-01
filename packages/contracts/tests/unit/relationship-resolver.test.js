@@ -2431,14 +2431,25 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
     const schemas = result.components.schemas;
 
-    // Lateral expansions: VerificationWritable, ApplicationNoteWritable,
-    // ReviewProgressEntryWritable each have memberId → ApplicationMember.
-    // Under global expand they should be renamed to `member`.
-    for (const laterName of ['VerificationWritable', 'ApplicationNoteWritable', 'ReviewProgressEntryWritable']) {
+    // Lateral expansions to ApplicationMember (sibling under /applications/{id}):
+    // ApplicationNoteWritable and ReviewProgressEntryWritable each have
+    // memberId → ApplicationMember. Under global expand they should be renamed
+    // to `member` and inlined.
+    for (const laterName of ['ApplicationNoteWritable', 'ReviewProgressEntryWritable']) {
       const props = gatherSchemaProperties(schemas[laterName]);
       assert.strictEqual(props.memberId, undefined, `${laterName}.memberId should be renamed by lateral expansion`);
       assert.ok(props.member, `${laterName}.member should be inlined`);
     }
+
+    // VerificationWritable.sourceId → Polymorphic is a cross-domain forward
+    // reference (the target has no served path in this spec). It should still
+    // be expanded — renamed to `source` — even though Polymorphic isn't in the
+    // schema index. This guards the cross-domain forward-expand path against
+    // regressions, in particular ensuring polymorphic / external refs aren't
+    // accidentally treated as back-references.
+    const verificationProps = gatherSchemaProperties(schemas.VerificationWritable);
+    assert.strictEqual(verificationProps.sourceId, undefined, 'VerificationWritable.sourceId should be renamed (cross-domain forward expand)');
+    assert.ok(verificationProps.source, 'VerificationWritable.source should be inlined');
 
     // Cascade stops: the local ApplicationMember (referenced by the lateral's
     // `member` $ref) still has its applicationId as a scalar. Any consumer
