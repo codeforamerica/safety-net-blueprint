@@ -9,7 +9,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
 ### Actions
 
 - **submit** — Formally submits a draft application, starting the regulatory processing clock
-  - Actors: applicant, or caseworker
+  - Actors: applicant, or case_worker
   - Transition: `draft` → `submitted`
   - Record when the application was formally submitted (sets `submittedAt`)
   - Emit: `intake.application.undefined` — starts the regulatory clock; triggers caseworker task creation, confirmation notice, and person matching
@@ -18,7 +18,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `submitted` → `under_review`
   - Emit: `intake.application.undefined` — signals caseworker has begun active review
 - **complete-review** — Caseworker signals data collection is complete and the application is ready for determination
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: no state change
   - Emit: `intake.application.undefined` — signals data collection is complete; triggers eligibility determination
 - **submit-for-approval** — System routes the application to supervisor review when state-configured approval thresholds are met
@@ -35,12 +35,12 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `pending_approval` → `under_review`
   - Emit: `intake.application.undefined` — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker
 - **close** — Marks a reviewed application as closed after all determinations are complete
-  - Actors: caseworker, supervisor, or system
+  - Actors: case_worker, supervisor, or system
   - Transition: `under_review` → `closed`
   - Record when the intake phase closed (sets `closedAt`)
   - Emit: `intake.application.undefined` — signals intake is complete; triggers case creation
 - **withdraw** — Applicant or caseworker withdraws the application before a decision is made
-  - Actors: applicant, caseworker, or supervisor
+  - Actors: applicant, case_worker, or supervisor
   - Transition: `submitted`/`under_review` → `withdrawn`
   - Record when the application was withdrawn (sets `withdrawnAt`)
   - Emit: `intake.application.undefined` — triggers open task cancellation and withdrawal notice
@@ -53,8 +53,8 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Create an Interview record when a caseworker claims an application_review task; SNAP requires an interview before determination (7 CFR § 273.2(e))
 - **`undefined`**
   - Look up: application (from `event.subject`)
-  - Create electronic Verifications per member and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
-  - Create electronic Verifications per member and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
+  - Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
+  - Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
 - **`undefined`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - Transition the Verification based on the service call result; on inconclusive, creates a document fallback per ex parte rules (42 CFR § 435.911)
@@ -79,6 +79,19 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Look up: member (from `event.subject`)
   - Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches
 - **`undefined`**
+  - Look up: member (from `event.subject`), application (from `$member.applicationId`)
+  - If `$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"`:
+    - If `"snap" in $application.programs`:
+      - `POST intake/applications/verifications`
+- **`undefined`**
+  - Look up: application (from `event.subject`)
+  - If `$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"`:
+    - If `"snap" in $application.programs`:
+      - `POST intake/applications/verifications`
+    - If `"medicaid" in $application.programs`:
+      - `POST intake/applications/verifications`
+      - `POST intake/applications/verifications`
+- **`undefined`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - `PATCH intake/applications/verifications/$verification.id`
 
@@ -98,12 +111,12 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `pending` → `inconclusive`
   - Emit: `intake.verification.undefined` — triggers document fallback creation via intake rule subscription
 - **waive** — Caseworker grants a waiver for an obligation that cannot be satisfied through normal means
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `pending`/`inconclusive` → `waived`
   - Record when the waiver was granted (sets `waivedAt`)
   - Emit: `intake.verification.undefined` — signals the obligation is resolved without evidence
 - **mark-cannot-verify** — Caseworker closes an obligation when all available verification methods are exhausted
-  - Actors: caseworker, or supervisor
+  - Actors: case_worker, or supervisor
   - Transition: `pending`/`inconclusive` → `cannot_verify`
   - Record when the obligation was closed as cannot-verify (sets `closedAt`)
 

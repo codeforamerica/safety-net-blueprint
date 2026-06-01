@@ -98,6 +98,8 @@ Role:
         - "persons:read"
 
 RoleType:
+  # Canonical values live in schemas/common/enums.yaml#/$defs/RoleType (used by state-machine-schema.yaml).
+  # Keep this enum in sync with that file — OpenAPI cannot $ref a JSON Schema directly.
   type: string
   description: |
     Authorization roles that determine base permissions and data scoping.
@@ -108,6 +110,7 @@ RoleType:
     - county_admin: Administer county staff and configuration
     - state_admin: Statewide oversight and administration (all counties)
     - partner_readonly: External partner with limited read access
+    - system: Automated service account for background and inter-service operations
   enum:
     - applicant
     - case_worker
@@ -115,3 +118,4 @@ RoleType:
     - county_admin
     - state_admin
     - partner_readonly
+    - system

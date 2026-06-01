@@ -358,7 +358,7 @@ $defs:
       actors:
         type: array
         items:
-          type: string
+          $ref: 'schemas/common/enums.yaml#/$defs/RoleType'
         description: >
           Roles authorized to trigger this handler. Checked before conditions.
           Omit to allow any authenticated caller (conditions still apply).

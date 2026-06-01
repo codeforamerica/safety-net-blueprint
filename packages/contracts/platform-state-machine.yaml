@@ -5,7 +5,7 @@ guards:
   - id: callerIsApplicant
     condition: '"applicant" in caller.roles'
   - id: callerIsCaseworker
-    condition: '"caseworker" in caller.roles'
+    condition: '"case_worker" in caller.roles'
   - id: callerIsSupervisor
     condition: '"supervisor" in caller.roles'
   - id: callerIsSystem

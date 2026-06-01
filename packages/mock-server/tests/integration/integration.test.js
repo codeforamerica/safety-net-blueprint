@@ -20,6 +20,7 @@ import yaml from 'js-yaml';
 import newman from 'newman';
 import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { BASE_URL, contractsDir, fetch, setupServer, teardownServer } from './helpers.js';
+import { ROLES } from '../roles.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -509,7 +510,7 @@ async function runTests() {
         console.log(`\n  RPC-2. POST ${taskPath}/{id}/claim (pending → in_progress)`);
         const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': ROLES.CASE_WORKER }
         });
 
         if (response.status === 200) {
@@ -539,7 +540,7 @@ async function runTests() {
         console.log(`\n  RPC-3. POST ${taskPath}/{id}/claim again → 409`);
         const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb', 'X-Caller-Roles': 'caseworker' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb', 'X-Caller-Roles': ROLES.CASE_WORKER }
         });
 
         if (response.status === 409) {
@@ -569,7 +570,7 @@ async function runTests() {
         console.log(`\n  RPC-4. POST ${taskPath}/{id}/complete with wrong worker → 409`);
         const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-bbb', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ outcome: 'approved' })
         });
 
@@ -600,7 +601,7 @@ async function runTests() {
         console.log(`\n  RPC-5. POST ${taskPath}/{id}/release (in_progress → pending)`);
         const response = await fetch(`${BASE_URL}${taskPath}/${rpcTaskId}/release`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ reason: 'Integration test release' })
         });
 
@@ -694,7 +695,7 @@ async function runTests() {
         console.log(`\n  EVENT-2. Claim task → verify "claimed" domain event`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': ROLES.CASE_WORKER }
         });
 
         const listResponse = await fetch(`${BASE_URL}/platform/events?subject=${auditTaskId}`);
@@ -727,7 +728,7 @@ async function runTests() {
         console.log(`\n  EVENT-3. Release task → verify 3 domain events`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/release`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ reason: 'Testing domain events' })
         });
 
@@ -761,11 +762,11 @@ async function runTests() {
         console.log(`\n  EVENT-4. Claim + complete → verify 5 total domain events`);
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': ROLES.CASE_WORKER }
         });
         await fetch(`${BASE_URL}${taskPath}/${auditTaskId}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-audit-1', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ outcome: 'approved' })
         });
 
@@ -934,11 +935,11 @@ async function runTests() {
         console.log('\n  RULE-3. Claim + release SNAP task → rules re-evaluated');
         await fetch(`${BASE_URL}${taskPath}/${snapTaskId}/claim`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1', 'X-Caller-Roles': 'caseworker' }
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1', 'X-Caller-Roles': ROLES.CASE_WORKER }
         });
         const releaseRes = await fetch(`${BASE_URL}${taskPath}/${snapTaskId}/release`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-rule-1', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ reason: 'Testing rule re-evaluation' })
         });
 
@@ -1040,7 +1041,7 @@ async function runTests() {
         const workerAaaId = '00000000-0000-0000-0000-000000000001';
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
           body: JSON.stringify({ assignedToId: workerAaaId })
         });
         const data = await response.json();
@@ -1066,7 +1067,7 @@ async function runTests() {
         const workerBbbId = '00000000-0000-0000-0000-000000000002';
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
           body: JSON.stringify({ assignedToId: workerBbbId })
         });
         const data = await response.json();
@@ -1091,7 +1092,7 @@ async function runTests() {
         console.log(`\n  SUP-4. Supervisor sets priority to high — status stays pending`);
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/set-priority`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
           body: JSON.stringify({ priority: 2, reason: 'Urgent case' })
         });
         const data = await response.json();
@@ -1151,12 +1152,12 @@ async function runTests() {
 
       await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/claim`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' }
+        headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': ROLES.CASE_WORKER }
       });
 
       const response = await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/assign`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+        headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
         body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000002' })
       });
       const data = await response.json();
@@ -1180,7 +1181,7 @@ async function runTests() {
         console.log(`\n  SUP-7. Caseworker tries to assign → 403 FORBIDDEN`);
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000002' })
         });
         if (response.status === 403) {
@@ -1204,7 +1205,7 @@ async function runTests() {
         console.log(`\n  SUP-8. Caseworker tries to set-priority → 403 FORBIDDEN`);
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/set-priority`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ priority: 2 })
         });
         if (response.status === 403) {
@@ -1229,12 +1230,12 @@ async function runTests() {
         console.log(`\n  SUP-9. Assign on completed task → 409`);
         await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': '00000000-0000-0000-0000-000000000002', 'X-Caller-Roles': 'caseworker' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': '00000000-0000-0000-0000-000000000002', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ outcome: 'approved' })
         });
         const response = await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/assign`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': 'supervisor' },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
           body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000001' })
         });
         if (response.status === 409) {

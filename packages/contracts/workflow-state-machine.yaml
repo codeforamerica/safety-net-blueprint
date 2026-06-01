@@ -20,7 +20,7 @@ machines:
       - id: claim
         description: "POST /tasks/{taskId}/claim — Caseworker takes ownership of an unassigned pending task"
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [taskIsUnassigned]
         transition: {from: pending, to: in_progress}
         steps:
@@ -29,7 +29,7 @@ machines:
       - id: complete
         description: "POST /tasks/{taskId}/complete — Marks an in-progress task done with an outcome and optional notes"
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [callerIsAssignedWorker]
           - actors: [system]
             conditions: [callerIsSystem]
@@ -47,7 +47,7 @@ machines:
       - id: release
         description: "POST /tasks/{taskId}/release — Returns an in-progress task to the queue, clearing the assignment"
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [callerIsAssignedWorker]
         transition: {from: in_progress, to: pending}
         schema:
@@ -61,7 +61,7 @@ machines:
       - id: escalate
         description: "POST /tasks/{taskId}/escalate — Escalate a task; assigned workers can escalate in-progress tasks, supervisors can escalate from any state"
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [callerIsAssignedWorker]
           - actors: [supervisor]
             conditions: [callerIsSupervisor]
@@ -117,7 +117,7 @@ machines:
       - id: await-client
         description: "POST /tasks/{taskId}/await-client — Pauses an in-progress task while waiting for a client response"
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [callerIsAssignedWorker]
         transition: {from: in_progress, to: awaiting_client}
         schema:
@@ -130,7 +130,7 @@ machines:
       - id: await-verification
         description: "POST /tasks/{taskId}/await-verification — Pauses an in-progress task while waiting for a verification result"
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [callerIsAssignedWorker]
         transition: {from: in_progress, to: awaiting_verification}
         schema:
@@ -143,7 +143,7 @@ machines:
       - id: resume
         description: "POST /tasks/{taskId}/resume — Resumes a blocked task, cancelling any active wait timers"
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsAssignedWorker, callerIsSupervisor]}]
         transition: {from: [awaiting_client, awaiting_verification], to: in_progress}
         steps:
@@ -192,7 +192,7 @@ machines:
       - id: submit-for-review
         description: "POST /tasks/{taskId}/submit-for-review — Worker submits a completed task to a supervisor for review and approval"
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [callerIsAssignedWorker]
           - actors: [system]
             conditions: [callerIsSystem]

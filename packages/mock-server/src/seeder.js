@@ -125,16 +125,32 @@ export function deriveAllCollectionNames(api) {
 
 /**
  * Extract resources from examples that belong to a specific collection.
- * Matches example keys by schema prefix (e.g., "QueueExample1" matches "Queue" prefix).
+ *
+ * Uses longest-prefix matching to disambiguate keys when collection schema
+ * prefixes share a common prefix. For example, both "applications"
+ * (prefix "Application") and "application-members" (prefix
+ * "ApplicationMember") match the key "ApplicationMemberExample1" via
+ * startsWith — but only "ApplicationMember" is the longest match, so the
+ * key is correctly assigned to application-members and not applications.
+ *
  * @param {Object} examples - All examples from the YAML file
  * @param {string} collectionName - Target collection name
+ * @param {string[]} allCollections - All collection names for this API (used for disambiguation)
  * @returns {Array} Array of resource objects for this collection
  */
-function extractResourcesForCollection(examples, collectionName) {
-  const prefix = collectionToSchemaPrefix(collectionName);
+function extractResourcesForCollection(examples, collectionName, allCollections) {
+  const targetPrefix = collectionToSchemaPrefix(collectionName);
+  const allPrefixes = allCollections.map(collectionToSchemaPrefix);
   const filtered = {};
   for (const [key, value] of Object.entries(examples)) {
-    if (key.startsWith(prefix)) {
+    if (!key.startsWith(targetPrefix)) continue;
+    // Find the longest schema prefix that matches this key. If a more specific
+    // collection (e.g. "ApplicationMember") also matches, skip this key for the
+    // less specific one (e.g. "Application") so records aren't double-assigned.
+    const longestMatch = allPrefixes
+      .filter((p) => key.startsWith(p))
+      .sort((a, b) => b.length - a.length)[0];
+    if (longestMatch === targetPrefix) {
       filtered[key] = value;
     }
   }
@@ -173,7 +189,7 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
       }
 
       for (const collectionName of allCollections) {
-        const resources = extractResourcesForCollection(examples, collectionName);
+        const resources = extractResourcesForCollection(examples, collectionName, allCollections);
 
         if (resources.length === 0) {
           summary[collectionName] = 0;

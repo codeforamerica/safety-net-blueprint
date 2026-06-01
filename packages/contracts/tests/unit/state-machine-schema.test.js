@@ -24,10 +24,13 @@ function loadSchema() {
 function makeValidator() {
   const schema = loadSchema();
   const ajv = new Ajv2020({ strict: false, allErrors: true });
-  // Preload platform-events.yaml so $ref: 'schemas/platform-events.yaml#/$defs/EventBase' resolves.
+  // Preload referenced schemas so $ref paths resolve.
   const platformEventsPath = join(contractsRoot, 'schemas/platform-events.yaml');
   const platformEvents = yaml.load(readFileSync(platformEventsPath, 'utf8'));
   ajv.addSchema(platformEvents, 'schemas/platform-events.yaml');
+  const commonEnumsPath = join(contractsRoot, 'schemas/common/enums.yaml');
+  const commonEnums = yaml.load(readFileSync(commonEnumsPath, 'utf8'));
+  ajv.addSchema(commonEnums, 'schemas/common/enums.yaml');
   return ajv.compile(schema);
 }
 
@@ -213,7 +216,7 @@ test('state-machine-schema action types', async (t) => {
   await t.test('action with full transition and guards', () => {
     const doc = withActions([{
       id: 'activate',
-      guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
+      guards: [{ actors: ['case_worker'], conditions: ['callerIsCaseworker'] }],
       transition: { from: 'draft', to: 'active' },
       steps: [
         { set: { field: 'activatedAt', value: '$now', description: 'Record activation time' } },
@@ -247,7 +250,7 @@ test('state-machine-schema action types', async (t) => {
     const doc = withActions([{
       id: 'complete-review',
       transition: { from: 'active' },
-      guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
+      guards: [{ actors: ['case_worker'], conditions: ['callerIsCaseworker'] }],
       steps: [{ emit: { type: 'domain.test.review_completed', description: 'Signal review done' } }],
     }]);
     const { valid, errors } = validate(doc);
@@ -330,7 +333,7 @@ test('state-machine-schema guards composition', async (t) => {
         initialState: 'draft',
         actions: [{
           id: 'do-thing',
-          guards: [{ actors: ['caseworker'], conditions }],
+          guards: [{ actors: ['case_worker'], conditions }],
           steps: [{ emit: { type: 'domain.test.done', description: 'Done' } }],
         }],
       }],
@@ -538,7 +541,7 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
         }],
         actions: [{
           id: 'activate',
-          guards: [{ actors: ['caseworker'], conditions: ['callerIsCaseworker'] }],
+          guards: [{ actors: ['case_worker'], conditions: ['callerIsCaseworker'] }],
           transition: { from: 'draft', to: 'active' },
           steps: [{ emit: { type: 'domain.test.activated', description: 'Activate' } }],
         }],

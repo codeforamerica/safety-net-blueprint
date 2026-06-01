@@ -10,3 +10,11 @@ ApplicationExample1:
   closedAt: null
   createdAt: "2026-04-01T09:00:00Z"
   updatedAt: "2026-04-01T09:15:00Z"
+
+ApplicationMemberExample1:
+  id: 00000005-0000-4000-8000-000000000001
+  applicationId: 00000004-0000-4000-8000-000000000001
+  roles:
+    - primary_applicant
+  createdAt: "2026-04-01T09:00:00Z"
+  updatedAt: "2026-04-01T09:00:00Z"

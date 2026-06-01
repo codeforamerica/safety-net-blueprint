@@ -20,7 +20,7 @@ machines:
         context:
           - members: {from: intake/application-members, where: {applicationId: $object.id}}
         guards:
-          - actors: [applicant, caseworker]
+          - actors: [applicant, case_worker]
             conditions: [{any: [callerIsApplicant, callerIsCaseworker]}]
         transition: {from: draft, to: submitted}
         steps:
@@ -37,7 +37,7 @@ machines:
       - id: complete-review
         description: POST /applications/{applicationId}/complete-review — Caseworker signals data collection is complete and the application is ready for determination
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: under_review}
         steps:
@@ -70,7 +70,7 @@ machines:
       - id: close
         description: POST /applications/{applicationId}/close — Marks a reviewed application as closed after all determinations are complete
         guards:
-          - actors: [caseworker, supervisor, system]
+          - actors: [case_worker, supervisor, system]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor, callerIsSystem]}]
         transition: {from: under_review, to: closed}
         steps:
@@ -82,7 +82,7 @@ machines:
           request:
             $ref: '#/$defs/WithdrawApplicationRequest'
         guards:
-          - actors: [applicant, caseworker, supervisor]
+          - actors: [applicant, case_worker, supervisor]
             conditions: [{any: [callerIsApplicant, callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [submitted, under_review], to: withdrawn}
         steps:
@@ -102,7 +102,7 @@ machines:
           - application: {from: intake/applications, where: {id: $this.subject}}
         steps:
           - call: createProgramVerifications
-            with: {program: snap, memberCategories: [income, identity], householdCategories: [residency]}
+            with: {program: snap, memberCategories: [identity], householdCategories: [residency], incomeCategories: [income]}
           - call: createProgramVerifications
             with: {program: medicaid, memberCategories: [citizenship, immigration], householdCategories: []}
       - type: data_exchange.call.completed
@@ -158,6 +158,31 @@ machines:
           - member: {from: intake/application-members, where: {id: $this.subject}}
         steps:
           - call: recordPersonMatch
+      - type: intake.member_income.created
+        description: Create an income verification when an income record is added to a submitted application; mirrors the income verification created by createProgramVerifications at submission time
+        context:
+          - member: {from: intake/application-members, where: {id: $this.subject}}
+          - application: {from: intake/applications, where: {id: $member.applicationId}}
+        steps:
+          - if: $application.status != "draft" && $application.status != "withdrawn" && $application.status != "closed"
+            then:
+              - if: '"snap" in $application.programs'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: income, category: income, verificationType: electronic}}
+      - type: intake.application_member.created
+        description: Create member verifications when a member is added to a submitted application; mirrors the member verifications created by createProgramVerifications at submission time
+        context:
+          - application: {from: intake/applications, where: {id: $this.subject}}
+        steps:
+          - if: $application.status != "draft" && $application.status != "withdrawn" && $application.status != "closed"
+            then:
+              - if: '"snap" in $application.programs'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: identity, verificationType: electronic}}
+              - if: '"medicaid" in $application.programs'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: citizenship, verificationType: electronic}}
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: immigration, verificationType: electronic}}
       - type: communication.notice.sent
         description: Append the document request notice to the Verification's documentRequests when Communication sends a notice
         context:
@@ -183,9 +208,10 @@ machines:
           - call: {POST: intake/applications/interview, body: {applicationId: $task.subjectId}}
       - id: createProgramVerifications
         description: >
-          Create electronic Verifications per member and document Verifications at the household level for the given program.
+          Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income),
+          and document Verifications at the household level for the given program.
           Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
-        parameters: [program, memberCategories, householdCategories]
+        parameters: [program, memberCategories, householdCategories, incomeCategories]
         if: $params.program in $application.programs
         then:
           - forEach:
@@ -197,7 +223,22 @@ machines:
                   where: {applicationId: $application.id}
                   as: member
                 do:
-                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, memberId: $member.id, category: $params.category, verificationType: electronic}}
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $member.id, sourceType: member, category: $params.category, verificationType: electronic}}
+          - forEach:
+              in: $params.incomeCategories
+              as: category
+            do:
+              - forEach:
+                  from: intake/application-members
+                  where: {applicationId: $application.id}
+                  as: member
+                do:
+                  - forEach:
+                      from: intake/member-incomes
+                      where: {memberId: $member.id}
+                      as: income
+                    do:
+                      - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $income.id, sourceType: income, category: $params.category, verificationType: electronic}}
           - forEach:
               in: $params.householdCategories
               as: category
@@ -225,7 +266,7 @@ machines:
                         $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
                     description: Record the electronic verification result as evidence
                 - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
-                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, memberId: $verification.memberId, category: $verification.category, verificationType: document}}
+                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, sourceId: $verification.sourceId, sourceType: $verification.sourceType, category: $verification.category, verificationType: document}}
       - id: linkAppointment
         description: Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.
         if: $this.data.subjectType == "interview"
@@ -333,7 +374,7 @@ machines:
           request:
             $ref: '#/$defs/WaiveVerificationRequest'
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: waived}
         steps:
@@ -345,7 +386,7 @@ machines:
           request:
             $ref: '#/$defs/MarkCannotVerifyRequest'
         guards:
-          - actors: [caseworker, supervisor]
+          - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: cannot_verify}
         steps:
@@ -378,7 +419,7 @@ machines:
         parameters: [serviceId]
         if: $object.verificationType == "electronic"
         then:
-          - call: {POST: data-exchange/service-calls, body: {serviceId: $params.serviceId, requestingResourceId: $object.memberId, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}
+          - call: {POST: data-exchange/service-calls, body: {serviceId: $params.serviceId, requestingResourceId: $object.sourceId, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}
 guards:
   - id: callerIsApplicant
     condition: "\"applicant\" in caller.roles"
