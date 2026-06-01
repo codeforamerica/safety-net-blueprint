@@ -98,6 +98,13 @@ else
   fail "Integration tests failed"
 fi
 
+step "Running contract scenarios"
+if npm run test:scenarios 2>&1; then
+  pass "Contract scenarios passed"
+else
+  fail "Contract scenarios failed"
+fi
+
 # Summary
 printf "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 if [ "$failed" -eq 0 ]; then

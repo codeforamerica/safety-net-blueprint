@@ -24,6 +24,7 @@
     "test": "node tests/run-all-tests.js --unit",
     "test:unit": "node tests/run-all-tests.js --unit",
     "test:integration": "node tests/run-all-tests.js --integration",
+    "test:scenarios": "node tests/run-all-tests.js --scenarios",
     "test:all": "node tests/run-all-tests.js --all"
   },
   "dependencies": {

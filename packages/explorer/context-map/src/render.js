@@ -1075,3 +1075,18 @@ export function renderContextMap(pkgConfig, mapConfig, outDir) {
     console.log(`Written: flow_${flow.domain}_${flow.id}.html`);
   }
 }
+
+/**
+ * Render a single flow diagram, given a flow object and the package-level config
+ * (actors, domains, events, flows arrays from explorer/src/config.yaml).
+ * Returns the HTML string — does not write to disk.
+ */
+export function renderFlow(flow, pkgConfig) {
+  config = {
+    actors:  pkgConfig.actors  || [],
+    domains: pkgConfig.domains || [],
+    events:  pkgConfig.events  || [],
+    flows:   pkgConfig.flows   || [],
+  };
+  return renderFlowPage(flow);
+}

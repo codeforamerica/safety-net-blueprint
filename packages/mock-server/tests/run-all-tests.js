@@ -1,11 +1,12 @@
 /**
  * Run all mock server tests
  * Run with: node tests/mock-server/run-all-tests.js
- * 
+ *
  * Options:
  *   --unit         Run only unit tests (default)
  *   --integration  Run only integration tests (requires mock server to be running)
- *   --all          Run both unit and integration tests
+ *   --scenarios    Run contract scenario collections via Newman (requires mock server)
+ *   --all          Run unit + integration + scenarios
  */
 
 import { spawn } from 'child_process';
@@ -28,16 +29,17 @@ const integrationTestFiles = readdirSync(integrationDir)
   .filter(file => file.endsWith('.test.js'))
   .map(file => join('integration', file));
 
-const postmanDir = join(__dirname, 'postman');
-const postmanCollections = existsSync(postmanDir)
-  ? readdirSync(postmanDir)
+const scenariosDir = resolve(__dirname, '..', '..', 'contracts', 'scenarios');
+const scenarioCollections = existsSync(scenariosDir)
+  ? readdirSync(scenariosDir)
       .filter(file => file.endsWith('.json'))
-      .map(file => join('postman', file))
+      .map(file => join(scenariosDir, file))
   : [];
 
 const args = process.argv.slice(2);
 const runUnit = args.includes('--unit') || args.includes('--all') || args.length === 0;
 const runIntegration = args.includes('--integration') || args.includes('--all');
+const runScenarios = args.includes('--scenarios') || args.includes('--all');
 
 async function runTest(testFile) {
   return new Promise((resolve, reject) => {
@@ -65,11 +67,11 @@ async function runTest(testFile) {
   });
 }
 
-async function runPostmanCollection(collectionFile) {
+async function runPostmanCollection(collectionPath) {
   return new Promise((resolve, reject) => {
-    const collectionPath = join(__dirname, collectionFile);
+    const label = collectionPath.split(/[/\\]/).pop();
     console.log(`\n${'='.repeat(70)}`);
-    console.log(`Running Postman collection: ${collectionFile}`);
+    console.log(`Running scenario: ${label}`);
     console.log('='.repeat(70));
 
     const proc = spawn('npx', ['newman', 'run', collectionPath, '--reporters', 'cli'], {
@@ -94,14 +96,12 @@ async function runPostmanCollection(collectionFile) {
 async function runAllTests() {
   console.log('Mock Server Test Suite');
   console.log('='.repeat(70));
-  
-  if (runUnit && runIntegration) {
-    console.log(`Running ${unitTestFiles.length} unit test(s), ${integrationTestFiles.length} integration test(s), and ${postmanCollections.length} Postman collection(s)...`);
-  } else if (runUnit) {
-    console.log(`Running ${unitTestFiles.length} unit test(s)...`);
-  } else if (runIntegration) {
-    console.log(`Running ${integrationTestFiles.length} integration test(s) and ${postmanCollections.length} Postman collection(s) (requires mock server)...`);
-  }
+
+  const parts = [];
+  if (runUnit) parts.push(`${unitTestFiles.length} unit`);
+  if (runIntegration) parts.push(`${integrationTestFiles.length} integration`);
+  if (runScenarios) parts.push(`${scenarioCollections.length} scenario`);
+  console.log(`Running ${parts.join(', ')} test(s)...`);
   
   let passed = 0;
   let failed = 0;
@@ -138,34 +138,34 @@ async function runAllTests() {
         console.error('   Make sure the mock server is running: npm run mock:start');
       }
     }
+  }
 
-    if (postmanCollections.length > 0) {
-      console.log('\n📮 Postman Collections');
-      console.log('-'.repeat(70));
+  // Run contract scenarios via Newman if requested
+  if (runScenarios && scenarioCollections.length > 0) {
+    console.log('\n📋 Contract Scenarios');
+    console.log('-'.repeat(70));
 
-      const contractsDir = resolve(__dirname, '..', '..', 'contracts');
-      const alreadyRunning = await isServerRunning().catch(() => false);
-      if (!alreadyRunning) {
-        console.log('Starting mock server...');
-        await startMockServer([contractsDir]);
-        await new Promise(res => setTimeout(res, 1500));
-        console.log('Mock server started\n');
-      }
-
-      for (const collectionFile of postmanCollections) {
-        try {
-          await runPostmanCollection(collectionFile);
-          passed++;
-        } catch (error) {
-          failed++;
-          failedTests.push(collectionFile);
-          console.error(`\n✗ ${collectionFile} failed: ${error.message}`);
-          console.error('   Make sure the mock server is running: npm run mock:start');
-        }
-      }
-
-      if (!alreadyRunning) await stopServer(false);
+    const contractsDir = resolve(__dirname, '..', '..', 'contracts');
+    const alreadyRunning = await isServerRunning().catch(() => false);
+    if (!alreadyRunning) {
+      console.log('Starting mock server...');
+      await startMockServer([contractsDir]);
+      await new Promise(res => setTimeout(res, 1500));
+      console.log('Mock server started\n');
     }
+
+    for (const collectionPath of scenarioCollections) {
+      try {
+        await runPostmanCollection(collectionPath);
+        passed++;
+      } catch (error) {
+        failed++;
+        failedTests.push(collectionPath.split(/[/\\]/).pop());
+        console.error(`\n✗ ${collectionPath.split(/[/\\]/).pop()} failed: ${error.message}`);
+      }
+    }
+
+    if (!alreadyRunning) await stopServer(false);
   }
   
   // Summary
