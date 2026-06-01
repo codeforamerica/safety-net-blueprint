@@ -939,7 +939,56 @@ test('relationship-resolver tests', async (t) => {
     assert.ok(props.person, 'person should be inlined');
   });
 
-  await t.test('direction gate - per-field expand on back-reference overrides direction (with warning)', () => {
+  await t.test('direction gate - per-field expand with fields on back-reference is honored silently', () => {
+    // Explicit `style: expand` on a back-reference is allowed when `fields` is
+    // supplied — the subset path bounds example expansion to the dot-notation
+    // depth, sidestepping the unbounded-recursion risk that motivates the
+    // direction gate. No warning is emitted; the author opted in explicitly.
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application', style: 'expand', fields: ['id', 'name'] }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result, warnings } = resolveRelationships(spec, 'expand', schemaIndex);
+
+    const props = result.components.schemas.ApplicationMember.properties;
+    assert.strictEqual(props.applicationId, undefined, 'applicationId removed by explicit expand');
+    assert.ok(props.application, 'application should be inlined per explicit override');
+    assert.strictEqual(props.application.type, 'object', 'subset uses inline object, not $ref');
+    assert.ok(props.application.properties.id && props.application.properties.name, 'subset contains the requested fields');
+    assert.ok(
+      !warnings.some(w => w.toLowerCase().includes('back-reference')),
+      `Did not expect a back-reference warning when fields is supplied; got: ${JSON.stringify(warnings)}`
+    );
+  });
+
+  await t.test('direction gate - per-field expand on back-reference without fields throws', () => {
+    // Without `fields`, example expansion takes the recursive path; combined
+    // with a mutual-expand annotation it could hang. We require `fields` so
+    // the bounded `buildExampleSubset` path is used instead.
     const spec = {
       paths: {
         '/applications/{applicationId}': {
@@ -968,14 +1017,85 @@ test('relationship-resolver tests', async (t) => {
     };
 
     const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
-    const { result, warnings } = resolveRelationships(spec, 'expand', schemaIndex);
+    assert.throws(
+      () => resolveRelationships(spec, 'expand', schemaIndex),
+      /ApplicationMember\.applicationId.*back-reference.*fields/
+    );
+  });
 
-    const props = result.components.schemas.ApplicationMember.properties;
-    assert.strictEqual(props.applicationId, undefined, 'applicationId removed by explicit expand');
-    assert.ok(props.application, 'application should be inlined per explicit override');
-    assert.ok(
-      warnings.some(w => w.includes('ApplicationMember.applicationId') && w.toLowerCase().includes('back-reference')),
-      `Expected a back-reference override warning; got: ${JSON.stringify(warnings)}`
+  await t.test('direction gate - per-field expand on back-reference with empty fields throws', () => {
+    // Falls under the broader "fields must be non-empty" rule but worth a
+    // focused test since the back-ref code path looks at !fields and a
+    // technically-present empty array would otherwise satisfy that check.
+    const spec = {
+      paths: {
+        '/applications/{applicationId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } }
+        },
+        '/applications/{applicationId}/members/{memberId}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationMember' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Application: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          ApplicationMember: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application', style: 'expand', fields: [] }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    assert.throws(
+      () => resolveRelationships(spec, 'expand', schemaIndex),
+      /fields must be a non-empty array/
+    );
+  });
+
+  await t.test('validation - empty fields array throws regardless of direction or style', () => {
+    // Even on a forward reference, `fields: []` produces a useless empty
+    // object in both the schema and example output and is rejected at
+    // resolve time.
+    const spec = {
+      paths: {
+        '/tasks/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } } } } }
+        },
+        '/users/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          User: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+          Task: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              assignedToId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'User', style: 'expand', fields: [] }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    assert.throws(
+      () => resolveRelationships(spec, 'links-only', schemaIndex),
+      /Task\.assignedToId.*fields must be a non-empty array/
     );
   });
 
@@ -1272,7 +1392,7 @@ test('relationship-resolver tests', async (t) => {
               applicationId: {
                 type: 'string',
                 format: 'uuid',
-                'x-relationship': { resource: 'Application', style: 'expand' }
+                'x-relationship': { resource: 'Application', style: 'expand', fields: ['id'] }
               }
             }
           }
@@ -2040,6 +2160,177 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveExampleRelationships(examplesData, expandRenames, new Map());
 
     assert.deepStrictEqual(result.QueueExample1, { id: 'queue-001', name: 'SNAP intake' });
+  });
+
+  // ===========================================================================
+  // Cycle protection: example expansion and schema-level warning
+  // ===========================================================================
+
+  await t.test('resolveExampleRelationships - truncates mutual-forward cycle to { id }', () => {
+    // Two top-level resources at the same hierarchy level (no parent/child)
+    // both forward-expand each other. The direction gate cannot help — both
+    // sides are forward references. Without the seen-set guard, expansion
+    // would recurse forever.
+    const examplesData = {
+      Case1: { id: 'case-001', householdId: 'household-001' },
+      Household1: { id: 'household-001', primaryCaseId: 'case-001' }
+    };
+
+    const expandRenames = [
+      { schemaName: 'Case', propertyName: 'householdId', expandedFieldName: 'household', resource: 'Household', fields: null },
+      { schemaName: 'Household', propertyName: 'primaryCaseId', expandedFieldName: 'primaryCase', resource: 'Case', fields: null }
+    ];
+
+    const examplesIndex = new Map([
+      ['case-001', { id: 'case-001', householdId: 'household-001' }],
+      ['household-001', { id: 'household-001', primaryCaseId: 'case-001' }]
+    ]);
+
+    const { result, warnings } = resolveExampleRelationships(examplesData, expandRenames, examplesIndex);
+
+    // Case1 → household:Household1 → primaryCase:Case → household:{id only}.
+    // The recursion bubbles out once household-001 reappears in the chain.
+    assert.ok(result.Case1.household, 'household expanded');
+    assert.strictEqual(result.Case1.household.id, 'household-001');
+    assert.ok(result.Case1.household.primaryCase, 'primaryCase expanded one more level');
+    assert.strictEqual(result.Case1.household.primaryCase.id, 'case-001');
+    assert.deepStrictEqual(
+      result.Case1.household.primaryCase.household,
+      { id: 'household-001' },
+      'cycle truncated to { id } when household-001 reappears'
+    );
+    assert.ok(
+      warnings.some(w => w.toLowerCase().includes('cycle') && w.includes('household-001')),
+      `Expected a cycle warning naming household-001; got: ${JSON.stringify(warnings)}`
+    );
+  });
+
+  await t.test('resolveExampleRelationships - truncates self-reference cycle', () => {
+    const examplesData = {
+      User1: { id: 'user-001', managerId: 'user-001' }
+    };
+
+    const expandRenames = [
+      { schemaName: 'User', propertyName: 'managerId', expandedFieldName: 'manager', resource: 'User', fields: null }
+    ];
+
+    const examplesIndex = new Map([
+      ['user-001', { id: 'user-001', managerId: 'user-001' }]
+    ]);
+
+    const { result, warnings } = resolveExampleRelationships(examplesData, expandRenames, examplesIndex);
+
+    assert.ok(result.User1.manager, 'manager expanded once');
+    assert.deepStrictEqual(
+      result.User1.manager.manager,
+      { id: 'user-001' },
+      'self-reference truncated at second descent'
+    );
+    assert.ok(
+      warnings.some(w => w.toLowerCase().includes('cycle') && w.includes('user-001')),
+      `Expected a self-reference cycle warning; got: ${JSON.stringify(warnings)}`
+    );
+  });
+
+  await t.test('resolveRelationships - warns when full-schema expand graph has a cycle', () => {
+    // Two top-level resources (siblings — neither is a back-ref of the other)
+    // each annotated to forward-expand the other with no fields subset. The
+    // resolved spec ends up with circular $refs, which is valid OpenAPI but
+    // breaks many code generators. The resolver should surface this.
+    const spec = {
+      paths: {
+        '/cases/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Case' } } } } } }
+        },
+        '/households/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Household' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Case: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              householdId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Household', style: 'expand' }
+              }
+            }
+          },
+          Household: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              primaryCaseId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Case', style: 'expand' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { warnings } = resolveRelationships(spec, 'links-only', schemaIndex);
+
+    assert.ok(
+      warnings.some(w => w.toLowerCase().includes('circular') && w.includes('Case') && w.includes('Household')),
+      `Expected a circular-expand warning; got: ${JSON.stringify(warnings)}`
+    );
+  });
+
+  await t.test('resolveRelationships - no cycle warning when at least one edge has fields subset', () => {
+    // Same mutual-forward shape as above but with `fields` on one edge —
+    // that edge produces an inline subset, not a $ref, so no circular $ref
+    // appears in the resolved spec.
+    const spec = {
+      paths: {
+        '/cases/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Case' } } } } } }
+        },
+        '/households/{id}': {
+          get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Household' } } } } } }
+        }
+      },
+      components: {
+        schemas: {
+          Case: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              householdId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Household', style: 'expand', fields: ['id'] }
+              }
+            }
+          },
+          Household: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              primaryCaseId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Case', style: 'expand' }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { warnings } = resolveRelationships(spec, 'links-only', schemaIndex);
+
+    assert.ok(
+      !warnings.some(w => w.toLowerCase().includes('circular')),
+      `Did not expect a circular-expand warning; got: ${JSON.stringify(warnings)}`
+    );
   });
 
   // ===========================================================================

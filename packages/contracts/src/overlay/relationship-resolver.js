@@ -24,9 +24,12 @@
  *   silently downgrades them to `links-only` so the scalar FK is preserved and
  *   the parent object is not inlined into every child. Authors can still opt
  *   in to upward inlining by setting `style: expand` per-field on a specific
- *   back-reference; the resolver honors that override and emits a warning so
- *   the choice is visible. See safety-net-blueprint#324 for the design intent
- *   and `isBackReference`/`resolveRelationships` for the implementation.
+ *   back-reference, but it requires a non-empty `fields` subset — otherwise
+ *   the resolver errors at build time, because the unbounded recursive example
+ *   expansion path can hang on circular data. With `fields` present, the
+ *   bounded `buildExampleSubset` path is used and the expansion is honored
+ *   silently. See safety-net-blueprint#324 for the design intent and
+ *   `isBackReference`/`resolveRelationships` for the implementation.
  */
 
 // =============================================================================
@@ -702,20 +705,36 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
         );
       }
 
+      // `fields`, when present, must be a non-empty array. An empty array
+      // would produce `type: object, properties: {}` in the schema and `{}`
+      // in example data — never a useful configuration.
+      if (field.relationship.fields !== undefined) {
+        if (!Array.isArray(field.relationship.fields) || field.relationship.fields.length === 0) {
+          throw new Error(
+            `${field.schemaName}.${field.propertyName}: x-relationship.fields must be a non-empty array (got ${JSON.stringify(field.relationship.fields)}).`
+          );
+        }
+      }
+
       // Direction gate: `expand` is for forward navigation (resource → its
       // dependencies). Applying it to a back-reference (child → parent) would
       // inline the parent object into the child and, transitively, into every
       // place the child appears — never the design intent. When the global
       // default would expand a back-reference, silently downgrade to
       // `links-only`. When an author explicitly opted into expand on a
-      // back-reference, honor it but emit a warning so reviewers see the choice.
+      // back-reference, require `fields` so example expansion takes the
+      // bounded `buildExampleSubset` path; without it the recursive
+      // `resolveExampleRelationships` path could hang on circular data
+      // (e.g. mutual expand: A → B and B → A).
       if (effectiveStyle === 'expand') {
         const isBackRef = isBackReference(spec, field.schemaName, field.relationship.resource, warnings);
         if (isBackRef) {
           if (isExplicitStyle) {
-            warnings.push(
-              `Explicit expand on back-reference ${field.schemaName}.${field.propertyName} → ${field.relationship.resource}; upward inlining was opted into by author.`
-            );
+            if (!field.relationship.fields) {
+              throw new Error(
+                `${field.schemaName}.${field.propertyName}: explicit style: expand on a back-reference requires a non-empty fields array. Without fields, recursive example expansion can hang on circular data; with fields, expansion is bounded by the dot-notation depth. See safety-net-blueprint#324.`
+              );
+            }
             wasExplicitBackRefOverride = true;
           } else {
             effectiveStyle = 'links-only';
@@ -763,6 +782,7 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
       for (const field of expandFields) {
         expandRenames.push({
+          schemaName: field.schemaName,
           propertyName: field.propertyName,
           expandedFieldName: deriveLinkName(field.propertyName),
           resource: field.relationship.resource,
@@ -772,7 +792,80 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     }
   }
 
+  // Surface schema-level cycles in the full-schema expand graph. Mutual
+  // forward refs (A.b → B and B.a → A, both expand, neither with `fields`)
+  // produce circular `$ref`s in the resolved spec — valid OpenAPI, but most
+  // code generators and doc tools choke on it. `fields`-subset expansions
+  // are bounded by dot-notation depth and don't contribute to this graph.
+  const cycles = detectExpandCycles(expandRenames);
+  for (const cycle of cycles) {
+    warnings.push(
+      `Circular full-schema expand: ${cycle.join(' → ')}. ` +
+      `Generated clients and documentation tools may not handle the resulting circular $refs. ` +
+      `Add a fields subset to at least one edge to break the cycle.`
+    );
+  }
+
   return { result: spec, warnings, expandRenames, linksData, decisions };
+}
+
+/**
+ * Find cycles in the full-schema expand graph (entries with no `fields`).
+ * Returns an array of cycles, each represented as a list of schema names
+ * starting and ending with the same node (e.g. ['A', 'B', 'A']).
+ */
+function detectExpandCycles(expandRenames) {
+  const adjacency = new Map();
+  for (const { schemaName, resource, fields } of expandRenames) {
+    if (fields) continue;
+    if (!schemaName) continue;
+    if (!adjacency.has(schemaName)) adjacency.set(schemaName, new Set());
+    adjacency.get(schemaName).add(resource);
+  }
+
+  const cycles = [];
+  const seenCycles = new Set();
+  const visited = new Set();
+
+  const walk = (node, path, onStack) => {
+    onStack.add(node);
+    path.push(node);
+    const neighbors = adjacency.get(node);
+    if (neighbors) {
+      for (const next of neighbors) {
+        if (onStack.has(next)) {
+          const cycleStart = path.indexOf(next);
+          const cycle = [...path.slice(cycleStart), next];
+          const key = canonicalizeCycle(cycle);
+          if (!seenCycles.has(key)) {
+            seenCycles.add(key);
+            cycles.push(cycle);
+          }
+        } else if (!visited.has(next)) {
+          walk(next, path, onStack);
+        }
+      }
+    }
+    path.pop();
+    onStack.delete(node);
+    visited.add(node);
+  };
+
+  for (const node of adjacency.keys()) {
+    if (!visited.has(node)) walk(node, [], new Set());
+  }
+
+  return cycles;
+}
+
+function canonicalizeCycle(cycle) {
+  const ring = cycle.slice(0, -1);
+  let minIdx = 0;
+  for (let i = 1; i < ring.length; i++) {
+    if (ring[i] < ring[minIdx]) minIdx = i;
+  }
+  const rotated = [...ring.slice(minIdx), ...ring.slice(0, minIdx)];
+  return rotated.join('→');
 }
 
 /**
@@ -912,9 +1005,12 @@ function buildExampleSubset(record, fields, examplesIndex, context, warnings) {
  * @param {Array<{ propertyName, expandedFieldName, resource, fields }>} expandRenames
  * @param {Map<string, object>} examplesIndex - id → record across all example files
  * @param {Array<{ propertyName, linkName, resource, basePath }>} linksData
+ * @param {Set<string>} [seen] - Record ids already in the current expansion chain;
+ *   used to break cycles in full-schema (no-fields) expansion. Callers should
+ *   omit this — it is populated on recursive descent.
  * @returns {{ result: object, warnings: string[] }}
  */
-function resolveExampleRelationships(examplesData, expandRenames, examplesIndex, linksData = []) {
+function resolveExampleRelationships(examplesData, expandRenames, examplesIndex, linksData = [], seen = new Set()) {
   if (!examplesData || (expandRenames.length === 0 && linksData.length === 0)) {
     return { result: examplesData, warnings: [] };
   }
@@ -954,11 +1050,25 @@ function resolveExampleRelationships(examplesData, expandRenames, examplesIndex,
         // No fields specified — use full related record, but also apply expand
         // renames to it so its own FK fields are expanded (matching schema
         // behavior where all annotations are resolved in the same pass).
+        // Guard against cycles: if this record id is already being expanded
+        // in the current chain, truncate to { id } to break recursion. This
+        // protects against mutual forward refs (A → B and B → A) where the
+        // schema-level direction gate cannot help.
+        if (seen.has(fkValue)) {
+          warnings.push(
+            `${exampleName}.${propertyName}: cycle detected — "${fkValue}" already in expansion chain; truncating to { id: "${fkValue}" }.`
+          );
+          record[expandedFieldName] = { id: fkValue };
+          continue;
+        }
+        const nextSeen = new Set(seen);
+        nextSeen.add(fkValue);
         const wrapped = { _: { ...relatedRecord } };
-        const { result: expanded } = resolveExampleRelationships(
-          wrapped, expandRenames, examplesIndex, []
+        const { result: expanded, warnings: nestedWarnings } = resolveExampleRelationships(
+          wrapped, expandRenames, examplesIndex, [], nextSeen
         );
         record[expandedFieldName] = expanded._;
+        warnings.push(...nestedWarnings);
       }
     }
 

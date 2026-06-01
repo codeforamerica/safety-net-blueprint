@@ -368,6 +368,25 @@ fields:
   - application.program.name  # expand two levels: Case → Application → Program
 ```
 
+### Direction-aware expand
+
+`expand` is for **forward** navigation — a resource pulling in a resource it depends on. The resolver detects direction from the spec's URL hierarchy: a sub-resource (e.g. `ApplicationMember` served at `/applications/{id}/members`) has a back-reference to its parent (`Application`), while siblings under a shared parent and resources at the top level are forward references to each other.
+
+The resolver applies a global `expand` default only to forward references. The same global default on a back-reference would inline the parent into every child (and, transitively, into every place the child appears) — never the design intent.
+
+| Configuration | Behavior |
+|---|---|
+| Global `expand` + forward FK | Expanded |
+| Global `expand` + back-reference FK | Silently downgraded to `links-only` (scalar FK preserved) |
+| Per-field `style: expand` + forward FK | Expanded |
+| Per-field `style: expand` + back-reference FK | Requires `fields`. Errors at resolve time if `fields` is absent or empty. With `fields` present, the expand is honored silently (subset, bounded by dot-notation depth). |
+| Per-field `style: links-only` on either direction | Honored (overrides global) |
+| Cross-domain FK (`domain:` set on the annotation) | Always treated as forward — URL-hierarchy direction detection only makes sense within a single domain |
+
+**`fields` must be a non-empty array when specified.** An empty `fields: []` is a configuration error and the resolver fails the build — it would otherwise produce `type: object, properties: {}` in the schema and `{}` in example data, which is never useful.
+
+**Mutual forward references.** Two schemas at the same hierarchy level (neither is a parent of the other) can both `expand` each other. Both FKs are expanded. When example data forms a cycle (e.g. `case-001.householdId = household-001` and `household-001.primaryCaseId = case-001`), the resolver detects the repeated record id during expansion and includes only `{ id }` for the repeated record rather than expanding it further. A warning is emitted naming the cycle. At the schema level, full-schema mutual expand also produces circular `$ref`s in the resolved spec — valid OpenAPI, but most code generators and documentation tools cannot handle it. The resolver emits a warning when it detects such a cycle; break it by giving at least one edge a `fields` subset (which produces an inline object rather than a `$ref`).
+
 ## Target Path Syntax
 
 Targets use JSONPath-like syntax. Where a schema lives determines its path prefix:
