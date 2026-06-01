@@ -6,15 +6,22 @@
  *
  * Folder/item markers (place in pre-request script):
  *   // x-diagram: skip          — omit this folder or request from the diagram
- *   // x-diagram: self          — render this folder as a self-loop on the current domain
+ *   // x-diagram: hide          — (folder) hide all request children by default; use show to opt in
+ *   // x-diagram: show          — (request) render this request even inside a hide folder
+ *   // x-diagram: self          — render this folder/request as a self-loop on the current domain
+ *   // x-diagram: self <domain> — render as a self-loop on the named domain (e.g. document_management)
+ *   // x-diagram: gap           — force this request to render as a gap (overrides broken detection)
  *   // x-diagram: opt <label>   — render this folder as an opt fragment with the given condition label
+ *   // x-diagram: section       — (folder) emit a labeled horizontal separator before inlining children
  *
  * Everything else is derived automatically:
- *   - Folders where all non-skipped children are sub-folders → par fragment
  *   - GET /platform/events?type=X immediately before a par → auto-generates event delivery arrows
+ *   - GET /platform/events?type=X elsewhere → self-loop, actor derived from event type prefix
  *   - POST /platform/events body.type → event step (from = event type prefix)
  *   - GET with ?traceid → reaction assertion → self-loop on the URL domain
  *   - POST/PUT/PATCH/DELETE → API call step (from derived from actor map or X-Caller-Roles header)
+ *   - Structural requests (emission assertions, reaction assertions, event injections) always render
+ *     regardless of the hide flag — only plain API calls are subject to hide/show
  *   - Participants inferred from step from/to/self values (actors before domains, first-appearance order)
  *   - Endpoints not defined in any *-openapi.yaml spec are automatically marked gap: true
  */
@@ -86,6 +93,14 @@ function getPrereqMarker(item, marker) {
 
 function isSkipped(item) {
   return getPrereqMarker(item, 'skip') !== null;
+}
+
+function isHidden(item) {
+  return getPrereqMarker(item, 'hide') !== null;
+}
+
+function isShown(item) {
+  return getPrereqMarker(item, 'show') !== null;
 }
 
 function slugify(name) {
@@ -160,23 +175,27 @@ function inferDomain(folderName) {
   return folderName.toLowerCase().replace(/\s+branch$/i, '').replace(/\s+/g, '_').trim();
 }
 
-function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths) {
+function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths, hidden = false) {
   const steps = [];
   let pendingEmission = null;
 
-  for (const item of items) {
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
     if (isSkipped(item)) { pendingEmission = null; continue; }
 
     if (item.item) {
-      const selfMark = getPrereqMarker(item, 'self');
-      const optCond  = getPrereqMarker(item, 'opt');
+      const selfMark   = getPrereqMarker(item, 'self');
+      const optCond    = getPrereqMarker(item, 'opt');
+      const hasSection = getPrereqMarker(item, 'section') !== null;
+      const childHidden = isHidden(item) ? true : hidden;
       const nonSkipped = item.item.filter(c => !isSkipped(c));
       const allFolders = nonSkipped.length > 0 && nonSkipped.every(c => c.item);
 
       if (selfMark !== null) {
-        steps.push({ self: branchDomain || scenarioDomain, label: item.name, note: item.description || null });
+        const selfDomain = selfMark || branchDomain || scenarioDomain;
+        steps.push({ self: selfDomain, label: item.name, note: item.description || null });
       } else if (optCond !== null) {
-        const children = convertItems(item.item, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths);
+        const children = convertItems(item.item, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths, childHidden);
         if (children.length > 0)
           steps.push({ fragment: slugify(item.name), type: 'opt', label: optCond, steps: children });
       } else if (allFolders) {
@@ -186,14 +205,15 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
           const opDomain = inferDomain(sf.name);
           const opSteps = [];
           if (emission) opSteps.push({ event: emission, from: scenarioDomain, to: opDomain });
-          opSteps.push(...convertItems(sf.item, scenarioDomain, opDomain, urlActorMap, definedEndpoints, domainsWithPaths));
+          opSteps.push(...convertItems(sf.item, scenarioDomain, opDomain, urlActorMap, definedEndpoints, domainsWithPaths, childHidden));
           return { label: sf.name.replace(/\b\w/g, c => c.toUpperCase()), steps: opSteps };
         });
         steps.push({ fragment: slugify(item.name), type: 'par', operands });
       } else {
         // Transparent folder — inline its children
         pendingEmission = null;
-        steps.push(...convertItems(item.item, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths));
+        if (hasSection) steps.push({ separator: true, label: item.name });
+        steps.push(...convertItems(item.item, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths, childHidden));
       }
       continue;
     }
@@ -201,14 +221,40 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
     const req = item.request;
     if (!req) continue;
 
-    // Self-loop marker on a request item
-    if (getPrereqMarker(item, 'self') !== null) {
-      steps.push({ self: branchDomain || scenarioDomain, label: item.name, note: getNote(item) });
+    // Self-loop marker on a request item — always renders
+    const selfMark = getPrereqMarker(item, 'self');
+    if (selfMark !== null) {
+      const selfDomain = selfMark || branchDomain || scenarioDomain;
+      steps.push({ self: selfDomain, label: item.name, note: getNote(item) });
       continue;
     }
 
+    // Structural requests (emission/reaction assertions, event injections, self-loops) always render.
+    // Plain API calls respect the hide/show flag.
+    const isStructural = isEmissionAssertion(item) || isReactionAssertion(item)
+      || parseEventType(item) !== null || getPrereqMarker(item, 'self') !== null;
+    if (hidden && !isShown(item) && !isStructural) continue;
+
     if (isEmissionAssertion(item)) {
-      pendingEmission = getEmittedType(item);
+      // Look ahead: if the next non-skipped item is a par-candidate folder, set
+      // pendingEmission for event delivery arrows. Otherwise render as a self-arrow
+      // on the domain derived from the event type prefix.
+      let nextIsParCandidate = false;
+      for (let j = i + 1; j < items.length; j++) {
+        if (isSkipped(items[j])) continue;
+        if (items[j].item) {
+          const nonSkipped = items[j].item.filter(c => !isSkipped(c));
+          nextIsParCandidate = nonSkipped.length > 0 && nonSkipped.every(c => c.item);
+        }
+        break;
+      }
+      if (nextIsParCandidate) {
+        pendingEmission = getEmittedType(item);
+      } else {
+        const eventType = getEmittedType(item);
+        const selfDomain = eventType ? eventType.split('.')[0].replace(/-/g, '_') : (branchDomain || scenarioDomain);
+        steps.push({ self: selfDomain, label: item.name, note: getNote(item) });
+      }
       continue;
     }
 
@@ -236,11 +282,14 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
     const hasAssertions = (item.event || []).some(e =>
       e.listen === 'test' && (e.script?.exec || []).some(l => l.includes('pm.test('))
     );
+    const isExplicitGap = getPrereqMarker(item, 'gap') !== null;
     // Gap: domain has no API paths yet — intentional, API not yet designed.
+    // Explicit gap: endpoint is in a domain with paths but intentionally not yet designed —
+    // use // x-diagram: gap to suppress broken detection.
     // Broken: domain has paths but this specific path doesn't match, with no assertions to catch it —
     // silent failure. Catches gaps that become implemented with a different shape than anticipated.
-    const isGap    = isUndefined && !domainHasPaths;
-    const isBroken = isUndefined && domainHasPaths && !hasAssertions;
+    const isGap    = isExplicitGap || (isUndefined && !domainHasPaths);
+    const isBroken = !isExplicitGap && isUndefined && domainHasPaths && !hasAssertions;
     steps.push({
       label: item.name,
       from: inferFrom(item, urlActorMap, branchDomain, scenarioDomain),
@@ -281,7 +330,9 @@ export function postmanToFlow(collection, pkgConfig) {
   for (const item of (collection.item || [])) {
     if (isSkipped(item)) continue;
     if (item.item) {
-      steps.push(...convertItems(item.item, domain, null, urlActorMap, definedEndpoints, domainsWithPaths));
+      const childHidden = isHidden(item) ? true : false;
+      if (getPrereqMarker(item, 'section') !== null) steps.push({ separator: true, label: item.name });
+      steps.push(...convertItems(item.item, domain, null, urlActorMap, definedEndpoints, domainsWithPaths, childHidden));
     } else {
       steps.push(...convertItems([item], domain, null, urlActorMap, definedEndpoints, domainsWithPaths));
     }

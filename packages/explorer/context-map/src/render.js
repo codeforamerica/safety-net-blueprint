@@ -202,6 +202,8 @@ const ABOVE_NORMAL  = 16;  // above-arrow space for a plain step
 const ABOVE_FRAG    = 40;  // above-arrow space when the step opens a fragment
 //                          = badge(16) + gap(4) + label(13) + margin(7)
 const MIN_BELOW     = 28;  // minimum below-arrow clearance
+const SEP_ABOVE     = 14;  // above-line space for a section separator
+const SEP_BELOW     = 10;  // below-line space for a section separator
 const BADGE_H       = 16;  // fragment badge strip height
 const BOX_H2        = 36;  // ref-step box height
 const MIN_GAP       = 4;   // minimum visual gap
@@ -214,6 +216,7 @@ const FRAG_NEST_PAD = 20;  // extra top extension for outer badge when two fragm
  * Used for: (a) fragment bottom calculation, (b) separator positions.
  */
 function stepBelowBase(step) {
+  if (step.separator) return SEP_BELOW;
   if (step.ref)  return Math.max(MIN_BELOW, BOX_H2 / 2 + MIN_GAP);
   let b = MIN_BELOW;
   if (step.self) b = Math.max(b, SEQ_SELF_H + 8);
@@ -236,6 +239,7 @@ function stepBelowBase(step) {
  *   - FRAG_NEST_PAD if the NEXT step opens multiple nested fragments (room for outer badge)
  */
 function stepSlotHeight(step, stepIdx, aboveFragSet, fragEndSet, fragStartCounts) {
+  if (step.separator) return SEP_ABOVE + SEP_BELOW;
   const above = aboveFragSet.has(stepIdx) ? ABOVE_FRAG : ABOVE_NORMAL;
   let below = stepBelowBase(step);
   if (fragEndSet.has(stepIdx))                           below += FRAG_PAD_BOT;
@@ -357,7 +361,9 @@ function renderFlowPage(flow) {
   const arrowY   = [];
   { let y = FIRST_Y; for (let i = 0; i < nSteps; i++) {
     stepTop[i]  = y;
-    arrowY[i]   = y + (aboveFragSet.has(i) ? ABOVE_FRAG : ABOVE_NORMAL);
+    arrowY[i]   = flatSteps[i].separator
+      ? y + SEP_ABOVE
+      : y + (aboveFragSet.has(i) ? ABOVE_FRAG : ABOVE_NORMAL);
     y += stepHts[i];
   } }
   const totalH = nSteps > 0 ? (stepTop[nSteps - 1] + stepHts[nSteps - 1]) : FIRST_Y;
@@ -511,6 +517,21 @@ function renderFlowPage(flow) {
   let gapIdx = 0, regIdx = 0, ovIdx = 0;
   flatSteps.forEach((step, idx) => {
     const y = arrowY[idx];
+
+    if (step.separator) {
+      const lineY = y.toFixed(1);
+      svgParts.push(
+        `  <line x1="${ML}" y1="${lineY}" x2="${W - MR}" y2="${lineY}" stroke="#E9CCBE" stroke-width="1.5"/>`
+      );
+      const cx = (W / 2).toFixed(1);
+      labelDivs.push(
+        `<div style="position:absolute;left:${cx}px;top:${(y - 10).toFixed(1)}px;transform:translate(-50%,0);` +
+        `font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;font-weight:700;` +
+        `color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;` +
+        `background:#f5f5f5;padding:0 10px;z-index:3;">${step.label}</div>`
+      );
+      return;
+    }
 
     if (step.ref && !step.ref.includes('/')) {
       const refFlow  = (config.flows || []).find(f => f.id === step.ref);
