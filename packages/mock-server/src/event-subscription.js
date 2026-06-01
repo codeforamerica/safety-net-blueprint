@@ -48,7 +48,7 @@ function findSmEntryForCollection(allStateMachines, domain, collection) {
  * Execute a pending operation trigger (invoke: { POST: domain/collection/{id}/operation }).
  * The path is fully interpolated: domain/collection/uuid/operation.
  */
-function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller) {
+function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null) {
   const parts = path.split('/');
   if (parts.length < 4) {
     console.error(`executePendingOperation: path "${path}" must have at least 4 segments`);
@@ -77,6 +77,8 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
       machine: smEntry.machine,
       slaTypes: allSlaTypes,
       requestBody: body || {},
+      traceparent,
+      causationid,
       now,
     });
   } catch (e) {
@@ -228,6 +230,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               source: `/${entDomain || smEntry.domain}`,
               data: { ...created },
               callerId: 'system',
+              traceparent: event.traceparent,
+              causationid: event.id,
               now,
             });
           } catch (e) {
@@ -247,7 +251,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         // Handle operation triggers
         for (const op of pendingOperations) {
           try {
-            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller);
+            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id);
           } catch (e) {
             console.error(`onEvent operation failed for "${op.path}":`, e.message);
           }
@@ -268,7 +272,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
             );
             for (const op of procOps) {
               try {
-                executePendingOperation(op, now, allStateMachines, allSlaTypes, caller);
+                executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id);
               } catch (e) {
                 console.error(`onEvent procedure operation failed for "${op.path}":`, e.message);
               }
@@ -299,6 +303,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               source: `/${domain}`,
               subject: evt.subject ?? subjectId,
               data: evt.data || null,
+              traceparent: event.traceparent,
+              causationid: event.id,
               time: now,
             });
           } catch (e) {

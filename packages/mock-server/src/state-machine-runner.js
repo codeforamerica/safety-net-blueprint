@@ -27,6 +27,7 @@ import { validate } from './validator.js';
  * @param {Array}  [options.slaTypes]       - SLA types from discoverSlaTypes()
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
+ * @param {string} [options.causationid]    - CloudEvents causation extension: id of the triggering event
  * @returns {{ success: boolean, result?: Object, status?: number, error?: string }}
  */
 export function executeTransition({
@@ -40,7 +41,8 @@ export function executeTransition({
   machine,
   slaTypes = [],
   requestBody = {},
-  traceparent = null
+  traceparent = null,
+  causationid = null
 }) {
   const timestamp = now || new Date().toISOString();
 
@@ -153,7 +155,7 @@ export function executeTransition({
         data: event.data || null,
         time: timestamp,
         traceparent,
-        causationid: event.causationid || undefined,
+        causationid: event.causationid || causationid || undefined,
       });
     } catch (e) {
       console.error(`Failed to emit event "${event.type}":`, e.message);
