@@ -79,6 +79,19 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Look up: member (from `event.subject`)
   - Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches
 - **`undefined`**
+  - Look up: member (from `event.subject`), application (from `$member.applicationId`)
+  - If `$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"`:
+    - If `"snap" in $application.programs`:
+      - `POST intake/applications/verifications`
+- **`undefined`**
+  - Look up: application (from `event.subject`)
+  - If `$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"`:
+    - If `"snap" in $application.programs`:
+      - `POST intake/applications/verifications`
+    - If `"medicaid" in $application.programs`:
+      - `POST intake/applications/verifications`
+      - `POST intake/applications/verifications`
+- **`undefined`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - `PATCH intake/applications/verifications/$verification.id`
 

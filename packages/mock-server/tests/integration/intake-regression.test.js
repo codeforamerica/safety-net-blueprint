@@ -1280,6 +1280,60 @@ async function testIncomeVerificationPerSource() {
 }
 
 // ---------------------------------------------------------------------------
+// Post-submission additions → verifications created
+// ---------------------------------------------------------------------------
+
+async function testPostSubmissionAdditions() {
+  section('Post-submission additions: verifications created for income/member added after submission');
+
+  await test('income added after SNAP submission → income verification created', async () => {
+    const app = await createAndSubmitApp(['snap']);
+    const member = await createMember(app.id, ['snap']);
+    const income = await createIncome(app.id, member.id);
+
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
+    const incomeV = items.find(v => v.category === 'income' && v.sourceId === income.id);
+    assert.ok(incomeV, 'income verification should be created for income added after submission');
+    assert.strictEqual(incomeV.sourceType, 'income');
+    assert.strictEqual(incomeV.verificationType, 'electronic');
+  });
+
+  await test('member added after SNAP submission → identity verification created', async () => {
+    const app = await createAndSubmitApp(['snap']);
+    const member = await createMember(app.id, ['snap']);
+
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
+    const identity = items.find(v => v.category === 'identity' && v.sourceId === member.id);
+    assert.ok(identity, 'identity verification should be created for member added after submission');
+    assert.strictEqual(identity.sourceType, 'member');
+    assert.strictEqual(identity.verificationType, 'electronic');
+  });
+
+  await test('member added after Medicaid submission → citizenship + immigration verifications created', async () => {
+    const app = await createAndSubmitApp(['medicaid']);
+    const member = await createMember(app.id, ['medicaid']);
+
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
+    const citizenship = items.find(v => v.category === 'citizenship' && v.sourceId === member.id);
+    const immigration = items.find(v => v.category === 'immigration' && v.sourceId === member.id);
+    assert.ok(citizenship, 'citizenship verification should be created for member added after Medicaid submission');
+    assert.ok(immigration, 'immigration verification should be created for member added after Medicaid submission');
+  });
+
+  await test('income added after application is closed → no verification created', async () => {
+    const app = await createOpenApp(['snap']);
+    const member = await createMember(app.id, ['snap']);
+    await fetch(`${BASE_URL}${APP}/${app.id}/close`, { method: 'POST', headers: CASEWORKER });
+
+    const income = await createIncome(app.id, member.id);
+
+    const { items } = await (await fetch(`${BASE_URL}${VERIFICATIONS}?applicationId=${app.id}&limit=20`)).json();
+    const incomeV = items.find(v => v.category === 'income' && v.sourceId === income.id);
+    assert.strictEqual(incomeV, undefined, 'no income verification should be created on a closed application');
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -1315,6 +1369,7 @@ async function runTests() {
     if (verificationsAvailable) await testVerificationLifecycle();
     if (verificationsAvailable && membersAvailable) await testCreateVerificationChecklistRule();
     if (verificationsAvailable && membersAvailable) await testIncomeVerificationPerSource();
+    if (verificationsAvailable && membersAvailable) await testPostSubmissionAdditions();
     if (verificationsAvailable) await testInitiateServiceCallsRule();
     if (verificationsAvailable) await testCallCompletedRules();
     if (verificationsAvailable) await testDocumentUploadRule();

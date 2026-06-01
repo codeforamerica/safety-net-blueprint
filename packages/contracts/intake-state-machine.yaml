@@ -158,6 +158,31 @@ machines:
           - member: {from: intake/application-members, where: {id: $this.subject}}
         steps:
           - call: recordPersonMatch
+      - type: intake.member_income.created
+        description: Create an income verification when an income record is added to a submitted application; mirrors the income verification created by createProgramVerifications at submission time
+        context:
+          - member: {from: intake/application-members, where: {id: $this.subject}}
+          - application: {from: intake/applications, where: {id: $member.applicationId}}
+        steps:
+          - if: $application.status != "draft" && $application.status != "withdrawn" && $application.status != "closed"
+            then:
+              - if: '"snap" in $application.programs'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: income, category: income, verificationType: electronic}}
+      - type: intake.application_member.created
+        description: Create member verifications when a member is added to a submitted application; mirrors the member verifications created by createProgramVerifications at submission time
+        context:
+          - application: {from: intake/applications, where: {id: $this.subject}}
+        steps:
+          - if: $application.status != "draft" && $application.status != "withdrawn" && $application.status != "closed"
+            then:
+              - if: '"snap" in $application.programs'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: identity, verificationType: electronic}}
+              - if: '"medicaid" in $application.programs'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: citizenship, verificationType: electronic}}
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: immigration, verificationType: electronic}}
       - type: communication.notice.sent
         description: Append the document request notice to the Verification's documentRequests when Communication sends a notice
         context:
