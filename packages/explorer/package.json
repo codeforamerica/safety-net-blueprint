@@ -9,7 +9,8 @@
     "build:service-blueprints": "node build.js --only=service-blueprints",
     "build:data-explorer": "node build.js --only=data-explorer",
     "build:state-machine-docs": "node build.js --only=state-machine-docs",
-    "build:adoption-model": "node build.js --only=adoption-model"
+    "build:adoption-model": "node build.js --only=adoption-model",
+    "build:scenarios": "node scenarios/build.js"
   },
   "dependencies": {
     "ajv": "^8.17.1",

@@ -107,6 +107,12 @@ if (doBuild('state-machine-docs')) {
   execFileSync(node, [resolve(__dirname, 'state-machine-docs', 'build.js')], { stdio: 'inherit' });
 }
 
+// ── Scenario diagrams (reads contracts directly — subprocess) ─────────────────
+
+if (doBuild('scenarios')) {
+  execFileSync(node, [resolve(__dirname, 'scenarios', 'build.js')], { stdio: 'inherit' });
+}
+
 // ── Adoption model PNG export ─────────────────────────────────────────────────
 
 if (buildAdoptionModel && browser) {
