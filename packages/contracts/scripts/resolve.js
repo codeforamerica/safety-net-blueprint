@@ -31,7 +31,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
 import { extractConfig, validateConfig } from '../src/overlay/config.js';
-import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships } from '../src/overlay/relationship-resolver.js';
+import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '../src/overlay/relationship-resolver.js';
 import { bundleSpec } from '../src/bundle.js';
 import { discoverStateMachines, extractItemEndpoint, generateOverlay } from './generate-rpc-overlay.js';
 
@@ -52,6 +52,7 @@ function parseArgs() {
     envFile: null,
     bundle: false,
     reconcileExamples: false,
+    verbose: false,
     help: false
   };
 
@@ -60,6 +61,8 @@ function parseArgs() {
       options.help = true;
     } else if (arg === '--bundle') {
       options.bundle = true;
+    } else if (arg === '--verbose') {
+      options.verbose = true;
     } else if (arg.startsWith('--spec=')) {
       options.spec = arg.split('=')[1];
     } else if (arg.startsWith('--overlay=')) {
@@ -95,6 +98,7 @@ Flags:
   --bundle           Inline all external $refs to produce self-contained specs
   --env=<env>        Target environment for x-environments filtering (optional)
   --env-file=<file>  Path to env file for \${VAR} placeholder substitution (optional)
+  --verbose          Print a per-schema relationship-resolution summary
   -h, --help         Show this help message
 
 Without --overlay, base specs are copied to --out unchanged.
@@ -999,13 +1003,22 @@ async function main() {
       const found = discoverRelationships(spec);
       if (found.length === 0) continue;
 
-      const { result, warnings, expandRenames, linksData } = resolveRelationships(spec, relationshipStyle, schemaIndex);
+      const { result, warnings, expandRenames, linksData, decisions } = resolveRelationships(spec, relationshipStyle, schemaIndex);
       currentResults.set(relativePath, result);
       allWarnings = allWarnings.concat(warnings);
       if (expandRenames.length > 0) allExpandRenames.push(...expandRenames);
       if (linksData.length > 0) allLinksData.push(...linksData);
 
       console.log(`Relationships: ${relativePath} (${found.length} fields, style: ${relationshipStyle})`);
+
+      if (options.verbose && decisions) {
+        const summary = summarizeResolverDecisions(decisions);
+        for (const [schemaName, counts] of Object.entries(summary)) {
+          console.log(
+            `  ${schemaName}: ${counts.expandedForward} forward / ${counts.expandedExplicitBackRef} explicit upward / ${counts.backRefsDowngraded} back-ref kept scalar / ${counts.linksOnly} links-only`
+          );
+        }
+      }
     }
 
     // Transform example data to match resolved relationship fields

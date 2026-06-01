@@ -16,6 +16,20 @@
  * Planned (not yet implemented):
  *   include     — JSON:API-style sideloading
  *   embed       — always inline related resources
+ *
+ * Direction-aware expand:
+ *   `expand` is for forward navigation (a resource pulling in its dependencies).
+ *   When the global style is `expand`, the resolver detects back-references
+ *   (child schemas pointing up at their parent in the URL hierarchy) and
+ *   silently downgrades them to `links-only` so the scalar FK is preserved and
+ *   the parent object is not inlined into every child. Authors can still opt
+ *   in to upward inlining by setting `style: expand` per-field on a specific
+ *   back-reference, but it requires a non-empty `fields` subset — otherwise
+ *   the resolver errors at build time, because the unbounded recursive example
+ *   expansion path can hang on circular data. With `fields` present, the
+ *   bounded `buildExampleSubset` path is used and the expansion is honored
+ *   silently. See safety-net-blueprint#324 for the design intent and
+ *   `isBackReference`/`resolveRelationships` for the implementation.
  */
 
 // =============================================================================
@@ -193,6 +207,166 @@ function resourceNameToPath(resource) {
     offset > 0 ? '-' + c.toLowerCase() : c.toLowerCase()
   );
   return `/${kebab}s`;
+}
+
+// =============================================================================
+// Direction detection
+// =============================================================================
+
+const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'];
+
+/**
+ * Find all URL paths in the spec that directly serve the given schema name.
+ *
+ * "Directly serves" means the schema is referenced by a `$ref` on an
+ * operation's request body or response body (including inline array `items`).
+ * Schemas reached only transitively — e.g., a `Member` referenced from inside
+ * a `MemberList` wrapper served at a list endpoint — are not counted here.
+ * The caller's intent is to find the path(s) that represent the schema's own
+ * hierarchical position in the URL tree, not every place its bytes can appear.
+ *
+ * @param {object} spec - Parsed OpenAPI spec
+ * @param {string} schemaName - Schema component name to locate
+ * @returns {string[]} Distinct paths serving the schema (declaration order)
+ */
+function findPathsForSchema(spec, schemaName) {
+  if (!spec || !spec.paths || typeof spec.paths !== 'object') return [];
+  const refTarget = `#/components/schemas/${schemaName}`;
+  const matches = [];
+  for (const [path, pathItem] of Object.entries(spec.paths)) {
+    if (!pathItem || typeof pathItem !== 'object') continue;
+    if (pathItemReferencesSchema(pathItem, refTarget)) {
+      matches.push(path);
+    }
+  }
+  return matches;
+}
+
+function pathItemReferencesSchema(pathItem, refTarget) {
+  for (const method of HTTP_METHODS) {
+    const op = pathItem[method];
+    if (!op || typeof op !== 'object') continue;
+    if (op.requestBody && operationBodyMatches(op.requestBody, refTarget)) return true;
+    if (op.responses) {
+      for (const response of Object.values(op.responses)) {
+        if (response && typeof response === 'object' && operationBodyMatches(response, refTarget)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function operationBodyMatches(bodyOrResponse, refTarget) {
+  if (!bodyOrResponse?.content || typeof bodyOrResponse.content !== 'object') return false;
+  for (const mediaType of Object.values(bodyOrResponse.content)) {
+    if (!mediaType?.schema || typeof mediaType.schema !== 'object') continue;
+    const schema = mediaType.schema;
+    if (schema.$ref === refTarget) return true;
+    if (schema.items && typeof schema.items === 'object' && schema.items.$ref === refTarget) return true;
+  }
+  return false;
+}
+
+/**
+ * Determine whether `<containingSchema>.<fkField> → <targetResource>` is a
+ * back-reference (child → parent) by URL-hierarchy inspection.
+ *
+ * A back-reference exists when the target's served path is a strict
+ * structural prefix of the containing schema's served path — i.e., the
+ * containing schema sits below the target in the URL tree, separated by at
+ * least one path parameter segment. Path parameters are compared structurally,
+ * so `{applicationId}` and `{appId}` are treated as equivalent.
+ *
+ * Defaults to forward (false) when either schema has no served path, when
+ * they share the same path, when they are siblings or unrelated, or when
+ * the schemas reference each other (self-reference).
+ *
+ * @param {object} spec - Parsed OpenAPI spec
+ * @param {string} containingSchemaName - Schema that carries the FK field
+ * @param {string} targetResourceName - Resource the FK points at
+ * @param {string[]} [warnings] - Optional accumulator for ambiguity warnings
+ * @returns {boolean} true when classification is a back-reference
+ */
+function isBackReference(spec, containingSchemaName, targetResourceName, warnings) {
+  if (containingSchemaName === targetResourceName) return false;
+  const containingPaths = findPathsForSchema(spec, containingSchemaName);
+  const targetPaths = findPathsForSchema(spec, targetResourceName);
+  if (containingPaths.length === 0 || targetPaths.length === 0) return false;
+
+  if (Array.isArray(warnings)) {
+    if (targetPaths.length > 1 && !pathsAreItemCollectionVariants(targetPaths)) {
+      warnings.push(
+        `${targetResourceName} is served at multiple paths (${targetPaths.join(', ')}); direction detection picked the shortest.`
+      );
+    }
+    if (containingPaths.length > 1 && !pathsAreItemCollectionVariants(containingPaths)) {
+      warnings.push(
+        `${containingSchemaName} is served at multiple paths (${containingPaths.join(', ')}); direction detection picked the shortest.`
+      );
+    }
+  }
+
+  const targetPath = pickCanonicalPath(targetPaths);
+  const containingPath = pickCanonicalPath(containingPaths);
+  return pathIsStrictPrefix(targetPath, containingPath);
+}
+
+function pickCanonicalPath(paths) {
+  return [...paths].sort((a, b) => {
+    if (a.length !== b.length) return a.length - b.length;
+    return a < b ? -1 : a > b ? 1 : 0;
+  })[0];
+}
+
+/**
+ * Decide whether all paths in the set represent the same hierarchical
+ * position. A resource is commonly served at several related paths — its
+ * collection (`/foo`), its item (`/foo/{id}`), and any number of action
+ * endpoints attached to the item (`/foo/{id}/submit`, `/foo/{id}/close`).
+ * Because `findPathsForSchema` only returns paths whose request/response
+ * directly $refs the same schema, all paths in the input list serve the same
+ * resource by construction; the only question is whether they share a common
+ * hierarchical root.
+ *
+ * Returns true when the paths share at least one common initial segment
+ * (so they're related representations of the same resource); false when they
+ * diverge at the root (genuinely separate access points, e.g. `/users/{id}`
+ * vs `/admin/users/{id}`).
+ */
+function pathsAreItemCollectionVariants(paths) {
+  if (paths.length < 2) return false;
+  const allSegs = paths.map(pathSegments);
+  const minLen = Math.min(...allSegs.map(s => s.length));
+  for (let i = 0; i < minLen; i++) {
+    const seg = allSegs[0][i];
+    for (let j = 1; j < allSegs.length; j++) {
+      if (!segmentMatches(allSegs[j][i], seg)) return false;
+    }
+  }
+  return true;
+}
+
+function pathIsStrictPrefix(maybePrefix, fullPath) {
+  const prefixSegs = pathSegments(maybePrefix);
+  const fullSegs = pathSegments(fullPath);
+  if (prefixSegs.length === 0 || fullSegs.length <= prefixSegs.length) return false;
+  for (let i = 0; i < prefixSegs.length; i++) {
+    if (!segmentMatches(prefixSegs[i], fullSegs[i])) return false;
+  }
+  return true;
+}
+
+function pathSegments(path) {
+  if (typeof path !== 'string') return [];
+  return path.split('/').filter(Boolean);
+}
+
+function segmentMatches(a, b) {
+  if (a === b) return true;
+  if (a.startsWith('{') && a.endsWith('}') && b.startsWith('{') && b.endsWith('}')) return true;
+  return false;
 }
 
 // =============================================================================
@@ -460,14 +634,17 @@ const PLANNED_STYLES = ['include', 'embed'];
  * @param {object} spec - Parsed OpenAPI spec (deep-cloned before calling)
  * @param {string} globalStyle - Default style from config (default: 'links-only')
  * @param {Map} schemaIndex - Schema index from buildSchemaIndex()
- * @returns {{ result: object, warnings: string[], expandRenames: Array, linksData: Array }}
+ * @returns {{ result: object, warnings: string[], expandRenames: Array, linksData: Array, decisions: object }}
  *   expandRenames: fields that were expanded, for use with resolveExampleRelationships
  *   linksData: fields that got links-only treatment, for use with resolveExampleRelationships
+ *   decisions: per-schema record of how each annotated FK was treated, suitable for
+ *     verbose summary reporting via summarizeResolverDecisions
  */
 function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = new Map()) {
   const warnings = [];
   const expandRenames = [];
   const linksData = [];
+  const decisions = {};
 
   // Validate global style
   if (PLANNED_STYLES.includes(globalStyle)) {
@@ -478,7 +655,7 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
   const relationships = discoverRelationships(spec);
   if (relationships.length === 0) {
-    return { result: spec, warnings, expandRenames };
+    return { result: spec, warnings, expandRenames, linksData, decisions };
   }
 
   // Warn about unknown resource references
@@ -507,13 +684,77 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     const linksOnlyFields = [];
     const expandFields = [];
 
+    if (!decisions[schemaName]) {
+      decisions[schemaName] = {
+        expandedForward: [],
+        expandedExplicitBackRef: [],
+        backRefsDowngraded: [],
+        linksOnly: []
+      };
+    }
+
     for (const field of fields) {
-      const effectiveStyle = field.relationship.style || globalStyle;
+      const isExplicitStyle = !!field.relationship.style;
+      let effectiveStyle = field.relationship.style || globalStyle;
+      let wasBackRefDowngrade = false;
+      let wasExplicitBackRefOverride = false;
 
       if (PLANNED_STYLES.includes(effectiveStyle)) {
         throw new Error(
           `Style "${effectiveStyle}" is not yet implemented. Supported styles: ${SUPPORTED_STYLES.join(', ')}.`
         );
+      }
+
+      // `fields`, when present, must be a non-empty array. An empty array
+      // would produce `type: object, properties: {}` in the schema and `{}`
+      // in example data — never a useful configuration.
+      if (field.relationship.fields !== undefined) {
+        if (!Array.isArray(field.relationship.fields) || field.relationship.fields.length === 0) {
+          throw new Error(
+            `${field.schemaName}.${field.propertyName}: x-relationship.fields must be a non-empty array (got ${JSON.stringify(field.relationship.fields)}).`
+          );
+        }
+      }
+
+      // Direction gate: `expand` is for forward navigation (resource → its
+      // dependencies). Applying it to a back-reference (child → parent) would
+      // inline the parent object into the child and, transitively, into every
+      // place the child appears — never the design intent. When the global
+      // default would expand a back-reference, silently downgrade to
+      // `links-only`. When an author explicitly opted into expand on a
+      // back-reference, require `fields` so example expansion takes the
+      // bounded `buildExampleSubset` path; without it the recursive
+      // `resolveExampleRelationships` path could hang on circular data
+      // (e.g. mutual expand: A → B and B → A).
+      if (effectiveStyle === 'expand') {
+        const isBackRef = isBackReference(spec, field.schemaName, field.relationship.resource, warnings);
+        if (isBackRef) {
+          if (isExplicitStyle) {
+            if (!field.relationship.fields) {
+              throw new Error(
+                `${field.schemaName}.${field.propertyName}: explicit style: expand on a back-reference requires a non-empty fields array. Without fields, recursive example expansion can hang on circular data; with fields, expansion is bounded by the dot-notation depth. See safety-net-blueprint#324.`
+              );
+            }
+            wasExplicitBackRefOverride = true;
+          } else {
+            effectiveStyle = 'links-only';
+            wasBackRefDowngrade = true;
+          }
+        }
+      }
+
+      const decisionRecord = {
+        propertyName: field.propertyName,
+        resource: field.relationship.resource
+      };
+      if (wasBackRefDowngrade) {
+        decisions[schemaName].backRefsDowngraded.push(decisionRecord);
+      } else if (wasExplicitBackRefOverride) {
+        decisions[schemaName].expandedExplicitBackRef.push(decisionRecord);
+      } else if (effectiveStyle === 'expand') {
+        decisions[schemaName].expandedForward.push(decisionRecord);
+      } else {
+        decisions[schemaName].linksOnly.push(decisionRecord);
       }
 
       if (effectiveStyle === 'expand') {
@@ -541,6 +782,7 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
       for (const field of expandFields) {
         expandRenames.push({
+          schemaName: field.schemaName,
           propertyName: field.propertyName,
           expandedFieldName: deriveLinkName(field.propertyName),
           resource: field.relationship.resource,
@@ -550,7 +792,112 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     }
   }
 
-  return { result: spec, warnings, expandRenames, linksData };
+  // Surface schema-level cycles in the full-schema expand graph. Mutual
+  // forward refs (A.b → B and B.a → A, both expand, neither with `fields`)
+  // produce circular `$ref`s in the resolved spec — valid OpenAPI, but most
+  // code generators and doc tools choke on it. `fields`-subset expansions
+  // are bounded by dot-notation depth and don't contribute to this graph.
+  const cycles = detectExpandCycles(expandRenames);
+  for (const cycle of cycles) {
+    warnings.push(
+      `Circular full-schema expand: ${cycle.join(' → ')}. ` +
+      `Generated clients and documentation tools may not handle the resulting circular $refs. ` +
+      `Add a fields subset to at least one edge to break the cycle.`
+    );
+  }
+
+  return { result: spec, warnings, expandRenames, linksData, decisions };
+}
+
+/**
+ * Find cycles in the full-schema expand graph (entries with no `fields`).
+ * Returns an array of cycles, each represented as a list of schema names
+ * starting and ending with the same node (e.g. ['A', 'B', 'A']).
+ */
+function detectExpandCycles(expandRenames) {
+  const adjacency = new Map();
+  for (const { schemaName, resource, fields } of expandRenames) {
+    if (fields) continue;
+    if (!schemaName) continue;
+    if (!adjacency.has(schemaName)) adjacency.set(schemaName, new Set());
+    adjacency.get(schemaName).add(resource);
+  }
+
+  const cycles = [];
+  const seenCycles = new Set();
+  const visited = new Set();
+
+  const walk = (node, path, onStack) => {
+    onStack.add(node);
+    path.push(node);
+    const neighbors = adjacency.get(node);
+    if (neighbors) {
+      for (const next of neighbors) {
+        if (onStack.has(next)) {
+          const cycleStart = path.indexOf(next);
+          const cycle = [...path.slice(cycleStart), next];
+          const key = canonicalizeCycle(cycle);
+          if (!seenCycles.has(key)) {
+            seenCycles.add(key);
+            cycles.push(cycle);
+          }
+        } else if (!visited.has(next)) {
+          walk(next, path, onStack);
+        }
+      }
+    }
+    path.pop();
+    onStack.delete(node);
+    visited.add(node);
+  };
+
+  for (const node of adjacency.keys()) {
+    if (!visited.has(node)) walk(node, [], new Set());
+  }
+
+  return cycles;
+}
+
+function canonicalizeCycle(cycle) {
+  const ring = cycle.slice(0, -1);
+  let minIdx = 0;
+  for (let i = 1; i < ring.length; i++) {
+    if (ring[i] < ring[minIdx]) minIdx = i;
+  }
+  const rotated = [...ring.slice(minIdx), ...ring.slice(0, minIdx)];
+  return rotated.join('→');
+}
+
+/**
+ * Convert a `decisions` map (as returned by resolveRelationships) into a
+ * per-schema count summary suitable for verbose logging.
+ *
+ * Each schema entry reports:
+ *   - expandedForward: number of forward FK fields expanded
+ *   - expandedExplicitBackRef: number of back-refs expanded via per-field override
+ *   - backRefsDowngraded: number of back-refs the direction gate kept as scalar
+ *   - linksOnly: number of fields rendered as links-only
+ *   - total: sum of all four (equals the number of annotated fields on the schema)
+ *
+ * @param {object} decisions - Per-schema decision arrays
+ * @returns {object} Per-schema count summary keyed by schemaName
+ */
+function summarizeResolverDecisions(decisions) {
+  const summary = {};
+  for (const [schemaName, perSchema] of Object.entries(decisions || {})) {
+    const expandedForward = perSchema.expandedForward.length;
+    const expandedExplicitBackRef = perSchema.expandedExplicitBackRef.length;
+    const backRefsDowngraded = perSchema.backRefsDowngraded.length;
+    const linksOnly = perSchema.linksOnly.length;
+    summary[schemaName] = {
+      expandedForward,
+      expandedExplicitBackRef,
+      backRefsDowngraded,
+      linksOnly,
+      total: expandedForward + expandedExplicitBackRef + backRefsDowngraded + linksOnly
+    };
+  }
+  return summary;
 }
 
 // =============================================================================
@@ -658,9 +1005,12 @@ function buildExampleSubset(record, fields, examplesIndex, context, warnings) {
  * @param {Array<{ propertyName, expandedFieldName, resource, fields }>} expandRenames
  * @param {Map<string, object>} examplesIndex - id → record across all example files
  * @param {Array<{ propertyName, linkName, resource, basePath }>} linksData
+ * @param {Set<string>} [seen] - Record ids already in the current expansion chain;
+ *   used to break cycles in full-schema (no-fields) expansion. Callers should
+ *   omit this — it is populated on recursive descent.
  * @returns {{ result: object, warnings: string[] }}
  */
-function resolveExampleRelationships(examplesData, expandRenames, examplesIndex, linksData = []) {
+function resolveExampleRelationships(examplesData, expandRenames, examplesIndex, linksData = [], seen = new Set()) {
   if (!examplesData || (expandRenames.length === 0 && linksData.length === 0)) {
     return { result: examplesData, warnings: [] };
   }
@@ -700,11 +1050,25 @@ function resolveExampleRelationships(examplesData, expandRenames, examplesIndex,
         // No fields specified — use full related record, but also apply expand
         // renames to it so its own FK fields are expanded (matching schema
         // behavior where all annotations are resolved in the same pass).
+        // Guard against cycles: if this record id is already being expanded
+        // in the current chain, truncate to { id } to break recursion. This
+        // protects against mutual forward refs (A → B and B → A) where the
+        // schema-level direction gate cannot help.
+        if (seen.has(fkValue)) {
+          warnings.push(
+            `${exampleName}.${propertyName}: cycle detected — "${fkValue}" already in expansion chain; truncating to { id: "${fkValue}" }.`
+          );
+          record[expandedFieldName] = { id: fkValue };
+          continue;
+        }
+        const nextSeen = new Set(seen);
+        nextSeen.add(fkValue);
         const wrapped = { _: { ...relatedRecord } };
-        const { result: expanded } = resolveExampleRelationships(
-          wrapped, expandRenames, examplesIndex, []
+        const { result: expanded, warnings: nestedWarnings } = resolveExampleRelationships(
+          wrapped, expandRenames, examplesIndex, [], nextSeen
         );
         record[expandedFieldName] = expanded._;
+        warnings.push(...nestedWarnings);
       }
     }
 
@@ -733,5 +1097,8 @@ export {
   deriveLinkName,
   resolveRelationships,
   buildExamplesIndex,
-  resolveExampleRelationships
+  resolveExampleRelationships,
+  findPathsForSchema,
+  isBackReference,
+  summarizeResolverDecisions
 };

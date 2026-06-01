@@ -122,7 +122,8 @@ queueId:
 | Field | Required | Description |
 |---|---|---|
 | `resource` | Yes | Related schema name in PascalCase (e.g., `Queue`, `Person`) |
-| `style` | No | `expand` causes the mock server to inline the related resource. Default: reference by ID. |
+| `style` | No | `expand` causes the mock server to inline the related resource. Default: reference by ID. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when an implicit global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
+| `fields` | No | Subset of fields to include when `style: expand`. Supports dot notation for nested relationships. When specified, must be a non-empty array — an empty `fields: []` is rejected at resolve time. |
 
 ---
 
