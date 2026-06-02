@@ -37,6 +37,11 @@ const httpStubs = [];
 /** Per-event-suffix counters for generating human-readable IDs. */
 const idCounters = new Map();
 
+/** Unix ms timestamp of the most recent clearStubs() call. Retroactive dispatch
+ *  only matches events created after this point, so stale events from prior test
+ *  runs don't trigger stubs registered in a later test. */
+let stubsClearedAt = Date.now();
+
 const TIMER_REQUESTED = 'scheduling.timer.requested';
 
 /** Per-URL-segment counters for generating human-readable HTTP stub IDs. */
@@ -124,7 +129,10 @@ export function registerStub(stub) {
   // synchronously before stub registration.
   try {
     const { items } = findAll('events', { type: on }, { limit: 100 });
-    const past = items.find(evt => matchCriteria(registered, evt));
+    const past = items.find(evt => {
+      if (new Date(evt.createdAt).getTime() < stubsClearedAt) return false;
+      return matchCriteria(registered, evt);
+    });
     if (past) {
       const idx = stubs.indexOf(registered);
       if (idx !== -1) stubs.splice(idx, 1);
@@ -248,6 +256,7 @@ export function removeHttpStub(id) {
 export function clearStubs() {
   stubs.length = 0;
   idCounters.clear();
+  stubsClearedAt = Date.now();
 }
 
 /**
@@ -266,6 +275,7 @@ export function clearAllStubs() {
   httpStubs.length = 0;
   idCounters.clear();
   httpIdCounters.clear();
+  stubsClearedAt = Date.now();
 }
 
 /**
