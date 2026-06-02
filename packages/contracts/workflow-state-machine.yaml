@@ -308,11 +308,7 @@ machines:
       - type: intake.application.submitted
         description: Create an application review task when a new application is submitted
         steps:
-          # Required-nullable fields (description, case, dueAt, startedAt, completedAt)
-          # are set to null explicitly so the resulting Task satisfies its response
-          # contract. The engine's required-defaults extraction provides the same
-          # guarantee; stating intent at the call site keeps the procedure honest.
-          - call: {POST: workflow/tasks, body: {taskType: application_review, name: Application review, description: null, status: pending, subjectType: application, subjectId: $this.subject, case: null, dueAt: null, startedAt: null, completedAt: null}, description: Create an intake review task when an application is submitted}
+          - call: {POST: workflow/tasks, body: {taskType: application_review, name: Application review, status: pending, subjectType: application, subjectId: $this.subject}, description: Create an intake review task when an application is submitted}
       - type: intake.application.closed
         description: Complete open tasks for the application when intake closes; handles direct close, supervisor-approved close, and auto-determination paths
         context:
