@@ -189,6 +189,23 @@ function convertPathFormat(path) {
 
 
 /**
+ * Merge URL path params into a request body for sub-resource POST handlers.
+ *
+ * Sub-sub-resource routes like POST /applications/{applicationId}/members/{memberId}/incomes
+ * have multiple {paramName} path segments. The persisted record needs every
+ * parent FK denormalized onto it (per the schema's required[] list); the
+ * URL is the authoritative source for those identities.
+ *
+ * Spreading every param into the body is safe because request schemas in
+ * the contracts use additionalProperties: true. Path params win on key
+ * collision: a client cannot override the URL-supplied parent FK by also
+ * passing it in the body.
+ */
+export function mergePathParamsIntoBody(body, params) {
+  return { ...(body || {}), ...(params || {}) };
+}
+
+/**
  * Extract default values for required fields in a JSON Schema (handles allOf).
  *
  * The engine guarantees the response schema's `required` contract for every
@@ -482,7 +499,10 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           if (Object.keys(subRequiredDefaults).length > 0) registerCollectionDefaults(collectionName, subRequiredDefaults);
           const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, { eventSubjectField: parentField });
           handler = (req, res) => {
-            req.body = { ...(req.body || {}), [parentField]: req.params[parentParam] };
+            // Spread ALL path params, not just the last one — sub-sub-resource
+            // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
+            // need every parent FK on the persisted record. See mergePathParamsIntoBody.
+            req.body = mergePathParamsIntoBody(req.body, req.params);
             return baseCreateHandler(req, res);
           };
           description = 'Create sub-resource';
