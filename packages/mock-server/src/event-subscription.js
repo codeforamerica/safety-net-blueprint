@@ -268,7 +268,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           const inlineRules = buildInlineRules(smEntry.stateMachine, smEntry.machine);
           try {
             const { pendingOperations: procOps, pendingEvents: procEvts } = executeProcedures(
-              pendingProcedures, resource, inlineRules, context
+              pendingProcedures, resource, inlineRules, context, event.traceparent, event.id
             );
             for (const op of procOps) {
               try {

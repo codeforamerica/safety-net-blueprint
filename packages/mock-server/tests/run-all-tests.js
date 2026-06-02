@@ -83,7 +83,7 @@ async function runPostmanCollection(collectionPath) {
       if (code === 0) {
         resolve(true);
       } else {
-        reject(new Error(`Postman collection ${collectionFile} failed with exit code ${code}`));
+        reject(new Error(`Postman collection ${collectionPath} failed with exit code ${code}`));
       }
     });
 

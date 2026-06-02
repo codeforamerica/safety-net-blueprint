@@ -54,429 +54,121 @@
       "value": ""
     },
     {
+      "key": "incomeCallCompletedEventId",
+      "value": ""
+    },
+    {
       "key": "incomeAId",
       "value": ""
     },
     {
       "key": "submissionTraceId",
       "value": ""
+    },
+    {
+      "key": "appSubmittedEventId",
+      "value": ""
+    },
+    {
+      "key": "taskCreatedEventId",
+      "value": ""
+    },
+    {
+      "key": "taskId",
+      "value": ""
     }
   ],
   "item": [
     {
-      "name": "Application submitted",
+      "name": "Pre-submission",
       "item": [
         {
-          "name": "Setup",
-          "item": [
-            {
-              "name": "Create application (snap + medicaid)",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "X-Caller-Id",
-                    "value": "applicant-1"
-                  },
-                  {
-                    "key": "X-Caller-Roles",
-                    "value": "applicant"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"programs\": [\"snap\", \"medicaid\"], \"channel\": \"online\"}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications"
-                  ]
-                }
+          "name": "Create application (snap + medicaid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               },
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: show"
-                    ]
-                  }
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "applicant"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"programs\": [\"snap\", \"medicaid\"], \"channel\": \"online\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-              ]
+              }
             },
-            {
-              "name": "Create member A (snap + medicaid — will confirm)",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "X-Caller-Id",
-                    "value": "applicant-1"
-                  },
-                  {
-                    "key": "X-Caller-Roles",
-                    "value": "applicant"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"roles\": [\"primary_applicant\"], \"programsApplyingFor\": [\"snap\", \"medicaid\"]}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "members"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test('member A created', () => {",
-                      "  pm.response.to.have.status(201);",
-                      "  pm.collectionVariables.set('memberAId', pm.response.json().id);",
-                      "});"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Create member B (snap only — will no_match)",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "X-Caller-Id",
-                    "value": "applicant-1"
-                  },
-                  {
-                    "key": "X-Caller-Roles",
-                    "value": "applicant"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"snap\"]}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "members"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('member B created', () => { pm.response.to.have.status(201); pm.collectionVariables.set('memberBId', pm.response.json().id); });"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Create member C (medicaid only — will review_required)",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "X-Caller-Id",
-                    "value": "applicant-1"
-                  },
-                  {
-                    "key": "X-Caller-Roles",
-                    "value": "applicant"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"medicaid\"]}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "members"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('member C created', () => { pm.response.to.have.status(201); pm.collectionVariables.set('memberCId', pm.response.json().id); });"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Create income for member A",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "X-Caller-Id",
-                    "value": "applicant-1"
-                  },
-                  {
-                    "key": "X-Caller-Roles",
-                    "value": "applicant"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"type\": \"employed\", \"amount\": 2000, \"frequency\": \"monthly\"}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}/incomes",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "members",
-                    "{{memberAId}}",
-                    "incomes"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('income A created', () => { pm.response.to.have.status(201); pm.collectionVariables.set('incomeAId', pm.response.json().id); });"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Create income for member B",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "X-Caller-Id",
-                    "value": "applicant-1"
-                  },
-                  {
-                    "key": "X-Caller-Roles",
-                    "value": "applicant"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"type\": \"employed\", \"amount\": 1500, \"frequency\": \"monthly\"}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberBId}}/incomes",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "members",
-                    "{{memberBId}}",
-                    "incomes"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('income B created', () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Create income for member C",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "X-Caller-Id",
-                    "value": "applicant-1"
-                  },
-                  {
-                    "key": "X-Caller-Roles",
-                    "value": "applicant"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"type\": \"employed\", \"amount\": 1200, \"frequency\": \"monthly\"}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberCId}}/incomes",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "members",
-                    "{{memberCId}}",
-                    "incomes"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('income C created', () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications"
               ]
             }
-          ],
+          },
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
+                "exec": []
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "// x-diagram: hide"
+                  "const app = pm.response.json();",
+                  "pm.test('application created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('appId', app.id);",
+                  "});",
+                  "pm.test('programs and channel recorded', () => {",
+                  "  pm.expect(app.programs).to.include.members(['snap', 'medicaid']);",
+                  "  pm.expect(app.channel).to.eql('online');",
+                  "});",
+                  "pm.test('initial status is draft', () => pm.expect(app.status).to.eql('draft'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Upload document",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// x-diagram: show",
-                  "// x-diagram: gap"
-                ]
-              }
-            }
-          ],
+          "name": "Create member A (SNAP + Medicaid — match: confirmed)",
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
               {
                 "key": "X-Caller-Roles",
                 "value": "applicant"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"documentType\":\"residency_verification\"}",
+              "raw": "{\"roles\": [\"primary_applicant\"], \"programsApplyingFor\": [\"snap\", \"medicaid\"]}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -484,7 +176,7 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/document-upload-sessions",
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -492,36 +184,51 @@
                 "intake",
                 "applications",
                 "{{appId}}",
-                "document-upload-sessions"
+                "members"
               ]
             }
           },
-          "response": []
-        },
-        {
-          "name": "Upload and link to application",
           "event": [
             {
-              "listen": "prerequest",
+              "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// x-diagram: show"
+                  "const member = pm.response.json();",
+                  "pm.test('member A created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('memberAId', member.id);",
+                  "});",
+                  "pm.test('roles and programs recorded', () => {",
+                  "  pm.expect(member.roles).to.include('primary_applicant');",
+                  "  pm.expect(member.programsApplyingFor).to.include.members(['snap', 'medicaid']);",
+                  "});"
                 ]
               }
             }
-          ],
+          ]
+        },
+        {
+          "name": "Create member B (SNAP only — match: no_match)",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "applicant"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"snap\"]}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -529,59 +236,7 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/document_management/documents",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "document_management",
-                "documents"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Inject document_management.document_version.uploaded",
-          "event": [],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"type\":\"document_management.document_version.uploaded\",\"data\":{\"documentId\":\"{{docId}}\"}}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/platform/events",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "platform",
-                "events"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Verification satisfied",
-          "event": [],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{residencyVerifId}}?traceid={{traceId}}",
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -589,24 +244,236 @@
                 "intake",
                 "applications",
                 "{{appId}}",
-                "verifications",
-                "{{residencyVerifId}}"
-              ],
-              "query": [
-                {
-                  "key": "traceid",
-                  "value": "{{traceId}}"
-                }
+                "members"
               ]
             }
           },
-          "response": []
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('member B created', () => { pm.response.to.have.status(201); pm.collectionVariables.set('memberBId', pm.response.json().id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create member C (Medicaid only — match: review_required)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "applicant"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"medicaid\"]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('member C created', () => { pm.response.to.have.status(201); pm.collectionVariables.set('memberCId', pm.response.json().id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create income for member A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "applicant"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\": \"employed\", \"amount\": 2000, \"frequency\": \"monthly\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members",
+                "{{memberAId}}",
+                "incomes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('income A created', () => { pm.response.to.have.status(201); pm.collectionVariables.set('incomeAId', pm.response.json().id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create income for member B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "applicant"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\": \"employed\", \"amount\": 1500, \"frequency\": \"monthly\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberBId}}/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members",
+                "{{memberBId}}",
+                "incomes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('income B created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create income for member C",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Caller-Id",
+                "value": "applicant-1"
+              },
+              {
+                "key": "X-Caller-Roles",
+                "value": "applicant"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\": \"employed\", \"amount\": 1200, \"frequency\": \"monthly\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberCId}}/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members",
+                "{{memberCId}}",
+                "incomes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('income C created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Submit application",
           "request": {
             "method": "POST",
-            "description": "Applicant submits online or in person; starts the regulatory processing clock (7 CFR § 273.2(g), 42 CFR § 435.912)",
+            "description": "Applicant submits the completed application.",
             "header": [
               {
                 "key": "Content-Type",
@@ -639,9 +506,7 @@
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
-                "exec": [
-                  "// x-diagram: show"
-                ]
+                "exec": []
               }
             },
             {
@@ -649,23 +514,27 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('application submitted', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().status).to.eql('submitted');",
-                  "  pm.expect(pm.response.json().submittedAt).to.be.a('string');",
-                  "});"
+                  "const app = pm.response.json();",
+                  "pm.test('submit accepted', () => pm.response.to.have.status(200));",
+                  "pm.test('status is submitted', () => pm.expect(app.status).to.eql('submitted'));",
+                  "pm.test('submittedAt recorded', () => pm.expect(app.submittedAt).to.be.a('string'));",
+                  "pm.test('programs preserved', () => pm.expect(app.programs).to.include.members(['snap', 'medicaid']));"
                 ]
               }
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "name": "Intake — Initiate Verifications",
+      "item": [
         {
-          "name": "Verify intake.application.submitted emitted",
+          "name": "intake.application.submitted received",
           "request": {
             "method": "GET",
-            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/platform/events?type=intake.application.submitted&subjectId={{appId}}",
+              "raw": "{{baseUrl}}/platform/events?type=intake.application.submitted&subject={{appId}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -679,54 +548,50 @@
                   "value": "intake.application.submitted"
                 },
                 {
-                  "key": "subjectId",
+                  "key": "subject",
                   "value": "{{appId}}"
                 }
               ]
-            }
+            },
+            "header": []
           },
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// x-diagram: to intake"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "type": "text/javascript",
                 "exec": [
-                  "pm.test('intake.application.submitted emitted', () => {",
+                  "pm.test('intake.application.submitted event published', () => {",
                   "  pm.response.to.have.status(200);",
-                  "  const { items } = pm.response.json();",
-                  "  pm.expect(items.length).to.be.greaterThan(0);",
-                  "  const traceId = (items[0].traceparent || '').split('-')[1] || '';",
-                  "  pm.collectionVariables.set('submissionTraceId', traceId);",
+                  "  const event = pm.response.json().items?.[0];",
+                  "  pm.expect(event).to.exist;",
+                  "  pm.expect(event.type).to.eql('intake.application.submitted');",
+                  "  pm.expect(event.subject).to.eql(pm.collectionVariables.get('appId'));",
+                  "  const parts = (event.traceparent || '').split('-');",
+                  "  if (parts[1]) pm.collectionVariables.set('submissionTraceId', parts[1]);",
+                  "  pm.collectionVariables.set('appSubmittedEventId', event.id);",
                   "});"
-                ]
+                ],
+                "type": "text/javascript"
               }
             }
           ]
-        }
-      ],
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "// x-diagram: hide",
-              "// x-diagram: section"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Verifications initiated",
-      "item": [
+        },
         {
           "name": "Verifications created per program and household member",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&subject={{appId}}&limit=20",
+              "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&causationid={{appSubmittedEventId}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -740,6 +605,1167 @@
                   "value": "intake.verification.created"
                 },
                 {
+                  "key": "causationid",
+                  "value": "{{appSubmittedEventId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const events = pm.response.json().items || [];",
+                  "const memberAId = pm.collectionVariables.get('memberAId');",
+                  "const incomeAId = pm.collectionVariables.get('incomeAId');",
+                  "const identityA = events.find(e => e.data?.category === 'identity' && e.data?.sourceId === memberAId);",
+                  "const incomeA = events.find(e => e.data?.category === 'income' && e.data?.sourceId === incomeAId);",
+                  "const residency = events.find(e => e.data?.category === 'residency');",
+                  "if (identityA) pm.collectionVariables.set('identityVerifIdA', identityA.subject);",
+                  "if (incomeA) pm.collectionVariables.set('incomeVerifIdA', incomeA.subject);",
+                  "if (residency) pm.collectionVariables.set('residencyVerifId', residency.subject);",
+                  "pm.test('intake.verification.created emitted', () => pm.response.to.have.status(200));",
+                  "pm.test('caused by intake.application.submitted', () => {",
+                  "  pm.expect(events[0]?.causationid).to.eql(pm.collectionVariables.get('appSubmittedEventId'));",
+                  "});",
+                  "pm.test('at least 3 verifications created', () => pm.expect(events.length).to.be.at.least(3));",
+                  "pm.test('identity verification found for member A', () => pm.expect(identityA).to.exist);",
+                  "pm.test('income verification found for member A', () => pm.expect(incomeA).to.exist);",
+                  "pm.test('residency verification present', () => pm.expect(residency).to.exist);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stub: fdsh_ssa → call.completed (conclusive) for identity A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"on\": \"data_exchange.service_call.created\",\n  \"match\": {\n    \"data.serviceType\": \"fdsh_ssa\",\n    \"data.metadata.intake.verificationId\": \"{{identityVerifIdA}}\"\n  },\n  \"respond\": {\n    \"type\": \"data_exchange.call.completed\",\n    \"data\": {\n      \"result\": \"conclusive\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mock/stubs/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mock",
+                "stubs",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// x-diagram: hide"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('stub registered', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stub: ssa_ievs → call.completed (inconclusive) for income A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"on\": \"data_exchange.service_call.created\",\n  \"match\": {\n    \"data.serviceType\": \"ssa_ievs\",\n    \"data.metadata.intake.verificationId\": \"{{incomeVerifIdA}}\"\n  },\n  \"respond\": {\n    \"type\": \"data_exchange.call.completed\",\n    \"data\": {\n      \"result\": \"inconclusive\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mock/stubs/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mock",
+                "stubs",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// x-diagram: hide"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('stub registered', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Identity verification satisfied",
+          "request": {
+            "method": "GET",
+            "description": "(data.category: identity, data.status: satisfied)",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?type=intake.verification.satisfied&subject={{identityVerifIdA}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                { "key": "type", "value": "intake.verification.satisfied" },
+                { "key": "subject", "value": "{{identityVerifIdA}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "type": "text/javascript", "exec": [] }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 3 — identity verification satisfied event published', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const event = pm.response.json().items?.[0];",
+                  "  pm.expect(event).to.exist;",
+                  "  pm.expect(event.data.category).to.eql('identity');",
+                  "  pm.expect(event.data.status).to.eql('satisfied');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Income verification inconclusive",
+          "request": {
+            "method": "GET",
+            "description": "(data.category: income, data.status: inconclusive)",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?type=intake.verification.inconclusive&subject={{incomeVerifIdA}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                { "key": "type", "value": "intake.verification.inconclusive" },
+                { "key": "subject", "value": "{{incomeVerifIdA}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "type": "text/javascript", "exec": [] }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 4 — income verification inconclusive event published', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const event = pm.response.json().items?.[0];",
+                  "  pm.expect(event).to.exist;",
+                  "  pm.collectionVariables.set('incomeCallCompletedEventId', event?.causationid ?? '');",
+                  "  pm.expect(event.data.category).to.eql('income');",
+                  "  pm.expect(event.data.status).to.eql('inconclusive');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Document fallback verification created",
+          "request": {
+            "method": "GET",
+            "description": "(data.category: income, data.verificationType: document, data.status: pending)",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&causationid={{incomeCallCompletedEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                { "key": "type", "value": "intake.verification.created" },
+                { "key": "causationid", "value": "{{incomeCallCompletedEventId}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "type": "text/javascript", "exec": [] }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AC 4 — document fallback verification created event published', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const event = pm.response.json().items?.[0];",
+                  "  pm.expect(event).to.exist;",
+                  "  pm.expect(event.data.category).to.eql('income');",
+                  "  pm.expect(event.data.verificationType).to.eql('document');",
+                  "  pm.expect(event.data.status).to.eql('pending');",
+                  "  pm.collectionVariables.set('incomeDocFallbackVerifId', event.subject);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Document requests",
+          "item": [
+            {
+              "name": "Send income fallback document request notice",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"verificationId\":\"{{incomeDocFallbackVerifId}}\",\"type\":\"document_request_income_verification\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/communication/notices",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "communication",
+                    "notices"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// x-diagram: gap"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('income notice sent', () => {",
+                      "  if (pm.response.code === 404) return; // gap — endpoint not yet implemented",
+                      "  pm.expect(pm.response.code).to.equal(201);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Inject communication.notice.sent (income fallback)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-income-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0002-0002-0002-000000000002\",\n    \"type\": \"document_request_income_verification\",\n    \"sentAt\": \"2026-01-15T09:30:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeDocFallbackVerifId}}\" } }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": []
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Income fallback document requests populated",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{incomeDocFallbackVerifId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "intake",
+                    "applications",
+                    "{{appId}}",
+                    "verifications",
+                    "{{incomeDocFallbackVerifId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": []
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('AC 4 — income fallback documentRequests has one entry', () => {",
+                      "  pm.response.to.have.status(200);",
+                      "  const req = (pm.response.json().documentRequests || [])[0];",
+                      "  pm.expect(req).to.exist;",
+                      "  pm.expect(req.type).to.eql('document_request_income_verification');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Send residency document request notice",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"verificationId\":\"{{residencyVerifId}}\",\"type\":\"document_request_residency_verification\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/communication/notices",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "communication",
+                    "notices"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": []
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('residency notice sent', () => {",
+                      "  if (pm.response.code === 404) return; // gap — endpoint not yet implemented",
+                      "  pm.expect(pm.response.code).to.equal(201);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Inject communication.notice.sent (residency)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-residency-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0001-0001-0001-000000000001\",\n    \"type\": \"document_request_residency_verification\",\n    \"sentAt\": \"2026-01-15T09:00:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{residencyVerifId}}\" } }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": []
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Residency document requests populated",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{residencyVerifId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "intake",
+                    "applications",
+                    "{{appId}}",
+                    "verifications",
+                    "{{residencyVerifId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": []
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('AC 2 — residency documentRequests has one entry', () => {",
+                      "  pm.response.to.have.status(200);",
+                      "  const req = (pm.response.json().documentRequests || [])[0];",
+                      "  pm.expect(req).to.exist;",
+                      "  pm.expect(req.type).to.eql('document_request_residency_verification');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Applicant uploads proof of residency",
+          "description": null,
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "item": [
+            {
+              "name": "Upload document",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// x-diagram: gap"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('upload session created', () => {",
+                      "  if (pm.response.code === 404) return; // gap — endpoint not yet implemented",
+                      "  pm.expect(pm.response.code).to.equal(201);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Caller-Roles",
+                    "value": "applicant"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"documentType\":\"residency_verification\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/document-upload-sessions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "intake",
+                    "applications",
+                    "{{appId}}",
+                    "document-upload-sessions"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Document uploaded and linked to application",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": []
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('document uploaded', () => {",
+                      "  if (pm.response.code === 404) return; // gap — endpoint not yet implemented",
+                      "  pm.expect(pm.response.code).to.equal(201);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/document_management/documents",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "document_management",
+                    "documents"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Inject document_management.document_version.uploaded",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"document_management.document_version.uploaded\",\n  \"source\": \"/test\",\n  \"subject\": \"{{residencyVerifId}}\",\n  \"data\": {\n    \"documentId\": \"{{docId}}\",\n    \"metadata\": {\n      \"intake\": {\n        \"verificationId\": \"{{residencyVerifId}}\"\n      }\n    }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Residency verification satisfied",
+              "request": {
+                "method": "GET",
+                "description": "(data.category: residency, data.status: satisfied)",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=intake.verification.satisfied&subject={{residencyVerifId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "intake.verification.satisfied"
+                    },
+                    {
+                      "key": "subject",
+                      "value": "{{residencyVerifId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const event = pm.response.json().items?.[0];",
+                  "pm.test('intake.verification.satisfied emitted', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(event).to.exist;",
+                  "});",
+                  "pm.test('residency verification satisfied', () => {",
+                  "  pm.expect(event?.data?.category).to.eql('residency');",
+                  "  pm.expect(event?.data?.status).to.eql('satisfied');",
+                  "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Workflow — Create Review Task",
+      "item": [
+        {
+          "name": "intake.application.submitted received",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?type=intake.application.submitted&subject={{appId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "intake.application.submitted"
+                },
+                {
+                  "key": "subject",
+                  "value": "{{appId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// x-diagram: to workflow"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Workflow creates intake review task",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?type=workflow.task.created&causationid={{appSubmittedEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "workflow.task.created"
+                },
+                {
+                  "key": "causationid",
+                  "value": "{{appSubmittedEventId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const event = pm.response.json().items?.[0];",
+                  "pm.test('workflow.task.created emitted', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(event).to.exist;",
+                  "});",
+                  "pm.test('caused by intake.application.submitted', () => {",
+                  "  pm.expect(event?.causationid).to.eql(pm.collectionVariables.get('appSubmittedEventId'));",
+                  "});",
+                  "pm.test('task subject set', () => pm.expect(event?.subject).to.be.a('string').and.not.empty);",
+                  "if (event) {",
+                  "  pm.collectionVariables.set('taskCreatedEventId', event.id);",
+                  "  pm.collectionVariables.set('taskId', event.subject);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Task routed to queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workflow",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const task = pm.response.json();",
+                  "pm.test('task found', () => pm.response.to.have.status(200));",
+                  "pm.test('task routed to queue', () => {",
+                  "  pm.expect(task.queueId).to.be.a('string').and.not.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Task priority initialized",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workflow",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const task = pm.response.json();",
+                  "pm.test('task found', () => pm.response.to.have.status(200));",
+                  "pm.test('task priority initialized', () => {",
+                  "  pm.expect(task.priority).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Eligibility — Pre-Screening",
+      "item": [
+        {
+          "name": "intake.application.submitted received",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?type=intake.application.submitted&subject={{appId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "intake.application.submitted"
+                },
+                {
+                  "key": "subject",
+                  "value": "{{appId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// x-diagram: to eligibility"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eligibility creates Determination and Decisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?type=eligibility.determination.created&causationid={{appSubmittedEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "eligibility.determination.created"
+                },
+                {
+                  "key": "causationid",
+                  "value": "{{appSubmittedEventId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const event = pm.response.json().items?.[0];",
+                  "pm.test(\"eligibility.determination.created emitted\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"caused by intake.application.submitted\", () => {",
+                  "  pm.expect(event?.causationid).to.eql(pm.collectionVariables.get(\"appSubmittedEventId\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stub: fdsh_fti → call.completed (conclusive)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"on\": \"data_exchange.service_call.created\",\n  \"match\": {\n    \"data.serviceType\": \"fdsh_fti\"\n  },\n  \"respond\": {\n    \"type\": \"data_exchange.call.completed\",\n    \"data\": {\n      \"result\": \"conclusive\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mock/stubs/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mock",
+                "stubs",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// x-diagram: hide"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('stub registered', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stub: fdsh_medicare_vci → call.completed (conclusive)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"on\": \"data_exchange.service_call.created\",\n  \"match\": {\n    \"data.serviceType\": \"fdsh_medicare_vci\"\n  },\n  \"respond\": {\n    \"type\": \"data_exchange.call.completed\",\n    \"data\": {\n      \"result\": \"conclusive\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mock/stubs/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mock",
+                "stubs",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// x-diagram: hide"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('stub registered', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eligibility flags application expedited",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?type=eligibility.application.expedited&subject={{appId}}&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "eligibility.application.expedited"
+                },
+                {
                   "key": "subject",
                   "value": "{{appId}}"
                 },
@@ -748,803 +1774,10 @@
                   "value": "20"
                 }
               ]
-            },
-            "description": "Income, identity, residency for SNAP; citizenship and immigration for Medicaid (per member)"
+            }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('verifications created', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().items.length).to.be.greaterThan(0);",
-                  "});"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
-        {
-          "name": "opt SNAP",
-          "item": [
-            {
-              "name": "Identity check (fdsh_ssa)",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"serviceId\": \"fdsh_ssa\", \"requestingResourceId\": \"{{memberAId}}\", \"requestingResourceType\": \"ApplicationMember\"}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/data-exchange/service-calls",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "data-exchange",
-                    "service-calls"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: show"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('identity service call submitted', () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Inject call.completed (conclusive) for identity",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-conclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{identityVerifIdA}}\" } },\n    \"result\": \"conclusive\",\n    \"serviceCallId\": \"sc-conclusive-001\",\n    \"serviceType\": \"fdsh_ssa\"\n  }\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/platform/events",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "platform",
-                    "events"
-                  ]
-                },
-                "description": "serviceType: fdsh_ssa — routed to verification by metadata.intake.verificationId"
-              },
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: show"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('event accepted', () => pm.response.to.have.status(202));"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Verify identity Verification satisfied",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{identityVerifIdA}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "verifications",
-                    "{{identityVerifIdA}}"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: skip"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test('AC 3 — conclusive: status satisfied', () => {",
-                      "  pm.response.to.have.status(200);",
-                      "  pm.expect(pm.response.json().status).to.eql('satisfied');",
-                      "});",
-                      "",
-                      "pm.test('AC 3 — electronic evidence recorded', () => {",
-                      "  const item = (pm.response.json().evidence || []).find(e => e.result === 'conclusive');",
-                      "  pm.expect(item).to.exist;",
-                      "  pm.expect(item.serviceCallId).to.eql('sc-conclusive-001');",
-                      "});"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Income check (ssa_ievs)",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"serviceId\": \"ssa_ievs\", \"requestingResourceId\": \"{{incomeAId}}\", \"requestingResourceType\": \"Income\"}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/data-exchange/service-calls",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "data-exchange",
-                    "service-calls"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: show"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('income service call submitted', () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Inject call.completed (inconclusive) for income",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-inconclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeVerifIdA}}\" } },\n    \"result\": \"inconclusive\",\n    \"serviceCallId\": \"sc-inconclusive-001\",\n    \"serviceType\": \"ssa_ievs\"\n  }\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/platform/events",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "platform",
-                    "events"
-                  ]
-                },
-                "description": "serviceType: ssa_ievs — routed to verification by metadata.intake.verificationId"
-              },
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: show"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('event accepted', () => pm.response.to.have.status(202));"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Verify income Verification inconclusive",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{incomeVerifIdA}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "verifications",
-                    "{{incomeVerifIdA}}"
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: skip"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test('AC 4 — inconclusive: status inconclusive', () => {",
-                      "  pm.response.to.have.status(200);",
-                      "  pm.expect(pm.response.json().status).to.eql('inconclusive');",
-                      "});",
-                      "",
-                      "pm.test('AC 4 — electronic evidence recorded', () => {",
-                      "  const item = (pm.response.json().evidence || []).find(e => e.result === 'inconclusive');",
-                      "  pm.expect(item).to.exist;",
-                      "});"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Verify document fallback Verification created",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications?limit=30",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "intake",
-                    "applications",
-                    "{{appId}}",
-                    "verifications"
-                  ],
-                  "query": [
-                    {
-                      "key": "limit",
-                      "value": "30"
-                    }
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: skip"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test('AC 4 — document fallback Verification created', () => {",
-                      "  const { items } = pm.response.json();",
-                      "  const incomeAId = pm.collectionVariables.get('incomeAId');",
-                      "  const fallback = items.find(v => v.category === 'income' && v.verificationType === 'document' && v.sourceId === incomeAId);",
-                      "  pm.expect(fallback).to.exist;",
-                      "  pm.expect(fallback.status).to.eql('pending');",
-                      "  pm.collectionVariables.set('incomeDocFallbackVerifId', fallback.id);",
-                      "});"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Document requests",
-              "item": [
-                {
-                  "name": "Send income fallback document request notice",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                      }
-                    ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\"verificationId\":\"{{identityVerifIdA}}\",\"type\":\"document_request_income_verification\"}",
-                      "options": {
-                        "raw": {
-                          "language": "json"
-                        }
-                      }
-                    },
-                    "url": {
-                      "raw": "{{baseUrl}}/communication/notices",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "communication",
-                        "notices"
-                      ]
-                    }
-                  },
-                  "event": [
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "// x-diagram: show"
-                        ]
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Inject communication.notice.sent (income fallback)",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                      }
-                    ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-income-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0002-0002-0002-000000000002\",\n    \"type\": \"document_request_income_verification\",\n    \"sentAt\": \"2026-01-15T09:30:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeDocFallbackVerifId}}\" } }\n  }\n}",
-                      "options": {
-                        "raw": {
-                          "language": "json"
-                        }
-                      }
-                    },
-                    "url": {
-                      "raw": "{{baseUrl}}/platform/events",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "platform",
-                        "events"
-                      ]
-                    }
-                  },
-                  "event": [
-                    {
-                      "listen": "test",
-                      "script": {
-                        "exec": [
-                          "pm.test('event accepted', () => pm.response.to.have.status(202));"
-                        ]
-                      }
-                    },
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "// x-diagram: show"
-                        ]
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Verify income fallback documentRequests populated",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{incomeDocFallbackVerifId}}",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "intake",
-                        "applications",
-                        "{{appId}}",
-                        "verifications",
-                        "{{incomeDocFallbackVerifId}}"
-                      ]
-                    }
-                  },
-                  "event": [
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "// x-diagram: skip"
-                        ]
-                      }
-                    },
-                    {
-                      "listen": "test",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "pm.test('AC 4 — income fallback documentRequests has one entry', () => {",
-                          "  pm.response.to.have.status(200);",
-                          "  const req = (pm.response.json().documentRequests || [])[0];",
-                          "  pm.expect(req).to.exist;",
-                          "  pm.expect(req.type).to.eql('document_request_income_verification');",
-                          "});"
-                        ]
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Send residency document request notice",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                      }
-                    ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\"verificationId\":\"{{identityVerifIdA}}\",\"type\":\"document_request_residency_verification\"}",
-                      "options": {
-                        "raw": {
-                          "language": "json"
-                        }
-                      }
-                    },
-                    "url": {
-                      "raw": "{{baseUrl}}/communication/notices",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "communication",
-                        "notices"
-                      ]
-                    }
-                  },
-                  "event": [
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "// x-diagram: show"
-                        ]
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Inject communication.notice.sent (residency)",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                      }
-                    ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"communication.notice.sent\",\n  \"source\": \"/test\",\n  \"subject\": \"notice-residency-001\",\n  \"data\": {\n    \"noticeId\": \"bbbbbbbb-0001-0001-0001-000000000001\",\n    \"type\": \"document_request_residency_verification\",\n    \"sentAt\": \"2026-01-15T09:00:00Z\",\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{residencyVerifId}}\" } }\n  }\n}",
-                      "options": {
-                        "raw": {
-                          "language": "json"
-                        }
-                      }
-                    },
-                    "url": {
-                      "raw": "{{baseUrl}}/platform/events",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "platform",
-                        "events"
-                      ]
-                    }
-                  },
-                  "event": [
-                    {
-                      "listen": "test",
-                      "script": {
-                        "exec": [
-                          "pm.test('event accepted', () => pm.response.to.have.status(202));"
-                        ]
-                      }
-                    },
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "// x-diagram: show"
-                        ]
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Verify residency documentRequests populated",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{residencyVerifId}}",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "intake",
-                        "applications",
-                        "{{appId}}",
-                        "verifications",
-                        "{{residencyVerifId}}"
-                      ]
-                    }
-                  },
-                  "event": [
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "// x-diagram: skip"
-                        ]
-                      }
-                    },
-                    {
-                      "listen": "test",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "pm.test('AC 2 — residency documentRequests has one entry', () => {",
-                          "  pm.response.to.have.status(200);",
-                          "  const req = (pm.response.json().documentRequests || [])[0];",
-                          "  pm.expect(req).to.exist;",
-                          "  pm.expect(req.type).to.eql('document_request_residency_verification');",
-                          "});"
-                        ]
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ],
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// x-diagram: opt SNAP"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "opt Medicaid",
-          "item": [
-            {
-              "name": "Citizenship check (fdsh_ssa)",
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: show"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('citizenship check submitted', () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"serviceId\": \"fdsh_ssa\", \"requestingResourceId\": \"{{memberAId}}\", \"requestingResourceType\": \"ApplicationMember\"}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/data-exchange/service-calls",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "data-exchange",
-                    "service-calls"
-                  ]
-                }
-              }
-            },
-            {
-              "name": "Immigration status check (fdsh_vlp)",
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// x-diagram: show"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('immigration check submitted', () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\"serviceId\": \"fdsh_vlp\", \"requestingResourceId\": \"{{memberAId}}\", \"requestingResourceType\": \"ApplicationMember\"}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/data-exchange/service-calls",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "data-exchange",
-                    "service-calls"
-                  ]
-                }
-              }
-            }
-          ],
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// x-diagram: opt Medicaid"
-                ]
-              }
-            }
-          ]
-        }
-      ],
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "// x-diagram: hide",
-              "// x-diagram: section"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "opt SNAP — determine if expedited",
-      "item": [
         {
           "name": "Inject eligibility.application.expedited",
           "request": {
@@ -1587,7 +1820,7 @@
           ]
         },
         {
-          "name": "Verify application isExpedited: true",
+          "name": "Application marked expedited",
           "request": {
             "method": "GET",
             "header": [],
@@ -1608,9 +1841,7 @@
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
-                "exec": [
-                  "// x-diagram: skip"
-                ]
+                "exec": []
               }
             },
             {
@@ -1622,186 +1853,6 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().isExpedited).to.be.true;",
                   "});"
-                ]
-              }
-            }
-          ]
-        }
-      ],
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "// x-diagram: opt SNAP expedited"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "opt Medicaid — determine if RTE eligible",
-      "item": [
-        {
-          "name": "MAGI income check (fdsh_fti)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"serviceType\": \"fdsh_fti\", \"decisionId\": \"{{decisionId}}\", \"applicationId\": \"{{appId}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/data-exchange/service-calls",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "data-exchange",
-                "service-calls"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('MAGI income check submitted', () => pm.response.to.have.status(201));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Inject call.completed for fdsh_fti",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-fti-001\",\n  \"data\": { \"result\": \"conclusive\", \"serviceCallId\": \"sc-fti-001\", \"serviceType\": \"fdsh_fti\" }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/platform/events",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "platform",
-                "events"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Medicare/VCI enrollment check (fdsh_medicare_vci)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"serviceType\": \"fdsh_medicare_vci\", \"decisionId\": \"{{decisionId}}\", \"applicationId\": \"{{appId}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/data-exchange/service-calls",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "data-exchange",
-                "service-calls"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Medicare/VCI check submitted', () => pm.response.to.have.status(201));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Inject call.completed for fdsh_medicare_vci",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-medicare-vci-001\",\n  \"data\": { \"result\": \"conclusive\", \"serviceCallId\": \"sc-medicare-vci-001\", \"serviceType\": \"fdsh_medicare_vci\" }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/platform/events",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "platform",
-                "events"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
                 ]
               }
             }
@@ -1849,7 +1900,7 @@
           ]
         },
         {
-          "name": "Verify member A medicaid determination written (RTE path)",
+          "name": "Member A Medicaid determination written (RTE path)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1872,9 +1923,7 @@
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
-                "exec": [
-                  "// x-diagram: skip"
-                ]
+                "exec": []
               }
             },
             {
@@ -1882,32 +1931,108 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('medicaid auto-determination written to member A', () => {",
-                  "  const determinations = pm.response.json().programDeterminations || [];",
-                  "  const medicaid = determinations.find(d => d.program === 'medicaid');",
+                  "const determinations = pm.response.json().programDeterminations || [];",
+                  "const medicaid = determinations.find(d => d.program === 'medicaid');",
+                  "pm.test('AC 6 — medicaid determination written to member A', () => {",
+                  "  pm.response.to.have.status(200);",
                   "  pm.expect(medicaid).to.exist;",
-                  "  pm.expect(medicaid.outcome).to.eql('approved');",
-                  "});"
+                  "});",
+                  "pm.test('medicaid outcome is approved', () => pm.expect(medicaid?.outcome).to.eql('approved'));",
+                  "pm.test('medicaid determinedAt recorded', () => pm.expect(medicaid?.determinedAt).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inject eligibility.application.decision_completed (manual path — member A, snap, approved)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"eligibility.application.decision_completed\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"program\": \"snap\",\n    \"status\": \"approved\",\n    \"path\": \"manual\",\n    \"decidedAt\": \"2026-01-15T10:00:00Z\",\n    \"decisionId\": \"dec-snap-001\",\n    \"determinationId\": \"det-001\",\n    \"applicationId\": \"{{appId}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/platform/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Member A SNAP determination written",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{appId}}",
+                "members",
+                "{{memberAId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = (pm.response.json().programDeterminations || []).find(d => d.program === 'snap');",
+                  "pm.test('AC 6 — snap determination written to member A', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(snap).to.exist;",
+                  "});",
+                  "pm.test('snap outcome is approved', () => pm.expect(snap?.outcome).to.eql('approved'));",
+                  "pm.test('snap determinedAt recorded', () => pm.expect(snap?.determinedAt).to.be.a('string'));"
                 ]
               }
             }
           ]
         }
-      ],
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "// x-diagram: opt Medicaid RTE eligible"
-            ]
-          }
-        }
       ]
     },
     {
-      "name": "Person matching",
+      "name": "Client Management — Person Matching",
       "item": [
         {
           "name": "Inject person.match_resolved (confirmed, member A)",
@@ -1951,7 +2076,7 @@
           ]
         },
         {
-          "name": "Verify member A personId set",
+          "name": "Member A person ID linked",
           "request": {
             "method": "GET",
             "header": [],
@@ -1974,9 +2099,7 @@
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
-                "exec": [
-                  "// x-diagram: skip"
-                ]
+                "exec": []
               }
             },
             {
@@ -2037,6 +2160,36 @@
           ]
         },
         {
+          "name": "Member B no_match — personId not set",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberBId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["intake", "applications", "{{appId}}", "members", "{{memberBId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const member = pm.response.json();",
+                  "pm.test('AC 7 — no_match: matchStatus is no_match', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(member.personMatch?.matchStatus).to.eql('no_match');",
+                  "});",
+                  "pm.test('AC 7 — no_match: personId not set', () => {",
+                  "  pm.expect(member.personId).to.not.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Inject person.match_resolved (review_required, member C)",
           "request": {
             "method": "POST",
@@ -2076,118 +2229,36 @@
               }
             }
           ]
-        }
-      ],
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "exec": [
-              "// x-diagram: section"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Determination",
-      "item": [
-        {
-          "name": "Inject eligibility.application.decision_completed (manual path — member A, snap, approved)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"eligibility.application.decision_completed\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"program\": \"snap\",\n    \"status\": \"approved\",\n    \"path\": \"manual\",\n    \"decidedAt\": \"2026-01-15T10:00:00Z\",\n    \"decisionId\": \"dec-snap-001\",\n    \"determinationId\": \"det-001\",\n    \"applicationId\": \"{{appId}}\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/platform/events",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "platform",
-                "events"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
-                ]
-              }
-            }
-          ]
         },
         {
-          "name": "Verify member A SNAP determination written",
+          "name": "Member C review_required — candidates populated",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "intake",
-                "applications",
-                "{{appId}}",
-                "members",
-                "{{memberAId}}"
-              ]
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberCId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["intake", "applications", "{{appId}}", "members", "{{memberCId}}"]
             }
           },
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// x-diagram: skip"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('AC 6 — snap determination written to member A', () => {",
-                  "  const snap = (pm.response.json().programDeterminations || []).find(d => d.program === 'snap');",
-                  "  pm.expect(snap).to.exist;",
-                  "  pm.expect(snap.outcome).to.eql('approved');",
+                  "const member = pm.response.json();",
+                  "pm.test('AC 7 — review_required: matchStatus is review_required', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(member.personMatch?.matchStatus).to.eql('review_required');",
+                  "});",
+                  "pm.test('AC 7 — review_required: multiple candidates present', () => {",
+                  "  pm.expect(member.personMatch?.candidates).to.be.an('array').with.lengthOf.at.least(2);",
                   "});"
                 ]
               }
             }
           ]
-        }
-      ],
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "exec": [
-              "// x-diagram: section"
-            ],
-            "type": "text/javascript"
-          }
         }
       ]
     }

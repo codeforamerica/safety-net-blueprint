@@ -265,9 +265,11 @@ function resolveWithArgs(withArgs, context) {
  * @param {Array} inlineProcedures - Combined procedures from the state machine
  * @param {Object} resource - Resource to mutate in place
  * @param {Object} context - State machine context
+ * @param {string|null} [traceparent] - W3C traceparent to propagate to emitted events
+ * @param {string|null} [causationid] - CloudEvents causationid to propagate to emitted events
  * @returns {{ operations: Array, events: Array }}
  */
-function executeProcedure(procedureId, inlineProcedures, resource, context) {
+function executeProcedure(procedureId, inlineProcedures, resource, context, traceparent = null, causationid = null) {
   const proc = (inlineProcedures || []).find(r => r.id === procedureId);
   if (!proc) {
     console.warn(`Procedure "${procedureId}" not found in state machine`);
@@ -307,6 +309,8 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
             source: `/${domain}`,
             data: { ...created },
             callerId: 'system',
+            traceparent,
+            causationid,
           });
         }
       } catch (e) {
@@ -322,7 +326,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
 
     if (pendingProcedures.length > 0) {
       const { pendingOperations: nestedOps, pendingEvents: nestedEvents } = executeProcedures(
-        pendingProcedures, resource, inlineProcedures, stepContext
+        pendingProcedures, resource, inlineProcedures, stepContext, traceparent, causationid
       );
       allPendingOperations.push(...(nestedOps || []));
       allPendingEvents.push(...(nestedEvents || []));
@@ -411,7 +415,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
  * @param {Object} [context] - State machine context
  * @returns {{ pendingOperations: Array, pendingEvents: Array }}
  */
-export function executeProcedures(pendingProcedures, resource, inlineProcedures = [], context = null) {
+export function executeProcedures(pendingProcedures, resource, inlineProcedures = [], context = null, traceparent = null, causationid = null) {
   const allPendingOperations = [];
   const allPendingEvents = [];
   if (!pendingProcedures || pendingProcedures.length === 0) {
@@ -434,7 +438,7 @@ export function executeProcedures(pendingProcedures, resource, inlineProcedures 
       const resolvedParams = resolveWithArgs(item.with, stepContext);
       callContext = { ...stepContext, params: { ...(stepContext.params || {}), ...resolvedParams } };
     }
-    const { operations: ops, events: evts } = executeProcedure(procedureId, inlineProcedures, resource, callContext);
+    const { operations: ops, events: evts } = executeProcedure(procedureId, inlineProcedures, resource, callContext, traceparent, causationid);
     allPendingOperations.push(...(ops || []));
     allPendingEvents.push(...(evts || []));
   }

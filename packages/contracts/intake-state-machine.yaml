@@ -325,31 +325,6 @@ machines:
       - {id: waived, slaClock: stopped, description: "Verification requirement waived by state policy. Terminal."}
       - {id: cannot_verify, slaClock: stopped, description: "Verification could not be completed after all attempts; caseworker decides next step. Terminal."}
     initialState: pending
-    context:
-      - fdshSsaService:
-          from: data-exchange/services
-          where:
-            serviceType: fdsh_ssa
-      - fdshVlpService:
-          from: data-exchange/services
-          where:
-            serviceType: fdsh_vlp
-      - ssaIevsService:
-          from: data-exchange/services
-          where:
-            serviceType: ssa_ievs
-      - irsIevsService:
-          from: data-exchange/services
-          where:
-            serviceType: irs_ievs
-      - swicaService:
-          from: data-exchange/services
-          where:
-            serviceType: swica
-      - uibService:
-          from: data-exchange/services
-          where:
-            serviceType: uib
     actions:
       - id: satisfy
         description: POST /applications/verifications/{verificationId}/satisfy — System marks an obligation as satisfied after receiving conclusive service call or document evidence
@@ -359,7 +334,16 @@ machines:
         transition: {from: [pending, inconclusive], to: satisfied}
         steps:
           - set: {field: satisfiedAt, value: $now, description: Record when the obligation was satisfied}
-          - emit: {type: intake.verification.satisfied, description: Emit intake.verification.satisfied — signals the obligation is fulfilled}
+          - emit:
+              type: intake.verification.satisfied
+              description: Emit intake.verification.satisfied — signals the obligation is fulfilled
+              data:
+                id: $object.id
+                applicationId: $object.applicationId
+                category: $object.category
+                verificationType: $object.verificationType
+                status: satisfied
+                satisfiedAt: $object.satisfiedAt
       - id: mark-inconclusive
         description: POST /applications/verifications/{verificationId}/mark-inconclusive — System records that a service call returned inconclusive, triggering document fallback
         guards:
@@ -367,7 +351,15 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: pending, to: inconclusive}
         steps:
-          - emit: {type: intake.verification.inconclusive, description: Emit intake.verification.inconclusive — triggers document fallback creation via intake rule subscription}
+          - emit:
+              type: intake.verification.inconclusive
+              description: Emit intake.verification.inconclusive — triggers document fallback creation via intake rule subscription
+              data:
+                id: $object.id
+                applicationId: $object.applicationId
+                category: $object.category
+                verificationType: $object.verificationType
+                status: inconclusive
       - id: waive
         description: POST /applications/verifications/{verificationId}/waive — Caseworker grants a waiver for an obligation that cannot be satisfied through normal means
         schema:
@@ -402,24 +394,24 @@ machines:
       - id: initiateServiceCalls
         description: Route each electronic Verification to its required service calls by category; document-type Verifications are skipped by initiateServiceCall
         match: $object.category
-        "on":
+        when:
           identity:
-            - {call: initiateServiceCall, with: {serviceId: $fdshSsaService.id}, description: "FDSH SSA identity check for SNAP (42 U.S.C. § 1320b-7)"}
+            - {call: initiateServiceCall, with: {serviceType: fdsh_ssa}, description: "FDSH SSA identity check for SNAP (42 U.S.C. § 1320b-7)"}
           income:
-            - {call: initiateServiceCall, with: {serviceId: $ssaIevsService.id}}
-            - {call: initiateServiceCall, with: {serviceId: $irsIevsService.id}}
-            - {call: initiateServiceCall, with: {serviceId: $swicaService.id}}
-            - {call: initiateServiceCall, with: {serviceId: $uibService.id}, description: SSA IEVS, IRS IEVS, SWICA, and UIB income checks (7 CFR § 272.8)}
+            - {call: initiateServiceCall, with: {serviceType: ssa_ievs}}
+            - {call: initiateServiceCall, with: {serviceType: irs_ievs}}
+            - {call: initiateServiceCall, with: {serviceType: swica}}
+            - {call: initiateServiceCall, with: {serviceType: uib}, description: SSA IEVS, IRS IEVS, SWICA, and UIB income checks (7 CFR § 272.8)}
           citizenship:
-            - {call: initiateServiceCall, with: {serviceId: $fdshSsaService.id}, description: "FDSH SSA citizenship check for Medicaid; electronic check required before paper documents (42 CFR § 435.956(b))"}
+            - {call: initiateServiceCall, with: {serviceType: fdsh_ssa}, description: "FDSH SSA citizenship check for Medicaid; electronic check required before paper documents (42 CFR § 435.956(b))"}
           immigration:
-            - {call: initiateServiceCall, with: {serviceId: $fdshVlpService.id}, description: "FDSH VLP immigration status check for Medicaid; electronic check required before paper documents (42 CFR § 435.956(c))"}
+            - {call: initiateServiceCall, with: {serviceType: fdsh_vlp}, description: "FDSH VLP immigration status check for Medicaid; electronic check required before paper documents (42 CFR § 435.956(c))"}
       - id: initiateServiceCall
         description: Post a single service call for this Verification; no-ops for document-type Verifications
-        parameters: [serviceId]
+        parameters: [serviceType]
         if: $object.verificationType == "electronic"
         then:
-          - call: {POST: data-exchange/service-calls, body: {serviceId: $params.serviceId, requestingResourceId: $object.sourceId, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}
+          - call: {POST: data-exchange/service-calls, body: {serviceType: $params.serviceType, requestingResourceId: $object.sourceId, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}
 guards:
   - id: callerIsApplicant
     condition: "\"applicant\" in caller.roles"

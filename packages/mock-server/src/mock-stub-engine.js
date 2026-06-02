@@ -14,12 +14,19 @@
  *
  * Stubs are ephemeral — cleared on server restart or via DELETE /mock/stubs/events.
  *
+ * Retroactive dispatch: if a matching event already exists in the database when a
+ * stub is registered, the stub fires immediately for the most recently created match.
+ * This handles scenarios where the mock server processes state machine subscriptions
+ * synchronously (within the same HTTP request), so trigger events may have already
+ * fired before the test collection reaches its stub registration step.
+ *
  * See docs/guides/mock-server.md for usage patterns.
  */
 
 import { emitEventEnvelope } from './emit-event.js';
 import { eventBus } from './event-bus.js';
 import { resolveTimeTokens } from './time-tokens.js';
+import { findAll } from './database-manager.js';
 
 /** Ordered list of registered event stubs. */
 const stubs = [];
@@ -110,6 +117,24 @@ export function registerStub(stub) {
   }
   const registered = { ...stub, id: nextId(on) };
   stubs.push(registered);
+
+  // Retroactive dispatch: fire immediately if a matching event is already in the
+  // database. findAll returns items sorted by createdAt DESC, so the first match
+  // is the most recently created — correct for scenarios where events fired
+  // synchronously before stub registration.
+  try {
+    const { items } = findAll('events', { type: on }, { limit: 100 });
+    const past = items.find(evt => matchCriteria(registered, evt));
+    if (past) {
+      const idx = stubs.indexOf(registered);
+      if (idx !== -1) stubs.splice(idx, 1);
+      console.log(`[stub] retroactive match ${registered.id} → found past ${on}`);
+      dispatchStubResponse(registered, past);
+    }
+  } catch {
+    // events collection may not exist at startup — ignore
+  }
+
   return registered;
 }
 
