@@ -189,17 +189,33 @@ function convertPathFormat(path) {
 
 
 /**
- * Extract required array field names from a JSON Schema (handles allOf).
- * Returns a defaults map like { evidence: [], documentRequests: [] }.
+ * Extract default values for required fields in a JSON Schema (handles allOf).
+ *
+ * The engine guarantees the response schema's `required` contract for every
+ * persisted resource. Two cases produce a default:
+ *   - required + type: 'array'            -> []
+ *   - required + type: ['X', 'null']      -> null  (any nullable type wins)
+ *
+ * Non-required fields and required non-nullable scalars get no default — the
+ * caller (request body or state-machine procedure) must supply them or fail
+ * loudly via schema validation. This prevents masking real validation gaps.
+ *
+ * Returns a defaults map like { evidence: [], description: null }.
  */
-function extractRequiredArrayDefaults(responseSchema) {
+export function extractRequiredDefaults(responseSchema) {
   if (!responseSchema) return {};
   const defaults = {};
   const schemas = responseSchema.allOf || [responseSchema];
   for (const s of schemas) {
     const props = s.properties || {};
     for (const field of (s.required || [])) {
-      if (props[field]?.type === 'array') {
+      const prop = props[field];
+      if (!prop) continue;
+      // Nullable wins over array: a type union that includes 'null' means
+      // the schema explicitly allows null content, even for arrays.
+      if (Array.isArray(prop.type) && prop.type.includes('null')) {
+        defaults[field] = null;
+      } else if (prop.type === 'array') {
         defaults[field] = [];
       }
     }
@@ -397,9 +413,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
       const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
-      const arrayDefaults = extractRequiredArrayDefaults(endpoint.responseSchema);
-      if (machineForEndpoint?.initialState) arrayDefaults.status = machineForEndpoint.initialState;
-      if (Object.keys(arrayDefaults).length > 0) registerCollectionDefaults(collectionName, arrayDefaults);
+      const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema);
+      if (machineForEndpoint?.initialState) requiredDefaults.status = machineForEndpoint.initialState;
+      if (Object.keys(requiredDefaults).length > 0) registerCollectionDefaults(collectionName, requiredDefaults);
       handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint);
       description = 'Create resource';
     } else if (isSubResourceEndpoint(endpoint.path)) {
@@ -461,9 +477,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           const subSmForEndpoint = subSmEntry?.stateMachine || null;
           const subMachineForEndpoint = subSmEntry?.machine || null;
           const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
-          const subArrayDefaults = extractRequiredArrayDefaults(endpoint.responseSchema);
-          if (subMachineForEndpoint?.initialState) subArrayDefaults.status = subMachineForEndpoint.initialState;
-          if (Object.keys(subArrayDefaults).length > 0) registerCollectionDefaults(collectionName, subArrayDefaults);
+          const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema);
+          if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
+          if (Object.keys(subRequiredDefaults).length > 0) registerCollectionDefaults(collectionName, subRequiredDefaults);
           const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, { eventSubjectField: parentField });
           handler = (req, res) => {
             req.body = { ...(req.body || {}), [parentField]: req.params[parentParam] };
