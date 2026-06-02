@@ -221,9 +221,8 @@ function stepBelowBase(step) {
   let b = MIN_BELOW;
   if (step.self) b = Math.max(b, SEQ_SELF_H + 8);
   if (step.note) {
-    const words = (step.note || '').split(/\s+/).filter(Boolean).length;
-    const lines = Math.max(1, Math.ceil(words / NOTE_WPL));
-    b = Math.max(b, 6 + lines * NOTE_LH);
+    const lines = (step.note || '').split('\n').length;
+    b = Math.max(b, 8 + lines * NOTE_LH);
   }
   return b;
 }
@@ -566,9 +565,9 @@ function renderFlowPage(flow) {
       if (si == null) return;
       const sx     = colX[si];
       const isGap  = !!step.gap;
-      const color  = isGap ? GAP_COLOR : '#6b7280';
+      const color  = isGap ? GAP_COLOR : '#00AD93';
       const dash   = isGap ? ' stroke-dasharray="5,3"' : '';
-      const marker = isGap ? 'sq-red' : 'sq-gray';
+      const marker = isGap ? 'sq-red' : 'sq-green';
       const prefix = isGap ? '\u26a0\ufe0f\u202f' : '';
       // Right-side columns go left so the label doesn't overflow the fragment box.
       const goLeft = sx > W / 2;
@@ -623,6 +622,14 @@ function renderFlowPage(flow) {
           `color:${color};white-space:nowrap;z-index:3;">${prefix}${step.label || ''}</div>`
         );
       }
+      if (step.note) {
+        const noteHtml = step.note.replace(/\n/g, '<br>');
+        labelDivs.push(
+          `<div style="position:absolute;left:${labelX}px;top:${(y + 4).toFixed(1)}px;` +
+          `${labelTransform}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;` +
+          `color:#6b7280;white-space:nowrap;z-index:3;">${noteHtml}</div>`
+        );
+      }
       return;
     }
 
@@ -630,13 +637,10 @@ function renderFlowPage(flow) {
     if (fi == null || ti == null) return;
 
     const fx = colX[fi], tx = colX[ti];
-    const isActor  = participants[fi].type === 'actor';
-    const evStatus = step.event ? (eventMap[step.event]?.status || 'planned') : null;
+    const isActor = participants[fi].type === 'actor';
     let color, markerId;
-    if      (step.gap)                   { color = GAP_COLOR;  markerId = 'sq-red';       }
-    else if (isActor)                    { color = '#2B1A78';  markerId = 'sq-dark-blue'; }
-    else if (evStatus === 'implemented') { color = '#00AD93';  markerId = 'sq-green';     }
-    else                                 { color = '#5650BE';  markerId = 'sq-blue';      }
+    if (step.gap) { color = GAP_COLOR; markerId = 'sq-red';   }
+    else          { color = '#00AD93'; markerId = 'sq-green'; }
 
     const dir  = tx > fx ? 1 : -1;
     const x2   = tx - dir * 8;
@@ -666,11 +670,11 @@ function renderFlowPage(flow) {
       `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:3;">${above}</div>`
     );
     if (step.note) {
-      const noteHtml = step.note.replace(/^(\[.+?\])\s*/, '$1<br>');
+      const noteHtml = step.note.replace(/\n/g, '<br>');
       labelDivs.push(
         `<div style="position:absolute;left:${midX}px;top:${belowY}px;transform:translate(-50%,0);` +
         `text-align:center;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;` +
-        `color:#6b7280;max-width:220px;white-space:normal;z-index:3;">${noteHtml}</div>`
+        `color:#6b7280;white-space:nowrap;z-index:3;">${noteHtml}</div>`
       );
     }
     if (step.policies && step.policies.length) {
@@ -747,8 +751,7 @@ function renderFlowPage(flow) {
     `</div>` +
     `<div style="position:absolute;right:20px;top:0;height:44px;display:flex;align-items:center;gap:14px;font-size:9px;">` +
     `<span>${mkArrow('#00AD93', false)}&thinsp;Implemented</span>` +
-    `<span>${mkArrow('#5650BE', false)}&thinsp;Planned</span>` +
-    `<span>${mkArrow('#2B1A78', false)}&thinsp;Human action</span>` +
+    `<span>${mkArrow('#00AD93', true)}&thinsp;Human action</span>` +
     `<span>${mkArrow('#AF121D', true)}&thinsp;Gap</span>` +
     `<span><span style="display:inline-block;width:12px;height:12px;line-height:12px;` +
     `text-align:center;vertical-align:middle;background:#FEF3C7;border:1px solid #D97706;` +

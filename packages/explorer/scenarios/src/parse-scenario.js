@@ -25,10 +25,9 @@ function getVar(variables, key) {
   return (variables || []).find(v => v.key === key)?.value ?? '';
 }
 
-// Returns true if the item's pre-request script contains // x-diagram: skip
-function isSkipped(item) {
+function isHidden(item) {
   const prereq = (item.event || []).find(e => e.listen === 'prerequest');
-  return (prereq?.script?.exec || []).some(line => line.includes('x-diagram: skip'));
+  return (prereq?.script?.exec || []).some(line => line.includes('x-diagram: hide'));
 }
 
 function stripBaseUrl(rawUrl) {
@@ -176,7 +175,7 @@ function inferDomainFromName(name) {
 // renderer can draw the arrow in the right direction.
 function parseItem(item, phaseName, urlActorMap, branchDomain = null) {
   const steps = [];
-  if (isSkipped(item)) return steps;
+  if (isHidden(item)) return steps;
 
   if (item.item) {
     const subFolders = item.item.filter(c => c.item);

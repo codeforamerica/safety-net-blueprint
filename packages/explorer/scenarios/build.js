@@ -11,7 +11,6 @@
 import { readdirSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { resolve, join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
 import { parseScenario } from './src/parse-scenario.js';
 import { postmanToFlow } from './src/postman-to-flow.js';
 import { renderBlueprintHtml } from './src/render-blueprint.js';
@@ -21,9 +20,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenariosDir = resolve(__dirname, '..', '..', 'contracts', 'scenarios');
 const outputDir    = resolve(__dirname, 'output');
 
-const pkgConfig = yaml.load(
-  readFileSync(resolve(__dirname, '..', 'src', 'config.yaml'), 'utf8')
-);
+function titleCase(id) {
+  return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
 
 if (!existsSync(scenariosDir)) {
   console.error(`Scenarios directory not found: ${scenariosDir}`);
@@ -62,7 +61,7 @@ for (const file of jsonFiles) {
   writeFileSync(blueprintPath, renderBlueprintHtml(scenario));
   console.log(`  Wrote ${blueprintPath}`);
 
-  const flow = postmanToFlow(collection, pkgConfig);
+  const flow = postmanToFlow(collection);
 
   const broken = collectBroken(flow.steps);
   if (broken.length > 0) {
@@ -73,8 +72,16 @@ for (const file of jsonFiles) {
     continue;
   }
 
+  const actorSet = new Set(flow.actorIds || []);
+  const scenarioConfig = {
+    actors:  flow.participants.filter(p =>  actorSet.has(p)).map(p => ({ id: p, label: titleCase(p) })),
+    domains: flow.participants.filter(p => !actorSet.has(p)).map(p => ({ id: p, label: titleCase(p), status: 'partial' })),
+    events:  [],
+    flows:   [],
+  };
+
   const sequencePath = join(outputDir, `${stem}-sequence.html`);
-  const sequenceDiv = renderFlow(flow, pkgConfig);
+  const sequenceDiv = renderFlow(flow, scenarioConfig);
   writeFileSync(sequencePath, `<!DOCTYPE html>
 <html>
 <head>
