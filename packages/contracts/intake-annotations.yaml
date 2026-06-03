@@ -164,3 +164,25 @@ events:
   intake.verification.satisfied:
     policies: [snap-verification-requirements, snap-ssa-identity-check]
     programs: [snap, medicaid]
+
+  # ── Cross-domain events that trigger intake or verification obligations ────────
+
+  eligibility.determination.created:
+    policies: [snap-processing-clock, medicaid-processing-clock]
+    programs: [snap, medicaid]
+
+  eligibility.application.expedited:
+    policies: [snap-expedited-processing]
+    programs: [snap]
+
+  communication.notice.sent:
+    policies: [snap-notice-of-action]
+    programs: [snap, medicaid]
+
+  data_exchange.service_call.created:
+    policies: [snap-ssa-identity-check, snap-income-verification, medicaid-electronic-verification-first]
+    programs: [snap, medicaid]
+
+  data_exchange.call.completed:
+    policies: [medicaid-ex-parte-determination, medicaid-electronic-verification-first]
+    programs: [snap, medicaid]

@@ -11,14 +11,22 @@
 import { readdirSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { resolve, join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
 import { parseScenario } from './src/parse-scenario.js';
 import { postmanToFlow } from './src/postman-to-flow.js';
 import { renderBlueprintHtml } from './src/render-blueprint.js';
+import { generateFigmaBlueprint } from './src/generate-figma.js';
 import { renderFlow } from '../context-map/src/render.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const scenariosDir = resolve(__dirname, '..', '..', 'contracts', 'scenarios');
-const outputDir    = resolve(__dirname, 'output');
+const scenariosDir      = resolve(__dirname, '..', '..', 'contracts', 'scenarios');
+const outputDir         = resolve(__dirname, 'output');
+const figmaPluginSrcDir = resolve(__dirname, '..', 'service-blueprints', 'src', 'figma-plugin', 'src');
+const cardTypesPath     = resolve(__dirname, '..', 'service-blueprints', 'config', 'card-types.yaml');
+
+const cardTypes = existsSync(cardTypesPath)
+  ? yaml.load(readFileSync(cardTypesPath, 'utf8'))
+  : { types: {}, actors: {} };
 
 function titleCase(id) {
   return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -58,8 +66,15 @@ for (const file of jsonFiles) {
 
   const scenario = parseScenario(filePath);
   const blueprintPath = join(outputDir, `${stem}-blueprint.html`);
-  writeFileSync(blueprintPath, renderBlueprintHtml(scenario));
+  writeFileSync(blueprintPath, renderBlueprintHtml(scenario, cardTypes));
   console.log(`  Wrote ${blueprintPath}`);
+
+  const { blueprint, cardData } = generateFigmaBlueprint(scenario);
+  if (existsSync(figmaPluginSrcDir)) {
+    writeFileSync(join(figmaPluginSrcDir, '_current.json'), JSON.stringify(blueprint, null, 2));
+    writeFileSync(join(figmaPluginSrcDir, '_current_cards.json'), JSON.stringify(cardData, null, 2));
+    console.log(`  Wrote Figma blueprint + cards → figma-plugin/src/`);
+  }
 
   const flow = postmanToFlow(collection);
 

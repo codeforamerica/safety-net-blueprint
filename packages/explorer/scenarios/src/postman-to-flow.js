@@ -130,20 +130,25 @@ function normalizePath(url) {
     .replace(/^\/([^/]+)/, (_, seg) => '/' + seg.replace(/-/g, '_'));
 }
 
-function getNote(item) {
-  return item.request?.description || item.description || null;
-}
-
 function requestPath(item) {
   const req = item.request;
   if (!req) return null;
   const method = (req.method || 'GET').toUpperCase();
-  const path = normalizePath(req.url);
+  const full = normalizePath(req.url);
+  const [basePath, qs] = full.split('?');
+  const kept = qs?.split('&').filter(p => p.startsWith('type=') || p.startsWith('subject=')) ?? [];
+  const path = kept.length ? `${basePath}?${kept.join('&')}` : basePath;
+  if (method === 'POST' && basePath === '/platform/events') {
+    try {
+      const eventType = JSON.parse(req.body?.raw || '{}').type;
+      if (eventType) return `${method} ${path} — ${eventType}`;
+    } catch {}
+  }
   return `${method} ${path}`;
 }
 
 function noteWithPath(item) {
-  const desc = getNote(item);
+  const desc = item.request?.description || item.description || null;
   const path = requestPath(item);
   if (!path) return desc;
   return desc ? `${path}\n${desc}` : path;
@@ -173,51 +178,6 @@ function parseEventType(item) {
   catch { return null; }
 }
 
-// Extract a readable summary of meaningful scalar fields from an object.
-// Skips UUIDs, template variables, ISO timestamps, and fields whose name ends in "Id".
-function summarizeFields(obj) {
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
-  const entries = [];
-  for (const [k, v] of Object.entries(obj)) {
-    if (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'boolean') continue;
-    if (typeof v === 'string') {
-      if (/^\{\{/.test(v)) continue;
-      if (/^[0-9a-f]{8}-/i.test(v)) continue;
-      if (/^\d{4}-\d{2}-\d{2}T/.test(v)) continue;
-    }
-    if (/Id$/.test(k) && k !== 'id') continue;
-    entries.push(`${k}: ${v}`);
-  }
-  return entries.length ? entries.join(', ') : null;
-}
-
-function extractPayloadSummary(body) {
-  return summarizeFields(body?.data);
-}
-
-// Build the note for an event injection step:
-//   line 1 — POST /platform/events — <eventType>
-//   line 2 — relevant data fields (if any)
-function injectionNote(item, eventType) {
-  let body = null;
-  try { body = JSON.parse(item.request?.body?.raw || '{}'); } catch {}
-  const summary = extractPayloadSummary(body);
-  const line1 = `POST /platform/events — ${eventType}`;
-  return summary ? `${line1}\n(${summary})` : line1;
-}
-
-// Build the note for an actor-initiated step:
-//   line 1 — METHOD /path
-//   line 2 — relevant request body fields (if any)
-function actorNote(item) {
-  const path = requestPath(item);
-  const method = (item.request?.method || 'GET').toUpperCase();
-  if (!['POST', 'PUT', 'PATCH'].includes(method)) return path;
-  let body = null;
-  try { body = JSON.parse(item.request?.body?.raw || '{}'); } catch {}
-  const summary = summarizeFields(body);
-  return summary ? `${path}\n(${summary})` : path;
-}
 
 function inferFrom(item, urlActorMap, branchDomain, scenarioDomain) {
   const req = item.request;
@@ -326,7 +286,7 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
       const fromDomain = eventType.split('.')[0];
       const toDomain = !branchDomain ? scenarioDomain
         : fromDomain === branchDomain ? scenarioDomain : branchDomain;
-      steps.push({ label: `Event ${eventType} published`, from: fromDomain, to: toDomain, note: injectionNote(item, eventType) });
+      steps.push({ label: item.name, from: fromDomain, to: toDomain, note: noteWithPath(item) });
       continue;
     }
 
@@ -381,14 +341,14 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
             // Domain subscribes to its own event — render as self-loop
             steps.push({
               self: target,
-              label: `Event ${typeParam.value} published`,
+              label: item.name,
               note: noteWithPath(item),
               ...(isGap    && { gap: true,    gap_description:    `${method} ${normalized} — endpoint not yet defined` }),
               ...(isBroken && { broken: true, broken_description: `${method} ${normalized} — domain has paths but this endpoint shape doesn't match any of them` }),
             });
           } else {
             steps.push({
-              label: `Event ${typeParam.value} published`,
+              label: item.name,
               from: emitter,
               to: target,
               note: noteWithPath(item),
@@ -403,8 +363,8 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
 
     const from = inferFrom(item, urlActorMap, branchDomain, scenarioDomain);
     const isActor = actorIds.has(from);
-    const label = isActor ? (getNote(item) || item.name) : item.name;
-    const note  = isActor ? actorNote(item) : noteWithPath(item);
+    const label = item.name;
+    const note  = noteWithPath(item);
     if (from === toDomain) {
       // Same domain on both ends — render as a self-loop rather than a zero-length arrow
       steps.push({

@@ -753,9 +753,6 @@ function renderFlowPage(flow) {
     `<span>${mkArrow('#00AD93', false)}&thinsp;Implemented</span>` +
     `<span>${mkArrow('#00AD93', true)}&thinsp;Human action</span>` +
     `<span>${mkArrow('#AF121D', true)}&thinsp;Gap</span>` +
-    `<span><span style="display:inline-block;width:12px;height:12px;line-height:12px;` +
-    `text-align:center;vertical-align:middle;background:#FEF3C7;border:1px solid #D97706;` +
-    `border-radius:2px;font-size:8px;color:#D97706;">&#8853;</span>&thinsp;State overlay point</span>` +
     `</div>` +
     `</div>`;
 

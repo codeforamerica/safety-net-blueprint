@@ -2,217 +2,719 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <style>* { box-sizing:border-box; margin:0; padding:0; } body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#fff; padding:24px; }</style>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#fff; padding:24px; overflow-x:auto; }
+    table { border-collapse:collapse; }
+  </style>
 </head>
 <body>
-  <h1 style="font-size:15px;font-weight:800;color:#1a1a1a;margin-bottom:16px;">Application Submission Flow — Service Blueprint</h1>
-  <div style="display:grid;grid-template-columns:140px 200px 200px 200px 200px;border:1px solid #ccc;border-radius:4px;overflow:hidden;">
-    <div style="background:#fff;border-right:1px solid #ddd;"></div><div style="background:#1a1a1a;color:#fff;font-size:12px;font-weight:800;padding:9px 11px;border-left:2px solid #fff;">Pre-submission</div><div style="background:#1a1a1a;color:#fff;font-size:12px;font-weight:800;padding:9px 11px;border-left:2px solid #fff;">Intake — Initiate Verifications</div><div style="background:#1a1a1a;color:#fff;font-size:12px;font-weight:800;padding:9px 11px;border-left:2px solid #fff;">Eligibility — Pre-Screening</div><div style="background:#1a1a1a;color:#fff;font-size:12px;font-weight:800;padding:9px 11px;border-left:2px solid #fff;">Client Management — Person Matching</div>
-    
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#D97C20;display:flex;align-items:center;justify-content:center;text-align:center;">Applicant</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create application (snap + medicaid)</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  <h1 style="font-size:14px;font-weight:800;color:#1a1a1a;margin-bottom:14px;">Application Submission Flow — Service Blueprint</h1>
+  <table>
+    <thead><tr><th rowspan="2" style="background:#000;border:1px solid #333;min-width:90px;"></th><th colspan="1" rowspan="2" style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#1a1a1a;color:#fff;font-size:11px;font-weight:800;">Pre-submission</th><th colspan="4" style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#1a1a1a;color:#fff;font-size:11px;font-weight:800;">Intake — Initiate Verifications</th><th colspan="1" rowspan="2" style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#1a1a1a;color:#fff;font-size:11px;font-weight:800;">Workflow — Create Review Task</th><th colspan="3" style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#1a1a1a;color:#fff;font-size:11px;font-weight:800;">Eligibility — Pre-Screening</th></tr><tr><th style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#333;color:#ccc;font-size:9px;font-weight:600;"></th><th style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#333;color:#ccc;font-size:9px;font-weight:600;">Identity — SNAP + Medicaid</th><th style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#333;color:#ccc;font-size:9px;font-weight:600;">Income — SNAP</th><th style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#333;color:#ccc;font-size:9px;font-weight:600;">Residency — SNAP + Medicaid</th><th style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#333;color:#ccc;font-size:9px;font-weight:600;"></th><th style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#333;color:#ccc;font-size:9px;font-weight:600;">Expedited SNAP</th><th style="padding:7px 10px;border:1px solid #333;text-align:left;white-space:nowrap;background:#333;color:#ccc;font-size:9px;font-weight:600;">Medicaid RTE</th></tr></thead>
+    <tbody><tr><td style="background:#D97C20;color:#fff;font-size:10px;font-weight:700;padding:7px 8px;text-align:center;vertical-align:middle;white-space:nowrap;border:1px solid rgba(0,0,0,.1);">Applicant</td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Create application</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create member A (SNAP + Medicaid — match: confirmed)</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Add member A (SNAP + Medicaid — match: confirmed)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create member B (SNAP only — match: no_match)</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Add member B (SNAP only — match: no_match)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create member C (Medicaid only — match: review_required)</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Add member C (Medicaid only — match: review_required)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create income for member A</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Add income for member A</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create income for member B</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Add income for member B</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create income for member C</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Add income for member C</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Submit application</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Submit application</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Upload document</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#D97C20;color:#3D1800;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#3D1800" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="5.5" r="3"/><path d="M1 15a7 7 0 0 1 14 0" stroke-width="1.5" fill="none" stroke="#3D1800"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Upload document</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">APPLICANT</div>
     </div>
-    
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div>
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#2B1A78;display:flex;align-items:center;justify-content:center;text-align:center;">Caseworker</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2B1A78;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Submit application</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">ACTION</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td></tr><tr><td style="background:#2B1A78;color:#fff;font-size:10px;font-weight:700;padding:7px 8px;text-align:center;vertical-align:middle;white-space:nowrap;border:1px solid rgba(0,0,0,.1);">Intake</td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Create application</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div>
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#2B1A78;display:flex;align-items:center;justify-content:center;text-align:center;">System</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create application (snap + medicaid)</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Add member A (SNAP + Medicaid — match: confirmed)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create member A (SNAP + Medicaid — match: confirmed)</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Add member B (SNAP only — match: no_match)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create member B (SNAP only — match: no_match)</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Add member C (Medicaid only — match: review_required)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create member C (Medicaid only — match: review_required)</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Add income for member A</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create income for member A</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Add income for member B</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create income for member B</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Add income for member C</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Create income for member C</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Submit application</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Submit application</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Application Submitted</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Upload document</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Identity Verification Created</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div>
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#888;display:flex;align-items:center;justify-content:center;text-align:center;">Communication</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Send income fallback document request notice</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Identity Verification Satisfied</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Send residency document request notice</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Income Verification Created</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div>
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#888;display:flex;align-items:center;justify-content:center;text-align:center;">Document Management</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#137C69;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">Document uploaded and linked to application</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">SYSTEM</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Income verification inconclusive</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div>
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#137C69;display:flex;align-items:center;justify-content:center;text-align:center;">Workflow</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div>
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#154C21;display:flex;align-items:center;justify-content:center;text-align:center;">Eligibility</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div>
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#4F41B2;display:flex;align-items:center;justify-content:center;text-align:center;">Client Management</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div>
-<div style="background:#fafafa;border-right:1px solid #ddd;border-top:1px solid #e8e8e8;padding:10px 8px;font-size:11px;font-weight:700;color:#fff;background:#555;display:flex;align-items:center;justify-content:center;text-align:center;">Events</div>
-<div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">communication.notice.sent</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Document fallback verification created</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject communication.notice.sent (income fallback)</div>
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">communication.notice.sent</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Residency Verification Created</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject communication.notice.sent (residency)</div>
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">document_management.document_version.uploaded</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Upload document</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject document_management.document_version.uploaded</div>
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">eligibility.application.expedited</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Residency verification satisfied</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject eligibility.application.expedited</div>
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">eligibility.application.decision_completed</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Application Submitted</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject eligibility.application.decision_completed (RTE — member A, medicaid, approved)</div>
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">eligibility.application.decision_completed</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Intake · Application Submitted</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject eligibility.application.decision_completed (manual path — member A, snap, approved)</div>
-  </div></div><div style="border-left:1px solid #ddd;border-top:1px solid #e8e8e8;padding:7px;min-height:56px;"><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">client_management.person.match_resolved</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td></tr><tr><td style="background:#2E6276;color:#fff;font-size:10px;font-weight:700;padding:7px 8px;text-align:center;vertical-align:middle;white-space:nowrap;border:1px solid rgba(0,0,0,.1);">Data Exchange</td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Data Exchange · Service Call Created (fdsh_ssa)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject person.match_resolved (confirmed, member A)</div>
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">client_management.person.match_resolved</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Data Exchange · Call Completed (conclusive)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject person.match_resolved (no_match, member B)</div>
-  </div><div style="border-radius:5px;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);">
-    <div style="background:#2E6276;color:#fff;padding:6px 8px;">
-      <div style="font-size:11px;font-weight:700;line-height:1.3;">client_management.person.match_resolved</div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;">EVENT</div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Data Exchange · Service Call Created (ssa_ievs)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
     </div>
-    <div style="background:#E7F2F5;color:#0A2E34;padding:5px 8px;font-size:10px;line-height:1.4;">Inject person.match_resolved (review_required, member C)</div>
-  </div></div>
-  </div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Data Exchange · Call Completed (inconclusive)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
+    </div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Data Exchange · Service Call Created (fdsh_fti)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
+    </div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Data Exchange · Service Call Created (fdsh_medicare_vci)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
+    </div>
+  </div></div></td></tr><tr><td style="background:#2672DE;color:#fff;font-size:10px;font-weight:700;padding:7px 8px;text-align:center;vertical-align:middle;white-space:nowrap;border:1px solid rgba(0,0,0,.1);">Communication</td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2672DE;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M2 4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H2zm0 2.5 6 3.8 6-3.8V12H2V6.5zm0-1.5 6 3.7 6-3.7V5H2v.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Communication · Send income fallback document request notice</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">COMMUNICATIONS</div>
+    </div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2672DE;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M2 4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H2zm0 2.5 6 3.8 6-3.8V12H2V6.5zm0-1.5 6 3.7 6-3.7V5H2v.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Communication · Send residency document request notice</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">COMMUNICATIONS</div>
+    </div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td></tr><tr><td style="background:#5C4A1E;color:#fff;font-size:10px;font-weight:700;padding:7px 8px;text-align:center;vertical-align:middle;white-space:nowrap;border:1px solid rgba(0,0,0,.1);">Document Management</td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#137C69;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5.66-4.5-.6-1.46 1-1.54L12.5 2l-1.54 1-.6-.6L9.5 2H6.5l-1.46.6L3.5 2 2 3.5l1 1.54-.6 1.46L2 8l.6 1.46-1 1.54 1.46 1.46 1.54-1L6.5 14h3l1.46-.6 1.54 1 1.46-1.46-1-1.54.6-1.46L14 8l-.34-1.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Document Management · Document uploaded and linked to application</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">SYSTEM</div>
+    </div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td></tr><tr><td style="background:#137C69;color:#fff;font-size:10px;font-weight:700;padding:7px 8px;text-align:center;vertical-align:middle;white-space:nowrap;border:1px solid rgba(0,0,0,.1);">Workflow</td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Workflow · Application Review Task Created</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
+    </div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td></tr><tr><td style="background:#154C21;color:#fff;font-size:10px;font-weight:700;padding:7px 8px;text-align:center;vertical-align:middle;white-space:nowrap;border:1px solid rgba(0,0,0,.1);">Eligibility</td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Eligibility · Eligibility determination created</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
+    </div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Eligibility · Decision Created (SNAP)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
+    </div>
+  </div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Eligibility · Decision Created (Medicaid)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
+    </div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#2E6276;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M9 1.5 4 9h4.5L6.5 15 13 7H8.5z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">Eligibility · Expedited SNAP Determined</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">EVENT</div>
+    </div>
+  </div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"></td></tr><tr><td style="background:#686868;color:#fff;font-size:10px;font-weight:700;padding:7px 8px;text-align:center;vertical-align:middle;white-space:nowrap;border:1px solid rgba(0,0,0,.1);">Policy</td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(g)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must accept any application on the date of first contact, even if incomplete. The date received is the application filing date and starts the processing clock.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(c)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must date-stamp or otherwise record the date of receipt on every application. The date stamp establishes the filing date used for timeliness determinations.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(i)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(i)(3)(i)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Benefits must be issued within 7 days for households with gross monthly income below $150 and liquid resources at or below $100, or households whose combined monthly gross income and liquid resources are less than the monthly rent or mortgage and utilities.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.912</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must make eligibility determinations within 45 days of application for most applicants and within 90 days for applicants who require a disability determination.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(a)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Any household may apply for SNAP benefits regardless of current participation in other programs. Agencies may not screen out applicants before accepting an application.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.1</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">All household members must be listed on the application regardless of whether they are individually applying for SNAP. Members who are ineligible — such as non-citizens who do not qualify — must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household.</div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(g)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must accept any application on the date of first contact, even if incomplete. The date received is the application filing date and starts the processing clock.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(c)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must date-stamp or otherwise record the date of receipt on every application. The date stamp establishes the filing date used for timeliness determinations.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(i)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.912</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must make eligibility determinations within 45 days of application for most applicants and within 90 days for applicants who require a disability determination.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.1</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">All household members must be listed on the application regardless of whether they are individually applying for SNAP. Members who are ineligible — such as non-citizens who do not qualify — must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household.</div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(f)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 272.8</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.956(b)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use electronic data sources to verify citizenship before requesting paper documentation. FDSH SSA citizenship check satisfies this requirement.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.956(c)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use electronic data sources to verify immigration status before requesting paper documentation. FDSH VLP satisfies this requirement.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.948</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use data from other agencies and programs to verify eligibility information electronically before requesting documentation from applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 272.8</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.911</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use available electronic data to make eligibility determinations without requiring additional information from the applicant when data is sufficient to establish eligibility.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(f)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(f)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 272.8</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.956(b)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use electronic data sources to verify citizenship before requesting paper documentation. FDSH SSA citizenship check satisfies this requirement.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.956(c)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use electronic data sources to verify immigration status before requesting paper documentation. FDSH VLP satisfies this requirement.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.948</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use data from other agencies and programs to verify eligibility information electronically before requesting documentation from applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 272.8</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.911</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use available electronic data to make eligibility determinations without requiring additional information from the applicant when data is sufficient to establish eligibility.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.911</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use available electronic data to make eligibility determinations without requiring additional information from the applicant when data is sufficient to establish eligibility.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(f)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 272.8</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.956(b)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use electronic data sources to verify citizenship before requesting paper documentation. FDSH SSA citizenship check satisfies this requirement.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.956(c)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use electronic data sources to verify immigration status before requesting paper documentation. FDSH VLP satisfies this requirement.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.948</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use data from other agencies and programs to verify eligibility information electronically before requesting documentation from applicants.</div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(f)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 272.8</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.956(b)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use electronic data sources to verify citizenship before requesting paper documentation. FDSH SSA citizenship check satisfies this requirement.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.956(c)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use electronic data sources to verify immigration status before requesting paper documentation. FDSH VLP satisfies this requirement.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.948</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must use data from other agencies and programs to verify eligibility information electronically before requesting documentation from applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(f)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(g)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must accept any application on the date of first contact, even if incomplete. The date received is the application filing date and starts the processing clock.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(c)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must date-stamp or otherwise record the date of receipt on every application. The date stamp establishes the filing date used for timeliness determinations.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(i)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.912</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must make eligibility determinations within 45 days of application for most applicants and within 90 days for applicants who require a disability determination.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.1</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">All household members must be listed on the application regardless of whether they are individually applying for SNAP. Members who are ineligible — such as non-citizens who do not qualify — must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household.</div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(g)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must accept any application on the date of first contact, even if incomplete. The date received is the application filing date and starts the processing clock.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(c)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must date-stamp or otherwise record the date of receipt on every application. The date stamp establishes the filing date used for timeliness determinations.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(i)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.912</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must make eligibility determinations within 45 days of application for most applicants and within 90 days for applicants who require a disability determination.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.1</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">All household members must be listed on the application regardless of whether they are individually applying for SNAP. Members who are ineligible — such as non-citizens who do not qualify — must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(i)(1)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.912</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">States must make eligibility determinations within 45 days of application for most applicants and within 90 days for applicants who require a disability determination.</div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 273.2(i)(3)(i)</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Benefits must be issued within 7 days for households with gross monthly income below $150 and liquid resources at or below $100, or households whose combined monthly gross income and liquid resources are less than the monthly rent or mortgage and utilities.</div></div></td><td style="border:1px solid #e0e0e0;padding:6px;vertical-align:top;min-width:160px;max-width:200px;"><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 272.8</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 U.S.C. § 1320b-7</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">7 CFR § 272.8</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants.</div></div><div style="border-radius:4px;overflow:hidden;margin-bottom:5px;box-shadow:0 1px 2px rgba(0,0,0,.12);"><div style="background:#686868;color:#FFFFFF;padding:5px 7px;display:flex;gap:4px;align-items:flex-start;">
+    <span style="margin-top:1px;opacity:.9;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="#FFFFFF" style="vertical-align:middle;flex-shrink:0;"><path d="M8 1 1 6v9h5v-5h4v5h5V6L8 1zm0 2.2 5 3.3V13h-3v-5H6v5H3V6.5L8 3.2z"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:600;line-height:1.3;">42 CFR § 435.940</div>
+      <div style="font-size:8px;font-weight:800;letter-spacing:.05em;margin-top:2px;opacity:.85;">POLICY</div>
+    </div>
+  </div><div style="background:#E3E3E3;color:#1A1A1A;padding:4px 7px;font-size:9px;line-height:1.4;">When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive.</div></div></td></tr></tbody>
+  </table>
 </body>
 </html>

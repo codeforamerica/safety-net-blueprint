@@ -132,7 +132,7 @@ function loadPolicyRegistry() {
 
 function resolvePolicies(ids, registry) {
   return (ids || []).map(id => registry[id]).filter(Boolean)
-    .map(p => ({ citation: p.citation, citationUrl: p.citationUrl }));
+    .map(p => ({ citation: p.citation, citationUrl: p.citationUrl, description: p.description?.trim() || undefined }));
 }
 
 // Build METHOD:"/domain/path-pattern" → [actors] from state machine descriptions
@@ -298,6 +298,113 @@ function parseItem(item, phaseName, urlActorMap, branchDomain = null) {
   return steps;
 }
 
+// Build a single blueprint-visible step from a request item.
+// Includes:
+//   - GET /platform/events assertions  → system action (the emitting domain did this)
+//   - POST/PUT/PATCH/DELETE to business domains → people or system action
+// Excludes:
+//   - POST /platform/events injections → test stubs, not real system actions
+//   - GET to non-platform domains → test verifications of state
+//   - Hidden items
+function buildBlueprintStep(item, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry) {
+  if (isHidden(item)) return null;
+  const req = item.request;
+  if (!req) return null;
+
+  const method = (req.method || 'GET').toUpperCase();
+  const rawUrl = typeof req.url === 'string' ? req.url : (req.url?.raw || '');
+  const domain = extractDomain(rawUrl);
+  const normalized = normalizePath(rawUrl);
+  const qp = typeof req.url === 'object' ? (req.url.query || []) : [];
+
+  let displayDomain, actors = [], event = null;
+
+  if (domain === 'platform') {
+    if (method === 'POST') return null;  // event injections are test stubs — skip
+    if (method !== 'GET') return null;
+    const typeParam = qp.find(q => q.key === 'type');
+    if (!typeParam?.value) return null;
+    event = typeParam.value;
+    displayDomain = event.split('.')[0].replace(/-/g, '_');
+  } else if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    displayDomain = domain;
+    // Prefer the actual caller role from the test request (scenario-specific)
+    // over the full actor list from the state machine (all possible actors).
+    const callerHeader = (req.header || []).find(h => h.key === 'X-Caller-Roles');
+    if (callerHeader?.value) {
+      actors = callerHeader.value.split(',').map(r => r.trim());
+    } else {
+      actors = urlActorMap.get(`${method}:${normalized}`) || [];
+    }
+  } else {
+    return null;  // GET to non-platform domain — test assertion, skip
+  }
+
+  let policyIds = [];
+  if (event) {
+    policyIds = annotations.events[event]?.policies || [];
+  } else {
+    const annKey = urlAnnotationKeyMap.get(`${method}:${normalized}`);
+    if (annKey) policyIds = annotations.operations[annKey]?.policies || [];
+  }
+
+  return {
+    name: item.name,
+    displayDomain,
+    actors,
+    event,
+    policies: resolvePolicies(policyIds, policyRegistry),
+  };
+}
+
+// Flatten all blueprint-visible steps from a list of items, recursing into sub-folders.
+function flattenBlueprintSteps(items, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry) {
+  const steps = [];
+  for (const item of items) {
+    if (isHidden(item)) continue;
+    if (item.item) {
+      steps.push(...flattenBlueprintSteps(item.item, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry));
+    } else {
+      const step = buildBlueprintStep(item, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry);
+      if (step) steps.push(step);
+    }
+  }
+  return steps;
+}
+
+// Build the flat column list for the service blueprint.
+// Each column is { phase, subPhase, steps }.
+// Top-level folders → phases; nested folders within them → sub-phases.
+function buildColumns(collection, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry) {
+  const columns = [];
+
+  for (const topFolder of (collection.item || [])) {
+    if (!topFolder.item || isHidden(topFolder)) continue;
+
+    const subFolders = topFolder.item.filter(c => c.item && !isHidden(c));
+    const directItems = topFolder.item.filter(c => !c.item);
+
+    if (subFolders.length === 0) {
+      const steps = flattenBlueprintSteps(topFolder.item, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry);
+      if (steps.length > 0) columns.push({ phase: topFolder.name, subPhase: null, steps });
+    } else {
+      // Direct (non-folder) items at the phase level
+      const directSteps = directItems
+        .filter(c => !isHidden(c))
+        .map(c => buildBlueprintStep(c, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry))
+        .filter(Boolean);
+      if (directSteps.length > 0) columns.push({ phase: topFolder.name, subPhase: null, steps: directSteps });
+
+      for (const sf of subFolders) {
+        const steps = flattenBlueprintSteps(sf.item, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry);
+        if (steps.length > 0) columns.push({ phase: topFolder.name, subPhase: sf.name, steps });
+      }
+    }
+  }
+
+  return columns;
+}
+
 export function parseScenario(filePath) {
   const collection = JSON.parse(readFileSync(filePath, 'utf8'));
   const urlActorMap = buildUrlActorMap();
@@ -347,6 +454,8 @@ export function parseScenario(filePath) {
     }
   }
 
+  const columns = buildColumns(collection, urlActorMap, urlAnnotationKeyMap, annotations, policyRegistry);
+
   return {
     id,
     domain,
@@ -354,6 +463,7 @@ export function parseScenario(filePath) {
     name: collection.info.name,
     description: collection.info.description,
     phases,
+    columns,
     domains: [...allDomains],
     actors: [...allActors],
     eventSubscriptions,

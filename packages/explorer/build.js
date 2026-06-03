@@ -9,7 +9,7 @@
  * Usage:
  *   node build.js                              # build everything
  *   node build.js --only=context-map
- *   node build.js --only=service-blueprints
+ *   node build.js --only=scenarios             # service blueprints + sequence diagrams
  *   node build.js --only=data-explorer
  *   node build.js --only=state-machine-docs
  *   node build.js --only=adoption-model
@@ -23,7 +23,6 @@ import yaml from 'js-yaml';
 import { resolveConfig } from './src/resolve-config.js';
 import { scanGaps } from './src/scan-gaps.js';
 import { renderContextMap } from './context-map/src/render.js';
-import { renderBlueprint } from './service-blueprints/src/generate-blueprint.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
@@ -34,21 +33,20 @@ const only    = onlyArg ? onlyArg.slice('--only='.length) : null;
 
 const doBuild = tool => !only || only === tool;
 
-const buildContextMap   = doBuild('context-map');
-const buildServiceBP    = doBuild('service-blueprints');
+const buildContextMap    = doBuild('context-map');
 const buildAdoptionModel = doBuild('adoption-model');
 
 // ── Resolve config once — shared by tools that depend on config.yaml ──────────
 
 let enrichedConfig;
-if (buildContextMap || buildServiceBP) {
+if (buildContextMap) {
   enrichedConfig = resolveConfig();
 }
 
 // ── Launch Puppeteer browser once — shared across all PNG exports ─────────────
 
 let browser = null;
-if (!process.env.CI && (buildContextMap || buildServiceBP || buildAdoptionModel)) {
+if (!process.env.CI && (buildContextMap || buildAdoptionModel)) {
   try {
     const puppeteer = (await import('puppeteer')).default;
     browser = await puppeteer.launch({ headless: 'new' });
@@ -73,25 +71,6 @@ if (buildContextMap) {
   if (browser) {
     const { exportContextMapPngs } = await import('./context-map/src/export-png.js');
     await exportContextMapPngs(browser, outDir, distDir);
-  }
-}
-
-// ── Service blueprints ────────────────────────────────────────────────────────
-
-if (buildServiceBP) {
-  const annotationsPath = resolve(__dirname, 'service-blueprints', 'config', 'intake-annotations.yaml');
-  const outDir = resolve(__dirname, 'service-blueprints', 'output');
-
-  const blueprintHtmlPath = renderBlueprint(enrichedConfig, annotationsPath, outDir);
-
-  if (browser) {
-    const { htmlToPng } = await import('./src/html-to-png.js');
-    const { renderCardsHtml } = await import('./service-blueprints/src/render-cards-html.js');
-
-    await htmlToPng(browser, blueprintHtmlPath, blueprintHtmlPath.replace('.html', '.png'));
-
-    const cardsHtmlPath = renderCardsHtml('intake');
-    await htmlToPng(browser, cardsHtmlPath, cardsHtmlPath.replace('.html', '.png'));
   }
 }
 
