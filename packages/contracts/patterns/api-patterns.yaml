@@ -333,6 +333,18 @@ sub_resource_paths:
             Create a child resource scoped to the parent. The parent ID in the
             URL replaces the need to include it in the request body. Returns 201
             with a Location header pointing to the new child item path.
+
+            REQUEST SCHEMA CONSTRAINT — additionalProperties: true (or omitted)
+            is REQUIRED for sub-resource POST request schemas. The mock-server's
+            create-handler spreads every URL path param into the request body
+            so that nested routes (e.g.
+            /applications/{applicationId}/members/{memberId}/incomes) carry
+            both the parent FK and the grandparent FK onto the persisted
+            record — schemas typically declare both as required. A request
+            schema with additionalProperties: false would reject the
+            auto-injected params and 422 the create. If a schema needs to
+            restrict its top-level shape, declare each URL param explicitly
+            in properties[] so the server-injected values match the schema.
           success_response:
             code: 201
             headers:

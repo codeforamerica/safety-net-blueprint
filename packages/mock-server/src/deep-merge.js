@@ -44,9 +44,12 @@ export function deepMerge(target, source, readOnlyFields = ['id', 'createdAt']) 
       continue;
     }
     
-    // If value is an object, recursively merge
+    // If value is an object, recursively merge.
+    // readOnlyFields applies only at the top level — at nested levels, an `id`
+    // field is the FK on an embedded expanded reference and MUST be writable.
+    // See issue #341.
     if (typeof value === 'object') {
-      result[key] = deepMerge(result[key] || {}, value, readOnlyFields);
+      result[key] = deepMerge(result[key] || {}, value, []);
       continue;
     }
     
