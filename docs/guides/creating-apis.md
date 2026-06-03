@@ -110,6 +110,7 @@ Every resource must include `id` (uuid, readOnly), `createdAt` (date-time, readO
 - Must return 201 Created
 - Should have Location header
 - Must have request body
+- For sub-resource POSTs (`/resources/{id}/sub-resources`), the request schema **must** use `additionalProperties: true` (or omit the constraint entirely). The mock-server spreads URL path params into the body so denormalized parent FKs persist on the child record; a schema with `additionalProperties: false` would reject the auto-injected params. See `patterns/api-patterns.yaml` → `sub_resource_paths` → `collection.collection_path.methods.POST` for the full rationale.
 
 ### Required for PATCH Endpoints
 - Must return 200 OK
