@@ -339,6 +339,7 @@ function dispatchStubResponse(stub, envelope) {
     source: source || '/system',
     subject: subject !== undefined ? subject : envelope.subject,
     data: Object.keys(resolvedData).length > 0 ? resolvedData : null,
+    causationid: envelope.id,
   });
   console.log(`[stub] matched ${stub.id} → fired ${fullType}`);
 }

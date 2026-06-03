@@ -710,13 +710,13 @@
               ]
             },
             {
-              "name": "Service Call Created (fdsh_ssa)",
+              "name": "Service Call Created (Identity Verification - fdsh_ssa)",
               "request": {
                 "method": "GET",
                 "description": "(data.serviceType: fdsh_ssa · data.metadata.intake.verificationId)",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created",
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -728,6 +728,10 @@
                     {
                       "key": "type",
                       "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
                     }
                   ]
                 }
@@ -739,7 +743,8 @@
                     "type": "text/javascript",
                     "exec": [
                       "const events = pm.response.json().items || [];",
-                      "const event = events.find(e => e.data?.serviceType === 'fdsh_ssa');",
+                      "const identityVerifIdA = pm.collectionVariables.get('identityVerifIdA');",
+                      "const event = events.find(e => e.data?.serviceType === 'fdsh_ssa' && e.data?.metadata?.intake?.verificationId === identityVerifIdA);",
                       "pm.test('data_exchange.service_call.created emitted for identity (fdsh_ssa)', () => {",
                       "  pm.response.to.have.status(200);",
                       "  pm.expect(event).to.exist;",
@@ -804,10 +809,55 @@
               ]
             },
             {
+              "name": "Service Call Created (Identity Verification - fdsh_vlp)",
+              "request": {
+                "method": "GET",
+                "description": "(data.serviceType: fdsh_vlp · data.metadata.intake.verificationId)",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const events = pm.response.json().items || [];",
+                      "const event = events.find(e => e.data?.serviceType === 'fdsh_vlp');",
+                      "pm.test('data_exchange.service_call.created emitted for fdsh_vlp', () => {",
+                      "  pm.response.to.have.status(200);",
+                      "  pm.expect(event).to.exist;",
+                      "});",
+                      "if (event) pm.collectionVariables.set('identityVlpServiceCallEventId', event.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
               "name": "Identity Verification Satisfied",
               "request": {
                 "method": "GET",
-                "description": "(subject: identity verification (member A) · data.status: satisfied)",
+                "description": "(subject: verificationId · data.status: satisfied)",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.satisfied&subject={{identityVerifIdA}}",
@@ -972,13 +1022,13 @@
               ]
             },
             {
-              "name": "Service Call Created (ssa_ievs)",
+              "name": "Service Call Created (Income Verification - ssa_ievs)",
               "request": {
                 "method": "GET",
                 "description": "(data.serviceType: ssa_ievs · data.metadata.intake.verificationId)",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created",
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -990,6 +1040,10 @@
                     {
                       "key": "type",
                       "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
                     }
                   ]
                 }
@@ -1001,7 +1055,8 @@
                     "type": "text/javascript",
                     "exec": [
                       "const events = pm.response.json().items || [];",
-                      "const event = events.find(e => e.data?.serviceType === 'ssa_ievs');",
+                      "const incomeVerifIdA = pm.collectionVariables.get('incomeVerifIdA');",
+                      "const event = events.find(e => e.data?.serviceType === 'ssa_ievs' && e.data?.metadata?.intake?.verificationId === incomeVerifIdA);",
                       "pm.test('data_exchange.service_call.created emitted for income (ssa_ievs)', () => {",
                       "  pm.response.to.have.status(200);",
                       "  pm.expect(event).to.exist;",
@@ -1067,10 +1122,148 @@
               ]
             },
             {
+              "name": "Service Call Created (Income Verification - irs_ievs)",
+              "request": {
+                "method": "GET",
+                "description": "(data.serviceType: irs_ievs · data.metadata.intake.verificationId)",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const events = pm.response.json().items || [];",
+                      "const incomeVerifIdA = pm.collectionVariables.get('incomeVerifIdA');",
+                      "const event = events.find(e => e.data?.serviceType === 'irs_ievs' && e.data?.metadata?.intake?.verificationId === incomeVerifIdA);",
+                      "pm.test('data_exchange.service_call.created emitted for irs_ievs', () => {",
+                      "  pm.response.to.have.status(200);",
+                      "  pm.expect(event).to.exist;",
+                      "});",
+                      "if (event) pm.collectionVariables.set('irsIevsServiceCallEventId', event.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Service Call Created (Income Verification - swica)",
+              "request": {
+                "method": "GET",
+                "description": "(data.serviceType: swica · data.metadata.intake.verificationId)",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const events = pm.response.json().items || [];",
+                      "const incomeVerifIdA = pm.collectionVariables.get('incomeVerifIdA');",
+                      "const event = events.find(e => e.data?.serviceType === 'swica' && e.data?.metadata?.intake?.verificationId === incomeVerifIdA);",
+                      "pm.test('data_exchange.service_call.created emitted for swica', () => {",
+                      "  pm.response.to.have.status(200);",
+                      "  pm.expect(event).to.exist;",
+                      "});",
+                      "if (event) pm.collectionVariables.set('swicaServiceCallEventId', event.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Service Call Created (Income Verification - uib)",
+              "request": {
+                "method": "GET",
+                "description": "(data.serviceType: uib · data.metadata.intake.verificationId)",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const events = pm.response.json().items || [];",
+                      "const incomeVerifIdA = pm.collectionVariables.get('incomeVerifIdA');",
+                      "const event = events.find(e => e.data?.serviceType === 'uib' && e.data?.metadata?.intake?.verificationId === incomeVerifIdA);",
+                      "pm.test('data_exchange.service_call.created emitted for uib', () => {",
+                      "  pm.response.to.have.status(200);",
+                      "  pm.expect(event).to.exist;",
+                      "});",
+                      "if (event) pm.collectionVariables.set('uibServiceCallEventId', event.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
               "name": "Income verification inconclusive",
               "request": {
                 "method": "GET",
-                "description": "(subject: income verification (member A) · data.status: inconclusive)",
+                "description": "(subject: verificationId · data.status: inconclusive)",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.inconclusive&subject={{incomeVerifIdA}}",
@@ -1663,7 +1856,7 @@
               "name": "Residency verification satisfied",
               "request": {
                 "method": "GET",
-                "description": "(subject: residency verification (household) · data.status: satisfied)",
+                "description": "(subject: verificationId · data.status: satisfied)",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.satisfied&subject={{residencyVerifId}}",
@@ -2368,13 +2561,13 @@
               ]
             },
             {
-              "name": "Service Call Created (fdsh_fti)",
+              "name": "Service Call Created (Tax Information - fdsh_fti)",
               "request": {
                 "method": "GET",
                 "description": "(data.serviceType: fdsh_fti · data.metadata.intake.memberId)",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created",
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -2386,6 +2579,10 @@
                     {
                       "key": "type",
                       "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
                     }
                   ]
                 }
@@ -2408,13 +2605,13 @@
               ]
             },
             {
-              "name": "Service Call Created (fdsh_medicare_vci)",
+              "name": "Service Call Created (Medicare VCI - fdsh_medicare_vci)",
               "request": {
                 "method": "GET",
                 "description": "(data.serviceType: fdsh_medicare_vci · data.metadata.intake.memberId)",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created",
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -2426,6 +2623,10 @@
                     {
                       "key": "type",
                       "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
                     }
                   ]
                 }

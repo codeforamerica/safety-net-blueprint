@@ -750,6 +750,7 @@ function renderFlowPage(flow) {
     `<span style="color:#6b7280;"> / ${flow.label}</span>` +
     `</div>` +
     `<div style="position:absolute;right:20px;top:0;height:44px;display:flex;align-items:center;gap:14px;font-size:9px;">` +
+    `<span style="color:#5650BE;font-weight:600;">opt</span><span style="color:#6b7280;">&thinsp;= optional</span>` +
     `<span>${mkArrow('#00AD93', false)}&thinsp;Implemented</span>` +
     `<span>${mkArrow('#00AD93', true)}&thinsp;Human action</span>` +
     `<span>${mkArrow('#AF121D', true)}&thinsp;Gap</span>` +

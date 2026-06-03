@@ -130,13 +130,29 @@ function normalizePath(url) {
     .replace(/^\/([^/]+)/, (_, seg) => '/' + seg.replace(/-/g, '_'));
 }
 
+// Like normalizePath but preserves Postman variable names: {{applicationId}} → {applicationId}
+function displayPath(url) {
+  return (typeof url === 'string' ? url : url?.raw || '')
+    .replace(/^https?:\/\/[^/]+/, '')
+    .replace(/^\{\{[^}]+\}\}/, '')
+    .replace(/\{\{([^}]+)\}\}/g, '{$1}')
+    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/{id}')
+    .replace(/^\/([^/]+)/, (_, seg) => '/' + seg.replace(/-/g, '_'));
+}
+
 function requestPath(item) {
   const req = item.request;
   if (!req) return null;
   const method = (req.method || 'GET').toUpperCase();
-  const full = normalizePath(req.url);
+  const full = displayPath(req.url);
   const [basePath, qs] = full.split('?');
-  const kept = qs?.split('&').filter(p => p.startsWith('type=') || p.startsWith('subject=')) ?? [];
+  const kept = (qs?.split('&').filter(p => p.startsWith('type=') || p.startsWith('subject=')) ?? [])
+    .map(p => {
+      const [k, v] = p.split('=');
+      if (!v || !/^\{[^}]+\}$/.test(v)) return p;
+      const placeholder = (k.endsWith('Id') || k.endsWith('id')) ? k : `${k}Id`;
+      return `${k}={${placeholder}}`;
+    });
   const path = kept.length ? `${basePath}?${kept.join('&')}` : basePath;
   if (method === 'POST' && basePath === '/platform/events') {
     try {
