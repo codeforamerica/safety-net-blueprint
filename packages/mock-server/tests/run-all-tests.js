@@ -32,7 +32,7 @@ const integrationTestFiles = readdirSync(integrationDir)
 const scenariosDir = resolve(__dirname, '..', '..', 'contracts', 'scenarios');
 const scenarioCollections = existsSync(scenariosDir)
   ? readdirSync(scenariosDir)
-      .filter(file => file.endsWith('.json'))
+      .filter(file => file.endsWith('.collection.json'))
       .map(file => join(scenariosDir, file))
   : [];
 

@@ -85,6 +85,23 @@ function getVar(variables, key) {
   return (variables || []).find(v => v.key === key)?.value ?? '';
 }
 
+// Parse YAML frontmatter from a request or folder description (--- ... --- block).
+function parseFrontmatter(item) {
+  const desc = (item.request?.description || item.description || '').trim();
+  if (!desc.startsWith('---')) return null;
+  const end = desc.indexOf('\n---', 3);
+  if (end < 0) return null;
+  try { return yaml.load(desc.slice(4, end)); } catch { return null; }
+}
+
+// Return only the human-readable part of a description (after the frontmatter block).
+function stripFrontmatter(desc) {
+  if (!desc?.trim().startsWith('---')) return desc;
+  const end = desc.indexOf('\n---', 3);
+  if (end < 0) return desc;
+  return desc.slice(end + 4).trim() || null;
+}
+
 function getPrereqMarker(item, marker) {
   const prereq = (item.event || []).find(e => e.listen === 'prerequest');
   const line = (prereq?.script?.exec || []).find(l => l.includes(`x-diagram: ${marker}`));
@@ -164,7 +181,8 @@ function requestPath(item) {
 }
 
 function noteWithPath(item) {
-  const desc = item.request?.description || item.description || null;
+  const rawDesc = item.request?.description || item.description || null;
+  const desc = rawDesc ? stripFrontmatter(rawDesc) : null;
   const path = requestPath(item);
   if (!path) return desc;
   return desc ? `${path}\n${desc}` : path;
@@ -220,19 +238,21 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
 
     if (item.item) {
       const selfMark   = getPrereqMarker(item, 'self');
-      const optCond    = getPrereqMarker(item, 'opt');
       const hasSection = getPrereqMarker(item, 'section') !== null;
       const childHidden = isHidden(item) ? true : hidden;
       const nonSkipped = item.item.filter(c => !isHidden(c));
       const allFolders = nonSkipped.length > 0 && nonSkipped.every(c => c.item);
+      const folderFm   = parseFrontmatter(item);
+      const condition  = folderFm?.condition ?? null;
 
       if (selfMark !== null) {
         const selfDomain = selfMark || branchDomain || scenarioDomain;
         steps.push({ self: selfDomain, label: item.name, note: item.description || null });
-      } else if (optCond !== null) {
+      } else if (condition !== null) {
+        // Folder has a condition in its description frontmatter — render as opt fragment.
         const children = convertItems(item.item, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths, eventSubscriptionMap, childHidden);
         if (children.length > 0)
-          steps.push({ fragment: slugify(item.name), type: 'opt', label: optCond, steps: children });
+          steps.push({ fragment: slugify(item.name), type: 'opt', label: condition, steps: children });
       } else if (allFolders && !hasSection) {
         const emission = pendingEmission;
         pendingEmission = null;
@@ -245,10 +265,16 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
         });
         steps.push({ fragment: slugify(item.name), type: 'par', operands });
       } else {
-        // Transparent folder — inline its children
         pendingEmission = null;
-        if (hasSection) steps.push({ separator: true, label: item.name });
-        steps.push(...convertItems(item.item, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths, eventSubscriptionMap, childHidden));
+        if (hasSection) {
+          steps.push({ separator: true, label: item.name });
+          steps.push(...convertItems(item.item, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths, eventSubscriptionMap, childHidden));
+        } else {
+          // Nested folder without explicit marker — labeled group box, no UML type badge.
+          const children = convertItems(item.item, scenarioDomain, branchDomain, urlActorMap, definedEndpoints, domainsWithPaths, eventSubscriptionMap, childHidden);
+          if (children.length > 0)
+            steps.push({ fragment: slugify(item.name), type: 'group', label: item.name, steps: children });
+        }
       }
       continue;
     }
@@ -269,6 +295,18 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
     const isStructural = isEmissionAssertion(item) || isReactionAssertion(item)
       || parseEventType(item) !== null || getPrereqMarker(item, 'self') !== null;
     if (hidden && !isShown(item) && !isStructural) continue;
+
+    // Verification request with frontmatter action block: Postman is verifying that an
+    // automatic system action happened. Hide the GET; show the action as a self-loop on
+    // the domain that owns it. When trigger.event matches an upstream emission, this
+    // reaction naturally follows those event delivery arrows in the diagram.
+    const fm = parseFrontmatter(item);
+    if (fm?.trigger?.type === 'event' && fm?.action?.path) {
+      const actionDomain = fm.action.path.split('/').filter(Boolean)[0]?.replace(/-/g, '_') || scenarioDomain;
+      const note = `${fm.action.method || 'POST'} ${fm.action.path}`;
+      steps.push({ self: actionDomain, label: item.name, note });
+      continue;
+    }
 
     // Reaction assertion: GET /non-platform-domain?traceid=X — domain reacted to an event.
     // Show as a self-loop on that domain so the reaction is visible in the diagram.
@@ -354,28 +392,18 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
         }
         // Publish to Event Bus
         steps.push({ event: typeParam.value, from: emitter, to: 'event_bus', async: true });
-        // Deliver to each subscriber
+        // Deliver from Event Bus to each subscriber — always via event_bus,
+        // even when target === emitter (self-subscription).
         for (const target of subscribers) {
-          if (target === emitter) {
-            steps.push({
-              self: target,
-              label: item.name,
-              note: noteWithPath(item),
-              async: true,
-              ...(isGap    && { gap: true,    gap_description:    `${method} ${normalized} — endpoint not yet defined` }),
-              ...(isBroken && { broken: true, broken_description: `${method} ${normalized} — domain has paths but this endpoint shape doesn't match any of them` }),
-            });
-          } else {
-            steps.push({
-              event: typeParam.value,
-              from: 'event_bus',
-              to: target,
-              note: noteWithPath(item),
-              async: true,
-              ...(isGap    && { gap: true,    gap_description:    `${method} ${normalized} — endpoint not yet defined` }),
-              ...(isBroken && { broken: true, broken_description: `${method} ${normalized} — domain has paths but this endpoint shape doesn't match any of them` }),
-            });
-          }
+          steps.push({
+            event: typeParam.value,
+            from: 'event_bus',
+            to: target,
+            note: noteWithPath(item),
+            async: true,
+            ...(isGap    && { gap: true,    gap_description:    `${method} ${normalized} — endpoint not yet defined` }),
+            ...(isBroken && { broken: true, broken_description: `${method} ${normalized} — domain has paths but this endpoint shape doesn't match any of them` }),
+          });
         }
         continue;
       }
@@ -451,6 +479,26 @@ export function postmanToFlow(collection) {
       steps.push(...convertItems([item], domain, null, urlActorMap, definedEndpoints, domainsWithPaths, eventSubscriptionMap));
     }
   }
+
+  // Deduplicate event publish and delivery arrows: the same event may be verified
+  // in multiple sections, but each (event, direction, participant) pair should
+  // appear only once in the diagram.
+  const seenPublish  = new Set(); // event type → already showed publish
+  const seenDeliver  = new Set(); // `event:from:to` → already showed delivery
+  const deduped = steps.filter(s => {
+    if (s.to === 'event_bus' && s.event) {
+      if (seenPublish.has(s.event)) return false;
+      seenPublish.add(s.event);
+    }
+    if (s.from === 'event_bus' && s.event && s.to) {
+      const key = `${s.event}:${s.from}:${s.to}`;
+      if (seenDeliver.has(key)) return false;
+      seenDeliver.add(key);
+    }
+    return true;
+  });
+  steps.length = 0;
+  steps.push(...deduped);
 
   // Actor IDs come from the state machine guard definitions (via urlActorMap values)
   const actorIds = new Set();

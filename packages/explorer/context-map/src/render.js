@@ -172,8 +172,9 @@ function groupIntoFlows(cfg) {
 // ── Flow sequence diagram helpers ──────────────────────────────────────────
 
 const FRAGMENT_STYLES = {
-  par: { stroke: '#2B1A78', fill: 'rgba(43,26,120,0.03)',  label: 'par' },
-  opt: { stroke: '#5650BE', fill: 'rgba(86,80,190,0.04)',  label: 'opt' },
+  par:   { stroke: '#2B1A78', fill: 'rgba(43,26,120,0.03)', label: 'par' },
+  opt:   { stroke: '#5650BE', fill: 'rgba(86,80,190,0.04)', label: 'opt' },
+  group: { stroke: '#9ca3af', fill: 'rgba(0,0,0,0.01)',     label: ''    },
 };
 
 // ── Adaptive step height ───────────────────────────────────────────────────
@@ -203,7 +204,7 @@ const ABOVE_FRAG    = 40;  // above-arrow space when the step opens a fragment
 //                          = badge(16) + gap(4) + label(13) + margin(7)
 const MIN_BELOW     = 28;  // minimum below-arrow clearance
 const SEP_ABOVE     = 14;  // above-line space for a section separator
-const SEP_BELOW     = 10;  // below-line space for a section separator
+const SEP_BELOW     = 24;  // below-line space for a section separator
 const BADGE_H       = 16;  // fragment badge strip height
 const BOX_H2        = 36;  // ref-step box height
 const MIN_GAP       = 4;   // minimum visual gap
@@ -216,7 +217,8 @@ const FRAG_NEST_PAD = 20;  // extra top extension for outer badge when two fragm
  * Used for: (a) fragment bottom calculation, (b) separator positions.
  */
 function stepBelowBase(step) {
-  if (step.separator) return SEP_BELOW;
+  if (step.separator)    return SEP_BELOW;
+  if (step.subseparator) return 5;
   if (step.ref)  return Math.max(MIN_BELOW, BOX_H2 / 2 + MIN_GAP);
   let b = MIN_BELOW;
   if (step.self) b = Math.max(b, SEQ_SELF_H + 8);
@@ -238,7 +240,8 @@ function stepBelowBase(step) {
  *   - FRAG_NEST_PAD if the NEXT step opens multiple nested fragments (room for outer badge)
  */
 function stepSlotHeight(step, stepIdx, aboveFragSet, fragEndSet, fragStartCounts) {
-  if (step.separator) return SEP_ABOVE + SEP_BELOW;
+  if (step.separator)    return SEP_ABOVE + SEP_BELOW;
+  if (step.subseparator) return 10;
   const above = aboveFragSet.has(stepIdx) ? ABOVE_FRAG : ABOVE_NORMAL;
   let below = stepBelowBase(step);
   if (fragEndSet.has(stepIdx))                           below += FRAG_PAD_BOT;
@@ -360,9 +363,9 @@ function renderFlowPage(flow) {
   const arrowY   = [];
   { let y = FIRST_Y; for (let i = 0; i < nSteps; i++) {
     stepTop[i]  = y;
-    arrowY[i]   = flatSteps[i].separator
-      ? y + SEP_ABOVE
-      : y + (aboveFragSet.has(i) ? ABOVE_FRAG : ABOVE_NORMAL);
+    arrowY[i]   = flatSteps[i].separator    ? y + SEP_ABOVE
+                : flatSteps[i].subseparator ? y + 5
+                : y + (aboveFragSet.has(i) ? ABOVE_FRAG : ABOVE_NORMAL);
     y += stepHts[i];
   } }
   const totalH = nSteps > 0 ? (stepTop[nSteps - 1] + stepHts[nSteps - 1]) : FIRST_Y;
@@ -455,22 +458,33 @@ function renderFlowPage(flow) {
     );
 
     const lw = 28, lh = BADGE_H, lx = fx, ly = fy;
-    svgParts.push(
-      `  <polygon points="${lx},${ly} ${lx+lw},${ly} ${lx+lw+8},${ly+lh/2} ${lx+lw},${ly+lh} ${lx},${ly+lh}" ` +
-      `fill="${style.stroke}" fill-opacity="0.18" stroke="${style.stroke}" stroke-width="1"/>`
-    );
-    svgParts.push(
-      `  <text x="${(lx + lw/2).toFixed(1)}" y="${(ly + lh - 4).toFixed(1)}" ` +
-      `font-size="9" font-weight="700" text-anchor="middle" fill="${style.stroke}" ` +
-      `font-family="${FONT}">${style.label}</text>`
-    );
 
-    if (frag.label) {
+    if (frag.type === 'group') {
+      // No badge pentagon — just the label directly in the top-left corner
+      if (frag.label) {
+        svgParts.push(
+          `  <text x="${(lx + 8).toFixed(1)}" y="${(ly + lh - 4).toFixed(1)}" ` +
+          `font-size="9" font-weight="600" fill="${style.stroke}" ` +
+          `font-family="${FONT}">${frag.label}</text>`
+        );
+      }
+    } else {
       svgParts.push(
-        `  <text x="${(lx + lw + 14).toFixed(1)}" y="${(ly + lh - 4).toFixed(1)}" ` +
-        `font-size="9" fill="${style.stroke}" font-style="italic" ` +
-        `font-family="${FONT}">[${frag.label}]</text>`
+        `  <polygon points="${lx},${ly} ${lx+lw},${ly} ${lx+lw+8},${ly+lh/2} ${lx+lw},${ly+lh} ${lx},${ly+lh}" ` +
+        `fill="${style.stroke}" fill-opacity="0.18" stroke="${style.stroke}" stroke-width="1"/>`
       );
+      svgParts.push(
+        `  <text x="${(lx + lw/2).toFixed(1)}" y="${(ly + lh - 4).toFixed(1)}" ` +
+        `font-size="9" font-weight="700" text-anchor="middle" fill="${style.stroke}" ` +
+        `font-family="${FONT}">${style.label}</text>`
+      );
+      if (frag.label) {
+        svgParts.push(
+          `  <text x="${(lx + lw + 14).toFixed(1)}" y="${(ly + lh - 4).toFixed(1)}" ` +
+          `font-size="9" fill="${style.stroke}" font-style="italic" ` +
+          `font-family="${FONT}">[${frag.label}]</text>`
+        );
+      }
     }
 
     // Per-operand labels rendered as HTML divs.
@@ -516,6 +530,13 @@ function renderFlowPage(flow) {
   let gapIdx = 0, regIdx = 0, ovIdx = 0;
   flatSteps.forEach((step, idx) => {
     const y = arrowY[idx];
+
+    if (step.subseparator) {
+      svgParts.push(
+        `  <line x1="${ML + 20}" y1="${y.toFixed(1)}" x2="${W - MR - 20}" y2="${y.toFixed(1)}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3"/>`
+      );
+      return;
+    }
 
     if (step.separator) {
       const lineY = y.toFixed(1);
