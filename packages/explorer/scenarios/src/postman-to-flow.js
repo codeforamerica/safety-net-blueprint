@@ -352,22 +352,26 @@ function convertItems(items, scenarioDomain, branchDomain, urlActorMap, definedE
           steps.push({ self: emitter, label: item.name, note: noteWithPath(item) });
           continue;
         }
+        // Publish to Event Bus
+        steps.push({ event: typeParam.value, from: emitter, to: 'event_bus', async: true });
+        // Deliver to each subscriber
         for (const target of subscribers) {
           if (target === emitter) {
-            // Domain subscribes to its own event — render as self-loop
             steps.push({
               self: target,
               label: item.name,
               note: noteWithPath(item),
+              async: true,
               ...(isGap    && { gap: true,    gap_description:    `${method} ${normalized} — endpoint not yet defined` }),
               ...(isBroken && { broken: true, broken_description: `${method} ${normalized} — domain has paths but this endpoint shape doesn't match any of them` }),
             });
           } else {
             steps.push({
-              label: item.name,
-              from: emitter,
+              event: typeParam.value,
+              from: 'event_bus',
               to: target,
               note: noteWithPath(item),
+              async: true,
               ...(isGap    && { gap: true,    gap_description:    `${method} ${normalized} — endpoint not yet defined` }),
               ...(isBroken && { broken: true, broken_description: `${method} ${normalized} — domain has paths but this endpoint shape doesn't match any of them` }),
             });

@@ -77,7 +77,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const now = new Date().toISOString();
       const traceparent = req.headers['traceparent'] || null;
       const domain = apiMetadata.serverBasePath.replace(/^\//, '');
-      const object = endpoint.collectionName.replace(/s$/, '');
+      const object = machine?.object?.toLowerCase() || endpoint.collectionName.replace(/s$/, '');
 
       // Resolve onCreate — new format: machine.triggers.onCreate; old format: stateMachine.onCreate
       const isNewFormat = Array.isArray(stateMachine?.machines) || machine?.triggers != null;

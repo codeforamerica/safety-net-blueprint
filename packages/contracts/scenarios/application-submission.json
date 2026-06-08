@@ -94,7 +94,7 @@
           "name": "Create application",
           "request": {
             "method": "POST",
-            "description": "Programs: SNAP (expedited), Medicaid · Channel: online",
+            "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nApplicant creates a new draft application.",
             "header": [
               {
                 "key": "Content-Type",
@@ -195,7 +195,8 @@
                 "{{appId}}",
                 "members"
               ]
-            }
+            },
+            "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nApplicant adds a household member applying for both SNAP and Medicaid."
           },
           "event": [
             {
@@ -255,7 +256,8 @@
                 "{{appId}}",
                 "members"
               ]
-            }
+            },
+            "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nApplicant adds a household member applying for SNAP only."
           },
           "event": [
             {
@@ -306,7 +308,8 @@
                 "{{appId}}",
                 "members"
               ]
-            }
+            },
+            "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nApplicant adds a household member applying for Medicaid only."
           },
           "event": [
             {
@@ -359,7 +362,8 @@
                 "{{memberAId}}",
                 "incomes"
               ]
-            }
+            },
+            "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nApplicant records an income source for member A."
           },
           "event": [
             {
@@ -412,7 +416,8 @@
                 "{{memberBId}}",
                 "incomes"
               ]
-            }
+            },
+            "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nApplicant records an income source for member B."
           },
           "event": [
             {
@@ -465,7 +470,8 @@
                 "{{memberCId}}",
                 "incomes"
               ]
-            }
+            },
+            "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nApplicant records an income source for member C."
           },
           "event": [
             {
@@ -482,6 +488,7 @@
           "name": "Submit application",
           "request": {
             "method": "POST",
+            "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nFormally files the application and starts the regulatory processing clock.",
             "header": [
               {
                 "key": "Content-Type",
@@ -541,6 +548,7 @@
           "name": "Application Submitted",
           "request": {
             "method": "GET",
+            "description": "---\nevent:\n  type: intake.application.submitted\n---\nVerifies the event was published when the application was submitted.",
             "url": {
               "raw": "{{baseUrl}}/platform/events?type=intake.application.submitted&subject={{appId}}",
               "host": [
@@ -594,7 +602,7 @@
           ]
         },
         {
-          "name": "Identity — SNAP + Medicaid",
+          "name": "Identity",
           "event": [
             {
               "listen": "prerequest",
@@ -611,7 +619,7 @@
               "name": "Identity Verification Created",
               "request": {
                 "method": "GET",
-                "description": "(data.category: identity · data.sourceId: memberId · subject: verificationId)",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.application.submitted\naction:\n  method: POST\n  path: /intake/applications/verifications\n  body:\n    sourceType: member\n    category: identity\n    verificationType: electronic\n---\nIntake creates one identity verification per SNAP member (A and B). Member C is Medicaid-only and gets citizenship and immigration verifications instead.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&causationid={{appSubmittedEventId}}",
@@ -643,15 +651,13 @@
                       "const events = pm.response.json().items || [];",
                       "const memberAId = pm.collectionVariables.get('memberAId');",
                       "const memberBId = pm.collectionVariables.get('memberBId');",
-                      "const memberCId = pm.collectionVariables.get('memberCId');",
                       "const identityVerifs = events.filter(e => e.data?.category === 'identity');",
                       "const identityA = identityVerifs.find(e => e.data?.sourceId === memberAId);",
                       "const identityB = identityVerifs.find(e => e.data?.sourceId === memberBId);",
-                      "const identityC = identityVerifs.find(e => e.data?.sourceId === memberCId);",
-                      "pm.test('identity verification created for member A', () => pm.expect(identityA).to.exist);",
-                      "pm.test('identity verification created for member B', () => pm.expect(identityB).to.exist);",
-                      "pm.test('identity verification created for member C', () => pm.expect(identityC).to.exist);",
-                      "if (identityA) pm.collectionVariables.set('identityVerifIdA', identityA.subject);"
+                      "pm.test('identity verification created for member A (SNAP)', () => pm.expect(identityA).to.exist);",
+                      "pm.test('identity verification created for member B (SNAP)', () => pm.expect(identityB).to.exist);",
+                      "if (identityA) pm.collectionVariables.set('identityVerifIdA', identityA.subject);",
+                      "if (identityB) pm.collectionVariables.set('identityVerifIdB', identityB.subject);"
                     ]
                   }
                 }
@@ -713,7 +719,7 @@
               "name": "Service Call Created (Identity Verification - fdsh_ssa)",
               "request": {
                 "method": "GET",
-                "description": "(data.serviceType: fdsh_ssa · data.metadata.intake.verificationId)",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.verification.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: fdsh_ssa\n---\nIntake initiates an FDSH SSA identity check when the identity verification is created.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
@@ -759,7 +765,7 @@
               "name": "Call Completed (conclusive)",
               "request": {
                 "method": "GET",
-                "description": "(data.result: conclusive · data.metadata.intake.verificationId)",
+                "description": "---\nevent:\n  type: data_exchange.call.completed\n---\nData Exchange publishes call.completed when the external service returns a conclusive result.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.call.completed&causationid={{identityServiceCallEventId}}",
@@ -809,55 +815,10 @@
               ]
             },
             {
-              "name": "Service Call Created (Identity Verification - fdsh_vlp)",
-              "request": {
-                "method": "GET",
-                "description": "(data.serviceType: fdsh_vlp · data.metadata.intake.verificationId)",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "platform",
-                    "events"
-                  ],
-                  "query": [
-                    {
-                      "key": "type",
-                      "value": "data_exchange.service_call.created"
-                    },
-                    {
-                      "key": "sort",
-                      "value": "-time"
-                    }
-                  ]
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "const events = pm.response.json().items || [];",
-                      "const event = events.find(e => e.data?.serviceType === 'fdsh_vlp');",
-                      "pm.test('data_exchange.service_call.created emitted for fdsh_vlp', () => {",
-                      "  pm.response.to.have.status(200);",
-                      "  pm.expect(event).to.exist;",
-                      "});",
-                      "if (event) pm.collectionVariables.set('identityVlpServiceCallEventId', event.id);"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
               "name": "Identity Verification Satisfied",
               "request": {
                 "method": "GET",
-                "description": "(subject: verificationId · data.status: satisfied)",
+                "description": "---\ntrigger:\n  type: event\n  event: data_exchange.call.completed\naction:\n  method: POST\n  path: /intake/applications/verifications/{id}/satisfy\n---\nIntake satisfies the verification when the service call returns a conclusive result.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.satisfied&subject={{identityVerifIdA}}",
@@ -908,7 +869,461 @@
           ]
         },
         {
-          "name": "Income — SNAP",
+          "name": "Citizenship",
+          "item": [
+            {
+              "name": "Citizenship Verification Created",
+              "request": {
+                "method": "GET",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.application.submitted\naction:\n  method: POST\n  path: /intake/applications/verifications\n  body:\n    sourceType: member\n    category: citizenship\n    verificationType: electronic\n---\nIntake creates one citizenship verification per Medicaid member (A and C) in response to application submission (42 CFR § 435.956(b)).",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&causationid={{appSubmittedEventId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "intake.verification.created"
+                    },
+                    {
+                      "key": "causationid",
+                      "value": "{{appSubmittedEventId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const events = pm.response.json().items || [];",
+                      "const memberAId = pm.collectionVariables.get('memberAId');",
+                      "const memberCId = pm.collectionVariables.get('memberCId');",
+                      "const citizenVerifs = events.filter(e => e.data?.category === 'citizenship');",
+                      "const citizenA = citizenVerifs.find(e => e.data?.sourceId === memberAId);",
+                      "const citizenC = citizenVerifs.find(e => e.data?.sourceId === memberCId);",
+                      "pm.test('citizenship verification created for member A (Medicaid)', () => pm.expect(citizenA).to.exist);",
+                      "pm.test('citizenship verification created for member C (Medicaid)', () => pm.expect(citizenC).to.exist);",
+                      "if (citizenA) pm.collectionVariables.set('citizenshipVerifIdA', citizenA.subject);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Stub: fdsh_ssa → call.completed (conclusive) for citizenship A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"on\": \"data_exchange.service_call.created\",\n  \"match\": {\n    \"data.serviceType\": \"fdsh_ssa\",\n    \"data.metadata.intake.verificationId\": \"{{citizenshipVerifIdA}}\"\n  },\n  \"respond\": {\n    \"type\": \"data_exchange.call.completed\",\n    \"data\": {\n      \"result\": \"conclusive\"\n    }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/mock/stubs/events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "mock",
+                    "stubs",
+                    "events"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// x-diagram: hide"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('stub registered', () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Service Call Created (Citizenship Verification - fdsh_ssa)",
+              "request": {
+                "method": "GET",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.verification.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: fdsh_ssa\n---\nIntake initiates an FDSH SSA citizenship check when the citizenship verification is created.",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const events = pm.response.json().items || [];",
+                      "const citizenshipVerifIdA = pm.collectionVariables.get('citizenshipVerifIdA');",
+                      "const event = events.find(e => e.data?.serviceType === 'fdsh_ssa' && e.data?.metadata?.intake?.verificationId === citizenshipVerifIdA);",
+                      "pm.test('service call created for citizenship (fdsh_ssa)', () => { pm.response.to.have.status(200); pm.expect(event).to.exist; });",
+                      "if (event) pm.collectionVariables.set('citizenshipSvcCallEvtIdA', event.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Call Completed (conclusive)",
+              "request": {
+                "method": "GET",
+                "description": "---\nevent:\n  type: data_exchange.call.completed\n---\nData Exchange publishes call.completed when FDSH SSA returns a conclusive citizenship result.",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.call.completed&causationid={{citizenshipSvcCallEvtIdA}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "data_exchange.call.completed"
+                    },
+                    {
+                      "key": "causationid",
+                      "value": "{{citizenshipSvcCallEvtIdA}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const event = pm.response.json().items?.[0];",
+                      "pm.test('data_exchange.call.completed (conclusive) for citizenship', () => { pm.response.to.have.status(200); pm.expect(event).to.exist; pm.expect(event.data.result).to.eql('conclusive'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Citizenship Verification Satisfied",
+              "request": {
+                "method": "GET",
+                "description": "---\ntrigger:\n  type: event\n  event: data_exchange.call.completed\naction:\n  method: POST\n  path: /intake/applications/verifications/{id}/satisfy\n---\nIntake satisfies the citizenship verification when the FDSH SSA call returns conclusive.",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=intake.verification.satisfied&subject={{citizenshipVerifIdA}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "intake.verification.satisfied"
+                    },
+                    {
+                      "key": "subject",
+                      "value": "{{citizenshipVerifIdA}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const event = pm.response.json().items?.[0];",
+                      "pm.test('citizenship verification satisfied', () => { pm.response.to.have.status(200); pm.expect(event).to.exist; pm.expect(event.data?.status).to.eql('satisfied'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Immigration",
+          "item": [
+            {
+              "name": "Immigration Verification Created",
+              "request": {
+                "method": "GET",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.application.submitted\naction:\n  method: POST\n  path: /intake/applications/verifications\n  body:\n    sourceType: member\n    category: immigration\n    verificationType: electronic\n---\nIntake creates one immigration verification per Medicaid member (A and C) in response to application submission (42 CFR § 435.956(c)).",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&causationid={{appSubmittedEventId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "intake.verification.created"
+                    },
+                    {
+                      "key": "causationid",
+                      "value": "{{appSubmittedEventId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const events = pm.response.json().items || [];",
+                      "const memberAId = pm.collectionVariables.get('memberAId');",
+                      "const memberCId = pm.collectionVariables.get('memberCId');",
+                      "const immigVerifs = events.filter(e => e.data?.category === 'immigration');",
+                      "const immigA = immigVerifs.find(e => e.data?.sourceId === memberAId);",
+                      "const immigC = immigVerifs.find(e => e.data?.sourceId === memberCId);",
+                      "pm.test('immigration verification created for member A (Medicaid)', () => pm.expect(immigA).to.exist);",
+                      "pm.test('immigration verification created for member C (Medicaid)', () => pm.expect(immigC).to.exist);",
+                      "if (immigA) pm.collectionVariables.set('immigrationVerifIdA', immigA.subject);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Stub: fdsh_vlp → call.completed (conclusive) for immigration A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"on\": \"data_exchange.service_call.created\",\n  \"match\": {\n    \"data.serviceType\": \"fdsh_vlp\",\n    \"data.metadata.intake.verificationId\": \"{{immigrationVerifIdA}}\"\n  },\n  \"respond\": {\n    \"type\": \"data_exchange.call.completed\",\n    \"data\": {\n      \"result\": \"conclusive\"\n    }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/mock/stubs/events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "mock",
+                    "stubs",
+                    "events"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// x-diagram: hide"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('stub registered', () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Service Call Created (Immigration Verification - fdsh_vlp)",
+              "request": {
+                "method": "GET",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.verification.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: fdsh_vlp\n---\nIntake initiates an FDSH VLP immigration status check when the immigration verification is created.",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "data_exchange.service_call.created"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-time"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const events = pm.response.json().items || [];",
+                      "const immigrationVerifIdA = pm.collectionVariables.get('immigrationVerifIdA');",
+                      "const event = events.find(e => e.data?.serviceType === 'fdsh_vlp' && e.data?.metadata?.intake?.verificationId === immigrationVerifIdA);",
+                      "pm.test('service call created for immigration (fdsh_vlp)', () => { pm.response.to.have.status(200); pm.expect(event).to.exist; });",
+                      "if (event) pm.collectionVariables.set('immigrationSvcCallEvtIdA', event.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Call Completed (conclusive)",
+              "request": {
+                "method": "GET",
+                "description": "---\nevent:\n  type: data_exchange.call.completed\n---\nData Exchange publishes call.completed when FDSH VLP returns a conclusive immigration status result.",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=data_exchange.call.completed&causationid={{immigrationSvcCallEvtIdA}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "data_exchange.call.completed"
+                    },
+                    {
+                      "key": "causationid",
+                      "value": "{{immigrationSvcCallEvtIdA}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const event = pm.response.json().items?.[0];",
+                      "pm.test('data_exchange.call.completed (conclusive) for immigration', () => { pm.response.to.have.status(200); pm.expect(event).to.exist; pm.expect(event.data.result).to.eql('conclusive'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Immigration Verification Satisfied",
+              "request": {
+                "method": "GET",
+                "description": "---\ntrigger:\n  type: event\n  event: data_exchange.call.completed\naction:\n  method: POST\n  path: /intake/applications/verifications/{id}/satisfy\n---\nIntake satisfies the immigration verification when the FDSH VLP call returns conclusive.",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/platform/events?type=intake.verification.satisfied&subject={{immigrationVerifIdA}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "platform",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "intake.verification.satisfied"
+                    },
+                    {
+                      "key": "subject",
+                      "value": "{{immigrationVerifIdA}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const event = pm.response.json().items?.[0];",
+                      "pm.test('immigration verification satisfied', () => { pm.response.to.have.status(200); pm.expect(event).to.exist; pm.expect(event.data?.status).to.eql('satisfied'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Income",
           "event": [
             {
               "listen": "prerequest",
@@ -925,7 +1340,7 @@
               "name": "Income Verification Created",
               "request": {
                 "method": "GET",
-                "description": "(data.category: income · data.sourceId: incomeId · subject: verificationId)",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.application.submitted\naction:\n  method: POST\n  path: /intake/applications/verifications\n  body:\n    category: income\n    verificationType: electronic\n---\nIntake creates one income verification per income source per SNAP member in response to application submission.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&causationid={{appSubmittedEventId}}",
@@ -1025,7 +1440,7 @@
               "name": "Service Call Created (Income Verification - ssa_ievs)",
               "request": {
                 "method": "GET",
-                "description": "(data.serviceType: ssa_ievs · data.metadata.intake.verificationId)",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.verification.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: ssa_ievs\n---\nIntake initiates an SSA IEVS income check when the income verification is created.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
@@ -1071,7 +1486,7 @@
               "name": "Call Completed (inconclusive)",
               "request": {
                 "method": "GET",
-                "description": "(data.result: inconclusive · data.metadata.intake.verificationId)",
+                "description": "---\nevent:\n  type: data_exchange.call.completed\n---\nData Exchange publishes call.completed when the external service returns an inconclusive result.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.call.completed&causationid={{incomeServiceCallEventId}}",
@@ -1125,7 +1540,7 @@
               "name": "Service Call Created (Income Verification - irs_ievs)",
               "request": {
                 "method": "GET",
-                "description": "(data.serviceType: irs_ievs · data.metadata.intake.verificationId)",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.verification.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: irs_ievs\n---\nIntake initiates an IRS IEVS income check when the income verification is created.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
@@ -1171,7 +1586,7 @@
               "name": "Service Call Created (Income Verification - swica)",
               "request": {
                 "method": "GET",
-                "description": "(data.serviceType: swica · data.metadata.intake.verificationId)",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.verification.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: swica\n---\nIntake initiates a SWICA income check when the income verification is created.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
@@ -1217,7 +1632,7 @@
               "name": "Service Call Created (Income Verification - uib)",
               "request": {
                 "method": "GET",
-                "description": "(data.serviceType: uib · data.metadata.intake.verificationId)",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.verification.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: uib\n---\nIntake initiates a UIB income check when the income verification is created.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
@@ -1263,7 +1678,7 @@
               "name": "Income verification inconclusive",
               "request": {
                 "method": "GET",
-                "description": "(subject: verificationId · data.status: inconclusive)",
+                "description": "---\ntrigger:\n  type: event\n  event: data_exchange.call.completed\naction:\n  method: POST\n  path: /intake/applications/verifications/{id}/mark-inconclusive\n---\nIntake marks the verification inconclusive when the service call returns an inconclusive result.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.inconclusive&subject={{incomeVerifIdA}}",
@@ -1315,7 +1730,7 @@
               "name": "Document fallback verification created",
               "request": {
                 "method": "GET",
-                "description": "(data.category: income · data.verificationType: document · data.status: pending)",
+                "description": "---\ntrigger:\n  type: event\n  event: data_exchange.call.completed\naction:\n  method: POST\n  path: /intake/applications/verifications\n  body:\n    verificationType: document\n---\nIntake creates a document-type fallback verification when a service call returns inconclusive (per 42 CFR § 435.940).",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&causationid={{incomeCallCompletedEventId}}",
@@ -1393,7 +1808,8 @@
                     "communication",
                     "notices"
                   ]
-                }
+                },
+                "description": "---\ntrigger:\n  type: external\n  domain: communication\n---\nCommunication sends a document request notice when the income document fallback verification is created."
               },
               "event": [
                 {
@@ -1432,9 +1848,18 @@
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=communication.notice.sent"
                 },
-                "description": "(data.type: document_request_income_verification · data.metadata.intake.verificationId)"
+                "description": "---\nevent:\n  type: communication.notice.sent\n---\nVerifies the notice was sent for the income fallback document request."
               },
               "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// x-diagram: to communication"
+                    ]
+                  }
+                },
                 {
                   "listen": "test",
                   "script": {
@@ -1461,7 +1886,7 @@
               "name": "Income fallback document requests updated",
               "request": {
                 "method": "GET",
-                "description": "(verificationId: income document fallback verification · documentRequests[0].type: document_request_income_verification)",
+                "description": "---\ntrigger:\n  type: event\n  event: communication.notice.sent\naction:\n  method: PATCH\n  path: /intake/applications/verifications/{id}\n---\nIntake appends the notice to the verification documentRequests when Communication confirms the notice was sent.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{incomeDocFallbackVerifId}}",
@@ -1504,7 +1929,7 @@
           ]
         },
         {
-          "name": "Residency — SNAP + Medicaid",
+          "name": "Residency",
           "event": [
             {
               "listen": "prerequest",
@@ -1521,7 +1946,7 @@
               "name": "Residency Verification Created",
               "request": {
                 "method": "GET",
-                "description": "(data.category: residency · subject: verificationId)",
+                "description": "---\ntrigger:\n  type: event\n  event: intake.application.submitted\naction:\n  method: POST\n  path: /intake/applications/verifications\n  body:\n    category: residency\n    verificationType: document\n---\nIntake creates a household-level residency verification (document type) for SNAP at submission. No electronic check exists for residency (7 CFR § 273.2(f)(1)(iii)). Medicaid does not require a residency verification through intake.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.created&causationid={{appSubmittedEventId}}",
@@ -1590,7 +2015,8 @@
                     "communication",
                     "notices"
                   ]
-                }
+                },
+                "description": "---\ntrigger:\n  type: external\n  domain: communication\n---\nCommunication sends a document request notice when the residency verification is created."
               },
               "event": [
                 {
@@ -1629,9 +2055,18 @@
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=communication.notice.sent"
                 },
-                "description": "(data.type: document_request_residency_verification · data.metadata.intake.verificationId)"
+                "description": "---\nevent:\n  type: communication.notice.sent\n---\nVerifies the notice was sent for the residency document request."
               },
               "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// x-diagram: to communication"
+                    ]
+                  }
+                },
                 {
                   "listen": "test",
                   "script": {
@@ -1658,7 +2093,7 @@
               "name": "Residency document requests updated",
               "request": {
                 "method": "GET",
-                "description": "(verificationId: residency verification (household) · documentRequests[0].type: document_request_residency_verification)",
+                "description": "---\ntrigger:\n  type: event\n  event: communication.notice.sent\naction:\n  method: PATCH\n  path: /intake/applications/verifications/{id}\n---\nIntake appends the notice to the verification documentRequests when Communication confirms the notice was sent.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/intake/applications/{{appId}}/verifications/{{residencyVerifId}}",
@@ -1755,7 +2190,8 @@
                     "{{appId}}",
                     "document-upload-sessions"
                   ]
-                }
+                },
+                "description": "---\ntrigger:\n  type: user\n  actor: applicant\n---\nApplicant initiates a document upload session to satisfy a residency verification."
               },
               "response": []
             },
@@ -1766,7 +2202,9 @@
                   "listen": "prerequest",
                   "script": {
                     "type": "text/javascript",
-                    "exec": []
+                    "exec": [
+                      "// x-diagram: hide"
+                    ]
                   }
                 },
                 {
@@ -1808,7 +2246,8 @@
                     "document_management",
                     "documents"
                   ]
-                }
+                },
+                "description": "---\ntrigger:\n  type: external\n  domain: document_management\n---\nDocument Management creates the document record after processing the upload."
               },
               "response": []
             },
@@ -1848,7 +2287,7 @@
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=document_management.document_version.uploaded"
                 },
-                "description": "(data.metadata.intake.verificationId)"
+                "description": "---\nevent:\n  type: document_management.document_version.uploaded\n---\nVerifies the event was published when the document was uploaded."
               },
               "response": []
             },
@@ -1856,7 +2295,7 @@
               "name": "Residency verification satisfied",
               "request": {
                 "method": "GET",
-                "description": "(subject: verificationId · data.status: satisfied)",
+                "description": "---\ntrigger:\n  type: event\n  event: document_management.document_version.uploaded\naction:\n  method: POST\n  path: /intake/applications/verifications/{id}/satisfy\n---\nIntake satisfies the residency verification when the uploaded document is linked to the verification.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=intake.verification.satisfied&subject={{residencyVerifId}}",
@@ -1930,7 +2369,8 @@
                   "value": "{{appId}}"
                 }
               ]
-            }
+            },
+            "description": "---\nevent:\n  type: intake.application.submitted\n---\nVerifies the event was published when the application was submitted."
           },
           "event": [
             {
@@ -1948,7 +2388,7 @@
           "name": "Application Review Task Created",
           "request": {
             "method": "GET",
-            "description": "(subject: task ID)",
+            "description": "---\ntrigger:\n  type: event\n  event: intake.application.submitted\naction:\n  method: POST\n  path: /workflow/tasks\n---\nWorkflow creates a review task when an application is submitted.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/platform/events?type=workflow.task.created&causationid={{appSubmittedEventId}}",
@@ -1999,7 +2439,7 @@
           "name": "Task routed to queue and priority initialized",
           "request": {
             "method": "GET",
-            "description": "(queueId: set · priority: number)",
+            "description": "---\ntrigger:\n  type: event\n  event: workflow.task.created\naction:\n  method: PATCH\n  path: /workflow/tasks/{id}\n---\nWorkflow assigns the task to the intake review queue and sets its initial priority.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/workflow/tasks/{{taskId}}",
@@ -2061,7 +2501,8 @@
                   "value": "{{appId}}"
                 }
               ]
-            }
+            },
+            "description": "---\nevent:\n  type: intake.application.submitted\n---\nVerifies the event was published when the application was submitted."
           },
           "event": [
             {
@@ -2079,7 +2520,7 @@
           "name": "Eligibility determination created",
           "request": {
             "method": "GET",
-            "description": "(subject: determinationId)",
+            "description": "---\ntrigger:\n  type: event\n  event: intake.application.submitted\naction:\n  method: POST\n  path: /eligibility/determinations\n---\nEligibility creates a Determination record when an application is submitted, initiating pre-screening.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/platform/events?type=eligibility.determination.created&causationid={{appSubmittedEventId}}",
@@ -2122,7 +2563,7 @@
           "name": "Decision Created (SNAP)",
           "request": {
             "method": "GET",
-            "description": "(data.memberId: memberAId or memberBId · data.program: snap)",
+            "description": "---\ntrigger:\n  type: event\n  event: eligibility.determination.created\naction:\n  method: POST\n  path: /eligibility/determinations/decisions\n  body:\n    program: snap\n---\nEligibility creates one Decision per member per program when a Determination is created.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/platform/events?type=eligibility.decision.created",
@@ -2166,7 +2607,7 @@
           "name": "Decision Created (Medicaid)",
           "request": {
             "method": "GET",
-            "description": "(data.memberId: memberAId or memberCId · data.program: medicaid)",
+            "description": "---\ntrigger:\n  type: event\n  event: eligibility.determination.created\naction:\n  method: POST\n  path: /eligibility/determinations/decisions\n  body:\n    program: medicaid\n---\nEligibility creates one Decision per member per program when a Determination is created.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/platform/events?type=eligibility.decision.created",
@@ -2268,7 +2709,8 @@
                       "value": "20"
                     }
                   ]
-                }
+                },
+                "description": "---\nevent:\n  type: eligibility.application.expedited\n---\nVerifies the event was published when eligibility screening confirmed expedited criteria are met."
               },
               "response": []
             },
@@ -2300,7 +2742,8 @@
                     "platform",
                     "events"
                   ]
-                }
+                },
+                "description": "---\ntrigger:\n  type: external\n  domain: eligibility\n---\nEligibility publishes the expedited event when screening confirms the applicant meets expedited SNAP criteria."
               },
               "event": [
                 {
@@ -2317,7 +2760,7 @@
               "name": "Application marked expedited",
               "request": {
                 "method": "GET",
-                "description": "(isExpedited: true)",
+                "description": "---\ntrigger:\n  type: event\n  event: eligibility.application.expedited\naction:\n  method: PATCH\n  path: /intake/applications/{id}\n  body:\n    isExpedited: true\n---\nIntake sets isExpedited on the application when eligibility confirms expedited criteria are met.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/intake/applications/{{appId}}",
@@ -2382,7 +2825,7 @@
                     "events"
                   ]
                 },
-                "description": "(data.program: snap · data.status: approved · data.path: manual)"
+                "description": "---\ntrigger:\n  type: external\n  domain: eligibility\n---\nEligibility publishes the decision_completed event when the SNAP determination is finalized."
               },
               "event": [
                 {
@@ -2399,7 +2842,7 @@
               "name": "SNAP decision written back (member A)",
               "request": {
                 "method": "GET",
-                "description": "(programDeterminations[snap].outcome: approved)",
+                "description": "---\ntrigger:\n  type: event\n  event: eligibility.application.decision_completed\naction:\n  method: PATCH\n  path: /intake/application-members/{id}\n---\nIntake writes the SNAP eligibility outcome back to the ApplicationMember when the decision is completed.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}",
@@ -2443,7 +2886,7 @@
           ]
         },
         {
-          "name": "Medicaid RTE",
+          "name": "MAGI Medicaid",
           "event": [
             {
               "listen": "prerequest",
@@ -2564,7 +3007,7 @@
               "name": "Service Call Created (Tax Information - fdsh_fti)",
               "request": {
                 "method": "GET",
-                "description": "(data.serviceType: fdsh_fti · data.metadata.intake.memberId)",
+                "description": "---\ntrigger:\n  type: event\n  event: eligibility.determination.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: fdsh_fti\n---\nEligibility initiates an IRS Federal Tax Information check as part of MAGI income determination.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
@@ -2608,7 +3051,7 @@
               "name": "Service Call Created (Medicare VCI - fdsh_medicare_vci)",
               "request": {
                 "method": "GET",
-                "description": "(data.serviceType: fdsh_medicare_vci · data.metadata.intake.memberId)",
+                "description": "---\ntrigger:\n  type: event\n  event: eligibility.determination.created\naction:\n  method: POST\n  path: /data-exchange/service-calls\n  body:\n    serviceType: fdsh_medicare_vci\n---\nEligibility initiates a Medicare VCI check as part of MAGI Medicaid eligibility determination.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.service_call.created&sort=-time",
@@ -2655,7 +3098,7 @@
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.call.completed"
                 },
-                "description": "(data.result: conclusive · data.metadata.intake.verificationId)"
+                "description": "---\nevent:\n  type: data_exchange.call.completed\n---\nData Exchange publishes call.completed when IRS returns the Federal Tax Information result."
               },
               "event": [
                 {
@@ -2692,7 +3135,7 @@
                 "url": {
                   "raw": "{{baseUrl}}/platform/events?type=data_exchange.call.completed"
                 },
-                "description": "(data.result: conclusive · data.metadata.intake.verificationId)"
+                "description": "---\nevent:\n  type: data_exchange.call.completed\n---\nData Exchange publishes call.completed when the Medicare VCI check returns a result."
               },
               "event": [
                 {
@@ -2751,7 +3194,7 @@
                     "events"
                   ]
                 },
-                "description": "(data.program: medicaid · data.status: approved · data.path: auto)"
+                "description": "---\ntrigger:\n  type: external\n  domain: eligibility\n---\nEligibility publishes the decision_completed event when the MAGI Medicaid determination is finalized."
               },
               "event": [
                 {
@@ -2768,7 +3211,7 @@
               "name": "Medicaid decision written back (member A)",
               "request": {
                 "method": "GET",
-                "description": "(programDeterminations[medicaid].outcome: approved)",
+                "description": "---\ntrigger:\n  type: event\n  event: eligibility.application.decision_completed\naction:\n  method: PATCH\n  path: /intake/application-members/{id}\n---\nIntake writes the Medicaid eligibility outcome back to the ApplicationMember when the decision is completed.",
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}",
@@ -2846,7 +3289,7 @@
                 "events"
               ]
             },
-            "description": "(data.matchType: confirmed · data.candidates[0].confidenceScore: 0.99)"
+            "description": "---\ntrigger:\n  type: external\n  domain: client_management\n---\nClient Management publishes a confirmed person match for member A with high confidence."
           },
           "event": [
             {
@@ -2863,7 +3306,7 @@
           "name": "Member A person ID linked",
           "request": {
             "method": "GET",
-            "description": "(personId: set, matchStatus: confirmed)",
+            "description": "---\ntrigger:\n  type: event\n  event: client_management.person.match_resolved\naction:\n  method: PATCH\n  path: /intake/application-members/{id}\n---\nIntake sets personId and personMatch on the ApplicationMember when the match is confirmed.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}",
@@ -2932,7 +3375,7 @@
                 "events"
               ]
             },
-            "description": "(data.matchType: no_match)"
+            "description": "---\ntrigger:\n  type: external\n  domain: client_management\n---\nClient Management publishes a no_match result for member B — no existing person record found."
           },
           "event": [
             {
@@ -2949,7 +3392,7 @@
           "name": "Member B no_match — personId not set",
           "request": {
             "method": "GET",
-            "description": "(matchStatus: no_match, personId: null)",
+            "description": "---\ntrigger:\n  type: event\n  event: client_management.person.match_resolved\naction:\n  method: PATCH\n  path: /intake/application-members/{id}\n---\nIntake records the no_match status on the ApplicationMember. personId is not set for no_match results.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberBId}}",
@@ -3013,7 +3456,7 @@
                 "events"
               ]
             },
-            "description": "(data.matchType: review_required · data.candidates: 2+)"
+            "description": "---\ntrigger:\n  type: external\n  domain: client_management\n---\nClient Management publishes a review_required result for member C — multiple candidates found with similar confidence scores."
           },
           "event": [
             {
@@ -3030,7 +3473,7 @@
           "name": "Member C review_required — candidates populated",
           "request": {
             "method": "GET",
-            "description": "(matchStatus: review_required, candidates: 2+)",
+            "description": "---\ntrigger:\n  type: event\n  event: client_management.person.match_resolved\naction:\n  method: PATCH\n  path: /intake/application-members/{id}\n---\nIntake records the review_required status and candidate list on the ApplicationMember for caseworker review.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberCId}}",

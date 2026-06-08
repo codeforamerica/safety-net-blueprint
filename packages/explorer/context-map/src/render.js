@@ -644,7 +644,7 @@ function renderFlowPage(flow) {
 
     const dir  = tx > fx ? 1 : -1;
     const x2   = tx - dir * 8;
-    const dash = step.gap ? 'stroke-dasharray="5,3"' : isActor ? 'stroke-dasharray="6,3"' : '';
+    const dash = step.gap ? 'stroke-dasharray="5,3"' : (isActor || step.async) ? 'stroke-dasharray="6,3"' : '';
     svgParts.push(
       `  <line x1="${fx}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="1.5" ${dash} marker-end="url(#${markerId})"/>`
     );
