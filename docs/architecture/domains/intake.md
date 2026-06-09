@@ -191,7 +191,7 @@ See [Decision 10](#decision-10-interview-entity-model).
 
 ### Review progress
 
-A per-section tracking record for the caseworker's review of an application. Upsert-by-composite-key (`applicationId` + `section`) — one entry per section, optionally scoped to a specific member for member-level sections. Records are informational: they do not gate the `complete-review` transition, which states can optionally enforce via overlay. See [Decision 17](#decision-17-review-progress-is-a-separate-queryable-resource).
+A per-section tracking record for the caseworker's review of an application. Entries are server-initialized at `submitted → under_review` — one per household section and one per member × member-scoped section. Clients update entries by id. Records are informational: they do not gate the `complete-review` transition, which states can optionally enforce via overlay. See [Decision 17](#decision-17-review-progress-is-a-separate-queryable-resource).
 
 Key fields:
 - `section` + `memberId` (composite key) — upsert semantics: submitting progress for the same section and member replaces the existing entry rather than creating a duplicate. `memberId` is nullable; sections without a member context (e.g., household expenses) use `section` alone as the key.
