@@ -432,13 +432,33 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
+  /applications/{applicationId}/review-progress/{entryId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/ReviewProgressEntryIdParam"
+
+    get:
+      summary: Get a review progress entry
+      description: Retrieve a single review-progress entry by identifier.
+      operationId: getApplicationReviewProgress
+      tags:
+        - Application Review Progress
+      responses:
+        "200":
+          description: Review progress entry retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgressEntry"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
     patch:
-      summary: Upsert a review progress entry
-      description: >
-        Creates or updates the review-progress entry identified by the (section, memberId)
-        composite key. If no matching entry exists it is created; if one exists it is updated.
-        Omit memberId for household-level sections.
-      operationId: upsertApplicationReviewProgress
+      summary: Update a review progress entry
+      description: Apply partial updates to a review-progress entry (e.g., set status).
+      operationId: updateApplicationReviewProgress
       tags:
         - Application Review Progress
       requestBody:
@@ -446,10 +466,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReviewProgressEntryUpsert"
+              $ref: "#/components/schemas/ReviewProgressEntryWritable"
       responses:
         "200":
-          description: Review progress entry upserted successfully.
+          description: Review progress entry updated successfully.
           content:
             application/json:
               schema:
@@ -1497,6 +1517,12 @@ components:
       in: path
       required: true
       description: Unique identifier of the application note.
+
+    ReviewProgressEntryIdParam:
+      name: entryId
+      in: path
+      required: true
+      description: Unique identifier of the review-progress entry.
       schema:
         type: string
         format: uuid
@@ -2551,14 +2577,6 @@ components:
               type: string
               format: date-time
               readOnly: true
-
-    ReviewProgressEntryUpsert:
-      allOf:
-        - $ref: "#/components/schemas/ReviewProgressEntryWritable"
-        - type: object
-          required:
-            - section
-            - status
 
     ReviewProgressList:
       allOf:
