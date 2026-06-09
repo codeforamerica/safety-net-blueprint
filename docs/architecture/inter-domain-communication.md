@@ -22,6 +22,23 @@ Some interactions combine both patterns: a command initiates a long-running oper
 
 If neither fits cleanly, the interaction may be a candidate for the async command variant.
 
+**The cross-domain seeding variant** <a name="cross-domain-seeding"></a>
+
+Some interactions require one domain to write records directly into another domain — not to trigger a reaction, but to seed the second domain's records with data only the first domain holds at that moment.
+
+A cross-domain write is acceptable only when both conditions are met:
+
+1. **The writing domain is authoritative** — the data being written is owned by the writing domain at the time of the write. It is not copying data it received from elsewhere; it is the original source.
+2. **The write is fire-and-forget** — the writing domain does not need a result. No synchronous dependency is introduced.
+
+When both conditions are met, a cross-domain write is simpler than the alternative (an event chain requiring the receiving domain to subscribe and query back). When either condition is absent, a cross-domain write creates coupling in the wrong direction and should not be used.
+
+**Baseline example — Intake seeding Eligibility at submission:** At application submission, Intake creates the Determination and Decisions in the Eligibility domain, pre-populated with application data snapshots. Intake is authoritative for application data at that moment; the write is fire-and-forget (Intake does not wait for Eligibility to respond). Both conditions are met. See [Eligibility Decision 12](domains/eligibility.md#decision-12-who-creates-determination-and-decision-records).
+
+**Reverse direction — Eligibility writing back to Intake:** Eligibility writing determination outcomes back to Application Member records (as a denormalized copy for caseworker-facing display) is also acceptable. Eligibility is authoritative for outcomes; the write is fire-and-forget. Both conditions are met.
+
+**Counter-example:** A domain writing records into another domain and then subscribing to the result of that write violates condition 2. A domain writing data it received from a third domain violates condition 1. Neither is a cross-domain write — they are coupling in disguise.
+
 ---
 
 ## Domain Events
