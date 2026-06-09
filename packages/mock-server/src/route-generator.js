@@ -281,74 +281,6 @@ function createReviewContextHandler() {
 }
 
 /**
- * Create a GET handler for GET /applications/{applicationId}/notes.
- * Applies optional ?scope=, ?section=, ?memberId= filters in addition to applicationId.
- */
-/**
- * Create a PATCH handler for PATCH /applications/{applicationId}/review-progress.
- * Upserts an entry identified by the (section, memberId) composite key.
- */
-function createReviewProgressUpsertHandler(apiMetadata) {
-  return (req, res) => {
-    try {
-      const { applicationId } = req.params;
-      const application = findById('applications', applicationId);
-      if (!application) {
-        return res.status(404).json({ code: 'NOT_FOUND', message: 'Application not found' });
-      }
-      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-        return res.status(400).json({ code: 'BAD_REQUEST', message: 'Request body must be a JSON object' });
-      }
-      const { section, status } = req.body;
-      if (!section) {
-        return res.status(422).json({ code: 'UNPROCESSABLE_ENTITY', message: 'section is required', details: [{ field: 'section', message: 'required' }] });
-      }
-      if (!status) {
-        return res.status(422).json({ code: 'UNPROCESSABLE_ENTITY', message: 'status is required', details: [{ field: 'status', message: 'required' }] });
-      }
-
-      // Match on composite key: applicationId + section + memberId (null-safe)
-      const { items: candidates } = findAll('application-review-progress', { applicationId, section }, { limit: 1000 });
-      const targetMemberId = req.body.memberId ?? null;
-      const existing = candidates.find(e => (e.memberId ?? null) === targetMemberId);
-
-      let result;
-      let action;
-      if (!existing) {
-        const newRecord = { id: randomUUID(), applicationId, ...req.body };
-        insertResource('application-review-progress', newRecord);
-        result = findAll('application-review-progress', { id: newRecord.id }, { limit: 1 }).items[0];
-        action = 'created';
-      } else {
-        result = update('application-review-progress', existing.id, req.body);
-        action = 'updated';
-      }
-
-      try {
-        const domain = apiMetadata.serverBasePath.replace(/^\//, '');
-        emitEvent({
-          domain,
-          object: 'review-progress-entry',
-          action,
-          resourceId: result.id,
-          subject: applicationId,
-          source: apiMetadata.serverBasePath,
-          data: { changes: [] },
-          callerId: req.headers['x-caller-id'] || null,
-          traceparent: req.headers['traceparent'] || null,
-          now: result.updatedAt,
-        });
-      } catch (e) { /* non-fatal */ }
-
-      res.json(result);
-    } catch (error) {
-      console.error('Review progress upsert handler error:', error);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-    }
-  };
-}
-
-/**
  * Register routes for an API specification
  * @param {Object} app - Express app
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
@@ -403,9 +335,6 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
         });
       }
-    } else if (endpoint.operationId === 'upsertApplicationReviewProgress') {
-      handler = createReviewProgressUpsertHandler(apiMetadata);
-      description = 'Upsert review progress entry';
     } else if (endpoint.operationId === 'search') {
       // Cross-resource search endpoint — custom handler
       handler = createSearchHandler(apiMetadata);
