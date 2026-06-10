@@ -420,6 +420,23 @@ sub_resource_paths:
       - GET   /applications/{applicationId}/interview
       - PATCH /applications/{applicationId}/interview
 
+  # ---------------------------------------------------------------------------
+  # Server-initialized collections
+  # ---------------------------------------------------------------------------
+  # Some sub-resource collections are pre-populated by the server rather than
+  # created by the caller. Callers read the list and update entries by id via
+  # PATCH /{resources}/{resourceId}/{subResources}/{subResourceId}.
+  #
+  # Prefer this over upsert endpoints (PATCH-by-composite-key). Upsert conflates
+  # create and update, requires the caller to know the composite key, and makes
+  # it impossible to distinguish "entry does not exist" from "entry exists with
+  # these values." Only use an upsert endpoint if there is a documented reason
+  # why server initialization is not feasible.
+  #
+  # Examples:
+  #   - ReviewProgressEntry — initialized per section when a task is claimed
+  #   - Interview — singleton, system-created on application submission
+
 # =============================================================================
 # Events Endpoint Pattern
 # =============================================================================

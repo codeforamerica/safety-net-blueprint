@@ -90,12 +90,24 @@ machines:
           - emit: {type: intake.application.withdrawn, data: {reason: $request.reason}, description: Emit intake.application.withdrawn — triggers open task cancellation and withdrawal notice}
     events:
       - type: workflow.task.claimed
-        description: Open the application for review and create an interview record when a caseworker claims the intake review task
+        description: Open the application for review, create an interview record, and initialize review-progress entries when a caseworker claims the intake review task
         context:
           - task: {from: workflow/tasks, where: {id: $this.subject}}
         steps:
           - call: openApplication
           - call: createInterview
+          - call: createReviewProgressEntries
+            with:
+              sections:
+                - {name: demographics, scope: member}
+                - {name: identity, scope: member}
+                - {name: income, scope: member}
+                - {name: employment, scope: member}
+                - {name: health-coverage, scope: member}
+                - {name: assets, scope: household}
+                - {name: contact, scope: household}
+                - {name: expenses, scope: household}
+                - {name: household, scope: household}
       - type: intake.application.submitted
         description: Initiate electronic verification requests for each applicable program when an application is submitted
         context:
@@ -206,6 +218,28 @@ machines:
         if: $task.taskType == "application_review"
         then:
           - call: {POST: intake/applications/interview, body: {applicationId: $task.subjectId}}
+      - id: createReviewProgressEntries
+        description: >
+          Initialize one review-progress entry per section when a caseworker claims an application_review task.
+          Member-scoped sections (scope: member) create one entry per household member; household sections
+          (scope: household) create one entry. States may add, remove, or reclassify sections via overlay.
+        parameters: [sections]
+        if: $task.taskType == "application_review"
+        then:
+          - forEach:
+              in: $params.sections
+              as: section
+            do:
+              - if: $params.section.scope == "member"
+                then:
+                  - forEach:
+                      from: intake/application-members
+                      where: {applicationId: $task.subjectId}
+                      as: member
+                    do:
+                      - call: {POST: intake/applications/review-progress, body: {applicationId: $task.subjectId, section: $params.section.name, memberId: $member.id, status: not_started}}
+                else:
+                  - call: {POST: intake/applications/review-progress, body: {applicationId: $task.subjectId, section: $params.section.name, status: not_started}}
       - id: createProgramVerifications
         description: >
           Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income),
