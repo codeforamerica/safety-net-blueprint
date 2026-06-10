@@ -308,6 +308,7 @@ Quick reference — each decision is detailed in the section below.
 | 16 | [Review surface uses the composite view pattern](#decision-16-review-surface-uses-the-composite-view-pattern) | Server-assembled neutral composite — front end organizes for its workflow; writes still use sub-resource endpoints. |
 | 17 | [Review-progress is a separate queryable resource](#decision-17-review-progress-is-a-separate-queryable-resource) | Dedicated resource with bounded dataset — navigation state kept separate from application and workflow entities. |
 | 18 | [Notes are a first-class resource](#decision-18-notes-are-a-first-class-resource) | Standalone resource with scope field — decoupled from review-progress, independently queryable at all scoping levels. |
+| 19 | [Application submitted event payload — lean vs. enriched](#decision-19-application-submitted-event-payload--lean-vs-enriched) | Keep the submitted event lean; Intake reads member-program data directly from its own records when seeding Eligibility. |
 
 ---
 
@@ -595,6 +596,24 @@ Quick reference — each decision is detailed in the section below.
 - Cúram's case narrative system and Salesforce's Activity model both treat notes as a first-class resource, not a field on a process tracking object
 
 **Decision:** Notes are a standalone resource (`GET /applications/{id}/notes`, `POST /applications/{id}/notes`). `additionalProperties: true` on `ApplicationNote` allows states to add note types or visibility controls via overlay without changing the baseline contract.
+
+---
+
+### Decision 19: Application submitted event payload — lean vs. enriched
+
+**Status:** Decided: A
+
+**What's being decided:** Whether `intake.application.submitted` should include full per-member program data — each member's demographics, income, and applied-for programs — so downstream consumers can act without querying Intake, or whether the payload should remain lean (`programs`, `memberIds` only) and consumers query Intake directly for detail they need.
+
+**Considerations:**
+- `intake.application.submitted` is consumed by many domains: workflow (task creation), eligibility (seeding Determination and Decisions), client management (person matching), communications (confirmation notice), data exchange (initiating checks). Adding per-member data grows the event schema significantly and couples every consumer to Intake's member data model.
+- Changes to member fields (adding a field, renaming a property) would become breaking changes for all event consumers under the enriched approach, not just those that use the changed fields.
+- Intake seeding Eligibility at submission reads member data directly from its own records — the seeding is a cross-domain write executed by Intake's submission handler, not driven by event consumers reading the event payload. Intake has direct access to its own records and does not need to embed them in the event. See [Eligibility Decision 12](eligibility.md#decision-12-who-creates-determination-and-decision-records).
+- The lean payload (`programs`, `memberIds`) gives downstream domains enough to correlate and query what they need without embedding Intake's internal data model in a shared contract.
+
+**Options:**
+- **(A)** ✓ Keep the submitted event lean: `programs` (list of applied-for programs) and `memberIds` (list of household member IDs); Intake reads member data from its own records when seeding Eligibility
+- **(B)** Enrich the submitted event with per-member program data so downstream consumers can act without querying Intake
 
 ---
 
