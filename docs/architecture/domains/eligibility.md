@@ -60,7 +60,7 @@ Key fields:
 - `applicationId` — links the Determination to its application
 - `status` — overall resolution state: `pending` | `in_progress` | `completed`
 - `expeditedFlagged` — whether the household qualifies for expedited SNAP processing, as determined by SNAP expedited screening at submission. This is a household-level result — it evaluates the household's combined income and resources, not individual members — which is why it sits on the Determination rather than on any individual Decision. When true, Intake stores a copy on the Application for caseworker-facing display. See [Decision 3](#decision-3-ownership-of-expedited-screening).
-- `applicationSnapshot.household` — point-in-time copy of household-level application data (household composition, shelter costs, utilities, migrant/seasonal worker status, housing type) assembled by Intake when this record is created. Provides the data needed for expedited SNAP screening and household-level program evaluations without a live cross-domain query. See [Decision 13](#decision-13-application-data-snapshot).
+- `householdSnapshot` — point-in-time copy of household-level application data (household composition, shelter costs, utilities, migrant/seasonal worker status, housing type) assembled by Intake when this record is created. Provides the data needed for expedited SNAP screening and household-level program evaluations without a live cross-domain query. See [Decision 13](#decision-13-application-data-snapshot).
 
 See [Decision 2](#decision-2-determination-entity-model), [Decision 12](#decision-12-who-creates-determination-and-decision-records), [Decision 13](#decision-13-application-data-snapshot).
 
@@ -77,8 +77,8 @@ Key fields:
 - `decidedAt` — when the decision was finalized; used to verify regulatory deadline compliance
 - `denialReasonCode` — coded value required when status is `denied`; used to generate the Notice of Action and establish the basis for any appeal. Codes are program-specific and defined at implementation from federal reporting code sets (FNS for SNAP, CMS for Medicaid).
 - `electronicChecks` — records of the electronic data calls made at submission for this Decision (service queried, result received, timestamp); present only for Medicaid Decisions where ex parte evaluation was attempted. Provides the audit trail required by 42 CFR § 435.916 and supports caseworker review of why a Decision was auto-resolved or left pending.
-- `applicationSnapshot.member` — point-in-time copy of this member's application data (demographics, income, expenses, assets, employment, health coverage) assembled by Intake when this record is created. See [Decision 13](#decision-13-application-data-snapshot).
-- `applicationSnapshot.verificationSummary` — verification obligation statuses for this member and program at the time of record creation; refreshed from current Intake data immediately before final determination runs. See [Decision 13](#decision-13-application-data-snapshot).
+- `memberSnapshot` — point-in-time copy of this member's application data (demographics, income, expenses, assets, employment, health coverage) assembled by Intake when this record is created. Decision links back to its Determination for household-level data when the adapter needs it. See [Decision 13](#decision-13-application-data-snapshot).
+- `verificationSummary` — verification obligation statuses for this member and program; populated by Intake at record creation and refreshed from current Intake data at each evaluate call. See [Decision 13](#decision-13-application-data-snapshot), [Decision 15](#decision-15-evaluation-runs-and-history).
 
 See [Decision 2](#decision-2-determination-entity-model), [Decision 4](#decision-4-submission-time-electronic-evaluation-scope), [Decision 12](#decision-12-who-creates-determination-and-decision-records), [Decision 13](#decision-13-application-data-snapshot).
 
@@ -97,6 +97,7 @@ See [Decision 2](#decision-2-determination-entity-model), [Decision 4](#decision
 
 - **Application submitted → `pending`** — Intake creates the Determination (and one Decision per member per applied-for program) as part of its submission handler, pre-populated with application data snapshots. Expedited SNAP screening begins immediately on Determination creation; Medicaid electronic checks begin on each Medicaid Decision's creation. See [Decision 1](#decision-1-eligibility-trigger-at-submission), [Decision 12](#decision-12-who-creates-determination-and-decision-records), [Decision 14](#decision-14-evaluation-trigger-alignment).
 - **Evaluation begins → `in_progress`** — transitions when Eligibility starts evaluating: at submission when electronic checks are initiated (for Medicaid applications), or when the rules engine runs after caseworker review completes (for all remaining Decisions)
+- **Caseworker-initiated evaluation** — a caseworker can trigger the rules engine at any point during review, either against all pending Decisions for a Determination (`POST /eligibility/determinations/{id}/evaluate`) or against a single Decision (`POST /eligibility/decisions/{id}/evaluate`). Trial runs return projected outcomes without updating Decision status or firing downstream events; official runs do both. Snapshots are refreshed from current Intake data before each run. See [Decision 15](#decision-15-evaluation-runs-and-history).
 - **Caseworker review completed → rules engine runs** — when Intake signals that review is complete, the rules engine evaluates all remaining undetermined combinations using the verified application data
 - **All Decisions resolved → `completed`** — when the last pending Decision reaches a terminal state, the Determination moves to `completed` and the all-determined signal fires. See [Decision 5](#decision-5-all-determined-tracking).
 - **Application withdrawn → `withdrawn`** — when Intake signals that the application has been withdrawn, the Determination moves to `withdrawn` regardless of how many Decisions are still pending; any already-resolved Decisions remain as the audit record.
@@ -151,8 +152,9 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 | 10 | [Notice of Action trigger](#decision-10-notice-of-action-trigger) | NOA triggered at `intake.application.closed` — fires after all post-determination steps including supervisor approval |
 | 11 | [Eligibility rules engine scope](#decision-11-eligibility-rules-engine-scope) | Program eligibility rules are adapter-layer; the blueprint defines data model, API, and events, not eligibility criteria |
 | 12 | [Who creates Determination and Decision records](#decision-12-who-creates-determination-and-decision-records) | Intake creates both at submission; Eligibility owns and evaluates them |
-| 13 | [Application data snapshot](#decision-13-application-data-snapshot) | Determination and Decision carry a point-in-time snapshot of application data populated by Intake at creation, refreshed before final determination |
+| 13 | [Application data snapshot](#decision-13-application-data-snapshot) | Determination and Decision carry a point-in-time snapshot of application data populated by Intake at creation, refreshed at each evaluate call |
 | 14 | [Evaluation trigger alignment](#decision-14-evaluation-trigger-alignment) | Each submission-time evaluation fires on the event that guarantees its required data exists |
+| 15 | [Evaluation runs and history](#decision-15-evaluation-runs-and-history) | Evaluate endpoints support trial and official runs; platform entity lifecycle events provide the audit history |
 
 ---
 
@@ -378,14 +380,13 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 - The adapter spec defines the required shapes: `IndividualDeterminationRequest` (per-member programs: member context, verification summary) and `HouseholdDeterminationRequest` (household programs: all member contexts, household data, verification summary). The state machine must be able to assemble these request bodies without a live Intake query.
 - IBM Cúram calls this the **determination context** — a point-in-time snapshot of application evidence assembled for the rules engine, separate from the live intake records. Salesforce Government Cloud uses dedicated evaluation objects that carry the data through the evaluation workflow. The broader pattern is CQRS / materialized read model: the domain that needs to evaluate data maintains its own read-optimized copy.
 - A stored snapshot also provides a durable audit record of exactly what data was used in each evaluation — required for federal reporting, appeals, and oversight reviews.
-- Three mechanisms keep the snapshot current across the full application lifecycle: (1) **At submission** — Intake populates snapshots when creating the Determination and Decisions; required because expedited SNAP screening and Medicaid ex parte evaluation fire immediately before any caseworker action. (2) **New member added post-submission** — when a member is added to a submitted application, Intake creates new Decisions for that member × their applied-for programs and populates the snapshot with that member's current data; evaluation begins immediately on the new Decisions. (3) **Final determination** — immediately before calling the adapter, the state machine refreshes each Decision's snapshot from current Intake data; caseworker review is the phase where data is corrected and enriched, and the rules engine must receive post-review data.
-- Snapshot refresh at final determination: caseworker review specifically exists to correct and enrich submission-time data. Income figures may be adjusted, household members added, demographics corrected. Evaluating against the submission-time snapshot at final determination would undermine that work. The snapshot on each Decision is refreshed from current Intake data immediately before the rules engine call at final determination.
+- Three mechanisms keep the snapshot current across the full application lifecycle: (1) **At submission** — Intake populates snapshots when creating the Determination and Decisions; required because expedited SNAP screening and Medicaid ex parte evaluation fire immediately before any caseworker action. (2) **New member added post-submission** — when a member is added to a submitted application, Intake creates new Decisions for that member × their applied-for programs and populates the snapshot with that member's current data; evaluation begins immediately on the new Decisions. (3) **Evaluate calls** — snapshots are refreshed from current Intake data before invoking the rules engine; caseworker review is the phase where data is corrected and enriched, and evaluating against stale submission-time data would undermine that work. See [Decision 15](#decision-15-evaluation-runs-and-history).
 
 **Options:**
 - **(A)** Eligibility queries Intake at evaluation time to fetch current application data before each adapter call
-- **(B)** ✓ Each Determination and Decision carries a stored snapshot of application data: `Determination.applicationSnapshot.household` (household composition, shelter costs, utilities) and `Decision.applicationSnapshot.member` + `Decision.applicationSnapshot.verificationSummary` (member context, verification statuses). The snapshot is populated by Intake at record creation and refreshed immediately before final determination runs.
+- **(B)** ✓ Each Determination and Decision carries a stored snapshot of application data: `Determination.householdSnapshot` (household composition, shelter costs, utilities) and `Decision.memberSnapshot` + `Decision.verificationSummary` (member context, verification statuses). Decision links to its Determination for household-level data when the adapter needs it. The snapshot is populated by Intake at record creation and refreshed at each evaluate call. See [Decision 15](#decision-15-evaluation-runs-and-history).
 
-**Decision:** Option A requires a synchronous cross-domain query from Eligibility to Intake inside the evaluation flow, creating a runtime dependency that the adapter boundary was designed to avoid. Option B gives the state machine everything it needs in its own domain's records, consistent with the adapter black-box constraint. The refresh at final determination (not continuous synchronization) avoids the complexity of maintaining a live projection while still ensuring the adapter receives post-review data when it matters most.
+**Decision:** Option A requires a synchronous cross-domain query from Eligibility to Intake inside the evaluation flow, creating a runtime dependency that the adapter boundary was designed to avoid. Option B gives the state machine everything it needs in its own domain's records, consistent with the adapter black-box constraint. Refreshing snapshots at each evaluate call (not continuous synchronization) avoids the complexity of maintaining a live projection while still ensuring the adapter receives post-review data when it matters most. That refresh is the evaluate step itself — see [Decision 15](#decision-15-evaluation-runs-and-history); entity lifecycle events on Decision and Determination record the updated entity state at each evaluate call, providing the audit trail of what data the rules engine received.
 
 ---
 
@@ -399,7 +400,7 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 
 **Considerations:**
 - Expedited SNAP screening (`ExpeditedScreeningRequest`) requires only `household` data, which is on the Determination snapshot. It does not need any Decisions to exist. Triggering on the first SNAP Decision would work today but is fragile.
-- Medicaid ex parte evaluation is inherently per-member: it uses only that Decision's `applicationSnapshot.member` and the electronic check results for that member. No coordination with other Decisions is required.
+- Medicaid ex parte evaluation is inherently per-member: it uses only that Decision's `memberSnapshot` and the electronic check results for that member. No coordination with other Decisions is required.
 - Final determination needs all Decisions and all post-review data. `intake.application.review_completed` is the explicit signal from Intake that review is complete and all data is ready.
 
 **Options:**
@@ -407,6 +408,29 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 - **(B)** ✓ Each evaluation fires on the event that guarantees its required data exists: expedited SNAP on **Determination creation** (household data only, no Decisions needed); Medicaid ex parte on each **Medicaid Decision creation** (per-member, no coordination needed); final determination on `intake.application.review_completed` (all Decisions exist, snapshots refreshed)
 
 **Decision:** Option B avoids the coordination problem entirely by aligning each trigger with its actual data dependency. No separate "seal" or "all Decisions ready" event is needed. The `eligibility.decision.created` event continues to trigger Medicaid data exchange initiation — the only submission-time evaluation that requires individual Decision existence.
+
+---
+
+### Decision 15: Evaluation runs and history
+
+**Status:** Decided: B
+
+**What's being decided:** Whether trial evaluation runs during caseworker review are supported, and how the audit trail for each evaluation is maintained.
+
+**Background:** Caseworkers commonly run the rules engine multiple times during review — correcting income figures, adding household members, resolving verifications, and re-running to see the effect before committing. The blueprint needs a way to support these intermediate runs without affecting official Decision records.
+
+**Considerations:**
+- Trial runs and official runs invoke the same rules engine with the same inputs; the difference is only what happens to the result — trial runs do not update Decision status or fire downstream events
+- For SNAP, both the determination-level and per-Decision-level evaluate paths require full household data — SNAP income and resource tests apply to the household as a unit, so a per-Decision evaluate must access all members' current data via the Determination link; Medicaid MAGI evaluation is per-person and requires household composition for FPL calculation but not all members' income data
+- The platform event log already records every entity lifecycle event — full fields on create, changed fields on update — queryable by subject (entity ID) and trace ID, providing a complete reconstruction of entity state at any point in time.
+- Each evaluate call refreshes the application data snapshots on the Determination and relevant Decisions from current Intake data before invoking the rules engine. When snapshots change, the platform event log records the updated entity state — the sequence of update events across evaluate calls is the audit history of what data changed during review.
+- IBM Cúram and Salesforce Government Cloud both support simulation/trial evaluations; both treat the platform event log (or equivalent) as the audit record rather than a separate evaluation entity.
+
+**Options:**
+- **(A)** No trial run support — evaluation only happens on the official event-driven path; caseworkers cannot preview outcomes before marking review complete
+- **(B)** ✓ Add evaluate endpoints for both trial and official runs; audit history comes from entity lifecycle events on Decision and Determination (updated entity state logged via `decision.updated` and `determination.updated`); trace context propagated through snapshot refresh → rules engine → status update links the data state to the outcome in the event log
+
+**Decision:** Option B reuses existing platform infrastructure and avoids a new entity. The snapshot refresh on each evaluate call naturally produces `decision.updated` and `determination.updated` events recording the updated entity state — replaying these events reconstructs the data state at any point in the review cycle. For official runs, the trace ID propagated through the evaluate sequence links the data snapshot to the Decision outcomes in the event log. Trial runs return projected outcomes synchronously and publish the same lifecycle events; they do not update `Decision.status` or fire `decision_completed` events.
 
 ---
 
@@ -424,6 +448,12 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 ### Determination and Decision entity fields
 
 States may add fields to Determination and Decision to track state-specific data — for example, additional denial reason detail, program-specific flags, or audit annotations. Fields listed in [Baseline constraints](#baseline-constraints) may not be removed or renamed. All other baseline fields may be renamed to match state terminology via overlay.
+
+### Decision revision and correction
+
+The baseline treats terminal Decision states (`approved`, `denied`, `ineligible`) as final — once set, no further evaluation occurs. This is the correct default for the standard processing path.
+
+States that need caseworkers to correct terminal Decisions — for example, overriding an ex parte auto-determination that was incorrectly resolved before caseworker review — can implement a revision path at the adapter layer: a mechanism to return a Decision to `pending` and re-evaluate it via the standard evaluate path (see [Decision 15](#decision-15-evaluation-runs-and-history)). Two constraints apply: (1) `Decision.path` must be updated to `manual` when a caseworker overrides an auto-determined result, to preserve the regulatory distinction between ex parte and caseworker-reviewed determinations required for CMS reporting; (2) entity lifecycle events on the relevant Decision and Determination provide the before-and-after audit trail for any oversight or appeals review.
 
 ### Submission-time electronic evaluation for non-Medicaid programs
 
