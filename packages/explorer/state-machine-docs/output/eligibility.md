@@ -18,6 +18,10 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
   - Transition: `in_progress` → `completed`
   - Record when all Decisions were resolved (sets `completedAt`)
   - Emit: `eligibility.determination.undefined` — signals all program Decisions are resolved; Intake subscribes to close the application
+- **evaluate** — Run eligibility determination for all pending Decisions; trial runs project outcomes without changing Decision state or emitting decision_completed events
+  - Actors: system, or case_worker
+  - Transition: no state change
+  - Refresh the EligibilitySnapshot, then call the determination adapter for each remaining pending Decision (42 CFR § 435.912). Official runs allow the adapter to approve, deny, or mark-ineligible each Decision; trial runs return projected outcomes without changing Decision state or emitting decision_completed events. Correlation IDs (decisionId, determinationId) are passed in metadata so the adapter can echo them back for response correlation. For household programs (snap), the platform flattens per-member verificationSummary arrays and adds memberId to each entry before sending — exact assembly rules are specified in issue #353.
 - **withdraw** — System withdraws a Determination when the associated application is withdrawn
   - Actors: system only
   - Transition: `in_progress` → `withdrawn`
@@ -28,9 +32,16 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
 
 - **`undefined`**
   - Create a Determination for the submitted application
+  - Seed one pending Decision per household member per applied-for program for a Determination
+  - If `"snap" in $this.data.programs`:
+    - Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))
+- **`undefined`**
+  - Look up: application (from `event.subject`), determination
+  - If `$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"`:
+    - For each `$this.data.programs`:
 - **`undefined`**
   - Look up: determination
-  - Call the final determination adapter for each remaining pending Decision (42 CFR § 435.912)
+  - Refresh the EligibilitySnapshot, then call the determination adapter for each remaining pending Decision (42 CFR § 435.912). Official runs allow the adapter to approve, deny, or mark-ineligible each Decision; trial runs return projected outcomes without changing Decision state or emitting decision_completed events. Correlation IDs (decisionId, determinationId) are passed in metadata so the adapter can echo them back for response correlation. For household programs (snap), the platform flattens per-member verificationSummary arrays and adds memberId to each entry before sending — exact assembly rules are specified in issue #353.
 - **`undefined`**
   - Look up: pendingDecision
   - If `$pendingDecision is null`:
@@ -70,10 +81,7 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
 ### Event subscriptions
 
 - **`undefined`**
-  - Match on `$object.program`:
-    - When `snap`:
-      - Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))
-    - When `medicaid`:
-      - Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)
+  - If `program is "medicaid"`:
+    - Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)
 - **`undefined`**
   - Call the Medicaid ex parte adapter when all data exchange results for a Decision are in; adapter triggers approve, deny, or mark-ineligible (42 CFR § 435.911)

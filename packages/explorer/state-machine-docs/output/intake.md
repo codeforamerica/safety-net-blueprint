@@ -51,10 +51,12 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Look up: task (from `event.subject`)
   - Transition the application from submitted to under_review when a caseworker claims the intake review task
   - Create an Interview record when a caseworker claims an application_review task; SNAP requires an interview before determination (7 CFR § 273.2(e))
+  - Initialize one review-progress entry per section when a caseworker claims an application_review task. Member-scoped sections (scope: member) create one entry per household member; household sections (scope: household) create one entry. States may add, remove, or reclassify sections via overlay.
 - **`undefined`**
   - Look up: application (from `event.subject`)
   - Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
   - Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
+  - Build and store the initial EligibilitySnapshot from the submitted application data
 - **`undefined`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - Transition the Verification based on the service call result; on inconclusive, creates a document fallback per ex parte rules (42 CFR § 435.911)
@@ -63,8 +65,6 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
 - **`undefined`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification
-- **`undefined`**
-  - For each:
 - **`undefined`**
   - Look up: member (from `event.data.memberId`)
   - Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
@@ -91,6 +91,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
     - If `"medicaid" in $application.programs`:
       - `POST intake/applications/verifications`
       - `POST intake/applications/verifications`
+    - Refresh EligibilitySnapshot to include the new member
 - **`undefined`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - `PATCH intake/applications/verifications/$verification.id`
