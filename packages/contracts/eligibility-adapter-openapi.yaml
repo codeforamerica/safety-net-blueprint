@@ -339,31 +339,57 @@ components:
       description: >
         Final determination request for per-applicant programs (medicaid, chip,
         tanf, ccdf). Extends PerMemberProgramRequest with the verification summary
-        for this applicant.
+        for this applicant and a runType indicating whether this is a trial or
+        official evaluation run.
       allOf:
         - $ref: "#/components/schemas/PerMemberProgramRequest"
         - type: object
           required:
             - verificationSummary
+            - runType
           properties:
             verificationSummary:
               type: array
               items:
                 $ref: "#/components/schemas/VerificationSummary"
               description: Status of verification obligations relevant to this applicant and program.
+            runType:
+              type: string
+              enum:
+                - trial
+                - official
+              description: >
+                Whether this is a trial run (projected outcome only — do not trigger approve,
+                deny, or mark-ineligible callbacks) or an official run (commit the decision
+                by triggering the appropriate callback). The blueprint uses trial runs to let
+                caseworkers preview outcomes before finalizing.
 
     HouseholdDeterminationRequest:
       description: >
         Final determination request for per-household programs (snap). Extends
-        PerHouseholdProgramRequest with the verification summary for the household.
+        PerHouseholdProgramRequest with the verification summary for the household
+        and a runType indicating whether this is a trial or official evaluation run.
       allOf:
         - $ref: "#/components/schemas/PerHouseholdProgramRequest"
         - type: object
           required:
             - verificationSummary
+            - runType
           properties:
             verificationSummary:
               type: array
               items:
                 $ref: "#/components/schemas/VerificationSummary"
-              description: Status of verification obligations relevant to this household and program.
+              description: >
+                Status of verification obligations for the household, one entry per
+                member per obligation. Each entry carries a memberId for correlation.
+            runType:
+              type: string
+              enum:
+                - trial
+                - official
+              description: >
+                Whether this is a trial run (projected outcome only — do not trigger approve,
+                deny, or mark-ineligible callbacks) or an official run (commit the decision
+                by triggering the appropriate callback). The blueprint uses trial runs to let
+                caseworkers preview outcomes before finalizing.

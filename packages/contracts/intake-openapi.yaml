@@ -2212,6 +2212,27 @@ components:
         A machine-readable assembly spec (to drive mock server behavior and overlay
         customization) is under design in issue #353.
 
+        **Payload size and sub-resource access (open design question for #353):** The current
+        shape embeds all sub-resource data inline. For large households this payload can grow
+        significantly — SNAP in particular passes all members' data in one call. Two approaches
+        are under consideration for #353:
+
+        - **Inline (current):** Intake pre-assembles a complete payload per refresh. The adapter
+          receives everything it needs in one response; no additional calls required. Assembly
+          knowledge (what fields each program needs) lives in Intake's assembly config.
+
+        - **HAL-style sub-resource links:** The snapshot includes Intake-governed schema shapes
+          for each sub-resource (income, expenses, assets, etc.) alongside `_links` to those
+          sub-resources (per HAL — Hypertext Application Language). The adapter fetches only
+          the sub-resources its rules engine declares as inputs. Schema governance stays with
+          Intake; the adapter owns "what my rules engine needs." Eliminates large-payload
+          concerns; adds round-trips per evaluation.
+
+        The HAL-style approach may be a better fit for rules engines that declare their own
+        input fact types — the adapter wires fact types to Intake sub-resource links rather
+        than receiving a single pre-assembled bundle. Both approaches keep sub-resource schemas
+        governed by this spec.
+
         PUT upsert semantics: 201 on first creation, 200 on replacement. The platform
         publishes `intake.eligibility_snapshot.created` or `intake.eligibility_snapshot.updated`
         based on the response code.

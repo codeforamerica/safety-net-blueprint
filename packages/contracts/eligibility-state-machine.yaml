@@ -107,12 +107,44 @@ machines:
           pending Decision (42 CFR § 435.912). Official runs allow the adapter to approve, deny,
           or mark-ineligible each Decision; trial runs return projected outcomes without changing
           Decision state or emitting decision_completed events.
+
+          Correlation IDs (decisionId, determinationId) are passed in metadata so the adapter
+          can echo them back for response correlation. For household programs (snap), the platform
+          flattens per-member verificationSummary arrays and adds memberId to each entry before
+          sending — exact assembly rules are specified in issue #353.
         parameters: [runType]
         steps:
-          - call: {PUT: intake/applications/$determination.applicationId/eligibility-snapshot, description: Refresh the EligibilitySnapshot from current application data before calling the adapter}
-          - forEach: {from: eligibility/determinations/decisions, where: {determinationId: $determination.id, status: pending}, as: decision}
+          - call: {PUT: intake/applications/$determination.applicationId/eligibility-snapshot, as: snapshot, description: Refresh and capture the current EligibilitySnapshot}
+          - forEach:
+              from: eligibility/determinations/decisions
+              where: {determinationId: $determination.id, status: pending}
+              as: decision
             do:
-              - call: {POST: eligibility-adapter/evaluate/determination, body: {decisionId: $decision.id, determinationId: $determination.id, applicationId: $determination.applicationId, program: $decision.program, runType: $params.runType}}
+              - if: $decision.program == "snap"
+                then:
+                  - call:
+                      POST: eligibility-adapter/evaluate/determination
+                      body:
+                        metadata: {decisionId: $decision.id, determinationId: $determination.id}
+                        program: $decision.program
+                        runType: $params.runType
+                        members: "$snapshot.members[*].memberSnapshot"
+                        household: $snapshot.householdSnapshot
+                        verificationSummary: "$snapshot.members[*].verificationSummary"
+                else:
+                  - forEach:
+                      in: $snapshot.members
+                      where: {memberId: $decision.memberId}
+                      as: snapshotMember
+                    do:
+                      - call:
+                          POST: eligibility-adapter/evaluate/determination
+                          body:
+                            metadata: {decisionId: $decision.id, determinationId: $determination.id}
+                            program: $decision.program
+                            runType: $params.runType
+                            member: $snapshotMember.memberSnapshot
+                            verificationSummary: $snapshotMember.verificationSummary
       - id: evaluateSnapExpedited
         description: "Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))"
         parameters: [applicationId]
