@@ -2,6 +2,30 @@
 
 The Safety Net Blueprint uses two distinct patterns for cross-domain communication: **commands** and **domain events**. Choosing the right pattern is a contract decision — it determines coupling, testability, and what consumers can rely on.
 
+## Principles
+
+### Keep PII in the owning domain
+
+Don't copy PII or sensitive fields onto another domain's records — that expands the governance surface without adding a governance boundary. When a domain needs another domain's PII, use it transiently, not as persisted fields. See [PII in cross-domain data sharing](#pii-in-cross-domain-data-sharing).
+
+### Govern what crosses domain boundaries with a schema
+
+What enters and exits a domain boundary should be governed by a schema. We prefer patterns where the producing domain assembles and exposes a purpose-built view — when consumers assemble their own inputs by querying another domain, that behavior is outside the contract layer and can't be validated, versioned, or tested.
+
+### Put assembly logic in the domain that holds the data
+
+Put data assembly in the producer, not the consumer. When consumers reach into a producer's internals to compose a view, they couple to the internal model — changes to the producer break the consumer. The producer should expose a stable, composed interface.
+
+### Cross-domain writes: authoritative source, fire-and-forget
+
+Allow one domain to write directly into another only when two conditions hold: the writing domain is the authoritative source for the data, and the write is fire-and-forget. When either condition is absent, the write creates coupling in the wrong direction.
+
+### Treat event schemas as public contracts
+
+Event payload shapes are contracts the moment a consumer subscribes. Additive changes (new fields) are safe; breaking changes (removed or renamed fields) require a new event version.
+
+---
+
 ## Choosing a pattern
 
 **Use a command when the calling domain needs a result to continue its own operation.**
@@ -38,6 +62,28 @@ When both conditions are met, a cross-domain write is simpler than the alternati
 **Reverse direction — Eligibility writing back to Intake:** Eligibility writing determination outcomes back to Application Member records (as a denormalized copy for caseworker-facing display) is also acceptable. Eligibility is authoritative for outcomes; the write is fire-and-forget. Both conditions are met.
 
 **Counter-example:** A domain writing records into another domain and then subscribing to the result of that write violates condition 2. A domain writing data it received from a third domain violates condition 1. Neither is a cross-domain write — they are coupling in disguise.
+
+**The commanded snapshot pattern** <a name="commanded-snapshot-pattern"></a>
+
+Some interactions require one domain to maintain a consumer-specific read model that another domain can trigger a refresh of on demand — a purpose-built view assembled from the owning domain's current state, shaped for one consumer's exact needs.
+
+A commanded snapshot resource:
+- Is owned by the domain that holds the authoritative data, which is also responsible for the quality and shape of the view
+- Is shaped for the consuming domain's specific use case — assembled from the owning domain's internal model, not a copy of it
+- Uses PUT upsert semantics: the consumer calls PUT to initialize or refresh it; the owning domain assembles the current view and returns it
+- Keeps PII and sensitive data within the owning domain's boundary — the consuming domain's records never persist the raw fields
+
+This pattern applies all three principles simultaneously:
+
+- **Bounded context isolation:** The snapshot lives in the producing domain; PII stays within that domain's governance boundary.
+- **Contract coverage:** The snapshot schema governs exactly what data reaches the consuming domain and its adapter. When assembly logic lives inside an adapter, it is outside the contract layer — unobservable and ungovernable. Bringing assembly into the owning domain makes the full data flow schema-governed.
+- **Assembly knowledge in the owning domain:** The consumer calls one endpoint and receives a pre-built payload. It does not need to know which internal resources the producing domain queries, how to join them, or which fields to map. Changes to the producing domain's internal model do not reach the consumer.
+
+**When to use:** The consuming domain needs pre-assembled data from another domain at a specific moment (e.g., before calling a vendor adapter); the consumer controls when a refresh is needed; and current-at-refresh is sufficient (real-time synchronization is not required).
+
+**Baseline example — `EligibilitySnapshot`:** Intake owns the `EligibilitySnapshot` resource per application. The Eligibility rules engine calls `PUT /intake/applications/{id}/eligibility-snapshot` before each evaluate call; Intake assembles the current household and member data and returns it. PII stays in Intake; the eligibility adapter receives a pre-built, schema-governed payload without making cross-domain queries at evaluation time. See [Eligibility Decision 13](domains/eligibility.md#decision-13-application-data-snapshot).
+
+Name consumer-facing snapshot resources using the [`{ConsumerDomain}Snapshot` naming convention](api-architecture.md#consumerdomain-snapshot-naming-convention).
 
 ---
 
@@ -84,8 +130,9 @@ Every REST resource emits three lifecycle events automatically — no state mach
 | `POST /resources` | `{object}.created` | Full resource snapshot |
 | `PATCH /resources/{id}` | `{object}.updated` | `{ changes: [{ field, before, after }] }` |
 | `DELETE /resources/{id}` | `{object}.deleted` | `null` |
+| `PUT /resources/{id}` (upsert) | `{object}.created` (201) or `{object}.updated` (200) | Full resource snapshot in both cases — PUT replaces the full resource, so the event carries the complete new state rather than a field diff (consistent with Stripe, GitHub, and Cosmos DB) |
 
-The `before` and `after` values in `updated` events record field-level changes so consumers can react to specific mutations without fetching the full resource.
+The `before` and `after` values in `updated` events record field-level changes so consumers can react to specific mutations without fetching the full resource. **Exception: PUT upsert** — because the caller always provides the full replacement value, the `updated` event carries the complete new resource snapshot rather than a field diff. This is consistent with how REST-native webhook systems (Stripe, GitHub, Cosmos DB) handle full-replacement operations. Consumers subscribing to `updated` on a `singleton_upsert` resource should expect a full snapshot, not a diff.
 
 **2. Declarative state machine events (RPC transitions)**
 
@@ -98,7 +145,7 @@ Transitions declare their own events explicitly in the state machine YAML. Each 
     assignedToId: $caller.id
 ```
 
-All events — both auto-emitted and declarative — use the same `emitEvent()` utility, which constructs the CloudEvents envelope, persists it to the shared `/platform/events` log, and broadcasts it over the SSE stream.
+All events — both auto-emitted and declarative — use the same `emitEvent()` utility, which constructs the CloudEvents envelope, persists it to the shared `/platform/events` log, and broadcasts it over the SSE (Server-Sent Events) stream.
 
 The `type` field is always derived implicitly: `org.codeforamerica.safety-net-blueprint.{domain}.{object}.{action}`. There is no ambiguity about what constitutes a valid type — it always reflects a real operation on a real resource.
 
@@ -162,7 +209,7 @@ Prefixes are declared in the `servers` entry of each OpenAPI spec and can be ove
 
 ## Event Versioning
 
-Pub/sub creates semantic coupling — payload shape is a contract. New fields may be added to an event without versioning. Breaking changes (removed or renamed fields) require a new version.
+Pub/sub (publish/subscribe — a messaging pattern where producers broadcast events to topics and any number of consumers can subscribe independently) creates semantic coupling — payload shape is a contract. New fields may be added to an event without versioning. Breaking changes (removed or renamed fields) require a new version.
 
 The `.v2` suffix convention on the event type is common (used by Confluent, AWS EventBridge, and others) and keeps the version visible in routing rules and logs:
 
@@ -184,6 +231,21 @@ The target architecture is pub/sub with CloudEvents messages. Most implementatio
 **Step 1 — REST polling on `/events`:** Producers write events to the `/events` store directly. Consumers poll the endpoint on a schedule, tracking position with a cursor. When a broker is in place, producers publish to broker topics and polling is replaced by subscriptions; the `/events` endpoint remains for audit queries.
 
 **Step 2 — Pub/sub:** Producers publish to broker topics; consumers subscribe and receive events in real time. AWS EventBridge, SNS/SQS, Azure Service Bus, and Google Cloud Pub/Sub all support CloudEvents natively. Migration from Step 1 requires no event contract changes — only the delivery mechanism changes.
+
+---
+
+## PII in cross-domain data sharing <a name="pii-in-cross-domain-data-sharing"></a>
+
+Three patterns are acceptable when a domain needs PII held by another domain. See [Bounded context boundaries as governance boundaries](#bounded-context-boundaries-as-governance-boundaries) for the underlying principle.
+
+**1. Commanded snapshot** — The owning domain materializes a purpose-built read model for a specific consumer. The consumer calls PUT to initialize or refresh it; the owning domain assembles the current data and returns it. PII stays in the owning domain; the consumer receives a pre-built, schema-governed payload. This is the preferred pattern when the consumer needs pre-assembled data at a specific moment (e.g., before calling a rules engine adapter). See [commanded snapshot pattern](#commanded-snapshot-pattern).
+
+*Baseline example:* `EligibilitySnapshot` — Intake assembles household and member application data for the Eligibility rules engine. PII stays in Intake. See [Eligibility Decision 13](domains/eligibility.md#decision-13-application-data-snapshot).
+
+**2. Direct query** — The consuming domain queries the owning domain's standard API endpoints at runtime using system credentials. PII stays in the owning domain; the consumer fetches what it needs when it needs it. Appropriate when the consumer is part of the adapter layer and the query is scoped to a specific runtime operation.
+
+*Baseline example:* Data exchange adapters query Intake using system credentials before calling external services. See [Data Exchange Decision 13](domains/data-exchange.md#decision-13-no-pii-in-request-payload).
+
 
 ---
 

@@ -27,6 +27,33 @@ Contract artifacts define what the system must do. States build adapters that tr
 
 ---
 
+## Resource Patterns
+
+### PUT upsert (singleton sub-resources) <a name="put-upsert-singleton-sub-resources"></a>
+
+Some singleton sub-resources are not server-initialized on parent creation — instead, the consuming domain controls when the resource is created or refreshed. Use `PUT /{parent}/{id}/{resource}` with upsert semantics: creates the resource if none exists (returns 201) and replaces it if one does (returns 200).
+
+The platform publishes the correct CRUD lifecycle event automatically based on the response code: 201 produces `{object}.created`; 200 produces `{object}.updated`. Both events carry the full resource snapshot — not a field diff. Because the caller always provides the full replacement value, the complete new state is the natural event payload, consistent with how REST-native event systems (Stripe, GitHub, Cosmos DB) handle full-replacement operations. No explicit `emit:` step in the state machine is required.
+
+**When to use:** A resource that is idempotently created-or-replaced, where the consumer drives the timing. The first call initializes it; subsequent calls refresh it. The consumer always provides the full replacement value — not a partial update. See [`singleton_upsert` in api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml).
+
+**Baseline example:** `EligibilitySnapshot` — Intake creates it at application submission; the Eligibility state machine calls `PUT /intake/applications/{id}/eligibility-snapshot` before each evaluate call to refresh.
+
+### `{ConsumerDomain}Snapshot` naming convention <a name="consumerdomain-snapshot-naming-convention"></a>
+
+This convention names resources that implement the **commanded snapshot pattern**: the producing domain maintains a consumer-specific read model that the consumer can trigger a refresh of on demand. The producing domain owns the assembly logic and is responsible for the quality and shape of what it returns; the consumer calls one endpoint without needing to know the producing domain's internal structure.
+
+Resources following this pattern use the `{ConsumerDomain}Snapshot` naming convention:
+
+- Schema name: `{ConsumerDomain}Snapshot` (PascalCase)
+- URL segment: `{consumer-domain}-snapshot` (kebab-case)
+- Full path: `PUT /{owning-domain}/{parent-resource}/{id}/{consumer-domain}-snapshot`
+- Example: `EligibilitySnapshot` → `PUT /intake/applications/{id}/eligibility-snapshot`
+
+The `Snapshot` suffix communicates a point-in-time materialized view. Consumer-domain naming makes ownership and intent explicit: the resource belongs to the owning domain but is shaped for a named consumer. See [commanded snapshot pattern](inter-domain-communication.md#commanded-snapshot-pattern) for when to use this pattern and why.
+
+---
+
 ## Operational Concerns
 
 Each domain has different operational and performance requirements. Caching policies, query complexity limits, and domain-specific metrics are documented in the domain's own architecture doc (e.g., [Workflow metrics](domains/workflow.md#metrics)). This section covers cross-cutting operational concerns that apply across all domains.

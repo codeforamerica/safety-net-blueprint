@@ -287,6 +287,7 @@ behavioral_contract_steps:
   invoke_methods:
     - POST    # create a resource or trigger a state machine operation
     - PATCH   # append a value to an array field via $push
+    - PUT     # replace a singleton sub-resource (upsert semantics)
 
 # =============================================================================
 # Sub-Resource Path Patterns
@@ -419,6 +420,59 @@ sub_resource_paths:
     examples:
       - GET   /applications/{applicationId}/interview
       - PATCH /applications/{applicationId}/interview
+
+  # ---------------------------------------------------------------------------
+  # Singleton sub-resource with upsert semantics
+  # ---------------------------------------------------------------------------
+  # Use when the consuming domain controls when the resource is created or
+  # refreshed — not the server on parent initialization. The consumer always
+  # provides the full replacement value; the server creates (201) or replaces
+  # (200) accordingly.
+  #
+  # The platform publishes the correct CRUD lifecycle event automatically from
+  # the response code: 201 → {object}.created, 200 → {object}.updated. No
+  # explicit emit step in the state machine is needed.
+  #
+  # Use this over singleton (GET + PATCH) when:
+  # - The consuming domain drives refresh timing (not the server)
+  # - The consumer always sends the full payload (idempotent replace, not partial update)
+  # - The resource may not exist yet when the consumer first calls it
+  #
+  # Example: PUT /applications/{applicationId}/eligibility-snapshot
+  #   — Eligibility calls PUT before each evaluate call; Intake creates or replaces.
+  singleton_upsert:
+    path_pattern: "/{resources}/{resourceId}/{subResource}"
+    methods: [GET, PUT]
+    description: |
+      Creates the singleton if it does not exist (201) or replaces it in full
+      if it does (200). PUT body is the full resource value — not a partial update.
+      GET returns the current resource object directly (not wrapped in items[]).
+    success_responses:
+      get:
+        code: 200
+        body: Resource object
+      put:
+        on_create:
+          code: 201
+          description: Resource did not previously exist — created
+          body: Full resource snapshot
+        on_update:
+          code: 200
+          description: Resource replaced in full
+          body: Full resource snapshot
+    notes:
+      - Segment is singular — signals a one-to-one relationship with the parent.
+      - No POST — PUT is the single write path.
+      - No DELETE — the singleton exists for the lifetime of the parent.
+      - No PATCH — consumers always replace the full resource, not a partial update.
+      - Event payload for both 201 and 200 is the full resource snapshot — not a
+        field diff. PUT replaces the whole resource, so the complete new state is
+        the natural event payload. This differs from PATCH updated events, which
+        carry only changed fields. Consistent with Stripe, GitHub, and Cosmos DB.
+      - See commanded_snapshot_pattern for when to use this with consumer-oriented resources.
+    examples:
+      - GET /applications/{applicationId}/eligibility-snapshot
+      - PUT /applications/{applicationId}/eligibility-snapshot
 
   # ---------------------------------------------------------------------------
   # Server-initialized collections
@@ -882,6 +936,42 @@ crud_operations:
       description: Resource deleted successfully
       body: null
     error_responses: [404, 500]
+
+# =============================================================================
+# Commanded Snapshot Pattern
+# =============================================================================
+# A domain exposes a purpose-built, consumer-oriented resource that pre-assembles
+# the data a specific consuming domain needs — instead of the consumer calling
+# multiple endpoints and assembling data itself at call time.
+#
+# The owning domain materializes the view; the consuming domain calls PUT to
+# refresh it when needed. PII and sensitive data stay in the owning domain.
+#
+# Naming convention: {ConsumerDomain}Snapshot
+#   Schema name (PascalCase): EligibilitySnapshot
+#   URL segment (kebab-case): eligibility-snapshot
+#   Full path: PUT /{owning-domain}/{parent}/{id}/{consumer-domain}-snapshot
+#
+# Implementation: uses singleton_upsert pattern (PUT with 201/200 semantics).
+# See docs/architecture/inter-domain-communication.md#commanded-snapshot-pattern.
+commanded_snapshot_pattern:
+  description: |
+    A consumer-specific materialized view exposed by the owning domain.
+    Consumer calls PUT to initialize or refresh; owning domain assembles
+    and returns current data. PII stays in the owning domain.
+  naming_convention: "{ConsumerDomain}Snapshot"
+  path_pattern: "/{owning-domain}/{resources}/{resourceId}/{consumer-domain}-snapshot"
+  uses_pattern: singleton_upsert
+  baseline_example:
+    resource: EligibilitySnapshot
+    owner: intake
+    consumer: eligibility
+    path: "PUT /intake/applications/{applicationId}/eligibility-snapshot"
+    rationale: >
+      Intake assembles household and member data for the Eligibility rules engine.
+      PII stays in Intake; the adapter receives a pre-built payload without
+      making cross-domain queries at evaluation time.
+      See docs/architecture/domains/eligibility.md Decision 13.
 
 # =============================================================================
 # Shared Components# =============================================================================

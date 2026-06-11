@@ -220,6 +220,27 @@ See [Decision 16](#decision-16-review-surface-uses-the-composite-view-pattern).
 
 ---
 
+### EligibilitySnapshot
+
+A consumer-specific read model that Intake maintains on behalf of the Eligibility rules engine. Contains the household-level and per-member application data the eligibility adapter needs to evaluate each household member for each program — assembled from the application's current state so the adapter receives one pre-built payload rather than making multiple cross-domain queries at evaluation time. PII stays in Intake.
+
+All major government benefits platforms (IBM Cúram, Salesforce Government Cloud) produce an equivalent evaluation context or determination package scoped to what the rules engine needs.
+
+Key fields:
+- `applicationId` — links the snapshot to its application
+- `householdSnapshot` — household-level data: composition, shelter costs, utilities, migrant/seasonal worker status, housing type. Used for expedited SNAP screening and household-program evaluations.
+- `members[]` — per-member entries, one per household member:
+  - `memberId` — links to the ApplicationMember record
+  - `memberSnapshot` — member-level data: demographics, income, expenses, assets, employment, health coverage
+  - `verificationSummary` — current verification obligation statuses for this member; reflects the state of the verification checklist at the time of the last snapshot refresh
+- `refreshedAt` — when the snapshot was last refreshed; allows consumers to detect staleness
+
+The resource uses PUT upsert semantics: `PUT /intake/applications/{id}/eligibility-snapshot` creates the record (201) if none exists or replaces it (200) if one does. The platform publishes `intake.eligibility_snapshot.created` or `intake.eligibility_snapshot.updated` based on the response code — no explicit emit step is needed. Intake creates the snapshot when seeding Determination and Decision records at submission; Eligibility calls PUT to refresh before each evaluate call.
+
+See [Eligibility Decision 13](eligibility.md#decision-13-application-data-snapshot), [PUT upsert pattern](../api-architecture.md#put-upsert-singleton-sub-resources), [commanded snapshot pattern](../inter-domain-communication.md#commanded-snapshot-pattern).
+
+---
+
 ## Application lifecycle
 
 ### States
