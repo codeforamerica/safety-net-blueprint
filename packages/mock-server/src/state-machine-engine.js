@@ -8,6 +8,7 @@ import jsonLogic from 'json-logic-js';
 import { deriveCollectionName } from './collection-utils.js';
 import { findAll, findById } from './database-manager.js';
 import { resolveTimeToken } from './time-tokens.js';
+import { executeSingletonPut } from './singleton-put-executor.js';
 
 /**
  * Resolve a value expression against a context.
@@ -429,15 +430,26 @@ export function findOperation(machine, transitionName, resource) {
  * @param {Array} pendingAppends - Accumulator for pending appends
  */
 function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, pendingAppends) {
-  const method = 'POST' in spec ? 'POST' : 'PATCH' in spec ? 'PATCH' : 'GET' in spec ? 'GET' : 'DELETE' in spec ? 'DELETE' : null;
+  const method = 'POST' in spec ? 'POST' : 'PATCH' in spec ? 'PATCH' : 'GET' in spec ? 'GET' : 'DELETE' in spec ? 'DELETE' : 'PUT' in spec ? 'PUT' : null;
   if (!method) {
-    console.warn('call: (object form) step missing POST, PATCH, GET, or DELETE key — skipping');
+    console.warn('call: (object form) step missing POST, PATCH, GET, DELETE, or PUT key — skipping');
     return;
   }
 
   const rawPath = spec[method];
   const path = interpolatePath(rawPath, context);
   const body = resolveBody(spec.body, context);
+
+  if (method === 'PUT') {
+    // Execute singleton PUT steps eagerly so the `as:` result is available to subsequent steps.
+    const result = executeSingletonPut(path, { now: context.now });
+    const as = spec.as || null;
+    if (result !== null && as) {
+      if (!context.entities) context.entities = {};
+      context.entities[as] = result;
+    }
+    return;
+  }
 
   if (method === 'POST') {
     if (rawPath.includes('{') || rawPath.includes('$')) {

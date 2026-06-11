@@ -14,8 +14,9 @@ import { createSearchHandler } from './handlers/search-handler.js';
 import { createMetricsListHandler, createMetricsGetHandler } from './handlers/metrics-handler.js';
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
+import { assembleEligibilitySnapshot } from './handlers/eligibility-snapshot-handler.js';
 import { findSlaTypes } from './sla-loader.js';
-import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
+import { findAll, findById, insertResource, update, deleteResource, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName } from './collection-utils.js';
 import { randomUUID } from 'node:crypto';
@@ -174,6 +175,86 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
     }
   };
 }
+
+/**
+ * Create a PUT handler for a singleton sub-resource.
+ * Full-replacement upsert semantics: 201 on first creation, 200 on replacement.
+ * Uses delete-and-reinsert rather than deep-merge to guarantee a clean replacement
+ * of nested objects (avoids stale fields if the shape has changed).
+ *
+ * If an assembleBody function is provided (see SINGLETON_PUT_ASSEMBLERS), the body
+ * is assembled server-side (e.g. EligibilitySnapshot) and the request body is ignored.
+ * Otherwise the request body is used directly, matching standard PUT semantics.
+ */
+function createSingletonReplaceHandler(apiMetadata, endpoint, parentParam, parentField, assembleBody = null) {
+  const resourceLabel = endpoint.collectionName.replace(/s$/, '');
+  return (req, res) => {
+    try {
+      const parentId = req.params[parentParam];
+
+      let bodyData;
+      if (assembleBody) {
+        bodyData = assembleBody(parentId);
+        if (bodyData === null) {
+          return res.status(404).json({ code: 'NOT_FOUND', message: `${capitalize(resourceLabel)} not found` });
+        }
+      } else {
+        if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+          return res.status(400).json({ code: 'BAD_REQUEST', message: 'Request body must be a JSON object', details: [{ field: 'body', message: 'must be object' }] });
+        }
+        bodyData = req.body;
+      }
+
+      const { items } = findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
+      let result;
+      let action;
+      const now = new Date().toISOString();
+
+      if (items.length === 0) {
+        result = { id: randomUUID(), [parentField]: parentId, ...bodyData, createdAt: now, updatedAt: now };
+        insertResource(endpoint.collectionName, result);
+        action = 'created';
+      } else {
+        // Full replacement: delete + reinsert to avoid stale nested fields from deepMerge
+        deleteResource(endpoint.collectionName, items[0].id);
+        result = { id: items[0].id, [parentField]: parentId, ...bodyData, createdAt: items[0].createdAt, updatedAt: now };
+        insertResource(endpoint.collectionName, result);
+        action = 'updated';
+      }
+
+      try {
+        const domain = apiMetadata.serverBasePath.replace(/^\//, '');
+        emitEvent({
+          domain,
+          object: resourceLabel,
+          action,
+          resourceId: result.id,
+          subject: parentId,
+          source: apiMetadata.serverBasePath,
+          data: result,
+          callerId: req.headers['x-caller-id'] || null,
+          traceparent: req.headers['traceparent'] || null,
+          now: result.updatedAt,
+        });
+      } catch (e) { /* non-fatal */ }
+
+      res.status(action === 'created' ? 201 : 200).json(result);
+    } catch (error) {
+      console.error('Singleton replace handler error:', error);
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+    }
+  };
+}
+
+/**
+ * Registry of server-side assembly functions for PUT singleton sub-resources that
+ * have no request body — the server assembles the replacement from its own data.
+ * Key: operationId from the OpenAPI spec. Value: (parentId) => bodyData | null.
+ * Return null to indicate the parent resource was not found (yields 404).
+ */
+const SINGLETON_PUT_ASSEMBLERS = {
+  refreshEligibilitySnapshot: assembleEligibilitySnapshot,
+};
 
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -377,6 +458,12 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
         } else if (method === 'patch') {
           handler = createSingletonUpdateHandler(apiMetadata, endpointWithCollection, parentParam, parentField);
           description = 'Update singleton sub-resource';
+        } else if (method === 'put') {
+          const assembleBody = SINGLETON_PUT_ASSEMBLERS[endpoint.operationId] || null;
+          handler = createSingletonReplaceHandler(apiMetadata, endpointWithCollection, parentParam, parentField, assembleBody);
+          description = assembleBody
+            ? 'Replace singleton sub-resource (server-side assembly)'
+            : 'Replace singleton sub-resource';
         } else {
           console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on singleton ${endpoint.path}`);
           continue;

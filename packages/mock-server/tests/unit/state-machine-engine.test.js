@@ -727,6 +727,63 @@ test('applySteps — invoke PATCH queues pendingAppend with resolved $push body'
 });
 
 // =============================================================================
+// applySteps — call: { PUT: ... } (singleton replace)
+// =============================================================================
+
+test('applySteps — call PUT for unregistered sub-resource is a no-op (no crash, no entities set)', () => {
+  const resource = {};
+  const context = { entities: {} };
+  // "unknown-resource" has no registered assembler → executeSingletonPut returns null
+  assert.doesNotThrow(() => {
+    applySteps([{ call: { PUT: 'intake/applications/abc/unknown-resource' } }], resource, context);
+  });
+  assert.deepStrictEqual(context.entities, {});
+});
+
+test('applySteps — call PUT with as: does not set alias when assembler returns null', () => {
+  const resource = {};
+  const context = { entities: {} };
+  applySteps([{ call: { PUT: 'intake/applications/abc/unknown-resource', as: 'snapshot' } }], resource, context);
+  assert.strictEqual(context.entities.snapshot, undefined);
+});
+
+test('applySteps — call PUT with registered assembler sets as-alias in context.entities', () => {
+  insertResource('applications', { id: 'sme-put-app', status: 'submitted' });
+
+  const resource = {};
+  const context = { entities: {} };
+  applySteps([{ call: { PUT: 'intake/applications/sme-put-app/eligibility-snapshot', as: 'snap' } }], resource, context);
+
+  assert.ok(context.entities.snap, 'snap alias should be set in entities');
+  assert.ok(Array.isArray(context.entities.snap.members), 'snap.members should be an array');
+  assert.ok('householdSnapshot' in context.entities.snap, 'snap should have householdSnapshot');
+
+  clearAll('applications');
+  clearAll('eligibility-snapshots');
+  clearAll('events');
+});
+
+test('applySteps — call PUT as-alias is available to subsequent steps in the same call', () => {
+  insertResource('applications', { id: 'sme-put-seq', status: 'submitted' });
+  insertResource('household-infos', { id: 'hh-seq', applicationId: 'sme-put-seq', size: 4 });
+
+  const resource = {};
+  const context = { entities: {} };
+  // Second step reads $snap.householdSnapshot.size from the captured alias
+  applySteps([
+    { call: { PUT: 'intake/applications/sme-put-seq/eligibility-snapshot', as: 'snap' } },
+    { set: { field: 'householdSize', value: '$snap.householdSnapshot.size' } },
+  ], resource, context);
+
+  assert.strictEqual(resource.householdSize, 4, 'set step should read from captured snapshot alias');
+
+  clearAll('applications');
+  clearAll('household-infos');
+  clearAll('eligibility-snapshots');
+  clearAll('events');
+});
+
+// =============================================================================
 // applySteps — when:
 // =============================================================================
 
