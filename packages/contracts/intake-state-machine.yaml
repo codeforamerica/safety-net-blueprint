@@ -109,7 +109,7 @@ machines:
                 - {name: expenses, scope: household}
                 - {name: household, scope: household}
       - type: intake.application.submitted
-        description: Initiate electronic verification requests for each applicable program when an application is submitted
+        description: Initiate electronic verification requests for each applicable program and create the initial EligibilitySnapshot when an application is submitted
         context:
           - application: {from: intake/applications, where: {id: $this.subject}}
         steps:
@@ -117,6 +117,7 @@ machines:
             with: {program: snap, memberCategories: [identity], householdCategories: [residency], incomeCategories: [income]}
           - call: createProgramVerifications
             with: {program: medicaid, memberCategories: [citizenship, immigration], householdCategories: []}
+          - call: {PUT: intake/applications/$this.subject/eligibility-snapshot, description: Build and store the initial EligibilitySnapshot from the submitted application data}
       - type: data_exchange.call.completed
         description: Update the verification status based on the service call result; create a document fallback if the result is inconclusive
         context:
@@ -133,19 +134,6 @@ machines:
           - verification: {from: intake/applications/verifications, where: {id: $this.data.metadata.intake.verificationId}}
         steps:
           - call: satisfyVerificationOnDocumentUpload
-      - type: eligibility.determination.created
-        description: Create one Decision per household member per applied-for program when an eligibility Determination is created for this application
-        steps:
-          - forEach:
-              from: intake/application-members
-              where: {applicationId: $this.data.applicationId}
-              as: member
-            do:
-              - forEach:
-                  in: $member.programs
-                  as: program
-                do:
-                  - call: {POST: eligibility/determinations/decisions, body: {determinationId: $this.subject, applicationId: $this.data.applicationId, memberId: $member.id, program: $program, status: pending}}
       - type: eligibility.application.decision_completed
         description: Write the eligibility outcome back to the application member record when a per-member program decision is completed
         context:
@@ -182,7 +170,7 @@ machines:
                 then:
                   - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: income, category: income, verificationType: electronic}}
       - type: intake.application_member.created
-        description: Create member verifications when a member is added to a submitted application; mirrors the member verifications created by createProgramVerifications at submission time
+        description: Create member verifications and refresh the EligibilitySnapshot when a member is added to a submitted application; Decision seeding is handled by the eligibility domain
         context:
           - application: {from: intake/applications, where: {id: $this.subject}}
         steps:
@@ -195,6 +183,7 @@ machines:
                 then:
                   - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: citizenship, verificationType: electronic}}
                   - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: immigration, verificationType: electronic}}
+              - call: {PUT: intake/applications/$application.id/eligibility-snapshot, description: Refresh EligibilitySnapshot to include the new member}
       - type: communication.notice.sent
         description: Append the document request notice to the Verification's documentRequests when Communication sends a notice
         context:
