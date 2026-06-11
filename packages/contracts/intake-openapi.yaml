@@ -48,6 +48,8 @@ tags:
     description: Health coverage records for an application member.
   - name: Member Income
     description: Income records for an application member.
+  - name: Eligibility Snapshot
+    description: Consumer-specific read model maintained by Intake for the Eligibility rules engine.
   - name: Verifications
     description: Application verification obligations — electronic check results and document evidence.
 
@@ -1438,6 +1440,57 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
+  /applications/{applicationId}/eligibility-snapshot:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get eligibility snapshot
+      description: Retrieve the current EligibilitySnapshot for this application.
+      operationId: getEligibilitySnapshot
+      tags:
+        - Eligibility Snapshot
+      responses:
+        "200":
+          description: EligibilitySnapshot retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilitySnapshot"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+    put:
+      summary: Refresh eligibility snapshot
+      description: |
+        Rebuild and store the EligibilitySnapshot from the application's current data.
+        Creates the record (201) on first call; replaces it entirely (200) on subsequent calls.
+        The platform publishes `intake.eligibility_snapshot.created` or
+        `intake.eligibility_snapshot.updated` based on the response code.
+
+        No request body — the snapshot is assembled server-side from the application's current
+        state. Called by Intake at submission time and by Eligibility before each evaluate call.
+      operationId: refreshEligibilitySnapshot
+      tags:
+        - Eligibility Snapshot
+      responses:
+        "200":
+          description: Snapshot replaced successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilitySnapshot"
+        "201":
+          description: Snapshot created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilitySnapshot"
+        "404":
+          $ref: "./components/responses.yaml#/NotFound"
+        "500":
+          $ref: "./components/responses.yaml#/InternalError"
+
 components:
   parameters:
     ApplicationIdParam:
@@ -2135,6 +2188,129 @@ components:
         - $ref: "./schemas/common/household.yaml"
         - type: object
           minProperties: 1
+
+    # ---------------------------------------------------------------------------
+    # Eligibility Snapshot
+    # ---------------------------------------------------------------------------
+
+    EligibilitySnapshot:
+      description: >
+        Consumer-specific read model that Intake maintains for the Eligibility rules engine.
+        Contains the household-level and per-member application data the eligibility adapter
+        needs to evaluate each household member for each program — assembled from the
+        application's current state so the adapter receives one pre-built payload rather
+        than making multiple cross-domain queries at evaluation time.
+
+        Assembly rules: `householdSnapshot` is drawn from the application's household-info
+        sub-resource. Each `members[]` entry draws `memberSnapshot` from the corresponding
+        ApplicationMember record plus its income, expenses, assets, employment-records, and
+        health-coverages sub-resources; `verificationSummary` is drawn from the application's
+        verifications filtered to that member. All fields use the common schema shapes shared
+        between intake sub-resources and the eligibility adapter (member.yaml, household.yaml,
+        income.yaml, etc.) — no field mapping is required at the adapter layer.
+
+        A machine-readable assembly spec (to drive mock server behavior and overlay
+        customization) is under design in issue #353.
+
+        PUT upsert semantics: 201 on first creation, 200 on replacement. The platform
+        publishes `intake.eligibility_snapshot.created` or `intake.eligibility_snapshot.updated`
+        based on the response code.
+      type: object
+      required:
+        - id
+        - applicationId
+        - householdSnapshot
+        - members
+        - refreshedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        applicationId:
+          type: string
+          format: uuid
+          readOnly: true
+          x-relationship:
+            resource: Application
+        householdSnapshot:
+          $ref: "./schemas/common/household.yaml"
+          description: Household-level data at the time of the last refresh.
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/EligibilitySnapshotMember"
+          description: Per-member entries, one per household member at the time of the last refresh.
+        refreshedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When the snapshot was last rebuilt; allows consumers to detect staleness.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    EligibilitySnapshotMember:
+      description: Per-member entry in an EligibilitySnapshot.
+      type: object
+      required:
+        - memberId
+        - memberSnapshot
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: Links to the ApplicationMember record.
+          x-relationship:
+            resource: ApplicationMember
+        memberSnapshot:
+          description: >
+            Member-level data at the time of the last refresh: demographics, income, expenses,
+            assets, employment, and health coverage. Mirrors the MemberContext shape expected
+            by the eligibility adapter.
+          allOf:
+            - $ref: "./schemas/common/member.yaml"
+            - type: object
+              properties:
+                income:
+                  type: array
+                  items:
+                    $ref: "./schemas/common/income.yaml"
+                  description: Income records for this member.
+                expenses:
+                  type: array
+                  items:
+                    $ref: "./schemas/common/expenses.yaml"
+                  description: Expense records for this member.
+                assets:
+                  type: array
+                  items:
+                    $ref: "./schemas/common/assets.yaml"
+                  description: Asset records for this member.
+                employment:
+                  type: array
+                  items:
+                    $ref: "./schemas/common/employment.yaml"
+                  description: Employment records for this member.
+                healthCoverage:
+                  type: array
+                  items:
+                    $ref: "./schemas/common/health-coverage.yaml"
+                  description: Health coverage records for this member.
+        verificationSummary:
+          type: array
+          items:
+            $ref: "./schemas/common/intake.yaml#/$defs/VerificationSummary"
+          description: >
+            Current verification obligation statuses for this member at the time of the
+            last snapshot refresh.
 
     # ---------------------------------------------------------------------------
     # Application Notes
