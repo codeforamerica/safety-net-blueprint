@@ -34,6 +34,20 @@ machines:
         steps:
           - set: {field: completedAt, value: $now, description: Record when all Decisions were resolved}
           - emit: {type: eligibility.application.determination_completed, subject: $object.applicationId, description: "Emit eligibility.application.determination_completed — signals all program Decisions are resolved; Intake subscribes to close the application"}
+      - id: evaluate
+        description: "POST /determinations/{determinationId}/evaluate — Run eligibility determination for all pending Decisions; trial runs project outcomes without changing Decision state or emitting decision_completed events"
+        schema:
+          request:
+            $ref: '#/$defs/EvaluateDeterminationRequest'
+        guards:
+          - actors: [system, case_worker]
+            conditions: [{any: [callerIsSystem, callerIsCaseworker]}]
+        transition: {from: in_progress}
+        context:
+          - determination: {from: eligibility/determinations, where: {id: $object.id}}
+        steps:
+          - call: evaluateDetermination
+            with: {runType: $request.runType}
       - id: withdraw
         description: "POST /determinations/{determinationId}/withdraw — System withdraws a Determination when the associated application is withdrawn"
         guards:
@@ -45,14 +59,35 @@ machines:
           - emit: {type: eligibility.determination.withdrawn, subject: $object.applicationId}
     events:
       - type: intake.application.submitted
+        description: Create a Determination, seed pending Decisions for each member and program, and run expedited SNAP screening when an application is submitted
         steps:
           - call: {POST: eligibility/determinations, body: {applicationId: $this.subject, programs: $this.data.programs, status: in_progress}, description: Create a Determination for the submitted application}
+          - call: seedDecisions
+            with: {applicationId: $this.subject}
+          - if: '"snap" in $this.data.programs'
+            then:
+              - call: evaluateSnapExpedited
+                with: {applicationId: $this.subject}
+      - type: intake.application_member.created
+        description: Seed a pending Decision per program when a member is added to a submitted application
+        context:
+          - application: {from: intake/applications, where: {id: $this.subject}}
+          - determination: {from: eligibility/determinations, where: {applicationId: $this.subject}}
+        steps:
+          - if: $application.status != "draft" && $application.status != "withdrawn" && $application.status != "closed"
+            then:
+              - forEach:
+                  in: $this.data.programs
+                  as: program
+                do:
+                  - call: {POST: eligibility/determinations/decisions, body: {determinationId: $determination.id, applicationId: $application.id, memberId: $this.data.id, program: $program, status: pending}, description: Seed a pending Decision for the new member per program}
       - type: intake.application.review_completed
         description: Run final eligibility determination for all remaining pending Decisions after caseworker review is complete (42 CFR § 435.912)
         context:
           - determination: {from: eligibility/determinations, where: {applicationId: $this.subject}}
         steps:
-          - call: evaluateFinalDetermination
+          - call: evaluateDetermination
+            with: {runType: official}
       - type: eligibility.application.decision_completed
         context:
           - pendingDecision: {from: eligibility/determinations/decisions, where: {determinationId: $this.data.determinationId, status: pending}}
@@ -66,12 +101,41 @@ machines:
           - if: '$determination.id != null'
             then: [{call: {POST: eligibility/determinations/$determination.id/withdraw, description: Withdraw the Determination; already-resolved Decisions are preserved as the audit record}}]
     procedures:
-      - id: evaluateFinalDetermination
-        description: Call the final determination adapter for each remaining pending Decision (42 CFR § 435.912)
+      - id: evaluateDetermination
+        description: >
+          Refresh the EligibilitySnapshot, then call the determination adapter for each remaining
+          pending Decision (42 CFR § 435.912). Official runs allow the adapter to approve, deny,
+          or mark-ineligible each Decision; trial runs return projected outcomes without changing
+          Decision state or emitting decision_completed events.
+        parameters: [runType]
         steps:
+          - call: {PUT: intake/applications/$determination.applicationId/eligibility-snapshot, description: Refresh the EligibilitySnapshot from current application data before calling the adapter}
           - forEach: {from: eligibility/determinations/decisions, where: {determinationId: $determination.id, status: pending}, as: decision}
             do:
-              - call: {POST: eligibility-adapter/evaluate/determination, body: {decisionId: $decision.id, determinationId: $determination.id, applicationId: $determination.applicationId, program: $decision.program}}
+              - call: {POST: eligibility-adapter/evaluate/determination, body: {decisionId: $decision.id, determinationId: $determination.id, applicationId: $determination.applicationId, program: $decision.program, runType: $params.runType}}
+      - id: evaluateSnapExpedited
+        description: "Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))"
+        parameters: [applicationId]
+        context:
+          - determination: {from: eligibility/determinations, where: {applicationId: $params.applicationId}}
+        steps:
+          - call: {POST: eligibility-adapter/evaluate/expedited-screening, body: {determinationId: $determination.id, applicationId: $determination.applicationId}}
+      - id: seedDecisions
+        description: Seed one pending Decision per household member per applied-for program for a Determination
+        parameters: [applicationId]
+        context:
+          - determination: {from: eligibility/determinations, where: {applicationId: $params.applicationId}}
+        steps:
+          - forEach:
+              from: intake/application-members
+              where: {applicationId: $params.applicationId}
+              as: member
+            do:
+              - forEach:
+                  in: $member.programs
+                  as: program
+                do:
+                  - call: {POST: eligibility/determinations/decisions, body: {determinationId: $determination.id, applicationId: $params.applicationId, memberId: $member.id, program: $program, status: pending}, description: Seed a pending Decision for each member/program combination}
 
   # ---------------------------------------------------------------------------
   # Decision — one per program per Determination; tracks per-program outcome.
@@ -127,20 +191,16 @@ machines:
           - emit: {type: eligibility.application.decision_completed, data: {determinationId: $object.determinationId, memberId: $object.memberId, program: $object.program, status: ineligible, path: $request.path, denialReasonCode: $request.denialReasonCode}}
     events:
       - type: eligibility.decision.created
-        description: Run expedited SNAP screening or initiate Medicaid data exchange when a Decision is created
+        description: Initiate Medicaid data exchange when a Medicaid Decision is created
         steps:
-          - match: $object.program
-            when:
-              snap: [{call: evaluateSnapExpedited}]
-              medicaid: [{call: initiateMedicaidDataExchange}]
+          - if: $object.program == "medicaid"
+            then:
+              - call: initiateMedicaidDataExchange
       - type: data_exchange.call.completed
         description: Run Medicaid ex parte evaluation when all data exchange results for a Decision are in (42 CFR § 435.911)
         steps:
           - call: evaluateMedicaidExParte
     procedures:
-      - id: evaluateSnapExpedited
-        description: "Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))"
-        call: {POST: eligibility-adapter/evaluate/expedited-screening, body: {decisionId: $object.id, determinationId: $object.determinationId, applicationId: $object.applicationId}}
       - id: initiateMedicaidDataExchange
         description: Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)
         steps:
@@ -156,6 +216,21 @@ machines:
           - call: {POST: eligibility-adapter/evaluate/medicaid-ex-parte, body: {decisionId: $decision.id, determinationId: $decision.determinationId, applicationId: $decision.applicationId}}
 
 $defs:
+  EvaluateDeterminationRequest:
+    type: object
+    required:
+      - runType
+    properties:
+      runType:
+        type: string
+        enum:
+          - trial
+          - official
+        description: >
+          Whether to run a trial (projected outcomes only) or an official evaluation
+          (updates Decision status and emits decision_completed events). Trial runs allow
+          caseworkers to preview outcomes without committing; official runs finalize the determination.
+
   ApproveDecisionRequest:
     type: object
     required:
