@@ -1,0 +1,384 @@
+# JSON Schema for Domain Composition YAML files ({domain}-compositions.yaml).
+# Validates structural correctness. Cross-artifact semantic checks
+# (e.g., bind fields matching resource schemas) are performed by the resolve pipeline.
+#
+# Example usage:
+#
+#   version: "1.0"
+#   domain: intake
+#   fragments:
+#     memberFinancials:
+#       include:
+#         income: { resource: member-incomes, bind: memberId }
+#   compositions:
+#     reviewContext:
+#       compositeType: sectionView
+#       resource: applications
+#       sections:
+#         identity: { resource: members, bind: applicationId, fields: [name, dateOfBirth] }
+#         household: { resource: household-info, bind: applicationId }
+#       panel:
+#         include:
+#           verifications:
+#             resource: verifications
+#             bind: applicationId
+#             filter: "category == $section.name"
+#       endpoint:
+#         path: /applications/{applicationId}/review
+#       state:
+#         schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' }
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Domain Compositions
+description: >
+  Schema for domain composition YAML files ({domain}-compositions.yaml).
+  Defines declarative resource compositions — composite views assembled
+  from multiple source resources at request time.
+
+type: object
+required:
+  - version
+additionalProperties: false
+
+properties:
+  $schema:
+    type: string
+
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  domain:
+    type: string
+    description: Domain namespace (e.g., intake, eligibility).
+
+  fragments:
+    type: object
+    description: >
+      Named, reusable composition sub-graphs. Referenced via
+      $ref: '#/fragments/name' in include nodes. Resolved before
+      assembly — no runtime indirection.
+    additionalProperties:
+      $ref: "#/$defs/FragmentBody"
+
+  compositions:
+    type: object
+    description: >
+      Named composition declarations. Each key is the composition name;
+      the value declares the root resource and how to assemble it.
+    minProperties: 1
+    additionalProperties:
+      $ref: "#/$defs/Composition"
+
+$defs:
+
+  Composition:
+    # Example — basic inline response composition:
+    #   members:
+    #     resource: application-members
+    #     bind: applicationId
+    #     filter: "status == 'active'"
+    #     fields: [firstName, lastName]
+    #     links: true
+    #     endpoint:
+    #       path: /applications/{applicationId}/members-summary
+    #
+    # Example — sectionView composite type:
+    #   reviewContext:
+    #     compositeType: sectionView
+    #     resource: applications
+    #     sections:
+    #       identity: { resource: members, bind: applicationId }
+    #     endpoint:
+    #       path: /applications/{applicationId}/review
+    type: object
+    description: A named composition declaration.
+    required:
+      - resource
+    additionalProperties: false
+    properties:
+      compositeType:
+        type: string
+        enum: [sectionView]
+        description: >
+          Higher-level structural pattern. When present, composite-type-specific
+          properties apply (sections, panel for sectionView).
+      resource:
+        type: string
+        description: The backing REST resource name (kebab-case, matches the resource endpoint slug).
+      bind:
+        $ref: "#/$defs/Bind"
+      views:
+        $ref: "#/$defs/Views"
+      links:
+        type: boolean
+        description: >
+          Generate _links.self on each item. Mutually exclusive with flatten. Default false.
+        default: false
+      missing:
+        type: string
+        enum: [empty]
+        description: >
+          Singleton resources only. Default is null when not found;
+          'empty' returns {} instead.
+      filter:
+        type: string
+        description: CEL expression evaluated per item at read time. Read-only.
+      fields:
+        $ref: "#/$defs/Fields"
+      flatten:
+        type: boolean
+        description: >
+          Remove the composition key and promote the node's fields to the parent level.
+          Mutually exclusive with links. Default false.
+        default: false
+      include:
+        $ref: "#/$defs/IncludeMap"
+      endpoint:
+        $ref: "#/$defs/Endpoint"
+      state:
+        $ref: "#/$defs/StateResource"
+      # sectionView-specific
+      sections:
+        type: object
+        description: >
+          sectionView only. Named sections, each backed by a different resource type.
+          Each section is individually addressable at the derived panel path.
+        additionalProperties:
+          $ref: "#/$defs/SectionNode"
+      panel:
+        type: object
+        description: >
+          sectionView only. Nodes added to every panel response in addition to
+          the matching section's resource.
+        additionalProperties: false
+        properties:
+          include:
+            $ref: "#/$defs/IncludeMap"
+
+  FragmentBody:
+    type: object
+    description: The body of a named fragment — an include map without a wrapping name key.
+    additionalProperties: false
+    properties:
+      include:
+        $ref: "#/$defs/IncludeMap"
+
+  IncludeMap:
+    type: object
+    description: >
+      Map of named child compositions. Each key is the include name;
+      the value is either a composition node or a $ref to a fragment.
+    additionalProperties:
+      oneOf:
+        - $ref: "#/$defs/IncludeNode"
+        - $ref: "#/$defs/FragmentRef"
+
+  IncludeNode:
+    # Example — child node with bind and field selection:
+    #   income:
+    #     resource: member-incomes
+    #     bind: memberId
+    #     fields: [amount, type]
+    #     views: [snap, medicaid]
+    type: object
+    description: A child composition node within an include map.
+    required:
+      - resource
+    additionalProperties: false
+    properties:
+      resource:
+        type: string
+      bind:
+        $ref: "#/$defs/Bind"
+      views:
+        $ref: "#/$defs/Views"
+      links:
+        type: boolean
+        default: false
+      missing:
+        type: string
+        enum: [empty]
+      filter:
+        type: string
+      fields:
+        $ref: "#/$defs/Fields"
+      flatten:
+        type: boolean
+        default: false
+      include:
+        $ref: "#/$defs/IncludeMap"
+
+  SectionNode:
+    # Example — section with embedded fields:
+    #   identity:
+    #     resource: members
+    #     bind: applicationId
+    #     fields: [name, dateOfBirth]
+    #
+    # Example — section with all fields:
+    #   income:
+    #     resource: members
+    #     bind: applicationId
+    #     fields: [*]
+    type: object
+    description: A section in a sectionView composition.
+    required:
+      - resource
+    additionalProperties: false
+    properties:
+      resource:
+        type: string
+      bind:
+        $ref: "#/$defs/Bind"
+      fields:
+        $ref: "#/$defs/Fields"
+      views:
+        $ref: "#/$defs/Views"
+      filter:
+        type: string
+      include:
+        $ref: "#/$defs/IncludeMap"
+      state:
+        $ref: "#/$defs/StateResource"
+
+  Endpoint:
+    # Example:
+    #   endpoint:
+    #     path: /applications/{applicationId}/review
+    #     methods: [get]
+    #     parentLink: true
+    type: object
+    description: Consumer-facing endpoint declaration for this composition.
+    required:
+      - path
+    additionalProperties: false
+    properties:
+      path:
+        type: string
+        description: URL path for the composition endpoint.
+      methods:
+        type: array
+        items:
+          type: string
+          enum: [get, post, put, patch, delete]
+        default: [get]
+      parentLink:
+        type: boolean
+        description: >
+          Inject _links.{compositionKey} into the parent resource's GET by ID response.
+          Default false.
+        default: false
+
+  StateResource:
+    # Example:
+    #   state:
+    #     schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' }
+    #     methods: [put, patch]
+    #     flatten: true
+    type: object
+    description: >
+      Composition-owned state resource. The framework creates, persists, and exposes
+      this as a first-class resource with generated GET/PUT/PATCH endpoints.
+      Schema points to the client-writable fields in the companion schemas file.
+    required:
+      - schema
+    additionalProperties: false
+    properties:
+      schema:
+        type: object
+        description: $ref to the writable fields schema in the companion {domain}-compositions-schemas.yaml.
+        required:
+          - $ref
+        additionalProperties: false
+        properties:
+          $ref:
+            type: string
+      methods:
+        type: array
+        items:
+          type: string
+          enum: [put, patch]
+        default: [put, patch]
+      flatten:
+        type: boolean
+        description: Promote state fields to the parent level in GET responses. Default false.
+        default: false
+
+  Bind:
+    # Example — single field:  bind: applicationId
+    # Example — compound:      bind: [memberId, programId]
+    description: >
+      Field name(s) on the child resource matching the parent's identifier.
+      Single string for simple joins; array for compound joins.
+    oneOf:
+      - type: string
+        description: Single bind field name (e.g., applicationId).
+      - type: array
+        items:
+          type: string
+        minItems: 2
+        description: Compound bind — list of field names for multi-key joins.
+
+  Fields:
+    # Example — subset:  fields: [firstName, lastName]
+    # Example — alias:   fields: [applicationId as clientApplicationId]
+    # Example — all:     fields: [*]
+    description: >
+      Field selection list. Plain names ('firstName'), aliased names
+      ('applicationId as clientApplicationId'), or ['*'] for all fields.
+    type: array
+    items:
+      type: string
+    minItems: 1
+
+  FragmentRef:
+    # Example:
+    #   financials:
+    #     $ref: '#/fragments/memberFinancials'
+    #     flatten: true
+    type: object
+    description: Reference to a named fragment defined under fragments:.
+    required:
+      - $ref
+    additionalProperties: false
+    properties:
+      $ref:
+        type: string
+        description: Fragment reference path (e.g., '#/fragments/memberFinancials').
+      flatten:
+        type: boolean
+        default: false
+
+  Views:
+    # Example — list form:    views: [snap, medicaid]
+    # Example — object form:
+    #   views:
+    #     snap:
+    #       filter: "status == 'active'"
+    #       fields: [id, amount]
+    #     medicaid:       # null value = plain inclusion
+    description: >
+      View declarations for this node. List form for plain inclusion;
+      object form for per-view filter/field overrides. A null value in
+      object form means plain inclusion with no additional filter or fields.
+    oneOf:
+      - type: array
+        items:
+          type: string
+        minItems: 1
+        description: List of view names this node is included in.
+      - type: object
+        description: >
+          Object form — each key is a view name; value may be null (plain
+          inclusion) or an object with optional filter and/or fields overrides.
+        additionalProperties:
+          oneOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              properties:
+                filter:
+                  type: string
+                fields:
+                  $ref: "#/$defs/Fields"
