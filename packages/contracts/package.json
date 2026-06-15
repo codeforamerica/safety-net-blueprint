@@ -26,7 +26,8 @@
     "./loader": "./src/validation/openapi-loader.js",
     "./patterns": "./src/validation/pattern-validator.js",
     "./example-validator": "./src/validation/example-validator.js",
-    "./relationships": "./src/overlay/relationship-resolver.js"
+    "./relationships": "./src/overlay/relationship-resolver.js",
+    "./compositions": "./src/compositions/compositions-resolver.js"
   },
   "scripts": {
     "prepack": "npm run design:reference && node ../../scripts/build-package-readme.js",

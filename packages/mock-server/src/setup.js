@@ -11,6 +11,7 @@ import { discoverStateMachines } from './state-machine-loader.js';
 import { discoverSlaTypes } from './sla-loader.js';
 import { discoverMetrics } from './metrics-loader.js';
 import { discoverConfigs } from './config-loader.js';
+import { discoverCompositions } from '@codeforamerica/safety-net-blueprint-contracts/compositions';
 import { insertResource } from './database-manager.js';
 import { registerConfigManaged } from './config-registry.js';
 /**
@@ -90,6 +91,13 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     slaTypes.forEach(s => console.log(`  - ${s.domain} (${s.slaTypes.length} type(s))`));
   }
 
+  // Discover composition definitions
+  const compositions = discoverCompositions(specsDir);
+  if (verbose && compositions.length > 0) {
+    console.log(`\n✓ Discovered ${compositions.length} composition file(s):`);
+    compositions.forEach(c => console.log(`  - ${c.domain} (${Object.keys(c.doc.compositions || {}).length} composition(s))`));
+  }
+
   // Discover metric definition contracts
   const metrics = discoverMetrics(specsDir);
   if (verbose && metrics.length > 0) {
@@ -143,7 +151,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, slaTypes, metrics, configs, summary };
+  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, summary };
 }
 
 /**

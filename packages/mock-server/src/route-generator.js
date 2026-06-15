@@ -15,6 +15,7 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
+import { assembleSectionIndex, assembleSectionPanel, toExpressPath } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName } from './collection-utils.js';
@@ -532,6 +533,81 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
 
   console.log('✓ All routes registered\n');
   return allEndpoints;
+}
+
+/**
+ * Register routes for all discovered composition files.
+ *
+ * For each sectionView composition that declares an endpoint, registers:
+ *   GET {endpoint.path}           — section index (list of section names + hrefs)
+ *   GET {endpoint.path}/:section  — section panel (primary items + includes)
+ *
+ * @param {Object} app - Express app
+ * @param {Array} compositionFiles - Array from discoverCompositions()
+ * @param {Array} apiSpecs - Array of API metadata (used to resolve domain base paths)
+ * @returns {Array} Registered endpoint info
+ */
+export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs = []) {
+  const registeredEndpoints = [];
+
+  for (const { domain, doc } of compositionFiles) {
+    // Look up the server base path for this domain (e.g. "/intake" for the intake domain)
+    const apiSpec = apiSpecs.find(s => s.name === domain);
+    const basePath = apiSpec?.serverBasePath ?? '';
+
+    for (const [compositionName, composition] of Object.entries(doc.compositions || {})) {
+      const endpointPath = composition.endpoint?.path;
+      if (!endpointPath) continue;
+
+      const fullPath = basePath && !endpointPath.startsWith(basePath)
+        ? `${basePath}${endpointPath}`
+        : endpointPath;
+
+      const indexExpressPath = toExpressPath(fullPath);
+      const panelExpressPath = `${indexExpressPath}/:section`;
+
+      // Section index
+      app.get(indexExpressPath, (req, res) => {
+        try {
+          res.json(assembleSectionIndex(composition, req.params, indexExpressPath));
+        } catch (error) {
+          console.error('Composition index handler error:', error);
+          res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+        }
+      });
+
+      // Section panel
+      app.get(panelExpressPath, (req, res) => {
+        try {
+          const panel = assembleSectionPanel(composition, req.params.section, req.params);
+          if (!panel) {
+            return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
+          }
+          res.json(panel);
+        } catch (error) {
+          console.error('Composition panel handler error:', error);
+          res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+        }
+      });
+
+      // Pre-register 405 for write methods on the index endpoint
+      for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
+        app[writeMethod](indexExpressPath, (req, res) => {
+          res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
+        });
+      }
+
+      console.log(`    GET    ${indexExpressPath} - ${compositionName} section index`);
+      console.log(`    GET    ${panelExpressPath} - ${compositionName} section panel`);
+
+      registeredEndpoints.push(
+        { method: 'GET', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} section index` },
+        { method: 'GET', path: `${fullPath}/:section`, expressPath: panelExpressPath, description: `${compositionName} section panel` }
+      );
+    }
+  }
+
+  return registeredEndpoints;
 }
 
 /**

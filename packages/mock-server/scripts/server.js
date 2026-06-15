@@ -13,7 +13,7 @@ import { resolve } from 'path';
 import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
-import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
+import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes } from '../src/route-generator.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { closeAll, clearAllDatabases, insertResource, findById } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
@@ -112,6 +112,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
     let allSlaTypes = [];
     let allMetrics = [];
     let allConfigs = [];
+    let allCompositions = [];
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
@@ -119,6 +120,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
       allMetrics = allMetrics.concat(result.metrics);
       allConfigs = allConfigs.concat(result.configs || []);
+      allCompositions = allCompositions.concat(result.compositions || []);
     }
 
 
@@ -266,6 +268,12 @@ async function startMockServer(specDirs = null, seedDir = null) {
 
     // Register state machine RPC routes
     const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes);
+
+    // Register composition routes (sectionView index + panel endpoints)
+    if (allCompositions.length > 0) {
+      console.log('\nRegistering composition routes...');
+      registerCompositionRoutes(app, allCompositions, apiSpecs);
+    }
 
 
     // 404 handler for undefined routes
