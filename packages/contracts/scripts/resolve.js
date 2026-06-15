@@ -34,6 +34,7 @@ import { extractConfig, validateConfig } from '../src/overlay/config.js';
 import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '../src/overlay/relationship-resolver.js';
 import { bundleSpec } from '../src/bundle.js';
 import { discoverStateMachines, extractItemEndpoint, generateOverlay } from './generate-rpc-overlay.js';
+import { discoverCompositions, generateCompositionOverlays } from '../src/compositions/compositions-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -848,7 +849,10 @@ async function main() {
   // Discover state machines for RPC auto-generation (directory mode only)
   const stateMachines = !specIsFile ? discoverStateMachines(specPath) : [];
 
-  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && stateMachines.length === 0) {
+  // Discover composition files for endpoint generation (directory mode only)
+  const compositionFiles = !specIsFile ? discoverCompositions(specPath) : [];
+
+  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && stateMachines.length === 0 && compositionFiles.length === 0) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -896,6 +900,40 @@ async function main() {
 
       const actionCount = (stateMachine.machines || []).flatMap(m => m.actions || []).length;
       console.log(`  \u2713 Auto-generated: ${stateMachine.domain} RPC Overlay (${actionCount} actions)`);
+    }
+  }
+
+  // Auto-generate and apply composition overlays (after RPC overlays, before explicit overlays)
+  if (compositionFiles.length > 0) {
+    const inputFilesForIndex = currentResults
+      ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+      : yamlFiles;
+
+    const compositionOverlays = generateCompositionOverlays(compositionFiles, inputFilesForIndex);
+
+    for (const { overlay: rawOverlay, domain } of compositionOverlays) {
+      const apiSpecFile = `${domain}-openapi.yaml`;
+      const targetFile = inputFilesForIndex.find(f => f.relativePath === apiSpecFile);
+      let overlay = rawOverlay;
+      if (targetFile) {
+        const prefix = detectComponentPrefix(targetFile.spec);
+        overlay = rewriteOverlayRefs(overlay, './', prefix);
+      }
+
+      const inputFiles = currentResults
+        ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+        : yamlFiles;
+
+      const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+      const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+      allWarnings = allWarnings.concat(warnings);
+
+      const { results: compResults, warnings: compWarnings } = applyOverlayWithTargets(inputFiles, overlay, actionTargets, specPath);
+      allWarnings = allWarnings.concat(compWarnings);
+      currentResults = compResults;
+
+      const compositionCount = Object.keys(rawOverlay.actions.find(a => a.target === '$.paths')?.update || {}).length;
+      console.log(`  \u2713 Auto-generated: ${domain} Composition Overlay (${compositionCount} endpoint(s))`);
     }
   }
 

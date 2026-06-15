@@ -61,6 +61,12 @@ channels:
       applicationWithdrawn:
         $ref: '#/components/messages/ApplicationWithdrawnMessage'
 
+  intake.application_member.created:
+    address: intake.application_member.created
+    messages:
+      applicationMemberCreated:
+        $ref: '#/components/messages/ApplicationMemberCreatedMessage'
+
   intake.determination.approval_needed:
     address: intake.determination.approval_needed
     messages:
@@ -72,6 +78,12 @@ channels:
     messages:
       determinationRejected:
         $ref: '#/components/messages/DeterminationRejectedMessage'
+
+  intake.member_income.created:
+    address: intake.member_income.created
+    messages:
+      memberIncomeCreated:
+        $ref: '#/components/messages/MemberIncomeCreatedMessage'
 
   intake.verification.created:
     address: intake.verification.created
@@ -104,6 +116,12 @@ components:
       summary: Signals intake is complete; triggers case creation.
       payload:
         $ref: '#/components/schemas/ApplicationClosedEvent'
+
+    ApplicationMemberCreatedMessage:
+      name: intake.application_member.created
+      summary: Emitted when a household member is added to an application (auto-emitted on POST). Subject is applicationId.
+      payload:
+        $ref: '#/components/schemas/ApplicationMemberCreatedEvent'
 
     ApplicationCreatedMessage:
       name: intake.application.created
@@ -159,6 +177,12 @@ components:
       payload:
         $ref: '#/components/schemas/DeterminationRejectedEvent'
 
+    MemberIncomeCreatedMessage:
+      name: intake.member_income.created
+      summary: Emitted when an income record is added to a member (auto-emitted on POST). Subject is memberId.
+      payload:
+        $ref: '#/components/schemas/MemberIncomeCreatedEvent'
+
     VerificationCreatedMessage:
       name: intake.verification.created
       summary: Emitted when a Verification record is first created (auto-emitted on POST).
@@ -185,6 +209,16 @@ components:
 
   schemas:
     # Primary schemas (alphabetical by event type)
+
+    # subject: applicationId
+    ApplicationMemberCreatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application_member.created
 
     # subject: applicationId
     ApplicationClosedEvent:
@@ -346,6 +380,16 @@ components:
             type:
               type: string
               const: intake.determination.rejected
+
+    # subject: memberId
+    MemberIncomeCreatedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.member_income.created
 
     # subject: verificationId
     VerificationCreatedEvent:
