@@ -275,3 +275,139 @@ describe('assembleSectionPanel — unknown section', () => {
     assert.strictEqual(result, null);
   });
 });
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — derived fields
+// ---------------------------------------------------------------------------
+
+const DERIVE_COMPOSITION = {
+  compositeType: 'sectionView',
+  resource: 'applications',
+  endpoint: { path: '/applications/{applicationId}/review' },
+  derives: {
+    isComplete: {
+      item: "Object.values($self).every(v => $present(v))",
+      collection: "items.every(i => Object.values(i).every(v => $present(v)))",
+    },
+    percentComplete: {
+      item: "Object.keys($self).length === 0 ? 0 : Math.round(Object.values($self).filter(v => $present(v)).length / Object.keys($self).length * 100)",
+      collection: "items.length === 0 ? 0 : Math.round(items.filter(i => Object.values(i).every(v => $present(v))).length / items.length * 100)",
+    },
+    countComplete: {
+      item: "({ complete: Object.values($self).filter(v => $present(v)).length, total: Object.keys($self).length })",
+      collection: "({ complete: items.filter(i => Object.values(i).every(v => $present(v))).length, total: items.length })",
+    },
+  },
+  sections: {
+    demographics: {
+      resource: 'application-members',
+      bind: 'applicationId',
+      fields: ['firstName', 'lastName', 'dateOfBirth'],
+      derive: {
+        complete: { $ref: '#/derives/isComplete/item' },
+        allComplete: { $ref: '#/derives/isComplete/collection' },
+        percent: { $ref: '#/derives/percentComplete/item' },
+        collectionPercent: { $ref: '#/derives/percentComplete/collection' },
+        counts: { $ref: '#/derives/countComplete/item' },
+        collectionCounts: { $ref: '#/derives/countComplete/collection' },
+      },
+    },
+    sparse: {
+      resource: 'application-members',
+      bind: 'applicationId',
+      derive: {
+        hasPhone: "has(phoneNumber)",
+      },
+    },
+  },
+  panel: {},
+};
+
+describe('assembleSectionPanel — derived fields', () => {
+  beforeEach(() => {
+    clearAll('application-members');
+    // Alice: all three declared fields present
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith', dateOfBirth: '1990-01-01' });
+    // Bob: missing dateOfBirth
+    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob', lastName: 'Jones', dateOfBirth: null });
+  });
+
+  test('item-scope complete: true when all declared fields present', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const alice = result.items.find(i => i.firstName === 'Alice');
+    assert.strictEqual(alice.complete, true);
+  });
+
+  test('item-scope complete: false when a declared field is missing', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const bob = result.items.find(i => i.firstName === 'Bob');
+    assert.strictEqual(bob.complete, false);
+  });
+
+  test('item-scope percentComplete: 100 when all fields present', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const alice = result.items.find(i => i.firstName === 'Alice');
+    assert.strictEqual(alice.percent, 100);
+  });
+
+  test('item-scope percentComplete: partial when some fields missing', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const bob = result.items.find(i => i.firstName === 'Bob');
+    assert.ok(bob.percent > 0 && bob.percent < 100);
+  });
+
+  test('item-scope countComplete returns { complete, total }', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const alice = result.items.find(i => i.firstName === 'Alice');
+    assert.deepStrictEqual(alice.counts, { complete: 3, total: 3 });
+    const bob = result.items.find(i => i.firstName === 'Bob');
+    assert.strictEqual(bob.counts.total, 3);
+    assert.ok(bob.counts.complete < 3);
+  });
+
+  test('collection-scope allComplete: false when any item incomplete', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.strictEqual(result.allComplete, false);
+  });
+
+  test('collection-scope allComplete: true when all items complete', () => {
+    clearAll('application-members');
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith', dateOfBirth: '1990-01-01' });
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.strictEqual(result.allComplete, true);
+  });
+
+  test('collection-scope percentComplete: partial when some items incomplete', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.ok(result.collectionPercent > 0 && result.collectionPercent < 100);
+  });
+
+  test('collection-scope countComplete returns { complete, total }', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.strictEqual(result.collectionCounts.total, 2);
+    assert.strictEqual(result.collectionCounts.complete, 1);
+  });
+
+  test('collection-scope fields do not appear on individual items', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    for (const item of result.items) {
+      assert.ok(!('allComplete' in item));
+      assert.ok(!('collectionPercent' in item));
+      assert.ok(!('collectionCounts' in item));
+    }
+  });
+
+  test('item-scope derive on absent field returns false', () => {
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'sparse', { applicationId: APP_ID });
+    for (const item of result.items) {
+      assert.strictEqual(typeof item.hasPhone, 'boolean');
+    }
+  });
+
+  test('empty collection: percentComplete is 0, countComplete total is 0', () => {
+    clearAll('application-members');
+    const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.strictEqual(result.collectionPercent, 0);
+    assert.deepStrictEqual(result.collectionCounts, { complete: 0, total: 0 });
+  });
+});

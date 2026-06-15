@@ -1,0 +1,31 @@
+# Cross-domain shared derived expressions.
+# Reference from a domain compositions file with:
+#   $ref: './derives.yaml#/complete/item'
+#
+# Completeness expressions use Object.values($self) / Object.values(i) to check
+# all fields on the item. Use `fields:` on the section node to control which
+# fields are considered — only the declared fields will be present on each item.
+#
+# $present(v) is a built-in helper: true when v is non-null, non-undefined,
+# and non-empty string.
+
+# True/false completeness
+isComplete:
+  # item scope — true when all fields on this item are present and non-empty
+  item: "Object.values($self).every(v => $present(v))"
+  # collection scope — true when every item in the collection is complete
+  collection: "items.every(i => Object.values(i).every(v => $present(v)))"
+
+# Completion percentage (0–100, rounded)
+percentComplete:
+  # item scope — % of fields on this item that are filled in
+  item: "Object.keys($self).length === 0 ? 0 : Math.round(Object.values($self).filter(v => $present(v)).length / Object.keys($self).length * 100)"
+  # collection scope — % of items that are complete; 0 for empty collections
+  collection: "items.length === 0 ? 0 : Math.round(items.filter(i => Object.values(i).every(v => $present(v))).length / items.length * 100)"
+
+# x-of-y counts as { complete, total }
+countComplete:
+  # item scope — { complete: fields filled in, total: total fields }
+  item: "({ complete: Object.values($self).filter(v => $present(v)).length, total: Object.keys($self).length })"
+  # collection scope — { complete: items complete, total: total items }
+  collection: "({ complete: items.filter(i => Object.values(i).every(v => $present(v))).length, total: items.length })"

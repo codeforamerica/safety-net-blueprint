@@ -10,10 +10,9 @@
  *  3. Field selection   — project a subset of fields when `fields:` is declared
  *  4. Include nodes     — fetch each included resource with its own bind + filter
  *  5. Panel nodes       — add the shared panel includes (verifications, notes, etc.)
+ *  6. Derived fields    — evaluate `derive:` expressions; item-scope or collection-scope
  *
- * Filter expressions are a subset of CEL:
- *   field == 'literal'      — literal equality
- *   field == $section.name  — equality with the current section name
+ * Filter and derive expressions use the same CEL syntax as state machine conditions.
  */
 
 import { findAll, findById } from './database-manager.js';
@@ -57,6 +56,116 @@ function evaluateFilter(expr, record, context = {}) {
   }
 
   return record[lhs] === rhsValue;
+}
+
+// ---------------------------------------------------------------------------
+// Derive evaluation
+// ---------------------------------------------------------------------------
+
+/**
+ * Evaluate a derive expression against a context.
+ *
+ * Transforms common CEL patterns to JavaScript before evaluation:
+ *   has(field)              — field is present and non-empty
+ *   .size()                 — collection or string length
+ *   .filter(var, pred)      — filter collection
+ *   .map(var, expr)         — transform collection
+ *   .all(var, pred)         — all items satisfy predicate
+ *   .exists(var, pred)      — any item satisfies predicate
+ *
+ * @param {string} expr - CEL expression
+ * @param {Object} context - Variables available to the expression
+ * @returns {*} Evaluated result, or undefined on error
+ */
+// Helpers injected into every derive expression context.
+// $present(v) — true if value is non-null, non-undefined, non-empty string
+const DERIVE_HELPERS = {
+  $present: (v) => v !== null && v !== undefined && v !== '',
+};
+
+function evaluateDerive(expr, context = {}) {
+  if (!expr || typeof expr !== 'string') return undefined;
+  try {
+    const jsExpr = expr
+      .replace(/\bhas\((\w+)\)/g, '(typeof $1 !== "undefined" && $1 !== null && $1 !== "")')
+      .replace(/\.size\(\)/g, '.length')
+      .replace(/\.(filter|map)\((\w+),\s*([^)]+(?:\([^)]*\))*[^)]*)\)/g, (_, fn, v, pred) => `.${fn}(${v} => (${pred}))`)
+      .replace(/\.all\((\w+),\s*([^)]+(?:\([^)]*\))*[^)]*)\)/g, '.every($1 => ($2))')
+      .replace(/\.exists\((\w+),\s*([^)]+(?:\([^)]*\))*[^)]*)\)/g, '.some($1 => ($2))');
+
+    const fullCtx = { ...DERIVE_HELPERS, ...context };
+    const fn = new Function(...Object.keys(fullCtx), `return (${jsExpr});`);
+    return fn(...Object.values(fullCtx));
+  } catch (e) {
+    console.warn(`Derive expression evaluation error for "${expr}": ${e.message}`);
+    return undefined;
+  }
+}
+
+/**
+ * Resolve a derive expression — either an inline string or a $ref to the derives map.
+ *
+ * @param {string|Object} exprOrRef - String expression or { $ref: '#/derives/name' }
+ * @param {Object} derives - The derives map from the composition file
+ * @returns {string|undefined}
+ */
+function resolveDerivExpr(exprOrRef, derives = {}) {
+  if (typeof exprOrRef === 'string') return exprOrRef;
+  if (exprOrRef?.$ref) {
+    const match = exprOrRef.$ref.match(/^#\/derives\/(.+)$/);
+    if (match) {
+      // Walk nested path: '#/derives/complete/item' → derives.complete.item
+      const parts = match[1].split('/');
+      let val = derives;
+      for (const part of parts) {
+        if (val == null) return undefined;
+        val = val[part];
+      }
+      return typeof val === 'string' ? val : undefined;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Apply derive: expressions to a panel response.
+ *
+ * Scope inference:
+ *   - Expression references 'items' → collection scope: evaluated once against
+ *     the full array; result added as a top-level field on the panel response
+ *   - Otherwise → item scope: evaluated per item; result added as a new field
+ *     on each item object
+ *
+ * @param {Object} sectionDef - The section's composition definition
+ * @param {Object} composition - The full composition definition (for derives: map)
+ * @param {Array} items - The section's item array (mutated in place for item-scope)
+ * @param {Object} panel - The panel response object (receives collection-scope fields)
+ */
+function applyDerives(sectionDef, composition, items, panel) {
+  const derive = sectionDef.derive;
+  if (!derive) return;
+
+  const derives = composition.derives || {};
+
+  // Snapshot each item's source fields before any derives are applied.
+  // This ensures $self and collection items always reflect source data,
+  // not accumulated derived fields from earlier entries in the derive map.
+  const snapshots = Array.isArray(items) ? items.map(item => ({ ...item })) : [];
+
+  for (const [fieldName, exprOrRef] of Object.entries(derive)) {
+    const expr = resolveDerivExpr(exprOrRef, derives);
+    if (!expr) continue;
+
+    const isCollectionScope = /\bitems\b/.test(expr);
+
+    if (isCollectionScope) {
+      panel[fieldName] = evaluateDerive(expr, { items: snapshots });
+    } else if (Array.isArray(items)) {
+      items.forEach((item, idx) => {
+        item[fieldName] = evaluateDerive(expr, { ...snapshots[idx], $self: snapshots[idx] });
+      });
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -195,6 +304,8 @@ export function assembleSectionPanel(composition, sectionName, params) {
 
   // items may be an array (normal) or empty object (missing: empty)
   if (Array.isArray(items)) {
+    // Apply derived fields: item-scope mutates items; collection-scope adds to response
+    applyDerives(sectionDef, composition, items, response);
     response.items = items;
   } else {
     response.data = items;

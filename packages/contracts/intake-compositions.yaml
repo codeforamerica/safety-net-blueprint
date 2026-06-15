@@ -7,6 +7,16 @@ $schema: "./schemas/compositions-schema.yaml"
 version: "1.0"
 domain: intake
 
+# Reusable derive expressions for this domain.
+# Cross-domain expressions live in ../derives.yaml.
+derives:
+  # Shared expressions from packages/contracts/derives.yaml are resolved by the
+  # resolve pipeline. Inline them here for mock server use until that is built.
+  isComplete:
+    item: "Object.values($self).every(v => $present(v))"
+    collection: "items.every(i => Object.values(i).every(v => $present(v)))"
+  sectionHasData: "items.size() > 0"
+
 compositions:
 
   # reviewContext — sectionView composite for the caseworker application review workflow.
@@ -40,6 +50,9 @@ compositions:
       demographics:
         resource: application-members
         bind: applicationId
+        derive:
+          complete: { $ref: '#/derives/isComplete/item' }   # item-scope: is this member's data complete?
+          hasData: { $ref: '#/derives/sectionHasData' }     # collection-scope: are there any members?
 
       identity:
         resource: application-members
