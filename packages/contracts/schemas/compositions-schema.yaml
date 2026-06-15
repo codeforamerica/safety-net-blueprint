@@ -235,6 +235,9 @@ $defs:
         $ref: "#/$defs/Fields"
       views:
         $ref: "#/$defs/Views"
+      missing:
+        type: string
+        enum: [empty]
       filter:
         type: string
       include:

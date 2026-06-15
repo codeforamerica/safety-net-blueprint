@@ -1,0 +1,33 @@
+# Companion schemas for intake-compositions.yaml.
+# Defines client-writable state resource schemas referenced by $ref in the composition config.
+# These are the writable fields only — read-only framework fields (id, createdAt, etc.)
+# are added by the framework at generate time.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Intake Composition Schemas
+
+$defs:
+
+  # SectionReviewProgress — writable state for a single review section panel.
+  # One instance is created per section (member-scoped sections: one per member × section).
+  # Accessed at: /applications/{applicationId}/review-progress/{section}
+  #              /applications/{applicationId}/review-progress/{section}/{memberId}  (member-scoped)
+  #
+  # Example:
+  #   PATCH /applications/{applicationId}/review-progress/identity
+  #   { "status": "in_progress" }
+
+  ReviewProgress:
+    type: object
+    additionalProperties: false
+    properties:
+      status:
+        type: string
+        description: >
+          Caseworker review status for this section. Initialized to not_started
+          when the application transitions to under_review.
+        enum:
+          - not_started
+          - in_progress
+          - complete
+          - flagged

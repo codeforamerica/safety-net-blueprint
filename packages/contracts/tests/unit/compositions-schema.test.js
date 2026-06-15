@@ -36,6 +36,20 @@ function errorPaths(errors) {
 }
 
 // ---------------------------------------------------------------------------
+// Real file round-trips
+// ---------------------------------------------------------------------------
+
+test('compositions-schema validates real files', async (t) => {
+
+  await t.test('intake-compositions.yaml is valid', () => {
+    const doc = yaml.load(readFileSync(join(contractsRoot, 'intake-compositions.yaml'), 'utf8'));
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, `Expected valid but got errors:\n${errorPaths(errors).join('\n')}`);
+  });
+
+});
+
+// ---------------------------------------------------------------------------
 // Structural requirements
 // ---------------------------------------------------------------------------
 
@@ -558,8 +572,30 @@ test('compositions-schema sectionView', async (t) => {
               bind: 'applicationId',
               fields: ['name', 'dateOfBirth'],
               state: {
-                schema: { $ref: './intake-compositions-schemas.yaml#/$defs/SectionProgress' },
+                schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' },
               },
+            },
+          },
+          endpoint: { path: '/applications/{applicationId}/review' },
+        },
+      },
+    };
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('section node with missing: empty (singleton resource)', () => {
+    const doc = {
+      version: '1.0',
+      compositions: {
+        reviewContext: {
+          compositeType: 'sectionView',
+          resource: 'applications',
+          sections: {
+            household: {
+              resource: 'household-info',
+              bind: 'applicationId',
+              missing: 'empty',
             },
           },
           endpoint: { path: '/applications/{applicationId}/review' },
