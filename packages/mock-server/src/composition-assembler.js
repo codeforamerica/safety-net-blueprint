@@ -15,92 +15,18 @@
  * Filter and derive expressions use the same CEL syntax as state machine conditions.
  */
 
+import { evaluateCEL } from './cel-evaluator.js';
 import { findAll, findById } from './database-manager.js';
 
 // ---------------------------------------------------------------------------
-// Filter evaluation
+// Composition CEL helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Evaluate a simple filter expression against a record.
- *
- * Supported forms:
- *   field == 'value'       — equality against a string literal
- *   field == $section.name — equality against the current section name
- *
- * @param {string} expr - Filter expression string
- * @param {Object} record - Record to evaluate against
- * @param {Object} context - Evaluation context ({ sectionName })
- * @returns {boolean}
- */
-function evaluateFilter(expr, record, context = {}) {
-  if (!expr) return true;
-
-  const trimmed = expr.trim();
-
-  // Parse: lhs == rhs
-  const eqMatch = trimmed.match(/^(\w+)\s*==\s*(.+)$/);
-  if (!eqMatch) return true; // Unknown expression form — pass through
-
-  const lhs = eqMatch[1];
-  const rhsRaw = eqMatch[2].trim();
-
-  // Resolve RHS: string literal ('value') or variable ($section.name)
-  let rhsValue;
-  if (rhsRaw.startsWith("'") && rhsRaw.endsWith("'")) {
-    rhsValue = rhsRaw.slice(1, -1);
-  } else if (rhsRaw === '$section.name') {
-    rhsValue = context.sectionName ?? null;
-  } else {
-    rhsValue = rhsRaw; // bare word — treat as literal
-  }
-
-  return record[lhs] === rhsValue;
-}
-
-// ---------------------------------------------------------------------------
-// Derive evaluation
-// ---------------------------------------------------------------------------
-
-/**
- * Evaluate a derive expression against a context.
- *
- * Transforms common CEL patterns to JavaScript before evaluation:
- *   has(field)              — field is present and non-empty
- *   .size()                 — collection or string length
- *   .filter(var, pred)      — filter collection
- *   .map(var, expr)         — transform collection
- *   .all(var, pred)         — all items satisfy predicate
- *   .exists(var, pred)      — any item satisfies predicate
- *
- * @param {string} expr - CEL expression
- * @param {Object} context - Variables available to the expression
- * @returns {*} Evaluated result, or undefined on error
- */
-// Helpers injected into every derive expression context.
-// $present(v) — true if value is non-null, non-undefined, non-empty string
-const DERIVE_HELPERS = {
+// $present(v) — true if value is non-null, non-undefined, non-empty string.
+// Injected into every filter and derive expression context for compositions.
+const COMPOSITION_HELPERS = {
   $present: (v) => v !== null && v !== undefined && v !== '',
 };
-
-function evaluateDerive(expr, context = {}) {
-  if (!expr || typeof expr !== 'string') return undefined;
-  try {
-    const jsExpr = expr
-      .replace(/\bhas\((\w+)\)/g, '(typeof $1 !== "undefined" && $1 !== null && $1 !== "")')
-      .replace(/\.size\(\)/g, '.length')
-      .replace(/\.(filter|map)\((\w+),\s*([^)]+(?:\([^)]*\))*[^)]*)\)/g, (_, fn, v, pred) => `.${fn}(${v} => (${pred}))`)
-      .replace(/\.all\((\w+),\s*([^)]+(?:\([^)]*\))*[^)]*)\)/g, '.every($1 => ($2))')
-      .replace(/\.exists\((\w+),\s*([^)]+(?:\([^)]*\))*[^)]*)\)/g, '.some($1 => ($2))');
-
-    const fullCtx = { ...DERIVE_HELPERS, ...context };
-    const fn = new Function(...Object.keys(fullCtx), `return (${jsExpr});`);
-    return fn(...Object.values(fullCtx));
-  } catch (e) {
-    console.warn(`Derive expression evaluation error for "${expr}": ${e.message}`);
-    return undefined;
-  }
-}
 
 /**
  * Resolve a derive expression — either an inline string or a $ref to the derives map.
@@ -159,10 +85,10 @@ function applyDerives(sectionDef, composition, items, panel) {
     const isCollectionScope = /\bitems\b/.test(expr);
 
     if (isCollectionScope) {
-      panel[fieldName] = evaluateDerive(expr, { items: snapshots });
+      panel[fieldName] = evaluateCEL(expr, { ...COMPOSITION_HELPERS, items: snapshots });
     } else if (Array.isArray(items)) {
       items.forEach((item, idx) => {
-        item[fieldName] = evaluateDerive(expr, { ...snapshots[idx], $self: snapshots[idx] });
+        item[fieldName] = evaluateCEL(expr, { ...COMPOSITION_HELPERS, ...snapshots[idx], $self: snapshots[idx] });
       });
     }
   }
@@ -187,7 +113,7 @@ function fetchNodeItems(node, bindValues, context) {
   const { items } = findAll(resource, filterObj, { limit: 1000 });
 
   const filtered = filter
-    ? items.filter(item => evaluateFilter(filter, item, context))
+    ? items.filter(item => Boolean(evaluateCEL(filter, { ...COMPOSITION_HELPERS, ...item, $section: { name: context.sectionName } })))
     : items;
 
   const projected = fields ? filtered.map(item => projectFields(item, fields)) : filtered;
