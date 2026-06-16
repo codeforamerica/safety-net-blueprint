@@ -58,6 +58,7 @@ compositions:
       demographics:
         resource: application-members
         bind: applicationId
+        links: true
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
         index:

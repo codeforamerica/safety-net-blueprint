@@ -18,6 +18,7 @@ import {
   validateBindFields,
   extractPathParams,
   buildParameterIndex,
+  buildPathToSchemaMap,
   generateCompositionOverlay,
   generateCompositionOverlays,
   generateSectionViewPanelEndpoint,
@@ -1049,5 +1050,189 @@ describe('real intake composition', () => {
       }
     }
     assert.equal(errors.length, 0, 'no bind validation errors expected for real intake compositions');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildPathToSchemaMap
+// ---------------------------------------------------------------------------
+
+describe('buildPathToSchemaMap', () => {
+  const specWithPaths = {
+    paths: {
+      '/applications/{applicationId}': {
+        get: {
+          responses: {
+            '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } }
+          }
+        }
+      },
+      '/applications': {
+        get: {
+          responses: {
+            '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationListResponse' } } } }
+          }
+        }
+      }
+    },
+    components: {
+      schemas: {
+        Application: {
+          allOf: [
+            { $ref: '#/components/schemas/ApplicationWritable' },
+            { type: 'object', properties: { id: { type: 'string' } } }
+          ]
+        },
+        ApplicationListResponse: {
+          type: 'object',
+          properties: { items: { type: 'array' } }
+        }
+      }
+    }
+  };
+
+  test('maps path to schema name', () => {
+    const map = buildPathToSchemaMap([{ relativePath: 'intake-openapi.yaml', spec: specWithPaths }]);
+    assert.ok(map.has('/applications/{applicationId}'));
+    assert.equal(map.get('/applications/{applicationId}').schemaName, 'Application');
+  });
+
+  test('detects hasAllOf correctly', () => {
+    const map = buildPathToSchemaMap([{ relativePath: 'intake-openapi.yaml', spec: specWithPaths }]);
+    assert.equal(map.get('/applications/{applicationId}').hasAllOf, true);
+    assert.equal(map.get('/applications').hasAllOf, false);
+  });
+
+  test('skips paths with no GET response schema $ref', () => {
+    const spec = {
+      paths: {
+        '/things/{id}': { get: { responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } } } }
+      },
+      components: { schemas: {} }
+    };
+    const map = buildPathToSchemaMap([{ relativePath: 'test.yaml', spec }]);
+    assert.equal(map.size, 0);
+  });
+
+  test('returns empty map for specs with no paths', () => {
+    const map = buildPathToSchemaMap([{ relativePath: 'empty.yaml', spec: {} }]);
+    assert.equal(map.size, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parentLink overlay injection
+// ---------------------------------------------------------------------------
+
+describe('parentLink overlay injection', () => {
+  const specWithApplication = {
+    paths: {
+      '/applications/{applicationId}': {
+        get: {
+          responses: {
+            '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } }
+          }
+        }
+      }
+    },
+    components: {
+      schemas: {
+        Application: {
+          allOf: [
+            { $ref: '#/components/schemas/ApplicationWritable' },
+            { type: 'object', properties: { id: { type: 'string' } } }
+          ]
+        }
+      }
+    }
+  };
+
+  const parentSchemaMap = buildPathToSchemaMap([{ relativePath: 'intake-openapi.yaml', spec: specWithApplication }]);
+
+  const compositionFile = {
+    domain: 'intake',
+    filePath: '/tmp/intake-compositions.yaml',
+    doc: {
+      compositions: {
+        reviewContext: {
+          compositeType: 'sectionView',
+          resource: 'applications',
+          endpoint: {
+            path: '/applications/{applicationId}/review',
+            parentLink: true,
+          },
+          sections: { demographics: { resource: 'application-members', bind: 'applicationId' } },
+        }
+      }
+    }
+  };
+
+  test('emits an append action targeting Application.allOf', () => {
+    const overlay = generateCompositionOverlay(compositionFile, new Map(), parentSchemaMap);
+    assert.ok(overlay, 'overlay should be generated');
+    const appendAction = overlay.actions.find(a =>
+      a.target === '$.components.schemas.Application.allOf' && a.append
+    );
+    assert.ok(appendAction, 'should have append action for Application.allOf');
+    assert.equal(appendAction.file, 'intake-openapi.yaml');
+    assert.ok(appendAction.append.properties._links, '_links property should be present');
+    assert.ok(
+      appendAction.append.properties._links.properties.reviewContext,
+      '_links.reviewContext should be present'
+    );
+  });
+
+  test('emits update action on properties for non-allOf parent schemas', () => {
+    const plainSpec = {
+      paths: {
+        '/things/{thingId}': {
+          get: {
+            responses: {
+              '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Thing' } } } }
+            }
+          }
+        }
+      },
+      components: {
+        schemas: {
+          Thing: { type: 'object', properties: { id: { type: 'string' } } }
+        }
+      }
+    };
+    const plainParentSchemaMap = buildPathToSchemaMap([{ relativePath: 'test-openapi.yaml', spec: plainSpec }]);
+    const plainCompositionFile = {
+      domain: 'test',
+      filePath: '/tmp/test-compositions.yaml',
+      doc: {
+        compositions: {
+          thingView: {
+            resource: 'things',
+            endpoint: {
+              path: '/things/{thingId}/view',
+              parentLink: true,
+            }
+          }
+        }
+      }
+    };
+    const overlay = generateCompositionOverlay(plainCompositionFile, new Map(), plainParentSchemaMap);
+    const updateAction = overlay.actions.find(a =>
+      a.target === '$.components.schemas.Thing.properties' && a.update
+    );
+    assert.ok(updateAction, 'should have update action for Thing.properties');
+    assert.ok(updateAction.update._links, '_links should be in update');
+  });
+
+  test('emits no extra actions when parentSchemaMap is not provided', () => {
+    const overlay = generateCompositionOverlay(compositionFile, new Map());
+    const appendActions = overlay.actions.filter(a => a.append);
+    assert.equal(appendActions.length, 0, 'no append actions without parentSchemaMap');
+  });
+
+  test('emits no extra actions when parent path not found in map', () => {
+    const emptyMap = new Map();
+    const overlay = generateCompositionOverlay(compositionFile, new Map(), emptyMap);
+    const appendActions = overlay.actions.filter(a => a.append);
+    assert.equal(appendActions.length, 0, 'no append actions when parent not in map');
   });
 });

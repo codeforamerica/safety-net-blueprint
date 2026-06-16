@@ -1334,6 +1334,49 @@ async function testSectionView() {
     const ids = data.items.map(i => i.id);
     assert.ok(ids.includes(income.id), 'income present without view filter');
   });
+
+  // ---- links: true ----
+
+  await test('GET /review/demographics — items include _links.self pointing to member endpoint', async () => {
+    const res = await fetch(`${BASE_REVIEW}/demographics`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items) && data.items.length > 0, 'at least one demographics item');
+    for (const item of data.items) {
+      assert.ok(item._links?.self, `item ${item.id} missing _links.self`);
+      // URL should reference the application ID and the member's own ID
+      assert.ok(item._links.self.includes(appId), '_links.self contains applicationId');
+      assert.ok(item._links.self.includes(item.id), '_links.self contains member id');
+      assert.ok(item._links.self.includes('/members/'), '_links.self references members endpoint');
+    }
+  });
+
+  await test('GET /review/identity — items do NOT include _links.self (links not declared)', async () => {
+    const res = await fetch(`${BASE_REVIEW}/identity`);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items), 'items present');
+    for (const item of data.items) {
+      assert.ok(!item._links, `identity item ${item.id} should not have _links (links: true not set on identity section)`);
+    }
+  });
+
+  // ---- parentLink: true ----
+
+  await test('GET /applications/:id — response includes _links.reviewContext from parentLink', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/${appId}`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(data._links, 'application GET by ID response has _links');
+    assert.ok(data._links.reviewContext, '_links.reviewContext present');
+    assert.ok(
+      data._links.reviewContext.href.includes(appId),
+      '_links.reviewContext.href contains applicationId'
+    );
+    assert.ok(
+      data._links.reviewContext.href.includes('/review'),
+      '_links.reviewContext.href references the review endpoint'
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------

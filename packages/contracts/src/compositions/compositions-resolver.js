@@ -576,6 +576,44 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
 }
 
 /**
+ * Build an index mapping OpenAPI path → GET response schema info.
+ * Used to locate the parent resource schema when generating parentLink overlays.
+ *
+ * @param {Array<{ relativePath: string, spec: Object }>} yamlFiles
+ * @returns {Map<string, { schemaName: string, hasAllOf: boolean }>}
+ */
+export function buildPathToSchemaMap(yamlFiles) {
+  const map = new Map();
+
+  for (const { spec } of yamlFiles) {
+    if (!spec?.paths) continue;
+
+    for (const [path, pathItem] of Object.entries(spec.paths)) {
+      const getOp = pathItem?.get;
+      if (!getOp) continue;
+
+      const schemaRef =
+        getOp.responses?.['200']?.content?.['application/json']?.schema?.$ref;
+      if (!schemaRef) continue;
+
+      const match = schemaRef.match(/^#\/components\/schemas\/(.+)$/);
+      if (!match) continue;
+
+      const schemaName = match[1];
+      const schema = spec.components?.schemas?.[schemaName];
+      if (!schema) continue;
+
+      map.set(path, {
+        schemaName,
+        hasAllOf: Array.isArray(schema.allOf),
+      });
+    }
+  }
+
+  return map;
+}
+
+/**
  * Generate an OpenAPI overlay for a single composition file.
  *
  * Emits one path entry per composition that declares an `endpoint:`.
@@ -595,12 +633,13 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
  * @param {Map<string, string>} paramIndex - from buildParameterIndex
  * @returns {Object|null} Overlay document, or null if no endpoints were declared
  */
-export function generateCompositionOverlay(compositionFile, paramIndex) {
+export function generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap = null) {
   const { domain, doc, filePath } = compositionFile;
   const apiSpecFile = `${domain}-openapi.yaml`;
 
   const pathsUpdate = {};
   const schemasUpdate = {};
+  const extraActions = [];
 
   for (const [compositionName, composition] of Object.entries(doc.compositions || {})) {
     if (!composition.endpoint?.path) continue;
@@ -695,6 +734,50 @@ export function generateCompositionOverlay(compositionFile, paramIndex) {
       Object.assign(pathsUpdate, pathEntries);
       Object.assign(schemasUpdate, schemaEntries);
     }
+
+    // parentLink: true — inject _links.{compositionName} into the parent resource's
+    // GET response schema at resolve time (not in the base spec).
+    if (composition.endpoint?.parentLink && parentSchemaMap) {
+      const parentPath = endpointPath.replace(/\/[^/]+$/, '');
+      const parentInfo = parentSchemaMap.get(parentPath);
+      if (parentInfo) {
+        const linksBlock = {
+          type: 'object',
+          properties: {
+            _links: {
+              type: 'object',
+              readOnly: true,
+              description: 'Generated composition links.',
+              properties: {
+                [compositionName]: {
+                  type: 'object',
+                  description: `Link to the ${compositionName} composition.`,
+                  properties: {
+                    href: { type: 'string', format: 'uri-reference', readOnly: true },
+                  },
+                },
+              },
+            },
+          },
+        };
+
+        if (parentInfo.hasAllOf) {
+          extraActions.push({
+            target: `$.components.schemas.${parentInfo.schemaName}.allOf`,
+            file: apiSpecFile,
+            description: `Inject _links.${compositionName} into ${parentInfo.schemaName}`,
+            append: linksBlock,
+          });
+        } else {
+          extraActions.push({
+            target: `$.components.schemas.${parentInfo.schemaName}.properties`,
+            file: apiSpecFile,
+            description: `Inject _links.${compositionName} into ${parentInfo.schemaName}`,
+            update: { _links: linksBlock.properties._links },
+          });
+        }
+      }
+    }
   }
 
   if (Object.keys(pathsUpdate).length === 0) return null;
@@ -711,7 +794,8 @@ export function generateCompositionOverlay(compositionFile, paramIndex) {
       file: apiSpecFile,
       description: `Add generated composition response schemas for ${domain}`,
       update: schemasUpdate
-    }
+    },
+    ...extraActions,
   ];
 
   return {
@@ -734,10 +818,11 @@ export function generateCompositionOverlay(compositionFile, paramIndex) {
  */
 export function generateCompositionOverlays(compositionFiles, yamlFiles) {
   const paramIndex = buildParameterIndex(yamlFiles);
+  const parentSchemaMap = buildPathToSchemaMap(yamlFiles);
   const result = [];
 
   for (const compositionFile of compositionFiles) {
-    const overlay = generateCompositionOverlay(compositionFile, paramIndex);
+    const overlay = generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap);
     if (overlay) {
       result.push({ overlay, domain: compositionFile.domain });
     }

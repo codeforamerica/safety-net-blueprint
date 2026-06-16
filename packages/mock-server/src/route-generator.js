@@ -15,7 +15,7 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
-import { assembleSectionIndex, assembleSectionPanel, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, extractPrimaryParam } from './composition-assembler.js';
+import { assembleSectionIndex, assembleSectionPanel, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, extractPrimaryParam, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName } from './collection-utils.js';
@@ -539,6 +539,30 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
 }
 
 /**
+ * Build a map from resource collection name to the OpenAPI item path pattern.
+ * Used to generate _links.self URLs for items when a section declares links: true.
+ *
+ * e.g. "application-members" → "/applications/{applicationId}/members/{memberId}"
+ *
+ * @param {Array} apiSpecs - Array of API metadata objects from loadAllSpecs()
+ * @returns {Map<string, string>}
+ */
+function buildResourceItemPathMap(apiSpecs) {
+  const map = new Map();
+  for (const spec of apiSpecs) {
+    for (const endpoint of (spec.endpoints || [])) {
+      if (endpoint.method.toLowerCase() !== 'get') continue;
+      if (!endpoint.path.trimEnd().endsWith('}')) continue;
+      const collectionName = deriveCollectionName(endpoint.path, spec.serverBasePath || '');
+      if (collectionName && !map.has(collectionName)) {
+        map.set(collectionName, endpoint.path);
+      }
+    }
+  }
+  return map;
+}
+
+/**
  * Register routes for all discovered composition files.
  *
  * For each sectionView composition that declares an endpoint, registers:
@@ -552,6 +576,7 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
  */
 export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs = []) {
   const registeredEndpoints = [];
+  const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
 
   for (const { domain, doc, filePath } of compositionFiles) {
     // Look up the server base path for this domain (e.g. "/intake" for the intake domain)
@@ -570,6 +595,15 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       const panelExpressPath = `${indexExpressPath}/:section`;
       const primaryParam = extractPrimaryParam(endpointPath);
 
+      // parentLink: true — register the parent resource path so get-handler
+      // can inject _links.{compositionName} into parent GET by ID responses.
+      // Uses fullPath (with server base) because endpoint.path in the loaded
+      // apiSpecs includes the server base prefix.
+      if (composition.endpoint?.parentLink) {
+        const parentFullPath = fullPath.replace(/\/[^/]+$/, '');
+        registerParentLink(parentFullPath, compositionName, fullPath);
+      }
+
       // Merge doc-level views and derives so the assembler can resolve $ref expressions
       const compositionWithDoc = {
         ...composition,
@@ -580,6 +614,8 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       // Load companion schema defaults for state embedding (empty if no state declared)
       const stateDefaults = loadStateDefaults(composition.state, filePath);
 
+      const assemblerOpts = { resourceItemPathMap, serverBasePath: basePath };
+
       // Section index
       app.get(indexExpressPath, (req, res) => {
         try {
@@ -587,7 +623,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
           if (parentId && !findById(composition.resource, parentId)) {
             return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
           }
-          res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, req.query.view || null));
+          res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, req.query.view || null, assemblerOpts));
         } catch (error) {
           console.error('Composition index handler error:', error);
           res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
@@ -601,7 +637,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
           if (parentId && !findById(composition.resource, parentId)) {
             return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
           }
-          const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, req.query.view || null);
+          const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, req.query.view || null, assemblerOpts);
           if (!panel) {
             return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
           }

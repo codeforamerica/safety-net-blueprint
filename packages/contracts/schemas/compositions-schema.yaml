@@ -302,6 +302,12 @@ $defs:
         $ref: "#/$defs/DeriveMap"
       include:
         $ref: "#/$defs/IncludeMap"
+      links:
+        type: boolean
+        description: >
+          Generate _links.self on each item using the URL from the resource's
+          spec-declared endpoint. Mutually exclusive with flatten. Default false.
+        default: false
       state:
         $ref: "#/$defs/StateResource"
 

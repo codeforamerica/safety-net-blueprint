@@ -19,6 +19,36 @@ import { evaluateCEL } from './cel-evaluator.js';
 import { findAll, findById, create, update } from './database-manager.js';
 
 // ---------------------------------------------------------------------------
+// Parent link registry
+// ---------------------------------------------------------------------------
+
+/**
+ * Registry populated at startup by registerCompositionRoutes when a composition
+ * declares parentLink: true.  Maps the parent resource's OpenAPI item path
+ * (e.g. /applications/{applicationId}) to a map of compositionName → { href }.
+ *
+ * The get-handler consults this at request time to inject _links into the parent
+ * resource response.  Because JavaScript closures capture references, the handler
+ * sees the populated registry even though it was created before the composition
+ * routes were registered.
+ */
+export const parentLinkRegistry = new Map();
+
+/**
+ * Register a composition as a link on its parent resource's GET by ID response.
+ *
+ * @param {string} parentPath - OpenAPI path of parent GET by ID (e.g. /applications/{applicationId})
+ * @param {string} compositionName - Composition key (e.g. "reviewContext")
+ * @param {string} compositionEndpointPath - OpenAPI path of the composition endpoint
+ */
+export function registerParentLink(parentPath, compositionName, compositionEndpointPath) {
+  if (!parentLinkRegistry.has(parentPath)) {
+    parentLinkRegistry.set(parentPath, {});
+  }
+  parentLinkRegistry.get(parentPath)[compositionName] = { href: compositionEndpointPath };
+}
+
+// ---------------------------------------------------------------------------
 // Composition CEL helpers
 // ---------------------------------------------------------------------------
 
@@ -70,6 +100,28 @@ function resolveViewDef(viewDef, derives = {}) {
     result.filter = resolveDerivExpr(result.filter, derives);
   }
   return result;
+}
+
+/**
+ * Build a _links.self URL for a resource item.
+ *
+ * Substitutes known path params from `params` into the item path pattern, then
+ * replaces the last remaining {param} placeholder with the item's own ID.
+ *
+ * @param {string} resourceItemPath - OpenAPI path pattern for the resource item endpoint
+ * @param {string} serverBasePath - Server base path (e.g. "/intake")
+ * @param {Object} params - Express req.params (path parameter values)
+ * @param {string} itemId - The item's own ID
+ * @returns {string} Fully resolved URL
+ */
+function buildSelfLink(resourceItemPath, serverBasePath, params, itemId) {
+  let url = `${serverBasePath}${resourceItemPath}`;
+  for (const [param, value] of Object.entries(params)) {
+    url = url.replace(`{${param}}`, String(value));
+  }
+  // Last remaining placeholder is the item's own ID
+  url = url.replace(/\{[^}]+\}$/, String(itemId ?? ''));
+  return url;
 }
 
 /**
@@ -197,7 +249,7 @@ function buildBindValues(params) {
  * @param {string|null} viewName - Named view to apply (from ?view= query param)
  * @returns {Object}
  */
-export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, viewName = null) {
+export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, viewName = null, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
   const sectionDefs = composition.sections || {};
   const bindValues = buildBindValues(params);
 
@@ -273,9 +325,25 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
 
     // Project fields for display after derives have been evaluated.
     // Index fields take precedence over view fields on the index endpoint.
-    entry.items = indexConfig?.fields
+    // Track original IDs before projection so _links.self can use them even
+    // when `id` is not included in index.fields.
+    const itemIds = items.map(item => item.id);
+    let finalItems = indexConfig?.fields
       ? items.map(item => projectFields(item, indexConfig.fields))
       : items;
+
+    // Add _links.self after projection (so links are not stripped by field selection).
+    if (sectionDef.links && resourceItemPathMap) {
+      const itemPath = resourceItemPathMap.get(sectionDef.resource);
+      if (itemPath) {
+        finalItems = finalItems.map((item, idx) => ({
+          ...item,
+          _links: { self: buildSelfLink(itemPath, serverBasePath, params, itemIds[idx]) },
+        }));
+      }
+    }
+
+    entry.items = finalItems;
 
     sections.push(entry);
   }
@@ -297,7 +365,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
  * @param {string|null} viewName - Optional named view to apply (overrides base filter/fields)
  * @returns {Object|null} Panel response, or null if section not found
  */
-export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, viewName = null) {
+export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, viewName = null, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
   const sections = composition.sections || {};
   const sectionDef = sections[sectionName];
   if (!sectionDef) return null;
@@ -364,9 +432,25 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
 
     // Apply view field projection as final step — after derives and state embedding
     // so post-fetch fields (e.g. reviewProgress from state embedding) respect the view.
-    response.items = viewDef?.fields
+    // Track original IDs before projection so _links.self can use them even when id
+    // is not included in the view's field list.
+    const itemIds = items.map(item => item.id);
+    let finalItems = viewDef?.fields
       ? items.map(item => projectFields(item, viewDef.fields))
       : items;
+
+    // Add _links.self after projection (so links are never stripped by field selection).
+    if (sectionDef.links && resourceItemPathMap) {
+      const itemPath = resourceItemPathMap.get(sectionDef.resource);
+      if (itemPath) {
+        finalItems = finalItems.map((item, idx) => ({
+          ...item,
+          _links: { self: buildSelfLink(itemPath, serverBasePath, params, itemIds[idx]) },
+        }));
+      }
+    }
+
+    response.items = finalItems;
   } else {
     response.data = items;
   }
