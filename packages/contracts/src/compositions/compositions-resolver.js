@@ -327,6 +327,68 @@ function loadCompanionSchemaEntry(stateConfig, compositionFilePath) {
 }
 
 /**
+ * Generate OpenAPI path and schema entries for the panel endpoint of a sectionView composition.
+ *
+ * For sectionView compositions, emits:
+ *   GET {endpoint.path}/{section}  — panel for a named section
+ *
+ * @param {string} compositionName
+ * @param {string} endpointPath - Index endpoint path (e.g. /applications/{applicationId}/review)
+ * @param {Map<string, string>} paramIndex - From buildParameterIndex
+ * @returns {{ path: string, schemaName: string, pathEntry: Object, schemaEntry: Object }}
+ */
+export function generateSectionViewPanelEndpoint(compositionName, endpointPath, paramIndex) {
+  const panelPath = `${endpointPath}/{section}`;
+  const paramNames = extractPathParams(endpointPath);
+  const sectionSchemaName = `${toPascalCase(compositionName)}SectionResponse`;
+
+  const parentParams = paramNames.map(name => {
+    const ref = paramIndex.get(name);
+    return ref
+      ? { $ref: ref }
+      : { name, in: 'path', required: true, schema: { type: 'string' } };
+  });
+
+  const sectionParam = {
+    name: 'section',
+    in: 'path',
+    required: true,
+    schema: { type: 'string' },
+    description: 'Section name within the sectionView composition.',
+  };
+
+  const pathEntry = {
+    parameters: [...parentParams, sectionParam],
+    get: {
+      summary: `Get ${compositionName} section panel`,
+      operationId: `get${toPascalCase(compositionName)}Section`,
+      'x-composition': compositionName,
+      'x-composition-type': 'sectionView',
+      responses: {
+        '200': {
+          description: `${compositionName} section panel retrieved successfully.`,
+          content: {
+            'application/json': { schema: { $ref: `#/components/schemas/${sectionSchemaName}` } }
+          }
+        },
+        '404': { $ref: './components/responses.yaml#/NotFound' },
+        '500': { $ref: './components/responses.yaml#/InternalError' },
+      }
+    }
+  };
+
+  const schemaEntry = {
+    type: 'object',
+    description: `Generated section panel response for ${compositionName}.`,
+    'x-composition': compositionName,
+    'x-composition-type': 'sectionView',
+  };
+
+  return { path: panelPath, schemaName: sectionSchemaName, pathEntry, schemaEntry };
+}
+
+
+/**
  * Generate OpenAPI path entries and schemas for a composition state resource.
  *
  * For sectionView compositions, generates:
@@ -590,6 +652,24 @@ export function generateCompositionOverlay(compositionFile, paramIndex) {
       schemaEntry['x-composition-type'] = composition.compositeType;
     }
     schemasUpdate[schemaName] = schemaEntry;
+
+    // sectionView compositions: also generate the panel endpoint and section enum
+    if (composition.compositeType === 'sectionView') {
+      const panel = generateSectionViewPanelEndpoint(compositionName, endpointPath, paramIndex);
+      pathsUpdate[panel.path] = panel.pathEntry;
+      schemasUpdate[panel.schemaName] = panel.schemaEntry;
+
+      const sectionKeys = Object.keys(composition.sections || {});
+      if (sectionKeys.length > 0) {
+        const enumName = `${toPascalCase(compositionName)}Sections`;
+        schemasUpdate[enumName] = {
+          type: 'string',
+          description: `Valid section names for the ${compositionName} sectionView.`,
+          enum: sectionKeys,
+          'x-generated': 'section-enum',
+        };
+      }
+    }
 
     // If the composition declares state:, also generate state resource endpoints
     if (composition.state) {

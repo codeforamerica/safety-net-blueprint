@@ -19,7 +19,8 @@ import {
   extractPathParams,
   buildParameterIndex,
   generateCompositionOverlay,
-  generateCompositionOverlays
+  generateCompositionOverlays,
+  generateSectionViewPanelEndpoint,
 } from '../../src/compositions/compositions-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -827,6 +828,189 @@ describe('generateCompositionOverlays', () => {
     } finally {
       removeTempDir(dir);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateSectionViewPanelEndpoint
+// ---------------------------------------------------------------------------
+
+describe('generateSectionViewPanelEndpoint', () => {
+  function makeParamIndex() {
+    return new Map([
+      ['applicationId', '#/components/parameters/ApplicationIdParam']
+    ]);
+  }
+
+  test('returns panel path with {section} appended', () => {
+    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
+    assert.equal(result.path, '/applications/{applicationId}/review/{section}');
+  });
+
+  test('panel path entry has parent params + section param', () => {
+    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
+    const params = result.pathEntry.parameters;
+    assert.ok(params.some(p => p.$ref === '#/components/parameters/ApplicationIdParam'), 'has parent param ref');
+    assert.ok(params.some(p => p.name === 'section' && p.in === 'path' && p.required === true), 'has section param');
+  });
+
+  test('GET operation has correct operationId and x-composition annotations', () => {
+    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
+    const get = result.pathEntry.get;
+    assert.equal(get.operationId, 'getReviewContextSection');
+    assert.equal(get['x-composition'], 'reviewContext');
+    assert.equal(get['x-composition-type'], 'sectionView');
+  });
+
+  test('schema name is {CompositionName}SectionResponse', () => {
+    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
+    assert.equal(result.schemaName, 'ReviewContextSectionResponse');
+  });
+
+  test('schema entry has x-composition annotations', () => {
+    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
+    assert.equal(result.schemaEntry['x-composition'], 'reviewContext');
+    assert.equal(result.schemaEntry['x-composition-type'], 'sectionView');
+  });
+
+  test('falls back to inline param when section ref not in index', () => {
+    const result = generateSectionViewPanelEndpoint('myCtx', '/domains/{domainId}/ctx', new Map());
+    const params = result.pathEntry.parameters;
+    const domainParam = params.find(p => p.name === 'domainId');
+    assert.ok(domainParam, 'inline param for unknown parent param');
+    assert.equal(domainParam.in, 'path');
+  });
+
+  test('GET 404 response uses shared ref', () => {
+    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
+    assert.equal(result.pathEntry.get.responses['404'].$ref, './components/responses.yaml#/NotFound');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateCompositionOverlay — sectionView panel endpoint
+// ---------------------------------------------------------------------------
+
+describe('generateCompositionOverlay — sectionView panel', () => {
+  function makeParamIndex() {
+    return new Map([['applicationId', '#/components/parameters/ApplicationIdParam']]);
+  }
+
+  test('sectionView emits panel path in addition to index path', () => {
+    const compositionFile = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          reviewContext: {
+            compositeType: 'sectionView',
+            resource: 'applications',
+            endpoint: { path: '/applications/{applicationId}/review' },
+            sections: { income: { resource: 'member-incomes', bind: 'applicationId' } }
+          }
+        }
+      }
+    };
+    const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
+    const pathsAction = overlay.actions.find(a => a.target === '$.paths');
+    assert.ok(pathsAction.update['/applications/{applicationId}/review'], 'index path present');
+    assert.ok(pathsAction.update['/applications/{applicationId}/review/{section}'], 'panel path present');
+  });
+
+  test('non-sectionView composition does not emit panel path', () => {
+    const compositionFile = {
+      domain: 'test',
+      doc: {
+        compositions: {
+          memberSummary: {
+            resource: 'application-members',
+            endpoint: { path: '/applications/{applicationId}/member-summary' }
+          }
+        }
+      }
+    };
+    const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
+    const pathsAction = overlay.actions.find(a => a.target === '$.paths');
+    const paths = Object.keys(pathsAction.update);
+    assert.ok(!paths.some(p => p.includes('{section}')), 'no panel path for non-sectionView');
+  });
+
+  test('sectionView emits panel schema alongside index schema', () => {
+    const compositionFile = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          reviewContext: {
+            compositeType: 'sectionView',
+            resource: 'applications',
+            endpoint: { path: '/applications/{applicationId}/review' },
+            sections: { income: { resource: 'member-incomes', bind: 'applicationId' } }
+          }
+        }
+      }
+    };
+    const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
+    const schemasAction = overlay.actions.find(a => a.target === '$.components.schemas');
+    assert.ok(schemasAction.update.ReviewContextResponse, 'index schema present');
+    assert.ok(schemasAction.update.ReviewContextSectionResponse, 'panel schema present');
+  });
+
+  test('sectionView emits section enum schema in the overlay', () => {
+    const compositionFile = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          reviewContext: {
+            compositeType: 'sectionView',
+            resource: 'applications',
+            endpoint: { path: '/applications/{applicationId}/review' },
+            sections: { demographics: {}, identity: {}, income: {} }
+          }
+        }
+      }
+    };
+    const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
+    const schemasAction = overlay.actions.find(a => a.target === '$.components.schemas');
+    const enumSchema = schemasAction.update.ReviewContextSections;
+    assert.ok(enumSchema, 'section enum schema present');
+    assert.deepEqual(enumSchema.enum, ['demographics', 'identity', 'income']);
+    assert.equal(enumSchema['x-generated'], 'section-enum');
+  });
+
+  test('sectionView with no sections does not emit section enum', () => {
+    const compositionFile = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          reviewContext: {
+            compositeType: 'sectionView',
+            resource: 'applications',
+            endpoint: { path: '/applications/{applicationId}/review' },
+            sections: {}
+          }
+        }
+      }
+    };
+    const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
+    const schemasAction = overlay.actions.find(a => a.target === '$.components.schemas');
+    assert.ok(!schemasAction.update.ReviewContextSections, 'no enum schema for empty sections');
+  });
+
+  test('non-sectionView composition does not emit section enum', () => {
+    const compositionFile = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          memberSummary: {
+            resource: 'application-members',
+            endpoint: { path: '/applications/{applicationId}/member-summary' }
+          }
+        }
+      }
+    };
+    const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
+    const schemasAction = overlay.actions.find(a => a.target === '$.components.schemas');
+    const keys = Object.keys(schemasAction.update);
+    assert.ok(!keys.some(k => k.endsWith('Sections')), 'no enum schema for non-sectionView');
   });
 });
 

@@ -568,6 +568,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
 
       const indexExpressPath = toExpressPath(fullPath);
       const panelExpressPath = `${indexExpressPath}/:section`;
+      const primaryParam = extractPrimaryParam(endpointPath);
 
       // Load companion schema defaults for state embedding (empty if no state declared)
       const stateDefaults = loadStateDefaults(composition.state, filePath);
@@ -575,6 +576,10 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       // Section index
       app.get(indexExpressPath, (req, res) => {
         try {
+          const parentId = primaryParam ? req.params[primaryParam] : null;
+          if (parentId && !findById(composition.resource, parentId)) {
+            return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
+          }
           res.json(assembleSectionIndex(composition, req.params, indexExpressPath, stateDefaults));
         } catch (error) {
           console.error('Composition index handler error:', error);
@@ -585,6 +590,10 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       // Section panel
       app.get(panelExpressPath, (req, res) => {
         try {
+          const parentId = primaryParam ? req.params[primaryParam] : null;
+          if (parentId && !findById(composition.resource, parentId)) {
+            return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
+          }
           const panel = assembleSectionPanel(composition, req.params.section, req.params, stateDefaults);
           if (!panel) {
             return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });

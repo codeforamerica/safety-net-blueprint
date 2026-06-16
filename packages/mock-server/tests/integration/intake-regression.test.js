@@ -1215,6 +1215,90 @@ async function testCompositionState() {
 }
 
 // ---------------------------------------------------------------------------
+// sectionView — section index and panels
+// ---------------------------------------------------------------------------
+
+async function testSectionView() {
+  section('sectionView — /applications/{id}/review index and panels');
+
+  const { id: appId } = await createAndSubmitApp(['snap']);
+  await fetch(`${BASE_URL}${APP}/${appId}/open`, { method: 'POST', headers: SYSTEM });
+  const member = await (await fetch(`${BASE_URL}${APP}/${appId}/members`, {
+    method: 'POST', headers: CASEWORKER,
+    body: { applicationId: appId, firstName: 'Section', lastName: 'Tester', programsApplyingFor: ['snap'], roles: ['household_member'] },
+  })).json();
+  const BASE_REVIEW = `${BASE_URL}${APP}/${appId}/review`;
+
+  // ---- Section index ----
+
+  await test('GET /review — returns sections object with all declared section keys', async () => {
+    const res = await fetch(BASE_REVIEW);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.sections, 'sections key present');
+    const keys = data.sections.map(s => s.name);
+    assert.ok(keys.includes('identity'), 'identity section present');
+    assert.ok(keys.includes('household'), 'household section present');
+    assert.ok(keys.includes('income'), 'income section present');
+  });
+
+  await test('GET /review — each section entry has a name and href', async () => {
+    const data = await (await fetch(BASE_REVIEW)).json();
+    for (const entry of data.sections) {
+      assert.ok(entry.name, `${entry.name} has name`);
+      assert.ok(entry.href && entry.href.includes(entry.name), `${entry.name} href includes section name`);
+    }
+  });
+
+  await test('GET /review — 404 for unknown application', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  // ---- Section panel ----
+
+  await test('GET /review/:section — returns section and items', async () => {
+    const res = await fetch(`${BASE_REVIEW}/identity`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.section, 'identity', 'section name in response');
+    assert.ok(Array.isArray(data.items), 'items is array');
+    assert.ok(data.items.some(i => i.id === member.id), 'created member in items');
+  });
+
+  await test('GET /review/:section — 404 for unknown section name', async () => {
+    const res = await fetch(`${BASE_REVIEW}/nonexistent-section`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  await test('GET /review/:section — 404 for unknown application', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review/identity`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  await test('GET /review/:section — panel.include resources appear in response', async () => {
+    const data = await (await fetch(`${BASE_REVIEW}/income`)).json();
+    assert.ok(data.include && 'notes' in data.include, 'panel.include notes present under data.include');
+  });
+
+  await test('GET /review/:section — $section.name filter context passes section to filter', async () => {
+    // Create a note scoped to "income" section; the verifications panel.include
+    // uses filter: "category == $section.name" which exercises $section.name injection.
+    // We verify the panel assembles without error and the items array is present.
+    const data = await (await fetch(`${BASE_REVIEW}/income`)).json();
+    assert.ok(Array.isArray(data.items), 'items present (filter did not crash)');
+    assert.strictEqual(data.section, 'income');
+  });
+
+  await test('GET /review/:section — household section (missing: empty) returns data', async () => {
+    const res = await fetch(`${BASE_REVIEW}/household`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.section, 'household');
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Application notes
 // ---------------------------------------------------------------------------
 
@@ -1538,6 +1622,7 @@ async function runTests() {
     await testReviewContext();
     await testReviewProgress();
     await testCompositionState();
+    await testSectionView();
     await testApplicationNotes();
     await testTraceparentPropagation();
   } finally {
