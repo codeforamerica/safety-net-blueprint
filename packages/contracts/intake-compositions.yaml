@@ -15,6 +15,15 @@ derives:
   isComplete:
     item: "Object.values($self).every(v => $present(v))"
     collection: "items.length > 0 && items.every(i => Object.values(i).every(v => $present(v)))"
+  isIncomplete:
+    item: "!Object.values($self).every(v => $present(v))"
+
+# Reusable named view definitions available on all sections in this domain.
+# Applied via ?view=<name> on any section panel endpoint.
+# Referenced via { $ref: '#/views/<name>' } in section-level view overrides.
+views:
+  incomplete:
+    filter: { $ref: '#/derives/isIncomplete/item' }
 
 compositions:
 
@@ -51,10 +60,9 @@ compositions:
         bind: applicationId
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            filter: "roles.contains('primary_applicant')"
-            fields: [id, firstName, lastName, dateOfBirth, relationshipToHead]
+        index:
+          filter: "roles.contains('primary_applicant')"
+          fields: [id, firstName, lastName, dateOfBirth, relationshipToHead]
 
       identity:
         resource: application-members
@@ -66,37 +74,33 @@ compositions:
             filter: "category == 'identity'"
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            filter: "roles.contains('primary_applicant')"
-            fields: [id, firstName, lastName, citizenshipStatus, immigrationStatus]
+        index:
+          filter: "roles.contains('primary_applicant')"
+          fields: [id, firstName, lastName, citizenshipStatus, immigrationStatus]
 
       income:
         resource: member-incomes
         bind: applicationId
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            fields: [id, memberId, type, amount, frequency]
+        index:
+          fields: [id, memberId, type, amount, frequency]
 
       employment:
         resource: member-employment-records
         bind: applicationId
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            fields: [id, memberId, status, jobTitle]
+        index:
+          fields: [id, memberId, status, jobTitle]
 
       health-coverage:
         resource: member-health-coverages
         bind: applicationId
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            fields: [id, memberId, coverageType, planName]
+        index:
+          fields: [id, memberId, coverageType, planName]
 
       # Household-level sections — one review-progress entry per section (no memberId)
 
@@ -105,9 +109,8 @@ compositions:
         bind: applicationId
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            fields: [id, memberId, type, value]
+        index:
+          fields: [id, memberId, type, value]
 
       contact:
         resource: application-members
@@ -115,19 +118,17 @@ compositions:
         fields: [id, firstName, lastName, phoneNumber, email, preferredLanguage, preferredContactMethod]
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            filter: "roles.contains('primary_applicant')"
-            fields: [id, firstName, lastName, phoneNumber, email]
+        index:
+          filter: "roles.contains('primary_applicant')"
+          fields: [id, firstName, lastName, phoneNumber, email]
 
       expenses:
         resource: member-expenses
         bind: applicationId
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            fields: [id, memberId, category, amount, frequency]
+        index:
+          fields: [id, memberId, category, amount, frequency]
 
       household:
         resource: household-info
@@ -135,9 +136,8 @@ compositions:
         missing: empty
         derive:
           complete: { $ref: '#/derives/isComplete/collection' }
-        views:
-          index:
-            fields: [id, size]
+        index:
+          fields: [id, size]
 
     # Panel nodes — included in every section panel response alongside the section's resource
     panel:

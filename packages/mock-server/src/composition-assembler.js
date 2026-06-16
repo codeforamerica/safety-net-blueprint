@@ -54,6 +54,25 @@ function resolveDerivExpr(exprOrRef, derives = {}) {
 }
 
 /**
+ * Resolve a view definition, resolving any $ref in its filter field.
+ *
+ * Views are looked up directly from the doc-level views map by the caller;
+ * this function resolves $ref expressions within the view (e.g., filter: { $ref: '#/derives/...' }).
+ *
+ * @param {Object|undefined} viewDef - View definition { filter?, fields? }
+ * @param {Object} derives - The derives map from the composition file
+ * @returns {Object|undefined} Resolved view definition with filter as a plain string
+ */
+function resolveViewDef(viewDef, derives = {}) {
+  if (!viewDef) return undefined;
+  const result = { ...viewDef };
+  if (result.filter && typeof result.filter === 'object') {
+    result.filter = resolveDerivExpr(result.filter, derives);
+  }
+  return result;
+}
+
+/**
  * Apply derive: expressions to a panel response.
  *
  * Scope inference:
@@ -165,16 +184,20 @@ function buildBindValues(params) {
  * Assemble the section index response for a sectionView composition.
  *
  * For each section, includes a link to its panel endpoint. When the section
- * declares a views.index, also fetches summary data using that view's filter
+ * declares an index: config, also fetches summary data using that config's filter
  * and field projection, and evaluates derive: expressions against it.
  *
- * @param {Object} composition - Composition definition from YAML
+ * When viewName is given, the named view's filter is composed (AND) with the
+ * section's index.filter. Sections with zero surviving items are excluded.
+ *
+ * @param {Object} composition - Composition definition from YAML (with doc.views merged in)
  * @param {Object} params - Express req.params (path params)
  * @param {string} basePath - Base URL path for this composition endpoint
  * @param {Object} stateDefaults - Default field values for the state resource
+ * @param {string|null} viewName - Named view to apply (from ?view= query param)
  * @returns {Object}
  */
-export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}) {
+export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, viewName = null) {
   const sectionDefs = composition.sections || {};
   const bindValues = buildBindValues(params);
 
@@ -185,51 +208,77 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   const stateInfo = composition.state ? deriveStateResource(composition.state) : null;
   const bindParam = stateInfo ? extractPrimaryParam(composition.endpoint?.path ?? '') : null;
 
-  const sections = Object.entries(sectionDefs).map(([name, sectionDef]) => {
+  // Resolve named view from doc-level views map
+  const views = composition.views || {};
+  const derives = composition.derives || {};
+  const viewDef = viewName ? resolveViewDef(views[viewName], derives) : null;
+
+  const sections = [];
+
+  for (const [name, sectionDef] of Object.entries(sectionDefs)) {
     const entry = { name, href: `${resolvedBase}/${name}` };
 
-    const indexView = sectionDef.views?.index;
-    if (!indexView) return entry;
+    const indexConfig = sectionDef.index;
+
+    // Without a view, sections with no index config are link-only
+    if (!indexConfig && !viewDef) {
+      sections.push(entry);
+      continue;
+    }
 
     const context = { sectionName: name };
 
-    // Fetch items using the index view's filter, but without field projection yet
+    // Fetch items using the index config's filter, without field projection yet
     // so that derive expressions can operate on the full record before projection.
     const fetchNode = {
       resource: sectionDef.resource,
       bind: sectionDef.bind,
       missing: sectionDef.missing,
-      filter: indexView.filter,
+      filter: indexConfig?.filter,
     };
-    const items = fetchNodeItems(fetchNode, bindValues, context);
+    let items = fetchNodeItems(fetchNode, bindValues, context);
 
-    // Apply derive: expressions (collection-scope adds to entry, item-scope adds to items)
-    if (Array.isArray(items)) {
-      applyDerives(sectionDef, composition, items, entry);
-
-      // Embed state per item if composition declares state:
-      if (stateInfo && bindParam) {
-        const bindValue = bindValues[bindParam];
-        for (const item of items) {
-          const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, item.id ?? null);
-          const { id: _id, createdAt: _c, updatedAt: _u, [bindParam]: _bp, section: _s, itemId: _ii, ...stateFields } =
-            record ?? {};
-          item[stateInfo.camelKey] = Object.keys(stateFields).length > 0
-            ? stateFields
-            : { ...stateDefaults };
-        }
-      }
-
-      // Project fields for display after derives have been evaluated
-      entry.items = indexView.fields
-        ? items.map(item => projectFields(item, indexView.fields))
-        : items;
-    } else {
+    if (!Array.isArray(items)) {
+      // Singleton (missing: empty) — expose as data, unaffected by view filter
       entry.data = items;
+      sections.push(entry);
+      continue;
     }
 
-    return entry;
-  });
+    // Apply view filter on top of index filter (AND semantics)
+    if (viewDef?.filter) {
+      items = items.filter(item =>
+        Boolean(evaluateCEL(viewDef.filter, { ...COMPOSITION_HELPERS, ...item, $self: item }))
+      );
+    }
+
+    // With a view active, exclude sections that have no surviving items
+    if (viewDef && items.length === 0) continue;
+
+    // Apply derive: expressions (collection-scope adds to entry, item-scope adds to items)
+    applyDerives(sectionDef, composition, items, entry);
+
+    // Embed state per item if composition declares state:
+    if (stateInfo && bindParam) {
+      const bindValue = bindValues[bindParam];
+      for (const item of items) {
+        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, item.id ?? null);
+        const { id: _id, createdAt: _c, updatedAt: _u, [bindParam]: _bp, section: _s, itemId: _ii, ...stateFields } =
+          record ?? {};
+        item[stateInfo.camelKey] = Object.keys(stateFields).length > 0
+          ? stateFields
+          : { ...stateDefaults };
+      }
+    }
+
+    // Project fields for display after derives have been evaluated.
+    // Index fields take precedence over view fields on the index endpoint.
+    entry.items = indexConfig?.fields
+      ? items.map(item => projectFields(item, indexConfig.fields))
+      : items;
+
+    sections.push(entry);
+  }
 
   return { sections };
 }
@@ -245,18 +294,31 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
  * @param {string} sectionName - Name of the section being requested
  * @param {Object} params - Express req.params (path params)
  * @param {Object} stateDefaults - Default field values for the state resource (keyed by field name)
+ * @param {string|null} viewName - Optional named view to apply (overrides base filter/fields)
  * @returns {Object|null} Panel response, or null if section not found
  */
-export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}) {
+export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, viewName = null) {
   const sections = composition.sections || {};
   const sectionDef = sections[sectionName];
   if (!sectionDef) return null;
 
+  // Resolve named view from doc-level views map
+  const views = composition.views || {};
+  const derives = composition.derives || {};
+  const viewDef = viewName ? resolveViewDef(views[viewName], derives) : null;
+
   const bindValues = buildBindValues(params);
   const context = { sectionName };
 
-  // Fetch primary section resource
-  const items = fetchNodeItems(sectionDef, bindValues, context);
+  // Fetch primary section resource using the section's base filter
+  let items = fetchNodeItems(sectionDef, bindValues, context);
+
+  // Apply view filter as additional filter (AND semantics) — does not replace section filter
+  if (viewDef?.filter && Array.isArray(items)) {
+    items = items.filter(item =>
+      Boolean(evaluateCEL(viewDef.filter, { ...COMPOSITION_HELPERS, ...item, $self: item }))
+    );
+  }
 
   // Fetch section-level includes
   const include = {};
@@ -300,7 +362,11 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
       }
     }
 
-    response.items = items;
+    // Apply view field projection as final step — after derives and state embedding
+    // so post-fetch fields (e.g. reviewProgress from state embedding) respect the view.
+    response.items = viewDef?.fields
+      ? items.map(item => projectFields(item, viewDef.fields))
+      : items;
   } else {
     response.data = items;
   }

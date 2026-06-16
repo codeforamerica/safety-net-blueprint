@@ -656,6 +656,24 @@ export function generateCompositionOverlay(compositionFile, paramIndex) {
     // sectionView compositions: also generate the panel endpoint and section enum
     if (composition.compositeType === 'sectionView') {
       const panel = generateSectionViewPanelEndpoint(compositionName, endpointPath, paramIndex);
+
+      // Collect named views from the doc-level views map
+      const viewNames = Object.keys(doc.views || {});
+      if (viewNames.length > 0) {
+        const viewParam = {
+          name: 'view',
+          in: 'query',
+          required: false,
+          schema: { type: 'string', enum: viewNames },
+          description: 'Named view projection to apply.',
+        };
+        // Add to the index endpoint operation
+        if (!operation.parameters) operation.parameters = [];
+        operation.parameters.push(viewParam);
+        // Add to the panel endpoint
+        panel.pathEntry.get.parameters = [viewParam];
+      }
+
       pathsUpdate[panel.path] = panel.pathEntry;
       schemasUpdate[panel.schemaName] = panel.schemaEntry;
 

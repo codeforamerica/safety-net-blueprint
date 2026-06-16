@@ -99,14 +99,19 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         });
       }
 
-      // For PATCH, merge with existing data first, then validate the complete merged object
-      // This ensures the final result is valid while allowing partial updates
+      // For PATCH, merge with existing data first, then validate the complete merged object.
+      // Exclude null values for fields the client didn't send — those are null-initialized
+      // placeholders from record creation and should not trigger validation failures.
       const mergedData = { ...existing, ...req.body };
 
       // Validate merged data (422 for validation errors)
       if (endpoint.requestSchema) {
+        const clientFields = new Set(Object.keys(req.body));
+        const dataForValidation = Object.fromEntries(
+          Object.entries(mergedData).filter(([k, v]) => v !== null || clientFields.has(k))
+        );
         const { valid, errors } = validate(
-          mergedData,
+          dataForValidation,
           endpoint.requestSchema,
           `${endpoint.collectionName}-update`
         );

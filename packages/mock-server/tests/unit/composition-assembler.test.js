@@ -179,21 +179,17 @@ const INDEX_VIEW_COMPOSITION = {
       derive: {
         complete: { $ref: '#/derives/isComplete/collection' },
       },
-      views: {
-        index: {
-          filter: "roles.contains('primary_applicant')",
-          fields: ['id', 'firstName', 'lastName'],
-        },
+      index: {
+        filter: "roles.contains('primary_applicant')",
+        fields: ['id', 'firstName', 'lastName'],
       },
     },
     household: {
       resource: 'household-infos',
       bind: 'applicationId',
       missing: 'empty',
-      views: {
-        index: {
-          fields: ['id'],
-        },
+      index: {
+        fields: ['id'],
       },
     },
     noView: {

@@ -13,6 +13,34 @@ import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 
 /**
+ * Collect the names of optional properties from a resolved JSON Schema.
+ * Optional = declared in properties but not in required. Handles allOf by
+ * merging properties and required lists from all sub-schemas.
+ *
+ * @param {Object} schema - Fully-resolved JSON Schema object
+ * @returns {Set<string>} Names of optional properties
+ */
+function collectOptionalProperties(schema) {
+  const allProperties = {};
+  const allRequired = new Set();
+
+  function walk(s) {
+    if (!s || typeof s !== 'object') return;
+    if (s.properties) Object.assign(allProperties, s.properties);
+    if (s.required) for (const f of s.required) allRequired.add(f);
+    if (s.allOf) for (const sub of s.allOf) walk(sub);
+  }
+
+  walk(schema);
+
+  const optional = new Set();
+  for (const name of Object.keys(allProperties)) {
+    if (!allRequired.has(name)) optional.add(name);
+  }
+  return optional;
+}
+
+/**
  * Create create handler for a resource
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
@@ -52,9 +80,24 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         }
       }
 
-      // Create resource in database — merge any enrichment data set by pre-create middleware
-      // (e.g. catalog-derived fields that aren't in the create schema)
-      const createData = req.enrichmentData ? { ...req.body, ...req.enrichmentData } : req.body;
+      // Merge enrichment data (catalog-derived fields, path params for sub-resources)
+      const mergedBody = req.enrichmentData ? { ...req.body, ...req.enrichmentData } : req.body;
+
+      // Null-initialize optional schema properties not provided in the request body,
+      // so stored records reflect the full schema shape (matches real database behavior
+      // where unset nullable columns are stored as NULL rather than omitted entirely).
+      const nullDefaults = {};
+      if (endpoint.requestSchema) {
+        const optionalProps = collectOptionalProperties(endpoint.requestSchema);
+        for (const prop of optionalProps) {
+          if (!(prop in mergedBody)) nullDefaults[prop] = null;
+        }
+      }
+
+      const createData = Object.keys(nullDefaults).length > 0
+        ? { ...nullDefaults, ...mergedBody }
+        : mergedBody;
+
       const resource = create(endpoint.collectionName, createData);
 
       // Mark runtime-created resources as user-sourced when the collection

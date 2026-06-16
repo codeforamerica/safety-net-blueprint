@@ -570,6 +570,13 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       const panelExpressPath = `${indexExpressPath}/:section`;
       const primaryParam = extractPrimaryParam(endpointPath);
 
+      // Merge doc-level views and derives so the assembler can resolve $ref expressions
+      const compositionWithDoc = {
+        ...composition,
+        views: doc.views || {},
+        derives: doc.derives || {},
+      };
+
       // Load companion schema defaults for state embedding (empty if no state declared)
       const stateDefaults = loadStateDefaults(composition.state, filePath);
 
@@ -580,7 +587,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
           if (parentId && !findById(composition.resource, parentId)) {
             return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
           }
-          res.json(assembleSectionIndex(composition, req.params, indexExpressPath, stateDefaults));
+          res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, req.query.view || null));
         } catch (error) {
           console.error('Composition index handler error:', error);
           res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
@@ -594,7 +601,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
           if (parentId && !findById(composition.resource, parentId)) {
             return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
           }
-          const panel = assembleSectionPanel(composition, req.params.section, req.params, stateDefaults);
+          const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, req.query.view || null);
           if (!panel) {
             return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
           }

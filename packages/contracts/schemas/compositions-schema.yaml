@@ -15,7 +15,11 @@
 #       compositeType: sectionView
 #       resource: applications
 #       sections:
-#         identity: { resource: members, bind: applicationId, fields: [name, dateOfBirth] }
+#         identity:
+#           resource: members
+#           bind: applicationId
+#           index:
+#             fields: [name, dateOfBirth]
 #         household: { resource: household-info, bind: applicationId }
 #       panel:
 #         include:
@@ -65,6 +69,30 @@ properties:
         - type: object
           additionalProperties:
             type: string
+
+  views:
+    type: object
+    description: >
+      Named projection definitions available on all sections in this domain.
+      Applied via ?view=<name> on index or panel endpoints. Each named view may
+      declare a filter (composed via AND with any existing section/index filter)
+      and optional field projection.
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      properties:
+        filter:
+          oneOf:
+            - type: string
+            - type: object
+              required:
+                - $ref
+              additionalProperties: false
+              properties:
+                $ref:
+                  type: string
+        fields:
+          $ref: "#/$defs/Fields"
 
   fragments:
     type: object
@@ -224,17 +252,23 @@ $defs:
         $ref: "#/$defs/IncludeMap"
 
   SectionNode:
-    # Example — section with embedded fields:
-    #   identity:
-    #     resource: members
-    #     bind: applicationId
-    #     fields: [name, dateOfBirth]
-    #
-    # Example — section with all fields:
+    # Example — section with index config:
     #   income:
-    #     resource: members
+    #     resource: member-incomes
     #     bind: applicationId
-    #     fields: [*]
+    #     index:
+    #       fields: [id, memberId, type, amount]
+    #
+    # Example — section with index filter:
+    #   demographics:
+    #     resource: application-members
+    #     bind: applicationId
+    #     index:
+    #       filter: "roles.contains('primary_applicant')"
+    #       fields: [id, firstName, lastName]
+    #
+    # Example — link-only section (no index config):
+    #   household: { resource: household-info, bind: applicationId }
     type: object
     description: A section in a sectionView composition.
     required:
@@ -247,8 +281,18 @@ $defs:
         $ref: "#/$defs/Bind"
       fields:
         $ref: "#/$defs/Fields"
-      views:
-        $ref: "#/$defs/Views"
+      index:
+        type: object
+        description: >
+          Section index configuration — filter and fields for this section's entry in
+          the section index response. Omit to make this a link-only section.
+        additionalProperties: false
+        properties:
+          filter:
+            type: string
+            description: CEL expression applied when assembling this section's index entry.
+          fields:
+            $ref: "#/$defs/Fields"
       missing:
         type: string
         enum: [empty]
