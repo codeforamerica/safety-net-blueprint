@@ -156,6 +156,111 @@ describe('assembleSectionIndex', () => {
 });
 
 // ---------------------------------------------------------------------------
+// assembleSectionIndex — index views
+// ---------------------------------------------------------------------------
+
+const INDEX_VIEW_COMPOSITION = {
+  compositeType: 'sectionView',
+  resource: 'applications',
+  endpoint: { path: '/applications/{applicationId}/review' },
+  derives: {
+    isComplete: {
+      collection: 'items.length > 0 && items.every(i => Object.values(i).every(v => $present(v)))',
+    },
+  },
+  sections: {
+    members: {
+      resource: 'application-members',
+      bind: 'applicationId',
+      derive: {
+        complete: { $ref: '#/derives/isComplete/collection' },
+      },
+      views: {
+        index: {
+          filter: "roles.contains('primary_applicant')",
+          fields: ['id', 'firstName', 'lastName'],
+        },
+      },
+    },
+    household: {
+      resource: 'household-infos',
+      bind: 'applicationId',
+      missing: 'empty',
+      views: {
+        index: {
+          fields: ['id'],
+        },
+      },
+    },
+    noView: {
+      resource: 'application-members',
+      bind: 'applicationId',
+    },
+  },
+  panel: {},
+};
+
+describe('assembleSectionIndex — index views', () => {
+  beforeEach(() => {
+    clearAll('application-members');
+    clearAll('household-infos');
+    insertResource('application-members', {
+      id: MEMBER_ID_1, applicationId: APP_ID,
+      firstName: 'Alice', lastName: 'Smith', email: 'alice@example.com',
+      roles: ['primary_applicant'],
+    });
+    insertResource('application-members', {
+      id: MEMBER_ID_2, applicationId: APP_ID,
+      firstName: 'Bob', lastName: 'Jones', email: 'bob@example.com',
+      roles: ['household_member'],
+    });
+  });
+
+  test('section with index view returns filtered and projected items', () => {
+    const result = assembleSectionIndex(
+      INDEX_VIEW_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    const membersSection = result.sections.find(s => s.name === 'members');
+    assert.ok(Array.isArray(membersSection.items));
+    assert.strictEqual(membersSection.items.length, 1, 'should filter to primary_applicant only');
+    assert.strictEqual(membersSection.items[0].firstName, 'Alice');
+    assert.ok(!('email' in membersSection.items[0]), 'projected fields should exclude email');
+  });
+
+  test('section with index view includes derived fields', () => {
+    const result = assembleSectionIndex(
+      INDEX_VIEW_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    const membersSection = result.sections.find(s => s.name === 'members');
+    assert.strictEqual(typeof membersSection.complete, 'boolean');
+  });
+
+  test('section without index view has no items in index entry', () => {
+    const result = assembleSectionIndex(
+      INDEX_VIEW_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    const noViewSection = result.sections.find(s => s.name === 'noView');
+    assert.ok(!('items' in noViewSection));
+  });
+
+  test('section with missing: empty and no records returns data: {}', () => {
+    const result = assembleSectionIndex(
+      INDEX_VIEW_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    const householdSection = result.sections.find(s => s.name === 'household');
+    assert.deepStrictEqual(householdSection.data, {});
+  });
+});
+
+// ---------------------------------------------------------------------------
 // assembleSectionPanel — bind resolution
 // ---------------------------------------------------------------------------
 

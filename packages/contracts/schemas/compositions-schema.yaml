@@ -52,6 +52,20 @@ properties:
     type: string
     description: Domain namespace (e.g., intake, eligibility).
 
+  derives:
+    type: object
+    description: >
+      Named, reusable derive expressions for this domain. Each entry is either
+      a string expression or a nested object of named expressions (e.g.,
+      isComplete.item, isComplete.collection). Referenced in section derive:
+      declarations via $ref: '#/derives/name' or '#/derives/name/scope'.
+    additionalProperties:
+      oneOf:
+        - type: string
+        - type: object
+          additionalProperties:
+            type: string
+
   fragments:
     type: object
     description: >
@@ -240,6 +254,8 @@ $defs:
         enum: [empty]
       filter:
         type: string
+      derive:
+        $ref: "#/$defs/DeriveMap"
       include:
         $ref: "#/$defs/IncludeMap"
       state:
@@ -352,6 +368,32 @@ $defs:
       flatten:
         type: boolean
         default: false
+
+  DeriveMap:
+    # Example — inline expression:
+    #   derive:
+    #     complete: "items.length > 0 && items.every(i => $present(i.status))"
+    #
+    # Example — $ref to derives map:
+    #   derive:
+    #     complete: { $ref: '#/derives/isComplete/collection' }
+    type: object
+    description: >
+      Named derive expressions added to the section panel response at read time.
+      Each key becomes a field on the response. Values are either inline CEL
+      expression strings or $ref pointers to the derives map.
+    additionalProperties:
+      oneOf:
+        - type: string
+          description: Inline CEL expression.
+        - type: object
+          description: $ref to a named expression in the derives map.
+          required:
+            - $ref
+          additionalProperties: false
+          properties:
+            $ref:
+              type: string
 
   Views:
     # Example — list form:    views: [snap, medicaid]

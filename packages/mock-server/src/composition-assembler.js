@@ -164,7 +164,9 @@ function buildBindValues(params) {
 /**
  * Assemble the section index response for a sectionView composition.
  *
- * Returns an object listing section names with links to their panel endpoints.
+ * For each section, includes a link to its panel endpoint. When the section
+ * declares a views.index, also fetches summary data using that view's filter
+ * and field projection, and evaluates derive: expressions against it.
  *
  * @param {Object} composition - Composition definition from YAML
  * @param {Object} params - Express req.params (path params)
@@ -172,17 +174,45 @@ function buildBindValues(params) {
  * @returns {Object}
  */
 export function assembleSectionIndex(composition, params, basePath) {
-  const sections = Object.keys(composition.sections || {});
+  const sectionDefs = composition.sections || {};
+  const bindValues = buildBindValues(params);
 
   // Build the concrete base path by substituting path params
   const resolvedBase = basePath.replace(/:(\w+)/g, (_, name) => params[name] ?? `:${name}`);
 
-  return {
-    sections: sections.map(name => ({
-      name,
-      href: `${resolvedBase}/${name}`
-    }))
-  };
+  const sections = Object.entries(sectionDefs).map(([name, sectionDef]) => {
+    const entry = { name, href: `${resolvedBase}/${name}` };
+
+    const indexView = sectionDef.views?.index;
+    if (!indexView) return entry;
+
+    const context = { sectionName: name };
+
+    // Fetch items using the index view's filter, but without field projection yet
+    // so that derive expressions can operate on the full record before projection.
+    const fetchNode = {
+      resource: sectionDef.resource,
+      bind: sectionDef.bind,
+      missing: sectionDef.missing,
+      filter: indexView.filter,
+    };
+    const items = fetchNodeItems(fetchNode, bindValues, context);
+
+    // Apply derive: expressions (collection-scope adds to entry, item-scope adds to items)
+    if (Array.isArray(items)) {
+      applyDerives(sectionDef, composition, items, entry);
+      // Project fields for display after derives have been evaluated
+      entry.items = indexView.fields
+        ? items.map(item => projectFields(item, indexView.fields))
+        : items;
+    } else {
+      entry.data = items;
+    }
+
+    return entry;
+  });
+
+  return { sections };
 }
 
 // ---------------------------------------------------------------------------
