@@ -11,6 +11,10 @@ import { clearAll, insertResource } from '../../src/database-manager.js';
 import {
   assembleSectionIndex,
   assembleSectionPanel,
+  deriveStateResource,
+  findStateRecord,
+  listStateRecords,
+  upsertStateRecord,
   extractPrimaryParam,
   toExpressPath,
 } from '../../src/composition-assembler.js';
@@ -515,5 +519,183 @@ describe('assembleSectionPanel — derived fields', () => {
     assert.strictEqual(result.allComplete, false);
     assert.strictEqual(result.collectionPercent, 0);
     assert.deepStrictEqual(result.collectionCounts, { complete: 0, total: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deriveStateResource
+// ---------------------------------------------------------------------------
+
+describe('deriveStateResource', () => {
+  test('returns null when stateConfig is missing', () => {
+    assert.strictEqual(deriveStateResource(null), null);
+    assert.strictEqual(deriveStateResource({}), null);
+    assert.strictEqual(deriveStateResource({ schema: {} }), null);
+  });
+
+  test('derives camelKey, collectionName, defsKey from $ref', () => {
+    const result = deriveStateResource({
+      schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' },
+    });
+    assert.deepStrictEqual(result, {
+      defsKey: 'ReviewProgress',
+      collectionName: 'review-progress',
+      camelKey: 'reviewProgress',
+    });
+  });
+
+  test('handles single-word key', () => {
+    const result = deriveStateResource({
+      schema: { $ref: './schemas/foo.yaml#/$defs/Status' },
+    });
+    assert.strictEqual(result.defsKey, 'Status');
+    assert.strictEqual(result.collectionName, 'status');
+    assert.strictEqual(result.camelKey, 'status');
+  });
+
+  test('returns null for malformed $ref (no $defs segment)', () => {
+    const result = deriveStateResource({
+      schema: { $ref: './schemas/foo.yaml#/components/schemas/Foo' },
+    });
+    assert.strictEqual(result, null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// State CRUD: upsertStateRecord / findStateRecord / listStateRecords
+// ---------------------------------------------------------------------------
+
+describe('state CRUD helpers', () => {
+  const COLL = 'test-progress';
+  const BIND_PARAM = 'applicationId';
+  const BIND_VALUE = 'app-state-001';
+
+  beforeEach(() => clearAll(COLL));
+
+  test('upsertStateRecord creates a new record', () => {
+    const record = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', null, { status: 'not_started' });
+    assert.ok(record.id, 'has id');
+    assert.strictEqual(record[BIND_PARAM], BIND_VALUE);
+    assert.strictEqual(record.section, 'identity');
+    assert.strictEqual(record.status, 'not_started');
+    assert.ok(!record.itemId, 'no itemId for singleton');
+    assert.ok(record.createdAt, 'has createdAt');
+    assert.ok(record.updatedAt, 'has updatedAt');
+  });
+
+  test('upsertStateRecord creates a record with itemId for collection-backed sections', () => {
+    const record = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'in_progress' });
+    assert.strictEqual(record.itemId, 'mem-001');
+    assert.strictEqual(record.section, 'identity');
+    assert.strictEqual(record.status, 'in_progress');
+  });
+
+  test('upsertStateRecord updates an existing record on second call', () => {
+    const first = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'household', null, { status: 'not_started' });
+    const second = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'household', null, { status: 'complete' });
+    assert.strictEqual(first.id, second.id, 'same record');
+    assert.strictEqual(second.status, 'complete');
+  });
+
+  test('upsertStateRecord with itemId updates the correct record', () => {
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'not_started' });
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-002', { status: 'not_started' });
+    const updated = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'in_progress' });
+    assert.strictEqual(updated.status, 'in_progress');
+
+    const other = findStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-002');
+    assert.strictEqual(other.status, 'not_started', 'other record untouched');
+  });
+
+  test('findStateRecord returns null when record does not exist', () => {
+    const result = findStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'income', null);
+    assert.strictEqual(result, null);
+  });
+
+  test('findStateRecord retrieves the correct record by section + itemId', () => {
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'complete' });
+    const found = findStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001');
+    assert.strictEqual(found.status, 'complete');
+  });
+
+  test('listStateRecords returns paginated result for a section', () => {
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'in_progress' });
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-002', { status: 'not_started' });
+    const result = listStateRecords(COLL, BIND_PARAM, BIND_VALUE, 'identity');
+    assert.strictEqual(result.total, 2);
+    assert.strictEqual(result.items.length, 2);
+    assert.ok('hasNext' in result && 'limit' in result && 'offset' in result, 'pagination fields present');
+  });
+
+  test('listStateRecords returns empty result for an unknown section', () => {
+    const result = listStateRecords(COLL, BIND_PARAM, BIND_VALUE, 'nonexistent');
+    assert.strictEqual(result.total, 0);
+    assert.deepStrictEqual(result.items, []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — state embedding
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — state embedding', () => {
+  // collection name is derived from the $defs key: ReviewProgress → review-progress
+  const STATE_COLL = 'review-progress';
+
+  const STATE_COMPOSITION = {
+    compositeType: 'sectionView',
+    resource: 'applications',
+    endpoint: { path: '/applications/{applicationId}/review' },
+    state: {
+      schema: { $ref: './schemas/test-compositions-schemas.yaml#/$defs/ReviewProgress' },
+    },
+    sections: {
+      demographics: {
+        resource: 'application-members',
+        bind: 'applicationId',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    clearAll('application-members');
+    clearAll(STATE_COLL);
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice' });
+    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob' });
+  });
+
+  test('embeds state from DB under camelKey when record exists', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', MEMBER_ID_1, { status: 'complete' });
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const alice = panel.items.find(i => i.id === MEMBER_ID_1);
+    assert.ok(alice.reviewProgress, 'reviewProgress present on item');
+    assert.strictEqual(alice.reviewProgress.status, 'complete');
+  });
+
+  test('uses stateDefaults when no record exists', () => {
+    const defaults = { status: 'not_started' };
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID }, defaults);
+    for (const item of panel.items) {
+      assert.deepStrictEqual(item.reviewProgress, { status: 'not_started' });
+    }
+  });
+
+  test('embeds empty object when no record and no defaults', () => {
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    for (const item of panel.items) {
+      assert.deepStrictEqual(item.reviewProgress, {});
+    }
+  });
+
+  test('strips framework fields from embedded state', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', MEMBER_ID_1, { status: 'in_progress' });
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const alice = panel.items.find(i => i.id === MEMBER_ID_1);
+    assert.ok(!('id' in alice.reviewProgress), 'no id');
+    assert.ok(!('createdAt' in alice.reviewProgress), 'no createdAt');
+    assert.ok(!('updatedAt' in alice.reviewProgress), 'no updatedAt');
+    assert.ok(!('applicationId' in alice.reviewProgress), 'no applicationId');
+    assert.ok(!('section' in alice.reviewProgress), 'no section');
+    assert.ok(!('itemId' in alice.reviewProgress), 'no itemId');
   });
 });

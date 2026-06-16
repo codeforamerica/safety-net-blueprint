@@ -31,3 +31,4 @@ $defs:
           - in_progress
           - complete
           - flagged
+        default: not_started

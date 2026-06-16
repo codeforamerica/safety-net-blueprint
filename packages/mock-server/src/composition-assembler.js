@@ -16,7 +16,7 @@
  */
 
 import { evaluateCEL } from './cel-evaluator.js';
-import { findAll, findById } from './database-manager.js';
+import { findAll, findById, create, update } from './database-manager.js';
 
 // ---------------------------------------------------------------------------
 // Composition CEL helpers
@@ -171,14 +171,19 @@ function buildBindValues(params) {
  * @param {Object} composition - Composition definition from YAML
  * @param {Object} params - Express req.params (path params)
  * @param {string} basePath - Base URL path for this composition endpoint
+ * @param {Object} stateDefaults - Default field values for the state resource
  * @returns {Object}
  */
-export function assembleSectionIndex(composition, params, basePath) {
+export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}) {
   const sectionDefs = composition.sections || {};
   const bindValues = buildBindValues(params);
 
   // Build the concrete base path by substituting path params
   const resolvedBase = basePath.replace(/:(\w+)/g, (_, name) => params[name] ?? `:${name}`);
+
+  // Resolve state resource info once for the whole index
+  const stateInfo = composition.state ? deriveStateResource(composition.state) : null;
+  const bindParam = stateInfo ? extractPrimaryParam(composition.endpoint?.path ?? '') : null;
 
   const sections = Object.entries(sectionDefs).map(([name, sectionDef]) => {
     const entry = { name, href: `${resolvedBase}/${name}` };
@@ -201,6 +206,20 @@ export function assembleSectionIndex(composition, params, basePath) {
     // Apply derive: expressions (collection-scope adds to entry, item-scope adds to items)
     if (Array.isArray(items)) {
       applyDerives(sectionDef, composition, items, entry);
+
+      // Embed state per item if composition declares state:
+      if (stateInfo && bindParam) {
+        const bindValue = bindValues[bindParam];
+        for (const item of items) {
+          const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, item.id ?? null);
+          const { id: _id, createdAt: _c, updatedAt: _u, [bindParam]: _bp, section: _s, itemId: _ii, ...stateFields } =
+            record ?? {};
+          item[stateInfo.camelKey] = Object.keys(stateFields).length > 0
+            ? stateFields
+            : { ...stateDefaults };
+        }
+      }
+
       // Project fields for display after derives have been evaluated
       entry.items = indexView.fields
         ? items.map(item => projectFields(item, indexView.fields))
@@ -225,9 +244,10 @@ export function assembleSectionIndex(composition, params, basePath) {
  * @param {Object} composition - Composition definition from YAML
  * @param {string} sectionName - Name of the section being requested
  * @param {Object} params - Express req.params (path params)
+ * @param {Object} stateDefaults - Default field values for the state resource (keyed by field name)
  * @returns {Object|null} Panel response, or null if section not found
  */
-export function assembleSectionPanel(composition, sectionName, params) {
+export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}) {
   const sections = composition.sections || {};
   const sectionDef = sections[sectionName];
   if (!sectionDef) return null;
@@ -262,6 +282,24 @@ export function assembleSectionPanel(composition, sectionName, params) {
   if (Array.isArray(items)) {
     // Apply derived fields: item-scope mutates items; collection-scope adds to response
     applyDerives(sectionDef, composition, items, response);
+
+    // Embed composition state per item if state: is declared on the composition
+    if (composition.state) {
+      const stateInfo = deriveStateResource(composition.state);
+      const bindParam = extractPrimaryParam(composition.endpoint?.path ?? '');
+      if (stateInfo && bindParam) {
+        const bindValue = bindValues[bindParam];
+        for (const item of items) {
+          const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, sectionName, item.id ?? null);
+          const { id: _id, createdAt: _c, updatedAt: _u, [bindParam]: _bp, section: _s, itemId: _ii, ...stateFields } =
+            record ?? {};
+          item[stateInfo.camelKey] = Object.keys(stateFields).length > 0
+            ? stateFields
+            : { ...stateDefaults };
+        }
+      }
+    }
+
     response.items = items;
   } else {
     response.data = items;
@@ -272,6 +310,91 @@ export function assembleSectionPanel(composition, sectionName, params) {
   }
 
   return response;
+}
+
+// ---------------------------------------------------------------------------
+// Composition state helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive state resource metadata from a composition state config block.
+ *
+ * Extracts the $defs key from the $ref, converts to camelCase (response key)
+ * and kebab-case (collection name / path segment).
+ *
+ * @param {Object} stateConfig - composition.state
+ * @returns {{ defsKey: string, collectionName: string, camelKey: string } | null}
+ */
+export function deriveStateResource(stateConfig) {
+  if (!stateConfig?.schema?.$ref) return null;
+  const match = stateConfig.schema.$ref.match(/#\/\$defs\/([A-Za-z][A-Za-z0-9]*)$/);
+  if (!match) return null;
+  const defsKey = match[1];
+  const collectionName = defsKey.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  const camelKey = defsKey.charAt(0).toLowerCase() + defsKey.slice(1);
+  return { defsKey, collectionName, camelKey };
+}
+
+/**
+ * Look up a single state record by section + optional itemId.
+ *
+ * @param {string} collectionName - Derived from state resource (e.g. 'review-progress')
+ * @param {string} bindParam - The binding path param name (e.g. 'applicationId')
+ * @param {string} bindValue - The binding path param value
+ * @param {string} section - Section name
+ * @param {string|null} itemId - Item ID for collection-backed sections; null for singletons
+ * @returns {Object|null}
+ */
+export function findStateRecord(collectionName, bindParam, bindValue, section, itemId = null) {
+  const filters = { [bindParam]: bindValue, section };
+  if (itemId !== null) filters.itemId = itemId;
+  const { items } = findAll(collectionName, filters, { limit: 1 });
+  return items[0] ?? null;
+}
+
+/**
+ * List state records for a section. Returns the standard paginated result shape.
+ *
+ * @param {string} collectionName
+ * @param {string} bindParam
+ * @param {string} bindValue
+ * @param {string} section
+ * @param {Object} pagination - { limit, offset }
+ * @returns {{ items: Object[], total: number, limit: number, offset: number, hasNext: boolean }}
+ */
+export function listStateRecords(collectionName, bindParam, bindValue, section, pagination = {}) {
+  const limit = pagination.limit ?? 25;
+  const offset = pagination.offset ?? 0;
+  const { items, total } = findAll(collectionName, { [bindParam]: bindValue, section }, { limit, offset });
+  return { items, total, limit, offset, hasNext: offset + items.length < total };
+}
+
+/**
+ * Create or update a state record. Looks up existing record first; creates if absent.
+ *
+ * @param {string} collectionName
+ * @param {string} bindParam
+ * @param {string} bindValue
+ * @param {string} section
+ * @param {string|null} itemId
+ * @param {Object} updates - Client-supplied fields
+ * @returns {Object} The full updated (or newly created) record
+ */
+export function upsertStateRecord(collectionName, bindParam, bindValue, section, itemId, updates) {
+  const filters = { [bindParam]: bindValue, section };
+  if (itemId !== null) filters.itemId = itemId;
+  const { items } = findAll(collectionName, filters, { limit: 1 });
+
+  if (items[0]) {
+    return update(collectionName, items[0].id, updates);
+  }
+
+  return create(collectionName, {
+    [bindParam]: bindValue,
+    section,
+    ...(itemId !== null ? { itemId } : {}),
+    ...updates,
+  });
 }
 
 // ---------------------------------------------------------------------------

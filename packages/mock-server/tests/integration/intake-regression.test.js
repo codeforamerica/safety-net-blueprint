@@ -1103,6 +1103,118 @@ async function testReviewProgress() {
 }
 
 // ---------------------------------------------------------------------------
+// Composition state — generated state endpoints from composition state: declaration
+// ---------------------------------------------------------------------------
+
+async function testCompositionState() {
+  section('Composition state — generated review-progress endpoints');
+
+  const { id: appId } = await createAndSubmitApp(['snap']);
+  const member = await (await fetch(`${BASE_URL}${APP}/${appId}/members`, {
+    method: 'POST', headers: CASEWORKER,
+    body: { applicationId: appId, firstName: 'State', lastName: 'Tester', programsApplyingFor: ['snap'], roles: ['household_member'] },
+  })).json();
+
+  const BASE_STATE = `${BASE_URL}${APP}/${appId}/review-progress`;
+
+  // ---- PUT (singleton write) ----
+
+  await test('PUT /{section} — creates state record for a singleton section', async () => {
+    const res = await fetch(`${BASE_STATE}/household`, {
+      method: 'PUT', headers: CASEWORKER,
+      body: { status: 'complete' },
+    });
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.status, 'complete');
+    assert.strictEqual(data.section, 'household');
+    assert.strictEqual(data.applicationId, appId);
+    assert.ok(data.id, 'has id');
+    assert.ok(data.createdAt, 'has createdAt');
+    assert.ok(data.updatedAt, 'has updatedAt');
+    assert.ok(!data.itemId, 'no itemId for singleton');
+  });
+
+  await test('PUT /{section} — second PUT replaces the record', async () => {
+    const first = await (await fetch(`${BASE_STATE}/expenses`, {
+      method: 'PUT', headers: CASEWORKER, body: { status: 'not_started' },
+    })).json();
+    const second = await (await fetch(`${BASE_STATE}/expenses`, {
+      method: 'PUT', headers: CASEWORKER, body: { status: 'in_progress' },
+    })).json();
+    assert.strictEqual(first.id, second.id, 'same record id');
+    assert.strictEqual(second.status, 'in_progress');
+  });
+
+  // ---- PATCH + GET by itemId (collection-backed) ----
+
+  await test('PATCH /{section}/{itemId} — creates state record for a collection item', async () => {
+    const res = await fetch(`${BASE_STATE}/identity/${member.id}`, {
+      method: 'PATCH', headers: CASEWORKER,
+      body: { status: 'in_progress' },
+    });
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.status, 'in_progress');
+    assert.strictEqual(data.section, 'identity');
+    assert.strictEqual(data.itemId, member.id);
+    assert.strictEqual(data.applicationId, appId);
+  });
+
+  await test('GET /{section}/{itemId} — returns single state record', async () => {
+    const res = await fetch(`${BASE_STATE}/identity/${member.id}`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.status, 'in_progress');
+    assert.strictEqual(data.itemId, member.id);
+  });
+
+  await test('GET /{section}/{itemId} — 404 for unknown itemId', async () => {
+    const res = await fetch(`${BASE_STATE}/identity/00000000-0000-0000-0000-000000000000`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  await test('PATCH /{section}/{itemId} — second PATCH updates the same record', async () => {
+    const first = await (await fetch(`${BASE_STATE}/income/${member.id}`, {
+      method: 'PATCH', headers: CASEWORKER, body: { status: 'not_started' },
+    })).json();
+    const second = await (await fetch(`${BASE_STATE}/income/${member.id}`, {
+      method: 'PATCH', headers: CASEWORKER, body: { status: 'flagged' },
+    })).json();
+    assert.strictEqual(first.id, second.id, 'same record id');
+    assert.strictEqual(second.status, 'flagged');
+  });
+
+  // ---- Panel embedding ----
+
+  await test('panel GET embeds state under camelKey on each item', async () => {
+    const panel = await (await fetch(`${BASE_URL}${APP}/${appId}/review/identity`)).json();
+    const memberItem = panel.items?.find(i => i.id === member.id);
+    assert.ok(memberItem, 'member found in panel items');
+    assert.ok(memberItem.reviewProgress, 'reviewProgress embedded');
+    assert.strictEqual(memberItem.reviewProgress.status, 'in_progress');
+  });
+
+  await test('panel GET returns default state fields when no record written', async () => {
+    const panel = await (await fetch(`${BASE_URL}${APP}/${appId}/review/demographics`)).json();
+    const memberItem = panel.items?.find(i => i.id === member.id);
+    assert.ok(memberItem, 'member found in demographics panel items');
+    assert.ok(memberItem.reviewProgress, 'reviewProgress present even without prior write');
+    assert.strictEqual(memberItem.reviewProgress.status, 'not_started', 'default status from schema');
+  });
+
+  // ---- Parent 404 guard ----
+
+  await test('PUT /{section} — 404 for unknown application', async () => {
+    const res = await fetch(
+      `${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-progress/household`,
+      { method: 'PUT', headers: CASEWORKER, body: { status: 'complete' } }
+    );
+    assert.strictEqual(res.status, 404);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Application notes
 // ---------------------------------------------------------------------------
 
@@ -1425,6 +1537,7 @@ async function runTests() {
     await testSubCollectionPaginationEnvelope();
     await testReviewContext();
     await testReviewProgress();
+    await testCompositionState();
     await testApplicationNotes();
     await testTraceparentPropagation();
   } finally {

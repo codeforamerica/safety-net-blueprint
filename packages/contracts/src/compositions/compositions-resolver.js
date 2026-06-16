@@ -17,7 +17,7 @@
  */
 
 import { readdirSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import yaml from 'js-yaml';
 
 // =============================================================================
@@ -275,6 +275,245 @@ function toPascalCase(name) {
 }
 
 /**
+ * Convert a PascalCase string to kebab-case.
+ * "ReviewProgress" → "review-progress"
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+function toKebabCase(s) {
+  return s.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+/**
+ * Derive state resource name info from a state config block.
+ *
+ * @param {Object} stateConfig - composition.state
+ * @returns {{ defsKey: string, kebabName: string, camelKey: string } | null}
+ */
+export function deriveStateResourceName(stateConfig) {
+  if (!stateConfig?.schema?.$ref) return null;
+  const match = stateConfig.schema.$ref.match(/#\/\$defs\/([A-Za-z][A-Za-z0-9]*)$/);
+  if (!match) return null;
+  const defsKey = match[1];
+  return {
+    defsKey,
+    kebabName: toKebabCase(defsKey),
+    camelKey: defsKey.charAt(0).toLowerCase() + defsKey.slice(1),
+  };
+}
+
+/**
+ * Load properties from the companion schema file referenced in state.schema.$ref.
+ *
+ * @param {Object} stateConfig - composition.state
+ * @param {string} compositionFilePath - Absolute path to the composition YAML file
+ * @returns {{ properties: Object, required: string[] } | null}
+ */
+function loadCompanionSchemaEntry(stateConfig, compositionFilePath) {
+  if (!stateConfig?.schema?.$ref || !compositionFilePath) return null;
+  const [filePart, defsPath] = stateConfig.schema.$ref.split('#');
+  const defsKey = defsPath?.match(/\/\$defs\/([A-Za-z][A-Za-z0-9]*)$/)?.[1];
+  if (!filePart || !defsKey) return null;
+
+  try {
+    const schemaPath = join(dirname(compositionFilePath), filePart);
+    const doc = yaml.load(readFileSync(schemaPath, 'utf8'));
+    const schema = doc?.$defs?.[defsKey];
+    return schema ? { properties: schema.properties ?? {}, required: schema.required ?? [] } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Generate OpenAPI path entries and schemas for a composition state resource.
+ *
+ * For sectionView compositions, generates:
+ *   GET    /{stateResource}/{section}          — list (paginated)
+ *   GET    /{stateResource}/{section}/{itemId} — single record
+ *   PUT    /{stateResource}/{section}          — replace (singleton)
+ *   PATCH  /{stateResource}/{section}          — partial update (singleton)
+ *   PUT    /{stateResource}/{section}/{itemId} — replace (collection item)
+ *   PATCH  /{stateResource}/{section}/{itemId} — partial update (collection item)
+ *
+ * @param {Object} composition - Composition definition
+ * @param {string} endpointPath - Composition endpoint path (e.g. /applications/{applicationId}/review)
+ * @param {Map<string, string>} paramIndex - From buildParameterIndex
+ * @param {string} compositionFilePath - Absolute path to the composition YAML file
+ * @returns {{ pathEntries: Object, schemaEntries: Object }}
+ */
+export function generateStateEndpoints(composition, endpointPath, paramIndex, compositionFilePath) {
+  const stateNameInfo = deriveStateResourceName(composition.state);
+  if (!stateNameInfo) return { pathEntries: {}, schemaEntries: {} };
+
+  const { defsKey, kebabName } = stateNameInfo;
+
+  // Derive parent base path: strip the last segment
+  // e.g. /applications/{applicationId}/review → /applications/{applicationId}
+  const parentBase = endpointPath.replace(/\/[^/]+$/, '');
+  const stateBasePath = `${parentBase}/${kebabName}`;
+  const sectionPath = `${stateBasePath}/{section}`;
+  const itemPath = `${stateBasePath}/{section}/{itemId}`;
+
+  // Build parent path parameters (from parent base path)
+  const parentParamNames = extractPathParams(parentBase);
+  const parentParams = parentParamNames.map(name => {
+    const ref = paramIndex.get(name);
+    return ref ? { $ref: ref } : { name, in: 'path', required: true, schema: { type: 'string' } };
+  });
+
+  const sectionParam = { name: 'section', in: 'path', required: true, schema: { type: 'string' },
+    description: 'Section name within the sectionView composition.' };
+  const itemIdParam = { name: 'itemId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' },
+    description: 'Item identifier for collection-backed sections.' };
+
+  const sectionParams = [...parentParams, sectionParam];
+  const itemParams   = [...parentParams, sectionParam, itemIdParam];
+
+  // Schema names
+  const writableSchemaName = `${defsKey}Writable`;
+  const resourceSchemaName = defsKey;
+  const listSchemaName     = `${defsKey}ListResponse`;
+
+  const notFound     = { $ref: './components/responses.yaml#/NotFound' };
+  const internalErr  = { $ref: './components/responses.yaml#/InternalError' };
+  const badRequest   = { $ref: './components/responses.yaml#/BadRequest' };
+  const unprocessable = { $ref: './components/responses.yaml#/UnprocessableEntity' };
+
+  const resourceRef = { $ref: `#/components/schemas/${resourceSchemaName}` };
+  const listRef     = { $ref: `#/components/schemas/${listSchemaName}` };
+
+  const readBody = (schemaRef, description) => ({
+    content: { 'application/json': { schema: schemaRef } },
+    description,
+  });
+
+  const pathEntries = {
+    [sectionPath]: {
+      parameters: sectionParams,
+      get: {
+        summary: `List ${defsKey} state records for a section`,
+        operationId: `list${defsKey}BySection`,
+        'x-state-resource': stateNameInfo.camelKey,
+        parameters: [
+          { $ref: './components/parameters.yaml#/LimitParam' },
+          { $ref: './components/parameters.yaml#/OffsetParam' },
+        ],
+        responses: {
+          '200': { description: `${defsKey} state records retrieved successfully.`, ...readBody(listRef, undefined) },
+          '404': notFound,
+          '500': internalErr,
+        },
+      },
+      put: {
+        summary: `Replace ${defsKey} state for a section`,
+        operationId: `replace${defsKey}BySection`,
+        'x-state-resource': stateNameInfo.camelKey,
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${writableSchemaName}` } } } },
+        responses: {
+          '200': { description: `${defsKey} state replaced successfully.`, ...readBody(resourceRef, undefined) },
+          '400': badRequest, '404': notFound, '422': unprocessable, '500': internalErr,
+        },
+      },
+      patch: {
+        summary: `Update ${defsKey} state for a section`,
+        operationId: `update${defsKey}BySection`,
+        'x-state-resource': stateNameInfo.camelKey,
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${writableSchemaName}` } } } },
+        responses: {
+          '200': { description: `${defsKey} state updated successfully.`, ...readBody(resourceRef, undefined) },
+          '400': badRequest, '404': notFound, '422': unprocessable, '500': internalErr,
+        },
+      },
+    },
+    [itemPath]: {
+      parameters: itemParams,
+      get: {
+        summary: `Get ${defsKey} state for a collection item`,
+        operationId: `get${defsKey}ByItem`,
+        'x-state-resource': stateNameInfo.camelKey,
+        responses: {
+          '200': { description: `${defsKey} state retrieved successfully.`, ...readBody(resourceRef, undefined) },
+          '404': notFound,
+          '500': internalErr,
+        },
+      },
+      put: {
+        summary: `Replace ${defsKey} state for a collection item`,
+        operationId: `replace${defsKey}ByItem`,
+        'x-state-resource': stateNameInfo.camelKey,
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${writableSchemaName}` } } } },
+        responses: {
+          '200': { description: `${defsKey} state replaced successfully.`, ...readBody(resourceRef, undefined) },
+          '400': badRequest, '404': notFound, '422': unprocessable, '500': internalErr,
+        },
+      },
+      patch: {
+        summary: `Update ${defsKey} state for a collection item`,
+        operationId: `update${defsKey}ByItem`,
+        'x-state-resource': stateNameInfo.camelKey,
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${writableSchemaName}` } } } },
+        responses: {
+          '200': { description: `${defsKey} state updated successfully.`, ...readBody(resourceRef, undefined) },
+          '400': badRequest, '404': notFound, '422': unprocessable, '500': internalErr,
+        },
+      },
+    },
+  };
+
+  // Build schema entries
+  const companionEntry = loadCompanionSchemaEntry(composition.state, compositionFilePath);
+  const writableProperties = companionEntry?.properties ?? {};
+  const writableRequired   = companionEntry?.required ?? [];
+
+  const frameworkProperties = {
+    id:            { type: 'string', format: 'uuid', readOnly: true },
+    section:       { type: 'string', readOnly: true },
+    itemId:        { type: 'string', format: 'uuid', nullable: true, readOnly: true },
+    createdAt:     { type: 'string', format: 'date-time', readOnly: true },
+    updatedAt:     { type: 'string', format: 'date-time', readOnly: true },
+  };
+
+  const schemaEntries = {
+    [writableSchemaName]: {
+      type: 'object',
+      description: `Client-writable fields for the ${stateNameInfo.camelKey} state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.`,
+      'x-state-resource': stateNameInfo.camelKey,
+      ...(Object.keys(writableProperties).length > 0 ? { properties: writableProperties } : {}),
+      ...(writableRequired.length > 0 ? { required: writableRequired } : {}),
+    },
+    [resourceSchemaName]: {
+      type: 'object',
+      description: `Generated state resource for ${stateNameInfo.camelKey}.`,
+      'x-state-resource': stateNameInfo.camelKey,
+      allOf: [
+        { $ref: `#/components/schemas/${writableSchemaName}` },
+        {
+          type: 'object',
+          properties: frameworkProperties,
+          required: ['id', 'section', 'createdAt', 'updatedAt'],
+        },
+      ],
+    },
+    [listSchemaName]: {
+      type: 'object',
+      description: `Paginated list of ${stateNameInfo.camelKey} state records.`,
+      properties: {
+        items:   { type: 'array', items: { $ref: `#/components/schemas/${resourceSchemaName}` } },
+        total:   { type: 'integer' },
+        limit:   { type: 'integer' },
+        offset:  { type: 'integer' },
+        hasNext: { type: 'boolean' },
+      },
+      required: ['items', 'total', 'limit', 'offset', 'hasNext'],
+    },
+  };
+
+  return { pathEntries, schemaEntries };
+}
+
+/**
  * Generate an OpenAPI overlay for a single composition file.
  *
  * Emits one path entry per composition that declares an `endpoint:`.
@@ -282,6 +521,10 @@ function toPascalCase(name) {
  *  - parameter refs derived from the path pattern
  *  - a stub response schema named `{CompositionName}Response`
  *  - `x-composition` annotation for downstream tooling
+ *
+ * When `composition.state` is declared, also emits state resource endpoints
+ * following the standard API patterns (paginated list, get/put/patch by section
+ * and item).
  *
  * The overlay uses `./components/responses.yaml#/...` for error response refs.
  * Callers that need a different prefix should rewrite refs after calling this.
@@ -291,7 +534,7 @@ function toPascalCase(name) {
  * @returns {Object|null} Overlay document, or null if no endpoints were declared
  */
 export function generateCompositionOverlay(compositionFile, paramIndex) {
-  const { domain, doc } = compositionFile;
+  const { domain, doc, filePath } = compositionFile;
   const apiSpecFile = `${domain}-openapi.yaml`;
 
   const pathsUpdate = {};
@@ -347,6 +590,13 @@ export function generateCompositionOverlay(compositionFile, paramIndex) {
       schemaEntry['x-composition-type'] = composition.compositeType;
     }
     schemasUpdate[schemaName] = schemaEntry;
+
+    // If the composition declares state:, also generate state resource endpoints
+    if (composition.state) {
+      const { pathEntries, schemaEntries } = generateStateEndpoints(composition, endpointPath, paramIndex, filePath);
+      Object.assign(pathsUpdate, pathEntries);
+      Object.assign(schemasUpdate, schemaEntries);
+    }
   }
 
   if (Object.keys(pathsUpdate).length === 0) return null;
