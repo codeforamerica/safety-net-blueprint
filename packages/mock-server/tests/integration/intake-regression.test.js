@@ -949,156 +949,34 @@ async function testSubCollectionPaginationEnvelope() {
 // ---------------------------------------------------------------------------
 
 async function testReviewContext() {
-  section('Review context — GET /applications/{id}/review-context');
+  section('Review context — GET /applications/{id}/review');
 
-  const app = await createOpenApp();
-  const appId = app.id;
+  const { id: appId } = await createOpenApp();
 
-  await test('200 — returns required top-level keys', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/${appId}/review-context`);
+  await test('200 — returns sections array', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/${appId}/review`);
     assert.strictEqual(res.status, 200);
     const data = await res.json();
-    assert.ok('application' in data, 'application key present');
-    assert.ok('members' in data, 'members key present');
-    assert.ok('reviewProgress' in data, 'reviewProgress key present');
-    assert.ok('notes' in data, 'notes key present');
+    assert.ok(Array.isArray(data.sections), 'sections is an array');
+    assert.ok(data.sections.length > 0, 'at least one section');
   });
 
-  await test('application sub-object matches the application resource', async () => {
-    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
-    assert.strictEqual(data.application.id, appId);
-    assert.strictEqual(data.application.status, 'under_review');
-  });
-
-  await test('members is an array', async () => {
-    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
-    assert.ok(Array.isArray(data.members));
-  });
-
-  await test('reviewProgress and notes are arrays', async () => {
-    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
-    assert.ok(Array.isArray(data.reviewProgress));
-    assert.ok(Array.isArray(data.notes));
+  await test('each section has name and href', async () => {
+    const { sections } = await (await fetch(`${BASE_URL}${APP}/${appId}/review`)).json();
+    for (const s of sections) {
+      assert.ok(typeof s.name === 'string', `section has name`);
+      assert.ok(typeof s.href === 'string', `section ${s.name} has href`);
+    }
   });
 
   await test('404 for unknown application', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-context`);
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review`);
     assert.strictEqual(res.status, 404);
   });
 
   await test('405 for POST (read-only endpoint)', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/${appId}/review-context`, { method: 'POST', body: {} });
+    const res = await fetch(`${BASE_URL}${APP}/${appId}/review`, { method: 'POST', body: {} });
     assert.strictEqual(res.status, 405);
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Review progress
-// ---------------------------------------------------------------------------
-
-async function testReviewProgress() {
-  section('Review progress — server-initialized entries + PATCH-by-id');
-
-  // Submit an app with one member, then claim the task to trigger initialization
-  const { id: appId } = await createAndSubmitApp(['snap']);
-  const member = await (await fetch(`${BASE_URL}${APP}/${appId}/members`, {
-    method: 'POST', headers: CASEWORKER,
-    body: { applicationId: appId, firstName: 'Test', lastName: 'Member', programsApplyingFor: ['snap'], roles: ['household_member'] },
-  })).json();
-  const task = await (await fetch(`${BASE_URL}${TASKS}`, {
-    method: 'POST', headers: CASEWORKER,
-    body: { name: 'Intake review', taskType: 'application_review', subjectId: appId, programType: 'snap' },
-  })).json();
-  await fetch(`${BASE_URL}${TASKS}/${task.id}/claim`, { method: 'POST', headers: CASEWORKER });
-
-  const BASE_PROGRESS = `${BASE_URL}${APP}/${appId}/review-progress`;
-
-  // 4 household sections + 5 member-scoped sections × 1 member = 9 entries
-  const HOUSEHOLD_SECTIONS = ['assets', 'contact', 'expenses', 'household'];
-  const MEMBER_SECTIONS = ['demographics', 'identity', 'income', 'employment', 'health-coverage'];
-  const EXPECTED_TOTAL = HOUSEHOLD_SECTIONS.length + MEMBER_SECTIONS.length;
-
-  await test('GET — returns all pre-initialized entries after task claim', async () => {
-    const res = await fetch(BASE_PROGRESS);
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    assert.ok('items' in data && 'total' in data && 'limit' in data && 'offset' in data && 'hasNext' in data, 'pagination shape');
-    assert.strictEqual(data.total, EXPECTED_TOTAL, `expected ${EXPECTED_TOTAL} entries (${HOUSEHOLD_SECTIONS.length} household + ${MEMBER_SECTIONS.length} member-scoped)`);
-  });
-
-  await test('household sections have no memberId', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    for (const section of HOUSEHOLD_SECTIONS) {
-      const entry = items.find(e => e.section === section);
-      assert.ok(entry, `household entry exists for section=${section}`);
-      assert.ok(!entry.memberId, `section=${section} should not have memberId`);
-    }
-  });
-
-  await test('member-scoped sections are linked to the member', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    for (const section of MEMBER_SECTIONS) {
-      const entry = items.find(e => e.section === section && e.memberId === member.id);
-      assert.ok(entry, `member entry exists for section=${section}`);
-    }
-  });
-
-  await test('all initialized entries have status=not_started', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    assert.ok(items.every(e => e.status === 'not_started'), 'all entries start as not_started');
-  });
-
-  await test('PATCH by id — updates status', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    const entry = items.find(e => e.section === 'income' && e.memberId === member.id);
-    assert.ok(entry, 'income entry exists');
-
-    const res = await fetch(`${BASE_PROGRESS}/${entry.id}`, {
-      method: 'PATCH', headers: CASEWORKER,
-      body: { status: 'in_progress' },
-    });
-    assert.strictEqual(res.status, 200);
-    const updated = await res.json();
-    assert.strictEqual(updated.status, 'in_progress');
-    assert.strictEqual(updated.id, entry.id, 'id unchanged');
-    assert.strictEqual(updated.section, 'income', 'section unchanged');
-    assert.strictEqual(updated.memberId, member.id, 'memberId unchanged');
-  });
-
-  await test('GET by id — returns single entry', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    const entry = items[0];
-    const res = await fetch(`${BASE_PROGRESS}/${entry.id}`);
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    assert.strictEqual(data.id, entry.id);
-  });
-
-  await test('GET ?section= — filters to matching entries only', async () => {
-    const res = await fetch(`${BASE_PROGRESS}?section=assets`);
-    const data = await res.json();
-    assert.strictEqual(data.total, 1, 'one household assets entry');
-    assert.ok(data.items.every(e => e.section === 'assets'));
-  });
-
-  await test('GET ?memberId= — filters to member entries only', async () => {
-    const res = await fetch(`${BASE_PROGRESS}?memberId=${member.id}`);
-    const data = await res.json();
-    assert.strictEqual(data.total, MEMBER_SECTIONS.length, `${MEMBER_SECTIONS.length} member-scoped entries`);
-    assert.ok(data.items.every(e => e.memberId === member.id));
-  });
-
-  await test('PATCH by id — 404 for unknown entry id', async () => {
-    const res = await fetch(`${BASE_PROGRESS}/00000000-0000-0000-0000-000000000000`, {
-      method: 'PATCH', headers: CASEWORKER,
-      body: { status: 'complete' },
-    });
-    assert.strictEqual(res.status, 404);
-  });
-
-  await test('GET list — 404 for unknown application', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-progress`);
-    assert.strictEqual(res.status, 404);
   });
 }
 
@@ -1380,125 +1258,6 @@ async function testSectionView() {
 }
 
 // ---------------------------------------------------------------------------
-// Application notes
-// ---------------------------------------------------------------------------
-
-async function testApplicationNotes() {
-  section('Application notes — /applications/{id}/notes');
-
-  const app = await createOpenApp();
-  const appId = app.id;
-  const BASE_NOTES = `${BASE_URL}${APP}/${appId}/notes`;
-
-  await test('GET — returns paginated shape with empty items initially', async () => {
-    const res = await fetch(BASE_NOTES);
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    assert.ok(Array.isArray(data.items));
-    assert.ok('total' in data && 'limit' in data && 'offset' in data && 'hasNext' in data);
-    assert.strictEqual(data.total, 0);
-  });
-
-  let noteId;
-
-  await test('POST — creates a note → 201 with id and applicationId', async () => {
-    const res = await fetch(BASE_NOTES, {
-      method: 'POST', headers: CASEWORKER,
-      body: { scope: 'section', section: 'income', text: 'Check pay stubs', textFormat: 'plain' },
-    });
-    assert.strictEqual(res.status, 201);
-    const data = await res.json();
-    assert.ok(data.id, 'id assigned');
-    assert.strictEqual(data.applicationId, appId);
-    assert.strictEqual(data.scope, 'section');
-    assert.strictEqual(data.section, 'income');
-    assert.strictEqual(data.text, 'Check pay stubs');
-    noteId = data.id;
-  });
-
-  await test('GET — lists created note in paginated response', async () => {
-    const data = await (await fetch(BASE_NOTES)).json();
-    assert.strictEqual(data.total, 1);
-    assert.strictEqual(data.items[0].id, noteId);
-  });
-
-  await test('GET /{noteId} — retrieves note by id', async () => {
-    const res = await fetch(`${BASE_NOTES}/${noteId}`);
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    assert.strictEqual(data.id, noteId);
-    assert.strictEqual(data.text, 'Check pay stubs');
-  });
-
-  await test('GET ?scope=section — filters by scope', async () => {
-    await fetch(BASE_NOTES, {
-      method: 'POST', headers: CASEWORKER,
-      body: { scope: 'application', text: 'General observation' },
-    });
-    const data = await (await fetch(`${BASE_NOTES}?scope=section`)).json();
-    assert.ok(data.items.every(n => n.scope === 'section'), 'all items match scope filter');
-  });
-
-  await test('GET ?section=income — filters by section', async () => {
-    const data = await (await fetch(`${BASE_NOTES}?section=income`)).json();
-    assert.ok(data.items.every(n => n.section === 'income'), 'all items match section filter');
-  });
-
-  await test('PATCH /{noteId} — updates text', async () => {
-    const res = await fetch(`${BASE_NOTES}/${noteId}`, {
-      method: 'PATCH', headers: CASEWORKER,
-      body: { text: 'Updated: reviewed pay stubs, verified' },
-    });
-    assert.strictEqual(res.status, 200);
-    assert.strictEqual((await res.json()).text, 'Updated: reviewed pay stubs, verified');
-  });
-
-  await test('PATCH /{noteId} — non-text fields unchanged after text update', async () => {
-    const data = await (await fetch(`${BASE_NOTES}/${noteId}`)).json();
-    assert.strictEqual(data.section, 'income', 'section unchanged after partial update');
-    assert.strictEqual(data.scope, 'section', 'scope unchanged after partial update');
-  });
-
-  await test('DELETE /{noteId} — 204', async () => {
-    const res = await fetch(`${BASE_NOTES}/${noteId}`, { method: 'DELETE', headers: CASEWORKER });
-    assert.strictEqual(res.status, 204);
-  });
-
-  await test('GET /{noteId} after DELETE — 404', async () => {
-    const res = await fetch(`${BASE_NOTES}/${noteId}`);
-    assert.strictEqual(res.status, 404);
-  });
-
-  await test('POST — application-scoped note (no section)', async () => {
-    const res = await fetch(BASE_NOTES, {
-      method: 'POST', headers: CASEWORKER,
-      body: { scope: 'application', text: 'Household seems stable' },
-    });
-    assert.strictEqual(res.status, 201);
-    const data = await res.json();
-    assert.strictEqual(data.scope, 'application');
-  });
-
-  await test('404 for unknown application', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/notes`);
-    assert.strictEqual(res.status, 404);
-  });
-
-  await test('GET /{noteId} 404 for unknown note', async () => {
-    const res = await fetch(`${BASE_NOTES}/00000000-0000-0000-0000-000000000000`);
-    assert.strictEqual(res.status, 404);
-  });
-
-  await test('POST emits event with application ID as subject', async () => {
-    const eventsRes = await fetch(`${BASE_URL}/platform/events?subject=${appId}`);
-    const data = await eventsRes.json();
-    const noteEvents = data.items.filter(e => e.type.includes('note'));
-    assert.ok(noteEvents.length > 0, 'at least one note event emitted');
-    assert.ok(noteEvents.every(e => e.subject === appId), 'all note events use application ID as subject');
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Income verification per source
 // Verifies that income verifications are created per income source, not per member
 // REQUIRES: /verifications, /application-members in spec, income sub-resource
@@ -1701,10 +1460,8 @@ async function runTests() {
     await testTaskClaimedRules();
     await testSubCollectionPaginationEnvelope();
     await testReviewContext();
-    await testReviewProgress();
     await testCompositionState();
     await testSectionView();
-    await testApplicationNotes();
     await testTraceparentPropagation();
   } finally {
     await teardownServer(serverStartedByTests);

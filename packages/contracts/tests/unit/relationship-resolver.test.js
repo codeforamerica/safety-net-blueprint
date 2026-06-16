@@ -2415,7 +2415,7 @@ test('relationship-resolver tests', async (t) => {
   // Integration: real intake spec under global expand
   // ===========================================================================
 
-  await t.test('integration - intake spec under global expand keeps all 16 back-refs scalar', async () => {
+  await t.test('integration - intake spec under global expand keeps all 14 back-refs scalar', async () => {
     // Loads the real packages/contracts/intake-openapi.yaml and confirms the
     // direction gate behaves correctly against the full spec. Acts as a
     // regression guard for the design intent documented in the GH issue.
@@ -2436,7 +2436,7 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
     const schemas = result.components.schemas;
 
-    // The 16 back-references documented in safety-net-blueprint#324.
+    // The 14 back-references in the intake spec.
     // Each tuple: [containingSchema, scalarFieldName].
     const backRefs = [
       ['ApplicationMember', 'applicationId'],
@@ -2451,10 +2451,8 @@ test('relationship-resolver tests', async (t) => {
       ['MemberHealthCoverage', 'memberId'],
       ['MemberHealthCoverage', 'applicationId'],
       ['ApplicationHousehold', 'applicationId'],
-      ['ApplicationNote', 'applicationId'],
       ['Verification', 'applicationId'],
       ['Interview', 'applicationId'],
-      ['ReviewProgressEntry', 'applicationId']
     ];
 
     for (const [schemaName, fieldName] of backRefs) {
@@ -2494,7 +2492,7 @@ test('relationship-resolver tests', async (t) => {
     assert.ok(writableProps.person, 'ApplicationMemberWritable.person should be inlined');
   });
 
-  await t.test('integration - intake spec expands laterals but cascade stops at one level', async () => {
+  await t.test('integration - intake spec expands cross-domain refs and cascade stops at one level', async () => {
     const { readFileSync } = await import('fs');
     const { join, dirname } = await import('path');
     const { fileURLToPath } = await import('url');
@@ -2509,16 +2507,6 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
     const schemas = result.components.schemas;
 
-    // Lateral expansions to ApplicationMember (sibling under /applications/{id}):
-    // ApplicationNoteWritable and ReviewProgressEntryWritable each have
-    // memberId → ApplicationMember. Under global expand they should be renamed
-    // to `member` and inlined.
-    for (const laterName of ['ApplicationNoteWritable', 'ReviewProgressEntryWritable']) {
-      const props = gatherSchemaProperties(schemas[laterName]);
-      assert.strictEqual(props.memberId, undefined, `${laterName}.memberId should be renamed by lateral expansion`);
-      assert.ok(props.member, `${laterName}.member should be inlined`);
-    }
-
     // VerificationWritable.sourceId → Polymorphic is a cross-domain forward
     // reference (the target has no served path in this spec). It should still
     // be expanded — renamed to `source` — even though Polymorphic isn't in the
@@ -2529,10 +2517,9 @@ test('relationship-resolver tests', async (t) => {
     assert.strictEqual(verificationProps.sourceId, undefined, 'VerificationWritable.sourceId should be renamed (cross-domain forward expand)');
     assert.ok(verificationProps.source, 'VerificationWritable.source should be inlined');
 
-    // Cascade stops: the local ApplicationMember (referenced by the lateral's
-    // `member` $ref) still has its applicationId as a scalar. Any consumer
-    // following the $ref reaches an ApplicationMember whose applicationId
-    // never expanded into the full Application object.
+    // Cascade stops: ApplicationMember.applicationId remains scalar even though
+    // forward-expansion runs on other schemas. Consumers following a $ref to
+    // ApplicationMember see an applicationId field, not an embedded Application.
     const memberProps = gatherSchemaProperties(schemas.ApplicationMember);
     assert.ok(memberProps.applicationId, 'ApplicationMember.applicationId still scalar (cascade stopped)');
     assert.strictEqual(memberProps.application, undefined, 'no embedded Application — cascade stopped');

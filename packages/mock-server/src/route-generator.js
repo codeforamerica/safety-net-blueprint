@@ -245,46 +245,6 @@ export function extractRequiredDefaults(responseSchema) {
 }
 
 /**
- * Create a composite handler for GET /applications/{applicationId}/review-context.
- * Assembles application, household, all members with their sub-resources,
- * review-progress entries, and notes into a single response.
- */
-function createReviewContextHandler() {
-  return (req, res) => {
-    try {
-      const { applicationId } = req.params;
-
-      const application = findById('applications', applicationId);
-      if (!application) {
-        return res.status(404).json({ code: 'NOT_FOUND', message: 'Application not found' });
-      }
-
-      const { items: householdItems } = findAll('household-infos', { applicationId }, { limit: 1 });
-      const household = householdItems.length > 0 ? householdItems[0] : null;
-
-      const { items: members } = findAll('application-members', { applicationId }, { limit: 1000 });
-      const enrichedMembers = members.map(member => {
-        const memberId = member.id;
-        const { items: incomes } = findAll('member-incomes', { memberId }, { limit: 1000 });
-        const { items: expenses } = findAll('member-expenses', { memberId }, { limit: 1000 });
-        const { items: assets } = findAll('member-assets', { memberId }, { limit: 1000 });
-        const { items: employmentRecords } = findAll('member-employment-records', { memberId }, { limit: 1000 });
-        const { items: healthCoverages } = findAll('member-health-coverages', { memberId }, { limit: 1000 });
-        return { ...member, incomes, expenses, assets, employmentRecords, healthCoverages };
-      });
-
-      const { items: reviewProgress } = findAll('application-review-progress', { applicationId }, { limit: 1000 });
-      const { items: notes } = findAll('application-notes', { applicationId }, { limit: 1000 });
-
-      res.json({ application, householdInfo: household, members: enrichedMembers, reviewProgress, notes });
-    } catch (error) {
-      console.error('Review context handler error:', error);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-    }
-  };
-}
-
-/**
  * Register routes for an API specification
  * @param {Object} app - Express app
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
@@ -330,15 +290,6 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       registeredEndpoints.push({ method: 'GET', path: expressPath, description: 'Get document version file content' });
       console.log(`    GET    ${expressPath} - Get document version file content`);
       continue;
-    } else if (endpoint.operationId === 'getApplicationReviewContext') {
-      handler = createReviewContextHandler();
-      description = 'Get application review context (composite view)';
-      // Read-only endpoint — pre-register 405 for write methods before the global 404 handler
-      for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
-        app[writeMethod](expressPath, (req, res) => {
-          res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
-        });
-      }
     } else if (endpoint.operationId === 'search') {
       // Cross-resource search endpoint — custom handler
       handler = createSearchHandler(apiMetadata);

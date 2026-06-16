@@ -32,3 +32,9 @@ $defs:
           - complete
           - flagged
         default: not_started
+      notes:
+        type: string
+        nullable: true
+        description: >
+          Free-form caseworker notes for this review section. Updated via PATCH
+          on the section state endpoint.
