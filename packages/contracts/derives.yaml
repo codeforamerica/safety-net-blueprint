@@ -13,8 +13,8 @@
 isComplete:
   # item scope — true when all fields on this item are present and non-empty
   item: "Object.values($self).every(v => $present(v))"
-  # collection scope — true when every item in the collection is complete
-  collection: "items.every(i => Object.values(i).every(v => $present(v)))"
+  # collection scope — true when the collection is non-empty and every item is complete
+  collection: "items.length > 0 && items.every(i => Object.values(i).every(v => $present(v)))"
 
 # Completion percentage (0–100, rounded)
 percentComplete:

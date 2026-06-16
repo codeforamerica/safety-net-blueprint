@@ -14,8 +14,7 @@ derives:
   # resolve pipeline. Inline them here for mock server use until that is built.
   isComplete:
     item: "Object.values($self).every(v => $present(v))"
-    collection: "items.every(i => Object.values(i).every(v => $present(v)))"
-  sectionHasData: "items.size() > 0"
+    collection: "items.length > 0 && items.every(i => Object.values(i).every(v => $present(v)))"
 
 compositions:
 
@@ -51,8 +50,7 @@ compositions:
         resource: application-members
         bind: applicationId
         derive:
-          complete: { $ref: '#/derives/isComplete/item' }   # item-scope: is this member's data complete?
-          hasData: { $ref: '#/derives/sectionHasData' }     # collection-scope: are there any members?
+          complete: { $ref: '#/derives/isComplete/collection' }
 
       identity:
         resource: application-members
@@ -62,38 +60,54 @@ compositions:
             resource: verifications
             bind: applicationId
             filter: "category == 'identity'"
+        derive:
+          complete: { $ref: '#/derives/isComplete/collection' }
 
       income:
         resource: member-incomes
         bind: applicationId
+        derive:
+          complete: { $ref: '#/derives/isComplete/collection' }
 
       employment:
         resource: member-employment-records
         bind: applicationId
+        derive:
+          complete: { $ref: '#/derives/isComplete/collection' }
 
       health-coverage:
         resource: member-health-coverages
         bind: applicationId
+        derive:
+          complete: { $ref: '#/derives/isComplete/collection' }
 
       # Household-level sections — one review-progress entry per section (no memberId)
 
       assets:
         resource: member-assets
         bind: applicationId
+        derive:
+          complete: { $ref: '#/derives/isComplete/collection' }
 
       contact:
         resource: application-members
         bind: applicationId
         fields: [id, firstName, lastName, phoneNumber, email, preferredLanguage, preferredContactMethod]
+        derive:
+          complete: { $ref: '#/derives/isComplete/collection' }
 
       expenses:
         resource: member-expenses
         bind: applicationId
+        derive:
+          complete: { $ref: '#/derives/isComplete/collection' }
 
       household:
         resource: household-info
         bind: applicationId
         missing: empty
+        derive:
+          complete: { $ref: '#/derives/isComplete/collection' }
 
     # Panel nodes — included in every section panel response alongside the section's resource
     panel:

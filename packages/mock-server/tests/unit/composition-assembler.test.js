@@ -287,7 +287,7 @@ const DERIVE_COMPOSITION = {
   derives: {
     isComplete: {
       item: "Object.values($self).every(v => $present(v))",
-      collection: "items.every(i => Object.values(i).every(v => $present(v)))",
+      collection: "items.length > 0 && items.every(i => Object.values(i).every(v => $present(v)))",
     },
     percentComplete: {
       item: "Object.keys($self).length === 0 ? 0 : Math.round(Object.values($self).filter(v => $present(v)).length / Object.keys($self).length * 100)",
@@ -404,9 +404,10 @@ describe('assembleSectionPanel — derived fields', () => {
     }
   });
 
-  test('empty collection: percentComplete is 0, countComplete total is 0', () => {
+  test('empty collection: allComplete is false, percentComplete is 0, countComplete total is 0', () => {
     clearAll('application-members');
     const result = assembleSectionPanel(DERIVE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.strictEqual(result.allComplete, false);
     assert.strictEqual(result.collectionPercent, 0);
     assert.deepStrictEqual(result.collectionCounts, { complete: 0, total: 0 });
   });
