@@ -16,9 +16,10 @@
  * stub with a fully-shaped schema.
  */
 
-import { readdirSync, readFileSync } from 'fs';
+import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import yaml from 'js-yaml';
+import { applyOverlay } from '../overlay/overlay-resolver.js';
 
 // =============================================================================
 // Discovery
@@ -47,7 +48,38 @@ export function discoverCompositions(specsDir) {
       const content = readFileSync(filePath, 'utf8');
       const doc = yaml.load(content);
       if (!doc || typeof doc !== 'object' || !doc.compositions) continue;
-      results.push({ filePath, domain, doc });
+
+      // Apply state composition overlays from overlays/*/
+      let mergedDoc = doc;
+      const overlaysDir = join(specsDir, 'overlays');
+      try {
+        const stateDirs = readdirSync(overlaysDir);
+        for (const stateDir of stateDirs) {
+          const stateDirPath = join(overlaysDir, stateDir);
+          let stat;
+          try { stat = statSync(stateDirPath); } catch { continue; }
+          if (!stat.isDirectory()) continue;
+
+          const overlayFilePath = join(stateDirPath, `${domain}-compositions.yaml`);
+          try {
+            const overlayContent = readFileSync(overlayFilePath, 'utf8');
+            const overlayDoc = yaml.load(overlayContent);
+            if (!overlayDoc || overlayDoc.overlay !== '1.0.0') continue;
+
+            const { result } = applyOverlay(mergedDoc, overlayDoc, {
+              silent: true,
+              overlayDir: stateDirPath,
+            });
+            mergedDoc = result;
+          } catch {
+            continue;
+          }
+        }
+      } catch {
+        // overlays directory doesn't exist — fine
+      }
+
+      results.push({ filePath, domain, doc: mergedDoc });
     } catch {
       continue;
     }
@@ -696,8 +728,8 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
     if (composition.compositeType === 'sectionView') {
       const panel = generateSectionViewPanelEndpoint(compositionName, endpointPath, paramIndex);
 
-      // Collect named views from the doc-level views map
-      const viewNames = Object.keys(doc.views || {});
+      // Collect named views from the composition-level views map
+      const viewNames = Object.keys(composition.views || {});
       if (viewNames.length > 0) {
         const viewParam = {
           name: 'view',

@@ -1156,7 +1156,7 @@ async function testSectionView() {
 
   await test('GET /review/:section — panel.include resources appear in response', async () => {
     const data = await (await fetch(`${BASE_REVIEW}/income`)).json();
-    assert.ok(data.include && 'notes' in data.include, 'panel.include notes present under data.include');
+    assert.ok(data.include && 'verifications' in data.include, 'panel.include verifications present under data.include');
   });
 
   await test('GET /review/:section — $section.name filter context passes section to filter', async () => {

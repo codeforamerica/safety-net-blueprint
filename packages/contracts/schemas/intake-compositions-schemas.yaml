@@ -33,8 +33,21 @@ $defs:
           - flagged
         default: not_started
       notes:
-        type: string
+        type: object
         nullable: true
+        additionalProperties: true
         description: >
-          Free-form caseworker notes for this review section. Updated via PATCH
-          on the section state endpoint.
+          Caseworker notes for this review section. Updated via PATCH on the
+          section state endpoint. additionalProperties: true allows states to
+          extend with visibility controls, note types, or other fields via overlay.
+        properties:
+          text:
+            type: string
+            description: Note content.
+          textFormat:
+            type: string
+            enum: [plain, markdown, html]
+            default: plain
+            description: >
+              Rendering format for the note text. plain: literal text.
+              markdown: rendered as Markdown. html: rendered as HTML.

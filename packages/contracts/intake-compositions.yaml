@@ -18,13 +18,6 @@ derives:
   isIncomplete:
     item: "!Object.values($self).every(v => $present(v))"
 
-# Reusable named view definitions available on all sections in this domain.
-# Applied via ?view=<name> on any section panel endpoint.
-# Referenced via { $ref: '#/views/<name>' } in section-level view overrides.
-views:
-  incomplete:
-    filter: { $ref: '#/derives/isIncomplete/item' }
-
 compositions:
 
   # reviewContext — sectionView composite for the caseworker application review workflow.
@@ -50,6 +43,9 @@ compositions:
     state:
       schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' }
       methods: [put, patch]
+    views:
+      incomplete:
+        filter: { $ref: '#/derives/isIncomplete/item' }
 
     sections:
 
@@ -147,6 +143,4 @@ compositions:
           resource: verifications
           bind: applicationId
           filter: "category == $section.name"
-        notes:
-          resource: application-notes
-          bind: applicationId
+

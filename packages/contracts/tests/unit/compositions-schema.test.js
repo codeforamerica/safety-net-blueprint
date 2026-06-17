@@ -83,12 +83,6 @@ test('compositions-schema structural requirements', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('compositions is optional (fragments-only file)', () => {
-    const { compositions: _, ...doc } = base;
-    const { valid, errors } = validate(doc);
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
   await t.test('rejects unknown top-level keys', () => {
     const doc = { ...base, unknownKey: 'value' };
     const { valid } = validate(doc);
@@ -211,52 +205,6 @@ test('compositions-schema include map', async (t) => {
               bind: 'applicationId',
               filter: "category == 'identity'",
             },
-          },
-        },
-      },
-    };
-    const { valid, errors } = validate(doc);
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('fragment $ref in include map', () => {
-    const doc = {
-      version: '1.0',
-      fragments: {
-        memberFinancials: {
-          include: {
-            income: { resource: 'member-incomes', bind: 'memberId' },
-          },
-        },
-      },
-      compositions: {
-        application: {
-          resource: 'applications',
-          include: {
-            financials: { $ref: '#/fragments/memberFinancials' },
-          },
-        },
-      },
-    };
-    const { valid, errors } = validate(doc);
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('fragment $ref with flatten', () => {
-    const doc = {
-      version: '1.0',
-      fragments: {
-        memberFinancials: {
-          include: {
-            income: { resource: 'member-incomes', bind: 'memberId' },
-          },
-        },
-      },
-      compositions: {
-        application: {
-          resource: 'applications',
-          include: {
-            financials: { $ref: '#/fragments/memberFinancials', flatten: true },
           },
         },
       },
@@ -623,42 +571,3 @@ test('compositions-schema sectionView', async (t) => {
 
 });
 
-// ---------------------------------------------------------------------------
-// Fragments
-// ---------------------------------------------------------------------------
-
-test('compositions-schema fragments', async (t) => {
-
-  await t.test('named fragment with include map', () => {
-    const doc = {
-      version: '1.0',
-      fragments: {
-        memberFinancials: {
-          include: {
-            income: { resource: 'member-incomes', bind: 'memberId' },
-            assets: { resource: 'member-assets', bind: 'memberId' },
-          },
-        },
-      },
-    };
-    const { valid, errors } = validate(doc);
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('fragment body rejects unknown keys', () => {
-    const doc = {
-      version: '1.0',
-      fragments: {
-        memberFinancials: {
-          include: {
-            income: { resource: 'member-incomes', bind: 'memberId' },
-          },
-          unknownKey: 'value',
-        },
-      },
-    };
-    const { valid } = validate(doc);
-    assert.equal(valid, false);
-  });
-
-});

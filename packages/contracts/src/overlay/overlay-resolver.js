@@ -377,6 +377,51 @@ export function appendAtPath(obj, path, items) {
 }
 
 /**
+ * Add a value at a JSONPath-like location.
+ * Unlike setAtPath, navigates the parent path strictly — does not auto-create intermediate
+ * keys. Only sets the key if it is absent; returns { added: false, reason: 'already exists' }
+ * if the key is already present so callers can warn and skip.
+ *
+ * @param {Object} obj - The object to modify
+ * @param {string} path - JSONPath-like path
+ * @param {*} value - The value to add
+ * @returns {{ added: boolean, reason: string | null }}
+ */
+export function addAtPath(obj, path, value) {
+  const tokens = parsePath(path);
+  if (tokens.length === 0) return { added: false, reason: 'empty path' };
+
+  const lastToken = tokens[tokens.length - 1];
+  if (lastToken.type !== 'key') {
+    return { added: false, reason: 'last path segment must be a key, not a filter expression' };
+  }
+
+  const navTokens = tokens.slice(0, -1);
+  let current = obj;
+  for (const token of navTokens) {
+    if (token.type === 'key') {
+      if (current[token.value] === undefined || current[token.value] === null) {
+        return { added: false, reason: `parent path does not exist at '${token.value}'` };
+      }
+      current = current[token.value];
+    } else if (token.type === 'filter') {
+      if (!Array.isArray(current)) return { added: false, reason: 'filter applied to non-array in parent path' };
+      const match = current.find(item => item && item[token.field] === token.value);
+      if (!match) return { added: false, reason: 'no item matched filter in parent path' };
+      current = match;
+    }
+  }
+
+  const key = lastToken.value;
+  if (Object.prototype.hasOwnProperty.call(current, key)) {
+    return { added: false, reason: 'already exists' };
+  }
+
+  current[key] = value;
+  return { added: true, reason: null };
+}
+
+/**
  * Load a replacement schema from a $ref path
  * @param {string} refPath - The $ref path (e.g., "./replacements/expenses.yaml#/CaliforniaExpenses")
  * @param {string} baseDir - The base directory to resolve relative paths from
@@ -437,7 +482,7 @@ export function applyOverlay(spec, overlay, options = {}) {
   }
 
   for (const action of overlay.actions) {
-    const { target, update, remove, rename, replace, append } = action;
+    const { target, update, remove, rename, replace, append, add } = action;
 
     if (!target) {
       if (!silent) {
@@ -458,7 +503,7 @@ export function applyOverlay(spec, overlay, options = {}) {
     const isAddingProperties = target.endsWith('.properties') && typeof update === 'object';
 
     // Warn if target doesn't fully exist (except when intentionally adding new properties or replacing)
-    if (!pathCheck.fullPathExists && !isAddingProperties && !replace) {
+    if (!pathCheck.fullPathExists && !isAddingProperties && !replace && add === undefined) {
       const actionDesc = action.description || target;
       warnings.push(`Target $.${pathCheck.missingAt} does not exist in base schema (action: "${actionDesc}")`);
     }
@@ -509,6 +554,34 @@ export function applyOverlay(spec, overlay, options = {}) {
       setAtPath(result, target, update);
       if (!silent && action.description) {
         console.log(`  - Applied: ${action.description}`);
+      }
+    } else if (add !== undefined) {
+      // Custom extension: add action (create at path only if absent; warns and skips if key exists)
+      let addValue = add;
+
+      if (add && typeof add === 'object' && add.$ref) {
+        if (!overlayDir) {
+          warnings.push(`Cannot resolve $ref in add action: overlayDir not provided (action: "${action.description || target}")`);
+          continue;
+        }
+        const { value, error } = loadReplacementRef(add.$ref, overlayDir);
+        if (error) {
+          warnings.push(`${error} (action: "${action.description || target}")`);
+          continue;
+        }
+        addValue = value;
+      }
+
+      const { added, reason } = addAtPath(result, target, addValue);
+      if (!added) {
+        const actionDesc = action.description || target;
+        if (reason === 'already exists') {
+          warnings.push(`add: target already exists, skipping (action: "${actionDesc}")`);
+        } else if (reason) {
+          warnings.push(`add: ${reason} (action: "${actionDesc}")`);
+        }
+      } else if (!silent && action.description) {
+        console.log(`  - Added: ${action.description}`);
       }
     }
   }

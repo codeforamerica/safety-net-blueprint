@@ -86,7 +86,7 @@ function resolveDerivExpr(exprOrRef, derives = {}) {
 /**
  * Resolve a view definition, resolving any $ref in its filter field.
  *
- * Views are looked up directly from the doc-level views map by the caller;
+ * Views are looked up from the composition-level views map by the caller;
  * this function resolves $ref expressions within the view (e.g., filter: { $ref: '#/derives/...' }).
  *
  * @param {Object|undefined} viewDef - View definition { filter?, fields? }
@@ -349,6 +349,51 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   }
 
   return { sections };
+}
+
+// ---------------------------------------------------------------------------
+// Plain composition assembly
+// ---------------------------------------------------------------------------
+
+/**
+ * Assemble a plain (non-sectionView) composition response.
+ *
+ * Fetches the root resource by its own ID (derived from the primary path parameter),
+ * applies optional field projection and include nodes, and returns the assembled record.
+ *
+ * @param {Object} composition - Composition definition (compositeType absent or not 'sectionView')
+ * @param {Object} params - Express req.params
+ * @param {Object} opts
+ * @returns {Object|null} Assembled record, or null if root resource not found
+ */
+export function assemblePlainComposition(composition, params, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
+  const bindValues = buildBindValues(params);
+  const primaryParam = extractPrimaryParam(composition.endpoint?.path ?? '');
+  const rootId = primaryParam ? bindValues[primaryParam] : null;
+  const rootRecord = rootId ? findById(composition.resource, rootId) : null;
+  if (!rootRecord) return null;
+
+  const record = composition.fields ? projectFields(rootRecord, composition.fields) : { ...rootRecord };
+
+  if (composition.include) {
+    const context = { sectionName: null };
+    const include = {};
+    for (const [key, includeNode] of Object.entries(composition.include)) {
+      include[key] = fetchNodeItems(includeNode, bindValues, context);
+    }
+    if (Object.keys(include).length > 0) {
+      record.include = include;
+    }
+  }
+
+  if (composition.links && resourceItemPathMap) {
+    const itemPath = resourceItemPathMap.get(composition.resource);
+    if (itemPath) {
+      record._links = { self: buildSelfLink(itemPath, serverBasePath, params, record.id) };
+    }
+  }
+
+  return record;
 }
 
 // ---------------------------------------------------------------------------

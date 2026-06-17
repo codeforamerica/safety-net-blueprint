@@ -12,12 +12,12 @@ base spec directory (--spec)         overlay directory (--overlay)
   *-openapi-examples.yaml              config.yaml
   components/                          (any structure)
   *-state-machine.yaml ──┐
-  *-rules.yaml           │
-        │                │ auto-generate RPC overlays
+  *-compositions.yaml ───┤ auto-generate overlays
+        │                │
         │           ┌────┘
         │           ▼
-        │    RPC overlay generation
-        │    (one per state machine)
+        │    Auto-overlay generation
+        │    (RPC endpoints + composition endpoints)
         │           │
         └───────────┤
                     │ + explicit overlays
@@ -35,18 +35,21 @@ base spec directory (--spec)         overlay directory (--overlay)
                 *-openapi.yaml        (merged spec)
                 *-openapi-examples.yaml  (transformed)
                 *-state-machine.yaml  (copied)
-                *-rules.yaml          (copied)
                 *-sla-types.yaml      (copied, no overlay processing yet — see #174)
                 *-metrics.yaml        (copied, no overlay processing yet — see #174)
 ```
 
 ## Pipeline Stages
 
-### 1. RPC Endpoint Generation
+### 1. Auto-overlay Generation
 
-Before any explicit overlay is applied, `resolve.js` discovers all `*-state-machine.yaml` files in the spec directory and generates an overlay for each one. Each overlay adds the RPC transition endpoints (e.g. `POST /tasks/{id}/claim`) to the corresponding API spec, deriving them from the state machine's triggers.
+Before any explicit overlay is applied, `resolve.js` generates overlays from two sources:
 
-These generated overlays are applied first, so subsequent explicit overlays can reference or further modify the RPC endpoints if needed.
+**RPC endpoint overlays** — `resolve.js` discovers all `*-state-machine.yaml` files and generates an overlay for each one. Each overlay adds the RPC transition endpoints (e.g. `POST /tasks/{id}/claim`) to the corresponding API spec, derived from the state machine's action definitions.
+
+**Composition overlays** — `resolve.js` discovers all `*-compositions.yaml` files and generates an overlay for each one. Each overlay adds the composite view endpoints and any composition state endpoints declared in the config (e.g. `GET /applications/{id}/review`, `PATCH /applications/{id}/review-progress/{section}`). If the composition sets `parentLink: true`, the overlay also adds `_links.<compositionId>` to the parent resource's response schema. See [Resource Composition](cross-cutting/resource-composition.md) for the full config reference.
+
+Both sets of generated overlays are applied before explicit overlays, so subsequent explicit overlays can reference or further modify any of these endpoints if needed.
 
 ### 2. Overlay Merge
 

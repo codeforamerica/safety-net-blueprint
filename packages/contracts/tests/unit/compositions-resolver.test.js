@@ -257,6 +257,129 @@ describe('discoverCompositions', () => {
       removeTempDir(dir);
     }
   });
+
+  test('applies state composition overlay from overlays/{state}/{domain}-compositions.yaml', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'intake-compositions.yaml', {
+        version: '1.0',
+        domain: 'intake',
+        compositions: {
+          reviewContext: {
+            compositeType: 'sectionView',
+            resource: 'applications',
+            sections: {
+              identity: { resource: 'members', bind: 'applicationId' },
+            },
+          },
+        },
+      });
+
+      mkdirSync(join(dir, 'overlays', 'example'), { recursive: true });
+      writeYaml(join(dir, 'overlays', 'example'), 'intake-compositions.yaml', {
+        overlay: '1.0.0',
+        info: { title: 'Example overlay', version: '1.0.0' },
+        actions: [{
+          target: '$.compositions.reviewContext.sections.household',
+          description: 'Add household section',
+          add: { resource: 'household-info', bind: 'applicationId' },
+        }],
+      });
+
+      const result = discoverCompositions(dir);
+      assert.equal(result.length, 1);
+      assert.ok(result[0].doc.compositions.reviewContext.sections.household, 'overlay-added section present');
+      assert.equal(result[0].doc.compositions.reviewContext.sections.identity.resource, 'members');
+    } finally {
+      removeTempDir(dir);
+    }
+  });
+
+  test('skips overlay files without overlay: 1.0.0 header', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'intake-compositions.yaml', {
+        version: '1.0',
+        domain: 'intake',
+        compositions: {
+          reviewContext: { resource: 'applications', sections: { identity: {} } },
+        },
+      });
+
+      mkdirSync(join(dir, 'overlays', 'example'), { recursive: true });
+      writeYaml(join(dir, 'overlays', 'example'), 'intake-compositions.yaml', {
+        version: '1.0',
+        compositions: { extra: { resource: 'foo' } },
+      });
+
+      const result = discoverCompositions(dir);
+      assert.equal(result.length, 1);
+      assert.equal(result[0].doc.compositions.extra, undefined, 'non-overlay file should be ignored');
+    } finally {
+      removeTempDir(dir);
+    }
+  });
+
+  test('applies overlays from multiple state directories', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'intake-compositions.yaml', {
+        version: '1.0',
+        domain: 'intake',
+        compositions: {
+          reviewContext: {
+            compositeType: 'sectionView',
+            resource: 'applications',
+            sections: { identity: { resource: 'members', bind: 'applicationId' } },
+          },
+        },
+      });
+
+      mkdirSync(join(dir, 'overlays', 'state-a'), { recursive: true });
+      writeYaml(join(dir, 'overlays', 'state-a'), 'intake-compositions.yaml', {
+        overlay: '1.0.0',
+        info: { title: 'State A overlay', version: '1.0.0' },
+        actions: [{
+          target: '$.compositions.reviewContext.sections.household',
+          add: { resource: 'household-info', bind: 'applicationId' },
+        }],
+      });
+
+      mkdirSync(join(dir, 'overlays', 'state-b'), { recursive: true });
+      writeYaml(join(dir, 'overlays', 'state-b'), 'intake-compositions.yaml', {
+        overlay: '1.0.0',
+        info: { title: 'State B overlay', version: '1.0.0' },
+        actions: [{
+          target: '$.compositions.reviewContext.sections.expenses',
+          add: { resource: 'member-expenses', bind: 'applicationId' },
+        }],
+      });
+
+      const result = discoverCompositions(dir);
+      assert.equal(result.length, 1);
+      const sections = result[0].doc.compositions.reviewContext.sections;
+      assert.ok(sections.identity, 'baseline section present');
+      assert.ok(sections.household, 'state-a section present');
+      assert.ok(sections.expenses, 'state-b section present');
+    } finally {
+      removeTempDir(dir);
+    }
+  });
+
+  test('ignores overlays directory when it does not exist', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'intake-compositions.yaml', {
+        version: '1.0',
+        domain: 'intake',
+        compositions: { reviewContext: { resource: 'applications', sections: {} } },
+      });
+      const result = discoverCompositions(dir);
+      assert.equal(result.length, 1);
+    } finally {
+      removeTempDir(dir);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -6,10 +6,6 @@
 #
 #   version: "1.0"
 #   domain: intake
-#   fragments:
-#     memberFinancials:
-#       include:
-#         income: { resource: member-incomes, bind: memberId }
 #   compositions:
 #     reviewContext:
 #       compositeType: sectionView
@@ -69,39 +65,6 @@ properties:
         - type: object
           additionalProperties:
             type: string
-
-  views:
-    type: object
-    description: >
-      Named projection definitions available on all sections in this domain.
-      Applied via ?view=<name> on index or panel endpoints. Each named view may
-      declare a filter (composed via AND with any existing section/index filter)
-      and optional field projection.
-    additionalProperties:
-      type: object
-      additionalProperties: false
-      properties:
-        filter:
-          oneOf:
-            - type: string
-            - type: object
-              required:
-                - $ref
-              additionalProperties: false
-              properties:
-                $ref:
-                  type: string
-        fields:
-          $ref: "#/$defs/Fields"
-
-  fragments:
-    type: object
-    description: >
-      Named, reusable composition sub-graphs. Referenced via
-      $ref: '#/fragments/name' in include nodes. Resolved before
-      assembly — no runtime indirection.
-    additionalProperties:
-      $ref: "#/$defs/FragmentBody"
 
   compositions:
     type: object
@@ -198,23 +161,13 @@ $defs:
           include:
             $ref: "#/$defs/IncludeMap"
 
-  FragmentBody:
-    type: object
-    description: The body of a named fragment — an include map without a wrapping name key.
-    additionalProperties: false
-    properties:
-      include:
-        $ref: "#/$defs/IncludeMap"
-
   IncludeMap:
     type: object
     description: >
       Map of named child compositions. Each key is the include name;
-      the value is either a composition node or a $ref to a fragment.
+      the value is a composition node.
     additionalProperties:
-      oneOf:
-        - $ref: "#/$defs/IncludeNode"
-        - $ref: "#/$defs/FragmentRef"
+      $ref: "#/$defs/IncludeNode"
 
   IncludeNode:
     # Example — child node with bind and field selection:
@@ -222,7 +175,6 @@ $defs:
     #     resource: member-incomes
     #     bind: memberId
     #     fields: [amount, type]
-    #     views: [snap, medicaid]
     type: object
     description: A child composition node within an include map.
     required:
@@ -233,8 +185,6 @@ $defs:
         type: string
       bind:
         $ref: "#/$defs/Bind"
-      views:
-        $ref: "#/$defs/Views"
       links:
         type: boolean
         default: false
@@ -401,24 +351,6 @@ $defs:
       type: string
     minItems: 1
 
-  FragmentRef:
-    # Example:
-    #   financials:
-    #     $ref: '#/fragments/memberFinancials'
-    #     flatten: true
-    type: object
-    description: Reference to a named fragment defined under fragments:.
-    required:
-      - $ref
-    additionalProperties: false
-    properties:
-      $ref:
-        type: string
-        description: Fragment reference path (e.g., '#/fragments/memberFinancials').
-      flatten:
-        type: boolean
-        default: false
-
   DeriveMap:
     # Example — inline expression:
     #   derive:
@@ -474,6 +406,13 @@ $defs:
               additionalProperties: false
               properties:
                 filter:
-                  type: string
+                  oneOf:
+                    - type: string
+                    - type: object
+                      required: [$ref]
+                      additionalProperties: false
+                      properties:
+                        $ref:
+                          type: string
                 fields:
                   $ref: "#/$defs/Fields"

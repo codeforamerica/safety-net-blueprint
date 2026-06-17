@@ -15,7 +15,7 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
-import { assembleSectionIndex, assembleSectionPanel, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, extractPrimaryParam, registerParentLink } from './composition-assembler.js';
+import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, extractPrimaryParam, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName } from './collection-utils.js';
@@ -555,10 +555,9 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         registerParentLink(parentFullPath, compositionName, fullPath);
       }
 
-      // Merge doc-level views and derives so the assembler can resolve $ref expressions
+      // Merge doc-level derives so the assembler can resolve $ref expressions in views and derive fields
       const compositionWithDoc = {
         ...composition,
-        views: doc.views || {},
         derives: doc.derives || {},
       };
 
@@ -567,52 +566,81 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
 
       const assemblerOpts = { resourceItemPathMap, serverBasePath: basePath };
 
-      // Section index
-      app.get(indexExpressPath, (req, res) => {
-        try {
-          const parentId = primaryParam ? req.params[primaryParam] : null;
-          if (parentId && !findById(composition.resource, parentId)) {
-            return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
+      if (composition.compositeType === 'sectionView') {
+        // Section index
+        app.get(indexExpressPath, (req, res) => {
+          try {
+            const parentId = primaryParam ? req.params[primaryParam] : null;
+            if (parentId && !findById(composition.resource, parentId)) {
+              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
+            }
+            res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, req.query.view || null, assemblerOpts));
+          } catch (error) {
+            console.error('Composition index handler error:', error);
+            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
           }
-          res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, req.query.view || null, assemblerOpts));
-        } catch (error) {
-          console.error('Composition index handler error:', error);
-          res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-        }
-      });
-
-      // Section panel
-      app.get(panelExpressPath, (req, res) => {
-        try {
-          const parentId = primaryParam ? req.params[primaryParam] : null;
-          if (parentId && !findById(composition.resource, parentId)) {
-            return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
-          }
-          const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, req.query.view || null, assemblerOpts);
-          if (!panel) {
-            return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
-          }
-          res.json(panel);
-        } catch (error) {
-          console.error('Composition panel handler error:', error);
-          res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-        }
-      });
-
-      // Pre-register 405 for write methods on the index endpoint
-      for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
-        app[writeMethod](indexExpressPath, (req, res) => {
-          res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
         });
+
+        // Section panel
+        app.get(panelExpressPath, (req, res) => {
+          try {
+            const parentId = primaryParam ? req.params[primaryParam] : null;
+            if (parentId && !findById(composition.resource, parentId)) {
+              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
+            }
+            const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, req.query.view || null, assemblerOpts);
+            if (!panel) {
+              return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
+            }
+            res.json(panel);
+          } catch (error) {
+            console.error('Composition panel handler error:', error);
+            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+          }
+        });
+
+        // Pre-register 405 for write methods on the index endpoint
+        for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
+          app[writeMethod](indexExpressPath, (req, res) => {
+            res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
+          });
+        }
+
+        console.log(`    GET    ${indexExpressPath} - ${compositionName} section index`);
+        console.log(`    GET    ${panelExpressPath} - ${compositionName} section panel`);
+
+        registeredEndpoints.push(
+          { method: 'GET', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} section index` },
+          { method: 'GET', path: `${fullPath}/:section`, expressPath: panelExpressPath, description: `${compositionName} section panel` }
+        );
+      } else {
+        // Plain composition — single GET endpoint returning the root resource record
+        app.get(indexExpressPath, (req, res) => {
+          try {
+            const result = assemblePlainComposition(compositionWithDoc, req.params, assemblerOpts);
+            if (!result) {
+              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} not found` });
+            }
+            res.json(result);
+          } catch (error) {
+            console.error('Plain composition handler error:', error);
+            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+          }
+        });
+
+        // Pre-register 405 for write methods
+        for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
+          app[writeMethod](indexExpressPath, (req, res) => {
+            res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
+          });
+        }
+
+        console.log(`    GET    ${indexExpressPath} - ${compositionName} plain composition`);
+
+        registeredEndpoints.push(
+          { method: 'GET', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} plain composition` }
+        );
       }
-
-      console.log(`    GET    ${indexExpressPath} - ${compositionName} section index`);
-      console.log(`    GET    ${panelExpressPath} - ${compositionName} section panel`);
-
-      registeredEndpoints.push(
-        { method: 'GET', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} section index` },
-        { method: 'GET', path: `${fullPath}/:section`, expressPath: panelExpressPath, description: `${compositionName} section panel` }
-      );
 
       // Register state resource routes if the composition declares state:
       if (composition.state) {
