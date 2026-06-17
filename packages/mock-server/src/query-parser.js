@@ -305,7 +305,7 @@ function tokenToSqlCondition(token, searchableFields) {
 
   // For field-specific token types, reject fields not in the searchable allowlist
   // to prevent arbitrary JSON path injection from user-supplied field names.
-  if (field !== undefined && searchableFields.length > 0 && !searchableFields.includes(field)) {
+  if (field != null && searchableFields.length > 0 && !searchableFields.includes(field)) {
     return { clause: null, tokenParams: [] };
   }
 
