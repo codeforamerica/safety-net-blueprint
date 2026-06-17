@@ -63,6 +63,11 @@ export function buildSearchConditions(queryParams = {}, searchableFields = []) {
         continue;
       }
 
+      // Only allow fields declared as searchable to prevent arbitrary JSON path injection.
+      if (searchableFields.length > 0 && !searchableFields.includes(key)) {
+        continue;
+      }
+
       // traceid matches against the trace-id segment of the W3C traceparent field
       // traceparent format: 00-{trace-id}-{parent-id}-{flags}
       if (key === 'traceid') {
