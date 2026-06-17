@@ -61,13 +61,28 @@ export function createListHandler(apiMetadata, endpoint) {
         }
       }
 
-      // Enable full-text search when the endpoint has a `q` or `search` parameter
+      // Build the searchable fields allowlist from two sources:
+      //   1. Schema string fields (when a `q` or `search` param is declared)
+      //   2. Declared query parameters — any `in: query` param is an
+      //      intentionally filterable field; including these ensures that params
+      //      backed by $ref schemas (which extractStringFields cannot resolve)
+      //      still pass the SQL injection allowlist check.
+      const RESERVED_PARAMS = new Set(['q', 'search', 'limit', 'offset', 'page', 'sort']);
       let searchableFields = [];
+      const declaredQueryParams = (endpoint.parameters || [])
+        .filter(p => p.in === 'query' && !RESERVED_PARAMS.has(p.name))
+        .map(p => p.name);
       for (const param of endpoint.parameters || []) {
         if (param.in === 'query' && (param.name === 'q' || param.name === 'search')) {
-          searchableFields = schemaFields;
+          searchableFields = [...new Set([...schemaFields, ...declaredQueryParams])];
           break;
         }
+      }
+      // Always include declared query params even without a q/search param,
+      // so that endpoints with only explicit filters (no full-text search)
+      // still allow those filters through the SQL injection allowlist.
+      if (searchableFields.length === 0 && declaredQueryParams.length > 0) {
+        searchableFields = declaredQueryParams;
       }
 
       // Ensure pagination defaults exist
