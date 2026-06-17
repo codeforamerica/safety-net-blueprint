@@ -303,6 +303,12 @@ function looksLikeIsoDateTime(value) {
 function tokenToSqlCondition(token, searchableFields) {
   const { type, field, value } = token;
 
+  // For field-specific token types, reject fields not in the searchable allowlist
+  // to prevent arbitrary JSON path injection from user-supplied field names.
+  if (field !== undefined && searchableFields.length > 0 && !searchableFields.includes(field)) {
+    return { clause: null, tokenParams: [] };
+  }
+
   switch (type) {
     // Full-text search types — search all string values at any depth using json_tree()
     case TokenType.FULL_TEXT: {
