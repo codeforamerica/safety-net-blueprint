@@ -111,7 +111,7 @@ Create a new key at a path that must not already exist. Unlike `update:`, `add:`
 
 **Add a section to an existing sectionView:**
 ```yaml
-- target: $.compositions.reviewContext.sections.foster-care
+- target: $.compositions.applicationReview.sections.foster-care
   description: Add foster care section for California's extended eligibility rules
   add:
     resource: foster-care-records
@@ -122,7 +122,7 @@ Create a new key at a path that must not already exist. Unlike `update:`, `add:`
 
 **Add an include node to an existing composition:**
 ```yaml
-- target: $.compositions.reviewContext.panel.include.caseNotes
+- target: $.compositions.applicationReview.panel.include.caseNotes
   description: Add case notes to every section panel
   add:
     resource: case-notes

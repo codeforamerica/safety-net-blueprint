@@ -1148,7 +1148,7 @@ describe('real intake composition', () => {
     const compositions = discoverCompositions(specsDir);
     const intake = compositions.find(c => c.domain === 'intake');
     assert.ok(intake, 'should discover intake-compositions.yaml');
-    assert.ok(intake.doc.compositions.reviewContext, 'should have reviewContext');
+    assert.ok(intake.doc.compositions.applicationReview, 'should have applicationReview');
   });
 
   test('validateBindFields finds no errors against real intake spec', async () => {

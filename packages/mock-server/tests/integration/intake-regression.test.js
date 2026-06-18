@@ -1240,19 +1240,19 @@ async function testSectionView() {
 
   // ---- parentLink: true ----
 
-  await test('GET /applications/:id — response includes _links.reviewContext from parentLink', async () => {
+  await test('GET /applications/:id — response includes _links.applicationReview from parentLink', async () => {
     const res = await fetch(`${BASE_URL}${APP}/${appId}`);
     assert.strictEqual(res.status, 200);
     const data = await res.json();
     assert.ok(data._links, 'application GET by ID response has _links');
-    assert.ok(data._links.reviewContext, '_links.reviewContext present');
+    assert.ok(data._links.applicationReview, '_links.applicationReview present');
     assert.ok(
-      data._links.reviewContext.href.includes(appId),
-      '_links.reviewContext.href contains applicationId'
+      data._links.applicationReview.href.includes(appId),
+      '_links.applicationReview.href contains applicationId'
     );
     assert.ok(
-      data._links.reviewContext.href.includes('/review'),
-      '_links.reviewContext.href references the review endpoint'
+      data._links.applicationReview.href.includes('/review'),
+      '_links.applicationReview.href references the review endpoint'
     );
   });
 }

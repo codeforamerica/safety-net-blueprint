@@ -157,7 +157,7 @@ include:
 {
   "id": "...",
   "_links": {
-    "reviewContext": "/applications/abc-123/review"
+    "applicationReview": "/applications/abc-123/review"
   }
 }
 ```
@@ -244,7 +244,7 @@ The `sectionView` composite type models the named-section navigation pattern: a 
 
 ```yaml
 compositions:
-  reviewContext:
+  applicationReview:
     compositeType: sectionView
     resource: applications
     endpoint:
@@ -286,7 +286,7 @@ Field and link defaults match plain compositions: all fields unless `fields:` is
 
 Named views (`?view=<name>`) apply to both endpoints: on the panel, items not matching the view's filter are excluded; on the index, sections with zero surviving items are excluded.
 
-**Enum byproduct.** Section keys in `sections:` generate a named enum type at resolve time, emitted into the companion schemas file. The name is derived from the composition key: PascalCase + `Sections` suffix (`reviewContext` → `ReviewContextSections`). This eliminates manually maintained enums whose valid values are defined by the composition's section structure.
+**Enum byproduct.** Section keys in `sections:` generate a named enum type at resolve time, emitted into the companion schemas file. The name is derived from the composition key: PascalCase + `Sections` suffix (`applicationReview` → `ApplicationReviewSections`). This eliminates manually maintained enums whose valid values are defined by the composition's section structure.
 
 ## Overlay extensibility
 

@@ -20,7 +20,7 @@ derives:
 
 compositions:
 
-  # reviewContext — sectionView composite for the caseworker application review workflow.
+  # review — sectionView composite for the caseworker application review workflow.
   #
   # Replaces the hand-authored ReviewContext schema and review-context endpoint.
   # Produces:
@@ -34,7 +34,7 @@ compositions:
   # Member-scoped sections: demographics, identity, income, employment, health-coverage
   # Household-level sections: assets, contact, expenses, household
 
-  reviewContext:
+  applicationReview:
     compositeType: sectionView
     resource: applications
     endpoint:
