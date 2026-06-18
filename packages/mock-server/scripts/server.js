@@ -264,16 +264,19 @@ async function startMockServer(specDirs = null, seedDir = null) {
     const baseUrl = `http://${HOST}:${PORT}`;
     const uploadsDir = resolveUploadsDir(resolve(import.meta.dirname, '..', 'uploads'));
     mkdirSync(uploadsDir, { recursive: true });
-    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, uploadsDir);
 
-    // Register state machine RPC routes
-    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes);
-
-    // Register composition routes (sectionView index + panel endpoints)
+    // Register composition routes BEFORE standard routes so sectionView handlers
+    // take priority over the standard sub-resource handlers that the route generator
+    // would otherwise register for the same composition-generated paths.
     if (allCompositions.length > 0) {
       console.log('\nRegistering composition routes...');
       registerCompositionRoutes(app, allCompositions, apiSpecs);
     }
+
+    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, uploadsDir);
+
+    // Register state machine RPC routes
+    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes);
 
 
     // 404 handler for undefined routes
