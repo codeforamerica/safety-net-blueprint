@@ -331,5 +331,35 @@ properties:
       patchZodGenForNullable(path, new Set());
       assert.strictEqual(readFileSync(path, 'utf8'), original);
     });
+
+    it('skips multi-line z.optional(z.union([...])) expressions unchanged', () => {
+      const original = [
+        'export const zFoo = z.object({',
+        '    completedAt: z.optional(z.union([',
+        '        z.iso.datetime({ offset: true }),',
+        '        z.null()',
+        '    ])),',
+        '});',
+        '',
+      ].join('\n');
+      const path = writeTmp(original);
+      patchZodGenForNullable(path, new Set(['completedAt']));
+      assert.strictEqual(readFileSync(path, 'utf8'), original);
+    });
+
+    it('skips multi-line z.optional(z.enum([...])) expressions unchanged', () => {
+      const original = [
+        'export const zFoo = z.object({',
+        "    channel: z.optional(z.enum([",
+        "        'online',",
+        "        'in_person'",
+        '    ])),',
+        '});',
+        '',
+      ].join('\n');
+      const path = writeTmp(original);
+      patchZodGenForNullable(path, new Set(['channel']));
+      assert.strictEqual(readFileSync(path, 'utf8'), original);
+    });
   });
 });

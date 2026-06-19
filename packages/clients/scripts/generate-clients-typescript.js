@@ -303,6 +303,12 @@ function patchZodGenForNullable(zodGenPath, nullableFields) {
       else if (line[pos] === ')') depth--;
       pos++;
     }
+    // If closing paren not found on this line, it's a multi-line expression — skip.
+    // The allOf-wrapped $ref case always generates as a single line; multi-line
+    // expressions like z.optional(z.union([...]) or z.optional(z.enum([...])
+    // already handle nullability correctly via z.null() in the union.
+    if (depth > 0) continue;
+
     const closePos = pos - 1; // index of the matching )
 
     // Skip if already patched (idempotent)
