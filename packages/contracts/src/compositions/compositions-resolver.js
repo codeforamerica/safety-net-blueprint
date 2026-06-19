@@ -489,7 +489,6 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
       get: {
         summary: `List ${defsKey} state records for a section`,
         operationId: `list${defsKey}BySection`,
-        'x-state-resource': stateNameInfo.camelKey,
         parameters: [
           { $ref: './components/parameters.yaml#/LimitParam' },
           { $ref: './components/parameters.yaml#/OffsetParam' },
@@ -503,7 +502,6 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
       put: {
         summary: `Replace ${defsKey} state for a section`,
         operationId: `replace${defsKey}BySection`,
-        'x-state-resource': stateNameInfo.camelKey,
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${writableSchemaName}` } } } },
         responses: {
           '200': { description: `${defsKey} state replaced successfully.`, ...readBody(resourceRef, undefined) },
@@ -513,7 +511,6 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
       patch: {
         summary: `Update ${defsKey} state for a section`,
         operationId: `update${defsKey}BySection`,
-        'x-state-resource': stateNameInfo.camelKey,
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${writableSchemaName}` } } } },
         responses: {
           '200': { description: `${defsKey} state updated successfully.`, ...readBody(resourceRef, undefined) },
@@ -526,7 +523,6 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
       get: {
         summary: `Get ${defsKey} state for a collection item`,
         operationId: `get${defsKey}ByItem`,
-        'x-state-resource': stateNameInfo.camelKey,
         responses: {
           '200': { description: `${defsKey} state retrieved successfully.`, ...readBody(resourceRef, undefined) },
           '404': notFound,
@@ -536,7 +532,6 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
       put: {
         summary: `Replace ${defsKey} state for a collection item`,
         operationId: `replace${defsKey}ByItem`,
-        'x-state-resource': stateNameInfo.camelKey,
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${writableSchemaName}` } } } },
         responses: {
           '200': { description: `${defsKey} state replaced successfully.`, ...readBody(resourceRef, undefined) },
@@ -546,7 +541,6 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
       patch: {
         summary: `Update ${defsKey} state for a collection item`,
         operationId: `update${defsKey}ByItem`,
-        'x-state-resource': stateNameInfo.camelKey,
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${writableSchemaName}` } } } },
         responses: {
           '200': { description: `${defsKey} state updated successfully.`, ...readBody(resourceRef, undefined) },
@@ -573,14 +567,12 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
     [writableSchemaName]: {
       type: 'object',
       description: `Client-writable fields for the ${stateNameInfo.camelKey} state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.`,
-      'x-state-resource': stateNameInfo.camelKey,
       ...(Object.keys(writableProperties).length > 0 ? { properties: writableProperties } : {}),
       ...(writableRequired.length > 0 ? { required: writableRequired } : {}),
     },
     [resourceSchemaName]: {
       type: 'object',
       description: `Generated state resource for ${stateNameInfo.camelKey}.`,
-      'x-state-resource': stateNameInfo.camelKey,
       allOf: [
         { $ref: `#/components/schemas/${writableSchemaName}` },
         {
