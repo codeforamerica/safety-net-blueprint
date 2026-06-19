@@ -261,6 +261,85 @@ describe('assembleSectionIndex — index views', () => {
 });
 
 // ---------------------------------------------------------------------------
+// assembleSectionIndex — root-level fields: projection
+// ---------------------------------------------------------------------------
+
+const FIELDS_COMPOSITION = {
+  compositeType: 'sectionView',
+  resource: 'applications',
+  fields: ['programs', 'status'],
+  endpoint: { path: '/applications/{applicationId}/review' },
+  sections: {
+    demographics: {
+      resource: 'application-members',
+      bind: 'applicationId',
+      index: { fields: ['id', 'firstName'] },
+    },
+  },
+};
+
+describe('assembleSectionIndex — root-level fields: projection', () => {
+  beforeEach(() => {
+    clearAll('applications');
+    clearAll('application-members');
+    insertResource('applications', {
+      id: APP_ID,
+      programs: ['snap', 'medicaid'],
+      status: 'submitted',
+      internalFlag: 'secret',
+    });
+    insertResource('application-members', {
+      id: MEMBER_ID_1,
+      applicationId: APP_ID,
+      firstName: 'Alice',
+      lastName: 'Smith',
+    });
+  });
+
+  test('merges declared root fields from the parent resource into the response', () => {
+    const result = assembleSectionIndex(
+      FIELDS_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.deepStrictEqual(result.programs, ['snap', 'medicaid']);
+    assert.strictEqual(result.status, 'submitted');
+  });
+
+  test('does not include undeclared fields from the parent resource', () => {
+    const result = assembleSectionIndex(
+      FIELDS_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.ok(!('internalFlag' in result), 'undeclared fields must not appear in the response');
+    assert.ok(!('id' in result), 'id is not in the declared fields list so it must not appear');
+  });
+
+  test('sections are still present alongside the root fields', () => {
+    const result = assembleSectionIndex(
+      FIELDS_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.ok(Array.isArray(result.sections), 'sections must still be present');
+    assert.strictEqual(result.sections.length, 1);
+  });
+
+  test('returns only sections when composition has no fields declaration', () => {
+    const noFieldsComposition = { ...FIELDS_COMPOSITION, fields: undefined };
+    const result = assembleSectionIndex(
+      noFieldsComposition,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.ok(!('programs' in result));
+    assert.ok(!('status' in result));
+    assert.ok(Array.isArray(result.sections));
+  });
+});
+
+// ---------------------------------------------------------------------------
 // assembleSectionPanel — bind resolution
 // ---------------------------------------------------------------------------
 

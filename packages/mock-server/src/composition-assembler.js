@@ -348,7 +348,26 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
     sections.push(entry);
   }
 
-  return { sections };
+  // Project root resource fields into the index response if the composition
+  // declares a top-level fields: list (e.g. fields: [programs, status]).
+  // Fetches the parent resource record and merges the projected fields into
+  // the response alongside sections.
+  let rootFields = {};
+  if (composition.fields && composition.resource) {
+    const primaryParam = extractPrimaryParam(composition.endpoint?.path ?? '');
+    if (primaryParam && bindValues[primaryParam]) {
+      const { items: parentItems } = findAll(
+        composition.resource,
+        { id: bindValues[primaryParam] },
+        { limit: 1 }
+      );
+      if (parentItems.length > 0) {
+        rootFields = projectFields(parentItems[0], composition.fields);
+      }
+    }
+  }
+
+  return { ...rootFields, sections };
 }
 
 // ---------------------------------------------------------------------------

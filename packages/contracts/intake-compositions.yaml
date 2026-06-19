@@ -37,6 +37,7 @@ compositions:
   applicationReview:
     compositeType: sectionView
     resource: applications
+    fields: [programs, status]
     endpoint:
       path: /applications/{applicationId}/review
       parentLink: true
