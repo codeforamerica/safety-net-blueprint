@@ -29,7 +29,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync
 import { join, dirname, relative, resolve, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
+import { applyOverlay, checkPathExists, parsePath } from '../src/overlay/overlay-resolver.js';
 import { extractConfig, validateConfig } from '../src/overlay/config.js';
 import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '../src/overlay/relationship-resolver.js';
 import { bundleSpec } from '../src/bundle.js';
@@ -298,10 +298,23 @@ function analyzeTargetLocations(overlay, yamlFiles) {
 
     if (!target) continue;
 
+    // For `add` actions the target key does not exist yet — check the parent
+    // path instead. The parent must exist for addAtPath to succeed.
+    let checkTarget = target;
+    if (action.add !== undefined) {
+      const tokens = parsePath(target);
+      if (tokens.length > 1) {
+        const parentTokens = tokens.slice(0, -1);
+        checkTarget = '$.' + parentTokens.map(t =>
+          t.type === 'filter' ? `[?(@.${t.field} == '${t.value}')]` : t.value
+        ).join('.');
+      }
+    }
+
     // Find all files where the full target path exists, with metadata
     const matchingFiles = [];
     for (const { relativePath, spec } of yamlFiles) {
-      const pathCheck = checkPathExists(spec, target);
+      const pathCheck = checkPathExists(spec, checkTarget);
       if (pathCheck.fullPathExists) {
         matchingFiles.push({
           relativePath,

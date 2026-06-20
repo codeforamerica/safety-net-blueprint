@@ -608,12 +608,27 @@ describe('deriveStateResource', () => {
     assert.strictEqual(deriveStateResource({ schema: {} }), null);
   });
 
-  test('derives camelKey, collectionName, defsKey from $ref', () => {
+  test('derives pathSegment, collectionName, camelKey, defsKey from $ref with endpoint context', () => {
+    const result = deriveStateResource(
+      { schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' } },
+      '/applications/{applicationId}/review',
+      '/intake'
+    );
+    assert.deepStrictEqual(result, {
+      defsKey: 'ReviewProgress',
+      pathSegment: 'review-progress',
+      collectionName: 'application-review-progress',
+      camelKey: 'reviewProgress',
+    });
+  });
+
+  test('falls back to pathSegment as collectionName when no endpointPath given', () => {
     const result = deriveStateResource({
       schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' },
     });
     assert.deepStrictEqual(result, {
       defsKey: 'ReviewProgress',
+      pathSegment: 'review-progress',
       collectionName: 'review-progress',
       camelKey: 'reviewProgress',
     });
@@ -624,7 +639,7 @@ describe('deriveStateResource', () => {
       schema: { $ref: './schemas/foo.yaml#/$defs/Status' },
     });
     assert.strictEqual(result.defsKey, 'Status');
-    assert.strictEqual(result.collectionName, 'status');
+    assert.strictEqual(result.pathSegment, 'status');
     assert.strictEqual(result.camelKey, 'status');
   });
 
@@ -714,8 +729,8 @@ describe('state CRUD helpers', () => {
 // ---------------------------------------------------------------------------
 
 describe('assembleSectionPanel — state embedding', () => {
-  // collection name is derived from the $defs key: ReviewProgress → review-progress
-  const STATE_COLL = 'review-progress';
+  // collection name is derived from the endpoint path: /applications/{applicationId}/review-progress → application-review-progress
+  const STATE_COLL = 'application-review-progress';
 
   const STATE_COMPOSITION = {
     compositeType: 'sectionView',

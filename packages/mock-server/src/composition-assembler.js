@@ -17,6 +17,7 @@
 
 import { evaluateCEL } from './cel-evaluator.js';
 import { findAll, findById, create, update } from './database-manager.js';
+import { deriveCollectionName } from './collection-utils.js';
 
 // ---------------------------------------------------------------------------
 // Parent link registry
@@ -257,7 +258,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   const resolvedBase = basePath.replace(/:(\w+)/g, (_, name) => params[name] ?? `:${name}`);
 
   // Resolve state resource info once for the whole index
-  const stateInfo = composition.state ? deriveStateResource(composition.state) : null;
+  const stateInfo = composition.state ? deriveStateResource(composition.state, composition.endpoint?.path, serverBasePath) : null;
   const bindParam = stateInfo ? extractPrimaryParam(composition.endpoint?.path ?? '') : null;
 
   // Resolve named view from doc-level views map
@@ -310,19 +311,6 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
     // Apply derive: expressions (collection-scope adds to entry, item-scope adds to items)
     applyDerives(sectionDef, composition, items, entry);
 
-    // Embed state per item if composition declares state:
-    if (stateInfo && bindParam) {
-      const bindValue = bindValues[bindParam];
-      for (const item of items) {
-        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, item.id ?? null);
-        const { id: _id, createdAt: _c, updatedAt: _u, [bindParam]: _bp, section: _s, itemId: _ii, ...stateFields } =
-          record ?? {};
-        item[stateInfo.camelKey] = Object.keys(stateFields).length > 0
-          ? stateFields
-          : { ...stateDefaults };
-      }
-    }
-
     // Project fields for display after derives have been evaluated.
     // Index fields take precedence over view fields on the index endpoint.
     // Track original IDs before projection so _links.self can use them even
@@ -331,6 +319,21 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
     let finalItems = indexConfig?.fields
       ? items.map(item => projectFields(item, indexConfig.fields))
       : items;
+
+    // Embed state per item AFTER field projection so it is not stripped by index.fields.
+    // All index.fields lists include `id`, so the state lookup still has an item id to work with.
+    if (stateInfo && bindParam) {
+      const bindValue = bindValues[bindParam];
+      for (let i = 0; i < finalItems.length; i++) {
+        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, itemIds[i] ?? null);
+        const { id: _id, createdAt: _c, updatedAt: _u, [bindParam]: _bp, section: _s, itemId: _ii, ...stateFields } =
+          record ?? {};
+        finalItems[i] = {
+          ...finalItems[i],
+          [stateInfo.camelKey]: Object.keys(stateFields).length > 0 ? stateFields : { ...stateDefaults },
+        };
+      }
+    }
 
     // Add _links.self after projection (so links are not stripped by field selection).
     if (sectionDef.links && resourceItemPathMap) {
@@ -367,7 +370,19 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
     }
   }
 
-  return { ...rootFields, sections };
+  // Process root-level include nodes (e.g. members on a sectionView index).
+  const rootInclude = {};
+  if (composition.include) {
+    for (const [key, includeNode] of Object.entries(composition.include)) {
+      rootInclude[key] = fetchNodeItems(includeNode, bindValues, {});
+    }
+  }
+
+  return {
+    ...rootFields,
+    sections,
+    ...(Object.keys(rootInclude).length > 0 ? { include: rootInclude } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -479,7 +494,7 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
 
     // Embed composition state per item if state: is declared on the composition
     if (composition.state) {
-      const stateInfo = deriveStateResource(composition.state);
+      const stateInfo = deriveStateResource(composition.state, composition.endpoint?.path, serverBasePath);
       const bindParam = extractPrimaryParam(composition.endpoint?.path ?? '');
       if (stateInfo && bindParam) {
         const bindValue = bindValues[bindParam];
@@ -534,19 +549,29 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
  * Derive state resource metadata from a composition state config block.
  *
  * Extracts the $defs key from the $ref, converts to camelCase (response key)
- * and kebab-case (collection name / path segment).
+ * and kebab-case (URL path segment). The DB collection name is derived via
+ * deriveCollectionName so it matches the collection names used by the route
+ * generator and seeder.
  *
  * @param {Object} stateConfig - composition.state
- * @returns {{ defsKey: string, collectionName: string, camelKey: string } | null}
+ * @param {string} [endpointPath] - OpenAPI-style composition endpoint path (e.g. /applications/{applicationId}/review)
+ * @param {string} [basePath] - Server base path (e.g. /intake)
+ * @returns {{ defsKey: string, pathSegment: string, collectionName: string, camelKey: string } | null}
  */
-export function deriveStateResource(stateConfig) {
+export function deriveStateResource(stateConfig, endpointPath, basePath) {
   if (!stateConfig?.schema?.$ref) return null;
   const match = stateConfig.schema.$ref.match(/#\/\$defs\/([A-Za-z][A-Za-z0-9]*)$/);
   if (!match) return null;
   const defsKey = match[1];
-  const collectionName = defsKey.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  const pathSegment = defsKey.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
   const camelKey = defsKey.charAt(0).toLowerCase() + defsKey.slice(1);
-  return { defsKey, collectionName, camelKey };
+  // Build the path the state resource will be served at and derive the collection name from it
+  const parentBase = (endpointPath || '').replace(/\/[^/]+$/, '');
+  const stateResourcePath = parentBase ? `${parentBase}/${pathSegment}` : pathSegment;
+  const collectionName = endpointPath
+    ? deriveCollectionName(stateResourcePath, basePath || '')
+    : pathSegment;
+  return { defsKey, pathSegment, collectionName, camelKey };
 }
 
 /**

@@ -644,7 +644,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
 
       // Register state resource routes if the composition declares state:
       if (composition.state) {
-        const stateInfo = deriveStateResource(composition.state);
+        const stateInfo = deriveStateResource(composition.state, endpointPath, basePath);
         if (stateInfo) {
           const stateEndpoints = registerStateRoutes(
             app, composition, compositionName, stateInfo, stateDefaults,
@@ -704,7 +704,7 @@ function loadStateDefaults(stateConfig, compositionFilePath) {
  * @param {Object} app - Express app
  * @param {Object} composition - Composition definition
  * @param {string} compositionName - Key name for the composition
- * @param {{ defsKey: string, collectionName: string, camelKey: string }} stateInfo
+ * @param {{ defsKey: string, pathSegment: string, collectionName: string, camelKey: string }} stateInfo
  * @param {Object} stateDefaults - Default field values from companion schema
  * @param {string} endpointPath - OpenAPI-style endpoint path (e.g. /applications/{applicationId}/review)
  * @param {string} fullPath - Absolute path including server base (e.g. /intake/applications/{applicationId}/review)
@@ -718,7 +718,7 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
   // Derive the parent base path: strip the last path segment from the composition endpoint
   // e.g. /applications/{applicationId}/review → /applications/{applicationId}
   const parentBase = endpointPath.replace(/\/[^/]+$/, '');
-  const stateResourcePath = `${parentBase}/${stateInfo.collectionName}`;
+  const stateResourcePath = `${parentBase}/${stateInfo.pathSegment}`;
   const stateFullPath = basePath && !stateResourcePath.startsWith(basePath)
     ? `${basePath}${stateResourcePath}`
     : stateResourcePath;
