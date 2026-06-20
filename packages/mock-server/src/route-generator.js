@@ -15,10 +15,10 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
-import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, extractPrimaryParam, registerParentLink } from './composition-assembler.js';
+import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
-import { deriveCollectionName } from './collection-utils.js';
+import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam } from './collection-utils.js';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -61,29 +61,6 @@ function isSubItemEndpoint(path) {
   return path.trimEnd().endsWith('}') && params.length > 1;
 }
 
-/**
- * Determine whether a sub-resource endpoint is a singleton (singular last segment)
- * vs. a sub-collection (plural last segment ending in 's').
- * Convention: collections use plural names; singletons use singular.
- * e.g., /applications/{applicationId}/interview → singleton (singular)
- *       /applications/{applicationId}/documents → collection (plural)
- */
-function isSingletonSubResource(path) {
-  const segments = path.split('/').filter(s => s && !s.startsWith('{'));
-  const lastSegment = segments[segments.length - 1];
-  return Boolean(lastSegment && !lastSegment.endsWith('s'));
-}
-
-/**
- * Extract the immediate parent path parameter name from a sub-resource path.
- * Uses the last {param} in the path, which is the direct parent's ID.
- * e.g., /intake/applications/{applicationId}/documents → 'applicationId'
- * e.g., /intake/applications/{applicationId}/members/{memberId}/incomes → 'memberId'
- */
-function extractParentParam(path) {
-  const matches = [...path.matchAll(/\{([^}]+)\}/g)];
-  return matches.length > 0 ? matches[matches.length - 1][1] : null;
-}
 
 /**
  * Derive the parent collection name from a sub-resource path.
@@ -322,7 +299,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
     } else if (isSubResourceEndpoint(endpoint.path)) {
       // Sub-resource endpoint: /resources/{parentId}/sub or /resources/{parentId}/sub/{subId}
       // Last path segment is a literal (not a {param}).
-      const parentParam = extractParentParam(endpoint.path);
+      const parentParam = extractPrimaryParam(endpoint.path);
       const parentField = parentParam; // URL param name == field name on the sub-resource
       if (isSingletonSubResource(endpoint.path)) {
         // Singleton: at most one child per parent (e.g., /applications/{applicationId}/interview)

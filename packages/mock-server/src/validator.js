@@ -16,6 +16,7 @@ const ajv = new Ajv({
 // Add format validators (email, uuid, date, date-time, etc.)
 addFormats(ajv);
 
+
 // Store compiled validators
 const validators = new Map();
 
@@ -58,6 +59,13 @@ function prepareSchemaForValidation(schema) {
   // structure, not resolve cross-schema $refs by ID.
   delete prepared.$id;
   delete prepared.$schema;
+
+  // Strip `nullable` — it's an OpenAPI 3.0 extension keyword, not a JSON Schema
+  // concept. AJV 8.x has a built-in `nullable` handler from its JTD vocabulary
+  // that requires `type` to be present in the same object, which throws on the
+  // common OpenAPI pattern `{ allOf: [$ref: ...], nullable: true }`. Nullability
+  // is enforced at the OpenAPI spec layer; the mock server doesn't need to validate it.
+  delete prepared.nullable;
   
   // If schema has properties, check for readOnly fields
   if (prepared.properties) {

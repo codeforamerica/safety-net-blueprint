@@ -15,9 +15,9 @@ import {
   findStateRecord,
   listStateRecords,
   upsertStateRecord,
-  extractPrimaryParam,
   toExpressPath,
 } from '../../src/composition-assembler.js';
+import { extractPrimaryParam } from '../../src/collection-utils.js';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures

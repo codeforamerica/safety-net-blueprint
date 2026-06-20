@@ -86,8 +86,8 @@ test('deriveCollectionName — sub-collection prefixed with parent singular', ()
   assert.strictEqual(deriveCollectionName('/applications/{id}/documents', '/intake'), 'application-documents');
 });
 
-test('deriveCollectionName — singleton sub-resource pluralized', () => {
-  assert.strictEqual(deriveCollectionName('/applications/{id}/interview', '/intake'), 'interviews');
+test('deriveCollectionName — singleton sub-resource kept as-is', () => {
+  assert.strictEqual(deriveCollectionName('/applications/{id}/interview', '/intake'), 'interview');
 });
 
 test('deriveCollectionName — entity path without leading slash', () => {

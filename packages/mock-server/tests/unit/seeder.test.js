@@ -154,7 +154,7 @@ test('Database Seeder Tests', async (t) => {
         'application-members',
         'application-verifications',
         'applications',
-        'household-infos',
+        'household-info',
         'member-expenses',
         'member-incomes',
       ]

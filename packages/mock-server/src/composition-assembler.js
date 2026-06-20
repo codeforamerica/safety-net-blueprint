@@ -17,7 +17,7 @@
 
 import { evaluateCEL } from './cel-evaluator.js';
 import { findAll, findById, create, update } from './database-manager.js';
-import { deriveCollectionName } from './collection-utils.js';
+import { deriveCollectionName, extractPrimaryParam } from './collection-utils.js';
 
 // ---------------------------------------------------------------------------
 // Parent link registry
@@ -634,22 +634,6 @@ export function upsertStateRecord(collectionName, bindParam, bindValue, section,
     ...(itemId !== null ? { itemId } : {}),
     ...updates,
   });
-}
-
-// ---------------------------------------------------------------------------
-// Route param extraction
-// ---------------------------------------------------------------------------
-
-/**
- * Extract the path param name that provides the primary bind value.
- * Uses the last {param} in the endpoint path.
- *
- * @param {string} endpointPath - e.g. /applications/{applicationId}/review
- * @returns {string|null}
- */
-export function extractPrimaryParam(endpointPath) {
-  const matches = [...endpointPath.matchAll(/\{([^}]+)\}/g)];
-  return matches.length > 0 ? matches[matches.length - 1][1] : null;
 }
 
 /**
