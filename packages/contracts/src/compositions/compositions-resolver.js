@@ -21,6 +21,13 @@ import { join, dirname } from 'path';
 import yaml from 'js-yaml';
 import { applyOverlay } from '../overlay/overlay-resolver.js';
 
+const LIST_QUERY_PARAMS = [
+  { $ref: './components/parameters.yaml#/SearchQueryParam' },
+  { $ref: './components/parameters.yaml#/LimitParam' },
+  { $ref: './components/parameters.yaml#/OffsetParam' },
+  { $ref: './components/parameters.yaml#/SortParam' },
+];
+
 // =============================================================================
 // Discovery
 // =============================================================================
@@ -396,6 +403,7 @@ export function generateSectionViewPanelEndpoint(compositionName, endpointPath, 
       operationId: `get${toPascalCase(compositionName)}Section`,
       'x-composition': compositionName,
       'x-composition-type': 'sectionView',
+      parameters: LIST_QUERY_PARAMS,
       responses: {
         '200': {
           description: `${compositionName} section panel retrieved successfully.`,
@@ -489,10 +497,7 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
       get: {
         summary: `List ${defsKey} state records for a section`,
         operationId: `list${defsKey}BySection`,
-        parameters: [
-          { $ref: './components/parameters.yaml#/LimitParam' },
-          { $ref: './components/parameters.yaml#/OffsetParam' },
-        ],
+        parameters: LIST_QUERY_PARAMS,
         responses: {
           '200': { description: `${defsKey} state records retrieved successfully.`, ...readBody(listRef, undefined) },
           '404': notFound,

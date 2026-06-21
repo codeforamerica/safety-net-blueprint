@@ -17,6 +17,7 @@
 import { evaluateCEL } from './cel-evaluator.js';
 import { findAll, findById, create, update } from './database-manager.js';
 import { deriveCollectionName, extractPrimaryParam } from './collection-utils.js';
+import { filterItems, paginateItems } from './search-engine.js';
 
 // ---------------------------------------------------------------------------
 // Parent link registry
@@ -96,7 +97,7 @@ function fetchNodeItems(node, bindValues, context) {
   const { resource, bind, filter, fields, missing } = node;
 
   const filterObj = bind ? { [bind]: bindValues[bind] } : {};
-  const { items } = findAll(resource, filterObj, { limit: 1000 });
+  const { items } = findAll(resource, filterObj, { limit: null });
 
   const filtered = filter
     ? items.filter(item => Boolean(evaluateCEL(filter, { ...COMPOSITION_HELPERS, ...item, $section: { name: context.sectionName } })))
@@ -332,13 +333,23 @@ export function assemblePlainComposition(composition, params, { resourceItemPath
 /**
  * Assemble a section panel response for a sectionView composition.
  *
+ * For list sections (items array), applies q= filtering and limit/offset pagination
+ * from queryParams and returns the standard paginated response shape:
+ *   { section, items, total, limit, offset, hasNext, include? }
+ *
+ * For singleton sections (missing: empty → data object), query params are ignored
+ * and no pagination fields are added.
+ *
  * @param {Object} composition - Composition definition from YAML
  * @param {string} sectionName - Name of the section being requested
  * @param {Object} params - Express req.params (path params)
  * @param {Object} stateDefaults - Default field values for the state resource (keyed by field name)
+ * @param {Object} opts
+ * @param {Object} [opts.queryParams={}] - Request query parameters (q, limit, offset, etc.)
+ * @param {Object} [opts.paginationDefaults={}] - Domain pagination defaults
  * @returns {Object|null} Panel response, or null if section not found
  */
-export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
+export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, serverBasePath = '', queryParams = {}, paginationDefaults = {} } = {}) {
   const sections = composition.sections || {};
   const sectionDef = sections[sectionName];
   if (!sectionDef) return null;
@@ -391,7 +402,7 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
     const itemIds = items.map(item => item.id);
     let finalItems = items;
 
-    // Add _links.self after projection (so links are never stripped by field selection).
+    // Add _links.self after state embedding (so links are never stripped by field selection).
     if (sectionDef.links && resourceItemPathMap) {
       const itemPath = resourceItemPathMap.get(sectionDef.resource);
       if (itemPath) {
@@ -402,8 +413,19 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
       }
     }
 
-    response.items = finalItems;
+    // Apply q= filtering and limit/offset pagination on the assembled items.
+    // Filtering runs on the fully assembled set (after state embedding and links)
+    // so callers can search on embedded fields like reviewProgress.status.
+    const filtered = filterItems(finalItems, queryParams);
+    const paginated = paginateItems(filtered, queryParams, paginationDefaults);
+
+    response.items = paginated.items;
+    response.total = paginated.total;
+    response.limit = paginated.limit;
+    response.offset = paginated.offset;
+    response.hasNext = paginated.hasNext;
   } else {
+    // Singleton section (missing: empty) — query params are not applicable.
     response.data = items;
   }
 

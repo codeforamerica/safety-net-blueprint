@@ -570,6 +570,112 @@ describe('state CRUD helpers', () => {
 });
 
 // ---------------------------------------------------------------------------
+// assembleSectionPanel — queryParams: filtering and pagination
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — q= on projected-out fields', () => {
+  beforeEach(() => seedTestData());
+
+  test('field projected out by fields: config is absent from assembled items — items excluded', () => {
+    // SIMPLE_COMPOSITION.contact has fields: ['id', 'firstName', 'lastName']
+    // email is projected out, so it is absent from assembled items.
+    // Filtering on email behaves like "field absent" → excluded (matches SQL NULL behavior).
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'contact', { applicationId: APP_ID }, {},
+      { queryParams: { q: 'email:alice@example.com' } }
+    );
+    assert.strictEqual(panel.items.length, 0, 'projected-out field filter excludes all items');
+  });
+});
+
+describe('assembleSectionPanel — q= filtering', () => {
+  beforeEach(() => seedTestData());
+
+  test('q= exact match filters assembled items', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { q: 'firstName:Alice' } }
+    );
+    assert.strictEqual(panel.items.length, 1);
+    assert.strictEqual(panel.items[0].firstName, 'Alice');
+  });
+
+  test('q= with no match returns empty items', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { q: 'firstName:Nobody' } }
+    );
+    assert.strictEqual(panel.items.length, 0);
+    assert.strictEqual(panel.total, 0);
+  });
+
+  test('q= on field absent from assembled items — items excluded (matches SQL NULL behavior)', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { q: 'nonexistentField:whatever' } }
+    );
+    assert.strictEqual(panel.items.length, 0);
+  });
+
+  test('plain field=value filter without q=', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { firstName: 'Bob' } }
+    );
+    assert.strictEqual(panel.items.length, 1);
+    assert.strictEqual(panel.items[0].firstName, 'Bob');
+  });
+});
+
+describe('assembleSectionPanel — pagination response shape', () => {
+  beforeEach(() => seedTestData());
+
+  test('list section includes pagination fields', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }
+    );
+    assert.ok('items' in panel, 'has items');
+    assert.ok('total' in panel, 'has total');
+    assert.ok('limit' in panel, 'has limit');
+    assert.ok('offset' in panel, 'has offset');
+    assert.ok('hasNext' in panel, 'has hasNext');
+  });
+
+  test('limit and offset slice items correctly', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { limit: '1', offset: '0' } }
+    );
+    assert.strictEqual(panel.items.length, 1);
+    assert.strictEqual(panel.total, 2);
+    assert.strictEqual(panel.limit, 1);
+    assert.strictEqual(panel.offset, 0);
+    assert.strictEqual(panel.hasNext, true);
+  });
+
+  test('second page with offset', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { limit: '1', offset: '1' } }
+    );
+    assert.strictEqual(panel.items.length, 1);
+    assert.strictEqual(panel.hasNext, false);
+  });
+
+  test('singleton section (missing: empty) has no pagination fields', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'household', { applicationId: APP_ID }, {},
+      { queryParams: { limit: '1', offset: '0' } }
+    );
+    assert.ok('data' in panel, 'has data');
+    assert.ok(!('items' in panel), 'no items');
+    assert.ok(!('total' in panel), 'no total');
+    assert.ok(!('limit' in panel), 'no limit');
+    assert.ok(!('hasNext' in panel), 'no hasNext');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // assembleSectionPanel — state embedding
 // ---------------------------------------------------------------------------
 

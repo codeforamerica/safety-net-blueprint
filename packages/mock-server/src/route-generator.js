@@ -541,6 +541,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       // Load companion schema defaults for state embedding (empty if no state declared)
       const stateDefaults = loadStateDefaults(composition.state, filePath);
 
+      const paginationDefaults = apiSpec?.pagination || {};
       const assemblerOpts = { resourceItemPathMap, serverBasePath: basePath };
 
       if (composition.compositeType === 'sectionView') {
@@ -558,14 +559,16 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
           }
         });
 
-        // Section panel
+        // Section panel — passes query params through so assembleSectionPanel can
+        // apply q= filtering and limit/offset pagination on the assembled items.
         app.get(panelExpressPath, (req, res) => {
           try {
             const parentId = primaryParam ? req.params[primaryParam] : null;
             if (parentId && !findById(composition.resource, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
-            const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, assemblerOpts);
+            const panelOpts = { ...assemblerOpts, queryParams: req.query, paginationDefaults };
+            const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, panelOpts);
             if (!panel) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
             }

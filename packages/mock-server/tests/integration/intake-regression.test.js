@@ -1200,6 +1200,81 @@ async function testSectionView() {
     }
   });
 
+  // ---- Pagination response shape ----
+
+  await test('GET /review/:section — list section includes pagination fields', async () => {
+    const res = await fetch(`${BASE_REVIEW}/identity`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items), 'items is array');
+    assert.strictEqual(typeof data.total, 'number', 'total is a number');
+    assert.strictEqual(typeof data.limit, 'number', 'limit is a number');
+    assert.strictEqual(typeof data.offset, 'number', 'offset is a number');
+    assert.strictEqual(typeof data.hasNext, 'boolean', 'hasNext is a boolean');
+  });
+
+  await test('GET /review/:section — singleton section (household) has no pagination fields', async () => {
+    const res = await fetch(`${BASE_REVIEW}/household`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok('data' in data, 'has data key');
+    assert.ok(!('items' in data), 'no items key');
+    assert.ok(!('total' in data), 'no total key');
+    assert.ok(!('limit' in data), 'no limit key');
+    assert.ok(!('hasNext' in data), 'no hasNext key');
+  });
+
+  await test('GET /review/:section?limit=1 — pagination slices items and reflects total', async () => {
+    // Ensure there are at least 2 members so pagination is meaningful
+    await fetch(`${BASE_URL}${APP}/${appId}/members`, {
+      method: 'POST', headers: CASEWORKER,
+      body: { applicationId: appId, firstName: 'Extra', lastName: 'Member', programsApplyingFor: ['snap'], roles: ['household_member'] },
+    });
+    const res = await fetch(`${BASE_REVIEW}/identity?limit=1&offset=0`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.items.length, 1, 'only 1 item returned');
+    assert.ok(data.total >= 2, 'total reflects full filtered count');
+    assert.strictEqual(data.limit, 1);
+    assert.strictEqual(data.offset, 0);
+    assert.strictEqual(data.hasNext, true);
+  });
+
+  // ---- q= filtering ----
+
+  await test('GET /review/:section?q= — filters items by field value', async () => {
+    const allRes = await fetch(`${BASE_REVIEW}/identity`);
+    const all = await allRes.json();
+    assert.ok(all.items.length >= 1, 'need at least one member');
+
+    const target = all.items[0];
+    const filtered = await (await fetch(`${BASE_REVIEW}/identity?q=firstName:${encodeURIComponent(target.firstName)}`)).json();
+
+    assert.ok(Array.isArray(filtered.items), 'items present');
+    assert.ok(filtered.items.every(i => i.firstName === target.firstName), 'all returned items match q= filter');
+    assert.ok(filtered.total <= all.total, 'filtered total <= unfiltered total');
+  });
+
+  await test('GET /review/:section?q= — non-matching filter returns empty items', async () => {
+    const res = await fetch(`${BASE_REVIEW}/identity?q=firstName:ZZZ_NoSuchName_ZZZ`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.deepStrictEqual(data.items, []);
+    assert.strictEqual(data.total, 0);
+    assert.strictEqual(data.hasNext, false);
+  });
+
+  await test('GET /review/:section?q= — total reflects filtered count, not pre-filter count', async () => {
+    const allRes = await fetch(`${BASE_REVIEW}/identity`);
+    const all = await allRes.json();
+    const target = all.items[0];
+
+    const filtered = await (await fetch(`${BASE_REVIEW}/identity?q=firstName:${encodeURIComponent(target.firstName)}`)).json();
+    // total should be the count after filtering, not the total member count
+    assert.ok(filtered.total <= all.total, 'filtered total is not larger than unfiltered');
+    assert.strictEqual(filtered.items.length, filtered.total <= filtered.limit ? filtered.total : filtered.limit);
+  });
+
   // ---- parentLink: true ----
 
   await test('GET /applications/:id — response includes _links.applicationReview from parentLink', async () => {

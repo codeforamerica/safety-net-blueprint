@@ -470,3 +470,156 @@ function fieldToJsonPath(field) {
   }
   return `$.${field}`;
 }
+
+// ---------------------------------------------------------------------------
+// JS-native filter — mirrors tokensToSqlConditions but operates on objects
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve a dot-notation field path against a JS object.
+ * Returns undefined if any segment along the path is null/undefined.
+ *
+ * @param {*} obj
+ * @param {string} path - e.g. "reviewProgress.status" or "firstName"
+ * @returns {*}
+ */
+export function getNestedValue(obj, path) {
+  const parts = path.split('.');
+  let curr = obj;
+  for (const part of parts) {
+    if (curr == null || typeof curr !== 'object') return undefined;
+    curr = curr[part];
+  }
+  return curr;
+}
+
+/**
+ * Recursively collect all string leaf values from an object or array.
+ * Used for full-text search across an assembled item.
+ *
+ * @param {*} value
+ * @returns {string[]}
+ */
+function collectStringValues(value) {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectStringValues);
+  if (value && typeof value === 'object') return Object.values(value).flatMap(collectStringValues);
+  return [];
+}
+
+/**
+ * Coerce a value to a number or comparable string for range comparisons.
+ * ISO date strings compare correctly as strings; everything else is cast to Number.
+ */
+const COERCE_DATE_RE = /^\d{4}-\d{2}-\d{2}/;
+function coerce(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && COERCE_DATE_RE.test(v)) return v;
+  const n = Number(v);
+  return isNaN(n) ? String(v) : n;
+}
+
+/**
+ * Test whether a single string value satisfies a full-text token.
+ */
+function fullTextMatches(type, str, value) {
+  const s = str.toLowerCase();
+  const v = String(value).toLowerCase();
+  switch (type) {
+    case TokenType.FULL_TEXT:            return s === v;
+    case TokenType.FULL_TEXT_CONTAINS:   return s.includes(v);
+    case TokenType.FULL_TEXT_STARTS_WITH: return s.startsWith(v);
+    case TokenType.FULL_TEXT_ENDS_WITH:  return s.endsWith(v);
+    default: return false;
+  }
+}
+
+/**
+ * Evaluate a single token against a JS item.
+ *
+ * Per design: if the referenced field does not exist on the item
+ * (getNestedValue returns undefined), the condition is ignored — the item
+ * passes that token. This matches the "ignore the field" behaviour requested
+ * for assembled results where a projected field may legitimately be absent.
+ *
+ * @param {Object} token - Parsed token from parseQueryString
+ * @param {Object} item - Assembled JS item to test
+ * @returns {boolean}
+ */
+function tokenMatchesItem(token, item) {
+  const { type, field, value } = token;
+
+  // Full-text types: scan all string values at any depth
+  const fullTextTypes = [
+    TokenType.FULL_TEXT, TokenType.FULL_TEXT_CONTAINS,
+    TokenType.FULL_TEXT_STARTS_WITH, TokenType.FULL_TEXT_ENDS_WITH,
+  ];
+  if (fullTextTypes.includes(type)) {
+    return collectStringValues(item).some(s => fullTextMatches(type, s, value));
+  }
+
+  const fieldValue = getNestedValue(item, field);
+
+  // Match SQL NULL semantics for absent fields:
+  //   NOT_EQUAL: SQL emits `IS NULL OR != ?`  → NULL passes  → return true
+  //   NOT_IN:    SQL emits `IS NULL OR NOT IN` → NULL passes  → return true
+  //   NOT_EXISTS: expects absence              → return true
+  //   Everything else: NULL comparison → false in SQL → return false
+  if (fieldValue === undefined) {
+    return type === TokenType.NOT_EQUAL || type === TokenType.NOT_IN || type === TokenType.NOT_EXISTS;
+  }
+
+  switch (type) {
+    case TokenType.EXACT: {
+      if (Array.isArray(fieldValue)) return fieldValue.some(f => f === value || String(f) === String(value));
+      return fieldValue === value || String(fieldValue) === String(value);
+    }
+    case TokenType.NOT_EQUAL: {
+      if (Array.isArray(fieldValue)) return !fieldValue.some(f => f === value || String(f) === String(value));
+      return fieldValue !== value && String(fieldValue) !== String(value);
+    }
+    case TokenType.CONTAINS:
+      return String(fieldValue).toLowerCase().includes(String(value).toLowerCase());
+    case TokenType.STARTS_WITH:
+      return String(fieldValue).toLowerCase().startsWith(String(value).toLowerCase());
+    case TokenType.ENDS_WITH:
+      return String(fieldValue).toLowerCase().endsWith(String(value).toLowerCase());
+    case TokenType.GREATER_THAN:
+      return coerce(fieldValue) > coerce(value);
+    case TokenType.GREATER_THAN_OR_EQUAL:
+      return coerce(fieldValue) >= coerce(value);
+    case TokenType.LESS_THAN:
+      return coerce(fieldValue) < coerce(value);
+    case TokenType.LESS_THAN_OR_EQUAL:
+      return coerce(fieldValue) <= coerce(value);
+    case TokenType.IN: {
+      const fv = Array.isArray(fieldValue) ? fieldValue : [fieldValue];
+      return value.some(v => fv.some(f => f === v || String(f) === String(v)));
+    }
+    case TokenType.NOT_IN: {
+      // SQL NOT_IN does NOT use json_each — it compares json_extract (JSON string) against values.
+      // For array field values, JSON.stringify matches SQL's json_extract representation,
+      // which means array-valued fields always pass NOT_IN (JSON array string != scalar value).
+      const fieldStr = Array.isArray(fieldValue) ? JSON.stringify(fieldValue) : String(fieldValue);
+      return !value.some(v => fieldStr === String(v));
+    }
+    case TokenType.EXISTS:
+      return fieldValue !== null && fieldValue !== undefined;
+    case TokenType.NOT_EXISTS:
+      return fieldValue === null || fieldValue === undefined;
+    default:
+      return true;
+  }
+}
+
+/**
+ * Build a JS predicate from a parsed token array.
+ * The predicate returns true when the item satisfies ALL tokens (AND semantics).
+ *
+ * @param {Array} tokens - From parseQueryString
+ * @returns {(item: Object) => boolean}
+ */
+export function tokensToJsFilter(tokens) {
+  if (!tokens || tokens.length === 0) return () => true;
+  return (item) => tokens.every(token => tokenMatchesItem(token, item));
+}
