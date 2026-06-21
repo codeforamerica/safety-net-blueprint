@@ -27,7 +27,6 @@ $schema: "./schemas/compositions-schema.yaml"
 version: "1.0"
 domain: {domain}
 
-derives:       # optional — named, reusable filter/derive expressions for this domain
 compositions:  # required — named composition definitions
 ```
 
@@ -57,11 +56,6 @@ compositions:
       schema: { $ref: './{domain}-compositions-schemas.yaml#/$defs/{SchemaName}' }
       methods: [put, patch]        # optional; default [put, patch]; GET always included
       flatten: true                # optional; default false
-    views:                         # optional; named view projections; applied via ?view= at request time
-      {viewName}:
-        filter: "..."              # optional; additional filter applied when this view is requested
-        fields: [...]              # optional; field subset for this view (overrides base fields)
-      {otherViewName}:             # no value = plain inclusion, no additional filter or fields
 ```
 
 ## Resource binding and assembly
@@ -162,26 +156,13 @@ include:
 }
 ```
 
-## Named views
+## Search and filtering
 
-Named views define alternate projections of a composition, selected via `?view=<name>` at request time. `views:` is declared at the composition level and defines which named projections are available, with optional per-view filter and field overrides:
+Composition panel and index endpoints support the same search, pagination, and sort params as other list endpoints in the blueprint. The specific params depend on the state's configured search capability — see the [Search and Filtering Pattern ADR](../../decisions/search-patterns.md) for the baseline approach.
 
-```yaml
-compositions:
-  members:
-    resource: application-members
-    bind: applicationId
-    views:
-      snap:
-        filter: "programs.contains('snap')"
-        fields: [id, amount, frequency]   # optional; overrides base fields for this view
-      medicaid:
-        # no value — plain inclusion with no additional filter or field restriction
-```
+Runtime filtering (e.g. "items where a field matches a value") is expressed through these params. Annotation-based filtering (e.g. "elements relevant to a given program") is a client-side concern — see the [Contract Metadata](contract-metadata.md) architecture doc.
 
-View-level `fields` overrides base `fields` for that view. When both are present, view-level `fields` must be a subset of base `fields`; validated at `npm run validate` time.
-
-For `sectionView` compositions, `?view=<name>` is section-aware: items not matching the view's filter are excluded from panel responses; sections with zero surviving items are excluded from the section index entirely. See [sectionView](#sectionview).
+Composition nodes support `filter:` expressions for structural assembly rules: conditions that always apply regardless of how the endpoint is queried (e.g. "only primary applicants", "only records matching this section"). These are distinct from runtime search — they are not exposed as query parameters and cannot be overridden by callers. See [Filters](#filters).
 
 ## Derived fields
 
@@ -284,8 +265,6 @@ The index is a navigation surface — sections default to link-only (`{ name, hr
 
 Field and link defaults match plain compositions: all fields unless `fields:` is declared on the section, no links unless `links: true` is set. Path is derived: `{endpoint.path}/{$section.name}` — not declared separately. Assembles the matching section's resource plus everything in `panel.include:`. `$section.name` in filters resolves to the path parameter value. The section's `state:` fields are included automatically.
 
-Named views (`?view=<name>`) apply to both endpoints: on the panel, items not matching the view's filter are excluded; on the index, sections with zero surviving items are excluded.
-
 **Enum byproduct.** Section keys in `sections:` generate a named enum type at resolve time, emitted into the companion schemas file. The name is derived from the composition key: PascalCase + `Sections` suffix (`applicationReview` → `ApplicationReviewSections`). This eliminates manually maintained enums whose valid values are defined by the composition's section structure.
 
 ## Overlay extensibility
@@ -358,7 +337,7 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 | 4 | [sectionView: navigation index with derived panels](#decision-4-sectionview-navigation-index-with-derived-panels) | Section index defaults to link-only — a navigation surface — with panel paths derived from section keys. |
 | 5 | [Composition-owned state](#decision-5-composition-owned-state) | State resources tracking composition-level progress are declared within the composition config and generated alongside the composite endpoints. |
 | 6 | [Section keys as URL path segments](#decision-6-section-keys-as-url-path-segments) | Panel paths are derived from section key names; no separate path declaration per section. |
-| 7 | [Named views as composition-level projections](#decision-7-named-views-as-composition-level-projections) | Alternate projections use `?view=` on the same endpoint rather than separate endpoints. |
+| 7 | [Runtime filtering via standard search params](#decision-7-runtime-filtering-via-standard-search-params) | Composition endpoints support the state's configured search, pagination, and sort params — consistent with other list endpoints. |
 | 8 | [parentLink for composition discovery](#decision-8-parentlink-for-composition-discovery) | `_links.<compositionId>` injected into parent resource responses — clients navigate via links rather than hardcoding paths. |
 
 ---
@@ -492,24 +471,24 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 
 ---
 
-### Decision 7: Named views as composition-level projections
+### Decision 7: Runtime filtering via standard search params
 
 **Status:** Decided: B
 
-**What's being decided:** Whether alternate projections of a composition (e.g., filtered to incomplete items only) should be separate endpoints or `?view=` parameters on the existing endpoint.
-
-**Background:** Consumers may need filtered or narrowed views of the same composition for different contexts — a progress indicator showing only incomplete sections vs a full review context for a caseworker. The question is whether each such variant is a separately declared endpoint or a parameter on the existing one.
+**What's being decided:** Whether composition panel and index endpoints support runtime filtering and search, and if so, how.
 
 **Considerations:**
-- Separate endpoints per projection make URL semantics explicit and require no query string. But endpoint count grows with projections and each new view requires spec changes.
-- `?view=<name>` serves the same consumer need from the same endpoint. `views:` at the composition level declares which projections are available — states define them, clients select among them. This keeps the available projections part of the composition contract rather than an open-ended client-driven query surface.
-- Named views compose with existing composition filters (AND semantics) rather than replacing them. For `sectionView` compositions, this applies at both the section level and the panel level.
+- Panel endpoints return assembled item lists — structurally the same shape as other list endpoints in the blueprint. Consistency means supporting the same search, pagination, and sort params.
+- Instance-level filtering (e.g. "items where a field matches a value") depends on resource state at request time. The blueprint's search param expresses this naturally and is already understood by states that configure a search backend.
+- Annotation-based filtering (e.g. program relevance) is a client-side concern — see the [Contract Metadata](contract-metadata.md) architecture doc.
+- Panel endpoints span assembled fields from potentially multiple resources. States configuring a search backend for composition endpoints need to handle indexing across the assembled field set.
+- Composition nodes support structural `filter:` expressions for assembly rules that always apply regardless of how the endpoint is queried. These are not exposed as query parameters and are distinct from runtime search.
 
 **Options:**
-- **(A)** Separate endpoint per projection — explicit URL semantics; endpoint count grows with projections
-- **(B) ✓** `views:` map with `?view=` query parameter — single endpoint per composition; projections declared in config
+- **(A)** No search params — composition endpoints are fixed, unfiltered reads
+- **(B) ✓** Standard search, pagination, and sort params — consistent with all other list endpoints; search capability is state-configured
 
-**Decision:** Composition-level views (B). Projections are design-time config elements; `?view=` keeps endpoint count stable as projections are added.
+**Decision:** B. Consistency with list endpoints; states already configure a search backend for their resource endpoints.
 
 ---
 

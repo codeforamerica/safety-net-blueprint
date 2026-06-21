@@ -1175,44 +1175,6 @@ async function testSectionView() {
     assert.strictEqual(data.section, 'household');
   });
 
-  // ---- Named views ----
-
-  // Create an income with only required fields. The mock server null-initializes optional
-  // fields (unearnedType, incomeBasis, startDate, endDate), so the stored record has null
-  // values that isIncomplete/item detects: !Object.values($self).every(v => $present(v)).
-  const income = await createIncome(appId, member.id, { type: 'employed', amount: 2000, frequency: 'monthly' });
-
-  await test('GET /review/income?view=incomplete — includes items with null optional fields', async () => {
-    const res = await fetch(`${BASE_REVIEW}/income?view=incomplete`);
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    assert.ok(Array.isArray(data.items), 'items array present');
-    const ids = data.items.map(i => i.id);
-    assert.ok(ids.includes(income.id), 'income included (has null optional fields)');
-  });
-
-  await test('GET /review?view=incomplete — income section present (has incomplete items)', async () => {
-    const res = await fetch(`${BASE_REVIEW}?view=incomplete`);
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    const sectionNames = data.sections.map(s => s.name);
-    assert.ok(sectionNames.includes('income'), 'income section present (has incomplete items)');
-  });
-
-  await test('GET /review?view=incomplete — employment section absent (no items)', async () => {
-    const res = await fetch(`${BASE_REVIEW}?view=incomplete`);
-    const data = await res.json();
-    const sectionNames = data.sections.map(s => s.name);
-    assert.ok(!sectionNames.includes('employment'), 'employment excluded (no items to filter)');
-  });
-
-  await test('GET /review/income without ?view — returns all items', async () => {
-    const res = await fetch(`${BASE_REVIEW}/income`);
-    const data = await res.json();
-    const ids = data.items.map(i => i.id);
-    assert.ok(ids.includes(income.id), 'income present without view filter');
-  });
-
   // ---- links: true ----
 
   await test('GET /review/demographics — items include _links.self pointing to member endpoint', async () => {

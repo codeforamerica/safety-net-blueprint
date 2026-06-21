@@ -12,8 +12,8 @@
  *
  * Overlay generation: for each composition that declares an `endpoint:`, the
  * resolver emits an OpenAPI overlay that adds the path entry and a stub
- * response schema.  Later phases (sectionView, state, named views) replace the
- * stub with a fully-shaped schema.
+ * response schema.  Later phases (sectionView, state) replace the stub with a
+ * fully-shaped schema.
  */
 
 import { readdirSync, readFileSync, statSync } from 'fs';
@@ -719,24 +719,6 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
     // sectionView compositions: also generate the panel endpoint and section enum
     if (composition.compositeType === 'sectionView') {
       const panel = generateSectionViewPanelEndpoint(compositionName, endpointPath, paramIndex);
-
-      // Collect named views from the composition-level views map
-      const viewNames = Object.keys(composition.views || {});
-      if (viewNames.length > 0) {
-        const viewParam = {
-          name: 'view',
-          in: 'query',
-          required: false,
-          schema: { type: 'string', enum: viewNames },
-          description: 'Named view projection to apply.',
-        };
-        // Add to the index endpoint operation
-        if (!operation.parameters) operation.parameters = [];
-        operation.parameters.push(viewParam);
-        // Add to the panel endpoint
-        panel.pathEntry.get.parameters = [viewParam];
-      }
-
       pathsUpdate[panel.path] = panel.pathEntry;
       schemasUpdate[panel.schemaName] = panel.schemaEntry;
 

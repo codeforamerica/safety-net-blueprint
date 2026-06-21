@@ -7,17 +7,6 @@ $schema: "./schemas/compositions-schema.yaml"
 version: "1.0"
 domain: intake
 
-# Reusable derive expressions for this domain.
-# Cross-domain expressions live in ../derives.yaml.
-derives:
-  # Shared expressions from packages/contracts/derives.yaml are resolved by the
-  # resolve pipeline. Inline them here for mock server use until that is built.
-  isComplete:
-    item: "Object.values($self).every(v => $present(v))"
-    collection: "items.length > 0 && items.every(i => Object.values(i).every(v => $present(v)))"
-  isIncomplete:
-    item: "!Object.values($self).every(v => $present(v))"
-
 compositions:
 
   # review — sectionView composite for the caseworker application review workflow.
@@ -44,10 +33,6 @@ compositions:
     state:
       schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' }
       methods: [put, patch]
-    views:
-      incomplete:
-        filter: { $ref: '#/derives/isIncomplete/item' }
-
     sections:
 
       # Member-scoped sections — one review-progress entry per member × section
@@ -56,8 +41,6 @@ compositions:
         resource: application-members
         bind: applicationId
         links: true
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           filter: "roles.contains('primary_applicant')"
           fields: [id, firstName, lastName, dateOfBirth, relationshipToHead]
@@ -70,8 +53,6 @@ compositions:
             resource: verifications
             bind: applicationId
             filter: "category == 'identity'"
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           filter: "roles.contains('primary_applicant')"
           fields: [id, firstName, lastName, citizenshipStatus, immigrationStatus]
@@ -79,24 +60,18 @@ compositions:
       income:
         resource: member-incomes
         bind: applicationId
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           fields: [id, memberId, type, amount, frequency]
 
       employment:
         resource: member-employment-records
         bind: applicationId
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           fields: [id, memberId, status, jobTitle]
 
       health-coverage:
         resource: member-health-coverages
         bind: applicationId
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           fields: [id, memberId, coverageType, planName]
 
@@ -105,8 +80,6 @@ compositions:
       assets:
         resource: member-assets
         bind: applicationId
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           fields: [id, memberId, type, value]
 
@@ -114,8 +87,6 @@ compositions:
         resource: application-members
         bind: applicationId
         fields: [id, firstName, lastName, phoneNumber, email, preferredLanguage, preferredContactMethod]
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           filter: "roles.contains('primary_applicant')"
           fields: [id, firstName, lastName, phoneNumber, email]
@@ -123,8 +94,6 @@ compositions:
       expenses:
         resource: member-expenses
         bind: applicationId
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           fields: [id, memberId, category, amount, frequency]
 
@@ -132,8 +101,6 @@ compositions:
         resource: household-info
         bind: applicationId
         missing: empty
-        derive:
-          complete: { $ref: '#/derives/isComplete/collection' }
         index:
           fields: [id, size]
 

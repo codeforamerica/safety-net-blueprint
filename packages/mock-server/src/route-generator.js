@@ -551,7 +551,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
             if (parentId && !findById(composition.resource, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
-            res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, req.query.view || null, assemblerOpts));
+            res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, assemblerOpts));
           } catch (error) {
             console.error('Composition index handler error:', error);
             res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
@@ -565,7 +565,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
             if (parentId && !findById(composition.resource, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
-            const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, req.query.view || null, assemblerOpts);
+            const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, assemblerOpts);
             if (!panel) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
             }

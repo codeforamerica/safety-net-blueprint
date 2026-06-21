@@ -10,9 +10,8 @@
  *  3. Field selection   — project a subset of fields when `fields:` is declared
  *  4. Include nodes     — fetch each included resource with its own bind + filter
  *  5. Panel nodes       — add the shared panel includes (verifications, notes, etc.)
- *  6. Derived fields    — evaluate `derive:` expressions; item-scope or collection-scope
  *
- * Filter and derive expressions use the same CEL syntax as state machine conditions.
+ * Filter expressions use the same CEL syntax as state machine conditions.
  */
 
 import { evaluateCEL } from './cel-evaluator.js';
@@ -60,50 +59,6 @@ const COMPOSITION_HELPERS = {
 };
 
 /**
- * Resolve a derive expression — either an inline string or a $ref to the derives map.
- *
- * @param {string|Object} exprOrRef - String expression or { $ref: '#/derives/name' }
- * @param {Object} derives - The derives map from the composition file
- * @returns {string|undefined}
- */
-function resolveDerivExpr(exprOrRef, derives = {}) {
-  if (typeof exprOrRef === 'string') return exprOrRef;
-  if (exprOrRef?.$ref) {
-    const match = exprOrRef.$ref.match(/^#\/derives\/(.+)$/);
-    if (match) {
-      // Walk nested path: '#/derives/complete/item' → derives.complete.item
-      const parts = match[1].split('/');
-      let val = derives;
-      for (const part of parts) {
-        if (val == null) return undefined;
-        val = val[part];
-      }
-      return typeof val === 'string' ? val : undefined;
-    }
-  }
-  return undefined;
-}
-
-/**
- * Resolve a view definition, resolving any $ref in its filter field.
- *
- * Views are looked up from the composition-level views map by the caller;
- * this function resolves $ref expressions within the view (e.g., filter: { $ref: '#/derives/...' }).
- *
- * @param {Object|undefined} viewDef - View definition { filter?, fields? }
- * @param {Object} derives - The derives map from the composition file
- * @returns {Object|undefined} Resolved view definition with filter as a plain string
- */
-function resolveViewDef(viewDef, derives = {}) {
-  if (!viewDef) return undefined;
-  const result = { ...viewDef };
-  if (result.filter && typeof result.filter === 'object') {
-    result.filter = resolveDerivExpr(result.filter, derives);
-  }
-  return result;
-}
-
-/**
  * Build a _links.self URL for a resource item.
  *
  * Substitutes known path params from `params` into the item path pattern, then
@@ -123,47 +78,6 @@ function buildSelfLink(resourceItemPath, serverBasePath, params, itemId) {
   // Last remaining placeholder is the item's own ID
   url = url.replace(/\{[^}]+\}$/, String(itemId ?? ''));
   return url;
-}
-
-/**
- * Apply derive: expressions to a panel response.
- *
- * Scope inference:
- *   - Expression references 'items' → collection scope: evaluated once against
- *     the full array; result added as a top-level field on the panel response
- *   - Otherwise → item scope: evaluated per item; result added as a new field
- *     on each item object
- *
- * @param {Object} sectionDef - The section's composition definition
- * @param {Object} composition - The full composition definition (for derives: map)
- * @param {Array} items - The section's item array (mutated in place for item-scope)
- * @param {Object} panel - The panel response object (receives collection-scope fields)
- */
-function applyDerives(sectionDef, composition, items, panel) {
-  const derive = sectionDef.derive;
-  if (!derive) return;
-
-  const derives = composition.derives || {};
-
-  // Snapshot each item's source fields before any derives are applied.
-  // This ensures $self and collection items always reflect source data,
-  // not accumulated derived fields from earlier entries in the derive map.
-  const snapshots = Array.isArray(items) ? items.map(item => ({ ...item })) : [];
-
-  for (const [fieldName, exprOrRef] of Object.entries(derive)) {
-    const expr = resolveDerivExpr(exprOrRef, derives);
-    if (!expr) continue;
-
-    const isCollectionScope = /\bitems\b/.test(expr);
-
-    if (isCollectionScope) {
-      panel[fieldName] = evaluateCEL(expr, { ...COMPOSITION_HELPERS, items: snapshots });
-    } else if (Array.isArray(items)) {
-      items.forEach((item, idx) => {
-        item[fieldName] = evaluateCEL(expr, { ...COMPOSITION_HELPERS, ...snapshots[idx], $self: snapshots[idx] });
-      });
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -247,10 +161,9 @@ function buildBindValues(params) {
  * @param {Object} params - Express req.params (path params)
  * @param {string} basePath - Base URL path for this composition endpoint
  * @param {Object} stateDefaults - Default field values for the state resource
- * @param {string|null} viewName - Named view to apply (from ?view= query param)
  * @returns {Object}
  */
-export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, viewName = null, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
+export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
   const sectionDefs = composition.sections || {};
   const bindValues = buildBindValues(params);
 
@@ -261,11 +174,6 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   const stateInfo = composition.state ? deriveStateResource(composition.state, composition.endpoint?.path, serverBasePath) : null;
   const bindParam = stateInfo ? extractPrimaryParam(composition.endpoint?.path ?? '') : null;
 
-  // Resolve named view from doc-level views map
-  const views = composition.views || {};
-  const derives = composition.derives || {};
-  const viewDef = viewName ? resolveViewDef(views[viewName], derives) : null;
-
   const sections = [];
 
   for (const [name, sectionDef] of Object.entries(sectionDefs)) {
@@ -273,8 +181,8 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
 
     const indexConfig = sectionDef.index;
 
-    // Without a view, sections with no index config are link-only
-    if (!indexConfig && !viewDef) {
+    // Sections with no index config are link-only
+    if (!indexConfig) {
       sections.push(entry);
       continue;
     }
@@ -298,20 +206,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
       continue;
     }
 
-    // Apply view filter on top of index filter (AND semantics)
-    if (viewDef?.filter) {
-      items = items.filter(item =>
-        Boolean(evaluateCEL(viewDef.filter, { ...COMPOSITION_HELPERS, ...item, $self: item }))
-      );
-    }
-
-    // With a view active, exclude sections that have no surviving items
-    if (viewDef && items.length === 0) continue;
-
-    // Apply derive: expressions (collection-scope adds to entry, item-scope adds to items)
-    applyDerives(sectionDef, composition, items, entry);
-
-    // Project fields for display after derives have been evaluated.
+    // Project fields for display.
     // Index fields take precedence over view fields on the index endpoint.
     // Track original IDs before projection so _links.self can use them even
     // when `id` is not included in index.fields.
@@ -441,31 +336,18 @@ export function assemblePlainComposition(composition, params, { resourceItemPath
  * @param {string} sectionName - Name of the section being requested
  * @param {Object} params - Express req.params (path params)
  * @param {Object} stateDefaults - Default field values for the state resource (keyed by field name)
- * @param {string|null} viewName - Optional named view to apply (overrides base filter/fields)
  * @returns {Object|null} Panel response, or null if section not found
  */
-export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, viewName = null, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
+export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
   const sections = composition.sections || {};
   const sectionDef = sections[sectionName];
   if (!sectionDef) return null;
-
-  // Resolve named view from doc-level views map
-  const views = composition.views || {};
-  const derives = composition.derives || {};
-  const viewDef = viewName ? resolveViewDef(views[viewName], derives) : null;
 
   const bindValues = buildBindValues(params);
   const context = { sectionName };
 
   // Fetch primary section resource using the section's base filter
   let items = fetchNodeItems(sectionDef, bindValues, context);
-
-  // Apply view filter as additional filter (AND semantics) — does not replace section filter
-  if (viewDef?.filter && Array.isArray(items)) {
-    items = items.filter(item =>
-      Boolean(evaluateCEL(viewDef.filter, { ...COMPOSITION_HELPERS, ...item, $self: item }))
-    );
-  }
 
   // Fetch section-level includes
   const include = {};
@@ -489,9 +371,6 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
 
   // items may be an array (normal) or empty object (missing: empty)
   if (Array.isArray(items)) {
-    // Apply derived fields: item-scope mutates items; collection-scope adds to response
-    applyDerives(sectionDef, composition, items, response);
-
     // Embed composition state per item if state: is declared on the composition
     if (composition.state) {
       const stateInfo = deriveStateResource(composition.state, composition.endpoint?.path, serverBasePath);
@@ -509,14 +388,8 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
       }
     }
 
-    // Apply view field projection as final step — after derives and state embedding
-    // so post-fetch fields (e.g. reviewProgress from state embedding) respect the view.
-    // Track original IDs before projection so _links.self can use them even when id
-    // is not included in the view's field list.
     const itemIds = items.map(item => item.id);
-    let finalItems = viewDef?.fields
-      ? items.map(item => projectFields(item, viewDef.fields))
-      : items;
+    let finalItems = items;
 
     // Add _links.self after projection (so links are never stripped by field selection).
     if (sectionDef.links && resourceItemPathMap) {
