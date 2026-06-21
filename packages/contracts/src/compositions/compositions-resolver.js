@@ -410,18 +410,18 @@ function loadCompanionSchemaEntry(stateConfig, compositionFilePath) {
 }
 
 /**
- * Generate OpenAPI path and schema entries for the panel endpoint of a sectionView composition.
+ * Generate OpenAPI path and schema entries for the static panel endpoints of a sectionView composition.
  *
- * For sectionView compositions, emits:
- *   GET {endpoint.path}/{section}  — panel for a named section
+ * For sectionView compositions, emits one static path per section:
+ *   GET {endpoint.path}/{sectionName}  — panel for each named section (section name baked in)
  *
  * @param {string} compositionName
  * @param {string} endpointPath - Index endpoint path (e.g. /applications/{applicationId}/review)
+ * @param {Object} sections - Map of section name → section config from the composition definition
  * @param {Map<string, string>} paramIndex - From buildParameterIndex
- * @returns {{ path: string, schemaName: string, pathEntry: Object, schemaEntry: Object }}
+ * @returns {{ paths: Object, schemaName: string, schemaEntry: Object }}
  */
-export function generateSectionViewPanelEndpoint(compositionName, endpointPath, paramIndex) {
-  const panelPath = `${endpointPath}/{section}`;
+export function generateSectionViewPanelEndpoints(compositionName, endpointPath, sections, paramIndex) {
   const paramNames = extractPathParams(endpointPath);
   const sectionSchemaName = `${toPascalCase(compositionName)}SectionResponse`;
 
@@ -432,25 +432,19 @@ export function generateSectionViewPanelEndpoint(compositionName, endpointPath, 
       : { name, in: 'path', required: true, schema: { type: 'string' } };
   });
 
-  const sectionParam = {
-    name: 'section',
-    in: 'path',
-    required: true,
-    schema: { type: 'string' },
-    description: 'Section name within the sectionView composition.',
-  };
+  const paths = {};
 
-  const pathEntry = {
-    parameters: [...parentParams, sectionParam],
-    get: {
-      summary: `Get ${compositionName} section panel`,
-      operationId: `get${toPascalCase(compositionName)}Section`,
-      'x-composition': compositionName,
-      'x-composition-type': 'sectionView',
+  for (const [sectionName, sectionConfig] of Object.entries(sections)) {
+    const sectionPath = `${endpointPath}/${sectionName}`;
+    const operationId = `get${toPascalCase(compositionName)}${toPascalCase(sectionName)}Section`;
+
+    const getOp = {
+      summary: `Get ${compositionName} ${sectionName} section panel`,
+      operationId,
       parameters: LIST_QUERY_PARAMS,
       responses: {
         '200': {
-          description: `${compositionName} section panel retrieved successfully.`,
+          description: `${compositionName} ${sectionName} section panel retrieved successfully.`,
           content: {
             'application/json': { schema: { $ref: `#/components/schemas/${sectionSchemaName}` } }
           }
@@ -458,17 +452,31 @@ export function generateSectionViewPanelEndpoint(compositionName, endpointPath, 
         '404': { $ref: './components/responses.yaml#/NotFound' },
         '500': { $ref: './components/responses.yaml#/InternalError' },
       }
+    };
+
+    if (sectionConfig?.sortable) {
+      const xSortable = { fields: sectionConfig.sortable.fields };
+      if (sectionConfig.sortable.default !== undefined) {
+        xSortable.default = sectionConfig.sortable.default;
+      }
+      if (sectionConfig.sortable.tieBreaker !== undefined) {
+        xSortable.tieBreaker = sectionConfig.sortable.tieBreaker;
+      }
+      getOp['x-sortable'] = xSortable;
     }
-  };
+
+    paths[sectionPath] = {
+      parameters: parentParams,
+      get: getOp,
+    };
+  }
 
   const schemaEntry = {
     type: 'object',
     description: `Generated section panel response for ${compositionName}.`,
-    'x-composition': compositionName,
-    'x-composition-type': 'sectionView',
   };
 
-  return { path: panelPath, schemaName: sectionSchemaName, pathEntry, schemaEntry };
+  return { paths, schemaName: sectionSchemaName, schemaEntry };
 }
 
 
@@ -693,7 +701,6 @@ export function buildPathToSchemaMap(yamlFiles) {
  * The generated operation includes:
  *  - parameter refs derived from the path pattern
  *  - a stub response schema named `{CompositionName}Response`
- *  - `x-composition` annotation for downstream tooling
  *
  * When `composition.state` is declared, also emits state resource endpoints
  * following the standard API patterns (paginated list, get/put/patch by section
@@ -732,7 +739,6 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
     const operation = {
       summary: `Get ${compositionName}`,
       operationId,
-      'x-composition': compositionName,
       responses: {
         '200': {
           description: `${compositionName} retrieved successfully.`,
@@ -758,20 +764,38 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
     const schemaEntry = {
       type: 'object',
       description: `Generated composition response for ${compositionName}.`,
-      'x-composition': compositionName
     };
-    if (composition.compositeType) {
-      schemaEntry['x-composition-type'] = composition.compositeType;
-    }
     schemasUpdate[schemaName] = schemaEntry;
 
-    // sectionView compositions: also generate the panel endpoint and section enum
+    // sectionView compositions: also generate static per-section panel endpoints and section enum
     if (composition.compositeType === 'sectionView') {
-      const panel = generateSectionViewPanelEndpoint(compositionName, endpointPath, paramIndex);
-      pathsUpdate[panel.path] = panel.pathEntry;
+      const sections = composition.sections || {};
+      const panel = generateSectionViewPanelEndpoints(compositionName, endpointPath, sections, paramIndex);
+
+      // Collect named views from the composition-level views map
+      const viewNames = Object.keys(composition.views || {});
+      if (viewNames.length > 0) {
+        const viewParam = {
+          name: 'view',
+          in: 'query',
+          required: false,
+          schema: { type: 'string', enum: viewNames },
+          description: 'Named view projection to apply.',
+        };
+        // Add to the index endpoint operation
+        if (!operation.parameters) operation.parameters = [];
+        operation.parameters.push(viewParam);
+        // Add to each per-section panel endpoint
+        for (const pathEntry of Object.values(panel.paths)) {
+          if (!pathEntry.get.parameters) pathEntry.get.parameters = [];
+          pathEntry.get.parameters.push(viewParam);
+        }
+      }
+
+      Object.assign(pathsUpdate, panel.paths);
       schemasUpdate[panel.schemaName] = panel.schemaEntry;
 
-      const sectionKeys = Object.keys(composition.sections || {});
+      const sectionKeys = Object.keys(sections);
       if (sectionKeys.length > 0) {
         const enumName = `${toPascalCase(compositionName)}Sections`;
         schemasUpdate[enumName] = {

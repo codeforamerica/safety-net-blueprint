@@ -22,7 +22,7 @@ import {
   buildPathToSchemaMap,
   generateCompositionOverlay,
   generateCompositionOverlays,
-  generateSectionViewPanelEndpoint,
+  generateSectionViewPanelEndpoints,
 } from '../../src/compositions/compositions-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -841,7 +841,6 @@ describe('generateCompositionOverlay', () => {
     assert.ok(pathEntry);
     assert.ok(pathEntry.get);
     assert.equal(pathEntry.get.operationId, 'getMemberSummary');
-    assert.ok(pathEntry.get['x-composition']);
 
     // Parameter should be resolved to $ref
     assert.deepEqual(pathEntry.parameters, [
@@ -887,26 +886,6 @@ describe('generateCompositionOverlay', () => {
     const schemasAction = overlay.actions.find(a => a.target === '$.components.schemas');
     assert.ok(schemasAction);
     assert.ok(schemasAction.update.MemberSummaryResponse);
-    assert.equal(schemasAction.update.MemberSummaryResponse['x-composition'], 'memberSummary');
-  });
-
-  test('includes x-composition-type for sectionView', () => {
-    const compositionFile = {
-      domain: 'intake',
-      doc: {
-        compositions: {
-          reviewContext: {
-            compositeType: 'sectionView',
-            resource: 'applications',
-            endpoint: { path: '/applications/{applicationId}/review' }
-          }
-        }
-      }
-    };
-    const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
-    const schemasAction = overlay.actions.find(a => a.target === '$.components.schemas');
-    const schema = schemasAction.update.ReviewContextResponse;
-    assert.equal(schema['x-composition-type'], 'sectionView');
   });
 
   test('targets the correct domain OpenAPI file', () => {
@@ -1006,58 +985,115 @@ describe('generateCompositionOverlays', () => {
 });
 
 // ---------------------------------------------------------------------------
-// generateSectionViewPanelEndpoint
+// generateSectionViewPanelEndpoints
 // ---------------------------------------------------------------------------
 
-describe('generateSectionViewPanelEndpoint', () => {
+describe('generateSectionViewPanelEndpoints', () => {
   function makeParamIndex() {
     return new Map([
       ['applicationId', '#/components/parameters/ApplicationIdParam']
     ]);
   }
 
-  test('returns panel path with {section} appended', () => {
-    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
-    assert.equal(result.path, '/applications/{applicationId}/review/{section}');
+  const sections = {
+    income: { resource: 'member-incomes', bind: 'applicationId' },
+    contact: { resource: 'contacts', bind: 'applicationId' },
+  };
+
+  test('returns one path per section (static paths, no {section} param)', () => {
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sections, makeParamIndex());
+    const paths = Object.keys(result.paths);
+    assert.equal(paths.length, 2);
+    assert.ok(result.paths['/applications/{applicationId}/review/income'], 'income path present');
+    assert.ok(result.paths['/applications/{applicationId}/review/contact'], 'contact path present');
+    assert.ok(!paths.some(p => p.includes('{section}')), 'no {section} param in any path');
   });
 
-  test('panel path entry has parent params + section param', () => {
-    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
-    const params = result.pathEntry.parameters;
-    assert.ok(params.some(p => p.$ref === '#/components/parameters/ApplicationIdParam'), 'has parent param ref');
-    assert.ok(params.some(p => p.name === 'section' && p.in === 'path' && p.required === true), 'has section param');
+  test('each path entry has parent path params (no section path param)', () => {
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sections, makeParamIndex());
+    for (const pathEntry of Object.values(result.paths)) {
+      assert.ok(pathEntry.parameters.some(p => p.$ref === '#/components/parameters/ApplicationIdParam'), 'has parent param ref');
+      assert.ok(!pathEntry.parameters.some(p => p.name === 'section'), 'no section path param');
+    }
   });
 
-  test('GET operation has correct operationId and x-composition annotations', () => {
-    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
-    const get = result.pathEntry.get;
-    assert.equal(get.operationId, 'getReviewContextSection');
-    assert.equal(get['x-composition'], 'reviewContext');
-    assert.equal(get['x-composition-type'], 'sectionView');
+  test('each GET operation has standard query params (SearchQueryParam, LimitParam, OffsetParam, SortParam)', () => {
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sections, makeParamIndex());
+    for (const pathEntry of Object.values(result.paths)) {
+      const params = pathEntry.get.parameters;
+      assert.ok(params.some(p => p.$ref === './components/parameters.yaml#/SearchQueryParam'), 'has SearchQueryParam');
+      assert.ok(params.some(p => p.$ref === './components/parameters.yaml#/LimitParam'), 'has LimitParam');
+      assert.ok(params.some(p => p.$ref === './components/parameters.yaml#/OffsetParam'), 'has OffsetParam');
+      assert.ok(params.some(p => p.$ref === './components/parameters.yaml#/SortParam'), 'has SortParam');
+    }
   });
 
-  test('schema name is {CompositionName}SectionResponse', () => {
-    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
+  test('operationId follows get{Composition}{Section}Section pattern', () => {
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sections, makeParamIndex());
+    assert.equal(result.paths['/applications/{applicationId}/review/income'].get.operationId, 'getReviewContextIncomeSection');
+    assert.equal(result.paths['/applications/{applicationId}/review/contact'].get.operationId, 'getReviewContextContactSection');
+  });
+
+  test('schema name is {CompositionName}SectionResponse (shared across sections)', () => {
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sections, makeParamIndex());
     assert.equal(result.schemaName, 'ReviewContextSectionResponse');
   });
 
-  test('schema entry has x-composition annotations', () => {
-    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
-    assert.equal(result.schemaEntry['x-composition'], 'reviewContext');
-    assert.equal(result.schemaEntry['x-composition-type'], 'sectionView');
+  test('section with sortable config gets x-sortable on its GET operation', () => {
+    const sectionsWithSortable = {
+      income: {
+        resource: 'member-incomes',
+        bind: 'applicationId',
+        sortable: { fields: ['amount', 'type'], default: 'amount', tieBreaker: 'id' },
+      },
+      contact: { resource: 'contacts', bind: 'applicationId' },
+    };
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sectionsWithSortable, makeParamIndex());
+    const incomeGet = result.paths['/applications/{applicationId}/review/income'].get;
+    assert.ok(incomeGet['x-sortable'], 'income section has x-sortable');
+    assert.deepEqual(incomeGet['x-sortable'].fields, ['amount', 'type']);
+    assert.equal(incomeGet['x-sortable'].default, 'amount');
+    assert.equal(incomeGet['x-sortable'].tieBreaker, 'id');
+
+    const contactGet = result.paths['/applications/{applicationId}/review/contact'].get;
+    assert.equal(contactGet['x-sortable'], undefined, 'contact section has no x-sortable');
   });
 
-  test('falls back to inline param when section ref not in index', () => {
-    const result = generateSectionViewPanelEndpoint('myCtx', '/domains/{domainId}/ctx', new Map());
-    const params = result.pathEntry.parameters;
-    const domainParam = params.find(p => p.name === 'domainId');
+  test('sortable config without default or tieBreaker omits those fields', () => {
+    const sectionsWithMinimalSortable = {
+      income: {
+        resource: 'member-incomes',
+        bind: 'applicationId',
+        sortable: { fields: ['amount'] },
+      },
+    };
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sectionsWithMinimalSortable, makeParamIndex());
+    const xSortable = result.paths['/applications/{applicationId}/review/income'].get['x-sortable'];
+    assert.ok(xSortable);
+    assert.deepEqual(xSortable.fields, ['amount']);
+    assert.equal(xSortable.default, undefined);
+    assert.equal(xSortable.tieBreaker, undefined);
+  });
+
+  test('falls back to inline param when parent path param not in index', () => {
+    const result = generateSectionViewPanelEndpoints('myCtx', '/domains/{domainId}/ctx', { info: {} }, new Map());
+    const pathEntry = result.paths['/domains/{domainId}/ctx/info'];
+    assert.ok(pathEntry, 'path exists');
+    const domainParam = pathEntry.parameters.find(p => p.name === 'domainId');
     assert.ok(domainParam, 'inline param for unknown parent param');
     assert.equal(domainParam.in, 'path');
   });
 
   test('GET 404 response uses shared ref', () => {
-    const result = generateSectionViewPanelEndpoint('reviewContext', '/applications/{applicationId}/review', makeParamIndex());
-    assert.equal(result.pathEntry.get.responses['404'].$ref, './components/responses.yaml#/NotFound');
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sections, makeParamIndex());
+    for (const pathEntry of Object.values(result.paths)) {
+      assert.equal(pathEntry.get.responses['404'].$ref, './components/responses.yaml#/NotFound');
+    }
+  });
+
+  test('returns empty paths object when sections is empty', () => {
+    const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', {}, makeParamIndex());
+    assert.deepEqual(result.paths, {});
   });
 });
 
@@ -1070,7 +1106,7 @@ describe('generateCompositionOverlay — sectionView panel', () => {
     return new Map([['applicationId', '#/components/parameters/ApplicationIdParam']]);
   }
 
-  test('sectionView emits panel path in addition to index path', () => {
+  test('sectionView emits one static path per section in addition to index path', () => {
     const compositionFile = {
       domain: 'intake',
       doc: {
@@ -1079,7 +1115,10 @@ describe('generateCompositionOverlay — sectionView panel', () => {
             compositeType: 'sectionView',
             resource: 'applications',
             endpoint: { path: '/applications/{applicationId}/review' },
-            sections: { income: { resource: 'member-incomes', bind: 'applicationId' } }
+            sections: {
+              income: { resource: 'member-incomes', bind: 'applicationId' },
+              contact: { resource: 'contacts', bind: 'applicationId' },
+            }
           }
         }
       }
@@ -1087,10 +1126,12 @@ describe('generateCompositionOverlay — sectionView panel', () => {
     const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
     const pathsAction = overlay.actions.find(a => a.target === '$.paths');
     assert.ok(pathsAction.update['/applications/{applicationId}/review'], 'index path present');
-    assert.ok(pathsAction.update['/applications/{applicationId}/review/{section}'], 'panel path present');
+    assert.ok(pathsAction.update['/applications/{applicationId}/review/income'], 'income panel path present');
+    assert.ok(pathsAction.update['/applications/{applicationId}/review/contact'], 'contact panel path present');
+    assert.ok(!Object.keys(pathsAction.update).some(p => p.includes('{section}')), 'no {section} param in any path');
   });
 
-  test('non-sectionView composition does not emit panel path', () => {
+  test('non-sectionView composition does not emit panel paths', () => {
     const compositionFile = {
       domain: 'test',
       doc: {
@@ -1105,6 +1146,7 @@ describe('generateCompositionOverlay — sectionView panel', () => {
     const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
     const pathsAction = overlay.actions.find(a => a.target === '$.paths');
     const paths = Object.keys(pathsAction.update);
+    assert.equal(paths.length, 1, 'only index path for non-sectionView');
     assert.ok(!paths.some(p => p.includes('{section}')), 'no panel path for non-sectionView');
   });
 
