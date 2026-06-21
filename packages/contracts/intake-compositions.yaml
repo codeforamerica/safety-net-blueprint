@@ -60,6 +60,9 @@ compositions:
       income:
         resource: member-incomes
         bind: applicationId
+        sortable:
+          fields: [memberId, type, amount, frequency]
+          default: -amount
         index:
           fields: [id, memberId, type, amount, frequency]
 

@@ -267,6 +267,50 @@ export function validateBindFields(compositionDoc, resourceSchemaIndex) {
 }
 
 // =============================================================================
+// Sortable Config Validation
+// =============================================================================
+
+const SORTABLE_FIELD_REGEX = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
+
+/**
+ * Validate sortable config declared on section nodes.
+ * Checks that every field name in sortable.fields matches the identifier regex
+ * (same rule enforced by parseSortString and the pattern validator at runtime).
+ *
+ * @param {Object} compositionDoc - { domain, doc: { compositions } }
+ * @returns {Array<{ message: string, path: string }>}
+ */
+export function validateSortableConfig(compositionDoc) {
+  const errors = [];
+  const { domain, doc } = compositionDoc;
+
+  for (const [name, composition] of Object.entries(doc.compositions || {})) {
+    const sections = composition.sections || {};
+    for (const [sectionName, section] of Object.entries(sections)) {
+      const { sortable } = section;
+      if (!sortable) continue;
+      const nodePath = `${domain}.compositions.${name}.sections.${sectionName}.sortable`;
+      for (const field of sortable.fields || []) {
+        if (!SORTABLE_FIELD_REGEX.test(field)) {
+          errors.push({
+            message: `Sortable field "${field}" is not a valid identifier (must match [A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*)`,
+            path: nodePath,
+          });
+        }
+      }
+      if (sortable.tieBreaker && !SORTABLE_FIELD_REGEX.test(sortable.tieBreaker)) {
+        errors.push({
+          message: `Sortable tieBreaker "${sortable.tieBreaker}" is not a valid identifier`,
+          path: nodePath,
+        });
+      }
+    }
+  }
+
+  return errors;
+}
+
+// =============================================================================
 // Overlay Generation
 // =============================================================================
 

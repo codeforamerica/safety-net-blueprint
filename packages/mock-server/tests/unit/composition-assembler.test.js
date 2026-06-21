@@ -740,3 +740,72 @@ describe('assembleSectionPanel — state embedding', () => {
     assert.ok(!('itemId' in alice.reviewProgress), 'no itemId');
   });
 });
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — sorting
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — sorting', () => {
+  const SORT_COMPOSITION = {
+    compositeType: 'sectionView',
+    resource: 'applications',
+    endpoint: { path: '/applications/{applicationId}/review' },
+    sections: {
+      members: {
+        resource: 'application-members',
+        bind: 'applicationId',
+        sortable: { fields: ['firstName', 'lastName'], default: 'firstName' },
+      },
+      household: {
+        resource: 'household-infos',
+        bind: 'applicationId',
+        missing: 'empty',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    clearAll('application-members');
+    clearAll('household-infos');
+    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob', lastName: 'Jones' });
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith' });
+  });
+
+  test('applies default sort when no ?sort= provided', () => {
+    const panel = assembleSectionPanel(SORT_COMPOSITION, 'members', { applicationId: APP_ID });
+    assert.ok(!panel.error);
+    assert.strictEqual(panel.items[0].firstName, 'Alice');
+    assert.strictEqual(panel.items[1].firstName, 'Bob');
+  });
+
+  test('applies ?sort= descending', () => {
+    const panel = assembleSectionPanel(SORT_COMPOSITION, 'members', { applicationId: APP_ID }, {}, { queryParams: { sort: '-firstName' } });
+    assert.ok(!panel.error);
+    assert.strictEqual(panel.items[0].firstName, 'Bob');
+  });
+
+  test('invalid sort field returns error object', () => {
+    const panel = assembleSectionPanel(SORT_COMPOSITION, 'members', { applicationId: APP_ID }, {}, { queryParams: { sort: 'nonexistent' } });
+    assert.ok(panel.error);
+    assert.strictEqual(panel.error.code, 'FIELD_NOT_SORTABLE');
+  });
+
+  test('?sort= on section without sortable returns INVALID_SORT_FIELD', () => {
+    const noSortComp = {
+      ...SORT_COMPOSITION,
+      sections: {
+        members: { resource: 'application-members', bind: 'applicationId' },
+      },
+    };
+    const panel = assembleSectionPanel(noSortComp, 'members', { applicationId: APP_ID }, {}, { queryParams: { sort: 'firstName' } });
+    assert.ok(panel.error);
+    assert.strictEqual(panel.error.code, 'INVALID_SORT_FIELD');
+  });
+
+  test('singleton section ignores sort entirely', () => {
+    // No household-info record → missing: empty fires → singleton (data only, no sort error)
+    const panel = assembleSectionPanel(SORT_COMPOSITION, 'household', { applicationId: APP_ID }, {}, { queryParams: { sort: 'size' } });
+    assert.ok(!panel.error, 'singleton does not return sort error');
+    assert.ok('data' in panel, 'singleton returns data key');
+  });
+});

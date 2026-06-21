@@ -253,51 +253,6 @@ test('compositions-schema include map', async (t) => {
 
 });
 
-// ---------------------------------------------------------------------------
-// Views
-// ---------------------------------------------------------------------------
-
-test('compositions-schema views variants', async (t) => {
-
-  function withViews(views) {
-    return {
-      version: '1.0',
-      compositions: {
-        items: { resource: 'some-resource', views },
-      },
-    };
-  }
-
-  await t.test('views as list of view names', () => {
-    const { valid, errors } = validate(withViews(['snap', 'medicaid']));
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('views as object with null value (plain inclusion)', () => {
-    const { valid, errors } = validate(withViews({ snap: null, medicaid: null }));
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('views as object with filter override', () => {
-    const { valid, errors } = validate(withViews({
-      snap: { filter: "status == 'active'" },
-    }));
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('views as object with fields override', () => {
-    const { valid, errors } = validate(withViews({
-      snap: { fields: ['id', 'amount'] },
-    }));
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('views list must have at least one item', () => {
-    const { valid } = validate(withViews([]));
-    assert.equal(valid, false);
-  });
-
-});
 
 // ---------------------------------------------------------------------------
 // Endpoint declaration

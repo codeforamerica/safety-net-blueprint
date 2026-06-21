@@ -1275,6 +1275,36 @@ async function testSectionView() {
     assert.strictEqual(filtered.items.length, filtered.total <= filtered.limit ? filtered.total : filtered.limit);
   });
 
+  // ---- sort= ----
+
+  await test('GET /review/:section?sort= — income sorted by amount:desc returns items in descending order', async () => {
+    const res = await fetch(`${BASE_REVIEW}/income?sort=-amount`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items));
+    if (data.items.length > 1) {
+      for (let i = 1; i < data.items.length; i++) {
+        const prev = Number(data.items[i - 1].amount ?? Infinity);
+        const curr = Number(data.items[i].amount ?? -Infinity);
+        assert.ok(prev >= curr, `items[${i - 1}].amount (${prev}) >= items[${i}].amount (${curr})`);
+      }
+    }
+  });
+
+  await test('GET /review/:section?sort= — unsupported sort field returns 400', async () => {
+    const res = await fetch(`${BASE_REVIEW}/income?sort=nonexistentField`);
+    assert.strictEqual(res.status, 400);
+    const data = await res.json();
+    assert.ok(data.code === 'FIELD_NOT_SORTABLE' || data.code === 'INVALID_SORT_FIELD');
+  });
+
+  await test('GET /review/:section?sort= — section without sortable rejects sort= with 400', async () => {
+    const res = await fetch(`${BASE_REVIEW}/demographics?sort=firstName`);
+    assert.strictEqual(res.status, 400);
+    const data = await res.json();
+    assert.strictEqual(data.code, 'INVALID_SORT_FIELD');
+  });
+
   // ---- parentLink: true ----
 
   await test('GET /applications/:id — response includes _links.applicationReview from parentLink', async () => {

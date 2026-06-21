@@ -234,6 +234,32 @@ $defs:
         type: string
       include:
         $ref: "#/$defs/IncludeMap"
+      sortable:
+        type: object
+        description: >
+          Sorting configuration for this section's panel endpoint.
+          Declared fields become the allowlist for the ?sort= parameter.
+          Same semantics as x-sortable on OpenAPI list endpoints:
+          tieBreaker defaults to 'id'; set to null to disable.
+          Fields must match [A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*.
+        additionalProperties: false
+        required:
+          - fields
+        properties:
+          fields:
+            type: array
+            items:
+              type: string
+              pattern: '^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$'
+            minItems: 1
+          default:
+            type: string
+          tieBreaker:
+            type: [string, 'null']
+            pattern: '^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$'
+          maxFields:
+            type: integer
+            minimum: 1
       links:
         type: boolean
         description: >

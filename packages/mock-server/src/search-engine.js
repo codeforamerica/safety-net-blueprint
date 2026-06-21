@@ -272,6 +272,78 @@ export function paginateItems(items, queryParams = {}, defaults = {}) {
 }
 
 /**
+ * Sort an array of assembled items using the ?sort= query parameter.
+ * JS counterpart to the SQL sort path (parseSortString + buildOrderByClause).
+ *
+ * Matches x-sortable semantics exactly:
+ *   - No sortConfig + ?sort= → error INVALID_SORT_FIELD
+ *   - sortConfig declared, no default, no ?sort= → sort by tieBreaker only (id ASC)
+ *   - tieBreaker defaults to 'id' when unset; null disables it
+ *   - Null values: last for ASC, first for DESC (matches SQL null ordering)
+ *
+ * @param {Object[]} items - Already-filtered items
+ * @param {Object} queryParams - Request query parameters
+ * @param {Object|undefined} sortConfig - sortable config from the section definition
+ * @returns {{ items: Object[] } | { error: { code: string, message: string, field?: string } }}
+ */
+export function sortItems(items, queryParams = {}, sortConfig) {
+  const hasClientSort = typeof queryParams.sort === 'string' && queryParams.sort.trim().length > 0;
+
+  // Validate sort params before touching items — invalid sort is a 400 regardless
+  // of whether any items matched. Matches SQL resolveOrderByClause behavior.
+  if (!sortConfig) {
+    if (hasClientSort) {
+      return { error: { code: 'INVALID_SORT_FIELD', message: 'this endpoint does not support the sort parameter' } };
+    }
+    return { items: items ?? [] };
+  }
+
+  const expression = hasClientSort ? queryParams.sort : sortConfig.default;
+  const parsed = parseSortString(expression, sortConfig);
+  if (!parsed.ok) {
+    const err = { code: parsed.code, message: parsed.message };
+    if (parsed.field !== undefined) err.field = parsed.field;
+    return { error: err };
+  }
+
+  if (!items || items.length === 0) return { items: items ?? [] };
+
+  // Build effective field list: declared fields + tieBreaker (defaults to 'id')
+  const tieBreaker = sortConfig.tieBreaker === undefined ? 'id' : sortConfig.tieBreaker;
+  const allFields = [...(parsed.fields ?? [])];
+  if (typeof tieBreaker === 'string' && tieBreaker.length > 0) {
+    if (!allFields.some(f => f.name === tieBreaker)) {
+      allFields.push({ name: tieBreaker, descending: false });
+    }
+  }
+
+  if (allFields.length === 0) return { items };
+
+  const sorted = [...items].sort((a, b) => {
+    for (const { name, descending } of allFields) {
+      const av = getNestedValue(a, name);
+      const bv = getNestedValue(b, name);
+      const aNull = av === undefined || av === null;
+      const bNull = bv === undefined || bv === null;
+      if (aNull && bNull) continue;
+      // Nulls last for ASC, nulls first for DESC — matches buildOrderByClause
+      if (aNull) return descending ? -1 : 1;
+      if (bNull) return descending ? 1 : -1;
+      const aNum = Number(av);
+      const bNum = Number(bv);
+      const numeric = !isNaN(aNum) && !isNaN(bNum);
+      const cmp = numeric
+        ? (aNum < bNum ? -1 : aNum > bNum ? 1 : 0)
+        : (String(av) < String(bv) ? -1 : String(av) > String(bv) ? 1 : 0);
+      if (cmp !== 0) return descending ? -cmp : cmp;
+    }
+    return 0;
+  });
+
+  return { items: sorted };
+}
+
+/**
  * Execute search query with filters and pagination
  * @param {Object} db - SQLite database instance
  * @param {Object} queryParams - Request query parameters

@@ -17,7 +17,7 @@
 import { evaluateCEL } from './cel-evaluator.js';
 import { findAll, findById, create, update } from './database-manager.js';
 import { deriveCollectionName, extractPrimaryParam } from './collection-utils.js';
-import { filterItems, paginateItems } from './search-engine.js';
+import { filterItems, paginateItems, sortItems } from './search-engine.js';
 
 // ---------------------------------------------------------------------------
 // Parent link registry
@@ -413,11 +413,13 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
       }
     }
 
-    // Apply q= filtering and limit/offset pagination on the assembled items.
-    // Filtering runs on the fully assembled set (after state embedding and links)
-    // so callers can search on embedded fields like reviewProgress.status.
+    // Apply filtering, sorting, and pagination on the fully assembled set
+    // (after state embedding and links) so callers can filter/sort on
+    // embedded fields like reviewProgress.status.
     const filtered = filterItems(finalItems, queryParams);
-    const paginated = paginateItems(filtered, queryParams, paginationDefaults);
+    const sortResult = sortItems(filtered, queryParams, sectionDef.sortable);
+    if (sortResult.error) return { error: sortResult.error };
+    const paginated = paginateItems(sortResult.items, queryParams, paginationDefaults);
 
     response.items = paginated.items;
     response.total = paginated.total;

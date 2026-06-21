@@ -572,6 +572,10 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
             if (!panel) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
             }
+            if (panel.error) {
+              const details = panel.error.field !== undefined ? [{ field: panel.error.field, message: panel.error.message }] : [];
+              return res.status(400).json({ code: panel.error.code, message: panel.error.message, details });
+            }
             res.json(panel);
           } catch (error) {
             console.error('Composition panel handler error:', error);

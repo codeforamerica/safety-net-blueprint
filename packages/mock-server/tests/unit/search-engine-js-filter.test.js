@@ -6,7 +6,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
-import { filterItems, paginateItems } from '../../src/search-engine.js';
+import { filterItems, paginateItems, sortItems } from '../../src/search-engine.js';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -207,5 +207,111 @@ describe('paginateItems', () => {
     const result = paginateItems(ITEMS, { limit: '100' });
     assert.strictEqual(result.items.length, 5);
     assert.strictEqual(result.hasNext, false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sortItems
+// ---------------------------------------------------------------------------
+
+const SORT_CONFIG = { fields: ['firstName', 'lastName', 'age', 'address.city'] };
+
+describe('sortItems — no sortConfig', () => {
+  test('no ?sort= with no sortConfig — returns items unchanged', () => {
+    const result = sortItems(ITEMS, {}, undefined);
+    assert.ok(!result.error);
+    assert.strictEqual(result.items.length, ITEMS.length);
+  });
+
+  test('?sort= with no sortConfig — returns INVALID_SORT_FIELD error', () => {
+    const result = sortItems(ITEMS, { sort: 'firstName:asc' }, undefined);
+    assert.ok(result.error);
+    assert.strictEqual(result.error.code, 'INVALID_SORT_FIELD');
+  });
+});
+
+describe('sortItems — sort direction', () => {
+  test('ascending sort by firstName', () => {
+    const result = sortItems(ITEMS, { sort: 'firstName' }, SORT_CONFIG);
+    assert.ok(!result.error);
+    const names = result.items.map(i => i.firstName);
+    assert.deepStrictEqual(names, [...names].sort());
+  });
+
+  test('descending sort by firstName', () => {
+    const result = sortItems(ITEMS, { sort: '-firstName' }, SORT_CONFIG);
+    assert.ok(!result.error);
+    const names = result.items.map(i => i.firstName);
+    assert.deepStrictEqual(names, [...names].sort().reverse());
+  });
+
+  test('default sort expression applied when no ?sort=', () => {
+    const config = { ...SORT_CONFIG, default: 'firstName' };
+    const result = sortItems(ITEMS, {}, config);
+    assert.ok(!result.error);
+    const names = result.items.map(i => i.firstName);
+    assert.deepStrictEqual(names, [...names].sort());
+  });
+});
+
+describe('sortItems — null ordering', () => {
+  test('null values sort last for ASC', () => {
+    const items = [
+      { id: '1', age: null },
+      { id: '2', age: 10 },
+      { id: '3', age: 5 },
+    ];
+    const result = sortItems(items, { sort: 'age' }, { fields: ['age'] });
+    assert.ok(!result.error);
+    assert.strictEqual(result.items[0].id, '3');
+    assert.strictEqual(result.items[1].id, '2');
+    assert.strictEqual(result.items[2].id, '1');
+  });
+
+  test('null values sort first for DESC', () => {
+    const items = [
+      { id: '1', age: 10 },
+      { id: '2', age: null },
+      { id: '3', age: 5 },
+    ];
+    const result = sortItems(items, { sort: '-age' }, { fields: ['age'] });
+    assert.ok(!result.error);
+    assert.strictEqual(result.items[0].id, '2');
+  });
+});
+
+describe('sortItems — tieBreaker', () => {
+  test('defaults to id ASC when tieBreaker not set', () => {
+    const items = [
+      { id: 'b', status: 'active' },
+      { id: 'a', status: 'active' },
+    ];
+    const result = sortItems(items, {}, { fields: ['status'], default: 'status' });
+    assert.ok(!result.error);
+    assert.strictEqual(result.items[0].id, 'a');
+  });
+
+  test('tieBreaker: null disables tie-breaking', () => {
+    const items = [
+      { id: 'b', status: 'active' },
+      { id: 'a', status: 'active' },
+    ];
+    const result = sortItems(items, {}, { fields: ['status'], default: 'status', tieBreaker: null });
+    assert.ok(!result.error);
+    assert.strictEqual(result.items.length, 2);
+  });
+});
+
+describe('sortItems — validation errors', () => {
+  test('unknown sort field returns FIELD_NOT_SORTABLE', () => {
+    const result = sortItems(ITEMS, { sort: 'unknownField' }, SORT_CONFIG);
+    assert.ok(result.error);
+    assert.strictEqual(result.error.code, 'FIELD_NOT_SORTABLE');
+  });
+
+  test('empty items returns empty result without error', () => {
+    const result = sortItems([], { sort: 'firstName' }, SORT_CONFIG);
+    assert.ok(!result.error);
+    assert.deepStrictEqual(result.items, []);
   });
 });

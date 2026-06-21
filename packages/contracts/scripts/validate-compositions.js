@@ -18,7 +18,8 @@ import yaml from 'js-yaml';
 import {
   discoverCompositions,
   buildResourceSchemaIndex,
-  validateBindFields
+  validateBindFields,
+  validateSortableConfig
 } from '../src/compositions/compositions-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -93,7 +94,9 @@ async function main() {
   let totalErrors = 0;
 
   for (const compositionFile of compositionFiles) {
-    const errors = validateBindFields(compositionFile, resourceSchemaIndex);
+    const bindErrors = validateBindFields(compositionFile, resourceSchemaIndex);
+    const sortErrors = validateSortableConfig(compositionFile);
+    const errors = [...bindErrors, ...sortErrors];
     const label = `${compositionFile.domain}-compositions.yaml`;
 
     if (errors.length === 0) {

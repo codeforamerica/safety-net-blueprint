@@ -16,6 +16,7 @@ import {
   collectSchemaProperties,
   buildResourceSchemaIndex,
   validateBindFields,
+  validateSortableConfig,
   extractPathParams,
   buildParameterIndex,
   buildPathToSchemaMap,
@@ -676,6 +677,55 @@ describe('validateBindFields', () => {
     const errors = validateBindFields(compositionDoc, index);
     assert.equal(errors.length, 1);
     assert.ok(errors[0].path.includes('intake.compositions.reviewContext.sections.income'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSortableConfig
+// ---------------------------------------------------------------------------
+
+describe('validateSortableConfig', () => {
+  function makeDoc(sectionOverrides) {
+    return {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          reviewContext: {
+            sections: {
+              income: { resource: 'member-incomes', bind: 'applicationId', ...sectionOverrides },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  test('returns no errors when sortable is absent', () => {
+    const errors = validateSortableConfig(makeDoc({}));
+    assert.equal(errors.length, 0);
+  });
+
+  test('returns no errors for valid field names', () => {
+    const errors = validateSortableConfig(makeDoc({ sortable: { fields: ['amount', 'type', 'nested.field'] } }));
+    assert.equal(errors.length, 0);
+  });
+
+  test('returns error for field name containing invalid characters', () => {
+    const errors = validateSortableConfig(makeDoc({ sortable: { fields: ['amount', 'bad field!'] } }));
+    assert.equal(errors.length, 1);
+    assert.ok(errors[0].message.includes('bad field!'));
+    assert.ok(errors[0].path.includes('income.sortable'));
+  });
+
+  test('returns error for invalid tieBreaker', () => {
+    const errors = validateSortableConfig(makeDoc({ sortable: { fields: ['amount'], tieBreaker: 'bad-name' } }));
+    assert.equal(errors.length, 1);
+    assert.ok(errors[0].message.includes('bad-name'));
+  });
+
+  test('null tieBreaker is valid (disables tie-breaking)', () => {
+    const errors = validateSortableConfig(makeDoc({ sortable: { fields: ['amount'], tieBreaker: null } }));
+    assert.equal(errors.length, 0);
   });
 });
 
