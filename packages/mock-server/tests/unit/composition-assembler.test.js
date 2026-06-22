@@ -532,6 +532,22 @@ describe('state CRUD helpers', () => {
     assert.strictEqual(second.status, 'complete');
   });
 
+  test('upsertStateRecord with null itemId does not match a per-item record in the same section', () => {
+    // Per-item record (itemId = 'mem-001') exists for section 'income'
+    const perItem = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'income', 'mem-001', { status: 'not_started' });
+
+    // Section-level upsert (itemId = null) must create a separate record
+    const sectionLevel = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'income', null, { status: 'complete' });
+    assert.notStrictEqual(sectionLevel.id, perItem.id, 'separate record created');
+    assert.strictEqual(sectionLevel.itemId, null, 'section-level record has null itemId');
+    assert.strictEqual(sectionLevel.status, 'complete');
+
+    // Per-item record must be unchanged
+    const unchanged = findStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'income', 'mem-001');
+    assert.strictEqual(unchanged.id, perItem.id, 'per-item record untouched');
+    assert.strictEqual(unchanged.status, 'not_started', 'per-item status unchanged');
+  });
+
   test('upsertStateRecord with itemId updates the correct record', () => {
     upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'not_started' });
     upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-002', { status: 'not_started' });

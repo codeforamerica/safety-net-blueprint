@@ -569,8 +569,7 @@ export function listStateRecords(collectionName, bindParam, bindValue, section, 
  * @returns {Object} The full updated (or newly created) record
  */
 export function upsertStateRecord(collectionName, bindParam, bindValue, section, itemId, updates) {
-  const filters = { [bindParam]: bindValue, section };
-  if (itemId !== null) filters.itemId = itemId;
+  const filters = { [bindParam]: bindValue, section, itemId: itemId ?? null };
   const { items } = findAll(collectionName, filters, { limit: 1 });
 
   if (items[0]) {
@@ -580,7 +579,7 @@ export function upsertStateRecord(collectionName, bindParam, bindValue, section,
   return create(collectionName, {
     [bindParam]: bindValue,
     section,
-    ...(itemId !== null ? { itemId } : {}),
+    itemId: itemId ?? null,
     ...updates,
   });
 }

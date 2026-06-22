@@ -99,7 +99,10 @@ export function findAll(resourceName, filters = {}, pagination = {}) {
   const params = [];
 
   for (const [key, value] of Object.entries(filters)) {
-    if (value !== undefined && value !== null) {
+    if (value === undefined) continue;
+    if (value === null) {
+      whereClauses.push(`json_extract(data, '$.${key}') IS NULL`);
+    } else {
       whereClauses.push(`json_extract(data, '$.${key}') = ?`);
       params.push(value);
     }

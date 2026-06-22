@@ -21,7 +21,10 @@ function resolveWhereValue(val, resource, context, resolved) {
   if (val.startsWith('$this.')) return resolveDotPath(context?.this, val.slice('$this.'.length));
   if (val.startsWith('$') && val.includes('.')) {
     const dot = val.indexOf('.');
-    return resolveDotPath(resolved[val.slice(1, dot)], val.slice(dot + 1));
+    const alias = val.slice(1, dot);
+    // Check current-layer resolved first; fall back to prior-layer entities for cross-layer refs
+    const entity = resolved[alias] ?? context?.entities?.[alias];
+    return resolveDotPath(entity, val.slice(dot + 1));
   }
   return val;
 }
