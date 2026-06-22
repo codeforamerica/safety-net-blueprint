@@ -26,7 +26,12 @@
 #       endpoint:
 #         path: /applications/{applicationId}/review
 #       state:
-#         schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' }
+#         schema:
+#           name: ReviewProgress
+#           type: object
+#           properties:
+#             status: { type: string, enum: [not_started, in_progress, complete, flagged], default: not_started }
+#         methods: [put, patch]
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 title: Domain Compositions
@@ -300,27 +305,53 @@ $defs:
   StateResource:
     # Example:
     #   state:
-    #     schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' }
+    #     schema:
+    #       name: ReviewProgress
+    #       type: object
+    #       additionalProperties: false
+    #       properties:
+    #         status:
+    #           type: string
+    #           enum: [not_started, in_progress, complete, flagged]
+    #           default: not_started
     #     methods: [put, patch]
     #     flatten: true
     type: object
     description: >
       Composition-owned state resource. The framework creates, persists, and exposes
       this as a first-class resource with generated GET/PUT/PATCH endpoints.
-      Schema points to the client-writable fields in the companion schemas file.
+      Schema defines the client-writable fields inline; the resolve pipeline generates
+      the writable and read-only OpenAPI schemas from this definition.
     required:
       - schema
     additionalProperties: false
     properties:
       schema:
         type: object
-        description: $ref to the writable fields schema in the companion {domain}-compositions-schemas.yaml.
+        description: >
+          Inline schema for the client-writable fields of the state resource.
+          Must include a `name` field (PascalCase) used to derive the generated
+          OpenAPI schema names (e.g. name: ReviewProgress → ReviewProgressWritable,
+          ReviewProgress, ReviewProgressListResponse).
         required:
-          - $ref
-        additionalProperties: false
+          - name
         properties:
-          $ref:
+          name:
             type: string
+            pattern: '^[A-Z][A-Za-z0-9]*$'
+            description: PascalCase name used to derive the generated OpenAPI schema names.
+          type:
+            type: string
+            enum: [object]
+          additionalProperties:
+            type: boolean
+          properties:
+            type: object
+            additionalProperties: true
+          required:
+            type: array
+            items:
+              type: string
       methods:
         type: array
         items:

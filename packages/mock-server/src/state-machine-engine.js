@@ -6,7 +6,7 @@
 
 import jsonLogic from 'json-logic-js';
 import { evaluateCEL as _evaluateCEL } from './cel-evaluator.js';
-import { deriveCollectionName } from './collection-utils.js';
+import { deriveCollectionName, resolveDotPath } from './collection-utils.js';
 import { findAll, findById } from './database-manager.js';
 import { resolveTimeToken } from './time-tokens.js';
 
@@ -92,18 +92,6 @@ export function resolveValue(value, context) {
   return value;
 }
 
-/**
- * Resolve a dot-notation path against an object.
- * Supports bracket notation for array indexing (e.g., "data.candidates[0].personId").
- * @param {*} obj - The object to traverse
- * @param {string} path - Dot-notation path, optionally with [n] array indexes
- * @returns {*} Resolved value, or null if any segment is missing
- */
-function resolveDotPath(obj, path) {
-  if (obj == null || !path) return null;
-  const normalized = path.replace(/\[(\d+)\]/g, '.$1');
-  return normalized.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
-}
 
 /**
  * Interpolate {alias.field} template expressions in a path string.

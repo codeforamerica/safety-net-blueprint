@@ -15,14 +15,12 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
+import { generateStateSchemas } from '@codeforamerica/safety-net-blueprint-contracts/compositions';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam } from './collection-utils.js';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import yaml from 'js-yaml';
 
 /**
  * Determine if a path is a flat collection endpoint (no path parameters).
@@ -538,8 +536,20 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         derives: doc.derives || {},
       };
 
-      // Load companion schema defaults for state embedding (empty if no state declared)
-      const stateDefaults = loadStateDefaults(composition.state, filePath);
+      // Seed state schemas into apiSpec.schemas so loadStateDefaults can read defaults.
+      // Only fills in schemas not already present — overlay-applied versions in the
+      // resolved spec take precedence over the generated baseline.
+      if (composition.state && apiSpec?.schemas) {
+        const generated = generateStateSchemas(composition.state);
+        for (const [key, schema] of Object.entries(generated)) {
+          if (!(key in apiSpec.schemas)) {
+            apiSpec.schemas[key] = schema;
+          }
+        }
+      }
+
+      // Load state defaults from the generated OpenAPI schema (empty if no state declared)
+      const stateDefaults = loadStateDefaults(composition.state, apiSpec);
 
       const paginationDefaults = apiSpec?.pagination || {};
       const assemblerOpts = { resourceItemPathMap, serverBasePath: basePath };
@@ -644,34 +654,27 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
 }
 
 /**
- * Load JSON Schema default values from the companion schemas file referenced by
- * composition.state.schema.$ref.
+ * Load default field values for the state resource from the generated OpenAPI writable schema.
+ * generateStateSchemas merges {Name}Writable into apiSpec.schemas before this is called,
+ * so apiSpec.schemas reflects the resolved composition state schema with defaults.
  *
  * @param {Object|undefined} stateConfig - composition.state
- * @param {string|undefined} compositionFilePath - Absolute path to the composition YAML file
- * @returns {Object} Map of field name → default value (empty if no defaults or file not found)
+ * @param {Object|undefined} apiSpec - Loaded API spec metadata ({ schemas, ... })
+ * @returns {Object} Map of field name → default value (empty if no defaults or schema not found)
  */
-function loadStateDefaults(stateConfig, compositionFilePath) {
-  if (!stateConfig?.schema?.$ref || !compositionFilePath) return {};
+function loadStateDefaults(stateConfig, apiSpec) {
+  const name = stateConfig?.schema?.name;
+  if (!name || !apiSpec?.schemas) return {};
 
-  const [filePart, defsPath] = stateConfig.schema.$ref.split('#');
-  const defsKey = defsPath?.match(/\/\$defs\/([A-Za-z][A-Za-z0-9]*)$/)?.[1];
-  if (!filePart || !defsKey) return {};
+  const writableSchemaName = `${name}Writable`;
+  const schema = apiSpec.schemas[writableSchemaName];
+  if (!schema?.properties) return {};
 
-  try {
-    const schemaPath = join(dirname(compositionFilePath), filePart);
-    const doc = yaml.load(readFileSync(schemaPath, 'utf8'));
-    const schema = doc?.$defs?.[defsKey];
-    if (!schema?.properties) return {};
-
-    const defaults = {};
-    for (const [field, def] of Object.entries(schema.properties)) {
-      if (def.default !== undefined) defaults[field] = def.default;
-    }
-    return defaults;
-  } catch {
-    return {};
+  const defaults = {};
+  for (const [field, def] of Object.entries(schema.properties)) {
+    if (def.default !== undefined) defaults[field] = def.default;
   }
+  return defaults;
 }
 
 /**

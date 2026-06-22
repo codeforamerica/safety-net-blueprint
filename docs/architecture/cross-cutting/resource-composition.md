@@ -53,7 +53,11 @@ compositions:
       methods: [get]               # optional; default [get]
       parentLink: true             # optional; default false
     state:                         # optional; generates composition state endpoints
-      schema: { $ref: './{domain}-compositions-schemas.yaml#/$defs/{SchemaName}' }
+      schema:
+        name: {SchemaName}         # PascalCase — drives generated OpenAPI schema names
+        type: object
+        properties:
+          {field}: ...             # standard JSON Schema; default: values are applied on GET
       methods: [put, patch]        # optional; default [put, patch]; GET always included
       flatten: true                # optional; default false
 ```
@@ -90,7 +94,13 @@ Query parameters are not bind sources — use `filter:` for conditional logic.
 
 `fields:` is an optional list of field names from the source resource. Omitting it includes all fields — equivalent to GraphQL's `fields: [*]`, which is also accepted explicitly.
 
-Fields support aliasing for cases where the target consumer expects a specific name or where flattening would produce a conflict:
+Fields support dot notation for nested properties. A dot-notation path projects the resolved value, preserving the nested structure up to the top-level key:
+
+```yaml
+fields: [id, person.firstName, person.lastName, roles]
+```
+
+Fields also support aliasing for cases where the target consumer expects a specific name or where flattening would produce a conflict:
 
 ```yaml
 fields: [firstName, applicationId as clientApplicationId]
@@ -192,15 +202,15 @@ Expressions use the same CEL syntax as state machine conditions. Cross-domain re
 
 A composition can declare an owned `state:` resource that the framework creates, persists, and exposes as a first-class resource with generated endpoints and schemas.
 
-**Schema.** `schema:` points to the client-writable fields via `$ref` to the companion `{domain}-compositions-schemas.yaml` file. The framework adds the following fields automatically:
+**Schema.** `schema:` declares the client-writable fields inline in the composition config. The `name` field (PascalCase) drives generated OpenAPI schema names; `properties` follows standard JSON Schema with `default` values applied on GET for unwritten fields. The resolve pipeline generates `{Name}Writable` (request body) and `{Name}` (full read response) in `components/schemas`. The framework adds the following fields to the read schema automatically:
 
 - `id` (UUID) — system-generated
 - `createdAt`, `updatedAt` — standard timestamps
 - Key fields from bind context: URL path parameters; `section` in a `sectionView`; the section item's ID (e.g., `memberId`) for collection-backed sections
 
-Declaring any framework-added fields in the companion schema is a validation error.
+Declaring any framework-added fields in the composition schema is a validation error.
 
-**Naming.** The resource name is derived from the `$defs` key in the companion schema: PascalCase → camelCase response key → kebab-case path segment. `ReviewProgress` → `reviewProgress` → `review-progress`.
+**Naming.** The resource name is derived from the `schema.name` field: PascalCase → camelCase response key → kebab-case path segment. `ReviewProgress` → `reviewProgress` → `review-progress`.
 
 **Generated endpoints.** Path is derived from the parent resource path plus the kebab-case resource name. For a `sectionView` state, the section is also part of the path. When the section resource is a collection, the item's ID is appended — one record per item:
 
@@ -232,7 +242,12 @@ compositions:
       path: /applications/{applicationId}/review
       parentLink: true
     state:
-      schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' }
+      schema:
+        name: ReviewProgress
+        type: object
+        properties:
+          status: { type: string, enum: [not_started, in_progress, complete, flagged], default: not_started }
+          notes: { type: object, nullable: true, additionalProperties: true }
       methods: [put, patch]
     sections:
       identity:
@@ -322,7 +337,6 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 | Artifact | Location |
 |---|---|
 | Domain composition configs | `packages/contracts/{domain}-compositions.yaml` |
-| Composition state schemas | `packages/contracts/schemas/{domain}-compositions-schemas.yaml` |
 | Compositions config schema (JSON Schema for the config format) | `packages/contracts/schemas/compositions-schema.yaml` |
 | Shared derived expressions | `packages/contracts/derives.yaml` |
 | State machines for `state:` resources | `packages/contracts/{domain}-state-machine.yaml` |
@@ -534,7 +548,6 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 
 - [Composition config schema](../../../packages/contracts/schemas/compositions-schema.yaml)
 - [Intake composition config](../../../packages/contracts/intake-compositions.yaml)
-- [Intake composition state schemas](../../../packages/contracts/schemas/intake-compositions-schemas.yaml)
 - [Resolve Pipeline Architecture](../resolve-pipeline.md)
 - [Behavioral Contract DSL](behavioral-contract-dsl.md)
 - [Intake Domain](../domains/intake.md)

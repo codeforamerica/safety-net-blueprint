@@ -453,9 +453,9 @@ describe('deriveStateResource', () => {
     assert.strictEqual(deriveStateResource({ schema: {} }), null);
   });
 
-  test('derives pathSegment, collectionName, camelKey, defsKey from $ref with endpoint context', () => {
+  test('derives pathSegment, collectionName, camelKey, defsKey from schema.name with endpoint context', () => {
     const result = deriveStateResource(
-      { schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' } },
+      { schema: { name: 'ReviewProgress' } },
       '/applications/{applicationId}/review',
       '/intake'
     );
@@ -469,7 +469,7 @@ describe('deriveStateResource', () => {
 
   test('falls back to pathSegment as collectionName when no endpointPath given', () => {
     const result = deriveStateResource({
-      schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' },
+      schema: { name: 'ReviewProgress' },
     });
     assert.deepStrictEqual(result, {
       defsKey: 'ReviewProgress',
@@ -481,16 +481,16 @@ describe('deriveStateResource', () => {
 
   test('handles single-word key', () => {
     const result = deriveStateResource({
-      schema: { $ref: './schemas/foo.yaml#/$defs/Status' },
+      schema: { name: 'Status' },
     });
     assert.strictEqual(result.defsKey, 'Status');
     assert.strictEqual(result.pathSegment, 'status');
     assert.strictEqual(result.camelKey, 'status');
   });
 
-  test('returns null for malformed $ref (no $defs segment)', () => {
+  test('returns null when schema.name is missing', () => {
     const result = deriveStateResource({
-      schema: { $ref: './schemas/foo.yaml#/components/schemas/Foo' },
+      schema: { properties: { status: { type: 'string' } } },
     });
     assert.strictEqual(result, null);
   });
@@ -688,7 +688,7 @@ describe('assembleSectionPanel — state embedding', () => {
     resource: 'applications',
     endpoint: { path: '/applications/{applicationId}/review' },
     state: {
-      schema: { $ref: './schemas/test-compositions-schemas.yaml#/$defs/ReviewProgress' },
+      schema: { name: 'ReviewProgress' },
     },
     sections: {
       demographics: {
@@ -738,6 +738,145 @@ describe('assembleSectionPanel — state embedding', () => {
     assert.ok(!('applicationId' in alice.reviewProgress), 'no applicationId');
     assert.ok(!('section' in alice.reviewProgress), 'no section');
     assert.ok(!('itemId' in alice.reviewProgress), 'no itemId');
+  });
+
+  test('embeds section-level state at panel root', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', null, { status: 'in_progress' });
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.ok('reviewProgress' in panel, 'section-level reviewProgress at panel root');
+    assert.strictEqual(panel.reviewProgress.status, 'in_progress');
+  });
+
+  test('section-level state at panel root uses defaults when no record exists', () => {
+    const defaults = { status: 'not_started' };
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID }, defaults);
+    assert.deepStrictEqual(panel.reviewProgress, { status: 'not_started' });
+  });
+
+  test('per-item state and section-level state are independent', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', null, { status: 'in_progress' });
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', MEMBER_ID_1, { status: 'complete' });
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.strictEqual(panel.reviewProgress.status, 'in_progress', 'section-level at root');
+    const alice = panel.items.find(i => i.id === MEMBER_ID_1);
+    assert.strictEqual(alice.reviewProgress.status, 'complete', 'per-item on item');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionIndex — state embedding
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionIndex — state embedding', () => {
+  const STATE_COLL = 'application-review-progress';
+
+  const STATE_COMPOSITION = {
+    compositeType: 'sectionView',
+    resource: 'applications',
+    endpoint: { path: '/applications/{applicationId}/review' },
+    state: {
+      schema: { name: 'ReviewProgress' },
+    },
+    sections: {
+      demographics: {
+        resource: 'application-members',
+        bind: 'applicationId',
+        index: { fields: ['id', 'firstName'] },
+      },
+      household: {
+        resource: 'household-infos',
+        bind: 'applicationId',
+        missing: 'empty',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    clearAll('application-members');
+    clearAll('household-infos');
+    clearAll(STATE_COLL);
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice' });
+    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob' });
+  });
+
+  test('embeds section-level state on each section entry', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', null, { status: 'in_progress' });
+    const result = assembleSectionIndex(
+      STATE_COMPOSITION, { applicationId: APP_ID }, '/applications/:applicationId/review'
+    );
+    const demo = result.sections.find(s => s.name === 'demographics');
+    assert.ok('reviewProgress' in demo, 'section-level state on entry');
+    assert.strictEqual(demo.reviewProgress.status, 'in_progress');
+  });
+
+  test('uses defaults when no section-level record exists', () => {
+    const result = assembleSectionIndex(
+      STATE_COMPOSITION, { applicationId: APP_ID }, '/applications/:applicationId/review',
+      { status: 'not_started' }
+    );
+    for (const section of result.sections) {
+      assert.deepStrictEqual(section.reviewProgress, { status: 'not_started' });
+    }
+  });
+
+  test('index items carry per-item state', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', MEMBER_ID_1, { status: 'complete' });
+    const result = assembleSectionIndex(
+      STATE_COMPOSITION, { applicationId: APP_ID }, '/applications/:applicationId/review',
+      { status: 'not_started' }
+    );
+    const demo = result.sections.find(s => s.name === 'demographics');
+    const alice = demo.items.find(i => i.id === MEMBER_ID_1);
+    assert.strictEqual(alice.reviewProgress.status, 'complete', 'per-item state embedded on index item');
+    const bob = demo.items.find(i => i.id === MEMBER_ID_2);
+    assert.deepStrictEqual(bob.reviewProgress, { status: 'not_started' }, 'defaults for item without a record');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — dot-notation field projection
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — dot-notation field projection', () => {
+  const DOT_COMPOSITION = {
+    compositeType: 'sectionView',
+    resource: 'applications',
+    endpoint: { path: '/applications/{applicationId}/review' },
+    sections: {
+      contact: {
+        resource: 'application-members',
+        bind: 'applicationId',
+        fields: ['id', 'address.city', 'address.zip'],
+      },
+    },
+  };
+
+  beforeEach(() => {
+    clearAll('application-members');
+    insertResource('application-members', {
+      id: MEMBER_ID_1,
+      applicationId: APP_ID,
+      firstName: 'Jane',
+      address: { city: 'Denver', zip: '80203', street: '123 Main St' },
+    });
+  });
+
+  test('projects nested field to top-level key', () => {
+    const panel = assembleSectionPanel(DOT_COMPOSITION, 'contact', { applicationId: APP_ID });
+    const item = panel.items[0];
+    assert.strictEqual(item.id, MEMBER_ID_1);
+    assert.deepStrictEqual(item.address, { city: 'Denver', zip: '80203' });
+    assert.ok(!('firstName' in item), 'non-selected fields excluded');
+    assert.ok(!('street' in (item.address ?? {})), 'non-selected nested fields excluded');
+  });
+
+  test('missing nested value is omitted from output', () => {
+    clearAll('application-members');
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID });
+    const panel = assembleSectionPanel(DOT_COMPOSITION, 'contact', { applicationId: APP_ID });
+    const item = panel.items[0];
+    // address.city and address.zip are missing — key should be absent or empty
+    assert.ok(!item.address || Object.keys(item.address).length === 0);
   });
 });
 

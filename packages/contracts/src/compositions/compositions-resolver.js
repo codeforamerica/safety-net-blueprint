@@ -17,7 +17,7 @@
  */
 
 import { readdirSync, readFileSync, statSync } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import yaml from 'js-yaml';
 import { applyOverlay } from '../overlay/overlay-resolver.js';
 
@@ -375,38 +375,28 @@ function toKebabCase(s) {
  * @returns {{ defsKey: string, kebabName: string, camelKey: string } | null}
  */
 export function deriveStateResourceName(stateConfig) {
-  if (!stateConfig?.schema?.$ref) return null;
-  const match = stateConfig.schema.$ref.match(/#\/\$defs\/([A-Za-z][A-Za-z0-9]*)$/);
-  if (!match) return null;
-  const defsKey = match[1];
+  const name = stateConfig?.schema?.name;
+  if (!name) return null;
   return {
-    defsKey,
-    kebabName: toKebabCase(defsKey),
-    camelKey: defsKey.charAt(0).toLowerCase() + defsKey.slice(1),
+    defsKey: name,
+    kebabName: toKebabCase(name),
+    camelKey: name.charAt(0).toLowerCase() + name.slice(1),
   };
 }
 
 /**
- * Load properties from the companion schema file referenced in state.schema.$ref.
+ * Load properties from the inline schema declared in state.schema.
  *
  * @param {Object} stateConfig - composition.state
- * @param {string} compositionFilePath - Absolute path to the composition YAML file
  * @returns {{ properties: Object, required: string[] } | null}
  */
-function loadCompanionSchemaEntry(stateConfig, compositionFilePath) {
-  if (!stateConfig?.schema?.$ref || !compositionFilePath) return null;
-  const [filePart, defsPath] = stateConfig.schema.$ref.split('#');
-  const defsKey = defsPath?.match(/\/\$defs\/([A-Za-z][A-Za-z0-9]*)$/)?.[1];
-  if (!filePart || !defsKey) return null;
-
-  try {
-    const schemaPath = join(dirname(compositionFilePath), filePart);
-    const doc = yaml.load(readFileSync(schemaPath, 'utf8'));
-    const schema = doc?.$defs?.[defsKey];
-    return schema ? { properties: schema.properties ?? {}, required: schema.required ?? [] } : null;
-  } catch {
-    return null;
-  }
+function loadCompanionSchemaEntry(stateConfig) {
+  const schema = stateConfig?.schema;
+  if (!schema?.name) return null;
+  return {
+    properties: schema.properties ?? {},
+    required: schema.required ?? [],
+  };
 }
 
 /**
@@ -497,7 +487,7 @@ export function generateSectionViewPanelEndpoints(compositionName, endpointPath,
  * @param {string} compositionFilePath - Absolute path to the composition YAML file
  * @returns {{ pathEntries: Object, schemaEntries: Object }}
  */
-export function generateStateEndpoints(composition, endpointPath, paramIndex, compositionFilePath) {
+export function generateStateEndpoints(composition, endpointPath, paramIndex) {
   const stateNameInfo = deriveStateResourceName(composition.state);
   if (!stateNameInfo) return { pathEntries: {}, schemaEntries: {} };
 
@@ -607,10 +597,34 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
     },
   };
 
-  // Build schema entries
-  const companionEntry = loadCompanionSchemaEntry(composition.state, compositionFilePath);
+  const schemaEntries = generateStateSchemas(composition.state);
+
+  return { pathEntries, schemaEntries };
+}
+
+/**
+ * Generate OpenAPI schema entries for a composition state resource.
+ *
+ * Returns the three generated schemas ({Name}Writable, {Name}, {Name}ListResponse)
+ * derived from the inline state.schema config. Used by both the resolve pipeline
+ * (generateStateEndpoints) and the mock server (to augment apiSpec.schemas at startup
+ * so loadStateDefaults can read defaults from the resolved spec).
+ *
+ * @param {Object} stateConfig - composition.state
+ * @returns {Object} Map of schema name → schema entry (empty object if no state config)
+ */
+export function generateStateSchemas(stateConfig) {
+  const stateNameInfo = deriveStateResourceName(stateConfig);
+  if (!stateNameInfo) return {};
+
+  const { defsKey, camelKey } = stateNameInfo;
+  const companionEntry = loadCompanionSchemaEntry(stateConfig);
   const writableProperties = companionEntry?.properties ?? {};
   const writableRequired   = companionEntry?.required ?? [];
+
+  const writableSchemaName = `${defsKey}Writable`;
+  const resourceSchemaName = defsKey;
+  const listSchemaName     = `${defsKey}ListResponse`;
 
   const frameworkProperties = {
     id:            { type: 'string', format: 'uuid', readOnly: true },
@@ -620,16 +634,16 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
     updatedAt:     { type: 'string', format: 'date-time', readOnly: true },
   };
 
-  const schemaEntries = {
+  return {
     [writableSchemaName]: {
       type: 'object',
-      description: `Client-writable fields for the ${stateNameInfo.camelKey} state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.`,
+      description: `Client-writable fields for the ${camelKey} state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.`,
       ...(Object.keys(writableProperties).length > 0 ? { properties: writableProperties } : {}),
       ...(writableRequired.length > 0 ? { required: writableRequired } : {}),
     },
     [resourceSchemaName]: {
       type: 'object',
-      description: `Generated state resource for ${stateNameInfo.camelKey}.`,
+      description: `Generated state resource for ${camelKey}.`,
       allOf: [
         { $ref: `#/components/schemas/${writableSchemaName}` },
         {
@@ -641,7 +655,7 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
     },
     [listSchemaName]: {
       type: 'object',
-      description: `Paginated list of ${stateNameInfo.camelKey} state records.`,
+      description: `Paginated list of ${camelKey} state records.`,
       properties: {
         items:   { type: 'array', items: { $ref: `#/components/schemas/${resourceSchemaName}` } },
         total:   { type: 'integer' },
@@ -652,8 +666,6 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex, co
       required: ['items', 'total', 'limit', 'offset', 'hasNext'],
     },
   };
-
-  return { pathEntries, schemaEntries };
 }
 
 /**
@@ -809,7 +821,7 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
 
     // If the composition declares state:, also generate state resource endpoints
     if (composition.state) {
-      const { pathEntries, schemaEntries } = generateStateEndpoints(composition, endpointPath, paramIndex, filePath);
+      const { pathEntries, schemaEntries } = generateStateEndpoints(composition, endpointPath, paramIndex);
       Object.assign(pathsUpdate, pathEntries);
       Object.assign(schemasUpdate, schemaEntries);
     }

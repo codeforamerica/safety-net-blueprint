@@ -27,11 +27,50 @@ compositions:
     compositeType: sectionView
     resource: applications
     fields: [programs, status]
+    include:
+      members:
+        resource: application-members
+        bind: applicationId
+        fields: [id, firstName, lastName, relationshipToHead]
     endpoint:
       path: /applications/{applicationId}/review
       parentLink: true
     state:
-      schema: { $ref: './schemas/intake-compositions-schemas.yaml#/$defs/ReviewProgress' }
+      schema:
+        name: ReviewProgress
+        type: object
+        additionalProperties: false
+        properties:
+          status:
+            type: string
+            description: >
+              Caseworker review status for this section. Initialized to not_started
+              when the application transitions to under_review.
+            enum:
+              - not_started
+              - in_progress
+              - complete
+              - flagged
+            default: not_started
+          notes:
+            type: object
+            nullable: true
+            additionalProperties: true
+            description: >
+              Caseworker notes for this review section. Updated via PATCH on the
+              section state endpoint. additionalProperties: true allows states to
+              extend with visibility controls, note types, or other fields via overlay.
+            properties:
+              text:
+                type: string
+                description: Note content.
+              textFormat:
+                type: string
+                enum: [plain, markdown, html]
+                default: plain
+                description: >
+                  Rendering format for the note text. plain: literal text.
+                  markdown: rendered as Markdown. html: rendered as HTML.
       methods: [put, patch]
     sections:
 

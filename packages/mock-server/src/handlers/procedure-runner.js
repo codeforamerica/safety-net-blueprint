@@ -5,19 +5,11 @@
 
 import jsonLogic from 'json-logic-js';
 import { create, update, findAll, findById } from '../database-manager.js';
-import { deriveCollectionName } from '../collection-utils.js';
+import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
 import { applySteps, resolveValue } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 
-/**
- * Resolve a dot-notation path against an object.
- */
-function resolveDotPath(obj, path) {
-  if (obj == null || !path) return null;
-  const normalized = path.replace(/\[(\d+)\]/g, '.$1');
-  return normalized.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
-}
 
 /**
  * Resolve a where clause value expression against the current resolution context.

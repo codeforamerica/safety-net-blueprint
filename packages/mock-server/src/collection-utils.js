@@ -1,6 +1,21 @@
 /**
- * Shared utilities for collection name derivation and state machine merging.
+ * Shared utilities for collection name derivation, state machine merging, and object path resolution.
  */
+
+/**
+ * Resolve a dot-notation path against an object.
+ * Supports bracket notation for array indexing (e.g., "data.candidates[0].personId").
+ * Returns null if any segment along the path is missing.
+ *
+ * @param {*} obj - The object to traverse
+ * @param {string} path - Dot-notation path, optionally with [n] array indexes
+ * @returns {*} Resolved value, or null if any segment is missing
+ */
+export function resolveDotPath(obj, path) {
+  if (obj == null || !path) return null;
+  const normalized = path.replace(/\[(\d+)\]/g, '.$1');
+  return normalized.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
+}
 
 /**
  * Determine whether a path represents a singleton sub-resource.

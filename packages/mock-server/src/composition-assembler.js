@@ -16,7 +16,7 @@
 
 import { evaluateCEL } from './cel-evaluator.js';
 import { findAll, findById, create, update } from './database-manager.js';
-import { deriveCollectionName, extractPrimaryParam } from './collection-utils.js';
+import { deriveCollectionName, extractPrimaryParam, resolveDotPath } from './collection-utils.js';
 import { filterItems, paginateItems, sortItems } from './search-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -122,11 +122,43 @@ function fetchNodeItems(node, bindValues, context) {
 function projectFields(record, fields) {
   const out = {};
   for (const field of fields) {
-    if (Object.prototype.hasOwnProperty.call(record, field)) {
+    if (field.includes('.')) {
+      // Dot-notation: resolve the value and set it at the top-level key (first segment).
+      // e.g. "person.firstName" → out.person = { firstName: <value> }
+      const dot = field.indexOf('.');
+      const topKey = field.slice(0, dot);
+      const subPath = field.slice(dot + 1);
+      const value = resolveDotPath(record, field);
+      if (value !== null) {
+        if (!Object.prototype.hasOwnProperty.call(out, topKey)) out[topKey] = {};
+        // Set nested value at subPath within out[topKey]
+        const subParts = subPath.split('.');
+        let target = out[topKey];
+        for (let i = 0; i < subParts.length - 1; i++) {
+          if (!Object.prototype.hasOwnProperty.call(target, subParts[i])) target[subParts[i]] = {};
+          target = target[subParts[i]];
+        }
+        target[subParts[subParts.length - 1]] = value;
+      }
+    } else if (Object.prototype.hasOwnProperty.call(record, field)) {
       out[field] = record[field];
     }
   }
   return out;
+}
+
+/**
+ * Strip framework-managed fields from a state record, returning only the
+ * client-visible fields. Used when embedding state into panel and index responses.
+ *
+ * @param {Object|null} record - State record from the DB (or null)
+ * @param {string} bindParam - The bind parameter name (e.g. 'applicationId')
+ * @returns {Object} Record with id, createdAt, updatedAt, bindParam, section, itemId removed
+ */
+function stripFrameworkFields(record, bindParam) {
+  if (!record) return null;
+  const { id: _1, createdAt: _2, updatedAt: _3, section: _4, itemId: _5, [bindParam]: _6, ...fields } = record;
+  return fields;
 }
 
 // ---------------------------------------------------------------------------
@@ -180,9 +212,18 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   for (const [name, sectionDef] of Object.entries(sectionDefs)) {
     const entry = { name, href: `${resolvedBase}/${name}` };
 
+    // Embed section-level state (itemId: null) on every section entry.
+    // The index shows one state object per section; per-item state appears on the panel only.
+    if (stateInfo && bindParam) {
+      const bindValue = bindValues[bindParam];
+      const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, null);
+      const fields = stripFrameworkFields(record, bindParam);
+      entry[stateInfo.camelKey] = (fields && Object.keys(fields).length > 0) ? fields : { ...stateDefaults };
+    }
+
     const indexConfig = sectionDef.index;
 
-    // Sections with no index config are link-only
+    // Sections with no index config are link-only (plus state above)
     if (!indexConfig) {
       sections.push(entry);
       continue;
@@ -216,21 +257,6 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
       ? items.map(item => projectFields(item, indexConfig.fields))
       : items;
 
-    // Embed state per item AFTER field projection so it is not stripped by index.fields.
-    // All index.fields lists include `id`, so the state lookup still has an item id to work with.
-    if (stateInfo && bindParam) {
-      const bindValue = bindValues[bindParam];
-      for (let i = 0; i < finalItems.length; i++) {
-        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, itemIds[i] ?? null);
-        const { id: _id, createdAt: _c, updatedAt: _u, [bindParam]: _bp, section: _s, itemId: _ii, ...stateFields } =
-          record ?? {};
-        finalItems[i] = {
-          ...finalItems[i],
-          [stateInfo.camelKey]: Object.keys(stateFields).length > 0 ? stateFields : { ...stateDefaults },
-        };
-      }
-    }
-
     // Add _links.self after projection (so links are not stripped by field selection).
     if (sectionDef.links && resourceItemPathMap) {
       const itemPath = resourceItemPathMap.get(sectionDef.resource);
@@ -240,6 +266,19 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
           _links: { self: buildSelfLink(itemPath, serverBasePath, params, itemIds[idx]) },
         }));
       }
+    }
+
+    // Embed per-item state on index items (after projection so state is never stripped by field selection).
+    if (stateInfo && bindParam) {
+      const bindValue = bindValues[bindParam];
+      finalItems = finalItems.map((item, idx) => {
+        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, itemIds[idx] ?? null);
+        const fields = stripFrameworkFields(record, bindParam);
+        return {
+          ...item,
+          [stateInfo.camelKey]: (fields && Object.keys(fields).length > 0) ? fields : { ...stateDefaults },
+        };
+      });
     }
 
     entry.items = finalItems;
@@ -378,24 +417,32 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
     }
   }
 
+  // Resolve state resource info once — used for both section-level and per-item embedding.
+  const stateInfo = composition.state
+    ? deriveStateResource(composition.state, composition.endpoint?.path, serverBasePath)
+    : null;
+  const bindParam = stateInfo ? extractPrimaryParam(composition.endpoint?.path ?? '') : null;
+
   const response = { section: sectionName };
+
+  // Embed section-level state (itemId: null) at the panel root.
+  // Present for both list and singleton sections.
+  if (stateInfo && bindParam) {
+    const bindValue = bindValues[bindParam];
+    const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, sectionName, null);
+    const fields = stripFrameworkFields(record, bindParam);
+    response[stateInfo.camelKey] = (fields && Object.keys(fields).length > 0) ? fields : { ...stateDefaults };
+  }
 
   // items may be an array (normal) or empty object (missing: empty)
   if (Array.isArray(items)) {
-    // Embed composition state per item if state: is declared on the composition
-    if (composition.state) {
-      const stateInfo = deriveStateResource(composition.state, composition.endpoint?.path, serverBasePath);
-      const bindParam = extractPrimaryParam(composition.endpoint?.path ?? '');
-      if (stateInfo && bindParam) {
-        const bindValue = bindValues[bindParam];
-        for (const item of items) {
-          const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, sectionName, item.id ?? null);
-          const { id: _id, createdAt: _c, updatedAt: _u, [bindParam]: _bp, section: _s, itemId: _ii, ...stateFields } =
-            record ?? {};
-          item[stateInfo.camelKey] = Object.keys(stateFields).length > 0
-            ? stateFields
-            : { ...stateDefaults };
-        }
+    // Embed per-item state for collection-backed (member-scoped) sections.
+    if (stateInfo && bindParam) {
+      const bindValue = bindValues[bindParam];
+      for (const item of items) {
+        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, sectionName, item.id ?? null);
+        const fields = stripFrameworkFields(record, bindParam);
+        item[stateInfo.camelKey] = (fields && Object.keys(fields).length > 0) ? fields : { ...stateDefaults };
       }
     }
 
@@ -456,10 +503,8 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
  * @returns {{ defsKey: string, pathSegment: string, collectionName: string, camelKey: string } | null}
  */
 export function deriveStateResource(stateConfig, endpointPath, basePath) {
-  if (!stateConfig?.schema?.$ref) return null;
-  const match = stateConfig.schema.$ref.match(/#\/\$defs\/([A-Za-z][A-Za-z0-9]*)$/);
-  if (!match) return null;
-  const defsKey = match[1];
+  const defsKey = stateConfig?.schema?.name;
+  if (!defsKey) return null;
   const pathSegment = defsKey.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
   const camelKey = defsKey.charAt(0).toLowerCase() + defsKey.slice(1);
   // Build the path the state resource will be served at and derive the collection name from it
@@ -483,9 +528,16 @@ export function deriveStateResource(stateConfig, endpointPath, basePath) {
  */
 export function findStateRecord(collectionName, bindParam, bindValue, section, itemId = null) {
   const filters = { [bindParam]: bindValue, section };
-  if (itemId !== null) filters.itemId = itemId;
-  const { items } = findAll(collectionName, filters, { limit: 1 });
-  return items[0] ?? null;
+  if (itemId !== null) {
+    filters.itemId = itemId;
+    const { items } = findAll(collectionName, filters, { limit: 1 });
+    return items[0] ?? null;
+  }
+  // Section-level lookup (itemId: null): findAll skips null filter values so it
+  // would match per-item records too. Fetch all section records and find the one
+  // without an itemId explicitly.
+  const { items } = findAll(collectionName, filters, { limit: null });
+  return items.find(r => r.itemId === undefined || r.itemId === null) ?? null;
 }
 
 /**

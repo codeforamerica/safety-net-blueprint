@@ -1,3 +1,5 @@
+import { resolveDotPath } from './collection-utils.js';
+
 /**
  * Query string parser for the `q` parameter search syntax
  *
@@ -484,13 +486,8 @@ function fieldToJsonPath(field) {
  * @returns {*}
  */
 export function getNestedValue(obj, path) {
-  const parts = path.split('.');
-  let curr = obj;
-  for (const part of parts) {
-    if (curr == null || typeof curr !== 'object') return undefined;
-    curr = curr[part];
-  }
-  return curr;
+  const result = resolveDotPath(obj, path);
+  return result === null ? undefined : result;
 }
 
 /**

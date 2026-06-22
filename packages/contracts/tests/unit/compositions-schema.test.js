@@ -328,14 +328,14 @@ test('compositions-schema endpoint declaration', async (t) => {
 
 test('compositions-schema state resource', async (t) => {
 
-  await t.test('state with schema $ref', () => {
+  await t.test('state with inline schema name', () => {
     const doc = {
       version: '1.0',
       compositions: {
         reviewContext: {
           resource: 'applications',
           state: {
-            schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' },
+            schema: { name: 'ReviewProgress', type: 'object', properties: { status: { type: 'string' } } },
           },
         },
       },
@@ -351,7 +351,7 @@ test('compositions-schema state resource', async (t) => {
         reviewContext: {
           resource: 'applications',
           state: {
-            schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' },
+            schema: { name: 'ReviewProgress', type: 'object', properties: { status: { type: 'string' } } },
             methods: ['patch'],
             flatten: true,
           },
@@ -376,7 +376,7 @@ test('compositions-schema state resource', async (t) => {
     assert.equal(valid, false);
   });
 
-  await t.test('state schema requires $ref', () => {
+  await t.test('state schema requires name', () => {
     const doc = {
       version: '1.0',
       compositions: {
@@ -397,7 +397,7 @@ test('compositions-schema state resource', async (t) => {
         reviewContext: {
           resource: 'applications',
           state: {
-            schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' },
+            schema: { name: 'ReviewProgress', type: 'object' },
             methods: ['get'],
           },
         },
@@ -475,7 +475,7 @@ test('compositions-schema sectionView', async (t) => {
               bind: 'applicationId',
               fields: ['name', 'dateOfBirth'],
               state: {
-                schema: { $ref: './intake-compositions-schemas.yaml#/$defs/ReviewProgress' },
+                schema: { name: 'ReviewProgress', type: 'object' },
               },
             },
           },

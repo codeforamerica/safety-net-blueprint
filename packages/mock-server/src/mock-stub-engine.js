@@ -20,6 +20,7 @@
 import { emitEventEnvelope } from './emit-event.js';
 import { eventBus } from './event-bus.js';
 import { resolveTimeTokens } from './time-tokens.js';
+import { resolveDotPath } from './collection-utils.js';
 
 /** Ordered list of registered event stubs. */
 const stubs = [];
@@ -60,13 +61,6 @@ function nextId(on) {
   return `${prefix}-${n}`;
 }
 
-/**
- * Resolve a dot-path against an object.
- * "data.serviceType" → obj.data.serviceType
- */
-function getPath(obj, path) {
-  return path.split('.').reduce((cur, key) => cur?.[key], obj);
-}
 
 /**
  * Test whether a stub's `on` value matches the given CloudEvents type.
@@ -85,7 +79,7 @@ function onMatches(eventType, on) {
 function matchCriteria(stub, envelope) {
   if (!stub.match || Object.keys(stub.match).length === 0) return true;
   for (const [path, expected] of Object.entries(stub.match)) {
-    if (getPath(envelope, path) !== expected) return false;
+    if (resolveDotPath(envelope, path) !== expected) return false;
   }
   return true;
 }
