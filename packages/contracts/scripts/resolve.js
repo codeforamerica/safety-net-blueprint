@@ -916,40 +916,6 @@ async function main() {
     }
   }
 
-  // Auto-generate and apply composition overlays (after RPC overlays, before explicit overlays)
-  if (compositionFiles.length > 0) {
-    const inputFilesForIndex = currentResults
-      ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
-      : yamlFiles;
-
-    const compositionOverlays = generateCompositionOverlays(compositionFiles, inputFilesForIndex);
-
-    for (const { overlay: rawOverlay, domain } of compositionOverlays) {
-      const apiSpecFile = `${domain}-openapi.yaml`;
-      const targetFile = inputFilesForIndex.find(f => f.relativePath === apiSpecFile);
-      let overlay = rawOverlay;
-      if (targetFile) {
-        const prefix = detectComponentPrefix(targetFile.spec);
-        overlay = rewriteOverlayRefs(overlay, './', prefix);
-      }
-
-      const inputFiles = currentResults
-        ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
-        : yamlFiles;
-
-      const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
-      const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
-      allWarnings = allWarnings.concat(warnings);
-
-      const { results: compResults, warnings: compWarnings } = applyOverlayWithTargets(inputFiles, overlay, actionTargets, specPath);
-      allWarnings = allWarnings.concat(compWarnings);
-      currentResults = compResults;
-
-      const compositionCount = Object.keys(rawOverlay.actions.find(a => a.target === '$.paths')?.update || {}).length;
-      console.log(`  \u2713 Auto-generated: ${domain} Composition Overlay (${compositionCount} endpoint(s))`);
-    }
-  }
-
   // Apply overlays if specified
   if (options.overlay) {
     const overlayInput = resolve(options.overlay);
@@ -1012,6 +978,42 @@ async function main() {
         allWarnings = allWarnings.concat(overlayWarnings);
         currentResults = overlayResults;
       }
+    }
+  }
+
+  // Auto-generate and apply composition overlays after explicit overlays, so that
+  // state.schema.properties additions made via user overlays are reflected in the
+  // generated {Name}Writable / {Name} / {Name}ListResponse schemas.
+  if (compositionFiles.length > 0) {
+    const inputFilesForIndex = currentResults
+      ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+      : yamlFiles;
+
+    const compositionOverlays = generateCompositionOverlays(compositionFiles, inputFilesForIndex);
+
+    for (const { overlay: rawOverlay, domain } of compositionOverlays) {
+      const apiSpecFile = `${domain}-openapi.yaml`;
+      const targetFile = inputFilesForIndex.find(f => f.relativePath === apiSpecFile);
+      let overlay = rawOverlay;
+      if (targetFile) {
+        const prefix = detectComponentPrefix(targetFile.spec);
+        overlay = rewriteOverlayRefs(overlay, './', prefix);
+      }
+
+      const inputFiles = currentResults
+        ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+        : yamlFiles;
+
+      const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+      const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+      allWarnings = allWarnings.concat(warnings);
+
+      const { results: compResults, warnings: compWarnings } = applyOverlayWithTargets(inputFiles, overlay, actionTargets, specPath);
+      allWarnings = allWarnings.concat(compWarnings);
+      currentResults = compResults;
+
+      const compositionCount = Object.keys(rawOverlay.actions.find(a => a.target === '$.paths')?.update || {}).length;
+      console.log(`  \u2713 Auto-generated: ${domain} Composition Overlay (${compositionCount} endpoint(s))`);
     }
   }
 

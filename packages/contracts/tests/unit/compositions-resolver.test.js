@@ -23,6 +23,7 @@ import {
   generateCompositionOverlay,
   generateCompositionOverlays,
   generateSectionViewPanelEndpoints,
+  generateStateSchemas,
 } from '../../src/compositions/compositions-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1449,5 +1450,173 @@ describe('parentLink overlay injection', () => {
     const overlay = generateCompositionOverlay(compositionFile, new Map(), emptyMap);
     const appendActions = overlay.actions.filter(a => a.append);
     assert.equal(appendActions.length, 0, 'no append actions when parent not in map');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateStateSchemas
+// ---------------------------------------------------------------------------
+
+describe('generateStateSchemas', () => {
+  test('returns empty object when stateConfig is null', () => {
+    assert.deepEqual(generateStateSchemas(null), {});
+  });
+
+  test('returns empty object when stateConfig has no schema.name', () => {
+    assert.deepEqual(generateStateSchemas({ schema: { properties: { foo: { type: 'string' } } } }), {});
+  });
+
+  test('generates three schemas from state config with name', () => {
+    const state = { schema: { name: 'ReviewProgress' } };
+    const schemas = generateStateSchemas(state);
+    assert.ok('ReviewProgressWritable' in schemas, 'Writable schema present');
+    assert.ok('ReviewProgress' in schemas, 'resource schema present');
+    assert.ok('ReviewProgressListResponse' in schemas, 'ListResponse schema present');
+  });
+
+  test('writable schema includes user-defined properties', () => {
+    const state = {
+      schema: {
+        name: 'ReviewProgress',
+        properties: {
+          status: { type: 'string', enum: ['not_started', 'complete'] },
+          notes: { type: 'string' },
+        },
+      },
+    };
+    const schemas = generateStateSchemas(state);
+    const writable = schemas.ReviewProgressWritable;
+    assert.ok(writable.properties?.status, 'status property present');
+    assert.ok(writable.properties?.notes, 'notes property present');
+  });
+
+  test('writable schema omits properties key when schema has no properties', () => {
+    const state = { schema: { name: 'ReviewProgress' } };
+    const schemas = generateStateSchemas(state);
+    assert.ok(!schemas.ReviewProgressWritable.properties, 'no properties key when none defined');
+  });
+
+  test('writable schema includes required when declared', () => {
+    const state = {
+      schema: {
+        name: 'ReviewProgress',
+        properties: { status: { type: 'string' } },
+        required: ['status'],
+      },
+    };
+    const schemas = generateStateSchemas(state);
+    assert.deepEqual(schemas.ReviewProgressWritable.required, ['status']);
+  });
+
+  test('resource schema uses allOf referencing writable schema', () => {
+    const state = { schema: { name: 'ReviewProgress' } };
+    const schemas = generateStateSchemas(state);
+    const resource = schemas.ReviewProgress;
+    assert.ok(Array.isArray(resource.allOf), 'resource schema uses allOf');
+    const ref = resource.allOf.find(e => e.$ref);
+    assert.equal(ref?.$ref, '#/components/schemas/ReviewProgressWritable');
+  });
+
+  test('list response schema references the resource schema', () => {
+    const state = { schema: { name: 'ReviewProgress' } };
+    const schemas = generateStateSchemas(state);
+    const list = schemas.ReviewProgressListResponse;
+    assert.equal(list.properties.items.items.$ref, '#/components/schemas/ReviewProgress');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Overlay-then-generate: state.schema properties from composition overlay
+// ---------------------------------------------------------------------------
+
+describe('overlay-then-generate: state schema picks up composition YAML overlay properties', () => {
+  let tmpDir;
+
+  function makeCompositionFixture(dir) {
+    // Overlays are discovered from overlays/{stateDir}/{domain}-compositions.yaml
+    const stateOverlayDir = join(dir, 'overlays', 'mystate');
+    mkdirSync(stateOverlayDir, { recursive: true });
+
+    const baseComposition = {
+      version: '1.0',
+      domain: 'test',
+      compositions: {
+        appReview: {
+          compositeType: 'sectionView',
+          resource: 'applications',
+          endpoint: { path: '/applications/{applicationId}/review' },
+          sections: {},
+          state: {
+            resource: 'application-review-progress',
+            bind: 'applicationId',
+            schema: {
+              name: 'ReviewProgress',
+              properties: {
+                status: { type: 'string', enum: ['not_started', 'complete'] },
+              },
+            },
+          },
+        },
+      },
+    };
+    writeYaml(dir, 'test-compositions.yaml', baseComposition);
+
+    // Composition YAML overlay adds a field to state.schema.properties
+    const stateOverlay = {
+      overlay: '1.0.0',
+      info: { title: 'State extension overlay', version: '1.0.0' },
+      actions: [{
+        target: '$.compositions.appReview.state.schema.properties',
+        update: { notes: { type: 'string' } },
+      }],
+    };
+    writeYaml(stateOverlayDir, 'test-compositions.yaml', stateOverlay);
+  }
+
+  test('properties added via compositions YAML overlay appear in generated {Name}Writable', () => {
+    tmpDir = createTempDir();
+    try {
+      makeCompositionFixture(tmpDir);
+
+      const compositions = discoverCompositions(tmpDir);
+      const found = compositions.find(c => c.domain === 'test');
+      assert.ok(found, 'composition discovered');
+
+      const mergedState = found.doc.compositions.appReview.state;
+      assert.ok(mergedState.schema.properties?.notes, 'overlay added notes property to state schema');
+
+      // generateStateSchemas must pick up the overlaid property
+      const schemas = generateStateSchemas(mergedState);
+      assert.ok(schemas.ReviewProgressWritable.properties?.notes, 'notes appears in generated ReviewProgressWritable');
+      assert.ok(schemas.ReviewProgressWritable.properties?.status, 'baseline status still present');
+    } finally {
+      removeTempDir(tmpDir);
+    }
+  });
+
+  test('overlaid state schema property appears in the generated OpenAPI overlay schemas action', () => {
+    tmpDir = createTempDir();
+    try {
+      makeCompositionFixture(tmpDir);
+
+      const compositions = discoverCompositions(tmpDir);
+
+      // Simulate what the resolve pipeline passes as yamlFiles
+      const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { paths: {}, components: { schemas: {} } } }];
+      const compositionOverlays = generateCompositionOverlays(compositions, yamlFiles);
+
+      const testOverlay = compositionOverlays.find(o => o.domain === 'test');
+      assert.ok(testOverlay, 'overlay generated for test domain');
+
+      const schemasAction = testOverlay.overlay.actions.find(a => a.target === '$.components.schemas');
+      assert.ok(schemasAction, 'schemas action present');
+
+      const writableSchema = schemasAction.update?.ReviewProgressWritable;
+      assert.ok(writableSchema, 'ReviewProgressWritable in generated overlay');
+      assert.ok(writableSchema.properties?.notes, 'notes property (from composition overlay) in ReviewProgressWritable');
+      assert.ok(writableSchema.properties?.status, 'baseline status property still in ReviewProgressWritable');
+    } finally {
+      removeTempDir(tmpDir);
+    }
   });
 });
