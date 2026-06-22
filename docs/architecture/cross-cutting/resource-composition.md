@@ -339,6 +339,7 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 | 6 | [Section keys as URL path segments](#decision-6-section-keys-as-url-path-segments) | Panel paths are derived from section key names; no separate path declaration per section. |
 | 7 | [Runtime filtering via standard search params](#decision-7-runtime-filtering-via-standard-search-params) | Composition endpoints support the state's configured search, pagination, and sort params — consistent with other list endpoints. |
 | 8 | [parentLink for composition discovery](#decision-8-parentlink-for-composition-discovery) | `_links.<compositionId>` injected into parent resource responses — clients navigate via links rather than hardcoding paths. |
+| 9 | [Static per-section panel paths](#decision-9-static-per-section-panel-paths) | Each section gets its own path entry; enables per-section sort configuration via `x-sortable`. |
 
 ---
 
@@ -506,6 +507,26 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 **Options:**
 - **(A)** Document paths in the API reference only — no runtime discoverability; clients hardcode paths; path changes require client updates
 - **(B) ✓** `parentLink: true` injects `_links.<compositionId>` — discoverable from the parent resource GET response; path changes transparent to clients navigating via links
+
+---
+
+### Decision 9: Static per-section panel paths
+
+**Status:** Decided: B
+
+**What's being decided:** Whether sectionView panel endpoints are generated as one static path per section (e.g., `/review/income`, `/review/contact`) or as a single parameterized path (`/review/{section}`).
+
+**Considerations:**
+- A single parameterized path (`/review/{section}`) produces one OpenAPI path entry shared across all sections. This means all sections would share the same operation definition — including sort configuration. Different sections expose fundamentally different resource types with different sortable fields; a shared path cannot express that.
+- Static paths (one per section) produce one OpenAPI path entry per section, each with its own operationId. This lets `x-sortable` be declared per section — the income section can expose `[memberId, type, amount, frequency]` as sortable fields while the contact section exposes none.
+- Static paths are consistent with how the rest of the blueprint's resource endpoints work — no other blueprint endpoint uses a path param to select among heterogeneous resource types.
+- Generated client functions are section-specific (`getApplicationReviewIncomeSection`) rather than generic (`getApplicationReviewSection`), making the API surface self-documenting and type-safe without needing a runtime section discriminator.
+
+**Options:**
+- **(A)** Single parameterized path `/review/{section}` — one OpenAPI entry; no per-section sort config; generic client function
+- **(B) ✓** One static path per section — per-section operation definitions; enables `x-sortable` per section; section-specific client functions
+
+**Decision:** Static (B). Per-section sort configuration requires distinct path entries. Static paths are also consistent with the rest of the blueprint's resource endpoint conventions.
 
 ---
 
