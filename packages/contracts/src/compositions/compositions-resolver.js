@@ -16,10 +16,9 @@
  * fully-shaped schema.
  */
 
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
-import { applyOverlay } from '../overlay/overlay-resolver.js';
 
 const LIST_QUERY_PARAMS = [
   { $ref: './components/parameters.yaml#/SearchQueryParam' },
@@ -56,37 +55,7 @@ export function discoverCompositions(specsDir) {
       const doc = yaml.load(content);
       if (!doc || typeof doc !== 'object' || !doc.compositions) continue;
 
-      // Apply state composition overlays from overlays/*/
-      let mergedDoc = doc;
-      const overlaysDir = join(specsDir, 'overlays');
-      try {
-        const stateDirs = readdirSync(overlaysDir);
-        for (const stateDir of stateDirs) {
-          const stateDirPath = join(overlaysDir, stateDir);
-          let stat;
-          try { stat = statSync(stateDirPath); } catch { continue; }
-          if (!stat.isDirectory()) continue;
-
-          const overlayFilePath = join(stateDirPath, `${domain}-compositions.yaml`);
-          try {
-            const overlayContent = readFileSync(overlayFilePath, 'utf8');
-            const overlayDoc = yaml.load(overlayContent);
-            if (!overlayDoc || overlayDoc.overlay !== '1.0.0') continue;
-
-            const { result } = applyOverlay(mergedDoc, overlayDoc, {
-              silent: true,
-              overlayDir: stateDirPath,
-            });
-            mergedDoc = result;
-          } catch {
-            continue;
-          }
-        }
-      } catch {
-        // overlays directory doesn't exist — fine
-      }
-
-      results.push({ filePath, domain, doc: mergedDoc });
+      results.push({ filePath, domain, doc });
     } catch {
       continue;
     }

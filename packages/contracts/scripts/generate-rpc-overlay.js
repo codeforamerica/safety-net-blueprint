@@ -83,22 +83,13 @@ export function discoverStateMachines(specsDir) {
 // =============================================================================
 
 /**
- * Read the base API spec and extract the item endpoint path and parameter refs.
- * @param {string} specsDir - Path to the specs directory
- * @param {string} apiSpecFile - Filename of the API spec (e.g., "workflow-openapi.yaml")
+ * Extract the item endpoint path and parameter refs from a loaded API spec.
+ * @param {Object} spec - Loaded API spec object
  * @param {string} [objectName] - State machine object name (e.g., "Task") to match the correct resource in multi-resource specs
- * @returns {{ itemPath: string, paramRefs: Array, tag: string } | null}
+ * @returns {{ itemPath: string, paramRefs: Array, tag: string, schemaRef: string } | null}
  */
-export function extractItemEndpoint(specsDir, apiSpecFile, objectName) {
-  const specPath = join(specsDir, apiSpecFile);
-  let spec;
-  try {
-    spec = yaml.load(readFileSync(specPath, 'utf8'));
-  } catch {
-    return null;
-  }
-
-  const paths = spec.paths || {};
+export function extractItemEndpointFromSpec(spec, objectName) {
+  const paths = spec?.paths || {};
 
   // If objectName is provided, derive the expected collection path (e.g., "Task" → "/tasks")
   const expectedCollection = objectName
@@ -135,6 +126,24 @@ export function extractItemEndpoint(specsDir, apiSpecFile, objectName) {
   }
 
   return fallback;
+}
+
+/**
+ * Read the base API spec and extract the item endpoint path and parameter refs.
+ * @param {string} specsDir - Path to the specs directory
+ * @param {string} apiSpecFile - Filename of the API spec (e.g., "workflow-openapi.yaml")
+ * @param {string} [objectName] - State machine object name (e.g., "Task") to match the correct resource in multi-resource specs
+ * @returns {{ itemPath: string, paramRefs: Array, tag: string } | null}
+ */
+export function extractItemEndpoint(specsDir, apiSpecFile, objectName) {
+  const specPath = join(specsDir, apiSpecFile);
+  let spec;
+  try {
+    spec = yaml.load(readFileSync(specPath, 'utf8'));
+  } catch {
+    return null;
+  }
+  return extractItemEndpointFromSpec(spec, objectName);
 }
 
 // =============================================================================

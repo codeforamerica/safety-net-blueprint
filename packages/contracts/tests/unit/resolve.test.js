@@ -811,15 +811,18 @@ test('resolve-overlay tests', async (t) => {
         }]
       });
 
-      // Collect yaml files the same way resolve.js does
       const yamlFiles = [
         {
           relativePath: 'test-openapi.yaml',
           spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+        },
+        {
+          relativePath: 'test-state-machine.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-state-machine.yaml'), 'utf8'))
         }
       ];
 
-      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+      const rpcOverlays = generateRpcOverlays(yamlFiles);
 
       assert.strictEqual(rpcOverlays.length, 1);
 
@@ -885,10 +888,14 @@ test('resolve-overlay tests', async (t) => {
         {
           relativePath: 'test-openapi.yaml',
           spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+        },
+        {
+          relativePath: 'test-state-machine.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-state-machine.yaml'), 'utf8'))
         }
       ];
 
-      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+      const rpcOverlays = generateRpcOverlays(yamlFiles);
       assert.strictEqual(rpcOverlays.length, 1);
 
       // Now apply the overlay through the full pipeline
@@ -948,15 +955,9 @@ test('resolve-overlay tests', async (t) => {
   });
 
   await t.test('generateRpcOverlays - returns empty when no state machines exist', () => {
-    const dir = createTmpDir();
-    try {
-      writeYaml(dir, 'test-openapi.yaml', { openapi: '3.1.0', info: { title: 'Test' } });
-      const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { openapi: '3.1.0' } }];
-      const result = generateRpcOverlays(dir, yamlFiles);
-      assert.strictEqual(result.length, 0);
-    } finally {
-      rmSync(dir, { recursive: true });
-    }
+    const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { openapi: '3.1.0' } }];
+    const result = generateRpcOverlays(yamlFiles);
+    assert.strictEqual(result.length, 0);
   });
 
   await t.test('generateRpcOverlays - rewrites $ref prefix when spec uses non-default prefix', () => {
@@ -1001,12 +1002,18 @@ test('resolve-overlay tests', async (t) => {
         }]
       });
 
-      const yamlFiles = [{
-        relativePath: 'test-openapi.yaml',
-        spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
-      }];
+      const yamlFiles = [
+        {
+          relativePath: 'test-openapi.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+        },
+        {
+          relativePath: 'test-state-machine.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-state-machine.yaml'), 'utf8'))
+        }
+      ];
 
-      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+      const rpcOverlays = generateRpcOverlays(yamlFiles);
       const { overlay } = rpcOverlays[0];
 
       // Response $refs should use the detected prefix, not ./

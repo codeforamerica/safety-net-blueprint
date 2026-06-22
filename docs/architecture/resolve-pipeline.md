@@ -11,18 +11,19 @@ base spec directory (--spec)         overlay directory (--overlay)
   *-openapi.yaml                       modifications.yaml
   *-openapi-examples.yaml              config.yaml
   components/                          (any structure)
-  *-state-machine.yaml ──┐
-  *-compositions.yaml ───┤ auto-generate overlays
-        │                │
-        │           ┌────┘
-        │           ▼
-        │    Auto-overlay generation
-        │    (RPC endpoints + composition endpoints)
-        │           │
-        └───────────┤
-                    │ + explicit overlays
+  *-state-machine.yaml                 │
+  *-compositions.yaml                  │
+        │                              │
+        └──────────────────────────────┤
+                                       ▼
+                              Apply overlays
+                                       │
+                    ┌──────────────────┘
                     ▼
-           Overlay merge
+           OpenAPI generation
+           (RPC + composition resources)
+           from *-state-machine.yaml
+           and *-compositions.yaml
                     │
                     ▼
          Relationship resolution
@@ -41,17 +42,9 @@ base spec directory (--spec)         overlay directory (--overlay)
 
 ## Pipeline Stages
 
-### 1. Auto-overlay Generation
+### 1. Apply Overlays
 
-Before any explicit overlay is applied, `resolve.js` generates overlays from two sources:
-
-**RPC endpoint overlays** — `resolve.js` discovers all `*-state-machine.yaml` files and generates an overlay for each one. Each overlay adds the RPC transition endpoints (e.g. `POST /tasks/{id}/claim`) to the corresponding API spec, derived from the state machine's action definitions.
-
-**Composition overlays** — `resolve.js` discovers all `*-compositions.yaml` files and generates an overlay for each one. Each overlay adds the composite view endpoints and any composition state endpoints declared in the config (e.g. `GET /applications/{id}/review`, `PATCH /applications/{id}/review-progress/{section}`). If the composition sets `parentLink: true`, the overlay also adds `_links.<compositionId>` to the parent resource's response schema. See [Resource Composition](cross-cutting/resource-composition.md) for the full config reference.
-
-Both sets of generated overlays are applied before explicit overlays, so subsequent explicit overlays can reference or further modify any of these endpoints if needed.
-
-### 2. Overlay Merge
+If `--overlay` is specified, `resolve.js` applies all overlay files in the given directory to the base specs. Overlays can target any YAML file in the spec directory — including `*-openapi.yaml`, `*-state-machine.yaml`, and `*-compositions.yaml` files.
 
 The overlay resolver (`packages/contracts/src/overlay/overlay-resolver.js`) applies JSON Merge Patch-style actions from an overlay file to the base spec. Actions can:
 
@@ -60,6 +53,16 @@ The overlay resolver (`packages/contracts/src/overlay/overlay-resolver.js`) appl
 - Add array items (using `x-merge` directives)
 
 The overlay path is specified via the `--overlay` flag to `resolve.js`. It can be a single file or a directory. When given a directory, the resolver walks it recursively and discovers all `.yaml` files with `overlay: 1.0.0` at the top level, applying them in alphabetical order. Within this repository the convention is `packages/contracts/overlays/<state>/`; in a state repository the path is whatever the state's scripts pass to `--overlay`.
+
+### 2. OpenAPI Generation
+
+After overlays have been applied, `resolve.js` generates OpenAPI paths and schemas from two source types:
+
+**RPC endpoints** — `resolve.js` reads all `*-state-machine.yaml` files and generates RPC transition endpoints for each one (e.g. `POST /tasks/{id}/claim`), derived from the state machine's action definitions.
+
+**Composition endpoints and schemas** — `resolve.js` reads all `*-compositions.yaml` files and generates composite view endpoints (e.g. `GET /applications/{id}/review`), state endpoints (e.g. `PATCH /applications/{id}/review-progress/{section}`), and the corresponding request/response schemas. If the composition sets `parentLink: true`, it also adds `_links.<compositionId>` to the parent resource's response schema. See [Resource Composition](cross-cutting/resource-composition.md) for the full config reference.
+
+Because generation runs after overlays, any overlay modifications to `*-state-machine.yaml` or `*-compositions.yaml` files are reflected in the generated output.
 
 ### 3. Relationship Resolution
 

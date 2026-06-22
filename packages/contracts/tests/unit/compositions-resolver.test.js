@@ -260,114 +260,6 @@ describe('discoverCompositions', () => {
     }
   });
 
-  test('applies state composition overlay from overlays/{state}/{domain}-compositions.yaml', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'intake-compositions.yaml', {
-        version: '1.0',
-        domain: 'intake',
-        compositions: {
-          reviewContext: {
-            compositeType: 'sectionView',
-            resource: 'applications',
-            sections: {
-              identity: { resource: 'members', bind: 'applicationId' },
-            },
-          },
-        },
-      });
-
-      mkdirSync(join(dir, 'overlays', 'example'), { recursive: true });
-      writeYaml(join(dir, 'overlays', 'example'), 'intake-compositions.yaml', {
-        overlay: '1.0.0',
-        info: { title: 'Example overlay', version: '1.0.0' },
-        actions: [{
-          target: '$.compositions.reviewContext.sections.household',
-          description: 'Add household section',
-          add: { resource: 'household-info', bind: 'applicationId' },
-        }],
-      });
-
-      const result = discoverCompositions(dir);
-      assert.equal(result.length, 1);
-      assert.ok(result[0].doc.compositions.reviewContext.sections.household, 'overlay-added section present');
-      assert.equal(result[0].doc.compositions.reviewContext.sections.identity.resource, 'members');
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-
-  test('skips overlay files without overlay: 1.0.0 header', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'intake-compositions.yaml', {
-        version: '1.0',
-        domain: 'intake',
-        compositions: {
-          reviewContext: { resource: 'applications', sections: { identity: {} } },
-        },
-      });
-
-      mkdirSync(join(dir, 'overlays', 'example'), { recursive: true });
-      writeYaml(join(dir, 'overlays', 'example'), 'intake-compositions.yaml', {
-        version: '1.0',
-        compositions: { extra: { resource: 'foo' } },
-      });
-
-      const result = discoverCompositions(dir);
-      assert.equal(result.length, 1);
-      assert.equal(result[0].doc.compositions.extra, undefined, 'non-overlay file should be ignored');
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-
-  test('applies overlays from multiple state directories', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'intake-compositions.yaml', {
-        version: '1.0',
-        domain: 'intake',
-        compositions: {
-          reviewContext: {
-            compositeType: 'sectionView',
-            resource: 'applications',
-            sections: { identity: { resource: 'members', bind: 'applicationId' } },
-          },
-        },
-      });
-
-      mkdirSync(join(dir, 'overlays', 'state-a'), { recursive: true });
-      writeYaml(join(dir, 'overlays', 'state-a'), 'intake-compositions.yaml', {
-        overlay: '1.0.0',
-        info: { title: 'State A overlay', version: '1.0.0' },
-        actions: [{
-          target: '$.compositions.reviewContext.sections.household',
-          add: { resource: 'household-info', bind: 'applicationId' },
-        }],
-      });
-
-      mkdirSync(join(dir, 'overlays', 'state-b'), { recursive: true });
-      writeYaml(join(dir, 'overlays', 'state-b'), 'intake-compositions.yaml', {
-        overlay: '1.0.0',
-        info: { title: 'State B overlay', version: '1.0.0' },
-        actions: [{
-          target: '$.compositions.reviewContext.sections.expenses',
-          add: { resource: 'member-expenses', bind: 'applicationId' },
-        }],
-      });
-
-      const result = discoverCompositions(dir);
-      assert.equal(result.length, 1);
-      const sections = result[0].doc.compositions.reviewContext.sections;
-      assert.ok(sections.identity, 'baseline section present');
-      assert.ok(sections.household, 'state-a section present');
-      assert.ok(sections.expenses, 'state-b section present');
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-
   test('ignores overlays directory when it does not exist', () => {
     const dir = createTempDir();
     try {
@@ -1526,97 +1418,69 @@ describe('generateStateSchemas', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Overlay-then-generate: state.schema properties from composition overlay
+// Overlay-then-generate: explicit overlay on composition YAML flows through
 // ---------------------------------------------------------------------------
 
-describe('overlay-then-generate: state schema picks up composition YAML overlay properties', () => {
-  let tmpDir;
-
-  function makeCompositionFixture(dir) {
-    // Overlays are discovered from overlays/{stateDir}/{domain}-compositions.yaml
-    const stateOverlayDir = join(dir, 'overlays', 'mystate');
-    mkdirSync(stateOverlayDir, { recursive: true });
-
-    const baseComposition = {
-      version: '1.0',
-      domain: 'test',
-      compositions: {
-        appReview: {
-          compositeType: 'sectionView',
-          resource: 'applications',
-          endpoint: { path: '/applications/{applicationId}/review' },
-          sections: {},
-          state: {
-            resource: 'application-review-progress',
-            bind: 'applicationId',
-            schema: {
-              name: 'ReviewProgress',
-              properties: {
-                status: { type: 'string', enum: ['not_started', 'complete'] },
-              },
+describe('overlay-then-generate: explicit overlay on composition YAML flows into generated OpenAPI', () => {
+  const baseCompositionDoc = {
+    version: '1.0',
+    domain: 'test',
+    compositions: {
+      appReview: {
+        compositeType: 'sectionView',
+        resource: 'applications',
+        endpoint: { path: '/applications/{applicationId}/review' },
+        sections: {},
+        state: {
+          resource: 'application-review-progress',
+          bind: 'applicationId',
+          schema: {
+            name: 'ReviewProgress',
+            properties: {
+              status: { type: 'string', enum: ['not_started', 'complete'] },
             },
           },
         },
       },
-    };
-    writeYaml(dir, 'test-compositions.yaml', baseComposition);
+    },
+  };
 
-    // Composition YAML overlay adds a field to state.schema.properties
-    const stateOverlay = {
-      overlay: '1.0.0',
-      info: { title: 'State extension overlay', version: '1.0.0' },
-      actions: [{
-        target: '$.compositions.appReview.state.schema.properties',
-        update: { notes: { type: 'string' } },
-      }],
-    };
-    writeYaml(stateOverlayDir, 'test-compositions.yaml', stateOverlay);
+  // Simulate what resolve.js does: refresh composition doc from currentResults
+  // (which contains the post-overlay version of the composition YAML file).
+  function applyExplicitOverlayToDoc(doc) {
+    // An overlay that adds a field to state.schema.properties
+    const overlaidDoc = JSON.parse(JSON.stringify(doc));
+    overlaidDoc.compositions.appReview.state.schema.properties.notes = { type: 'string' };
+    return overlaidDoc;
   }
 
-  test('properties added via compositions YAML overlay appear in generated {Name}Writable', () => {
-    tmpDir = createTempDir();
-    try {
-      makeCompositionFixture(tmpDir);
+  test('property added via explicit overlay appears in generated {Name}Writable', () => {
+    const overlaidDoc = applyExplicitOverlayToDoc(baseCompositionDoc);
+    const compositionFiles = [{ domain: 'test', filePath: 'test-compositions.yaml', doc: overlaidDoc }];
+    const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { paths: {}, components: { schemas: {} } } }];
 
-      const compositions = discoverCompositions(tmpDir);
-      const found = compositions.find(c => c.domain === 'test');
-      assert.ok(found, 'composition discovered');
+    const overlays = generateCompositionOverlays(compositionFiles, yamlFiles);
+    const testOverlay = overlays.find(o => o.domain === 'test');
+    assert.ok(testOverlay, 'overlay generated for test domain');
 
-      const mergedState = found.doc.compositions.appReview.state;
-      assert.ok(mergedState.schema.properties?.notes, 'overlay added notes property to state schema');
+    const schemasAction = testOverlay.overlay.actions.find(a => a.target === '$.components.schemas');
+    assert.ok(schemasAction, 'schemas action present');
 
-      // generateStateSchemas must pick up the overlaid property
-      const schemas = generateStateSchemas(mergedState);
-      assert.ok(schemas.ReviewProgressWritable.properties?.notes, 'notes appears in generated ReviewProgressWritable');
-      assert.ok(schemas.ReviewProgressWritable.properties?.status, 'baseline status still present');
-    } finally {
-      removeTempDir(tmpDir);
-    }
+    const writableSchema = schemasAction.update?.ReviewProgressWritable;
+    assert.ok(writableSchema, 'ReviewProgressWritable in generated overlay');
+    assert.ok(writableSchema.properties?.notes, 'notes (from overlay) in ReviewProgressWritable');
+    assert.ok(writableSchema.properties?.status, 'baseline status still present');
   });
 
-  test('overlaid state schema property appears in the generated OpenAPI overlay schemas action', () => {
-    tmpDir = createTempDir();
-    try {
-      makeCompositionFixture(tmpDir);
+  test('without overlay, only baseline properties appear in generated {Name}Writable', () => {
+    const compositionFiles = [{ domain: 'test', filePath: 'test-compositions.yaml', doc: baseCompositionDoc }];
+    const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { paths: {}, components: { schemas: {} } } }];
 
-      const compositions = discoverCompositions(tmpDir);
+    const overlays = generateCompositionOverlays(compositionFiles, yamlFiles);
+    const schemasAction = overlays.find(o => o.domain === 'test')?.overlay.actions.find(a => a.target === '$.components.schemas');
+    const writableSchema = schemasAction?.update?.ReviewProgressWritable;
 
-      // Simulate what the resolve pipeline passes as yamlFiles
-      const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { paths: {}, components: { schemas: {} } } }];
-      const compositionOverlays = generateCompositionOverlays(compositions, yamlFiles);
-
-      const testOverlay = compositionOverlays.find(o => o.domain === 'test');
-      assert.ok(testOverlay, 'overlay generated for test domain');
-
-      const schemasAction = testOverlay.overlay.actions.find(a => a.target === '$.components.schemas');
-      assert.ok(schemasAction, 'schemas action present');
-
-      const writableSchema = schemasAction.update?.ReviewProgressWritable;
-      assert.ok(writableSchema, 'ReviewProgressWritable in generated overlay');
-      assert.ok(writableSchema.properties?.notes, 'notes property (from composition overlay) in ReviewProgressWritable');
-      assert.ok(writableSchema.properties?.status, 'baseline status property still in ReviewProgressWritable');
-    } finally {
-      removeTempDir(tmpDir);
-    }
+    assert.ok(writableSchema?.properties?.status, 'baseline status present');
+    assert.ok(!writableSchema?.properties?.notes, 'notes not present without overlay');
   });
 });
