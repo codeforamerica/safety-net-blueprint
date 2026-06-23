@@ -428,3 +428,46 @@ test('generateOverlay — no second action when no $defs refs are present', () =
   assert.strictEqual(overlay.actions.length, 1);
   assert.strictEqual(overlay.actions[0].target, '$.paths');
 });
+
+test('generateOverlay — does not mutate input state machine schema refs', () => {
+  const stateMachine = {
+    domain: 'eligibility',
+    object: 'Decision',
+    apiSpec: 'eligibility-openapi.yaml',
+    machines: [
+      {
+        object: 'Decision',
+        states: [{ id: 'pending' }, { id: 'approved' }],
+        initialState: 'pending',
+        actions: [
+          {
+            id: 'approve',
+            transition: { from: 'pending', to: 'approved' },
+            schema: { request: { $ref: '#/$defs/ApproveDecisionRequest' } }
+          }
+        ]
+      }
+    ],
+    $defs: {
+      ApproveDecisionRequest: {
+        type: 'object',
+        required: ['path'],
+        properties: { path: { type: 'string', enum: ['auto', 'manual'] } }
+      }
+    }
+  };
+  const endpointInfo = {
+    itemPath: '/decisions/{decisionId}',
+    paramRefs: [],
+    tag: 'Decisions',
+    schemaRef: '#/components/schemas/Decision'
+  };
+
+  generateOverlay(stateMachine, endpointInfo);
+
+  assert.strictEqual(
+    stateMachine.machines[0].actions[0].schema.request.$ref,
+    '#/$defs/ApproveDecisionRequest',
+    'generateOverlay must not mutate schema.request.$ref on the input state machine'
+  );
+});

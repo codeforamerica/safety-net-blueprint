@@ -172,7 +172,9 @@ function buildRequestBody(requestSchema) {
     required: true,
     content: {
       'application/json': {
-        schema: requestSchema
+        // Deep-clone so rewriteLocalDefsRefs does not mutate the source
+        // state machine object (which would corrupt the resolved YAML output).
+        schema: JSON.parse(JSON.stringify(requestSchema))
       }
     }
   };
@@ -291,7 +293,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
       }
 
       const responseSchema = transition.schema?.response
-        ? transition.schema.response
+        ? JSON.parse(JSON.stringify(transition.schema.response))
         : (schemaRef ? { $ref: schemaRef } : { type: 'object' });
 
       operation.responses = {
