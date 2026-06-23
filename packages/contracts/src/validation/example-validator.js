@@ -9,6 +9,13 @@ import addFormats from 'ajv-formats';
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 
+// Seed data may contain $now time tokens (e.g. "$now-30d") in date-time fields.
+// These are resolved at runtime by the mock server — treat them as valid here.
+const TIME_TOKEN_RE = /^\$now([+-]\d+[dhwm])?(?:@\d{1,2}:\d{2})?$/;
+const isDateTimeOrToken = (v) => TIME_TOKEN_RE.test(v) || !isNaN(Date.parse(v));
+ajv.addFormat('date-time', { validate: isDateTimeOrToken });
+ajv.addFormat('date', { validate: (v) => TIME_TOKEN_RE.test(v) || /^\d{4}-\d{2}-\d{2}$/.test(v) });
+
 /**
  * Derive schema name from an example key.
  * e.g., "QueueExample1" → "Queue", "TaskAuditEventExample2" → "TaskAuditEvent"
