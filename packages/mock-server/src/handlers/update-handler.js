@@ -202,6 +202,9 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           source: apiMetadata.serverBasePath,
           data: { changes },
           callerId: req.headers['x-caller-id'] || null,
+          callerRoles: req.headers['x-caller-roles']
+            ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
+            : [],
           traceparent: req.headers['traceparent'] || null,
           now: updated.updatedAt,
         });

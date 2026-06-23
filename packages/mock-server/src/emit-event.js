@@ -42,27 +42,46 @@ export function emitEventEnvelope(envelope) {
   return record;
 }
 
+// Roles that map to a non-user authtype value. Any other non-empty role list → 'user'.
+const NON_USER_AUTHTYPES = new Set(['system', 'service_account', 'api_key', 'unauthenticated', 'unknown']);
+
+/**
+ * Derive the CloudEvents authtype from a caller's roles array.
+ * @param {string[]} callerRoles
+ * @returns {string|null}
+ */
+function deriveAuthtype(callerRoles) {
+  if (!callerRoles || callerRoles.length === 0) return null;
+  for (const role of callerRoles) {
+    if (NON_USER_AUTHTYPES.has(role)) return role;
+  }
+  return 'user';
+}
+
 /**
  * Emit a domain event.
  *
  * @param {Object} options
- * @param {string} options.domain      - Domain name (e.g., 'workflow')
- * @param {string} options.object      - Object name, singular lowercase (e.g., 'task')
- * @param {string} options.action      - Action verb (e.g., 'created', 'claimed')
- * @param {string} options.resourceId  - UUID of the affected resource
- * @param {string} options.source      - Domain base path (e.g., '/workflow')
- * @param {Object|null} [options.data] - Event payload. Defaults to null.
- * @param {string|null} [options.callerId]    - X-Caller-Id from request header
+ * @param {string} options.domain        - Domain name (e.g., 'workflow')
+ * @param {string} options.object        - Object name, singular lowercase (e.g., 'task')
+ * @param {string} options.action        - Action verb (e.g., 'created', 'claimed')
+ * @param {string} options.resourceId    - UUID of the affected resource
+ * @param {string} options.source        - Domain base path (e.g., '/workflow')
+ * @param {Object|null} [options.data]   - Event payload. Defaults to null.
+ * @param {string|null} [options.callerId]     - X-Caller-Id from request header
+ * @param {string[]}    [options.callerRoles]  - X-Caller-Roles parsed array (used to derive authtype)
  * @param {string|null} [options.traceparent]  - W3C traceparent header, if present
  * @param {string|null} [options.causationid]  - CloudEvents causation extension: id of the triggering event
- * @param {string|null} [options.now]  - ISO timestamp. Defaults to current time.
+ * @param {string|null} [options.now]    - ISO timestamp. Defaults to current time.
  * @returns {Object} The stored event record
  */
-export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, traceparent = null, causationid = null, now = null }) {
+export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, callerRoles = [], traceparent = null, causationid = null, now = null }) {
   const timestamp = now || new Date().toISOString();
   const normalizedDomain = domain.replace(/-/g, '_');
   const normalizedObject = object.replace(/-/g, '_');
   const type = `${normalizedDomain}.${normalizedObject}.${action}`;
+
+  const authtype = callerId ? deriveAuthtype(callerRoles) : null;
 
   const envelope = {
     specversion: '1.0',
@@ -74,6 +93,8 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
     datacontenttype: 'application/json',
     traceparent: traceparent || null,
     causationid: causationid || undefined,
+    authid: callerId || null,
+    authtype: authtype || null,
     data: data ?? null,
   };
 

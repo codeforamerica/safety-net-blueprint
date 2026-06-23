@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { insertResource, clearAll } from '../../src/database-manager.js';
+import { insertResource, clearAll, findAll } from '../../src/database-manager.js';
 import { resolveContextLayers } from '../../src/handlers/procedure-runner.js';
 import { createUpdateHandler } from '../../src/handlers/update-handler.js';
 import { createCreateHandler } from '../../src/handlers/create-handler.js';
@@ -159,4 +159,90 @@ test('createUpdateHandler — machine-level context available in onUpdate steps:
 
   assert.ok(res._data, 'expected a response body');
   assert.strictEqual(res._data.queueId, 'q-snap');
+});
+
+// =============================================================================
+// createCreateHandler — auto-emitted event subject and auth context (#364, #365)
+// =============================================================================
+
+test('createCreateHandler — emitted event subject is the created resource id, not the parent id', () => {
+  clearAll('testitems');
+  clearAll('events');
+
+  const apiMetadata = { serverBasePath: '/test' };
+  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null };
+
+  const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null);
+
+  // Simulate a sub-resource POST where applicationId is injected as enrichmentData
+  const parentId = 'parent-uuid-001';
+  const req = {
+    body: { name: 'child-record' },
+    enrichmentData: { applicationId: parentId },
+    headers: { 'x-caller-id': 'user-1', 'x-caller-roles': 'technician' },
+    path: '/testitems',
+  };
+  const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
+
+  handler(req, res);
+
+  assert.strictEqual(res._code, 201);
+  const createdId = res._data.id;
+  assert.ok(createdId, 'created resource must have an id');
+  assert.notStrictEqual(createdId, parentId, 'created resource id must not equal the parent id');
+
+  const { items } = findAll('events', {});
+  const createdEvent = items.find(e => e.type === 'test.testitem.created');
+  assert.ok(createdEvent, 'must have emitted a created event');
+  assert.strictEqual(createdEvent.subject, createdId, 'event subject must be the child resource id, not the parent id');
+});
+
+test('createCreateHandler — emitted event includes authid and authtype from caller headers', () => {
+  clearAll('testitems');
+  clearAll('events');
+
+  const apiMetadata = { serverBasePath: '/test' };
+  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null };
+
+  const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null);
+
+  const req = {
+    body: { name: 'child-record' },
+    headers: { 'x-caller-id': 'caseworker-42', 'x-caller-roles': 'technician,supervisor' },
+    path: '/testitems',
+  };
+  const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
+
+  handler(req, res);
+
+  const { items } = findAll('events', {});
+  const createdEvent = items.find(e => e.type === 'test.testitem.created');
+  assert.ok(createdEvent, 'must have emitted a created event');
+  assert.strictEqual(createdEvent.authid, 'caseworker-42');
+  assert.strictEqual(createdEvent.authtype, 'user');
+});
+
+test('createCreateHandler — emitted event has null authid and authtype when no caller headers', () => {
+  clearAll('testitems');
+  clearAll('events');
+
+  const apiMetadata = { serverBasePath: '/test' };
+  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null };
+
+  const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null);
+
+  const req = {
+    body: { name: 'child-record' },
+    headers: {},
+    path: '/testitems',
+  };
+  const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
+
+  handler(req, res);
+
+  const { items } = findAll('events', {});
+  const createdEvent = items.find(e => e.type === 'test.testitem.created');
+  assert.ok(createdEvent, 'must have emitted a created event');
+  assert.strictEqual(createdEvent.authid, null);
+  assert.strictEqual(createdEvent.authtype, null);
 });

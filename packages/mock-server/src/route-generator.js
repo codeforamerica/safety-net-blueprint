@@ -356,7 +356,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema);
           if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
           if (Object.keys(subRequiredDefaults).length > 0) registerCollectionDefaults(collectionName, subRequiredDefaults);
-          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, { eventSubjectField: parentField });
+          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint);
           handler = (req, res) => {
             // Spread ALL path params, not just the last one — sub-sub-resource
             // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
