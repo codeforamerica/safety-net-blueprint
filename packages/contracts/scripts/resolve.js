@@ -29,11 +29,12 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync
 import { join, dirname, relative, resolve, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { applyOverlay, checkPathExists } from '../src/overlay/overlay-resolver.js';
+import { applyOverlay, checkPathExists, parsePath } from '../src/overlay/overlay-resolver.js';
 import { extractConfig, validateConfig } from '../src/overlay/config.js';
 import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '../src/overlay/relationship-resolver.js';
 import { bundleSpec } from '../src/bundle.js';
-import { discoverStateMachines, extractItemEndpoint, generateOverlay } from './generate-rpc-overlay.js';
+import { extractItemEndpointFromSpec, generateOverlay } from './generate-rpc-overlay.js';
+import { generateCompositionOverlays } from '../src/compositions/compositions-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -297,10 +298,23 @@ function analyzeTargetLocations(overlay, yamlFiles) {
 
     if (!target) continue;
 
+    // For `add` actions the target key does not exist yet — check the parent
+    // path instead. The parent must exist for addAtPath to succeed.
+    let checkTarget = target;
+    if (action.add !== undefined) {
+      const tokens = parsePath(target);
+      if (tokens.length > 1) {
+        const parentTokens = tokens.slice(0, -1);
+        checkTarget = '$.' + parentTokens.map(t =>
+          t.type === 'filter' ? `[?(@.${t.field} == '${t.value}')]` : t.value
+        ).join('.');
+      }
+    }
+
     // Find all files where the full target path exists, with metadata
     const matchingFiles = [];
     for (const { relativePath, spec } of yamlFiles) {
-      const pathCheck = checkPathExists(spec, target);
+      const pathCheck = checkPathExists(spec, checkTarget);
       if (pathCheck.fullPathExists) {
         matchingFiles.push({
           relativePath,
@@ -619,30 +633,37 @@ function rewriteOverlayRefs(overlay, fromPrefix, toPrefix) {
 }
 
 /**
- * Discover state machines and generate in-memory RPC overlays.
- * Returns an array of { overlay, stateMachine } ready for application.
+ * Generate in-memory RPC overlays from state machine specs in inputFiles.
+ * Reads state machines from the post-overlay input so explicit overlay
+ * modifications are reflected in generated RPC endpoints.
+ * @param {Array<{relativePath: string, spec: Object}>} inputFiles
+ * @returns {Array<{overlay: Object, stateMachine: Object}>}
  */
-function generateRpcOverlays(specPath, yamlFiles) {
-  const machines = discoverStateMachines(specPath);
+function generateRpcOverlays(inputFiles) {
+  const machines = inputFiles
+    .filter(f => f.relativePath.endsWith('-state-machine.yaml'))
+    .map(f => f.spec)
+    .filter(sm => sm && sm.domain && (sm.object || (Array.isArray(sm.machines) && sm.machines.length > 0)));
+
   if (machines.length === 0) return [];
 
   const overlays = [];
 
-  for (const { stateMachine } of machines) {
+  for (const stateMachine of machines) {
     const apiSpecFile = stateMachine.apiSpec;
     if (!apiSpecFile) continue;
 
-    const endpointInfo = extractItemEndpoint(specPath, apiSpecFile);
+    const targetFile = inputFiles.find(f => f.relativePath === apiSpecFile);
+    if (!targetFile) continue;
+
+    const endpointInfo = extractItemEndpointFromSpec(targetFile.spec, stateMachine.object);
     if (!endpointInfo) continue;
 
     let overlay = generateOverlay(stateMachine, endpointInfo);
 
     // Detect the component $ref prefix used by the target spec and rewrite if needed
-    const targetFile = yamlFiles.find(f => f.relativePath === apiSpecFile);
-    if (targetFile) {
-      const prefix = detectComponentPrefix(targetFile.spec);
-      overlay = rewriteOverlayRefs(overlay, './', prefix);
-    }
+    const prefix = detectComponentPrefix(targetFile.spec);
+    overlay = rewriteOverlayRefs(overlay, './', prefix);
 
     overlays.push({ overlay, stateMachine });
   }
@@ -845,10 +866,11 @@ async function main() {
   }
   mkdirSync(outDir, { recursive: true });
 
-  // Discover state machines for RPC auto-generation (directory mode only)
-  const stateMachines = !specIsFile ? discoverStateMachines(specPath) : [];
+  // Quick check (no YAML parsing) whether generators will produce anything
+  const hasStateMachines = !specIsFile && readdirSync(specPath).some(f => f.endsWith('-state-machine.yaml'));
+  const hasCompositions = !specIsFile && readdirSync(specPath).some(f => f.endsWith('-compositions.yaml'));
 
-  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && stateMachines.length === 0) {
+  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && !hasStateMachines && !hasCompositions) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -876,28 +898,6 @@ async function main() {
   let allWarnings = [];
   let currentResults = null;
   let overlayConfig = null;
-
-  // Auto-generate and apply RPC overlays from state machine files (before explicit overlays)
-  if (stateMachines.length > 0) {
-    const rpcOverlays = generateRpcOverlays(specPath, yamlFiles);
-
-    for (const { overlay, stateMachine } of rpcOverlays) {
-      const inputFiles = currentResults
-        ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
-        : yamlFiles;
-
-      const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
-      const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
-      allWarnings = allWarnings.concat(warnings);
-
-      const { results: rpcResults, warnings: rpcWarnings } = applyOverlayWithTargets(inputFiles, overlay, actionTargets, specPath);
-      allWarnings = allWarnings.concat(rpcWarnings);
-      currentResults = rpcResults;
-
-      const actionCount = (stateMachine.machines || []).flatMap(m => m.actions || []).length;
-      console.log(`  \u2713 Auto-generated: ${stateMachine.domain} RPC Overlay (${actionCount} actions)`);
-    }
-  }
 
   // Apply overlays if specified
   if (options.overlay) {
@@ -960,6 +960,68 @@ async function main() {
         const { results: overlayResults, warnings: overlayWarnings } = applyOverlayWithTargets(inputFiles, overlay, actionTargets, overlayDir);
         allWarnings = allWarnings.concat(overlayWarnings);
         currentResults = overlayResults;
+      }
+    }
+  }
+
+  // Generate RPC and composition endpoints after explicit overlays.
+  // Both generators read from post-overlay specs so state customizations to
+  // *-state-machine.yaml and *-compositions.yaml files are reflected in the output.
+  if (!specIsFile && (hasStateMachines || hasCompositions)) {
+    const inputFiles = currentResults
+      ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+      : yamlFiles;
+
+    // RPC overlays: derived from state machine specs in inputFiles
+    const rpcOverlays = generateRpcOverlays(inputFiles);
+    for (const { overlay, stateMachine } of rpcOverlays) {
+      const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+      const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+      allWarnings = allWarnings.concat(warnings);
+
+      const { results: rpcResults, warnings: rpcWarnings } = applyOverlayWithTargets(inputFiles, overlay, actionTargets, specPath);
+      allWarnings = allWarnings.concat(rpcWarnings);
+      currentResults = rpcResults;
+
+      const actionCount = (stateMachine.machines || []).flatMap(m => m.actions || []).length;
+      console.log(`  \u2713 Generated: ${stateMachine.domain} RPC endpoints (${actionCount} actions)`);
+    }
+
+    // Composition overlays: derived from *-compositions.yaml specs in inputFiles
+    const compositionFiles = inputFiles
+      .filter(f => f.relativePath.endsWith('-compositions.yaml') && f.spec?.compositions)
+      .map(f => ({
+        filePath: join(specPath, f.relativePath),
+        domain: f.relativePath.replace('-compositions.yaml', ''),
+        doc: f.spec
+      }));
+
+    if (compositionFiles.length > 0) {
+      const compositionOverlays = generateCompositionOverlays(compositionFiles, inputFiles);
+
+      for (const { overlay: rawOverlay, domain } of compositionOverlays) {
+        const apiSpecFile = `${domain}-openapi.yaml`;
+        const targetFile = inputFiles.find(f => f.relativePath === apiSpecFile);
+        let overlay = rawOverlay;
+        if (targetFile) {
+          const prefix = detectComponentPrefix(targetFile.spec);
+          overlay = rewriteOverlayRefs(overlay, './', prefix);
+        }
+
+        const currentInputFiles = currentResults
+          ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+          : yamlFiles;
+
+        const actionFileMap = analyzeTargetLocations(overlay, currentInputFiles);
+        const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+        allWarnings = allWarnings.concat(warnings);
+
+        const { results: compResults, warnings: compWarnings } = applyOverlayWithTargets(currentInputFiles, overlay, actionTargets, specPath);
+        allWarnings = allWarnings.concat(compWarnings);
+        currentResults = compResults;
+
+        const compositionCount = Object.keys(rawOverlay.actions.find(a => a.target === '$.paths')?.update || {}).length;
+        console.log(`  \u2713 Generated: ${domain} composition endpoints (${compositionCount} endpoint(s))`);
       }
     }
   }

@@ -220,6 +220,109 @@ async function generateAnnotationsAndPolicies(specsDir, outputDir, annotationExp
 }
 
 /**
+ * Recursively walk a parsed YAML object and collect names of any properties
+ * declared with nullable: true. Handles allOf/anyOf/oneOf nesting.
+ *
+ * @param {unknown} obj
+ * @param {Set<string>} result - mutated in place
+ */
+function walkForNullable(obj, result) {
+  if (!obj || typeof obj !== 'object') return;
+  if (Array.isArray(obj)) {
+    for (const item of obj) walkForNullable(item, result);
+    return;
+  }
+  if (obj.properties) {
+    for (const [name, schema] of Object.entries(obj.properties)) {
+      if (schema && schema.nullable === true) result.add(name);
+    }
+  }
+  for (const val of Object.values(obj)) {
+    if (val && typeof val === 'object') walkForNullable(val, result);
+  }
+}
+
+/**
+ * Walk all YAML files in a spec directory (recursively) and collect the names
+ * of any schema properties declared with nullable: true.
+ *
+ * Catches nullable annotations in both the main OpenAPI spec and referenced
+ * schema files, including overlay-applied values in resolved specs.
+ *
+ * @param {string} specDir - path to the resolved spec directory
+ * @returns {Set<string>} field names that should be nullable
+ */
+function collectNullableFieldNames(specDir) {
+  const result = new Set();
+  const files = readdirSync(specDir, { recursive: true });
+  for (const file of files) {
+    if (typeof file !== 'string') continue;
+    if (!file.endsWith('.yaml') && !file.endsWith('.yml')) continue;
+    try {
+      const content = yaml.load(readFileSync(join(specDir, file), 'utf8'));
+      walkForNullable(content, result);
+    } catch {
+      // Skip unreadable or non-YAML files silently
+    }
+  }
+  return result;
+}
+
+/**
+ * Post-process a generated zod.gen.ts to add .nullable() to optional fields
+ * that @hey-api/openapi-ts missed — specifically, fields declared nullable: true
+ * on an allOf-wrapped $ref, which the generator does not translate correctly.
+ *
+ * Transforms:
+ *   fieldName: z.optional(X),  →  fieldName: z.optional(X.nullable()),
+ *
+ * Uses balanced-paren matching so nested schemas (e.g. z.array(z.string()))
+ * are handled correctly without truncation.
+ *
+ * @param {string} zodGenPath - absolute path to zod.gen.ts
+ * @param {Set<string>} nullableFields - field names that need .nullable()
+ */
+function patchZodGenForNullable(zodGenPath, nullableFields) {
+  if (nullableFields.size === 0) return;
+  const lines = readFileSync(zodGenPath, 'utf8').split('\n');
+  let patched = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(/^(\s+)(\w+):\s*z\.optional\(/);
+    if (!match) continue;
+    const fieldName = match[2];
+    if (!nullableFields.has(fieldName)) continue;
+
+    // Find the matching closing paren for z.optional( using balanced-paren scan
+    const optStart = line.indexOf('z.optional(') + 'z.optional('.length;
+    let depth = 1;
+    let pos = optStart;
+    while (pos < line.length && depth > 0) {
+      if (line[pos] === '(') depth++;
+      else if (line[pos] === ')') depth--;
+      pos++;
+    }
+    // If closing paren not found on this line, it's a multi-line expression — skip.
+    // The allOf-wrapped $ref case always generates as a single line; multi-line
+    // expressions like z.optional(z.union([...]) or z.optional(z.enum([...])
+    // already handle nullability correctly via z.null() in the union.
+    if (depth > 0) continue;
+
+    const closePos = pos - 1; // index of the matching )
+
+    // Skip if already patched (idempotent)
+    if (line.slice(optStart, closePos).endsWith('.nullable()')) continue;
+
+    lines[i] = line.slice(0, closePos) + '.nullable()' + line.slice(closePos);
+    patched = true;
+    console.log(`    nullable patch: ${fieldName}`);
+  }
+
+  if (patched) writeFileSync(zodGenPath, lines.join('\n'));
+}
+
+/**
  * Main generation function
  */
 async function main() {
@@ -295,6 +398,15 @@ async function main() {
     // Generate client using @hey-api/openapi-ts
     await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: outputDir });
 
+    // Post-process: add .nullable() to fields the generator missed.
+    // @hey-api/openapi-ts does not translate nullable: true on allOf-wrapped $ref
+    // fields to Zod .nullable() — this patch reads it from the resolved spec.
+    const zodGenPath = join(domainOutputDir, 'zod.gen.ts');
+    if (existsSync(zodGenPath)) {
+      const nullableFields = collectNullableFieldNames(specsDir);
+      if (nullableFields.size > 0) patchZodGenForNullable(zodGenPath, nullableFields);
+    }
+
     // Post-process: Remove unused @ts-expect-error directives
     const clientGenPath = join(domainOutputDir, 'client', 'client.gen.ts');
     if (existsSync(clientGenPath)) {
@@ -344,7 +456,7 @@ async function main() {
 }
 
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable };
 
 // Run main function only if this is the entry point
 if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {

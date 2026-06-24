@@ -263,6 +263,7 @@ compliance dashboard use case emerges that needs a live annotation query, an
 | 6 | [Citation URL](#decision-6-citation-url) | Optional `citationUrl` alongside the display `citation` string |
 | 7 | [dataClassification vocabulary](#decision-7-dataclassification-vocabulary) | Extensible baseline vocabulary; baseline values schema-enforced, states can extend |
 | 8 | [programs property and strength](#decision-8-programs-property-and-strength) | Renamed from `requiredForPrograms`; map form with per-program strength; shorthand defaults to `required` |
+| 9 | [Annotation filtering is a client-side concern](#decision-9-annotation-filtering-is-a-client-side-concern) | Consumers filter by annotation dimension using the TypeScript annotation export; no server-side annotation filter parameter. |
 
 ---
 
@@ -564,3 +565,21 @@ to validate program IDs against the registry, the same way it validates policy I
 - **(B)** ✓ `programs` as map with per-program strength; shorthand array defaults to `required`.
   Aligns with FHIR binding strength and ServiceNow mandatory/advisory distinction.
 
+---
+
+### Decision 9: Annotation filtering is a client-side concern
+
+**Status:** Decided: B
+
+**What's being decided:** Whether filtering by annotation dimension (e.g. showing only elements relevant to a given program) should be handled server-side via a query parameter, or by consumers using the annotation export.
+
+**Considerations:**
+- Annotation metadata is static — `programs: [snap, medicaid]` on a schema element never changes between requests or callers. A server-side filter on static metadata adds no efficiency over client-side filtering.
+- The TypeScript annotation export gives consumers direct access to annotation data. Filtering on it is a local operation against data already in scope.
+- Authorization-level data access (FTI, PHI) is governed by access control at the resource level — not annotation-based filtering in the API layer.
+
+**Options:**
+- **(A)** Server-side annotation filter parameter — query param resolved against the annotation file at request time
+- **(B) ✓** Client-side filtering using the TypeScript annotation export — no server-side annotation filter parameter
+
+**Decision:** B. Consumers filter using the TypeScript annotation export. Annotation metadata is static; server-side filtering adds no value and duplicates logic the client already has.

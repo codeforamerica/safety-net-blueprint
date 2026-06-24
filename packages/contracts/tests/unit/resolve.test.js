@@ -317,6 +317,105 @@ test('resolve-overlay tests', async (t) => {
   });
 
   // ===========================================================================
+  // add: action — file matching uses parent path
+  // ===========================================================================
+
+  await t.test('add: action matches file via parent path when target key does not exist', () => {
+    // The target $.compositions.applicationReview.include does not exist, but
+    // $.compositions.applicationReview does. analyzeTargetLocations should use
+    // the parent path so the file is matched and the action is applied.
+    const yamlFiles = [
+      {
+        relativePath: 'intake-compositions.yaml',
+        spec: {
+          compositions: {
+            applicationReview: {
+              compositeType: 'sectionView',
+              resource: 'applications',
+            },
+          },
+        },
+      },
+    ];
+
+    const overlay = {
+      actions: [
+        {
+          target: '$.compositions.applicationReview.include',
+          file: 'intake-compositions.yaml',
+          description: 'Add root-level include',
+          add: { members: { resource: 'application-members', bind: 'applicationId' } },
+        },
+      ],
+    };
+
+    const actionFileMap = analyzeTargetLocations(overlay, yamlFiles);
+    const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+
+    assert.strictEqual(warnings.length, 0);
+    assert.deepStrictEqual(actionTargets.get(0), ['intake-compositions.yaml']);
+  });
+
+  await t.test('add: action with explicit file warns when parent path does not exist in that file', () => {
+    const yamlFiles = [
+      {
+        relativePath: 'intake-compositions.yaml',
+        spec: { compositions: {} },
+      },
+    ];
+
+    const overlay = {
+      actions: [
+        {
+          target: '$.compositions.nonExistent.include',
+          file: 'intake-compositions.yaml',
+          description: 'Bad parent path',
+          add: { members: {} },
+        },
+      ],
+    };
+
+    const actionFileMap = analyzeTargetLocations(overlay, yamlFiles);
+    const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+
+    assert.ok(warnings.length > 0);
+    assert.deepStrictEqual(actionTargets.get(0), []);
+  });
+
+  await t.test('add: action auto-resolves to single file via parent path', () => {
+    const yamlFiles = [
+      {
+        relativePath: 'intake-compositions.yaml',
+        spec: {
+          compositions: {
+            applicationReview: { compositeType: 'sectionView' },
+          },
+        },
+      },
+      {
+        relativePath: 'other.yaml',
+        spec: { something: { else: true } },
+      },
+    ];
+
+    const overlay = {
+      actions: [
+        {
+          target: '$.compositions.applicationReview.newKey',
+          description: 'Add new key without explicit file',
+          add: { value: 42 },
+        },
+      ],
+    };
+
+    const actionFileMap = analyzeTargetLocations(overlay, yamlFiles);
+    const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+
+    assert.strictEqual(warnings.length, 0);
+    assert.deepStrictEqual(actionTargets.get(0), ['intake-compositions.yaml']);
+  });
+
+  // ===========================================================================
   // filterByEnvironment
   // ===========================================================================
 
@@ -712,15 +811,18 @@ test('resolve-overlay tests', async (t) => {
         }]
       });
 
-      // Collect yaml files the same way resolve.js does
       const yamlFiles = [
         {
           relativePath: 'test-openapi.yaml',
           spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+        },
+        {
+          relativePath: 'test-state-machine.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-state-machine.yaml'), 'utf8'))
         }
       ];
 
-      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+      const rpcOverlays = generateRpcOverlays(yamlFiles);
 
       assert.strictEqual(rpcOverlays.length, 1);
 
@@ -786,10 +888,14 @@ test('resolve-overlay tests', async (t) => {
         {
           relativePath: 'test-openapi.yaml',
           spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+        },
+        {
+          relativePath: 'test-state-machine.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-state-machine.yaml'), 'utf8'))
         }
       ];
 
-      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+      const rpcOverlays = generateRpcOverlays(yamlFiles);
       assert.strictEqual(rpcOverlays.length, 1);
 
       // Now apply the overlay through the full pipeline
@@ -849,15 +955,9 @@ test('resolve-overlay tests', async (t) => {
   });
 
   await t.test('generateRpcOverlays - returns empty when no state machines exist', () => {
-    const dir = createTmpDir();
-    try {
-      writeYaml(dir, 'test-openapi.yaml', { openapi: '3.1.0', info: { title: 'Test' } });
-      const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { openapi: '3.1.0' } }];
-      const result = generateRpcOverlays(dir, yamlFiles);
-      assert.strictEqual(result.length, 0);
-    } finally {
-      rmSync(dir, { recursive: true });
-    }
+    const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: { openapi: '3.1.0' } }];
+    const result = generateRpcOverlays(yamlFiles);
+    assert.strictEqual(result.length, 0);
   });
 
   await t.test('generateRpcOverlays - rewrites $ref prefix when spec uses non-default prefix', () => {
@@ -902,12 +1002,18 @@ test('resolve-overlay tests', async (t) => {
         }]
       });
 
-      const yamlFiles = [{
-        relativePath: 'test-openapi.yaml',
-        spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
-      }];
+      const yamlFiles = [
+        {
+          relativePath: 'test-openapi.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-openapi.yaml'), 'utf8'))
+        },
+        {
+          relativePath: 'test-state-machine.yaml',
+          spec: yaml.load(readFileSync(join(dir, 'test-state-machine.yaml'), 'utf8'))
+        }
+      ];
 
-      const rpcOverlays = generateRpcOverlays(dir, yamlFiles);
+      const rpcOverlays = generateRpcOverlays(yamlFiles);
       const { overlay } = rpcOverlays[0];
 
       // Response $refs should use the detected prefix, not ./

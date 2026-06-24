@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { deriveCollectionName, mergeByPrecedence } from '../../src/collection-utils.js';
+import { deriveCollectionName, mergeByPrecedence, resolveDotPath } from '../../src/collection-utils.js';
 
 // =============================================================================
 // mergeByPrecedence
@@ -86,10 +86,42 @@ test('deriveCollectionName — sub-collection prefixed with parent singular', ()
   assert.strictEqual(deriveCollectionName('/applications/{id}/documents', '/intake'), 'application-documents');
 });
 
-test('deriveCollectionName — singleton sub-resource pluralized', () => {
-  assert.strictEqual(deriveCollectionName('/applications/{id}/interview', '/intake'), 'interviews');
+test('deriveCollectionName — singleton sub-resource kept as-is', () => {
+  assert.strictEqual(deriveCollectionName('/applications/{id}/interview', '/intake'), 'interview');
 });
 
 test('deriveCollectionName — entity path without leading slash', () => {
   assert.strictEqual(deriveCollectionName('intake/applications/documents', 'intake'), 'application-documents');
+});
+
+// =============================================================================
+// resolveDotPath
+// =============================================================================
+
+test('resolveDotPath — simple top-level key', () => {
+  assert.strictEqual(resolveDotPath({ a: 1 }, 'a'), 1);
+});
+
+test('resolveDotPath — nested dot path', () => {
+  assert.strictEqual(resolveDotPath({ a: { b: { c: 42 } } }, 'a.b.c'), 42);
+});
+
+test('resolveDotPath — returns null for missing key', () => {
+  assert.strictEqual(resolveDotPath({ a: 1 }, 'b'), null);
+});
+
+test('resolveDotPath — returns null for missing nested key', () => {
+  assert.strictEqual(resolveDotPath({ a: { b: 1 } }, 'a.c'), null);
+});
+
+test('resolveDotPath — bracket notation normalized to dots', () => {
+  assert.strictEqual(resolveDotPath({ a: [10, 20] }, 'a[1]'), 20);
+});
+
+test('resolveDotPath — null object returns null', () => {
+  assert.strictEqual(resolveDotPath(null, 'a'), null);
+});
+
+test('resolveDotPath — empty path returns null', () => {
+  assert.strictEqual(resolveDotPath({ a: 1 }, ''), null);
 });

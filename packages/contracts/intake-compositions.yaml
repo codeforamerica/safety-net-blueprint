@@ -1,0 +1,156 @@
+# Declarative resource composition definitions for the intake domain.
+# Validated against schemas/compositions-schema.yaml.
+# Cross-artifact semantic checks (bind field resolution, resource existence)
+# are performed by the resolve pipeline.
+
+$schema: "./schemas/compositions-schema.yaml"
+version: "1.0"
+domain: intake
+
+compositions:
+
+  # review — sectionView composite for the caseworker application review workflow.
+  #
+  # Replaces the hand-authored ReviewContext schema and review-context endpoint.
+  # Produces:
+  #   GET  /applications/{applicationId}/review              — section index
+  #   GET  /applications/{applicationId}/review/{section}    — panel (section + shared panel nodes)
+  #   GET  /applications/{applicationId}/review-progress/{section}   — review progress state
+  #   PUT  /applications/{applicationId}/review-progress/{section}   — replace review progress state
+  #   PATCH /applications/{applicationId}/review-progress/{section}  — partial update
+  #
+  # Section taxonomy matches the ReviewSection enum in intake-openapi.yaml.
+  # Member-scoped sections: demographics, identity, income, employment, health-coverage
+  # Household-level sections: assets, contact, expenses, household
+
+  applicationReview:
+    compositeType: sectionView
+    resource: applications
+    fields: [programs, status]
+    include:
+      members:
+        resource: application-members
+        bind: applicationId
+        fields: [id, firstName, lastName, relationshipToHead]
+    endpoint:
+      path: /applications/{applicationId}/review
+      parentLink: true
+    state:
+      schema:
+        name: ReviewProgress
+        type: object
+        additionalProperties: false
+        properties:
+          status:
+            type: string
+            description: >
+              Caseworker review status for this section. Initialized to not_started
+              when the application transitions to under_review.
+            enum:
+              - not_started
+              - in_progress
+              - complete
+              - flagged
+            default: not_started
+          notes:
+            type: object
+            nullable: true
+            additionalProperties: true
+            description: >
+              Caseworker notes for this review section. Updated via PATCH on the
+              section state endpoint. additionalProperties: true allows states to
+              extend with visibility controls, note types, or other fields via overlay.
+            properties:
+              text:
+                type: string
+                description: Note content.
+              textFormat:
+                type: string
+                enum: [plain, markdown, html]
+                default: plain
+                description: >
+                  Rendering format for the note text. plain: literal text.
+                  markdown: rendered as Markdown. html: rendered as HTML.
+      methods: [put, patch]
+    sections:
+
+      # Member-scoped sections — one review-progress entry per member × section
+
+      demographics:
+        resource: application-members
+        bind: applicationId
+        links: true
+        index:
+          filter: "roles.contains('primary_applicant')"
+          fields: [id, firstName, lastName, dateOfBirth, relationshipToHead]
+
+      identity:
+        resource: application-members
+        bind: applicationId
+        include:
+          verifications:
+            resource: verifications
+            bind: applicationId
+            filter: "category == 'identity'"
+        index:
+          filter: "roles.contains('primary_applicant')"
+          fields: [id, firstName, lastName, citizenshipStatus, immigrationStatus]
+
+      income:
+        resource: member-incomes
+        bind: applicationId
+        sortable:
+          fields: [memberId, type, amount, frequency]
+          default: -amount
+        index:
+          fields: [id, memberId, type, amount, frequency]
+
+      employment:
+        resource: member-employment-records
+        bind: applicationId
+        index:
+          fields: [id, memberId, status, jobTitle]
+
+      health-coverage:
+        resource: member-health-coverages
+        bind: applicationId
+        index:
+          fields: [id, memberId, coverageType, planName]
+
+      # Household-level sections — one review-progress entry per section (no memberId)
+
+      assets:
+        resource: member-assets
+        bind: applicationId
+        index:
+          fields: [id, memberId, type, value]
+
+      contact:
+        resource: application-members
+        bind: applicationId
+        fields: [id, firstName, lastName, phoneNumber, email, preferredLanguage, preferredContactMethod]
+        index:
+          filter: "roles.contains('primary_applicant')"
+          fields: [id, firstName, lastName, phoneNumber, email]
+
+      expenses:
+        resource: member-expenses
+        bind: applicationId
+        index:
+          fields: [id, memberId, category, amount, frequency]
+
+      household:
+        resource: household-info
+        bind: applicationId
+        missing: empty
+        index:
+          fields: [id, size]
+
+    # Panel nodes — included in every section panel response alongside the section's resource
+    panel:
+      include:
+        verifications:
+          resource: verifications
+          bind: applicationId
+          filter: "category == $section.name"
+

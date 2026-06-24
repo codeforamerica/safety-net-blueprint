@@ -5,7 +5,8 @@
  */
 
 import jsonLogic from 'json-logic-js';
-import { deriveCollectionName } from './collection-utils.js';
+import { evaluateCEL as _evaluateCEL } from './cel-evaluator.js';
+import { deriveCollectionName, resolveDotPath } from './collection-utils.js';
 import { findAll, findById } from './database-manager.js';
 import { resolveTimeToken } from './time-tokens.js';
 
@@ -91,18 +92,6 @@ export function resolveValue(value, context) {
   return value;
 }
 
-/**
- * Resolve a dot-notation path against an object.
- * Supports bracket notation for array indexing (e.g., "data.candidates[0].personId").
- * @param {*} obj - The object to traverse
- * @param {string} path - Dot-notation path, optionally with [n] array indexes
- * @returns {*} Resolved value, or null if any segment is missing
- */
-function resolveDotPath(obj, path) {
-  if (obj == null || !path) return null;
-  const normalized = path.replace(/\[(\d+)\]/g, '.$1');
-  return normalized.split('.').reduce((cur, key) => (cur == null ? null : cur[key]), obj) ?? null;
-}
 
 /**
  * Interpolate {alias.field} template expressions in a path string.
@@ -197,57 +186,28 @@ function resolveBodyValue(val, context) {
 function evaluateCEL(condition, celData) {
   if (!condition || typeof condition !== 'string') return true;
 
-  // Build a simple evaluation context
-  // Replace $-prefixed variables with plain ones for JS eval
-  // CEL in guards uses caller.roles, object.field (no $ prefix)
-  // CEL in procedures/steps uses $caller.*, $object.*, etc.
+  // Build a flat context from the structured celData argument.
+  // Note: 'this' is omitted — it is a reserved word and breaks new Function(); use $this instead.
+  const ctx = {
+    caller: celData.caller || {},
+    object: celData.object || {},
+    request: celData.request || {},
+    params: celData.params || {},
+    $caller: celData.caller || {},
+    $object: celData.object || {},
+    $request: celData.request || {},
+    $this: celData.this || {},
+    $params: celData.params || {},
+    $now: celData.now || new Date().toISOString(),
+  };
 
-  try {
-    // Build context object accessible in eval
-    // Note: 'this' is omitted — it is a reserved word and breaks new Function(); use $this instead
-    const ctx = {
-      caller: celData.caller || {},
-      object: celData.object || {},
-      request: celData.request || {},
-      params: celData.params || {},
-      ...Object.fromEntries(
-        Object.entries(celData.entities || {}).map(([k, v]) => [`$${k}`, v])
-      ),
-      $caller: celData.caller || {},
-      $object: celData.object || {},
-      $request: celData.request || {},
-      $this: celData.this || {},
-      $params: celData.params || {},
-      $now: celData.now || new Date().toISOString(),
-    };
-
-    // Add entity aliases with $ prefix
-    for (const [alias, entity] of Object.entries(celData.entities || {})) {
-      ctx[`$${alias}`] = entity;
-    }
-
-    // CEL .size() → .length for JS arrays/strings
-    // CEL 'x in arr' → arr.includes(x) for arrays
-    // We do a lightweight transform for common patterns
-    let jsExpr = condition
-      // Replace .size() with .length
-      .replace(/\.size\(\)/g, '.length')
-      // Replace CEL '"literal" in arr' with arr.includes("literal")
-      .replace(/"([^"]+)"\s+in\s+([\w$\.]+)/g, '(Array.isArray($2) ? $2.includes("$1") : false)')
-      // Replace CEL '$var in arr' with arr.includes($var) — handles variable LHS
-      .replace(/([\$][\w$.]+)\s+in\s+([\$][\w$.]+)/g, '(Array.isArray($2) ? $2.includes($1) : false)')
-      // Replace CEL list.exists(var, predicate) with list.some(var => (predicate))
-      .replace(/\.exists\((\w+),\s*([^)]+(?:\([^)]*\)[^)]*)*)\)/g, '.some($1 => ($2))')
-      // Replace bare variable references (no prefix) to ctx.variable
-      .replace(/\bnull\b/g, 'null');
-
-    // Use Function constructor for safer eval than global eval
-    const fn = new Function(...Object.keys(ctx), `return (${jsExpr});`);
-    return Boolean(fn(...Object.values(ctx)));
-  } catch (e) {
-    console.warn(`CEL evaluation error for condition "${condition}": ${e.message} — defaulting to false`);
-    return false;
+  // Add entity aliases with $ prefix
+  for (const [alias, entity] of Object.entries(celData.entities || {})) {
+    ctx[`$${alias}`] = entity;
   }
+
+  const result = _evaluateCEL(condition, ctx);
+  return result !== undefined ? Boolean(result) : false;
 }
 
 /**

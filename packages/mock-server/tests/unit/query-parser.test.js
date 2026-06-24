@@ -428,13 +428,15 @@ function runTests() {
   test('full pipeline: q=john status:active -deleted:*', () => {
     const q = 'john status:active -deleted:*';
     const tokens = parseQueryString(q);
+    // searchableFields = ['name', 'email']: 'status' and 'deleted' are not in
+    // the allowlist and must be blocked to prevent JSON path injection.
+    // Full-text tokens (field === null) always pass through.
     const { whereClauses, params } = tokensToSqlConditions(tokens, ['name', 'email']);
 
     assertEqual(tokens.length, 3);
-    assertEqual(whereClauses.length, 3);
-    // Full-text match uses json_tree — one param for the search value
+    assertEqual(whereClauses.length, 1);
+    // Only the full-text 'john' term produces a clause
     assertEqual(params[0], 'john');
-    assertEqual(params[1], 'active');
   });
 
   test('full pipeline: q=programs:snap,tanf state:TX,CA', () => {

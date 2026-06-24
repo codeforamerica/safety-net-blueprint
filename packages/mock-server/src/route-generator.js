@@ -15,9 +15,11 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
+import { generateStateSchemas } from '@codeforamerica/safety-net-blueprint-contracts/compositions';
+import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
-import { deriveCollectionName } from './collection-utils.js';
+import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam } from './collection-utils.js';
 import { randomUUID } from 'node:crypto';
 
 /**
@@ -57,29 +59,6 @@ function isSubItemEndpoint(path) {
   return path.trimEnd().endsWith('}') && params.length > 1;
 }
 
-/**
- * Determine whether a sub-resource endpoint is a singleton (singular last segment)
- * vs. a sub-collection (plural last segment ending in 's').
- * Convention: collections use plural names; singletons use singular.
- * e.g., /applications/{applicationId}/interview → singleton (singular)
- *       /applications/{applicationId}/documents → collection (plural)
- */
-function isSingletonSubResource(path) {
-  const segments = path.split('/').filter(s => s && !s.startsWith('{'));
-  const lastSegment = segments[segments.length - 1];
-  return Boolean(lastSegment && !lastSegment.endsWith('s'));
-}
-
-/**
- * Extract the immediate parent path parameter name from a sub-resource path.
- * Uses the last {param} in the path, which is the direct parent's ID.
- * e.g., /intake/applications/{applicationId}/documents → 'applicationId'
- * e.g., /intake/applications/{applicationId}/members/{memberId}/incomes → 'memberId'
- */
-function extractParentParam(path) {
-  const matches = [...path.matchAll(/\{([^}]+)\}/g)];
-  return matches.length > 0 ? matches[matches.length - 1][1] : null;
-}
 
 /**
  * Derive the parent collection name from a sub-resource path.
@@ -241,46 +220,6 @@ export function extractRequiredDefaults(responseSchema) {
 }
 
 /**
- * Create a composite handler for GET /applications/{applicationId}/review-context.
- * Assembles application, household, all members with their sub-resources,
- * review-progress entries, and notes into a single response.
- */
-function createReviewContextHandler() {
-  return (req, res) => {
-    try {
-      const { applicationId } = req.params;
-
-      const application = findById('applications', applicationId);
-      if (!application) {
-        return res.status(404).json({ code: 'NOT_FOUND', message: 'Application not found' });
-      }
-
-      const { items: householdItems } = findAll('household-infos', { applicationId }, { limit: 1 });
-      const household = householdItems.length > 0 ? householdItems[0] : null;
-
-      const { items: members } = findAll('application-members', { applicationId }, { limit: 1000 });
-      const enrichedMembers = members.map(member => {
-        const memberId = member.id;
-        const { items: incomes } = findAll('member-incomes', { memberId }, { limit: 1000 });
-        const { items: expenses } = findAll('member-expenses', { memberId }, { limit: 1000 });
-        const { items: assets } = findAll('member-assets', { memberId }, { limit: 1000 });
-        const { items: employmentRecords } = findAll('member-employment-records', { memberId }, { limit: 1000 });
-        const { items: healthCoverages } = findAll('member-health-coverages', { memberId }, { limit: 1000 });
-        return { ...member, incomes, expenses, assets, employmentRecords, healthCoverages };
-      });
-
-      const { items: reviewProgress } = findAll('application-review-progress', { applicationId }, { limit: 1000 });
-      const { items: notes } = findAll('application-notes', { applicationId }, { limit: 1000 });
-
-      res.json({ application, householdInfo: household, members: enrichedMembers, reviewProgress, notes });
-    } catch (error) {
-      console.error('Review context handler error:', error);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-    }
-  };
-}
-
-/**
  * Register routes for an API specification
  * @param {Object} app - Express app
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
@@ -326,15 +265,6 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       registeredEndpoints.push({ method: 'GET', path: expressPath, description: 'Get document version file content' });
       console.log(`    GET    ${expressPath} - Get document version file content`);
       continue;
-    } else if (endpoint.operationId === 'getApplicationReviewContext') {
-      handler = createReviewContextHandler();
-      description = 'Get application review context (composite view)';
-      // Read-only endpoint — pre-register 405 for write methods before the global 404 handler
-      for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
-        app[writeMethod](expressPath, (req, res) => {
-          res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
-        });
-      }
     } else if (endpoint.operationId === 'search') {
       // Cross-resource search endpoint — custom handler
       handler = createSearchHandler(apiMetadata);
@@ -367,7 +297,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
     } else if (isSubResourceEndpoint(endpoint.path)) {
       // Sub-resource endpoint: /resources/{parentId}/sub or /resources/{parentId}/sub/{subId}
       // Last path segment is a literal (not a {param}).
-      const parentParam = extractParentParam(endpoint.path);
+      const parentParam = extractPrimaryParam(endpoint.path);
       const parentField = parentParam; // URL param name == field name on the sub-resource
       if (isSingletonSubResource(endpoint.path)) {
         // Singleton: at most one child per parent (e.g., /applications/{applicationId}/interview)
@@ -532,6 +462,326 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
 
   console.log('✓ All routes registered\n');
   return allEndpoints;
+}
+
+/**
+ * Build a map from resource collection name to the OpenAPI item path pattern.
+ * Used to generate _links.self URLs for items when a section declares links: true.
+ *
+ * e.g. "application-members" → "/applications/{applicationId}/members/{memberId}"
+ *
+ * @param {Array} apiSpecs - Array of API metadata objects from loadAllSpecs()
+ * @returns {Map<string, string>}
+ */
+function buildResourceItemPathMap(apiSpecs) {
+  const map = new Map();
+  for (const spec of apiSpecs) {
+    for (const endpoint of (spec.endpoints || [])) {
+      if (endpoint.method.toLowerCase() !== 'get') continue;
+      if (!endpoint.path.trimEnd().endsWith('}')) continue;
+      const collectionName = deriveCollectionName(endpoint.path, spec.serverBasePath || '');
+      if (collectionName && !map.has(collectionName)) {
+        map.set(collectionName, endpoint.path);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Register routes for all discovered composition files.
+ *
+ * For each sectionView composition that declares an endpoint, registers:
+ *   GET {endpoint.path}           — section index (list of section names + hrefs)
+ *   GET {endpoint.path}/:section  — section panel (primary items + includes)
+ *
+ * @param {Object} app - Express app
+ * @param {Array} compositionFiles - Array from discoverCompositions()
+ * @param {Array} apiSpecs - Array of API metadata (used to resolve domain base paths)
+ * @returns {Array} Registered endpoint info
+ */
+export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs = []) {
+  const registeredEndpoints = [];
+  const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
+
+  for (const { domain, doc, filePath } of compositionFiles) {
+    // Look up the server base path for this domain (e.g. "/intake" for the intake domain)
+    const apiSpec = apiSpecs.find(s => s.name === domain);
+    const basePath = apiSpec?.serverBasePath ?? '';
+
+    for (const [compositionName, composition] of Object.entries(doc.compositions || {})) {
+      const endpointPath = composition.endpoint?.path;
+      if (!endpointPath) continue;
+
+      const fullPath = basePath && !endpointPath.startsWith(basePath)
+        ? `${basePath}${endpointPath}`
+        : endpointPath;
+
+      const indexExpressPath = toExpressPath(fullPath);
+      const panelExpressPath = `${indexExpressPath}/:section`;
+      const primaryParam = extractPrimaryParam(endpointPath);
+
+      // parentLink: true — register the parent resource path so get-handler
+      // can inject _links.{compositionName} into parent GET by ID responses.
+      // Uses fullPath (with server base) because endpoint.path in the loaded
+      // apiSpecs includes the server base prefix.
+      if (composition.endpoint?.parentLink) {
+        const parentFullPath = fullPath.replace(/\/[^/]+$/, '');
+        registerParentLink(parentFullPath, compositionName, fullPath);
+      }
+
+      // Merge doc-level derives so the assembler can resolve $ref expressions in views and derive fields
+      const compositionWithDoc = {
+        ...composition,
+        derives: doc.derives || {},
+      };
+
+      // Seed state schemas into apiSpec.schemas so loadStateDefaults can read defaults.
+      // Only fills in schemas not already present — overlay-applied versions in the
+      // resolved spec take precedence over the generated baseline.
+      if (composition.state && apiSpec?.schemas) {
+        const generated = generateStateSchemas(composition.state);
+        for (const [key, schema] of Object.entries(generated)) {
+          if (!(key in apiSpec.schemas)) {
+            apiSpec.schemas[key] = schema;
+          }
+        }
+      }
+
+      // Load state defaults from the generated OpenAPI schema (empty if no state declared)
+      const stateDefaults = loadStateDefaults(composition.state, apiSpec);
+
+      const paginationDefaults = apiSpec?.pagination || {};
+      const assemblerOpts = { resourceItemPathMap, serverBasePath: basePath };
+
+      if (composition.compositeType === 'sectionView') {
+        // Section index
+        app.get(indexExpressPath, (req, res) => {
+          try {
+            const parentId = primaryParam ? req.params[primaryParam] : null;
+            if (parentId && !findById(composition.resource, parentId)) {
+              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
+            }
+            res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, assemblerOpts));
+          } catch (error) {
+            console.error('Composition index handler error:', error);
+            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+          }
+        });
+
+        // Section panel — passes query params through so assembleSectionPanel can
+        // apply q= filtering and limit/offset pagination on the assembled items.
+        app.get(panelExpressPath, (req, res) => {
+          try {
+            const parentId = primaryParam ? req.params[primaryParam] : null;
+            if (parentId && !findById(composition.resource, parentId)) {
+              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
+            }
+            const panelOpts = { ...assemblerOpts, queryParams: req.query, paginationDefaults };
+            const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, panelOpts);
+            if (!panel) {
+              return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
+            }
+            if (panel.error) {
+              const details = panel.error.field !== undefined ? [{ field: panel.error.field, message: panel.error.message }] : [];
+              return res.status(400).json({ code: panel.error.code, message: panel.error.message, details });
+            }
+            res.json(panel);
+          } catch (error) {
+            console.error('Composition panel handler error:', error);
+            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+          }
+        });
+
+        // Pre-register 405 for write methods on the index endpoint
+        for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
+          app[writeMethod](indexExpressPath, (req, res) => {
+            res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
+          });
+        }
+
+        console.log(`    GET    ${indexExpressPath} - ${compositionName} section index`);
+        console.log(`    GET    ${panelExpressPath} - ${compositionName} section panel`);
+
+        registeredEndpoints.push(
+          { method: 'GET', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} section index` },
+          { method: 'GET', path: `${fullPath}/:section`, expressPath: panelExpressPath, description: `${compositionName} section panel` }
+        );
+      } else {
+        // Plain composition — single GET endpoint returning the root resource record
+        app.get(indexExpressPath, (req, res) => {
+          try {
+            const result = assemblePlainComposition(compositionWithDoc, req.params, assemblerOpts);
+            if (!result) {
+              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} not found` });
+            }
+            res.json(result);
+          } catch (error) {
+            console.error('Plain composition handler error:', error);
+            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+          }
+        });
+
+        // Pre-register 405 for write methods
+        for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
+          app[writeMethod](indexExpressPath, (req, res) => {
+            res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
+          });
+        }
+
+        console.log(`    GET    ${indexExpressPath} - ${compositionName} plain composition`);
+
+        registeredEndpoints.push(
+          { method: 'GET', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} plain composition` }
+        );
+      }
+
+      // Register state resource routes if the composition declares state:
+      if (composition.state) {
+        const stateInfo = deriveStateResource(composition.state, endpointPath, basePath);
+        if (stateInfo) {
+          const stateEndpoints = registerStateRoutes(
+            app, composition, compositionName, stateInfo, stateDefaults,
+            endpointPath, fullPath, basePath
+          );
+          registeredEndpoints.push(...stateEndpoints);
+        }
+      }
+    }
+  }
+
+  return registeredEndpoints;
+}
+
+/**
+ * Load default field values for the state resource from the generated OpenAPI writable schema.
+ * generateStateSchemas merges {Name}Writable into apiSpec.schemas before this is called,
+ * so apiSpec.schemas reflects the resolved composition state schema with defaults.
+ *
+ * @param {Object|undefined} stateConfig - composition.state
+ * @param {Object|undefined} apiSpec - Loaded API spec metadata ({ schemas, ... })
+ * @returns {Object} Map of field name → default value (empty if no defaults or schema not found)
+ */
+function loadStateDefaults(stateConfig, apiSpec) {
+  const name = stateConfig?.schema?.name;
+  if (!name || !apiSpec?.schemas) return {};
+
+  const writableSchemaName = `${name}Writable`;
+  const schema = apiSpec.schemas[writableSchemaName];
+  if (!schema?.properties) return {};
+
+  const defaults = {};
+  for (const [field, def] of Object.entries(schema.properties)) {
+    if (def.default !== undefined) defaults[field] = def.default;
+  }
+  return defaults;
+}
+
+/**
+ * Register GET/PUT/PATCH routes for a composition state resource.
+ *
+ * Generates endpoints at:
+ *   GET    {stateBasePath}/{section}          — paginated list of state records for that section
+ *   GET    {stateBasePath}/{section}/{itemId} — single state record (collection-backed sections)
+ *   PUT    {stateBasePath}/{section}          — replace state (singleton sections)
+ *   PATCH  {stateBasePath}/{section}          — partial update (singleton sections)
+ *   PUT    {stateBasePath}/{section}/{itemId} — replace state for a collection item
+ *   PATCH  {stateBasePath}/{section}/{itemId} — partial update for a collection item
+ *
+ * @param {Object} app - Express app
+ * @param {Object} composition - Composition definition
+ * @param {string} compositionName - Key name for the composition
+ * @param {{ defsKey: string, pathSegment: string, collectionName: string, camelKey: string }} stateInfo
+ * @param {Object} stateDefaults - Default field values from companion schema
+ * @param {string} endpointPath - OpenAPI-style endpoint path (e.g. /applications/{applicationId}/review)
+ * @param {string} fullPath - Absolute path including server base (e.g. /intake/applications/{applicationId}/review)
+ * @param {string} basePath - Server base path (e.g. /intake)
+ * @returns {Array} Registered endpoint descriptors
+ */
+function registerStateRoutes(app, composition, compositionName, stateInfo, stateDefaults, endpointPath, fullPath, basePath) {
+  const bindParam = extractPrimaryParam(endpointPath);
+  if (!bindParam) return [];
+
+  // Derive the parent base path: strip the last path segment from the composition endpoint
+  // e.g. /applications/{applicationId}/review → /applications/{applicationId}
+  const parentBase = endpointPath.replace(/\/[^/]+$/, '');
+  const stateResourcePath = `${parentBase}/${stateInfo.pathSegment}`;
+  const stateFullPath = basePath && !stateResourcePath.startsWith(basePath)
+    ? `${basePath}${stateResourcePath}`
+    : stateResourcePath;
+
+  const stateExpressBase = toExpressPath(stateFullPath);
+  const sectionPath = `${stateExpressBase}/:section`;
+  const itemPath = `${stateExpressBase}/:section/:itemId`;
+
+  const internalError = (res, error) => {
+    console.error('Composition state handler error:', error);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+  };
+
+  // GET /{section} — paginated list of state records for that section
+  app.get(sectionPath, (req, res) => {
+    try {
+      const parent = findById(composition.resource, req.params[bindParam]);
+      if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
+
+      const limit = Math.min(parseInt(req.query.limit) || 25, 1000);
+      const offset = parseInt(req.query.offset) || 0;
+      const result = listStateRecords(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, { limit, offset });
+      res.json(result);
+    } catch (error) { internalError(res, error); }
+  });
+
+  // GET /{section}/{itemId} — single state record
+  app.get(itemPath, (req, res) => {
+    try {
+      const record = findStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, req.params.itemId);
+      if (!record) return res.status(404).json({ code: 'NOT_FOUND', message: 'State record not found' });
+      res.json(record);
+    } catch (error) { internalError(res, error); }
+  });
+
+  // PUT/PATCH /{section} — singleton write
+  for (const method of ['put', 'patch']) {
+    app[method](sectionPath, (req, res) => {
+      try {
+        const parent = findById(composition.resource, req.params[bindParam]);
+        if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
+        const body = method === 'put' ? { ...stateDefaults, ...req.body } : req.body;
+        const record = upsertStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, null, body);
+        res.json(record);
+      } catch (error) { internalError(res, error); }
+    });
+  }
+
+  // PUT/PATCH /{section}/{itemId} — collection item write
+  for (const method of ['put', 'patch']) {
+    app[method](itemPath, (req, res) => {
+      try {
+        const parent = findById(composition.resource, req.params[bindParam]);
+        if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
+        const body = method === 'put' ? { ...stateDefaults, ...req.body } : req.body;
+        const record = upsertStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, req.params.itemId, body);
+        res.json(record);
+      } catch (error) { internalError(res, error); }
+    });
+  }
+
+  console.log(`    GET    ${sectionPath} - ${compositionName} state list`);
+  console.log(`    GET    ${itemPath} - ${compositionName} state item`);
+  console.log(`    PUT    ${sectionPath} - ${compositionName} state replace`);
+  console.log(`    PATCH  ${sectionPath} - ${compositionName} state update`);
+  console.log(`    PUT    ${itemPath} - ${compositionName} state item replace`);
+  console.log(`    PATCH  ${itemPath} - ${compositionName} state item update`);
+
+  return [
+    { method: 'GET',   path: `${stateFullPath}/{section}`,          expressPath: sectionPath, description: `${compositionName} state list` },
+    { method: 'GET',   path: `${stateFullPath}/{section}/{itemId}`,  expressPath: itemPath,    description: `${compositionName} state item` },
+    { method: 'PUT',   path: `${stateFullPath}/{section}`,          expressPath: sectionPath, description: `${compositionName} state replace` },
+    { method: 'PATCH', path: `${stateFullPath}/{section}`,          expressPath: sectionPath, description: `${compositionName} state update` },
+    { method: 'PUT',   path: `${stateFullPath}/{section}/{itemId}`,  expressPath: itemPath,    description: `${compositionName} state item replace` },
+    { method: 'PATCH', path: `${stateFullPath}/{section}/{itemId}`,  expressPath: itemPath,    description: `${compositionName} state item update` },
+  ];
 }
 
 /**

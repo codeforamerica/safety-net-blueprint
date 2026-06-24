@@ -94,6 +94,58 @@ Add items to an existing array without replacing the baseline items. This is a c
 
 Use `append:` when you want to extend the baseline. Use `update:` when you want to replace the array entirely.
 
+### Add a New Key
+
+Create a new key at a path that must not already exist. Unlike `update:`, `add:` is a strict create — it warns and skips rather than overwriting if the key is present. The primary use case is composition overlays, where you want an accidental collision with a baseline key to produce a warning rather than a silent clobber.
+
+**Add a new top-level composition:**
+```yaml
+- target: $.compositions.fosterCareHistory
+  description: Add a California-specific foster care history composition
+  add:
+    resource: foster-care-records
+    bind: applicationId
+    endpoint:
+      path: /applications/{applicationId}/foster-care-history
+```
+
+**Add a section to an existing sectionView:**
+```yaml
+- target: $.compositions.applicationReview.sections.foster-care
+  description: Add foster care section for California's extended eligibility rules
+  add:
+    resource: foster-care-records
+    bind: applicationId
+    index:
+      fields: [id, memberId, status, placementDate]
+```
+
+**Add an include node to an existing composition:**
+```yaml
+- target: $.compositions.applicationReview.panel.include.caseNotes
+  description: Add case notes to every section panel
+  add:
+    resource: case-notes
+    bind: applicationId
+```
+
+`add:` navigates the parent path strictly — it does not auto-create intermediate keys. If the parent does not exist, the action warns and skips. If the key already exists, it warns and skips. Use `update:` to merge into or create intermediate structure; use `add:` when the key must be new. For adding to arrays, use `append:` instead.
+
+`add:` supports `$ref` for loading values from an external file, consistent with `replace:`:
+
+```yaml
+- target: $.compositions.fosterCareHistory
+  description: Load composition definition from a separate file
+  add:
+    $ref: ./compositions/foster-care-history.yaml
+```
+
+## Composition Overlays
+
+States can extend a domain's composition config by dropping an overlay file at `overlays/{state}/{domain}-compositions.yaml`. The resolve pipeline discovers these files automatically alongside the base composition config. See [Resource Composition](../architecture/cross-cutting/resource-composition.md#overlay-extensibility) for the full pattern.
+
+The overlay file uses the standard `overlay: 1.0.0` header so the resolver treats it as an overlay rather than a base composition file. Use `add:` for new keys so an accidental collision with a baseline key produces a warning rather than a silent overwrite.
+
 ## Behavioral YAML Targets
 
 The same overlay mechanism works for behavioral YAML files — state machines, rules, SLA types, and metrics — not just OpenAPI specs. A single overlay file can target both:

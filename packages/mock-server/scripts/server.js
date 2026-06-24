@@ -13,7 +13,7 @@ import { resolve } from 'path';
 import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
-import { registerAllRoutes, registerStateMachineRoutes } from '../src/route-generator.js';
+import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes } from '../src/route-generator.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { closeAll, clearAllDatabases, insertResource, findById } from '../src/database-manager.js';
 import { validateJSON } from '../src/validator.js';
@@ -112,6 +112,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
     let allSlaTypes = [];
     let allMetrics = [];
     let allConfigs = [];
+    let allCompositions = [];
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
@@ -119,6 +120,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
       allMetrics = allMetrics.concat(result.metrics);
       allConfigs = allConfigs.concat(result.configs || []);
+      allCompositions = allCompositions.concat(result.compositions || []);
     }
 
 
@@ -262,6 +264,15 @@ async function startMockServer(specDirs = null, seedDir = null) {
     const baseUrl = `http://${HOST}:${PORT}`;
     const uploadsDir = resolveUploadsDir(resolve(import.meta.dirname, '..', 'uploads'));
     mkdirSync(uploadsDir, { recursive: true });
+
+    // Register composition routes BEFORE standard routes so sectionView handlers
+    // take priority over the standard sub-resource handlers that the route generator
+    // would otherwise register for the same composition-generated paths.
+    if (allCompositions.length > 0) {
+      console.log('\nRegistering composition routes...');
+      registerCompositionRoutes(app, allCompositions, apiSpecs);
+    }
+
     const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, uploadsDir);
 
     // Register state machine RPC routes

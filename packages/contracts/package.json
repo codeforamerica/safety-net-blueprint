@@ -26,18 +26,20 @@
     "./loader": "./src/validation/openapi-loader.js",
     "./patterns": "./src/validation/pattern-validator.js",
     "./example-validator": "./src/validation/example-validator.js",
-    "./relationships": "./src/overlay/relationship-resolver.js"
+    "./relationships": "./src/overlay/relationship-resolver.js",
+    "./compositions": "./src/compositions/compositions-resolver.js"
   },
   "scripts": {
     "prepack": "npm run design:reference && node ../../scripts/build-package-readme.js",
     "test": "node --test tests/unit/",
-    "validate": "npm run validate:syntax && npm run validate:lint && npm run validate:patterns && npm run validate:schemas && npm run validate:rules && npm run validate:events",
+    "validate": "npm run validate:syntax && npm run validate:lint && npm run validate:patterns && npm run validate:schemas && npm run validate:rules && npm run validate:events && npm run validate:compositions",
     "validate:rules": "node scripts/validate-rules.js --spec=.",
     "validate:schemas": "node scripts/validate-schemas.js --spec=.",
     "validate:syntax": "node scripts/validate-openapi.js --spec=.",
     "validate:lint": "bash -c \"npx @redocly/cli lint *-openapi.yaml --config=../../.redocly.yaml\"",
     "validate:patterns": "node scripts/validate-patterns.js --spec=.",
     "validate:events": "node scripts/validate-events.js --spec=.",
+    "validate:compositions": "node scripts/validate-compositions.js --spec=.",
     "resolve": "node scripts/resolve.js --spec=. --out=../resolved",
     "api:new": "node scripts/generate-api.js",
     "api:update": "node scripts/update-api.js",

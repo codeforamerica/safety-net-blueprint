@@ -16,7 +16,7 @@
  *   q=field.nested:value        # Nested field (dot notation)
  */
 
-import { parseQueryString, tokensToSqlConditions } from './query-parser.js';
+import { parseQueryString, tokensToSqlConditions, tokensToJsFilter, getNestedValue } from './query-parser.js';
 import { parseSortString, buildOrderByClause } from './sort-parser.js';
 
 /**
@@ -60,6 +60,11 @@ export function buildSearchConditions(queryParams = {}, searchableFields = []) {
       // field filter would emit `WHERE json_extract(data, '$.sort') = ?`
       // and return zero rows.
       if (['search', 'q', 'limit', 'offset', 'page', 'sort'].includes(key)) {
+        continue;
+      }
+
+      // Only allow fields declared as searchable to prevent arbitrary JSON path injection.
+      if (searchableFields.length > 0 && !searchableFields.includes(key)) {
         continue;
       }
 
@@ -169,6 +174,173 @@ function resolveOrderByClause(queryParams, sortConfig) {
     return { error: { code: parsed.code, message: parsed.message, field: parsed.field } };
   }
   return { orderBy: buildOrderByClause(parsed.fields, sortConfig) };
+}
+
+// ---------------------------------------------------------------------------
+// JS-native collection utilities
+// ---------------------------------------------------------------------------
+
+// Params consumed by pagination/sort — not field filters.
+const RESERVED_PARAMS = new Set(['q', 'search', 'limit', 'offset', 'page', 'sort']);
+
+/**
+ * Filter an array of assembled items using query params.
+ * Mirrors the field-filter semantics of buildSearchConditions but operates on
+ * JS objects rather than SQL — correct for assembled composition results where
+ * fields may come from projection, state embedding, or multiple resources.
+ *
+ * q= is evaluated via tokensToJsFilter (full q-syntax support).
+ * Plain field=value params are applied as exact-match filters when q= is absent.
+ * If a field does not exist on an item, that condition is ignored for that item.
+ *
+ * @param {Object[]} items
+ * @param {Object} queryParams
+ * @returns {Object[]}
+ */
+export function filterItems(items, queryParams = {}) {
+  if (!items || items.length === 0) return items;
+
+  let result = items;
+
+  // q= complex syntax
+  if (queryParams.q) {
+    const tokens = parseQueryString(queryParams.q);
+    const predicate = tokensToJsFilter(tokens);
+    result = result.filter(predicate);
+  }
+
+  // legacy search= full-text substring across all string values
+  if (queryParams.search) {
+    const needle = String(queryParams.search).toLowerCase();
+    result = result.filter(item =>
+      JSON.stringify(item).toLowerCase().includes(needle)
+    );
+  }
+
+  // Simple field=value params — exact match, only when q= is absent.
+  // Mirrors buildSearchConditions semantics exactly:
+  //   - traceid maps to traceparent LIKE %-{value}-%
+  //   - array field values: check if the stored array contains the query value
+  //   - absent field: exclude (matches SQL NULL != value → false)
+  if (!queryParams.q) {
+    for (const [key, value] of Object.entries(queryParams)) {
+      if (RESERVED_PARAMS.has(key) || value === undefined || value === null || value === '') continue;
+
+      // traceid matches the trace-id segment of the W3C traceparent field
+      if (key === 'traceid') {
+        result = result.filter(item => {
+          const tp = getNestedValue(item, 'traceparent');
+          if (tp === undefined) return false;
+          return String(tp).includes(`-${value}-`);
+        });
+        continue;
+      }
+
+      result = result.filter(item => {
+        const fieldValue = getNestedValue(item, key);
+        if (fieldValue === undefined) return false; // absent field → exclude (matches SQL NULL behavior)
+        if (Array.isArray(fieldValue)) {
+          // SQL json_extract for array fields returns the JSON string (e.g. '["snap"]').
+          // Array query values: use intersection check (mirrors SQL's json_each for array params).
+          // Scalar query values: SQL does string equality against the JSON representation → always false.
+          if (!Array.isArray(value)) return false;
+          return value.some(v => fieldValue.some(f => String(f) === String(v)));
+        }
+        if (Array.isArray(value)) return value.some(v => String(fieldValue) === String(v));
+        return String(fieldValue) === String(value);
+      });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Apply pagination to an array of items.
+ * Returns the standard paginated response shape used by all list endpoints.
+ *
+ * @param {Object[]} items - Already-filtered items
+ * @param {Object} queryParams
+ * @param {Object} defaults - { limit, offset, limitDefault, limitMax, offsetDefault }
+ * @returns {{ items: Object[], total: number, limit: number, offset: number, hasNext: boolean }}
+ */
+export function paginateItems(items, queryParams = {}, defaults = {}) {
+  const { limit, offset } = parsePagination(queryParams, defaults);
+  const total = items.length;
+  const sliced = items.slice(offset, offset + limit);
+  return { items: sliced, total, limit, offset, hasNext: offset + limit < total };
+}
+
+/**
+ * Sort an array of assembled items using the ?sort= query parameter.
+ * JS counterpart to the SQL sort path (parseSortString + buildOrderByClause).
+ *
+ * Matches x-sortable semantics exactly:
+ *   - No sortConfig + ?sort= → error INVALID_SORT_FIELD
+ *   - sortConfig declared, no default, no ?sort= → sort by tieBreaker only (id ASC)
+ *   - tieBreaker defaults to 'id' when unset; null disables it
+ *   - Null values: last for ASC, first for DESC (matches SQL null ordering)
+ *
+ * @param {Object[]} items - Already-filtered items
+ * @param {Object} queryParams - Request query parameters
+ * @param {Object|undefined} sortConfig - sortable config from the section definition
+ * @returns {{ items: Object[] } | { error: { code: string, message: string, field?: string } }}
+ */
+export function sortItems(items, queryParams = {}, sortConfig) {
+  const hasClientSort = typeof queryParams.sort === 'string' && queryParams.sort.trim().length > 0;
+
+  // Validate sort params before touching items — invalid sort is a 400 regardless
+  // of whether any items matched. Matches SQL resolveOrderByClause behavior.
+  if (!sortConfig) {
+    if (hasClientSort) {
+      return { error: { code: 'INVALID_SORT_FIELD', message: 'this endpoint does not support the sort parameter' } };
+    }
+    return { items: items ?? [] };
+  }
+
+  const expression = hasClientSort ? queryParams.sort : sortConfig.default;
+  const parsed = parseSortString(expression, sortConfig);
+  if (!parsed.ok) {
+    const err = { code: parsed.code, message: parsed.message };
+    if (parsed.field !== undefined) err.field = parsed.field;
+    return { error: err };
+  }
+
+  if (!items || items.length === 0) return { items: items ?? [] };
+
+  // Build effective field list: declared fields + tieBreaker (defaults to 'id')
+  const tieBreaker = sortConfig.tieBreaker === undefined ? 'id' : sortConfig.tieBreaker;
+  const allFields = [...(parsed.fields ?? [])];
+  if (typeof tieBreaker === 'string' && tieBreaker.length > 0) {
+    if (!allFields.some(f => f.name === tieBreaker)) {
+      allFields.push({ name: tieBreaker, descending: false });
+    }
+  }
+
+  if (allFields.length === 0) return { items };
+
+  const sorted = [...items].sort((a, b) => {
+    for (const { name, descending } of allFields) {
+      const av = getNestedValue(a, name);
+      const bv = getNestedValue(b, name);
+      const aNull = av === undefined || av === null;
+      const bNull = bv === undefined || bv === null;
+      if (aNull && bNull) continue;
+      // Nulls last for ASC, nulls first for DESC — matches buildOrderByClause
+      if (aNull) return descending ? -1 : 1;
+      if (bNull) return descending ? 1 : -1;
+      const aNum = Number(av);
+      const bNum = Number(bv);
+      const numeric = !isNaN(aNum) && !isNaN(bNum);
+      const cmp = numeric
+        ? (aNum < bNum ? -1 : aNum > bNum ? 1 : 0)
+        : (String(av) < String(bv) ? -1 : String(av) > String(bv) ? 1 : 0);
+      if (cmp !== 0) return descending ? -cmp : cmp;
+    }
+    return 0;
+  });
+
+  return { items: sorted };
 }
 
 /**

@@ -1,0 +1,966 @@
+/**
+ * Unit tests for composition-assembler.
+ *
+ * Tests assembleSectionIndex, assembleSectionPanel, and filter evaluation
+ * using in-memory database-manager state.
+ */
+
+import { test, describe, beforeEach } from 'node:test';
+import assert from 'node:assert';
+import { clearAll, insertResource } from '../../src/database-manager.js';
+import {
+  assembleSectionIndex,
+  assembleSectionPanel,
+  deriveStateResource,
+  findStateRecord,
+  listStateRecords,
+  upsertStateRecord,
+  toExpressPath,
+} from '../../src/composition-assembler.js';
+import { extractPrimaryParam } from '../../src/collection-utils.js';
+
+// ---------------------------------------------------------------------------
+// Shared fixtures
+// ---------------------------------------------------------------------------
+
+const APP_ID = 'app-001';
+const MEMBER_ID_1 = 'mem-001';
+const MEMBER_ID_2 = 'mem-002';
+
+const SIMPLE_COMPOSITION = {
+  compositeType: 'sectionView',
+  resource: 'applications',
+  endpoint: { path: '/applications/{applicationId}/review' },
+  sections: {
+    demographics: {
+      resource: 'application-members',
+      bind: 'applicationId',
+    },
+    identity: {
+      resource: 'application-members',
+      bind: 'applicationId',
+      include: {
+        verifications: {
+          resource: 'verifications',
+          bind: 'applicationId',
+          filter: "category == 'identity'",
+        },
+      },
+    },
+    contact: {
+      resource: 'application-members',
+      bind: 'applicationId',
+      fields: ['id', 'firstName', 'lastName'],
+    },
+    household: {
+      resource: 'household-infos',
+      bind: 'applicationId',
+      missing: 'empty',
+    },
+  },
+  panel: {
+    include: {
+      notes: {
+        resource: 'application-notes',
+        bind: 'applicationId',
+      },
+      verifications: {
+        resource: 'verifications',
+        bind: 'applicationId',
+        filter: "category == $section.name",
+      },
+    },
+  },
+};
+
+function seedTestData() {
+  clearAll('application-members');
+  clearAll('verifications');
+  clearAll('application-notes');
+  clearAll('household-infos');
+
+  insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith', email: 'alice@example.com' });
+  insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob', lastName: 'Jones', email: 'bob@example.com' });
+
+  insertResource('verifications', { id: 'ver-001', applicationId: APP_ID, category: 'identity', status: 'pending' });
+  insertResource('verifications', { id: 'ver-002', applicationId: APP_ID, category: 'income', status: 'pending' });
+
+  insertResource('application-notes', { id: 'note-001', applicationId: APP_ID, text: 'First note' });
+}
+
+// ---------------------------------------------------------------------------
+// toExpressPath
+// ---------------------------------------------------------------------------
+
+describe('toExpressPath', () => {
+  test('converts {param} to :param', () => {
+    assert.strictEqual(
+      toExpressPath('/applications/{applicationId}/review'),
+      '/applications/:applicationId/review'
+    );
+  });
+
+  test('handles multiple params', () => {
+    assert.strictEqual(
+      toExpressPath('/applications/{applicationId}/members/{memberId}'),
+      '/applications/:applicationId/members/:memberId'
+    );
+  });
+
+  test('leaves paths with no params unchanged', () => {
+    assert.strictEqual(toExpressPath('/applications'), '/applications');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractPrimaryParam
+// ---------------------------------------------------------------------------
+
+describe('extractPrimaryParam', () => {
+  test('returns the last path param', () => {
+    assert.strictEqual(extractPrimaryParam('/applications/{applicationId}/review'), 'applicationId');
+  });
+
+  test('returns null for paths with no params', () => {
+    assert.strictEqual(extractPrimaryParam('/applications'), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionIndex
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionIndex', () => {
+  test('returns all section names as href links', () => {
+    const result = assembleSectionIndex(
+      SIMPLE_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.ok(Array.isArray(result.sections));
+    assert.strictEqual(result.sections.length, 4);
+    const names = result.sections.map(s => s.name);
+    assert.ok(names.includes('demographics'));
+    assert.ok(names.includes('identity'));
+    assert.ok(names.includes('contact'));
+    assert.ok(names.includes('household'));
+  });
+
+  test('resolves path params in hrefs', () => {
+    const result = assembleSectionIndex(
+      SIMPLE_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    for (const section of result.sections) {
+      assert.ok(section.href.includes(APP_ID), `href should contain applicationId: ${section.href}`);
+      assert.ok(section.href.endsWith(`/${section.name}`), `href should end with section name: ${section.href}`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionIndex — index views
+// ---------------------------------------------------------------------------
+
+const INDEX_VIEW_COMPOSITION = {
+  compositeType: 'sectionView',
+  resource: 'applications',
+  endpoint: { path: '/applications/{applicationId}/review' },
+  sections: {
+    members: {
+      resource: 'application-members',
+      bind: 'applicationId',
+      index: {
+        filter: "roles.contains('primary_applicant')",
+        fields: ['id', 'firstName', 'lastName'],
+      },
+    },
+    household: {
+      resource: 'household-infos',
+      bind: 'applicationId',
+      missing: 'empty',
+      index: {
+        fields: ['id'],
+      },
+    },
+    noView: {
+      resource: 'application-members',
+      bind: 'applicationId',
+    },
+  },
+  panel: {},
+};
+
+describe('assembleSectionIndex — index views', () => {
+  beforeEach(() => {
+    clearAll('application-members');
+    clearAll('household-infos');
+    insertResource('application-members', {
+      id: MEMBER_ID_1, applicationId: APP_ID,
+      firstName: 'Alice', lastName: 'Smith', email: 'alice@example.com',
+      roles: ['primary_applicant'],
+    });
+    insertResource('application-members', {
+      id: MEMBER_ID_2, applicationId: APP_ID,
+      firstName: 'Bob', lastName: 'Jones', email: 'bob@example.com',
+      roles: ['household_member'],
+    });
+  });
+
+  test('section with index view returns filtered and projected items', () => {
+    const result = assembleSectionIndex(
+      INDEX_VIEW_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    const membersSection = result.sections.find(s => s.name === 'members');
+    assert.ok(Array.isArray(membersSection.items));
+    assert.strictEqual(membersSection.items.length, 1, 'should filter to primary_applicant only');
+    assert.strictEqual(membersSection.items[0].firstName, 'Alice');
+    assert.ok(!('email' in membersSection.items[0]), 'projected fields should exclude email');
+  });
+
+  test('section without index view has no items in index entry', () => {
+    const result = assembleSectionIndex(
+      INDEX_VIEW_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    const noViewSection = result.sections.find(s => s.name === 'noView');
+    assert.ok(!('items' in noViewSection));
+  });
+
+  test('section with missing: empty and no records returns data: {}', () => {
+    const result = assembleSectionIndex(
+      INDEX_VIEW_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    const householdSection = result.sections.find(s => s.name === 'household');
+    assert.deepStrictEqual(householdSection.data, {});
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionIndex — root-level fields: projection
+// ---------------------------------------------------------------------------
+
+const FIELDS_COMPOSITION = {
+  compositeType: 'sectionView',
+  resource: 'applications',
+  fields: ['programs', 'status'],
+  endpoint: { path: '/applications/{applicationId}/review' },
+  sections: {
+    demographics: {
+      resource: 'application-members',
+      bind: 'applicationId',
+      index: { fields: ['id', 'firstName'] },
+    },
+  },
+};
+
+describe('assembleSectionIndex — root-level fields: projection', () => {
+  beforeEach(() => {
+    clearAll('applications');
+    clearAll('application-members');
+    insertResource('applications', {
+      id: APP_ID,
+      programs: ['snap', 'medicaid'],
+      status: 'submitted',
+      internalFlag: 'secret',
+    });
+    insertResource('application-members', {
+      id: MEMBER_ID_1,
+      applicationId: APP_ID,
+      firstName: 'Alice',
+      lastName: 'Smith',
+    });
+  });
+
+  test('merges declared root fields from the parent resource into the response', () => {
+    const result = assembleSectionIndex(
+      FIELDS_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.deepStrictEqual(result.programs, ['snap', 'medicaid']);
+    assert.strictEqual(result.status, 'submitted');
+  });
+
+  test('does not include undeclared fields from the parent resource', () => {
+    const result = assembleSectionIndex(
+      FIELDS_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.ok(!('internalFlag' in result), 'undeclared fields must not appear in the response');
+    assert.ok(!('id' in result), 'id is not in the declared fields list so it must not appear');
+  });
+
+  test('sections are still present alongside the root fields', () => {
+    const result = assembleSectionIndex(
+      FIELDS_COMPOSITION,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.ok(Array.isArray(result.sections), 'sections must still be present');
+    assert.strictEqual(result.sections.length, 1);
+  });
+
+  test('returns only sections when composition has no fields declaration', () => {
+    const noFieldsComposition = { ...FIELDS_COMPOSITION, fields: undefined };
+    const result = assembleSectionIndex(
+      noFieldsComposition,
+      { applicationId: APP_ID },
+      '/applications/:applicationId/review'
+    );
+    assert.ok(!('programs' in result));
+    assert.ok(!('status' in result));
+    assert.ok(Array.isArray(result.sections));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — bind resolution
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — bind resolution', () => {
+  beforeEach(seedTestData);
+
+  test('demographics section returns application members', () => {
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.ok(result, 'should return a panel');
+    assert.strictEqual(result.section, 'demographics');
+    assert.ok(Array.isArray(result.items));
+    assert.strictEqual(result.items.length, 2);
+  });
+
+  test('only returns members for the given applicationId', () => {
+    insertResource('application-members', { id: 'mem-other', applicationId: 'other-app', firstName: 'Other', lastName: 'Person' });
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.strictEqual(result.items.length, 2);
+    for (const item of result.items) {
+      assert.strictEqual(item.applicationId, APP_ID);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — filter evaluation
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — filter evaluation', () => {
+  beforeEach(seedTestData);
+
+  test('identity section include filters verifications by category == identity', () => {
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'identity', { applicationId: APP_ID });
+    assert.ok(result.include?.verifications, 'should have verifications include');
+    assert.strictEqual(result.include.verifications.length, 1);
+    assert.strictEqual(result.include.verifications[0].category, 'identity');
+  });
+
+  test('panel verifications filter uses $section.name substitution', () => {
+    // demographics section: panel.include.verifications filters category == 'demographics'
+    // No verifications with that category exist → empty array
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.ok(result.include?.verifications, 'should have panel verifications');
+    assert.strictEqual(result.include.verifications.length, 0);
+  });
+
+  test('section include takes precedence over panel include for same key', () => {
+    // identity section has its own verifications include (filtered to identity only)
+    // panel also has verifications (filtered to $section.name == identity, same result here)
+    // Section-level include should win (it is processed first)
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'identity', { applicationId: APP_ID });
+    // Should only have identity category verifications
+    assert.strictEqual(result.include.verifications.length, 1);
+    assert.strictEqual(result.include.verifications[0].id, 'ver-001');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — field selection
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — field selection', () => {
+  beforeEach(seedTestData);
+
+  test('contact section projects only declared fields', () => {
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'contact', { applicationId: APP_ID });
+    assert.ok(result.items.length > 0);
+    for (const item of result.items) {
+      const keys = Object.keys(item);
+      assert.ok(keys.includes('id'));
+      assert.ok(keys.includes('firstName'));
+      assert.ok(keys.includes('lastName'));
+      assert.ok(!keys.includes('email'), 'email should be projected out');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — missing: empty
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — missing: empty', () => {
+  beforeEach(seedTestData);
+
+  test('household section returns empty object when no records found', () => {
+    // No household-infos seeded for APP_ID — should get empty object not 404
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'household', { applicationId: APP_ID });
+    assert.ok(result, 'should return a panel');
+    assert.strictEqual(result.section, 'household');
+    assert.deepStrictEqual(result.data, {});
+    assert.ok(!result.items, 'should use data not items when missing: empty');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — panel includes
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — panel includes', () => {
+  beforeEach(seedTestData);
+
+  test('every section includes panel notes', () => {
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.ok(result.include?.notes, 'should have notes include');
+    assert.strictEqual(result.include.notes.length, 1);
+    assert.strictEqual(result.include.notes[0].text, 'First note');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — unknown section
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — unknown section', () => {
+  test('returns null for unknown section name', () => {
+    const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'nonexistent', { applicationId: APP_ID });
+    assert.strictEqual(result, null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deriveStateResource
+// ---------------------------------------------------------------------------
+
+describe('deriveStateResource', () => {
+  test('returns null when stateConfig is missing', () => {
+    assert.strictEqual(deriveStateResource(null), null);
+    assert.strictEqual(deriveStateResource({}), null);
+    assert.strictEqual(deriveStateResource({ schema: {} }), null);
+  });
+
+  test('derives pathSegment, collectionName, camelKey, defsKey from schema.name with endpoint context', () => {
+    const result = deriveStateResource(
+      { schema: { name: 'ReviewProgress' } },
+      '/applications/{applicationId}/review',
+      '/intake'
+    );
+    assert.deepStrictEqual(result, {
+      defsKey: 'ReviewProgress',
+      pathSegment: 'review-progress',
+      collectionName: 'application-review-progress',
+      camelKey: 'reviewProgress',
+    });
+  });
+
+  test('falls back to pathSegment as collectionName when no endpointPath given', () => {
+    const result = deriveStateResource({
+      schema: { name: 'ReviewProgress' },
+    });
+    assert.deepStrictEqual(result, {
+      defsKey: 'ReviewProgress',
+      pathSegment: 'review-progress',
+      collectionName: 'review-progress',
+      camelKey: 'reviewProgress',
+    });
+  });
+
+  test('handles single-word key', () => {
+    const result = deriveStateResource({
+      schema: { name: 'Status' },
+    });
+    assert.strictEqual(result.defsKey, 'Status');
+    assert.strictEqual(result.pathSegment, 'status');
+    assert.strictEqual(result.camelKey, 'status');
+  });
+
+  test('returns null when schema.name is missing', () => {
+    const result = deriveStateResource({
+      schema: { properties: { status: { type: 'string' } } },
+    });
+    assert.strictEqual(result, null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// State CRUD: upsertStateRecord / findStateRecord / listStateRecords
+// ---------------------------------------------------------------------------
+
+describe('state CRUD helpers', () => {
+  const COLL = 'test-progress';
+  const BIND_PARAM = 'applicationId';
+  const BIND_VALUE = 'app-state-001';
+
+  beforeEach(() => clearAll(COLL));
+
+  test('upsertStateRecord creates a new record', () => {
+    const record = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', null, { status: 'not_started' });
+    assert.ok(record.id, 'has id');
+    assert.strictEqual(record[BIND_PARAM], BIND_VALUE);
+    assert.strictEqual(record.section, 'identity');
+    assert.strictEqual(record.status, 'not_started');
+    assert.ok(!record.itemId, 'no itemId for singleton');
+    assert.ok(record.createdAt, 'has createdAt');
+    assert.ok(record.updatedAt, 'has updatedAt');
+  });
+
+  test('upsertStateRecord creates a record with itemId for collection-backed sections', () => {
+    const record = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'in_progress' });
+    assert.strictEqual(record.itemId, 'mem-001');
+    assert.strictEqual(record.section, 'identity');
+    assert.strictEqual(record.status, 'in_progress');
+  });
+
+  test('upsertStateRecord updates an existing record on second call', () => {
+    const first = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'household', null, { status: 'not_started' });
+    const second = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'household', null, { status: 'complete' });
+    assert.strictEqual(first.id, second.id, 'same record');
+    assert.strictEqual(second.status, 'complete');
+  });
+
+  test('upsertStateRecord with null itemId does not match a per-item record in the same section', () => {
+    // Per-item record (itemId = 'mem-001') exists for section 'income'
+    const perItem = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'income', 'mem-001', { status: 'not_started' });
+
+    // Section-level upsert (itemId = null) must create a separate record
+    const sectionLevel = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'income', null, { status: 'complete' });
+    assert.notStrictEqual(sectionLevel.id, perItem.id, 'separate record created');
+    assert.strictEqual(sectionLevel.itemId, null, 'section-level record has null itemId');
+    assert.strictEqual(sectionLevel.status, 'complete');
+
+    // Per-item record must be unchanged
+    const unchanged = findStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'income', 'mem-001');
+    assert.strictEqual(unchanged.id, perItem.id, 'per-item record untouched');
+    assert.strictEqual(unchanged.status, 'not_started', 'per-item status unchanged');
+  });
+
+  test('upsertStateRecord with itemId updates the correct record', () => {
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'not_started' });
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-002', { status: 'not_started' });
+    const updated = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'in_progress' });
+    assert.strictEqual(updated.status, 'in_progress');
+
+    const other = findStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-002');
+    assert.strictEqual(other.status, 'not_started', 'other record untouched');
+  });
+
+  test('findStateRecord returns null when record does not exist', () => {
+    const result = findStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'income', null);
+    assert.strictEqual(result, null);
+  });
+
+  test('findStateRecord retrieves the correct record by section + itemId', () => {
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'complete' });
+    const found = findStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001');
+    assert.strictEqual(found.status, 'complete');
+  });
+
+  test('listStateRecords returns paginated result for a section', () => {
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-001', { status: 'in_progress' });
+    upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', 'mem-002', { status: 'not_started' });
+    const result = listStateRecords(COLL, BIND_PARAM, BIND_VALUE, 'identity');
+    assert.strictEqual(result.total, 2);
+    assert.strictEqual(result.items.length, 2);
+    assert.ok('hasNext' in result && 'limit' in result && 'offset' in result, 'pagination fields present');
+  });
+
+  test('listStateRecords returns empty result for an unknown section', () => {
+    const result = listStateRecords(COLL, BIND_PARAM, BIND_VALUE, 'nonexistent');
+    assert.strictEqual(result.total, 0);
+    assert.deepStrictEqual(result.items, []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — queryParams: filtering and pagination
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — q= on projected-out fields', () => {
+  beforeEach(() => seedTestData());
+
+  test('field projected out by fields: config is absent from assembled items — items excluded', () => {
+    // SIMPLE_COMPOSITION.contact has fields: ['id', 'firstName', 'lastName']
+    // email is projected out, so it is absent from assembled items.
+    // Filtering on email behaves like "field absent" → excluded (matches SQL NULL behavior).
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'contact', { applicationId: APP_ID }, {},
+      { queryParams: { q: 'email:alice@example.com' } }
+    );
+    assert.strictEqual(panel.items.length, 0, 'projected-out field filter excludes all items');
+  });
+});
+
+describe('assembleSectionPanel — q= filtering', () => {
+  beforeEach(() => seedTestData());
+
+  test('q= exact match filters assembled items', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { q: 'firstName:Alice' } }
+    );
+    assert.strictEqual(panel.items.length, 1);
+    assert.strictEqual(panel.items[0].firstName, 'Alice');
+  });
+
+  test('q= with no match returns empty items', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { q: 'firstName:Nobody' } }
+    );
+    assert.strictEqual(panel.items.length, 0);
+    assert.strictEqual(panel.total, 0);
+  });
+
+  test('q= on field absent from assembled items — items excluded (matches SQL NULL behavior)', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { q: 'nonexistentField:whatever' } }
+    );
+    assert.strictEqual(panel.items.length, 0);
+  });
+
+  test('plain field=value filter without q=', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { firstName: 'Bob' } }
+    );
+    assert.strictEqual(panel.items.length, 1);
+    assert.strictEqual(panel.items[0].firstName, 'Bob');
+  });
+});
+
+describe('assembleSectionPanel — pagination response shape', () => {
+  beforeEach(() => seedTestData());
+
+  test('list section includes pagination fields', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }
+    );
+    assert.ok('items' in panel, 'has items');
+    assert.ok('total' in panel, 'has total');
+    assert.ok('limit' in panel, 'has limit');
+    assert.ok('offset' in panel, 'has offset');
+    assert.ok('hasNext' in panel, 'has hasNext');
+  });
+
+  test('limit and offset slice items correctly', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { limit: '1', offset: '0' } }
+    );
+    assert.strictEqual(panel.items.length, 1);
+    assert.strictEqual(panel.total, 2);
+    assert.strictEqual(panel.limit, 1);
+    assert.strictEqual(panel.offset, 0);
+    assert.strictEqual(panel.hasNext, true);
+  });
+
+  test('second page with offset', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID }, {},
+      { queryParams: { limit: '1', offset: '1' } }
+    );
+    assert.strictEqual(panel.items.length, 1);
+    assert.strictEqual(panel.hasNext, false);
+  });
+
+  test('singleton section (missing: empty) has no pagination fields', () => {
+    const panel = assembleSectionPanel(
+      SIMPLE_COMPOSITION, 'household', { applicationId: APP_ID }, {},
+      { queryParams: { limit: '1', offset: '0' } }
+    );
+    assert.ok('data' in panel, 'has data');
+    assert.ok(!('items' in panel), 'no items');
+    assert.ok(!('total' in panel), 'no total');
+    assert.ok(!('limit' in panel), 'no limit');
+    assert.ok(!('hasNext' in panel), 'no hasNext');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — state embedding
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — state embedding', () => {
+  // collection name is derived from the endpoint path: /applications/{applicationId}/review-progress → application-review-progress
+  const STATE_COLL = 'application-review-progress';
+
+  const STATE_COMPOSITION = {
+    compositeType: 'sectionView',
+    resource: 'applications',
+    endpoint: { path: '/applications/{applicationId}/review' },
+    state: {
+      schema: { name: 'ReviewProgress' },
+    },
+    sections: {
+      demographics: {
+        resource: 'application-members',
+        bind: 'applicationId',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    clearAll('application-members');
+    clearAll(STATE_COLL);
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice' });
+    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob' });
+  });
+
+  test('embeds state from DB under camelKey when record exists', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', MEMBER_ID_1, { status: 'complete' });
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const alice = panel.items.find(i => i.id === MEMBER_ID_1);
+    assert.ok(alice.reviewProgress, 'reviewProgress present on item');
+    assert.strictEqual(alice.reviewProgress.status, 'complete');
+  });
+
+  test('uses stateDefaults when no record exists', () => {
+    const defaults = { status: 'not_started' };
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID }, defaults);
+    for (const item of panel.items) {
+      assert.deepStrictEqual(item.reviewProgress, { status: 'not_started' });
+    }
+  });
+
+  test('embeds empty object when no record and no defaults', () => {
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    for (const item of panel.items) {
+      assert.deepStrictEqual(item.reviewProgress, {});
+    }
+  });
+
+  test('strips framework fields from embedded state', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', MEMBER_ID_1, { status: 'in_progress' });
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    const alice = panel.items.find(i => i.id === MEMBER_ID_1);
+    assert.ok(!('id' in alice.reviewProgress), 'no id');
+    assert.ok(!('createdAt' in alice.reviewProgress), 'no createdAt');
+    assert.ok(!('updatedAt' in alice.reviewProgress), 'no updatedAt');
+    assert.ok(!('applicationId' in alice.reviewProgress), 'no applicationId');
+    assert.ok(!('section' in alice.reviewProgress), 'no section');
+    assert.ok(!('itemId' in alice.reviewProgress), 'no itemId');
+  });
+
+  test('embeds section-level state at panel root', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', null, { status: 'in_progress' });
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.ok('reviewProgress' in panel, 'section-level reviewProgress at panel root');
+    assert.strictEqual(panel.reviewProgress.status, 'in_progress');
+  });
+
+  test('section-level state at panel root uses defaults when no record exists', () => {
+    const defaults = { status: 'not_started' };
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID }, defaults);
+    assert.deepStrictEqual(panel.reviewProgress, { status: 'not_started' });
+  });
+
+  test('per-item state and section-level state are independent', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', null, { status: 'in_progress' });
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', MEMBER_ID_1, { status: 'complete' });
+    const panel = assembleSectionPanel(STATE_COMPOSITION, 'demographics', { applicationId: APP_ID });
+    assert.strictEqual(panel.reviewProgress.status, 'in_progress', 'section-level at root');
+    const alice = panel.items.find(i => i.id === MEMBER_ID_1);
+    assert.strictEqual(alice.reviewProgress.status, 'complete', 'per-item on item');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionIndex — state embedding
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionIndex — state embedding', () => {
+  const STATE_COLL = 'application-review-progress';
+
+  const STATE_COMPOSITION = {
+    compositeType: 'sectionView',
+    resource: 'applications',
+    endpoint: { path: '/applications/{applicationId}/review' },
+    state: {
+      schema: { name: 'ReviewProgress' },
+    },
+    sections: {
+      demographics: {
+        resource: 'application-members',
+        bind: 'applicationId',
+        index: { fields: ['id', 'firstName'] },
+      },
+      household: {
+        resource: 'household-infos',
+        bind: 'applicationId',
+        missing: 'empty',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    clearAll('application-members');
+    clearAll('household-infos');
+    clearAll(STATE_COLL);
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice' });
+    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob' });
+  });
+
+  test('embeds section-level state on each section entry', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', null, { status: 'in_progress' });
+    const result = assembleSectionIndex(
+      STATE_COMPOSITION, { applicationId: APP_ID }, '/applications/:applicationId/review'
+    );
+    const demo = result.sections.find(s => s.name === 'demographics');
+    assert.ok('reviewProgress' in demo, 'section-level state on entry');
+    assert.strictEqual(demo.reviewProgress.status, 'in_progress');
+  });
+
+  test('uses defaults when no section-level record exists', () => {
+    const result = assembleSectionIndex(
+      STATE_COMPOSITION, { applicationId: APP_ID }, '/applications/:applicationId/review',
+      { status: 'not_started' }
+    );
+    for (const section of result.sections) {
+      assert.deepStrictEqual(section.reviewProgress, { status: 'not_started' });
+    }
+  });
+
+  test('index items carry per-item state', () => {
+    upsertStateRecord(STATE_COLL, 'applicationId', APP_ID, 'demographics', MEMBER_ID_1, { status: 'complete' });
+    const result = assembleSectionIndex(
+      STATE_COMPOSITION, { applicationId: APP_ID }, '/applications/:applicationId/review',
+      { status: 'not_started' }
+    );
+    const demo = result.sections.find(s => s.name === 'demographics');
+    const alice = demo.items.find(i => i.id === MEMBER_ID_1);
+    assert.strictEqual(alice.reviewProgress.status, 'complete', 'per-item state embedded on index item');
+    const bob = demo.items.find(i => i.id === MEMBER_ID_2);
+    assert.deepStrictEqual(bob.reviewProgress, { status: 'not_started' }, 'defaults for item without a record');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — dot-notation field projection
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — dot-notation field projection', () => {
+  const DOT_COMPOSITION = {
+    compositeType: 'sectionView',
+    resource: 'applications',
+    endpoint: { path: '/applications/{applicationId}/review' },
+    sections: {
+      contact: {
+        resource: 'application-members',
+        bind: 'applicationId',
+        fields: ['id', 'address.city', 'address.zip'],
+      },
+    },
+  };
+
+  beforeEach(() => {
+    clearAll('application-members');
+    insertResource('application-members', {
+      id: MEMBER_ID_1,
+      applicationId: APP_ID,
+      firstName: 'Jane',
+      address: { city: 'Denver', zip: '80203', street: '123 Main St' },
+    });
+  });
+
+  test('projects nested field to top-level key', () => {
+    const panel = assembleSectionPanel(DOT_COMPOSITION, 'contact', { applicationId: APP_ID });
+    const item = panel.items[0];
+    assert.strictEqual(item.id, MEMBER_ID_1);
+    assert.deepStrictEqual(item.address, { city: 'Denver', zip: '80203' });
+    assert.ok(!('firstName' in item), 'non-selected fields excluded');
+    assert.ok(!('street' in (item.address ?? {})), 'non-selected nested fields excluded');
+  });
+
+  test('missing nested value is omitted from output', () => {
+    clearAll('application-members');
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID });
+    const panel = assembleSectionPanel(DOT_COMPOSITION, 'contact', { applicationId: APP_ID });
+    const item = panel.items[0];
+    // address.city and address.zip are missing — key should be absent or empty
+    assert.ok(!item.address || Object.keys(item.address).length === 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleSectionPanel — sorting
+// ---------------------------------------------------------------------------
+
+describe('assembleSectionPanel — sorting', () => {
+  const SORT_COMPOSITION = {
+    compositeType: 'sectionView',
+    resource: 'applications',
+    endpoint: { path: '/applications/{applicationId}/review' },
+    sections: {
+      members: {
+        resource: 'application-members',
+        bind: 'applicationId',
+        sortable: { fields: ['firstName', 'lastName'], default: 'firstName' },
+      },
+      household: {
+        resource: 'household-infos',
+        bind: 'applicationId',
+        missing: 'empty',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    clearAll('application-members');
+    clearAll('household-infos');
+    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob', lastName: 'Jones' });
+    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith' });
+  });
+
+  test('applies default sort when no ?sort= provided', () => {
+    const panel = assembleSectionPanel(SORT_COMPOSITION, 'members', { applicationId: APP_ID });
+    assert.ok(!panel.error);
+    assert.strictEqual(panel.items[0].firstName, 'Alice');
+    assert.strictEqual(panel.items[1].firstName, 'Bob');
+  });
+
+  test('applies ?sort= descending', () => {
+    const panel = assembleSectionPanel(SORT_COMPOSITION, 'members', { applicationId: APP_ID }, {}, { queryParams: { sort: '-firstName' } });
+    assert.ok(!panel.error);
+    assert.strictEqual(panel.items[0].firstName, 'Bob');
+  });
+
+  test('invalid sort field returns error object', () => {
+    const panel = assembleSectionPanel(SORT_COMPOSITION, 'members', { applicationId: APP_ID }, {}, { queryParams: { sort: 'nonexistent' } });
+    assert.ok(panel.error);
+    assert.strictEqual(panel.error.code, 'FIELD_NOT_SORTABLE');
+  });
+
+  test('?sort= on section without sortable returns INVALID_SORT_FIELD', () => {
+    const noSortComp = {
+      ...SORT_COMPOSITION,
+      sections: {
+        members: { resource: 'application-members', bind: 'applicationId' },
+      },
+    };
+    const panel = assembleSectionPanel(noSortComp, 'members', { applicationId: APP_ID }, {}, { queryParams: { sort: 'firstName' } });
+    assert.ok(panel.error);
+    assert.strictEqual(panel.error.code, 'INVALID_SORT_FIELD');
+  });
+
+  test('singleton section ignores sort entirely', () => {
+    // No household-info record → missing: empty fires → singleton (data only, no sort error)
+    const panel = assembleSectionPanel(SORT_COMPOSITION, 'household', { applicationId: APP_ID }, {}, { queryParams: { sort: 'size' } });
+    assert.ok(!panel.error, 'singleton does not return sort error');
+    assert.ok('data' in panel, 'singleton returns data key');
+  });
+});

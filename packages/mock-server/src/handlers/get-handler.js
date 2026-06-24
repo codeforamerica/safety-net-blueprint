@@ -5,6 +5,7 @@
 import { findById } from '../database-manager.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
+import { parentLinkRegistry } from '../composition-assembler.js';
 
 /**
  * Create get-by-id handler for a resource
@@ -42,7 +43,20 @@ export function createGetHandler(apiMetadata, endpoint) {
           message: `${capitalize(paramName.replace(/Id$/, ''))} not found`
         });
       }
-      
+
+      // Inject _links for composition parentLink registrations.
+      // Path params are substituted into each link's href at request time.
+      const compositionLinks = parentLinkRegistry.get(endpoint.path);
+      if (compositionLinks) {
+        const _links = {};
+        for (const [key, link] of Object.entries(compositionLinks)) {
+          _links[key] = {
+            href: link.href.replace(/\{([^}]+)\}/g, (_, p) => req.params[p] ?? `{${p}}`),
+          };
+        }
+        return res.json({ ...resource, _links });
+      }
+
       res.json(resource);
     } catch (error) {
       console.error('Get handler error:', error);

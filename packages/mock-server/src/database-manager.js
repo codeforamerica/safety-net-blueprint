@@ -88,36 +88,43 @@ export function getDatabase(resourceName) {
  */
 export function findAll(resourceName, filters = {}, pagination = {}) {
   const db = getDatabase(resourceName);
+  // limit: null means fetch all records (no SQL LIMIT). Callers that do JS-level
+  // filtering or pagination (e.g. the composition assembler) pass null so they
+  // work with the full bind-filtered set before applying their own slice.
   const { limit = 25, offset = 0 } = pagination;
-  
+  const unlimited = pagination.limit === null;
+
   // Build WHERE clause from filters
   const whereClauses = [];
   const params = [];
-  
+
   for (const [key, value] of Object.entries(filters)) {
-    if (value !== undefined && value !== null) {
+    if (value === undefined) continue;
+    if (value === null) {
+      whereClauses.push(`json_extract(data, '$.${key}') IS NULL`);
+    } else {
       whereClauses.push(`json_extract(data, '$.${key}') = ?`);
       params.push(value);
     }
   }
-  
+
   const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-  
+
   // Get total count
   const countStmt = db.prepare(`SELECT COUNT(*) as count FROM resources ${whereClause}`);
   const { count: total } = countStmt.get(...params);
-  
-  // Get paginated items
-  const selectStmt = db.prepare(`
-    SELECT data FROM resources 
-    ${whereClause}
-    ORDER BY json_extract(data, '$.createdAt') DESC
-    LIMIT ? OFFSET ?
-  `);
-  
-  const rows = selectStmt.all(...params, limit, offset);
+
+  // Get items — omit LIMIT/OFFSET when caller requests all records
+  const selectQuery = unlimited
+    ? `SELECT data FROM resources ${whereClause} ORDER BY json_extract(data, '$.createdAt') DESC`
+    : `SELECT data FROM resources ${whereClause} ORDER BY json_extract(data, '$.createdAt') DESC LIMIT ? OFFSET ?`;
+
+  const selectStmt = db.prepare(selectQuery);
+  const rows = unlimited
+    ? selectStmt.all(...params)
+    : selectStmt.all(...params, limit, offset);
   const items = rows.map(row => JSON.parse(row.data));
-  
+
   return { items, total };
 }
 

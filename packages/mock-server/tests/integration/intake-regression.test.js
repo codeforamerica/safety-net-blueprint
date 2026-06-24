@@ -949,275 +949,378 @@ async function testSubCollectionPaginationEnvelope() {
 // ---------------------------------------------------------------------------
 
 async function testReviewContext() {
-  section('Review context — GET /applications/{id}/review-context');
+  section('Review context — GET /applications/{id}/review');
 
-  const app = await createOpenApp();
-  const appId = app.id;
+  const { id: appId } = await createOpenApp();
 
-  await test('200 — returns required top-level keys', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/${appId}/review-context`);
+  await test('200 — returns sections array', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/${appId}/review`);
     assert.strictEqual(res.status, 200);
     const data = await res.json();
-    assert.ok('application' in data, 'application key present');
-    assert.ok('members' in data, 'members key present');
-    assert.ok('reviewProgress' in data, 'reviewProgress key present');
-    assert.ok('notes' in data, 'notes key present');
+    assert.ok(Array.isArray(data.sections), 'sections is an array');
+    assert.ok(data.sections.length > 0, 'at least one section');
   });
 
-  await test('application sub-object matches the application resource', async () => {
-    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
-    assert.strictEqual(data.application.id, appId);
-    assert.strictEqual(data.application.status, 'under_review');
-  });
-
-  await test('members is an array', async () => {
-    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
-    assert.ok(Array.isArray(data.members));
-  });
-
-  await test('reviewProgress and notes are arrays', async () => {
-    const data = await (await fetch(`${BASE_URL}${APP}/${appId}/review-context`)).json();
-    assert.ok(Array.isArray(data.reviewProgress));
-    assert.ok(Array.isArray(data.notes));
+  await test('each section has name and href', async () => {
+    const { sections } = await (await fetch(`${BASE_URL}${APP}/${appId}/review`)).json();
+    for (const s of sections) {
+      assert.ok(typeof s.name === 'string', `section has name`);
+      assert.ok(typeof s.href === 'string', `section ${s.name} has href`);
+    }
   });
 
   await test('404 for unknown application', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-context`);
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review`);
     assert.strictEqual(res.status, 404);
   });
 
   await test('405 for POST (read-only endpoint)', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/${appId}/review-context`, { method: 'POST', body: {} });
+    const res = await fetch(`${BASE_URL}${APP}/${appId}/review`, { method: 'POST', body: {} });
     assert.strictEqual(res.status, 405);
   });
 }
 
 // ---------------------------------------------------------------------------
-// Review progress
+// Composition state — generated state endpoints from composition state: declaration
 // ---------------------------------------------------------------------------
 
-async function testReviewProgress() {
-  section('Review progress — server-initialized entries + PATCH-by-id');
+async function testCompositionState() {
+  section('Composition state — generated review-progress endpoints');
 
-  // Submit an app with one member, then claim the task to trigger initialization
   const { id: appId } = await createAndSubmitApp(['snap']);
   const member = await (await fetch(`${BASE_URL}${APP}/${appId}/members`, {
     method: 'POST', headers: CASEWORKER,
-    body: { applicationId: appId, firstName: 'Test', lastName: 'Member', programsApplyingFor: ['snap'], roles: ['household_member'] },
+    body: { applicationId: appId, firstName: 'State', lastName: 'Tester', programsApplyingFor: ['snap'], roles: ['household_member'] },
   })).json();
-  const task = await (await fetch(`${BASE_URL}${TASKS}`, {
-    method: 'POST', headers: CASEWORKER,
-    body: { name: 'Intake review', taskType: 'application_review', subjectId: appId, programType: 'snap' },
-  })).json();
-  await fetch(`${BASE_URL}${TASKS}/${task.id}/claim`, { method: 'POST', headers: CASEWORKER });
 
-  const BASE_PROGRESS = `${BASE_URL}${APP}/${appId}/review-progress`;
+  const BASE_STATE = `${BASE_URL}${APP}/${appId}/review-progress`;
 
-  // 4 household sections + 5 member-scoped sections × 1 member = 9 entries
-  const HOUSEHOLD_SECTIONS = ['assets', 'contact', 'expenses', 'household'];
-  const MEMBER_SECTIONS = ['demographics', 'identity', 'income', 'employment', 'health-coverage'];
-  const EXPECTED_TOTAL = HOUSEHOLD_SECTIONS.length + MEMBER_SECTIONS.length;
+  // ---- PUT (singleton write) ----
 
-  await test('GET — returns all pre-initialized entries after task claim', async () => {
-    const res = await fetch(BASE_PROGRESS);
+  await test('PUT /{section} — creates state record for a singleton section', async () => {
+    const res = await fetch(`${BASE_STATE}/household`, {
+      method: 'PUT', headers: CASEWORKER,
+      body: { status: 'complete' },
+    });
     assert.strictEqual(res.status, 200);
     const data = await res.json();
-    assert.ok('items' in data && 'total' in data && 'limit' in data && 'offset' in data && 'hasNext' in data, 'pagination shape');
-    assert.strictEqual(data.total, EXPECTED_TOTAL, `expected ${EXPECTED_TOTAL} entries (${HOUSEHOLD_SECTIONS.length} household + ${MEMBER_SECTIONS.length} member-scoped)`);
+    assert.strictEqual(data.status, 'complete');
+    assert.strictEqual(data.section, 'household');
+    assert.strictEqual(data.applicationId, appId);
+    assert.ok(data.id, 'has id');
+    assert.ok(data.createdAt, 'has createdAt');
+    assert.ok(data.updatedAt, 'has updatedAt');
+    assert.ok(!data.itemId, 'no itemId for singleton');
   });
 
-  await test('household sections have no memberId', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    for (const section of HOUSEHOLD_SECTIONS) {
-      const entry = items.find(e => e.section === section);
-      assert.ok(entry, `household entry exists for section=${section}`);
-      assert.ok(!entry.memberId, `section=${section} should not have memberId`);
-    }
+  await test('PUT /{section} — second PUT replaces the record', async () => {
+    const first = await (await fetch(`${BASE_STATE}/expenses`, {
+      method: 'PUT', headers: CASEWORKER, body: { status: 'not_started' },
+    })).json();
+    const second = await (await fetch(`${BASE_STATE}/expenses`, {
+      method: 'PUT', headers: CASEWORKER, body: { status: 'in_progress' },
+    })).json();
+    assert.strictEqual(first.id, second.id, 'same record id');
+    assert.strictEqual(second.status, 'in_progress');
   });
 
-  await test('member-scoped sections are linked to the member', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    for (const section of MEMBER_SECTIONS) {
-      const entry = items.find(e => e.section === section && e.memberId === member.id);
-      assert.ok(entry, `member entry exists for section=${section}`);
-    }
-  });
+  // ---- PATCH + GET by itemId (collection-backed) ----
 
-  await test('all initialized entries have status=not_started', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    assert.ok(items.every(e => e.status === 'not_started'), 'all entries start as not_started');
-  });
-
-  await test('PATCH by id — updates status', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    const entry = items.find(e => e.section === 'income' && e.memberId === member.id);
-    assert.ok(entry, 'income entry exists');
-
-    const res = await fetch(`${BASE_PROGRESS}/${entry.id}`, {
+  await test('PATCH /{section}/{itemId} — creates state record for a collection item', async () => {
+    const res = await fetch(`${BASE_STATE}/identity/${member.id}`, {
       method: 'PATCH', headers: CASEWORKER,
       body: { status: 'in_progress' },
     });
     assert.strictEqual(res.status, 200);
-    const updated = await res.json();
-    assert.strictEqual(updated.status, 'in_progress');
-    assert.strictEqual(updated.id, entry.id, 'id unchanged');
-    assert.strictEqual(updated.section, 'income', 'section unchanged');
-    assert.strictEqual(updated.memberId, member.id, 'memberId unchanged');
+    const data = await res.json();
+    assert.strictEqual(data.status, 'in_progress');
+    assert.strictEqual(data.section, 'identity');
+    assert.strictEqual(data.itemId, member.id);
+    assert.strictEqual(data.applicationId, appId);
   });
 
-  await test('GET by id — returns single entry', async () => {
-    const { items } = await (await fetch(BASE_PROGRESS)).json();
-    const entry = items[0];
-    const res = await fetch(`${BASE_PROGRESS}/${entry.id}`);
+  await test('GET /{section}/{itemId} — returns single state record', async () => {
+    const res = await fetch(`${BASE_STATE}/identity/${member.id}`);
     assert.strictEqual(res.status, 200);
     const data = await res.json();
-    assert.strictEqual(data.id, entry.id);
+    assert.strictEqual(data.status, 'in_progress');
+    assert.strictEqual(data.itemId, member.id);
   });
 
-  await test('GET ?section= — filters to matching entries only', async () => {
-    const res = await fetch(`${BASE_PROGRESS}?section=assets`);
-    const data = await res.json();
-    assert.strictEqual(data.total, 1, 'one household assets entry');
-    assert.ok(data.items.every(e => e.section === 'assets'));
-  });
-
-  await test('GET ?memberId= — filters to member entries only', async () => {
-    const res = await fetch(`${BASE_PROGRESS}?memberId=${member.id}`);
-    const data = await res.json();
-    assert.strictEqual(data.total, MEMBER_SECTIONS.length, `${MEMBER_SECTIONS.length} member-scoped entries`);
-    assert.ok(data.items.every(e => e.memberId === member.id));
-  });
-
-  await test('PATCH by id — 404 for unknown entry id', async () => {
-    const res = await fetch(`${BASE_PROGRESS}/00000000-0000-0000-0000-000000000000`, {
-      method: 'PATCH', headers: CASEWORKER,
-      body: { status: 'complete' },
-    });
+  await test('GET /{section}/{itemId} — 404 for unknown itemId', async () => {
+    const res = await fetch(`${BASE_STATE}/identity/00000000-0000-0000-0000-000000000000`);
     assert.strictEqual(res.status, 404);
   });
 
-  await test('GET list — 404 for unknown application', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-progress`);
+  await test('PATCH /{section}/{itemId} — second PATCH updates the same record', async () => {
+    const first = await (await fetch(`${BASE_STATE}/income/${member.id}`, {
+      method: 'PATCH', headers: CASEWORKER, body: { status: 'not_started' },
+    })).json();
+    const second = await (await fetch(`${BASE_STATE}/income/${member.id}`, {
+      method: 'PATCH', headers: CASEWORKER, body: { status: 'flagged' },
+    })).json();
+    assert.strictEqual(first.id, second.id, 'same record id');
+    assert.strictEqual(second.status, 'flagged');
+  });
+
+  // ---- Panel embedding ----
+
+  await test('panel GET embeds state under camelKey on each item', async () => {
+    const panel = await (await fetch(`${BASE_URL}${APP}/${appId}/review/identity`)).json();
+    const memberItem = panel.items?.find(i => i.id === member.id);
+    assert.ok(memberItem, 'member found in panel items');
+    assert.ok(memberItem.reviewProgress, 'reviewProgress embedded');
+    assert.strictEqual(memberItem.reviewProgress.status, 'in_progress');
+  });
+
+  await test('panel GET returns default state fields when no record written', async () => {
+    const panel = await (await fetch(`${BASE_URL}${APP}/${appId}/review/demographics`)).json();
+    const memberItem = panel.items?.find(i => i.id === member.id);
+    assert.ok(memberItem, 'member found in demographics panel items');
+    assert.ok(memberItem.reviewProgress, 'reviewProgress present even without prior write');
+    assert.strictEqual(memberItem.reviewProgress.status, 'not_started', 'default status from schema');
+  });
+
+  // ---- Parent 404 guard ----
+
+  await test('PUT /{section} — 404 for unknown application', async () => {
+    const res = await fetch(
+      `${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review-progress/household`,
+      { method: 'PUT', headers: CASEWORKER, body: { status: 'complete' } }
+    );
     assert.strictEqual(res.status, 404);
   });
 }
 
 // ---------------------------------------------------------------------------
-// Application notes
+// sectionView — section index and panels
 // ---------------------------------------------------------------------------
 
-async function testApplicationNotes() {
-  section('Application notes — /applications/{id}/notes');
+async function testSectionView() {
+  section('sectionView — /applications/{id}/review index and panels');
 
-  const app = await createOpenApp();
-  const appId = app.id;
-  const BASE_NOTES = `${BASE_URL}${APP}/${appId}/notes`;
+  const { id: appId } = await createAndSubmitApp(['snap']);
+  await fetch(`${BASE_URL}${APP}/${appId}/open`, { method: 'POST', headers: SYSTEM });
+  const member = await (await fetch(`${BASE_URL}${APP}/${appId}/members`, {
+    method: 'POST', headers: CASEWORKER,
+    body: { applicationId: appId, firstName: 'Section', lastName: 'Tester', programsApplyingFor: ['snap'], roles: ['household_member'] },
+  })).json();
+  const BASE_REVIEW = `${BASE_URL}${APP}/${appId}/review`;
 
-  await test('GET — returns paginated shape with empty items initially', async () => {
-    const res = await fetch(BASE_NOTES);
+  // ---- Section index ----
+
+  await test('GET /review — returns sections object with all declared section keys', async () => {
+    const res = await fetch(BASE_REVIEW);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.sections, 'sections key present');
+    const keys = data.sections.map(s => s.name);
+    assert.ok(keys.includes('identity'), 'identity section present');
+    assert.ok(keys.includes('household'), 'household section present');
+    assert.ok(keys.includes('income'), 'income section present');
+  });
+
+  await test('GET /review — each section entry has a name and href', async () => {
+    const data = await (await fetch(BASE_REVIEW)).json();
+    for (const entry of data.sections) {
+      assert.ok(entry.name, `${entry.name} has name`);
+      assert.ok(entry.href && entry.href.includes(entry.name), `${entry.name} href includes section name`);
+    }
+  });
+
+  await test('GET /review — 404 for unknown application', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  // ---- Section panel ----
+
+  await test('GET /review/:section — returns section and items', async () => {
+    const res = await fetch(`${BASE_REVIEW}/identity`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.section, 'identity', 'section name in response');
+    assert.ok(Array.isArray(data.items), 'items is array');
+    assert.ok(data.items.some(i => i.id === member.id), 'created member in items');
+  });
+
+  await test('GET /review/:section — 404 for unknown section name', async () => {
+    const res = await fetch(`${BASE_REVIEW}/nonexistent-section`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  await test('GET /review/:section — 404 for unknown application', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/review/identity`);
+    assert.strictEqual(res.status, 404);
+  });
+
+  await test('GET /review/:section — panel.include resources appear in response', async () => {
+    const data = await (await fetch(`${BASE_REVIEW}/income`)).json();
+    assert.ok(data.include && 'verifications' in data.include, 'panel.include verifications present under data.include');
+  });
+
+  await test('GET /review/:section — $section.name filter context passes section to filter', async () => {
+    // Create a note scoped to "income" section; the verifications panel.include
+    // uses filter: "category == $section.name" which exercises $section.name injection.
+    // We verify the panel assembles without error and the items array is present.
+    const data = await (await fetch(`${BASE_REVIEW}/income`)).json();
+    assert.ok(Array.isArray(data.items), 'items present (filter did not crash)');
+    assert.strictEqual(data.section, 'income');
+  });
+
+  await test('GET /review/:section — household section (missing: empty) returns data', async () => {
+    const res = await fetch(`${BASE_REVIEW}/household`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.section, 'household');
+  });
+
+  // ---- links: true ----
+
+  await test('GET /review/demographics — items include _links.self pointing to member endpoint', async () => {
+    const res = await fetch(`${BASE_REVIEW}/demographics`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items) && data.items.length > 0, 'at least one demographics item');
+    for (const item of data.items) {
+      assert.ok(item._links?.self, `item ${item.id} missing _links.self`);
+      // URL should reference the application ID and the member's own ID
+      assert.ok(item._links.self.includes(appId), '_links.self contains applicationId');
+      assert.ok(item._links.self.includes(item.id), '_links.self contains member id');
+      assert.ok(item._links.self.includes('/members/'), '_links.self references members endpoint');
+    }
+  });
+
+  await test('GET /review/identity — items do NOT include _links.self (links not declared)', async () => {
+    const res = await fetch(`${BASE_REVIEW}/identity`);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items), 'items present');
+    for (const item of data.items) {
+      assert.ok(!item._links, `identity item ${item.id} should not have _links (links: true not set on identity section)`);
+    }
+  });
+
+  // ---- Pagination response shape ----
+
+  await test('GET /review/:section — list section includes pagination fields', async () => {
+    const res = await fetch(`${BASE_REVIEW}/identity`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.items), 'items is array');
+    assert.strictEqual(typeof data.total, 'number', 'total is a number');
+    assert.strictEqual(typeof data.limit, 'number', 'limit is a number');
+    assert.strictEqual(typeof data.offset, 'number', 'offset is a number');
+    assert.strictEqual(typeof data.hasNext, 'boolean', 'hasNext is a boolean');
+  });
+
+  await test('GET /review/:section — singleton section (household) has no pagination fields', async () => {
+    const res = await fetch(`${BASE_REVIEW}/household`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok('data' in data, 'has data key');
+    assert.ok(!('items' in data), 'no items key');
+    assert.ok(!('total' in data), 'no total key');
+    assert.ok(!('limit' in data), 'no limit key');
+    assert.ok(!('hasNext' in data), 'no hasNext key');
+  });
+
+  await test('GET /review/:section?limit=1 — pagination slices items and reflects total', async () => {
+    // Ensure there are at least 2 members so pagination is meaningful
+    await fetch(`${BASE_URL}${APP}/${appId}/members`, {
+      method: 'POST', headers: CASEWORKER,
+      body: { applicationId: appId, firstName: 'Extra', lastName: 'Member', programsApplyingFor: ['snap'], roles: ['household_member'] },
+    });
+    const res = await fetch(`${BASE_REVIEW}/identity?limit=1&offset=0`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.items.length, 1, 'only 1 item returned');
+    assert.ok(data.total >= 2, 'total reflects full filtered count');
+    assert.strictEqual(data.limit, 1);
+    assert.strictEqual(data.offset, 0);
+    assert.strictEqual(data.hasNext, true);
+  });
+
+  // ---- q= filtering ----
+
+  await test('GET /review/:section?q= — filters items by field value', async () => {
+    const allRes = await fetch(`${BASE_REVIEW}/identity`);
+    const all = await allRes.json();
+    assert.ok(all.items.length >= 1, 'need at least one member');
+
+    const target = all.items[0];
+    const filtered = await (await fetch(`${BASE_REVIEW}/identity?q=firstName:${encodeURIComponent(target.firstName)}`)).json();
+
+    assert.ok(Array.isArray(filtered.items), 'items present');
+    assert.ok(filtered.items.every(i => i.firstName === target.firstName), 'all returned items match q= filter');
+    assert.ok(filtered.total <= all.total, 'filtered total <= unfiltered total');
+  });
+
+  await test('GET /review/:section?q= — non-matching filter returns empty items', async () => {
+    const res = await fetch(`${BASE_REVIEW}/identity?q=firstName:ZZZ_NoSuchName_ZZZ`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.deepStrictEqual(data.items, []);
+    assert.strictEqual(data.total, 0);
+    assert.strictEqual(data.hasNext, false);
+  });
+
+  await test('GET /review/:section?q= — total reflects filtered count, not pre-filter count', async () => {
+    const allRes = await fetch(`${BASE_REVIEW}/identity`);
+    const all = await allRes.json();
+    const target = all.items[0];
+
+    const filtered = await (await fetch(`${BASE_REVIEW}/identity?q=firstName:${encodeURIComponent(target.firstName)}`)).json();
+    // total should be the count after filtering, not the total member count
+    assert.ok(filtered.total <= all.total, 'filtered total is not larger than unfiltered');
+    assert.strictEqual(filtered.items.length, filtered.total <= filtered.limit ? filtered.total : filtered.limit);
+  });
+
+  // ---- sort= ----
+
+  await test('GET /review/:section?sort= — income sorted by amount:desc returns items in descending order', async () => {
+    const res = await fetch(`${BASE_REVIEW}/income?sort=-amount`);
     assert.strictEqual(res.status, 200);
     const data = await res.json();
     assert.ok(Array.isArray(data.items));
-    assert.ok('total' in data && 'limit' in data && 'offset' in data && 'hasNext' in data);
-    assert.strictEqual(data.total, 0);
+    if (data.items.length > 1) {
+      for (let i = 1; i < data.items.length; i++) {
+        const prev = Number(data.items[i - 1].amount ?? Infinity);
+        const curr = Number(data.items[i].amount ?? -Infinity);
+        assert.ok(prev >= curr, `items[${i - 1}].amount (${prev}) >= items[${i}].amount (${curr})`);
+      }
+    }
   });
 
-  let noteId;
-
-  await test('POST — creates a note → 201 with id and applicationId', async () => {
-    const res = await fetch(BASE_NOTES, {
-      method: 'POST', headers: CASEWORKER,
-      body: { scope: 'section', section: 'income', text: 'Check pay stubs', textFormat: 'plain' },
-    });
-    assert.strictEqual(res.status, 201);
+  await test('GET /review/:section?sort= — unsupported sort field returns 400', async () => {
+    const res = await fetch(`${BASE_REVIEW}/income?sort=nonexistentField`);
+    assert.strictEqual(res.status, 400);
     const data = await res.json();
-    assert.ok(data.id, 'id assigned');
-    assert.strictEqual(data.applicationId, appId);
-    assert.strictEqual(data.scope, 'section');
-    assert.strictEqual(data.section, 'income');
-    assert.strictEqual(data.text, 'Check pay stubs');
-    noteId = data.id;
+    assert.ok(data.code === 'FIELD_NOT_SORTABLE' || data.code === 'INVALID_SORT_FIELD');
   });
 
-  await test('GET — lists created note in paginated response', async () => {
-    const data = await (await fetch(BASE_NOTES)).json();
-    assert.strictEqual(data.total, 1);
-    assert.strictEqual(data.items[0].id, noteId);
+  await test('GET /review/:section?sort= — section without sortable rejects sort= with 400', async () => {
+    const res = await fetch(`${BASE_REVIEW}/demographics?sort=firstName`);
+    assert.strictEqual(res.status, 400);
+    const data = await res.json();
+    assert.strictEqual(data.code, 'INVALID_SORT_FIELD');
   });
 
-  await test('GET /{noteId} — retrieves note by id', async () => {
-    const res = await fetch(`${BASE_NOTES}/${noteId}`);
+  // ---- parentLink: true ----
+
+  await test('GET /applications/:id — response includes _links.applicationReview from parentLink', async () => {
+    const res = await fetch(`${BASE_URL}${APP}/${appId}`);
     assert.strictEqual(res.status, 200);
     const data = await res.json();
-    assert.strictEqual(data.id, noteId);
-    assert.strictEqual(data.text, 'Check pay stubs');
-  });
-
-  await test('GET ?scope=section — filters by scope', async () => {
-    await fetch(BASE_NOTES, {
-      method: 'POST', headers: CASEWORKER,
-      body: { scope: 'application', text: 'General observation' },
-    });
-    const data = await (await fetch(`${BASE_NOTES}?scope=section`)).json();
-    assert.ok(data.items.every(n => n.scope === 'section'), 'all items match scope filter');
-  });
-
-  await test('GET ?section=income — filters by section', async () => {
-    const data = await (await fetch(`${BASE_NOTES}?section=income`)).json();
-    assert.ok(data.items.every(n => n.section === 'income'), 'all items match section filter');
-  });
-
-  await test('PATCH /{noteId} — updates text', async () => {
-    const res = await fetch(`${BASE_NOTES}/${noteId}`, {
-      method: 'PATCH', headers: CASEWORKER,
-      body: { text: 'Updated: reviewed pay stubs, verified' },
-    });
-    assert.strictEqual(res.status, 200);
-    assert.strictEqual((await res.json()).text, 'Updated: reviewed pay stubs, verified');
-  });
-
-  await test('PATCH /{noteId} — non-text fields unchanged after text update', async () => {
-    const data = await (await fetch(`${BASE_NOTES}/${noteId}`)).json();
-    assert.strictEqual(data.section, 'income', 'section unchanged after partial update');
-    assert.strictEqual(data.scope, 'section', 'scope unchanged after partial update');
-  });
-
-  await test('DELETE /{noteId} — 204', async () => {
-    const res = await fetch(`${BASE_NOTES}/${noteId}`, { method: 'DELETE', headers: CASEWORKER });
-    assert.strictEqual(res.status, 204);
-  });
-
-  await test('GET /{noteId} after DELETE — 404', async () => {
-    const res = await fetch(`${BASE_NOTES}/${noteId}`);
-    assert.strictEqual(res.status, 404);
-  });
-
-  await test('POST — application-scoped note (no section)', async () => {
-    const res = await fetch(BASE_NOTES, {
-      method: 'POST', headers: CASEWORKER,
-      body: { scope: 'application', text: 'Household seems stable' },
-    });
-    assert.strictEqual(res.status, 201);
-    const data = await res.json();
-    assert.strictEqual(data.scope, 'application');
-  });
-
-  await test('404 for unknown application', async () => {
-    const res = await fetch(`${BASE_URL}${APP}/00000000-0000-0000-0000-000000000000/notes`);
-    assert.strictEqual(res.status, 404);
-  });
-
-  await test('GET /{noteId} 404 for unknown note', async () => {
-    const res = await fetch(`${BASE_NOTES}/00000000-0000-0000-0000-000000000000`);
-    assert.strictEqual(res.status, 404);
-  });
-
-  await test('POST emits event with application ID as subject', async () => {
-    const eventsRes = await fetch(`${BASE_URL}/platform/events?subject=${appId}`);
-    const data = await eventsRes.json();
-    const noteEvents = data.items.filter(e => e.type.includes('note'));
-    assert.ok(noteEvents.length > 0, 'at least one note event emitted');
-    assert.ok(noteEvents.every(e => e.subject === appId), 'all note events use application ID as subject');
+    assert.ok(data._links, 'application GET by ID response has _links');
+    assert.ok(data._links.applicationReview, '_links.applicationReview present');
+    assert.ok(
+      data._links.applicationReview.href.includes(appId),
+      '_links.applicationReview.href contains applicationId'
+    );
+    assert.ok(
+      data._links.applicationReview.href.includes('/review'),
+      '_links.applicationReview.href references the review endpoint'
+    );
   });
 }
 
@@ -1424,8 +1527,8 @@ async function runTests() {
     await testTaskClaimedRules();
     await testSubCollectionPaginationEnvelope();
     await testReviewContext();
-    await testReviewProgress();
-    await testApplicationNotes();
+    await testCompositionState();
+    await testSectionView();
     await testTraceparentPropagation();
   } finally {
     await teardownServer(serverStartedByTests);
