@@ -137,6 +137,31 @@ $defs:
               response to another event (e.g., a task auto-resumed because a timer
               fired). Allows consumers to trace the immediate cause without
               inspecting the full distributed trace.
+          authid:
+            type:
+              - string
+              - "null"
+            description: >
+              CloudEvents Auth Context extension (optional). Principal identifier
+              (userId from JWT claims) of the actor who triggered the event. No PII —
+              user ID only, not name or email. Required for FTI-governed events per
+              IRS Pub. 1075. Omitted when no caller identity is present.
+          authtype:
+            type:
+              - string
+              - "null"
+            enum:
+              - user
+              - service_account
+              - api_key
+              - system
+              - unauthenticated
+              - unknown
+              - null
+            description: >
+              CloudEvents Auth Context extension (optional). Principal type of the
+              actor who triggered the event. Required when authid is present.
+              Required for FTI-governed events per IRS Pub. 1075.
           data:
             type: object
             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.

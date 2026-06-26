@@ -270,6 +270,83 @@ test('emitEvent', async (t) => {
   });
 
   // ==========================================================================
+  // Auth context (authid / authtype)
+  // ==========================================================================
+
+  await t.test('sets authid and authtype when callerId and callerRoles are provided', () => {
+    clearAll('events');
+    const stored = emitEvent({
+      domain: 'workflow',
+      object: 'task',
+      action: 'created',
+      resourceId: 'abc123',
+      source: '/workflow',
+      data: null,
+      callerId: 'user-42',
+      callerRoles: ['technician'],
+      now: '2024-01-01T00:00:00.000Z',
+    });
+
+    assert.strictEqual(stored.authid, 'user-42');
+    assert.strictEqual(stored.authtype, 'user');
+    console.log('  ✓ Sets authid and authtype for user caller');
+  });
+
+  await t.test('sets authtype to system when caller role is system', () => {
+    clearAll('events');
+    const stored = emitEvent({
+      domain: 'workflow',
+      object: 'task',
+      action: 'created',
+      resourceId: 'abc123',
+      source: '/workflow',
+      data: null,
+      callerId: 'svc-account',
+      callerRoles: ['system'],
+      now: '2024-01-01T00:00:00.000Z',
+    });
+
+    assert.strictEqual(stored.authid, 'svc-account');
+    assert.strictEqual(stored.authtype, 'system');
+    console.log('  ✓ Sets authtype to system for system caller');
+  });
+
+  await t.test('sets authtype to service_account when caller role is service_account', () => {
+    clearAll('events');
+    const stored = emitEvent({
+      domain: 'workflow',
+      object: 'task',
+      action: 'created',
+      resourceId: 'abc123',
+      source: '/workflow',
+      data: null,
+      callerId: 'svc-123',
+      callerRoles: ['service_account'],
+      now: '2024-01-01T00:00:00.000Z',
+    });
+
+    assert.strictEqual(stored.authtype, 'service_account');
+    console.log('  ✓ Sets authtype to service_account');
+  });
+
+  await t.test('sets authid and authtype to null when no callerId', () => {
+    clearAll('events');
+    const stored = emitEvent({
+      domain: 'workflow',
+      object: 'task',
+      action: 'created',
+      resourceId: 'abc123',
+      source: '/workflow',
+      data: null,
+      now: '2024-01-01T00:00:00.000Z',
+    });
+
+    assert.strictEqual(stored.authid, null);
+    assert.strictEqual(stored.authtype, null);
+    console.log('  ✓ authid and authtype are null when no callerId');
+  });
+
+  // ==========================================================================
   // Default now
   // ==========================================================================
 

@@ -116,7 +116,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       }
 
 
-      const callerId = req.headers['x-caller-id'] || 'system';
+      const callerId = req.headers['x-caller-id'] || null;
       const now = new Date().toISOString();
       const traceparent = req.headers['traceparent'] || null;
       const domain = apiMetadata.serverBasePath.replace(/^\//, '');
@@ -201,16 +201,19 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       }
 
       // Auto-emit created event with full resource snapshot (after effects applied)
+      const callerRoles = req.headers['x-caller-roles']
+        ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
+        : [];
       try {
         emitEvent({
           domain,
           object,
           action: 'created',
           resourceId: resource.id,
-          subject: options.eventSubjectField ? (resource[options.eventSubjectField] ?? resource.id) : undefined,
           source: apiMetadata.serverBasePath,
           data: { ...resource },
           callerId,
+          callerRoles,
           traceparent,
           now,
         });

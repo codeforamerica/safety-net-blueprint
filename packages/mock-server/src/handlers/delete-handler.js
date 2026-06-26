@@ -59,6 +59,9 @@ export function createDeleteHandler(apiMetadata, endpoint) {
           source: apiMetadata.serverBasePath,
           data: null,
           callerId: req.headers['x-caller-id'] || null,
+          callerRoles: req.headers['x-caller-roles']
+            ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
+            : [],
           traceparent: req.headers['traceparent'] || null,
           now: new Date().toISOString(),
         });
