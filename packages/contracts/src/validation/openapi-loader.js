@@ -211,6 +211,11 @@ export function extractMetadata(spec, resourceName) {
  * @param {string} collectionName - Database collection name
  * @returns {string} PascalCase schema prefix
  */
+// Words ending in 's' that are not plurals, so their trailing 's' must not be
+// stripped when singularizing the final collection segment (e.g. progress ->
+// progress, not progres).
+const NON_PLURAL_ENDINGS = new Set(['progress', 'status', 'access', 'address', 'process']);
+
 export function collectionToSchemaPrefix(collectionName) {
   const segments = collectionName.split('-');
   return segments.map((seg, i) => {
@@ -218,7 +223,7 @@ export function collectionToSchemaPrefix(collectionName) {
     if (i === segments.length - 1) {
       if (s.endsWith('ies')) s = s.slice(0, -3) + 'y';
       else if (s.endsWith('ses')) s = s.slice(0, -2);
-      else if (s.endsWith('s')) s = s.slice(0, -1);
+      else if (s.endsWith('s') && !NON_PLURAL_ENDINGS.has(s)) s = s.slice(0, -1);
     }
     return s.charAt(0).toUpperCase() + s.slice(1);
   }).join('');
