@@ -177,14 +177,14 @@ components:
               description: Health coverage records for this member.
 
     ElectronicCheckResult:
-      $ref: "./schemas/common/data-exchange.yaml#/$defs/ServiceCallResult"
+      $ref: "./schemas/domain/data-exchange.yaml#/$defs/ServiceCallResult"
 
     VerificationSummary:
       description: >
         A verification summary as passed by the intake domain. Extends the common
         shape with the member identifier from the intake domain.
       allOf:
-        - $ref: "./schemas/common/intake.yaml#/$defs/VerificationSummary"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/VerificationSummary"
         - type: object
           properties:
             memberId:
@@ -267,10 +267,10 @@ components:
               $ref: "./components/common.yaml#/Program"
               description: The program this decision applies to.
             status:
-              $ref: "./schemas/common/eligibility.yaml#/$defs/DecisionStatus"
+              $ref: "./schemas/domain/eligibility.yaml#/$defs/DecisionStatus"
               description: The eligibility outcome.
             path:
-              $ref: "./schemas/common/eligibility.yaml#/$defs/DecisionPath"
+              $ref: "./schemas/domain/eligibility.yaml#/$defs/DecisionPath"
               description: How the decision was reached.
             denialReasonCode:
               type: string
