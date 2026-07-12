@@ -88,19 +88,41 @@ Flags:
     let allErrors = [];
     let allWarnings = [];
 
+    // First pass: collect all component schema names by x-domain so the FK
+    // validator can treat same-domain schemas from sibling specs as local.
+    const domainSchemas = new Map();
+    const parsedSpecs = new Map();
+    for (const specPath of specPaths) {
+      try {
+        const spec = await $RefParser.parse(specPath);
+        parsedSpecs.set(specPath, spec);
+        const domain = spec?.info?.['x-domain'];
+        const schemas = spec?.components?.schemas;
+        if (domain && schemas) {
+          if (!domainSchemas.has(domain)) domainSchemas.set(domain, new Set());
+          for (const name of Object.keys(schemas)) domainSchemas.get(domain).add(name);
+        }
+      } catch {
+        // parse errors are reported in the second pass
+      }
+    }
+
     for (const specPath of specPaths) {
       const specName = basename(specPath);
 
       try {
-        // Parse spec (without full dereferencing to keep $refs visible)
-        const spec = await $RefParser.parse(specPath);
+        // Use cached parse result from first pass where available
+        const spec = parsedSpecs.get(specPath) ?? await $RefParser.parse(specPath);
 
         if (spec?.info?.['x-status'] === 'deprecated') {
           continue;
         }
 
+        const domain = spec?.info?.['x-domain'];
+        const sameDomainSchemas = domain ? (domainSchemas.get(domain) ?? new Set()) : new Set();
+
         console.log(`📋 Checking ${specName}...`);
-        const issues = validateSpec(spec, specName);
+        const issues = validateSpec(spec, specName, sameDomainSchemas);
 
         const errors = issues.filter(i => i.severity === 'error');
         const warnings = issues.filter(i => i.severity === 'warn');

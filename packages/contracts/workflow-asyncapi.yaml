@@ -2,6 +2,7 @@ asyncapi: 3.0.0
 info:
   title: Workflow Domain Events
   version: 1.0.0
+  x-domain: workflow
   description: |
     Event catalog for the Workflow domain. All events are CloudEvents 1.0
     envelopes extending the base Event schema.

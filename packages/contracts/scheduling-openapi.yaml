@@ -198,12 +198,14 @@ components:
           description: Reference to the Person record (the subject of the appointment).
           x-relationship:
             resource: Person
+            domain: client-management
         assignedToId:
           type: string
           format: uuid
           description: Reference to the User record (staff member conducting the appointment).
           x-relationship:
             resource: User
+            domain: identity-access
         notes:
           type: string
           maxLength: 2000

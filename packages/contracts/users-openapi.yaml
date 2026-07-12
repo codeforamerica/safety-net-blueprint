@@ -450,6 +450,7 @@ components:
           description: Link to Person record (for applicants).
           x-relationship:
             resource: Person
+            domain: client-management
         caseWorkerId:
           type: string
           format: uuid

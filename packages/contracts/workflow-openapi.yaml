@@ -643,6 +643,7 @@ components:
           description: Reference to the User assigned to this task.
           x-relationship:
             resource: User
+            domain: identity-access
         outcome:
           type: string
           description: Completion outcome recorded when the task was completed (e.g., approved, denied).
