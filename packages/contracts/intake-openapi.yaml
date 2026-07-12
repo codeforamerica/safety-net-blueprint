@@ -1373,29 +1373,28 @@ components:
 
     ApplicationMemberWritable:
       description: Client-writable fields for an application member.
-      allOf:
-        - $ref: "./schemas/common/member.yaml"
-        - type: object
-          properties:
-            roles:
-              type: array
-              description: Roles this person plays in the application.
-              items:
-                type: string
-                enum:
-                  - primary_applicant
-                  - household_member
-                  - non_applying_member
-                  - authorized_representative
-                  - absent_parent
-            personId:
-              type: string
-              format: uuid
-              nullable: true
-              description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
-              x-relationship:
-                resource: Person
-                domain: client-management
+      type: object
+      additionalProperties: true
+      properties:
+        roles:
+          type: array
+          description: Roles this person plays in the application.
+          items:
+            type: string
+            enum:
+              - primary_applicant
+              - household_member
+              - non_applying_member
+              - authorized_representative
+              - absent_parent
+        personId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
+          x-relationship:
+            resource: Person
+            domain: client-management
 
     ApplicationMember:
       description: >
@@ -1591,7 +1590,7 @@ components:
     MemberExpense:
       description: An expense record for an application member.
       allOf:
-        - $ref: "./schemas/common/expenses.yaml"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Expense"
         - type: object
           required:
             - id
@@ -1626,11 +1625,11 @@ components:
               readOnly: true
 
     MemberExpenseCreate:
-      $ref: "./schemas/common/expenses.yaml"
+      $ref: "./schemas/domain/intake.yaml#/$defs/Expense"
 
     MemberExpenseUpdate:
       allOf:
-        - $ref: "./schemas/common/expenses.yaml"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Expense"
         - type: object
           minProperties: 1
 
@@ -1765,7 +1764,7 @@ components:
     MemberHealthCoverage:
       description: A health coverage record for an application member.
       allOf:
-        - $ref: "./schemas/common/health-coverage.yaml"
+        - $ref: "./schemas/common/health.yaml"
         - type: object
           required:
             - id
@@ -1800,11 +1799,11 @@ components:
               readOnly: true
 
     MemberHealthCoverageCreate:
-      $ref: "./schemas/common/health-coverage.yaml"
+      $ref: "./schemas/common/health.yaml"
 
     MemberHealthCoverageUpdate:
       allOf:
-        - $ref: "./schemas/common/health-coverage.yaml"
+        - $ref: "./schemas/common/health.yaml"
         - type: object
           minProperties: 1
 

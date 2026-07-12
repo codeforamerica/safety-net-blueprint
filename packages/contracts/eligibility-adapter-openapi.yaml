@@ -146,35 +146,35 @@ components:
         A household member with their demographic data and associated income,
         expenses, assets, employment, and health coverage. Used as the evaluation
         payload passed to the adapter for each member.
-      allOf:
-        - $ref: "./schemas/common/member.yaml"
-        - type: object
-          properties:
-            income:
-              type: array
-              items:
-                $ref: "./schemas/common/income.yaml"
-              description: Income records for this member.
-            expenses:
-              type: array
-              items:
-                $ref: "./schemas/common/expenses.yaml"
-              description: Expense records for this member.
-            assets:
-              type: array
-              items:
-                $ref: "./schemas/common/assets.yaml"
-              description: Asset records for this member.
-            employment:
-              type: array
-              items:
-                $ref: "./schemas/common/employment.yaml"
-              description: Employment records for this member.
-            healthCoverage:
-              type: array
-              items:
-                $ref: "./schemas/common/health-coverage.yaml"
-              description: Health coverage records for this member.
+      type: object
+      additionalProperties: true
+      properties:
+        income:
+          type: array
+          items:
+            $ref: "./schemas/common/income.yaml"
+          description: Income records for this member.
+        expenses:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: Expense records for this member.
+        assets:
+          type: array
+          items:
+            $ref: "./schemas/common/assets.yaml"
+          description: Asset records for this member.
+        employment:
+          type: array
+          items:
+            $ref: "./schemas/common/employment.yaml"
+          description: Employment records for this member.
+        healthCoverage:
+          type: array
+          items:
+            $ref: "./schemas/common/health.yaml"
+          description: Health coverage records for this member.
 
     ElectronicCheckResult:
       $ref: "./schemas/domain/data-exchange.yaml#/$defs/ServiceCallResult"

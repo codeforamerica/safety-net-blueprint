@@ -73,6 +73,10 @@ $defs:
         type: string
         description: Middle name.
         maxLength: 100
+      middleInitial:
+        type: string
+        description: Middle initial.
+        maxLength: 1
       lastName:
         type: string
         description: Last name.

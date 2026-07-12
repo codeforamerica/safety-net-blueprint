@@ -1,0 +1,259 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/health.yaml"
+title: HealthPlan
+description: >
+  A single health coverage plan referenced in an application. Plans are
+  application-level records shared across members; enrollment of a specific
+  member in a plan is tracked separately via HealthEnrollment. Plan type and
+  premium amount drive Medicaid and CHIP eligibility — specifically the
+  employer-sponsored insurance affordability test (45 CFR § 155.305(f)) and
+  cost-sharing reduction determinations.
+
+type: object
+required:
+  - type
+
+properties:
+  type:
+    $ref: "#/$defs/HealthPlanType"
+  typeOther:
+    type: string
+    description: Free-text description when type is other.
+  premiumAmount:
+    type: number
+    format: float
+    minimum: 0
+    description: Total premium amount for this plan.
+  premiumFrequency:
+    $ref: "#/$defs/PremiumFrequency"
+  organizationId:
+    type: string
+    format: uuid
+    description: The employer organization offering this plan. Present when type is employer_sponsored or cobra.
+    x-relationship:
+      resource: Organization
+  coverageContactName:
+    $ref: "./identity.yaml#/$defs/Name"
+    description: Name of the HR or benefits contact at the employer. Present when type is employer_sponsored or cobra.
+  hasMinimumValuePlan:
+    type: boolean
+    description: >
+      Whether the employer plan meets ACA minimum value standards (60% actuarial
+      value). Affects the Medicaid affordability test (45 CFR § 155.305(f)).
+      Present when type is employer_sponsored or cobra.
+  lowestCostPlanName:
+    type: string
+    description: Name of the lowest-cost self-only plan available to the member through this employer.
+  lowestCostPlanPremium:
+    type: number
+    format: float
+    minimum: 0
+    description: Employee-share premium for the lowest-cost self-only plan available to the member.
+  programType:
+    type: string
+    description: TRICARE program variant (e.g., TRICARE Prime, TRICARE Select). Present when type is tricare.
+  insuranceCompanyName:
+    type: string
+    description: Insurance carrier name. Present when type is tricare.
+  policyNumber:
+    type: string
+    description: Policy or member ID number. Present when type is tricare.
+  medicareId:
+    type: string
+    description: Medicare Beneficiary Identifier (MBI). Present when type is medicare.
+  partA:
+    $ref: "#/$defs/MedicarePart"
+    description: Medicare Part A (hospital insurance) details. Present when type is medicare.
+  partB:
+    $ref: "#/$defs/MedicarePart"
+    description: Medicare Part B (medical insurance) details. Present when type is medicare.
+  partC:
+    $ref: "#/$defs/MedicarePartC"
+    description: Medicare Part C (Medicare Advantage) details. Present when type is medicare.
+  partD:
+    $ref: "#/$defs/MedicarePartD"
+    description: Medicare Part D (prescription drug) details. Present when type is medicare.
+  sponsor:
+    type: object
+    description: Person sponsoring this TRICARE coverage. Present when type is tricare.
+    required: [type, id]
+    additionalProperties: false
+    properties:
+      type:
+        type: string
+        enum: [member, contact]
+        description: Whether the sponsor is a household member or a non-member contact.
+      id:
+        type: string
+        format: uuid
+        description: Identifier of the member or contact record.
+
+additionalProperties: true
+
+$defs:
+
+  HealthPlanType:
+    type: string
+    enum:
+      - employer_sponsored
+      - cobra
+      - medicare
+      - tricare
+      - va
+      - marketplace
+      - peace_corps
+      - chip
+      - medicaid
+      - tribal_health_services
+      - other_federal
+      - other
+    description: >
+      Type of health coverage. employer_sponsored and marketplace affect
+      Medicaid eligibility under the ACA affordability test (45 CFR §
+      155.305(f)). medicare and chip indicate current public program enrollment.
+      tricare and va indicate military and veterans coverage.
+
+  PremiumFrequency:
+    type: string
+    enum:
+      - weekly
+      - every_two_weeks
+      - twice_monthly
+      - monthly
+      - yearly
+    description: How often the premium is paid.
+
+  MedicarePart:
+    type: object
+    description: Medicare Part A (hospital) or Part B (medical) enrollment and premium details.
+    additionalProperties: true
+    properties:
+      status:
+        type: string
+        enum: [entitled, enrolled]
+        description: Whether the member is entitled to or actively enrolled in this part.
+      startDate:
+        type: string
+        format: date
+        description: Date coverage under this part began.
+      isPremiumFree:
+        type: boolean
+        description: >
+          Whether Part A is premium-free based on the member's or spouse's
+          work history. Applies to Part A only.
+      premiumAmount:
+        type: number
+        format: float
+        minimum: 0
+        description: Monthly premium for this part. Primarily applicable to Part B.
+      premiumPaidBy:
+        type: string
+        enum: [self, state, employer, other]
+        description: Who pays the premium for this part.
+
+  MedicarePartC:
+    type: object
+    description: Medicare Part C (Medicare Advantage) plan enrollment details.
+    additionalProperties: true
+    properties:
+      status:
+        type: string
+        enum: [entitled, enrolled]
+        description: Current enrollment status for this Part C plan.
+      startDate:
+        type: string
+        format: date
+        description: Date coverage under this plan began.
+      contractId:
+        type: string
+        description: CMS contract ID for the Medicare Advantage organization.
+      planId:
+        type: string
+        description: Plan ID within the contract.
+      planName:
+        type: string
+        description: Name of the Medicare Advantage plan.
+      premiumAmount:
+        type: number
+        format: float
+        minimum: 0
+        description: Monthly premium for this plan.
+      premiumPaidBy:
+        type: string
+        enum: [self, state, employer, other]
+        description: Who pays the premium for this plan.
+
+  MedicarePartD:
+    type: object
+    description: Medicare Part D (prescription drug coverage) enrollment details.
+    additionalProperties: true
+    properties:
+      status:
+        type: string
+        enum: [entitled, enrolled]
+        description: Current enrollment status for Part D.
+      startDate:
+        type: string
+        format: date
+        description: Date Part D coverage began.
+      planName:
+        type: string
+        description: Name of the Part D plan.
+      premiumAmount:
+        type: number
+        format: float
+        minimum: 0
+        description: Monthly premium for this plan.
+      premiumPaidBy:
+        type: string
+        enum: [self, state, employer, other]
+        description: Who pays the Part D premium.
+
+  HealthEnrollment:
+    type: object
+    description: >
+      A record linking a household member to a health plan. A member may be
+      enrolled in multiple plans (e.g., subscriber on an employer plan and
+      dependent on a spouse's plan). The healthPlanId links to the application's
+      health plans collection.
+    required:
+      - role
+    additionalProperties: true
+    properties:
+      healthPlanId:
+        type: string
+        format: uuid
+        description: The health plan this enrollment is for.
+        x-relationship:
+          resource: HealthPlan
+      jobId:
+        type: string
+        format: uuid
+        description: The job through which this employer-sponsored coverage is offered. Present when the plan is employer_sponsored or cobra.
+        x-relationship:
+          resource: Job
+      role:
+        type: string
+        enum: [subscriber, dependent]
+        description: >
+          Whether the member is the primary subscriber (policyholder) or a
+          dependent on another member's plan.
+      startDate:
+        type: string
+        format: date
+        description: Date this member's coverage under the plan began.
+      endDate:
+        type: string
+        format: date
+        description: Date this member's coverage under the plan ended or is expected to end.
+      eligibleDate:
+        type: string
+        format: date
+        description: Date the member first became eligible for this plan.
+      enrollmentStatus:
+        type: string
+        enum: [eligible, enrolled, pending, ended]
+        description: Current enrollment status for this member in this plan.
+      prefersSeparateMailing:
+        type: boolean
+        description: Whether the member prefers to receive plan notices at a different address than their primary mailing address.

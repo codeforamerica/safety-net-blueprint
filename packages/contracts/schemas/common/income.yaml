@@ -2,8 +2,11 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schemas/common/income.yaml"
 title: Income
 description: >
-  A single income record for a household member. Used across domains wherever
-  income data is collected, evaluated, or passed to the rules engine adapter.
+  A single income record for a household member. Covers earned income
+  (employment, self-employment), unearned income (benefits, support payments,
+  investment returns), lump sums, in-kind support, and other income types.
+  Used across domains wherever income data is collected, evaluated, or passed
+  to the rules engine adapter.
 
 type: object
 required:
@@ -14,37 +17,68 @@ required:
 properties:
   type:
     $ref: "#/$defs/IncomeType"
+  typeOther:
+    type: string
+    description: Free-text description when type is other.
+  jobId:
+    type: string
+    format: uuid
+    description: The job record this income is associated with. Present when type is employed or self_employed.
+    x-relationship:
+      resource: Job
   unearnedType:
     $ref: "#/$defs/UnearnedIncomeType"
-    description: Required when type is unearned.
-  incomeBasis:
-    $ref: "#/$defs/IncomeBasis"
+    description: The specific type of unearned income. Required when type is unearned.
+  inKindSupportType:
+    $ref: "#/$defs/InKindSupportType"
+    description: The category of in-kind support received. Required when type is in_kind_support.
+  payerName:
+    type: string
+    description: Name of the person or organization providing in-kind support. Present when type is in_kind_support.
+  lumpSumType:
+    $ref: "#/$defs/LumpSumType"
+    description: The type of lump sum payment. Required when type is lump_sum.
   amount:
     type: number
     format: float
     minimum: 0
     description: The income amount for the given frequency period.
   frequency:
-    $ref: "./enums.yaml#/$defs/Frequency"
-  startDate:
+    $ref: "#/$defs/IncomeFrequency"
+  dateReceived:
     type: string
     format: date
-    description: When the member first began receiving this income.
-  endDate:
+    description: Date the income was received. Used for lump sums and one-time payments.
+  changeReason:
+    $ref: "#/$defs/IncomeChangeReason"
+    description: Reason for a change in income. Present when reporting an income change.
+  changeExplanation:
     type: string
-    format: date
-    description: When the member expects this income to end, if applicable.
+    description: Free-text explanation of the income change. Present when changeReason is other.
 
 additionalProperties: true
 
 $defs:
+
   IncomeType:
     type: string
     enum:
       - employed
       - self_employed
       - unearned
-    description: The category of income.
+      - lump_sum
+      - in_kind_support
+      - tribal
+      - education_grant
+      - other
+      - prior_period
+    description: >
+      The category of income. employed and self_employed are earned income;
+      unearned covers passive and benefit income; lump_sum covers one-time
+      payments; in_kind_support covers non-cash contributions; tribal covers
+      per-capita and other tribal payments; education_grant covers grants
+      and scholarships not reported elsewhere; prior_period covers income
+      from a previous benefit period being reported now.
 
   UnearnedIncomeType:
     type: string
@@ -72,11 +106,50 @@ $defs:
       - loan_or_mortgage_income
       - research_participation
       - other
-    description: The specific type of unearned income.
+    description: The specific type of unearned income. Present when type is unearned.
 
-  IncomeBasis:
+  InKindSupportType:
     type: string
     enum:
-      - net
-      - gross
-    description: Whether the amount is net or gross.
+      - shelter
+      - food
+      - utilities
+      - other
+    description: The category of in-kind support. Present when type is in_kind_support.
+
+  LumpSumType:
+    type: string
+    enum:
+      - lawsuit_settlement
+      - insurance_settlement
+      - social_security_ssi_ssdi_payment
+      - veterans
+      - inheritance
+      - surrender_of_annuity
+      - life_insurance_payout
+      - lottery_gambling_winnings
+      - other
+    description: The type of lump sum payment. Present when type is lump_sum.
+
+  IncomeFrequency:
+    type: string
+    enum:
+      - daily
+      - weekly
+      - every_two_weeks
+      - twice_monthly
+      - monthly
+      - yearly
+      - variable
+    description: How often the income is received or accrues.
+
+  IncomeChangeReason:
+    type: string
+    enum:
+      - stopped_working
+      - hours_reduced
+      - new_job
+      - change_in_employment
+      - marital_status_change
+      - other
+    description: Reason for a change in this income record.

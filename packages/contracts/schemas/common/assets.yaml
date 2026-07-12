@@ -2,10 +2,11 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schemas/common/assets.yaml"
 title: Asset
 description: >
-  A single asset record for a household member. Used across domains wherever
-  asset data is collected, evaluated, or passed to the rules engine adapter.
+  A single asset record for a household member. Covers liquid assets, vehicles,
+  real property, retirement accounts, insurance policies, and other asset types.
   Liquid assets are used in SNAP resource tests and expedited screening
-  (7 CFR § 273.8, 7 CFR § 273.2(i)).
+  (7 CFR § 273.8, 7 CFR § 273.2(i)). Vehicle and real property treatment
+  varies by program and state policy.
 
 type: object
 required:
@@ -15,18 +16,63 @@ required:
 properties:
   type:
     $ref: "#/$defs/AssetType"
+  typeOther:
+    type: string
+    description: Free-text description when type is other.
   value:
     type: number
     format: float
     minimum: 0
     description: The current fair market value of the asset.
-  description:
+  financialInstitutionName:
     type: string
-    description: Optional free-text description of the asset.
+    description: Name of the financial institution holding the account. Present when type is liquid or retirement_account.
+  accountNumber:
+    type: string
+    description: Account number. Present when type is liquid or retirement_account.
+  year:
+    type: string
+    description: Model year. Present when type is vehicle.
+  make:
+    type: string
+    description: Vehicle make (manufacturer). Present when type is vehicle.
+  model:
+    type: string
+    description: Vehicle model. Present when type is vehicle.
+  policyType:
+    $ref: "#/$defs/InsurancePolicyType"
+    description: Insurance policy type. Present when type is insurance.
+  companyName:
+    type: string
+    description: Insurance company name. Present when type is insurance.
+  policyNumber:
+    type: string
+    description: Policy or certificate number. Present when type is insurance.
+  faceValue:
+    type: number
+    format: float
+    minimum: 0
+    description: >
+      Face value of the insurance policy. Life insurance policies with a cash
+      surrender value above the resource limit count toward SNAP and TANF
+      resource tests. Present when type is insurance.
+  isRevocable:
+    type: boolean
+    description: Whether the insurance policy is revocable. Present when type is insurance.
+  address:
+    $ref: "./contact.yaml#/$defs/Address"
+    description: Property address. Present when type is real_property.
+  primaryUse:
+    $ref: "#/$defs/RealPropertyUse"
+    description: Primary use of the real property. Present when type is real_property.
+  primaryUseOther:
+    type: string
+    description: Free-text description when primaryUse is other.
 
 additionalProperties: true
 
 $defs:
+
   AssetType:
     type: string
     enum:
@@ -34,10 +80,70 @@ $defs:
       - vehicle
       - real_property
       - retirement_account
-      - life_insurance
+      - insurance
       - other
     description: >
-      The category of asset. Liquid assets (cash, checking, savings) are
-      counted in the SNAP resource test (7 CFR § 273.8) and expedited
-      screening resource threshold. Vehicle and real property treatment
-      varies by program and state policy.
+      The category of asset. liquid (cash, checking, savings) is counted in
+      the SNAP resource test (7 CFR § 273.8) and expedited screening resource
+      threshold. vehicle and real_property treatment varies by program and
+      state policy. retirement_account treatment depends on whether the account
+      is accessible. insurance includes life insurance policies with cash value.
+
+  InsurancePolicyType:
+    type: string
+    enum:
+      - term
+      - permanent
+      - burial
+      - other
+    description: >
+      The type of life insurance policy. permanent and burial policies have
+      cash surrender value that counts toward SNAP resource tests.
+      term policies generally do not have cash value.
+
+  RealPropertyUse:
+    type: string
+    enum:
+      - primary_residence
+      - rental
+      - self_employment
+      - for_sale
+      - other
+    description: >
+      The primary use of the real property. primary_residence is generally
+      excluded from SNAP and TANF resource tests. rental, self_employment,
+      and for_sale properties may be counted depending on program rules
+      and state policy.
+
+  AssetDisposal:
+    type: object
+    description: >
+      A record of an asset transferred or sold in the past. Used to determine
+      whether a penalty period applies for transferring assets at below fair
+      market value under SNAP resource rules (7 CFR § 273.8(h)) and TANF.
+    required:
+      - type
+      - dateOfDisposal
+      - amountReceived
+      - fairMarketValue
+    properties:
+      type:
+        $ref: "#/$defs/AssetType"
+      typeOther:
+        type: string
+        description: Free-text description when type is other.
+      dateOfDisposal:
+        type: string
+        format: date
+        description: Date the asset was transferred, sold, or otherwise disposed of.
+      amountReceived:
+        type: number
+        format: float
+        minimum: 0
+        description: Amount actually received from the transfer or sale.
+      fairMarketValue:
+        type: number
+        format: float
+        minimum: 0
+        description: Fair market value of the asset at the time of disposal.
+    additionalProperties: true

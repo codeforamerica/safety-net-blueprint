@@ -111,10 +111,6 @@ apis:
       rule/post-must-return-201: off
   eligibility:
     root: packages/contracts/eligibility-openapi.yaml
-  households:
-    root: packages/contracts/households-openapi.yaml
-  incomes:
-    root: packages/contracts/incomes-openapi.yaml
   intake:
     root: packages/contracts/intake-openapi.yaml
   persons:

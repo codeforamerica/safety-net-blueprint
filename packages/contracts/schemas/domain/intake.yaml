@@ -2,11 +2,1123 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schemas/domain/intake.yaml"
 title: Intake
 description: >
-  Shared intake types passed to external systems (e.g., eligibility adapter).
-  Referenced by the eligibility adapter interface and by the intake OpenAPI spec
-  so both stay in sync.
+  Domain schemas for the intake domain. Covers member sub-objects (demographics,
+  citizenship, disability, etc.), application-level sub-objects (household,
+  utilities, expedited SNAP), and promoted collection schemas (expenses,
+  deductions, tax filers, relationships, etc.). Referenced by intake-openapi.yaml
+  and eligibility-adapter-openapi.yaml.
 
 $defs:
+
+  # ---------------------------------------------------------------------------
+  # Shared reference types
+  # ---------------------------------------------------------------------------
+
+  PersonRef:
+    type: object
+    description: >
+      A polymorphic reference to a person in the application. Can be a household
+      member (type: member, id: ApplicationMember.id) or a non-member contact
+      from the application's people registry (type: contact, id: Person.id).
+      Used throughout the application wherever a reference can point to either
+      a member or a non-member.
+    required: [type, id]
+    additionalProperties: false
+    properties:
+      type:
+        type: string
+        enum: [member, contact]
+        description: Whether the referenced person is a household member or a people-registry contact.
+      id:
+        type: string
+        format: uuid
+        description: Identifier of the referenced member or contact.
+
+  EntityRef:
+    type: object
+    description: >
+      A polymorphic reference to a person or organization in the application.
+      Extends PersonRef to also allow organization references (type: organization,
+      id: Organization.id). Used for authorized representatives, which can be
+      individuals or organizational entities.
+    required: [type, id]
+    additionalProperties: false
+    properties:
+      type:
+        type: string
+        enum: [member, contact, organization]
+        description: Whether the referenced entity is a member, contact, or organization.
+      id:
+        type: string
+        format: uuid
+        description: Identifier of the referenced member, contact, or organization.
+
+  # ---------------------------------------------------------------------------
+  # Member sub-objects
+  # ---------------------------------------------------------------------------
+
+  PersonalInformation:
+    type: object
+    description: >
+      Core demographic and identity fields for a household member. Collected
+      for all applying members. Used in identity verification, program eligibility
+      calculations, and federal reporting.
+    additionalProperties: true
+    properties:
+      ssn:
+        $ref: "../common/identity.yaml#/$defs/SocialSecurityNumber"
+        description: >
+          Social Security Number. Required for most program eligibility
+          determinations and SSA/FDSH identity verification.
+      dateOfBirth:
+        $ref: "../common/identity.yaml#/$defs/DateOfBirth"
+      sexAssignedAtBirth:
+        type: string
+        enum: [male, female, intersex, unknown]
+        description: Sex assigned at birth. Used in some program eligibility and reporting contexts.
+      genderIdentity:
+        type: string
+        enum:
+          - man
+          - woman
+          - non_binary
+          - transgender_man
+          - transgender_woman
+          - prefer_not_to_answer
+          - other
+        description: Member's self-reported gender identity. Collected for reporting; not used in eligibility calculations.
+      maritalStatus:
+        type: string
+        enum:
+          - single
+          - married
+          - divorced
+          - separated
+          - widowed
+          - civil_union
+          - domestic_partnership
+        description: Current marital or partnership status. Affects household composition and tax filing status for Medicaid eligibility.
+      races:
+        type: array
+        items:
+          type: string
+          enum:
+            - american_indian_alaskan_native
+            - asian
+            - black_african_american
+            - native_hawaiian_pacific_islander
+            - white
+        description: Self-reported racial categories. Collected for federal civil rights reporting. Not used in eligibility calculations.
+      isHispanicOrLatino:
+        type: boolean
+        description: Whether the member identifies as Hispanic or Latino. Collected for federal civil rights reporting.
+      preferredSpokenLanguage:
+        type: string
+        description: BCP 47 language tag for the member's preferred spoken language. Used to route interpreter services.
+      preferredWrittenLanguage:
+        type: string
+        description: BCP 47 language tag for the member's preferred written language. Used for notice generation.
+
+  Contact:
+    type: object
+    description: >
+      Contact and address information for a household member. Drives notice
+      delivery and caseworker outreach. homeAddress is used to determine
+      county jurisdiction.
+    additionalProperties: true
+    properties:
+      homeAddress:
+        $ref: "../common/contact.yaml#/$defs/Address"
+        description: Physical home address. Used to determine county jurisdiction.
+      mailingAddress:
+        $ref: "../common/contact.yaml#/$defs/Address"
+        description: Mailing address if different from home address. Overrides homeAddress for notice delivery.
+      phoneNumber:
+        $ref: "../common/contact.yaml#/$defs/PhoneNumber"
+        description: Primary phone number.
+      alternatePhoneNumber:
+        $ref: "../common/contact.yaml#/$defs/PhoneNumber"
+        description: Alternate phone number.
+      isExperiencingHomelessness:
+        type: boolean
+        description: Whether the member lacks a fixed, regular, and adequate nighttime residence.
+      noticePreference:
+        type: string
+        enum: [paper, email, both]
+        description: Preferred method for receiving program notices.
+      email:
+        $ref: "../common/contact.yaml#/$defs/Email"
+        description: Email address for electronic notices and correspondence.
+      alternateNoticeAddress:
+        $ref: "../common/contact.yaml#/$defs/Address"
+        description: Address for notices when privacy concerns exist (e.g., domestic violence situations).
+
+  Residency:
+    type: object
+    description: >
+      State residency information for a household member. States must verify
+      residency for most benefit programs. SNAP does not require a minimum
+      residency period (7 CFR § 273.3).
+    additionalProperties: true
+    properties:
+      isStateResident:
+        type: boolean
+        description: Whether the member currently resides in the state.
+      stateResidencyDate:
+        type: string
+        format: date
+        description: Date the member established residency in the state. Used for programs with residency waiting periods.
+
+  Citizenship:
+    type: object
+    description: >
+      Citizenship and immigration status for a household member. Determines
+      whether immigration verification checks are required and which federal
+      benefit waiting periods apply. Non-citizens face a 5-year bar for SNAP
+      in most cases (8 U.S.C. § 1612) and Medicaid (42 CFR § 435.406).
+    additionalProperties: true
+    properties:
+      citizenshipStatus:
+        type: string
+        enum: [us_citizen, us_national, non_citizen]
+        description: >
+          The member's citizenship status. Determines whether immigration
+          status checks are required via FDSH VLP or USCIS SAVE.
+      certificateNumber:
+        type: string
+        description: U.S. certificate of citizenship or naturalization number. Present when citizenshipStatus is us_citizen and naturalized.
+      immigrantStatus:
+        $ref: "#/$defs/ImmigrantStatus"
+        description: Specific immigration status per 8 U.S.C. § 1641. Required when citizenshipStatus is non_citizen.
+      uscisNumberOrI94:
+        type: string
+        description: USCIS alien registration number or I-94 admission number. Used for FDSH VLP verification.
+      document:
+        $ref: "#/$defs/Document"
+        description: Immigration document details. Present when citizenshipStatus is non_citizen.
+      residedInUsSince1996:
+        type: boolean
+        description: Whether the member has resided in the U.S. continuously since August 22, 1996. Relevant to the 5-year bar under PRWORA.
+      hasQualifyingMilitaryConnection:
+        type: boolean
+        description: Whether the member or a spouse/parent served honorably in the U.S. military. Exempts from certain waiting periods.
+      sponsored:
+        $ref: "#/$defs/Sponsored"
+        description: Sponsor deeming information. Present when the member entered the U.S. as a sponsored immigrant.
+
+  ImmigrantStatus:
+    type: string
+    enum:
+      - lawful_permanent_resident   # INA § 101(a)(20)
+      - refugee                     # INA § 207
+      - asylee                      # INA § 208
+      - deportation_withheld        # INA § 241(b)(3) / former § 243(h)
+      - parolee                     # INA § 212(d)(5), paroled for at least 1 year
+      - conditional_entrant         # INA § 203(a)(7), pre-1980 refugee program
+      - cuban_haitian_entrant        # RHCA § 501(e)
+      - amerasian                   # Immigration Act of 1990, Pub. L. 101-649 § 124
+      - battered_non_citizen        # 8 U.S.C. § 1641(c), VAWA
+      - trafficking_victim          # TVPA § 107(b)(1), 22 U.S.C. § 7105
+      - temporary_protected_status  # INA § 244; not a qualified alien but tracked by states
+      - other
+    description: >
+      Immigration status per 8 U.S.C. § 1641 (PRWORA qualified alien
+      categories). Drives federal benefit waiting-period rules and determines
+      the FDSH VLP or USCIS SAVE verification path. Present when
+      citizenshipStatus is non_citizen.
+
+  Document:
+    type: object
+    description: Immigration document details used to initiate FDSH VLP or USCIS SAVE verification.
+    additionalProperties: true
+    properties:
+      type:
+        type: string
+        enum:
+          - i_551
+          - i_766
+          - i_94
+          - i_327
+          - i_571
+          - foreign_passport
+          - machine_readable_immigrant_visa
+          - other
+        description: Type of immigration document. Determines which fields FDSH VLP requires.
+      number:
+        type: string
+        description: Document number (card number, I-94 number, etc.).
+      expirationDate:
+        type: string
+        format: date
+        description: Document expiration date.
+      countryOfIssuance:
+        type: string
+        description: ISO 3166-1 alpha-2 country code of the issuing country.
+        minLength: 2
+        maxLength: 2
+        pattern: "^[A-Z]{2}$"
+
+  Sponsored:
+    type: object
+    description: >
+      Sponsor deeming fields for sponsored immigrants. The sponsor's income and
+      resources are deemed available to the sponsored member for eligibility
+      calculations until the member naturalizes or works 40 qualifying quarters
+      (8 U.S.C. § 1631).
+    additionalProperties: true
+    properties:
+      hasBeenAbandonedBySponsor:
+        type: boolean
+        description: Whether the sponsor has abandoned the member. Exempts from sponsor deeming.
+      hasBeenMistreatedBySponsor:
+        type: boolean
+        description: Whether the member has been subjected to battery or extreme cruelty by the sponsor or sponsor's household. Exempts from sponsor deeming under VAWA provisions.
+      qualifiesForSponsorDeemingException:
+        type: boolean
+        description: Whether any other sponsor deeming exception applies (e.g., member is indigent).
+      receivesInKindSupport:
+        type: boolean
+        description: Whether the sponsor is currently providing in-kind support to the member.
+
+  Disability:
+    type: object
+    description: >
+      Disability status for a household member. Affects SNAP medical expense
+      deductions for elderly or disabled members (7 CFR § 273.9(d)(3)), TANF
+      exemptions from work requirements, and Medicaid disability pathways.
+    additionalProperties: true
+    properties:
+      isDisabled:
+        type: boolean
+        description: Whether the member has a disability as defined by the applying program.
+      hasLongTermCondition:
+        type: boolean
+        description: Whether the disability or health condition is expected to last 12 months or more.
+      hasPhysicalDisability:
+        type: boolean
+        description: Whether the member has a physical disability.
+      hasMentalDisability:
+        type: boolean
+        description: Whether the member has a mental health condition or intellectual disability.
+      needsHelpWithSelfCare:
+        type: boolean
+        description: Whether the member needs assistance with activities of daily living.
+
+  StudentStatus:
+    type: object
+    description: >
+      Student enrollment information for a household member. Affects SNAP
+      eligibility — most students enrolled at least half-time at an institution
+      of higher education are ineligible unless they meet an exemption
+      (7 CFR § 273.5).
+    additionalProperties: true
+    properties:
+      enrollmentStatus:
+        type: string
+        enum: [full_time, part_time, not_enrolled]
+        description: Current enrollment status at an educational institution.
+      institutionType:
+        type: string
+        enum: [higher_education, vocational, other]
+        description: Type of educational institution attended.
+      schoolName:
+        type: string
+        description: Name of the school or institution.
+      isParticipatingInWorkStudy:
+        type: boolean
+        description: Whether the member is participating in a federal work-study program. Exempts from the SNAP student rule.
+
+  Pregnancy:
+    type: object
+    description: >
+      Pregnancy information for a household member. Affects household size
+      calculations for some programs and Medicaid presumptive eligibility.
+    additionalProperties: true
+    properties:
+      isPregnant:
+        type: boolean
+        description: Whether the member is currently pregnant.
+      dueDate:
+        type: string
+        format: date
+        description: Expected due date.
+      numberOfBabiesExpected:
+        type: integer
+        minimum: 1
+        description: Number of babies expected. Used when calculating household size for programs that count unborn children.
+
+  FosterCare:
+    type: object
+    description: >
+      Foster care history for a household member. Young adults who aged out of
+      foster care may qualify for Medicaid coverage up to age 26 regardless of
+      income under the Fostering Connections Act (42 U.S.C. § 675a).
+    additionalProperties: true
+    properties:
+      startDate:
+        type: string
+        format: date
+        description: Date the member entered foster care.
+      endDate:
+        type: string
+        format: date
+        description: Date the member exited foster care.
+      exitReason:
+        type: string
+        enum: [adopted, reunified, aged_out, emancipated]
+        description: Reason the member exited foster care. aged_out is the primary qualifier for extended Medicaid.
+      exitState:
+        type: string
+        description: USPS postal abbreviation of the state from which the member exited foster care. Relevant for interstate Medicaid coordination.
+      receivedMedicaidAtAge18:
+        type: boolean
+        description: Whether the member was receiving Medicaid when they turned 18. Required for the Fostering Connections Medicaid pathway.
+      returnedAfterAdoption:
+        type: boolean
+        description: Whether the member returned to foster care after an adoption that was subsequently dissolved.
+      returnDate:
+        type: string
+        format: date
+        description: Date the member returned to foster care after dissolved adoption.
+
+  Military:
+    type: object
+    description: >
+      Military service information for a household member. Veterans and their
+      families may qualify for additional program pathways. Active duty
+      affects household composition rules for some programs.
+    additionalProperties: true
+    properties:
+      isVeteran:
+        type: boolean
+        description: Whether the member has served in the U.S. armed forces and has been discharged.
+      isActiveDuty:
+        type: boolean
+        description: Whether the member is currently on active duty.
+      dischargeStatus:
+        type: string
+        enum:
+          - honorable
+          - general
+          - other_than_honorable
+          - bad_conduct
+          - dishonorable
+          - uncharacterized
+        description: Character of discharge. Affects eligibility for VA benefits and some state programs.
+
+  InstitutionalStatus:
+    type: object
+    description: >
+      Institutional living status for a household member. Members residing in
+      certain institutions are ineligible for SNAP (7 CFR § 273.1(b)) and
+      may have modified Medicaid eligibility.
+    additionalProperties: true
+    properties:
+      livesInInstitution:
+        type: boolean
+        description: Whether the member currently resides in an institution.
+      facilityName:
+        type: string
+        description: Name of the institution.
+      facilityType:
+        type: string
+        enum: [nursing_home, hospital, incarceration, other]
+        description: Type of institution. Determines which program exclusions and rules apply.
+      dateEntered:
+        type: string
+        format: date
+        description: Date the member entered the institution.
+      pendingDispositionOfCharges:
+        type: boolean
+        description: Whether the member is a pre-trial detainee (charges pending). Affects SNAP and Medicaid eligibility differently than conviction.
+      mealsProvided:
+        type: boolean
+        description: Whether the institution provides meals as part of the living arrangement.
+
+  PriorConvictions:
+    type: object
+    description: >
+      Criminal history fields affecting program eligibility. Certain drug
+      felony convictions and other offenses create disqualifications or
+      require additional review under federal law.
+    additionalProperties: true
+    properties:
+      isFleeingFelon:
+        type: boolean
+        description: Whether the member is fleeing prosecution, custody, or confinement for a felony. Disqualifies from SNAP (7 CFR § 273.11(n)) and TANF (45 CFR § 261.55).
+      convictedOfDrugRelatedFelony:
+        type: boolean
+        description: Whether the member has a state or federal drug-related felony conviction. States may apply a lifetime ban or modified rules under 21 U.S.C. § 862a.
+      convictedDuplicateSnapBenefits:
+        type: boolean
+        description: Whether the member has been convicted of fraudulently obtaining SNAP benefits in multiple jurisdictions simultaneously (7 CFR § 273.11(c)).
+      convictedOfSnapTrafficking:
+        type: boolean
+        description: Whether the member has been convicted of SNAP benefit trafficking. Permanent disqualification (7 CFR § 273.11(b)).
+      convictedTradingSnapForFirearmsOrExplosives:
+        type: boolean
+        description: Whether the member has been convicted of trading SNAP benefits for firearms, ammunition, or explosives. Permanent disqualification (7 CFR § 273.11(b)).
+      convictedOfDisqualifyingViolentCrime:
+        type: boolean
+        description: Whether the member has a conviction for a disqualifying violent crime under state law.
+      disqualifiedForIPV:
+        type: boolean
+        description: Whether the member has been disqualified for an Intentional Program Violation (IPV) under 7 CFR § 273.16.
+      isViolatingProbationOrParole:
+        type: boolean
+        description: Whether the member is in violation of a condition of probation or parole. Disqualifies from SNAP (7 CFR § 273.11(n)).
+
+  TribalStatus:
+    type: object
+    description: >
+      Tribal membership and affiliation information. Members of federally
+      recognized tribes may have access to tribal food programs that interact
+      with SNAP eligibility. Some states provide additional benefits to
+      tribal members.
+    additionalProperties: true
+    properties:
+      isAmericanIndianOrAlaskaNative:
+        type: boolean
+        description: Whether the member is a member of a federally recognized tribe or is an Alaska Native.
+      tribeName:
+        type: string
+        description: Name of the federally recognized tribe.
+      tribeState:
+        type: string
+        description: USPS postal abbreviation of the state where the tribe is headquartered.
+
+  RetroactiveMedicalCoverage:
+    type: object
+    description: >
+      Retroactive Medicaid coverage request for a household member. Medicaid
+      may cover medical expenses incurred up to 3 months before the application
+      date if the member would have been eligible (42 CFR § 435.914).
+    additionalProperties: true
+    properties:
+      isRequested:
+        type: boolean
+        description: Whether the member is requesting retroactive Medicaid coverage.
+      periods:
+        type: array
+        items:
+          $ref: "#/$defs/Period"
+        description: Months for which retroactive coverage is requested, with household income for each.
+
+  Period:
+    type: object
+    description: A single month of retroactive Medicaid coverage with the relevant household income figure.
+    required: [month]
+    additionalProperties: true
+    properties:
+      month:
+        type: string
+        description: The month for which coverage is requested, in YYYY-MM format.
+        pattern: "^\\d{4}-\\d{2}$"
+      householdIncome:
+        type: number
+        format: float
+        minimum: 0
+        description: Total household income for this month. Used to assess eligibility for the retroactive period.
+
+  # ---------------------------------------------------------------------------
+  # Application sub-objects
+  # ---------------------------------------------------------------------------
+
+  Household:
+    type: object
+    description: >
+      Household-level data collected at the application level. Covers shared
+      living arrangements (roomers), housing subsidies, and prior multi-state
+      TANF receipt. Financial data for expedited SNAP screening lives in
+      ExpeditedSnap; utility details live in Utilities.
+    additionalProperties: true
+    properties:
+      roomers:
+        type: array
+        items:
+          $ref: "#/$defs/Roomer"
+        description: Non-household members who share the living space and pay rent separately.
+      utilitiesIncludedInRent:
+        type: boolean
+        description: Whether utility costs are included in the rent payment.
+      isSubsidizedHousing:
+        type: boolean
+        description: Whether the household lives in subsidized or public housing. Affects the SNAP utility standard deduction.
+      receivedTanfInAnotherState:
+        type: boolean
+        description: Whether the household has received TANF benefits in another state. Required for multi-state TANF coordination.
+
+  Roomer:
+    type: object
+    description: >
+      A person who lives in the household's residence but is not a household
+      member for benefit purposes. Roomers pay rent and are not included in
+      the household's benefit unit.
+    required: [type, id]
+    additionalProperties: true
+    properties:
+      type:
+        type: string
+        enum: [member, contact]
+        description: Whether the roomer is a household member counted in another capacity or a non-member contact.
+      id:
+        type: string
+        format: uuid
+        description: Identifier of the member or contact record.
+      amountPaidForRent:
+        type: number
+        format: float
+        minimum: 0
+        description: Amount the roomer pays for rent.
+      mealsIncludedWithRent:
+        type: boolean
+        description: Whether meals are included with the roomer's rent payment.
+
+  Utilities:
+    type: object
+    description: >
+      Utility information at the application level. Used to determine which
+      SNAP standard utility allowance (SUA) applies. States set their own
+      SUA amounts; the method of heating/cooling determines which SUA tier
+      the household qualifies for (7 CFR § 273.9(d)(6)).
+    additionalProperties: true
+    properties:
+      heatCoolMethod:
+        type: string
+        enum: [gas, electric, oil, propane, other]
+        description: Primary method used to heat or cool the home. Determines which utility standard applies.
+      heatCoolMethodOther:
+        type: string
+        description: Free-text description when heatCoolMethod is other.
+      receivesLiheap:
+        type: boolean
+        description: Whether the household receives Low Income Home Energy Assistance Program (LIHEAP) benefits. Households receiving LIHEAP may be eligible for the full SUA.
+
+  ExpeditedSnap:
+    type: object
+    description: >
+      Financial information used for the SNAP expedited processing screening
+      at application submission (7 CFR § 273.2(i)). This data is collected
+      once and passed to the eligibility adapter; it is not updated during
+      caseworker review.
+    additionalProperties: true
+    properties:
+      totalMoneyExpectedThisMonth:
+        type: number
+        format: float
+        minimum: 0
+        description: Total money the household expects to receive this month from all sources.
+      totalCashOnHand:
+        type: number
+        format: float
+        minimum: 0
+        description: Total cash on hand and in bank accounts available to the household.
+      monthlyMortgage:
+        type: number
+        format: float
+        minimum: 0
+        description: Monthly mortgage payment. Used in the expedited screening shelter cost calculation.
+      monthlyRent:
+        type: number
+        format: float
+        minimum: 0
+        description: Monthly rent payment. Used in the expedited screening shelter cost calculation.
+      monthlyUtilities:
+        type: number
+        format: float
+        minimum: 0
+        description: Monthly utility costs. Used in the expedited screening shelter cost calculation.
+      receivedSnapInLast30Days:
+        type: boolean
+        description: Whether the household received SNAP benefits in the last 30 days. Affects expedited eligibility under 7 CFR § 273.2(i).
+
+  Ebt:
+    type: object
+    description: EBT card preferences collected at the application level.
+    additionalProperties: true
+    properties:
+      needsCard:
+        type: boolean
+        description: Whether the household needs a new EBT card issued.
+      deliveryPreference:
+        type: string
+        enum: [by_mail, in_person]
+        description: How the household prefers to receive their EBT card.
+
+  ChildSupport:
+    type: object
+    description: >
+      Child support cooperation information at the application level. TANF and
+      Medicaid require cooperation with child support enforcement as a condition
+      of eligibility unless a good cause exemption applies (45 CFR § 265.1).
+    additionalProperties: true
+    properties:
+      goodCauseChildSupportWaiver:
+        type: boolean
+        description: Whether the household is claiming a good cause exemption from child support cooperation requirements.
+      parentsOutsideHome:
+        type: array
+        items:
+          $ref: "#/$defs/ParentOutsideHome"
+        description: Non-custodial parents outside the household for whom child support cooperation is being tracked.
+
+  ParentOutsideHome:
+    type: object
+    description: A non-custodial parent outside the household relevant to child support cooperation.
+    required: [type, id]
+    additionalProperties: true
+    properties:
+      type:
+        type: string
+        enum: [member, contact]
+        description: Whether the non-custodial parent is a household member or a people-registry contact.
+      id:
+        type: string
+        format: uuid
+        description: Identifier of the member or contact record.
+      childNames:
+        type: array
+        items:
+          $ref: "../common/identity.yaml#/$defs/Name"
+        description: Names of the children in the household whose non-custodial parent this person is.
+      attemptedMedicalSupportCooperation:
+        type: boolean
+        description: Whether the household has attempted to cooperate with medical child support enforcement for this parent.
+
+  # ---------------------------------------------------------------------------
+  # Application-level promoted collections
+  # ---------------------------------------------------------------------------
+
+  Expense:
+    type: object
+    description: >
+      A single expense record for a household member. Certain expense types
+      affect SNAP net income calculations (shelter, dependent care, child
+      support paid) and Medicaid deductions (medical expenses). Expenses are
+      application-level records with a memberId linking to the owning member.
+    required:
+      - type
+      - amount
+    additionalProperties: true
+    properties:
+      type:
+        $ref: "#/$defs/ExpenseType"
+      typeOther:
+        type: string
+        description: Free-text description when type is other.
+      amount:
+        type: number
+        format: float
+        minimum: 0
+        description: The expense amount.
+      legallyObligatedAmount:
+        type: number
+        format: float
+        minimum: 0
+        description: >
+          The legally obligated portion of the expense. Used for child support
+          deductions — only the legally obligated amount is deductible for SNAP
+          (7 CFR § 273.9(d)(5)).
+
+  ExpenseType:
+    type: string
+    enum:
+      - rent
+      - mortgage
+      - dependent_care
+      - medical
+      - child_support
+      - alimony
+      - other
+    description: >
+      The category of expense. rent and mortgage are used in the SNAP excess
+      shelter deduction (7 CFR § 273.9(d)(6)). dependent_care covers childcare
+      and adult dependent care deductible under 7 CFR § 273.9(d)(4). medical
+      covers out-of-pocket medical expenses for elderly or disabled members
+      (7 CFR § 273.9(d)(3)). child_support covers legally obligated child
+      support payments (7 CFR § 273.9(d)(5)).
+
+  Deduction:
+    type: object
+    description: >
+      An income deduction record for a household member. Used to compute
+      modified adjusted gross income (MAGI) for Medicaid and CHIP eligibility
+      (42 CFR § 435.603). Deductions are application-level records with a
+      memberId linking to the owning member.
+    required:
+      - type
+      - amount
+    additionalProperties: true
+    properties:
+      type:
+        $ref: "#/$defs/DeductionType"
+      typeOther:
+        type: string
+        description: Free-text description when type is other.
+      frequency:
+        $ref: "#/$defs/DeductionFrequency"
+      amount:
+        type: number
+        format: float
+        minimum: 0
+        description: The deduction amount for the given frequency period.
+      annualAmount:
+        type: number
+        format: float
+        minimum: 0
+        description: The total annual deduction amount. Used when frequency is variable or one_time_only.
+
+  DeductionType:
+    type: string
+    enum:
+      - alimony_paid
+      - capital_losses
+      - early_withdrawal_penalty
+      - student_loan_interest
+      - domestic_production_activities
+      - reimbursement_of_expenses
+      - hsa_deduction
+      - moving_expenses
+      - traditional_ira_contribution
+      - reservist_performing_artist_government_official_expenses
+      - other
+      - prior_period
+    description: The type of above-the-line income deduction. Used in MAGI calculations for Medicaid and CHIP (42 CFR § 435.603).
+
+  DeductionFrequency:
+    type: string
+    enum:
+      - one_time_only
+      - weekly
+      - every_two_weeks
+      - twice_monthly
+      - monthly
+      - yearly
+      - variable
+    description: How often the deduction occurs.
+
+  DisabilityBenefit:
+    type: object
+    description: >
+      A record of a member's SSI or SSDI benefit status. SSI receipt automatically
+      confers Medicaid eligibility in most states. SSDI receipt triggers Medicare
+      eligibility after a 24-month waiting period. Status is used in eligibility
+      determinations and to initiate FDSH SSA verification.
+    required:
+      - programType
+      - status
+    additionalProperties: true
+    properties:
+      programType:
+        type: string
+        enum: [ssi, ssdi]
+        description: Whether this is a Supplemental Security Income (SSI) or Social Security Disability Insurance (SSDI) benefit.
+      status:
+        type: string
+        enum: [pending, approved, active, ended, denied, appealed]
+        description: Current status of the SSA benefit application or award.
+      applicationDate:
+        type: string
+        format: date
+        description: Date the SSA benefit application was filed.
+      startDate:
+        type: string
+        format: date
+        description: Date benefit payments began or are expected to begin.
+      endDate:
+        type: string
+        format: date
+        description: Date benefit payments ended, if applicable.
+
+  TaxFiler:
+    type: object
+    description: >
+      Tax filing information for a household member. Tax filing status and
+      dependency relationships are used to define the MAGI household for
+      Medicaid and CHIP eligibility (42 CFR § 435.603).
+    additionalProperties: true
+    properties:
+      filingJointlyWithSpouse:
+        type: boolean
+        description: Whether the member files taxes jointly with a spouse.
+      spouse:
+        $ref: "#/$defs/PersonRef"
+        description: The spouse the member files with. Present when filingJointlyWithSpouse is true.
+      claimingDependents:
+        type: boolean
+        description: Whether the member claims any dependents on their tax return.
+      dependents:
+        type: array
+        items:
+          $ref: "#/$defs/PersonRef"
+        description: People the member claims as dependents on their tax return.
+      expectedToBeClaimedByNonHouseholdMember:
+        type: boolean
+        description: Whether the member expects to be claimed as a dependent by someone outside the household.
+      personClaiming:
+        $ref: "#/$defs/PersonRef"
+        description: The person outside the household who will claim this member as a dependent.
+      isNonCustodialParent:
+        type: boolean
+        description: Whether the member is a non-custodial parent claiming a dependent child under a qualified court order.
+      hasDomesticViolenceTaxFilingException:
+        type: boolean
+        description: Whether the member qualifies for the domestic violence exception to the tax-filer household composition rule.
+
+  PersonRelationship:
+    type: object
+    description: >
+      A directional relationship between two people in the application. Both
+      directions are always stored — A→B (type: parent) and B→A (type: child)
+      — so querying by fromId always returns the correct relationship type for
+      any given person. Used to determine MAGI household composition and
+      child support obligations.
+    required:
+      - fromId
+      - toId
+      - relationshipTypes
+    additionalProperties: false
+    properties:
+      fromId:
+        type: string
+        format: uuid
+        description: The subject of the relationship (the person whose perspective this describes).
+        x-relationship:
+          resource: Person
+      toId:
+        type: string
+        format: uuid
+        description: The object of the relationship.
+        x-relationship:
+          resource: Person
+      relationshipTypes:
+        type: array
+        minItems: 1
+        items:
+          type: string
+          enum:
+            - parent
+            - child
+            - spouse
+            - domestic_partner
+            - sibling
+            - grandparent
+            - grandchild
+            - legal_guardian
+            - caregiver
+            - primary_caregiver
+            - other_relative
+            - unrelated
+        description: The relationship type(s) from fromId's perspective relative to toId.
+
+  AuthorizedRepresentative:
+    type: object
+    description: >
+      A person or organization authorized to act on behalf of one or more
+      household members. Authorized representatives may complete and sign
+      applications, provide information, and receive notices (7 CFR § 273.2(n)).
+    required:
+      - type
+      - id
+    additionalProperties: true
+    properties:
+      type:
+        type: string
+        enum: [member, contact, organization]
+        description: Whether the authorized representative is a household member, contact, or organization.
+      id:
+        type: string
+        format: uuid
+        description: Identifier of the member, contact, or organization record.
+      inCareOf:
+        $ref: "#/$defs/PersonRef"
+        description: The individual within an organizational authorized representative who should receive notices.
+      receivesNotices:
+        type: boolean
+        description: Whether this authorized representative should receive copies of program notices.
+      appointedByMemberId:
+        type: string
+        format: uuid
+        description: The household member who appointed this authorized representative.
+        x-relationship:
+          resource: ApplicationMember
+      programs:
+        type: array
+        items:
+          $ref: "../common/enums.yaml#/$defs/Program"
+        description: Programs for which this person or organization is authorized to act. Empty array means authorized for all applied-for programs.
+
+  Sponsor:
+    type: object
+    description: >
+      An immigration sponsor record for a sponsored non-citizen member.
+      The sponsor's income and resources are deemed available to the member
+      for eligibility calculations until the member naturalizes or works
+      40 qualifying quarters (8 U.S.C. § 1631).
+    required:
+      - sponsoredMemberId
+    additionalProperties: true
+    properties:
+      sponsoredMemberId:
+        type: string
+        format: uuid
+        description: The household member sponsored by this person.
+        x-relationship:
+          resource: ApplicationMember
+      type:
+        type: string
+        enum: [member, contact]
+        description: Whether the sponsor is a household member or a people-registry contact.
+      personId:
+        type: string
+        format: uuid
+        description: Identifier of the member or contact record for the sponsor.
+      ssn:
+        $ref: "../common/identity.yaml#/$defs/SocialSecurityNumber"
+        description: Sponsor's Social Security Number. Used for income verification and deeming calculations.
+      spouse:
+        $ref: "#/$defs/Spouse"
+        description: Sponsor's spouse information, if the sponsor is married.
+      householdSize:
+        type: integer
+        minimum: 1
+        description: Size of the sponsor's household. Used in sponsor deeming calculations.
+      income:
+        type: number
+        format: float
+        minimum: 0
+        description: Sponsor's annual income. Used in sponsor deeming calculations.
+      livesWithSponsored:
+        type: boolean
+        description: Whether the sponsor lives in the same household as the sponsored member.
+
+  Spouse:
+    type: object
+    description: Sponsor's spouse information used in sponsor deeming calculations.
+    additionalProperties: true
+    properties:
+      type:
+        type: string
+        enum: [member, contact]
+        description: Whether the sponsor's spouse is a household member or a people-registry contact.
+      personId:
+        type: string
+        format: uuid
+        description: Identifier of the member or contact record for the spouse.
+      ssn:
+        $ref: "../common/identity.yaml#/$defs/SocialSecurityNumber"
+        description: Spouse's Social Security Number.
+      signedAffidavit:
+        type: boolean
+        description: Whether the sponsor's spouse has signed an I-864A Household Member Contract.
+
+  Signature:
+    type: object
+    description: >
+      A signature collected during the application process. Applications require
+      signatures for the application itself, rights and responsibilities
+      acknowledgment, and authorized representative appointment.
+    required:
+      - signer
+      - purpose
+      - signedAt
+      - signatureMethod
+    additionalProperties: true
+    properties:
+      signer:
+        $ref: "#/$defs/Signer"
+        description: The person or organization providing the signature.
+      purpose:
+        type: string
+        enum:
+          - application
+          - authorized_representative_appointment
+          - authorized_representative_acceptance
+          - rights_and_responsibilities
+          - hipaa_consent
+          - other
+        description: What the signature covers.
+      signedAt:
+        type: string
+        format: date-time
+        description: Date and time the signature was collected.
+      signatureMethod:
+        type: string
+        enum: [electronic, wet_signature, verbal]
+        description: How the signature was collected.
+
+  Signer:
+    type: object
+    description: A reference to the person or organization providing a signature, including their role in this context.
+    required: [type, id, role]
+    additionalProperties: false
+    properties:
+      type:
+        type: string
+        enum: [member, contact, organization]
+        description: Whether the signer is a household member, contact, or organization.
+      id:
+        type: string
+        format: uuid
+        description: Identifier of the member, contact, or organization record.
+      role:
+        type: string
+        enum: [applicant, authorized_representative, helper]
+        description: The role in which the signer is acting for this signature.
+
+  Organization:
+    type: object
+    description: >
+      A legal entity referenced in the application — typically an employer,
+      organizational authorized representative, or insurance carrier. The
+      organizations collection is the canonical registry of all organizations
+      referenced; other records (Job.employerId, HealthPlan.organizationId)
+      reference this by id.
+    required:
+      - name
+    additionalProperties: true
+    properties:
+      name:
+        type: string
+        description: Legal name of the organization.
+      ein:
+        type: string
+        description: Employer Identification Number (EIN / Federal Tax ID).
+        pattern: "^\\d{2}-\\d{7}$"
+      address:
+        $ref: "../common/contact.yaml#/$defs/Address"
+        description: Organization's primary business address.
+      phone:
+        $ref: "../common/contact.yaml#/$defs/PhoneNumber"
+        description: Organization's primary phone number.
+
+  Person:
+    type: object
+    description: >
+      A person referenced in the application who may or may not be a household
+      member. All individuals referenced in the application — household members,
+      authorized representatives, sponsors, tax dependents, non-custodial parents
+      — have a record in the people collection. Members are linked to their
+      people record via memberId. Non-members are referenced only through their
+      contact id. Distinct from the client-management Person resource, which is
+      the persistent person of record across applications.
+    required:
+      - name
+    additionalProperties: true
+    properties:
+      name:
+        $ref: "../common/identity.yaml#/$defs/Name"
+      address:
+        $ref: "../common/contact.yaml#/$defs/Address"
+      phone:
+        $ref: "../common/contact.yaml#/$defs/PhoneNumber"
+      email:
+        $ref: "../common/contact.yaml#/$defs/Email"
+
+  # ---------------------------------------------------------------------------
+  # Application process types
+  # ---------------------------------------------------------------------------
+
   VerificationSummary:
     type: object
     description: >

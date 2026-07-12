@@ -13,8 +13,8 @@ $defs:
     required:
       - addressLine1
       - city
-      - stateProvince
-      - postalCode
+      - state
+      - zip
     properties:
       addressLine1:
         type: string
@@ -30,12 +30,12 @@ $defs:
         description: City or locality of residence.
         minLength: 1
         maxLength: 100
-      stateProvince:
+      state:
         type: string
         description: State, province, or region of residence.
         minLength: 1
         maxLength: 100
-      postalCode:
+      zip:
         type: string
         description: Postal or ZIP code.
         minLength: 3
