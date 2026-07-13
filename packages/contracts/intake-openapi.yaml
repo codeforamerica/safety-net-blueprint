@@ -1618,7 +1618,7 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  /applications/{applicationId}/income:
+  /applications/{applicationId}/incomes:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
     get:
@@ -1680,7 +1680,7 @@ paths:
         "500":
           $ref: "./components/responses.yaml#/InternalError"
 
-  /applications/{applicationId}/income/{incomeId}:
+  /applications/{applicationId}/incomes/{incomeId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
       - $ref: "#/components/parameters/IncomeIdParam"

@@ -27,7 +27,11 @@ function findYamlFiles(dir) {
   for (const entry of readdirSync(dir)) {
     if (entry === 'node_modules') continue;
     const fullPath = resolve(dir, entry);
-    if (statSync(fullPath).isDirectory()) {
+    const stat = statSync(fullPath);
+    if (stat.isDirectory()) {
+      // Overlay files reference their target spec's components by design;
+      // they are not self-contained documents and cannot be validated in isolation.
+      if (entry === 'overlays') continue;
       results.push(...findYamlFiles(fullPath));
     } else if (entry.endsWith('.yaml') || entry.endsWith('.yml')) {
       results.push(fullPath);

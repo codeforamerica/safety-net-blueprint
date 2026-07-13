@@ -284,7 +284,7 @@ test('Database Seeder Tests', async (t) => {
     // Verifies that passing a separate seedDir causes seed data to be loaded
     // from that directory rather than from specsDir. This is the behaviour that
     // --seed=<dir> in setup.js exposes on the CLI.
-    clearAll('persons');
+    clearAll('applications');
 
     const { writeFileSync, mkdtempSync } = await import('fs');
     const { join: pathJoin } = await import('path');
@@ -292,26 +292,24 @@ test('Database Seeder Tests', async (t) => {
     const yaml = (await import('js-yaml')).default;
 
     const tmpSeedDir = mkdtempSync(pathJoin(tmpdir(), 'snb-seed-test-'));
-    writeFileSync(pathJoin(tmpSeedDir, 'persons.yaml'), yaml.dump({
-      PersonExample1: {
+    writeFileSync(pathJoin(tmpSeedDir, 'intake.yaml'), yaml.dump({
+      ApplicationExample1: {
         id: 'f0000001-0000-4000-8000-000000000001',
-        givenName: 'Seed',
-        familyName: 'Dir Test',
-        dateOfBirth: '1990-01-01',
+        status: 'draft',
       },
     }));
 
     // Use the real specs dir so API discovery works, but a custom seed dir
-    // that only has a persons entry — confirming seeds come from seedDir.
+    // that only has an intake entry — confirming seeds come from seedDir.
     const apiSpecs = await loadAllSpecs({ specsDir });
     const { seedAllDatabases: seed } = await import('../../src/seeder.js');
     seed(apiSpecs, specsDir, tmpSeedDir);
 
-    const found = findAll('persons', { id: 'f0000001-0000-4000-8000-000000000001' });
-    assert.strictEqual(found.total, 1, 'record from custom seedDir should be present in persons');
+    const found = findAll('applications', { id: 'f0000001-0000-4000-8000-000000000001' });
+    assert.strictEqual(found.total, 1, 'record from custom seedDir should be present in applications');
     console.log('  ✓ seedDir correctly overrides specsDir for seed loading');
 
-    clearAll('persons');
+    clearAll('applications');
   });
 
   await t.test('deriveAllCollectionNames - falls back to api object for APIs with no endpoints', () => {

@@ -2415,7 +2415,7 @@ test('relationship-resolver tests', async (t) => {
   // Integration: real intake spec under global expand
   // ===========================================================================
 
-  await t.test('integration - intake spec under global expand keeps all 14 back-refs scalar', async () => {
+  await t.test('integration - intake spec under global expand keeps all 9 back-refs scalar', async () => {
     // Loads the real packages/contracts/intake-openapi.yaml and confirms the
     // direction gate behaves correctly against the full spec. Acts as a
     // regression guard for the design intent documented in the GH issue.
@@ -2436,20 +2436,17 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
     const schemas = result.components.schemas;
 
-    // The 14 back-references in the intake spec.
+    // The 9 back-references in the intake spec (child → parent Application).
+    // memberId fields on application-level resources (Income, Expense, etc.) are
+    // sibling references, not back-references, so they are correctly expanded.
     // Each tuple: [containingSchema, scalarFieldName].
     const backRefs = [
       ['ApplicationMember', 'applicationId'],
-      ['MemberIncome', 'memberId'],
-      ['MemberIncome', 'applicationId'],
-      ['MemberExpense', 'memberId'],
-      ['MemberExpense', 'applicationId'],
-      ['MemberAsset', 'memberId'],
-      ['MemberAsset', 'applicationId'],
-      ['MemberEmployment', 'memberId'],
-      ['MemberEmployment', 'applicationId'],
-      ['MemberHealthCoverage', 'memberId'],
-      ['MemberHealthCoverage', 'applicationId'],
+      ['Income', 'applicationId'],
+      ['Expense', 'applicationId'],
+      ['Asset', 'applicationId'],
+      ['Job', 'applicationId'],
+      ['HealthPlan', 'applicationId'],
       ['ApplicationHousehold', 'applicationId'],
       ['Verification', 'applicationId'],
       ['Interview', 'applicationId'],

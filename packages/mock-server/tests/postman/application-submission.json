@@ -284,13 +284,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"type\": \"employed\", \"amount\": 2000, \"frequency\": \"monthly\"}",
+              "raw": "{\"memberId\": \"{{memberAId}}\", \"type\": \"employed\", \"amount\": 2000, \"frequency\": \"monthly\"}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}/incomes",
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/incomes",
               "host": ["{{baseUrl}}"],
-              "path": ["intake", "applications", "{{appId}}", "members", "{{memberAId}}", "incomes"]
+              "path": ["intake", "applications", "{{appId}}", "incomes"]
             }
           },
           "event": [
@@ -319,13 +319,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"type\": \"employed\", \"amount\": 1500, \"frequency\": \"monthly\"}",
+              "raw": "{\"memberId\": \"{{memberBId}}\", \"type\": \"employed\", \"amount\": 1500, \"frequency\": \"monthly\"}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberBId}}/incomes",
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/incomes",
               "host": ["{{baseUrl}}"],
-              "path": ["intake", "applications", "{{appId}}", "members", "{{memberBId}}", "incomes"]
+              "path": ["intake", "applications", "{{appId}}", "incomes"]
             }
           },
           "event": [
@@ -353,13 +353,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"type\": \"employed\", \"amount\": 1200, \"frequency\": \"monthly\"}",
+              "raw": "{\"memberId\": \"{{memberCId}}\", \"type\": \"employed\", \"amount\": 1200, \"frequency\": \"monthly\"}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberCId}}/incomes",
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/incomes",
               "host": ["{{baseUrl}}"],
-              "path": ["intake", "applications", "{{appId}}", "members", "{{memberCId}}", "incomes"]
+              "path": ["intake", "applications", "{{appId}}", "incomes"]
             }
           },
           "event": [

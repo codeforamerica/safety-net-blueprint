@@ -139,12 +139,11 @@ async function runTests() {
   
   // Test 2: Inline schema resolution from spec file (shallow)
   try {
-    console.log('\nTest 2: Resolve inline schema reference (#/components/schemas/PersonIdentity from persons-openapi.yaml)');
-    const specPath = join(__dirname, '../../../contracts/persons-openapi.yaml');
+    console.log('\nTest 2: Resolve inline schema reference (#/components/schemas/VerificationDocumentRequest from intake-openapi.yaml)');
+    const specPath = join(__dirname, '../../../contracts/intake-openapi.yaml');
     const specContent = loadYaml(specPath);
-    // Use PersonIdentity directly (not Person which uses allOf and triggers deep
-    // recursive resolution across files that the test resolver can't handle)
-    const schema = specContent.components?.schemas?.PersonIdentity;
+    // Use VerificationDocumentRequest directly (simple object schema with no external $refs)
+    const schema = specContent.components?.schemas?.VerificationDocumentRequest;
 
     if (schema && schema.type === 'object' && schema.properties) {
       console.log('  ✓ PASS: Inline schema found correctly');

@@ -234,7 +234,7 @@ machines:
                   as: member
                 do:
                   - forEach:
-                      from: intake/member-incomes
+                      from: intake/application-incomes
                       where: {memberId: $member.id}
                       as: income
                     do:
