@@ -2,8 +2,27 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schemas/common/contact.yaml"
 title: Contact
 description: >
-  Shared contact schemas used across domains. Referenced by OpenAPI specs,
-  state machine schemas, and event schemas.
+  A person referenced in an application who is not a household member —
+  an authorized representative, sponsor, tax dependent, or other non-member
+  contact. Carries the name and contact details needed to reach them.
+  Members who are also contacts are linked via PersonRef (type: member).
+
+type: object
+required:
+  - name
+additionalProperties: true
+properties:
+  name:
+    $ref: "../common/identity.yaml#/$defs/Name"
+  primaryAddress:
+    $ref: "#/$defs/Address"
+    description: Primary address for this contact.
+  primaryPhone:
+    $ref: "#/$defs/PhoneNumber"
+    description: Primary phone number.
+  email:
+    $ref: "#/$defs/Email"
+    description: Email address.
 
 $defs:
   Address:

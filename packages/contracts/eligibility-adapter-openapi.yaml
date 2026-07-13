@@ -243,7 +243,7 @@ components:
                 $ref: "#/components/schemas/MemberContext"
               description: All members in the household benefit unit.
             household:
-              $ref: "./schemas/common/household.yaml"
+              $ref: "./schemas/domain/intake.yaml#/$defs/Household"
               description: Household-level data used in benefit calculation.
 
     # -------------------------------------------------------------------------
@@ -293,7 +293,7 @@ components:
             - household
           properties:
             household:
-              $ref: "./schemas/common/household.yaml"
+              $ref: "./schemas/domain/intake.yaml#/$defs/Household"
               description: Household-level data used in SNAP expedited screening criteria.
 
     ExpeditedScreeningResponse:

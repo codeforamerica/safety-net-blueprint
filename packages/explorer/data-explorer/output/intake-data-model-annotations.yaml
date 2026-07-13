@@ -1,0 +1,830 @@
+# intake data model annotations
+# Generated from intake-openapi.yaml
+# Do not edit — regenerate with: node generate-data-model.mjs --domain=intake
+
+version: '1.0'
+domain: intake
+schema:
+  application.programsAppliedFor[]:
+    description: Programs the household is applying for. At least one required at submission.
+  application.channel:
+    description: How the application was filed.
+  application.ebt.needsCard:
+    description: Whether the household needs a new EBT card issued.
+  application.ebt.deliveryPreference:
+    description: How the household prefers to receive their EBT card.
+  application.registerToVote:
+    description: Whether any household member would like to register to vote.
+  application.deniesIevsConsent:
+    description: Whether the household denies consent for IEVS income verification.
+  application.expeditedSnap.totalMoneyExpectedThisMonth:
+    description: Total money the household expects to receive this month from all sources.
+  application.expeditedSnap.totalCashOnHand:
+    description: Total cash on hand and in bank accounts available to the household.
+  application.expeditedSnap.monthlyMortgage:
+    description: Monthly mortgage payment. Used in the expedited screening shelter cost calculation.
+  application.expeditedSnap.monthlyRent:
+    description: Monthly rent payment. Used in the expedited screening shelter cost calculation.
+  application.expeditedSnap.monthlyUtilities:
+    description: Monthly utility costs. Used in the expedited screening shelter cost calculation.
+  application.expeditedSnap.receivedSnapInLast30Days:
+    description: >-
+      Whether the household received SNAP benefits in the last 30 days. Affects expedited
+      eligibility under 7 CFR § 273.2(i).
+  application.utilities.heatCoolMethod:
+    description: Primary method used to heat or cool the home. Determines which utility standard applies.
+  application.utilities.heatCoolMethodOther:
+    description: Free-text description when heatCoolMethod is other.
+  application.utilities.receivesLiheap:
+    description: >-
+      Whether the household receives Low Income Home Energy Assistance Program (LIHEAP) benefits.
+      Households receiving LIHEAP may be eligible for the full SUA.
+  application.members[].personId:
+    description: >-
+      Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when
+      selecting from match candidates or correcting a bad link.
+  application.members[].personMatch.candidates[].personId:
+    description: The candidate person record ID.
+  application.members[].roles[]:
+    description: Roles this person plays in the application.
+  application.members[].programsAppliedFor[]:
+    description: Programs this member is applying for.
+  application.members[].purchasesAndPreparesFood:
+    description: Whether this member purchases and prepares food separately from the rest of the household.
+  application.members[].isMigrantFarmWorker:
+    description: Whether this member is a migrant or seasonal farm worker.
+  application.members[].hasThirdPartyLiabilityClaim:
+    description: Whether this member has a third-party liability claim that could cover medical costs.
+  application.members[].personalInformation.ssn:
+    description: >-
+      Social Security Number. Required for most program eligibility determinations and SSA/FDSH
+      identity verification.
+  application.members[].personalInformation.dateOfBirth:
+    description: >-
+      Date of birth. Used in age-based program eligibility criteria and as a core identity-matching
+      field for FDSH verification calls.
+  application.members[].personalInformation.sexAssignedAtBirth:
+    description: Sex assigned at birth. Used in some program eligibility and reporting contexts.
+  application.members[].personalInformation.genderIdentity:
+    description: >-
+      Member's self-reported gender identity. Collected for reporting; not used in eligibility
+      calculations.
+  application.members[].personalInformation.maritalStatus:
+    description: >-
+      Current marital or partnership status. Affects household composition and tax filing status for
+      Medicaid eligibility.
+  application.members[].personalInformation.races[]:
+    description: >-
+      Self-reported racial categories. Collected for federal civil rights reporting. Not used in
+      eligibility calculations.
+  application.members[].personalInformation.isHispanicOrLatino:
+    description: >-
+      Whether the member identifies as Hispanic or Latino. Collected for federal civil rights
+      reporting.
+  application.members[].personalInformation.preferredSpokenLanguage:
+    description: >-
+      BCP 47 language tag for the member's preferred spoken language. Used to route interpreter
+      services.
+  application.members[].personalInformation.preferredWrittenLanguage:
+    description: BCP 47 language tag for the member's preferred written language. Used for notice generation.
+  application.members[].contact.name.firstName:
+    description: First name.
+  application.members[].contact.name.middleName:
+    description: Middle name.
+  application.members[].contact.name.middleInitial:
+    description: Middle initial.
+  application.members[].contact.name.lastName:
+    description: Last name.
+  application.members[].contact.name.maidenName:
+    description: Maiden name if applicable.
+  application.members[].contact.name.suffix:
+    description: Name suffix such as Jr., Sr., III, etc.
+  application.members[].contact.primaryAddress.addressLine1:
+    description: Primary street address line.
+  application.members[].contact.primaryAddress.addressLine2:
+    description: Secondary address line such as apartment or unit.
+  application.members[].contact.primaryAddress.city:
+    description: City or locality of residence.
+  application.members[].contact.primaryAddress.state:
+    description: State, province, or region of residence.
+  application.members[].contact.primaryAddress.zip:
+    description: Postal or ZIP code.
+  application.members[].contact.primaryAddress.county:
+    description: County or equivalent administrative region.
+  application.members[].contact.primaryPhone:
+    description: Primary phone number.
+  application.members[].contact.email:
+    description: Email address.
+  application.members[].contact.mailingAddress.addressLine1:
+    description: Primary street address line.
+  application.members[].contact.mailingAddress.addressLine2:
+    description: Secondary address line such as apartment or unit.
+  application.members[].contact.mailingAddress.city:
+    description: City or locality of residence.
+  application.members[].contact.mailingAddress.state:
+    description: State, province, or region of residence.
+  application.members[].contact.mailingAddress.zip:
+    description: Postal or ZIP code.
+  application.members[].contact.mailingAddress.county:
+    description: County or equivalent administrative region.
+  application.members[].contact.alternatePhone:
+    description: Secondary phone number for the member.
+  application.members[].contact.isExperiencingHomelessness:
+    description: Whether the member lacks a fixed, regular, and adequate nighttime residence.
+  application.members[].contact.noticePreference:
+    description: Preferred method for receiving program notices.
+  application.members[].contact.alternateNoticeAddress.addressLine1:
+    description: Primary street address line.
+  application.members[].contact.alternateNoticeAddress.addressLine2:
+    description: Secondary address line such as apartment or unit.
+  application.members[].contact.alternateNoticeAddress.city:
+    description: City or locality of residence.
+  application.members[].contact.alternateNoticeAddress.state:
+    description: State, province, or region of residence.
+  application.members[].contact.alternateNoticeAddress.zip:
+    description: Postal or ZIP code.
+  application.members[].contact.alternateNoticeAddress.county:
+    description: County or equivalent administrative region.
+  application.members[].residency.isStateResident:
+    description: Whether the member currently resides in the state.
+  application.members[].residency.stateResidencyDate:
+    description: >-
+      Date the member established residency in the state. Used for programs with residency waiting
+      periods.
+  application.members[].citizenship.citizenshipStatus:
+    description: >-
+      The member's citizenship status. Determines whether immigration status checks are required via
+      FDSH VLP or USCIS SAVE.
+  application.members[].citizenship.certificateNumber:
+    description: >-
+      U.S. certificate of citizenship or naturalization number. Present when citizenshipStatus is
+      us_citizen and naturalized.
+  application.members[].citizenship.immigrantStatus:
+    description: >-
+      Specific immigration status per 8 U.S.C. § 1641. Required when citizenshipStatus is
+      non_citizen.
+  application.members[].citizenship.uscisNumberOrI94:
+    description: USCIS alien registration number or I-94 admission number. Used for FDSH VLP verification.
+  application.members[].citizenship.document.type:
+    description: Type of immigration document. Determines which fields FDSH VLP requires.
+  application.members[].citizenship.document.number:
+    description: Document number (card number, I-94 number, etc.).
+  application.members[].citizenship.document.expirationDate:
+    description: Document expiration date.
+  application.members[].citizenship.document.countryOfIssuance:
+    description: ISO 3166-1 alpha-2 country code of the issuing country.
+  application.members[].citizenship.residedInUsSince1996:
+    description: >-
+      Whether the member has resided in the U.S. continuously since August 22, 1996. Relevant to the
+      5-year bar under PRWORA.
+  application.members[].citizenship.hasQualifyingMilitaryConnection:
+    description: >-
+      Whether the member or a spouse/parent served honorably in the U.S. military. Exempts from
+      certain waiting periods.
+  application.members[].citizenship.sponsored.hasBeenAbandonedBySponsor:
+    description: Whether the sponsor has abandoned the member. Exempts from sponsor deeming.
+  application.members[].citizenship.sponsored.hasBeenMistreatedBySponsor:
+    description: >-
+      Whether the member has been subjected to battery or extreme cruelty by the sponsor or
+      sponsor's household. Exempts from sponsor deeming under VAWA provisions.
+  application.members[].citizenship.sponsored.qualifiesForSponsorDeemingException:
+    description: Whether any other sponsor deeming exception applies (e.g., member is indigent).
+  application.members[].citizenship.sponsored.receivesInKindSupport:
+    description: Whether the sponsor is currently providing in-kind support to the member.
+  application.members[].retroactiveMedicalCoverage.isRequested:
+    description: Whether the member is requesting retroactive Medicaid coverage.
+  application.members[].retroactiveMedicalCoverage.periods[].month:
+    description: The month for which coverage is requested, in YYYY-MM format.
+  application.members[].retroactiveMedicalCoverage.periods[].householdIncome:
+    description: Total household income for this month. Used to assess eligibility for the retroactive period.
+  application.members[].disability.isDisabled:
+    description: Whether the member has a disability as defined by the applying program.
+  application.members[].disability.hasLongTermCondition:
+    description: Whether the disability or health condition is expected to last 12 months or more.
+  application.members[].disability.hasPhysicalDisability:
+    description: Whether the member has a physical disability.
+  application.members[].disability.hasMentalDisability:
+    description: Whether the member has a mental health condition or intellectual disability.
+  application.members[].disability.needsHelpWithSelfCare:
+    description: Whether the member needs assistance with activities of daily living.
+  application.members[].studentStatus.enrollmentStatus:
+    description: Current enrollment status at an educational institution.
+  application.members[].studentStatus.institutionType:
+    description: Type of educational institution attended.
+  application.members[].studentStatus.schoolName:
+    description: Name of the school or institution.
+  application.members[].studentStatus.isParticipatingInWorkStudy:
+    description: >-
+      Whether the member is participating in a federal work-study program. Exempts from the SNAP
+      student rule.
+  application.members[].pregnancy.isPregnant:
+    description: Whether the member is currently pregnant.
+  application.members[].pregnancy.dueDate:
+    description: Expected due date.
+  application.members[].pregnancy.numberOfBabiesExpected:
+    description: >-
+      Number of babies expected. Used when calculating household size for programs that count unborn
+      children.
+  application.members[].fosterCare.startDate:
+    description: Date the member entered foster care.
+  application.members[].fosterCare.endDate:
+    description: Date the member exited foster care.
+  application.members[].fosterCare.exitReason:
+    description: Reason the member exited foster care. aged_out is the primary qualifier for extended Medicaid.
+  application.members[].fosterCare.exitState:
+    description: >-
+      USPS postal abbreviation of the state from which the member exited foster care. Relevant for
+      interstate Medicaid coordination.
+  application.members[].fosterCare.receivedMedicaidAtAge18:
+    description: >-
+      Whether the member was receiving Medicaid when they turned 18. Required for the Fostering
+      Connections Medicaid pathway.
+  application.members[].fosterCare.returnedAfterAdoption:
+    description: Whether the member returned to foster care after an adoption that was subsequently dissolved.
+  application.members[].fosterCare.returnDate:
+    description: Date the member returned to foster care after dissolved adoption.
+  application.members[].military.isVeteran:
+    description: Whether the member has served in the U.S. armed forces and has been discharged.
+  application.members[].military.isActiveDuty:
+    description: Whether the member is currently on active duty.
+  application.members[].military.dischargeStatus:
+    description: Character of discharge. Affects eligibility for VA benefits and some state programs.
+  application.members[].institutionalStatus.livesInInstitution:
+    description: Whether the member currently resides in an institution.
+  application.members[].institutionalStatus.facilityName:
+    description: Name of the institution.
+  application.members[].institutionalStatus.facilityType:
+    description: Type of institution. Determines which program exclusions and rules apply.
+  application.members[].institutionalStatus.dateEntered:
+    description: Date the member entered the institution.
+  application.members[].institutionalStatus.pendingDispositionOfCharges:
+    description: >-
+      Whether the member is a pre-trial detainee (charges pending). Affects SNAP and Medicaid
+      eligibility differently than conviction.
+  application.members[].institutionalStatus.mealsProvided:
+    description: Whether the institution provides meals as part of the living arrangement.
+  application.members[].priorConvictions.isFleeingFelon:
+    description: >-
+      Whether the member is fleeing prosecution, custody, or confinement for a felony. Disqualifies
+      from SNAP (7 CFR § 273.11(n)) and TANF (45 CFR § 261.55).
+  application.members[].priorConvictions.convictedOfDrugRelatedFelony:
+    description: >-
+      Whether the member has a state or federal drug-related felony conviction. States may apply a
+      lifetime ban or modified rules under 21 U.S.C. § 862a.
+  application.members[].priorConvictions.convictedDuplicateSnapBenefits:
+    description: >-
+      Whether the member has been convicted of fraudulently obtaining SNAP benefits in multiple
+      jurisdictions simultaneously (7 CFR § 273.11(c)).
+  application.members[].priorConvictions.convictedOfSnapTrafficking:
+    description: >-
+      Whether the member has been convicted of SNAP benefit trafficking. Permanent disqualification
+      (7 CFR § 273.11(b)).
+  application.members[].priorConvictions.convictedTradingSnapForFirearmsOrExplosives:
+    description: >-
+      Whether the member has been convicted of trading SNAP benefits for firearms, ammunition, or
+      explosives. Permanent disqualification (7 CFR § 273.11(b)).
+  application.members[].priorConvictions.convictedOfDisqualifyingViolentCrime:
+    description: Whether the member has a conviction for a disqualifying violent crime under state law.
+  application.members[].priorConvictions.disqualifiedForIPV:
+    description: >-
+      Whether the member has been disqualified for an Intentional Program Violation (IPV) under 7
+      CFR § 273.16.
+  application.members[].priorConvictions.isViolatingProbationOrParole:
+    description: >-
+      Whether the member is in violation of a condition of probation or parole. Disqualifies from
+      SNAP (7 CFR § 273.11(n)).
+  application.members[].tribalStatus.isAmericanIndianOrAlaskaNative:
+    description: Whether the member is a member of a federally recognized tribe or is an Alaska Native.
+  application.members[].tribalStatus.tribeName:
+    description: Name of the federally recognized tribe.
+  application.members[].tribalStatus.tribeState:
+    description: USPS postal abbreviation of the state where the tribe is headquartered.
+  application.members[].personMatch.candidates[].confidenceScore:
+    description: Match confidence score from 0 (no confidence) to 1 (certain).
+  application.members[].programDeterminations[].program:
+    description: Program identifier (e.g., snap, medicaid, tanf).
+  application.members[].programDeterminations[].outcome:
+    description: Determination outcome for this member/program combination.
+  application.members[].programDeterminations[].determinedAt:
+    description: When the determination was recorded.
+  application.householdInfo.roomers[].id:
+    description: Identifier of the member or contact record.
+  application.householdInfo.roomers[].type:
+    description: Whether the roomer is a household member counted in another capacity or a non-member contact.
+  application.householdInfo.roomers[].amountPaidForRent:
+    description: Amount the roomer pays for rent.
+  application.householdInfo.roomers[].mealsIncludedWithRent:
+    description: Whether meals are included with the roomer's rent payment.
+  application.householdInfo.utilitiesIncludedInRent:
+    description: Whether utility costs are included in the rent payment.
+  application.householdInfo.isSubsidizedHousing:
+    description: >-
+      Whether the household lives in subsidized or public housing. Affects the SNAP utility standard
+      deduction.
+  application.householdInfo.receivedTanfInAnotherState:
+    description: >-
+      Whether the household has received TANF benefits in another state. Required for multi-state
+      TANF coordination.
+  application.taxFilers[].spouse.id:
+    description: Identifier of the referenced member or contact.
+  application.taxFilers[].dependents[].id:
+    description: Identifier of the referenced member or contact.
+  application.taxFilers[].personClaiming.id:
+    description: Identifier of the referenced member or contact.
+  application.taxFilers[].memberId:
+    description: The household member this tax filing record belongs to.
+  application.taxFilers[].filingJointlyWithSpouse:
+    description: Whether the member files taxes jointly with a spouse.
+  application.taxFilers[].spouse.type:
+    description: Whether the referenced person is a household member or a people-registry contact.
+  application.taxFilers[].claimingDependents:
+    description: Whether the member claims any dependents on their tax return.
+  application.taxFilers[].dependents[].type:
+    description: Whether the referenced person is a household member or a people-registry contact.
+  application.taxFilers[].expectedToBeClaimedByNonHouseholdMember:
+    description: Whether the member expects to be claimed as a dependent by someone outside the household.
+  application.taxFilers[].personClaiming.type:
+    description: Whether the referenced person is a household member or a people-registry contact.
+  application.taxFilers[].isNonCustodialParent:
+    description: >-
+      Whether the member is a non-custodial parent claiming a dependent child under a qualified
+      court order.
+  application.taxFilers[].hasDomesticViolenceTaxFilingException:
+    description: >-
+      Whether the member qualifies for the domestic violence exception to the tax-filer household
+      composition rule.
+  application.healthPlans[].organizationId:
+    description: The employer organization offering this plan.
+  application.healthPlans[].sponsor.id:
+    description: Identifier of the member or contact record.
+  application.healthPlans[].type:
+    description: >-
+      Type of health coverage. employer_sponsored and marketplace affect Medicaid eligibility under
+      the ACA affordability test (45 CFR § 155.305(f)). medicare and chip indicate current public
+      program enrollment. tricare and va indicate military and veterans coverage.
+  application.healthPlans[].typeOther:
+    description: Free-text description when type is other.
+  application.healthPlans[].premiumAmount:
+    description: Total premium amount for this plan.
+  application.healthPlans[].premiumFrequency:
+    description: How often the premium is paid.
+  application.healthPlans[].coverageContactName.firstName:
+    description: First name.
+  application.healthPlans[].coverageContactName.middleName:
+    description: Middle name.
+  application.healthPlans[].coverageContactName.middleInitial:
+    description: Middle initial.
+  application.healthPlans[].coverageContactName.lastName:
+    description: Last name.
+  application.healthPlans[].coverageContactName.maidenName:
+    description: Maiden name if applicable.
+  application.healthPlans[].coverageContactName.suffix:
+    description: Name suffix such as Jr., Sr., III, etc.
+  application.healthPlans[].hasMinimumValuePlan:
+    description: >-
+      Whether the employer plan meets ACA minimum value standards (60% actuarial value). Affects the
+      Medicaid affordability test (45 CFR § 155.305(f)).
+  application.healthPlans[].lowestCostPlanName:
+    description: Name of the lowest-cost self-only plan available to the member through this employer.
+  application.healthPlans[].lowestCostPlanPremium:
+    description: Employee-share premium for the lowest-cost self-only plan available to the member.
+  application.healthPlans[].medicareId:
+    description: Medicare Beneficiary Identifier (MBI).
+  application.healthPlans[].partA.status:
+    description: Whether the member is entitled to or actively enrolled in this part.
+  application.healthPlans[].partA.startDate:
+    description: Date coverage under this part began.
+  application.healthPlans[].partA.isPremiumFree:
+    description: >-
+      Whether Part A is premium-free based on the member's or spouse's work history. Applies to Part
+      A only.
+  application.healthPlans[].partA.premiumAmount:
+    description: Monthly premium for this part. Primarily applicable to Part B.
+  application.healthPlans[].partA.premiumPaidBy:
+    description: Who pays the premium for this part.
+  application.healthPlans[].partB.status:
+    description: Whether the member is entitled to or actively enrolled in this part.
+  application.healthPlans[].partB.startDate:
+    description: Date coverage under this part began.
+  application.healthPlans[].partB.isPremiumFree:
+    description: >-
+      Whether Part A is premium-free based on the member's or spouse's work history. Applies to Part
+      A only.
+  application.healthPlans[].partB.premiumAmount:
+    description: Monthly premium for this part. Primarily applicable to Part B.
+  application.healthPlans[].partB.premiumPaidBy:
+    description: Who pays the premium for this part.
+  application.healthPlans[].partC.status:
+    description: Current enrollment status for this Part C plan.
+  application.healthPlans[].partC.startDate:
+    description: Date coverage under this plan began.
+  application.healthPlans[].partC.contractId:
+    description: CMS contract ID for the Medicare Advantage organization.
+  application.healthPlans[].partC.planId:
+    description: Plan ID within the contract.
+  application.healthPlans[].partC.planName:
+    description: Name of the Medicare Advantage plan.
+  application.healthPlans[].partC.premiumAmount:
+    description: Monthly premium for this plan.
+  application.healthPlans[].partC.premiumPaidBy:
+    description: Who pays the premium for this plan.
+  application.healthPlans[].partD.status:
+    description: Current enrollment status for Part D.
+  application.healthPlans[].partD.startDate:
+    description: Date Part D coverage began.
+  application.healthPlans[].partD.planName:
+    description: Name of the Part D plan.
+  application.healthPlans[].partD.premiumAmount:
+    description: Monthly premium for this plan.
+  application.healthPlans[].partD.premiumPaidBy:
+    description: Who pays the Part D premium.
+  application.healthPlans[].programType:
+    description: TRICARE program variant (e.g., TRICARE Prime, TRICARE Select).
+  application.healthPlans[].insuranceCompanyName:
+    description: Insurance carrier name.
+  application.healthPlans[].policyNumber:
+    description: Policy or member ID number.
+  application.healthPlans[].sponsor.type:
+    description: Whether the sponsor is a household member or a non-member contact.
+  application.healthEnrollments[].healthPlanId:
+    description: The health plan this enrollment is for.
+  application.healthEnrollments[].jobId:
+    description: >-
+      The job through which this employer-sponsored coverage is offered. Present when the plan is
+      employer_sponsored or cobra.
+  application.healthEnrollments[].memberId:
+    description: The household member enrolled in this plan.
+  application.healthEnrollments[].role:
+    description: >-
+      Whether the member is the primary subscriber (policyholder) or a dependent on another member's
+      plan.
+  application.healthEnrollments[].startDate:
+    description: Date this member's coverage under the plan began.
+  application.healthEnrollments[].endDate:
+    description: Date this member's coverage under the plan ended or is expected to end.
+  application.healthEnrollments[].eligibleDate:
+    description: Date the member first became eligible for this plan.
+  application.healthEnrollments[].enrollmentStatus:
+    description: Current enrollment status for this member in this plan.
+  application.healthEnrollments[].prefersSeparateMailing:
+    description: >-
+      Whether the member prefers to receive plan notices at a different address than their primary
+      mailing address.
+  application.childSupport.parentsOutsideHome[].id:
+    description: Identifier of the member or contact record.
+  application.childSupport.goodCauseChildSupportWaiver:
+    description: >-
+      Whether the household is claiming a good cause exemption from child support cooperation
+      requirements.
+  application.childSupport.parentsOutsideHome[].type:
+    description: Whether the non-custodial parent is a household member or a people-registry contact.
+  application.childSupport.parentsOutsideHome[].childNames[].firstName:
+    description: First name.
+  application.childSupport.parentsOutsideHome[].childNames[].middleName:
+    description: Middle name.
+  application.childSupport.parentsOutsideHome[].childNames[].middleInitial:
+    description: Middle initial.
+  application.childSupport.parentsOutsideHome[].childNames[].lastName:
+    description: Last name.
+  application.childSupport.parentsOutsideHome[].childNames[].maidenName:
+    description: Maiden name if applicable.
+  application.childSupport.parentsOutsideHome[].childNames[].suffix:
+    description: Name suffix such as Jr., Sr., III, etc.
+  application.childSupport.parentsOutsideHome[].attemptedMedicalSupportCooperation:
+    description: >-
+      Whether the household has attempted to cooperate with medical child support enforcement for
+      this parent.
+  application.contacts[].name.firstName:
+    description: First name.
+  application.contacts[].name.middleName:
+    description: Middle name.
+  application.contacts[].name.middleInitial:
+    description: Middle initial.
+  application.contacts[].name.lastName:
+    description: Last name.
+  application.contacts[].name.maidenName:
+    description: Maiden name if applicable.
+  application.contacts[].name.suffix:
+    description: Name suffix such as Jr., Sr., III, etc.
+  application.contacts[].primaryAddress.addressLine1:
+    description: Primary street address line.
+  application.contacts[].primaryAddress.addressLine2:
+    description: Secondary address line such as apartment or unit.
+  application.contacts[].primaryAddress.city:
+    description: City or locality of residence.
+  application.contacts[].primaryAddress.state:
+    description: State, province, or region of residence.
+  application.contacts[].primaryAddress.zip:
+    description: Postal or ZIP code.
+  application.contacts[].primaryAddress.county:
+    description: County or equivalent administrative region.
+  application.contacts[].primaryPhone:
+    description: Primary phone number.
+  application.contacts[].email:
+    description: Email address.
+  application.organizations[].name:
+    description: Legal name of the organization.
+  application.organizations[].ein:
+    description: Employer Identification Number (EIN / Federal Tax ID).
+  application.organizations[].address.addressLine1:
+    description: Primary street address line.
+  application.organizations[].address.addressLine2:
+    description: Secondary address line such as apartment or unit.
+  application.organizations[].address.city:
+    description: City or locality of residence.
+  application.organizations[].address.state:
+    description: State, province, or region of residence.
+  application.organizations[].address.zip:
+    description: Postal or ZIP code.
+  application.organizations[].address.county:
+    description: County or equivalent administrative region.
+  application.organizations[].phone:
+    description: Organization's primary phone number.
+  application.personRelationships[].fromId.id:
+    description: Identifier of the referenced member or contact.
+  application.personRelationships[].toId.id:
+    description: Identifier of the referenced member or contact.
+  application.personRelationships[].fromId.type:
+    description: Whether the referenced person is a household member or a people-registry contact.
+  application.personRelationships[].toId.type:
+    description: Whether the referenced person is a household member or a people-registry contact.
+  application.personRelationships[].relationshipTypes[]:
+    description: The relationship type(s) from fromId's perspective relative to toId.
+  application.authorizedRepresentatives[].inCareOf.id:
+    description: Identifier of the referenced member or contact.
+  application.authorizedRepresentatives[].appointedByMemberId:
+    description: The household member who appointed this authorized representative.
+  application.authorizedRepresentatives[].type:
+    description: Whether the authorized representative is a household member, contact, or organization.
+  application.authorizedRepresentatives[].inCareOf.type:
+    description: Whether the referenced person is a household member or a people-registry contact.
+  application.authorizedRepresentatives[].receivesNotices:
+    description: Whether this authorized representative should receive copies of program notices.
+  application.authorizedRepresentatives[].programs[]:
+    description: >-
+      Programs for which this person or organization is authorized to act. Empty array means
+      authorized for all applied-for programs.
+  application.signatures[].signer.id:
+    description: Identifier of the member, contact, or organization record.
+  application.signatures[].signer.type:
+    description: Whether the signer is a household member, contact, or organization.
+  application.signatures[].signer.role:
+    description: The role in which the signer is acting for this signature.
+  application.signatures[].purpose:
+    description: What the signature covers.
+  application.signatures[].signedAt:
+    description: Date and time the signature was collected.
+  application.signatures[].signatureMethod:
+    description: How the signature was collected.
+  application.sponsors[].sponsoredMemberId:
+    description: The household member sponsored by this person.
+  application.sponsors[].personId:
+    description: Identifier of the member or contact record for the sponsor.
+  application.sponsors[].spouse.personId:
+    description: Identifier of the member or contact record for the spouse.
+  application.sponsors[].type:
+    description: Whether the sponsor is a household member or a people-registry contact.
+  application.sponsors[].ssn:
+    description: Sponsor's Social Security Number. Used for income verification and deeming calculations.
+  application.sponsors[].spouse.type:
+    description: Whether the sponsor's spouse is a household member or a people-registry contact.
+  application.sponsors[].spouse.ssn:
+    description: Spouse's Social Security Number.
+  application.sponsors[].spouse.signedAffidavit:
+    description: Whether the sponsor's spouse has signed an I-864A Household Member Contract.
+  application.sponsors[].householdSize:
+    description: Size of the sponsor's household. Used in sponsor deeming calculations.
+  application.sponsors[].income:
+    description: Sponsor's annual income. Used in sponsor deeming calculations.
+  application.sponsors[].livesWithSponsored:
+    description: Whether the sponsor lives in the same household as the sponsored member.
+  application.jobs[].employerId:
+    description: The employer organization for this job.
+  application.jobs[].memberId:
+    description: The household member this job record belongs to.
+  application.jobs[].type:
+    description: >-
+      Whether this is W-2 employment (employed) or self-employment / gig work (self_employed).
+      Determines which expense deductions and verification pathways apply.
+  application.jobs[].status:
+    description: >-
+      Current status of the job. active — currently working. on_strike — participating in a labor
+      strike (SNAP eligibility may be affected under 7 CFR § 273.1(f)). ended — employment has
+      concluded.
+  application.jobs[].hoursPerWeek:
+    description: >-
+      Average hours worked per week. Used in TANF work participation rate calculations (45 CFR §
+      261.22) and CCDF activity eligibility determinations.
+  application.jobs[].isTemporary:
+    description: Whether the position is temporary or seasonal.
+  application.jobs[].startDate:
+    description: Date employment began.
+  application.jobs[].endDate:
+    description: Date employment ended or is expected to end.
+  application.jobs[].endReason:
+    description: Reason employment ended. Present when status is ended.
+  application.jobs[].strikeStartDate:
+    description: Date the strike began. Present when status is on_strike.
+  application.jobs[].lastPaycheckDate:
+    description: Date of the most recent paycheck received from this employer.
+  application.jobs[].lastPaycheckGrossAmount:
+    description: Gross amount of the most recent paycheck from this employer.
+  application.jobs[].businessName:
+    description: Business or trade name.
+  application.jobs[].businessType:
+    description: Type of business or industry.
+  application.jobs[].reportingMonth:
+    description: Month for which self-employment income is being reported (first day of the month).
+  application.jobs[].expenses.utilities:
+    description: Utility costs attributable to the business.
+  application.jobs[].expenses.taxes:
+    description: Business taxes paid.
+  application.jobs[].expenses.interest:
+    description: Business loan interest paid.
+  application.jobs[].expenses.laborCosts:
+    description: Wages or contracted labor costs paid to others.
+  application.jobs[].expenses.costOfMerchandise:
+    description: Cost of goods purchased for resale.
+  application.jobs[].expenses.other:
+    description: Other allowable business expenses not captured above.
+  application.income[].jobId:
+    description: The job record this income is associated with.
+  application.income[].memberId:
+    description: The household member this income record belongs to.
+  application.income[].type:
+    description: >-
+      The category of income. employed and self_employed are earned income; unearned covers passive
+      and benefit income; lump_sum covers one-time payments; in_kind_support covers non-cash
+      contributions; tribal covers per-capita and other tribal payments; education_grant covers
+      grants and scholarships not reported elsewhere; prior_period covers income from a previous
+      benefit period being reported now.
+  application.income[].typeOther:
+    description: Free-text description when type is other.
+  application.income[].amount:
+    description: The income amount for the given frequency period.
+  application.income[].frequency:
+    description: How often the income is received or accrues.
+  application.income[].dateReceived:
+    description: Date the income was received. Used for lump sums and one-time payments.
+  application.income[].changeReason:
+    description: Reason for a change in income. Present when reporting an income change.
+  application.income[].changeExplanation:
+    description: Free-text explanation of the income change. Present when changeReason is other.
+  application.income[].unearnedType:
+    description: The specific type of unearned income.
+  application.income[].inKindSupportType:
+    description: The category of in-kind support received.
+  application.income[].payerName:
+    description: Name of the person or organization providing in-kind support.
+  application.income[].lumpSumType:
+    description: The type of lump sum payment.
+  application.assets[].memberId:
+    description: The household member this asset belongs to.
+  application.assets[].type:
+    description: >-
+      The category of asset. liquid (cash, checking, savings) is counted in the SNAP resource test
+      (7 CFR § 273.8) and expedited screening resource threshold. vehicle and real_property
+      treatment varies by program and state policy. retirement_account treatment depends on whether
+      the account is accessible. insurance includes life insurance policies with cash value.
+  application.assets[].typeOther:
+    description: Free-text description when type is other.
+  application.assets[].value:
+    description: The current fair market value of the asset.
+  application.assets[].financialInstitutionName:
+    description: Name of the financial institution holding the account.
+  application.assets[].accountNumber:
+    description: Account number.
+  application.assets[].year:
+    description: Model year.
+  application.assets[].make:
+    description: Vehicle make (manufacturer).
+  application.assets[].model:
+    description: Vehicle model.
+  application.assets[].policyType:
+    description: Insurance policy type.
+  application.assets[].companyName:
+    description: Insurance company name.
+  application.assets[].policyNumber:
+    description: Policy or certificate number.
+  application.assets[].faceValue:
+    description: >-
+      Face value of the insurance policy. Life insurance policies with a cash surrender value above
+      the resource limit count toward SNAP and TANF resource tests.
+  application.assets[].isRevocable:
+    description: Whether the insurance policy is revocable.
+  application.assets[].address.addressLine1:
+    description: Primary street address line.
+  application.assets[].address.addressLine2:
+    description: Secondary address line such as apartment or unit.
+  application.assets[].address.city:
+    description: City or locality of residence.
+  application.assets[].address.state:
+    description: State, province, or region of residence.
+  application.assets[].address.zip:
+    description: Postal or ZIP code.
+  application.assets[].address.county:
+    description: County or equivalent administrative region.
+  application.assets[].primaryUse:
+    description: Primary use of the real property.
+  application.assets[].primaryUseOther:
+    description: Free-text description when primaryUse is other.
+  application.assetDisposals[].memberId:
+    description: The household member who disposed of the asset.
+  application.assetDisposals[].type:
+    description: >-
+      The category of asset. liquid (cash, checking, savings) is counted in the SNAP resource test
+      (7 CFR § 273.8) and expedited screening resource threshold. vehicle and real_property
+      treatment varies by program and state policy. retirement_account treatment depends on whether
+      the account is accessible. insurance includes life insurance policies with cash value.
+  application.assetDisposals[].typeOther:
+    description: Free-text description when type is other.
+  application.assetDisposals[].dateOfDisposal:
+    description: Date the asset was transferred, sold, or otherwise disposed of.
+  application.assetDisposals[].amountReceived:
+    description: Amount actually received from the transfer or sale.
+  application.assetDisposals[].fairMarketValue:
+    description: Fair market value of the asset at the time of disposal.
+  application.expenses[].memberId:
+    description: The household member this expense record belongs to.
+  application.expenses[].type:
+    description: >-
+      The category of expense. rent and mortgage are used in the SNAP excess shelter deduction (7
+      CFR § 273.9(d)(6)). dependent_care covers childcare and adult dependent care deductible under
+      7 CFR § 273.9(d)(4). medical covers out-of-pocket medical expenses for elderly or disabled
+      members (7 CFR § 273.9(d)(3)). child_support covers legally obligated child support payments
+      (7 CFR § 273.9(d)(5)).
+  application.expenses[].typeOther:
+    description: Free-text description when type is other.
+  application.expenses[].amount:
+    description: The expense amount.
+  application.expenses[].legallyObligatedAmount:
+    description: >-
+      The legally obligated portion of the expense. Used for child support deductions — only the
+      legally obligated amount is deductible for SNAP (7 CFR § 273.9(d)(5)).
+  application.disabilityBenefits[].memberId:
+    description: The household member with this disability benefit.
+  application.disabilityBenefits[].programType:
+    description: >-
+      Whether this is a Supplemental Security Income (SSI) or Social Security Disability Insurance
+      (SSDI) benefit.
+  application.disabilityBenefits[].status:
+    description: Current status of the SSA benefit application or award.
+  application.disabilityBenefits[].applicationDate:
+    description: Date the SSA benefit application was filed.
+  application.disabilityBenefits[].startDate:
+    description: Date benefit payments began or are expected to begin.
+  application.disabilityBenefits[].endDate:
+    description: Date benefit payments ended, if applicable.
+  application.deductions[].memberId:
+    description: The household member claiming this deduction.
+  application.deductions[].type:
+    description: >-
+      The type of above-the-line income deduction. Used in MAGI calculations for Medicaid and CHIP
+      (42 CFR § 435.603).
+  application.deductions[].typeOther:
+    description: Free-text description when type is other.
+  application.deductions[].frequency:
+    description: How often the deduction occurs.
+  application.deductions[].amount:
+    description: The deduction amount for the given frequency period.
+  application.deductions[].annualAmount:
+    description: The total annual deduction amount. Used when frequency is variable or one_time_only.
+  application.verifications[].sourceId:
+    description: >-
+      ID of the subject being verified. Points to an ApplicationMember when sourceType is `member`,
+      or to an income record when sourceType is `income`. Null for household-level obligations
+      (e.g., proof of residency).
+  application.verifications[].documentRequests[].noticeId:
+    description: ID of the notice in the communication domain.
+  application.verifications[].sourceType:
+    description: >-
+      Identifies what sourceId refers to. Required when sourceId is set; null for household-level
+      obligations.
+  application.verifications[].category:
+    description: Verification obligation category.
+  application.verifications[].verificationType:
+    description: How this verification obligation is to be fulfilled.
+  application.verifications[].status:
+    description: Current status of the verification obligation.
+  application.verifications[].evidence[]:
+    description: Electronic and document evidence items accumulated against this obligation.
+  application.verifications[].documentRequests[].type:
+    description: >-
+      Template identifier for the notice. Matches the type field on the communication.notice.sent
+      event.
+  application.verifications[].documentRequests[].sentAt:
+    description: When the notice was sent.
+  application.verifications[].documentRequests[].dueAt:
+    description: Deadline by which the applicant must respond.
+  application.verifications[].documentRequests[].channel:
+    description: Channel through which the notice was sent.
+  application.interview.appointments[]:
+    description: >-
+      Appointment IDs from the scheduling domain accumulated for this interview obligation.
+      Populated by the rules engine when scheduling.appointment.scheduled fires.
+  application.interview.waiverGranted:
+    description: Whether the interview requirement has been waived for this applicant.
+  application.interview.waiverReason:
+    description: Reason the interview was waived. Required when waiverGranted is true.
+  application.interview.completedAt:
+    description: When the caseworker attested the interview obligation was satisfied. Null until completed.

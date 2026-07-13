@@ -119,39 +119,33 @@ $defs:
         type: string
         description: BCP 47 language tag for the member's preferred written language. Used for notice generation.
 
-  Contact:
-    type: object
+  MemberContact:
     description: >
-      Contact and address information for a household member. Drives notice
-      delivery and caseworker outreach. homeAddress is used to determine
-      county jurisdiction.
-    additionalProperties: true
-    properties:
-      homeAddress:
-        $ref: "../common/contact.yaml#/$defs/Address"
-        description: Physical home address. Used to determine county jurisdiction.
-      mailingAddress:
-        $ref: "../common/contact.yaml#/$defs/Address"
-        description: Mailing address if different from home address. Overrides homeAddress for notice delivery.
-      phoneNumber:
-        $ref: "../common/contact.yaml#/$defs/PhoneNumber"
-        description: Primary phone number.
-      alternatePhoneNumber:
-        $ref: "../common/contact.yaml#/$defs/PhoneNumber"
-        description: Alternate phone number.
-      isExperiencingHomelessness:
-        type: boolean
-        description: Whether the member lacks a fixed, regular, and adequate nighttime residence.
-      noticePreference:
-        type: string
-        enum: [paper, email, both]
-        description: Preferred method for receiving program notices.
-      email:
-        $ref: "../common/contact.yaml#/$defs/Email"
-        description: Email address for electronic notices and correspondence.
-      alternateNoticeAddress:
-        $ref: "../common/contact.yaml#/$defs/Address"
-        description: Address for notices when privacy concerns exist (e.g., domestic violence situations).
+      Contact and address information for a household member. Extends the base
+      Contact type with member-specific fields: mailing address, homelessness
+      flag, notice preferences, and alternate notice address.
+      primaryAddress is used to determine county jurisdiction.
+    allOf:
+      - $ref: "../common/contact.yaml"
+      - type: object
+        additionalProperties: true
+        properties:
+          mailingAddress:
+            $ref: "../common/contact.yaml#/$defs/Address"
+            description: Mailing address if different from primary address. Overrides primaryAddress for notice delivery.
+          alternatePhone:
+            $ref: "../common/contact.yaml#/$defs/PhoneNumber"
+            description: Secondary phone number for the member.
+          isExperiencingHomelessness:
+            type: boolean
+            description: Whether the member lacks a fixed, regular, and adequate nighttime residence.
+          noticePreference:
+            type: string
+            enum: [paper, email, both]
+            description: Preferred method for receiving program notices.
+          alternateNoticeAddress:
+            $ref: "../common/contact.yaml#/$defs/Address"
+            description: Address for notices when privacy concerns exist (e.g., domestic violence situations).
 
   Residency:
     type: object
@@ -880,17 +874,11 @@ $defs:
     additionalProperties: false
     properties:
       fromId:
-        type: string
-        format: uuid
+        $ref: "#/$defs/PersonRef"
         description: The subject of the relationship (the person whose perspective this describes).
-        x-relationship:
-          resource: Person
       toId:
-        type: string
-        format: uuid
+        $ref: "#/$defs/PersonRef"
         description: The object of the relationship.
-        x-relationship:
-          resource: Person
       relationshipTypes:
         type: array
         minItems: 1
@@ -1091,29 +1079,6 @@ $defs:
       phone:
         $ref: "../common/contact.yaml#/$defs/PhoneNumber"
         description: Organization's primary phone number.
-
-  Person:
-    type: object
-    description: >
-      A person referenced in the application who may or may not be a household
-      member. All individuals referenced in the application — household members,
-      authorized representatives, sponsors, tax dependents, non-custodial parents
-      — have a record in the people collection. Members are linked to their
-      people record via memberId. Non-members are referenced only through their
-      contact id. Distinct from the client-management Person resource, which is
-      the persistent person of record across applications.
-    required:
-      - name
-    additionalProperties: true
-    properties:
-      name:
-        $ref: "../common/identity.yaml#/$defs/Name"
-      address:
-        $ref: "../common/contact.yaml#/$defs/Address"
-      phone:
-        $ref: "../common/contact.yaml#/$defs/PhoneNumber"
-      email:
-        $ref: "../common/contact.yaml#/$defs/Email"
 
   # ---------------------------------------------------------------------------
   # Application process types

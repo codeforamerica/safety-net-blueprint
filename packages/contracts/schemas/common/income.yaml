@@ -8,57 +8,125 @@ description: >
   Used across domains wherever income data is collected, evaluated, or passed
   to the rules engine adapter.
 
-type: object
-required:
-  - type
-  - amount
-  - frequency
-
-properties:
-  type:
-    $ref: "#/$defs/IncomeType"
-  typeOther:
-    type: string
-    description: Free-text description when type is other.
-  jobId:
-    type: string
-    format: uuid
-    description: The job record this income is associated with. Present when type is employed or self_employed.
-    x-relationship:
-      resource: Job
-  unearnedType:
-    $ref: "#/$defs/UnearnedIncomeType"
-    description: The specific type of unearned income. Required when type is unearned.
-  inKindSupportType:
-    $ref: "#/$defs/InKindSupportType"
-    description: The category of in-kind support received. Required when type is in_kind_support.
-  payerName:
-    type: string
-    description: Name of the person or organization providing in-kind support. Present when type is in_kind_support.
-  lumpSumType:
-    $ref: "#/$defs/LumpSumType"
-    description: The type of lump sum payment. Required when type is lump_sum.
-  amount:
-    type: number
-    format: float
-    minimum: 0
-    description: The income amount for the given frequency period.
-  frequency:
-    $ref: "#/$defs/IncomeFrequency"
-  dateReceived:
-    type: string
-    format: date
-    description: Date the income was received. Used for lump sums and one-time payments.
-  changeReason:
-    $ref: "#/$defs/IncomeChangeReason"
-    description: Reason for a change in income. Present when reporting an income change.
-  changeExplanation:
-    type: string
-    description: Free-text explanation of the income change. Present when changeReason is other.
-
-additionalProperties: true
+discriminator:
+  propertyName: type
+  mapping:
+    employed: "#/$defs/EarnedIncome"
+    self_employed: "#/$defs/EarnedIncome"
+    unearned: "#/$defs/UnearnedIncome"
+    in_kind_support: "#/$defs/InKindSupportIncome"
+    lump_sum: "#/$defs/LumpSumIncome"
+    tribal: "#/$defs/OtherIncome"
+    education_grant: "#/$defs/OtherIncome"
+    other: "#/$defs/OtherIncome"
+    prior_period: "#/$defs/OtherIncome"
+oneOf:
+  - $ref: "#/$defs/EarnedIncome"
+  - $ref: "#/$defs/UnearnedIncome"
+  - $ref: "#/$defs/InKindSupportIncome"
+  - $ref: "#/$defs/LumpSumIncome"
+  - $ref: "#/$defs/OtherIncome"
 
 $defs:
+
+  IncomeBase:
+    type: object
+    required:
+      - type
+      - amount
+      - frequency
+    additionalProperties: true
+    properties:
+      type:
+        $ref: "#/$defs/IncomeType"
+      typeOther:
+        type: string
+        description: Free-text description when type is other.
+      amount:
+        type: number
+        format: float
+        minimum: 0
+        description: The income amount for the given frequency period.
+      frequency:
+        $ref: "#/$defs/IncomeFrequency"
+      dateReceived:
+        type: string
+        format: date
+        description: Date the income was received. Used for lump sums and one-time payments.
+      changeReason:
+        $ref: "#/$defs/IncomeChangeReason"
+        description: Reason for a change in income. Present when reporting an income change.
+      changeExplanation:
+        type: string
+        description: Free-text explanation of the income change. Present when changeReason is other.
+
+  EarnedIncome:
+    description: Earned income from employment or self-employment.
+    allOf:
+      - $ref: "#/$defs/IncomeBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [employed, self_employed]
+          jobId:
+            type: string
+            format: uuid
+            description: The job record this income is associated with.
+            x-relationship:
+              resource: Job
+
+  UnearnedIncome:
+    description: Unearned income from benefits, support payments, investments, or other passive sources.
+    allOf:
+      - $ref: "#/$defs/IncomeBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [unearned]
+          unearnedType:
+            $ref: "#/$defs/UnearnedIncomeType"
+            description: The specific type of unearned income.
+
+  InKindSupportIncome:
+    description: Non-cash in-kind support received (shelter, food, utilities, etc.).
+    allOf:
+      - $ref: "#/$defs/IncomeBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [in_kind_support]
+          inKindSupportType:
+            $ref: "#/$defs/InKindSupportType"
+            description: The category of in-kind support received.
+          payerName:
+            type: string
+            description: Name of the person or organization providing in-kind support.
+
+  LumpSumIncome:
+    description: A one-time lump sum payment.
+    allOf:
+      - $ref: "#/$defs/IncomeBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [lump_sum]
+          lumpSumType:
+            $ref: "#/$defs/LumpSumType"
+            description: The type of lump sum payment.
+
+  OtherIncome:
+    description: Tribal payments, education grants, prior period income, or other income not covered by more specific types.
+    allOf:
+      - $ref: "#/$defs/IncomeBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [tribal, education_grant, other, prior_period]
 
   IncomeType:
     type: string

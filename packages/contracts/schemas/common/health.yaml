@@ -9,88 +9,155 @@ description: >
   employer-sponsored insurance affordability test (45 CFR § 155.305(f)) and
   cost-sharing reduction determinations.
 
-type: object
-required:
-  - type
-
-properties:
-  type:
-    $ref: "#/$defs/HealthPlanType"
-  typeOther:
-    type: string
-    description: Free-text description when type is other.
-  premiumAmount:
-    type: number
-    format: float
-    minimum: 0
-    description: Total premium amount for this plan.
-  premiumFrequency:
-    $ref: "#/$defs/PremiumFrequency"
-  organizationId:
-    type: string
-    format: uuid
-    description: The employer organization offering this plan. Present when type is employer_sponsored or cobra.
-    x-relationship:
-      resource: Organization
-  coverageContactName:
-    $ref: "./identity.yaml#/$defs/Name"
-    description: Name of the HR or benefits contact at the employer. Present when type is employer_sponsored or cobra.
-  hasMinimumValuePlan:
-    type: boolean
-    description: >
-      Whether the employer plan meets ACA minimum value standards (60% actuarial
-      value). Affects the Medicaid affordability test (45 CFR § 155.305(f)).
-      Present when type is employer_sponsored or cobra.
-  lowestCostPlanName:
-    type: string
-    description: Name of the lowest-cost self-only plan available to the member through this employer.
-  lowestCostPlanPremium:
-    type: number
-    format: float
-    minimum: 0
-    description: Employee-share premium for the lowest-cost self-only plan available to the member.
-  programType:
-    type: string
-    description: TRICARE program variant (e.g., TRICARE Prime, TRICARE Select). Present when type is tricare.
-  insuranceCompanyName:
-    type: string
-    description: Insurance carrier name. Present when type is tricare.
-  policyNumber:
-    type: string
-    description: Policy or member ID number. Present when type is tricare.
-  medicareId:
-    type: string
-    description: Medicare Beneficiary Identifier (MBI). Present when type is medicare.
-  partA:
-    $ref: "#/$defs/MedicarePart"
-    description: Medicare Part A (hospital insurance) details. Present when type is medicare.
-  partB:
-    $ref: "#/$defs/MedicarePart"
-    description: Medicare Part B (medical insurance) details. Present when type is medicare.
-  partC:
-    $ref: "#/$defs/MedicarePartC"
-    description: Medicare Part C (Medicare Advantage) details. Present when type is medicare.
-  partD:
-    $ref: "#/$defs/MedicarePartD"
-    description: Medicare Part D (prescription drug) details. Present when type is medicare.
-  sponsor:
-    type: object
-    description: Person sponsoring this TRICARE coverage. Present when type is tricare.
-    required: [type, id]
-    additionalProperties: false
-    properties:
-      type:
-        type: string
-        enum: [member, contact]
-        description: Whether the sponsor is a household member or a non-member contact.
-      id:
-        type: string
-        format: uuid
-        description: Identifier of the member or contact record.
-
-additionalProperties: true
+discriminator:
+  propertyName: type
+  mapping:
+    employer_sponsored: "#/$defs/EmployerOrCobraHealthPlan"
+    cobra: "#/$defs/EmployerOrCobraHealthPlan"
+    medicare: "#/$defs/MedicareHealthPlan"
+    tricare: "#/$defs/TricareHealthPlan"
+    va: "#/$defs/OtherHealthPlan"
+    marketplace: "#/$defs/OtherHealthPlan"
+    peace_corps: "#/$defs/OtherHealthPlan"
+    chip: "#/$defs/OtherHealthPlan"
+    medicaid: "#/$defs/OtherHealthPlan"
+    tribal_health_services: "#/$defs/OtherHealthPlan"
+    other_federal: "#/$defs/OtherHealthPlan"
+    other: "#/$defs/OtherHealthPlan"
+oneOf:
+  - $ref: "#/$defs/EmployerOrCobraHealthPlan"
+  - $ref: "#/$defs/MedicareHealthPlan"
+  - $ref: "#/$defs/TricareHealthPlan"
+  - $ref: "#/$defs/OtherHealthPlan"
 
 $defs:
+
+  HealthPlanBase:
+    type: object
+    required:
+      - type
+    additionalProperties: true
+    properties:
+      type:
+        $ref: "#/$defs/HealthPlanType"
+      typeOther:
+        type: string
+        description: Free-text description when type is other.
+      premiumAmount:
+        type: number
+        format: float
+        minimum: 0
+        description: Total premium amount for this plan.
+      premiumFrequency:
+        $ref: "#/$defs/PremiumFrequency"
+
+  EmployerOrCobraHealthPlan:
+    description: An employer-sponsored or COBRA continuation health plan.
+    allOf:
+      - $ref: "#/$defs/HealthPlanBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [employer_sponsored, cobra]
+          organizationId:
+            type: string
+            format: uuid
+            description: The employer organization offering this plan.
+            x-relationship:
+              resource: Organization
+          coverageContactName:
+            $ref: "./identity.yaml#/$defs/Name"
+            description: Name of the HR or benefits contact at the employer.
+          hasMinimumValuePlan:
+            type: boolean
+            description: >
+              Whether the employer plan meets ACA minimum value standards (60% actuarial
+              value). Affects the Medicaid affordability test (45 CFR § 155.305(f)).
+          lowestCostPlanName:
+            type: string
+            description: Name of the lowest-cost self-only plan available to the member through this employer.
+          lowestCostPlanPremium:
+            type: number
+            format: float
+            minimum: 0
+            description: Employee-share premium for the lowest-cost self-only plan available to the member.
+
+  MedicareHealthPlan:
+    description: A Medicare health plan.
+    allOf:
+      - $ref: "#/$defs/HealthPlanBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [medicare]
+          medicareId:
+            type: string
+            description: Medicare Beneficiary Identifier (MBI).
+          partA:
+            $ref: "#/$defs/MedicarePart"
+            description: Medicare Part A (hospital insurance) details.
+          partB:
+            $ref: "#/$defs/MedicarePart"
+            description: Medicare Part B (medical insurance) details.
+          partC:
+            $ref: "#/$defs/MedicarePartC"
+            description: Medicare Part C (Medicare Advantage) details.
+          partD:
+            $ref: "#/$defs/MedicarePartD"
+            description: Medicare Part D (prescription drug) details.
+
+  TricareHealthPlan:
+    description: A TRICARE military health plan.
+    allOf:
+      - $ref: "#/$defs/HealthPlanBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [tricare]
+          programType:
+            type: string
+            description: TRICARE program variant (e.g., TRICARE Prime, TRICARE Select).
+          insuranceCompanyName:
+            type: string
+            description: Insurance carrier name.
+          policyNumber:
+            type: string
+            description: Policy or member ID number.
+          sponsor:
+            type: object
+            description: Person sponsoring this TRICARE coverage.
+            required: [type, id]
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                enum: [member, contact]
+                description: Whether the sponsor is a household member or a non-member contact.
+              id:
+                type: string
+                format: uuid
+                description: Identifier of the member or contact record.
+
+  OtherHealthPlan:
+    description: A health plan with no type-specific fields (VA, marketplace, peace corps, CHIP, Medicaid, tribal health services, etc.).
+    allOf:
+      - $ref: "#/$defs/HealthPlanBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum:
+              - va
+              - marketplace
+              - peace_corps
+              - chip
+              - medicaid
+              - tribal_health_services
+              - other_federal
+              - other
 
   HealthPlanType:
     type: string

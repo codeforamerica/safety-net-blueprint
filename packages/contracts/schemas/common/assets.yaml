@@ -8,70 +8,135 @@ description: >
   (7 CFR § 273.8, 7 CFR § 273.2(i)). Vehicle and real property treatment
   varies by program and state policy.
 
-type: object
-required:
-  - type
-  - value
-
-properties:
-  type:
-    $ref: "#/$defs/AssetType"
-  typeOther:
-    type: string
-    description: Free-text description when type is other.
-  value:
-    type: number
-    format: float
-    minimum: 0
-    description: The current fair market value of the asset.
-  financialInstitutionName:
-    type: string
-    description: Name of the financial institution holding the account. Present when type is liquid or retirement_account.
-  accountNumber:
-    type: string
-    description: Account number. Present when type is liquid or retirement_account.
-  year:
-    type: string
-    description: Model year. Present when type is vehicle.
-  make:
-    type: string
-    description: Vehicle make (manufacturer). Present when type is vehicle.
-  model:
-    type: string
-    description: Vehicle model. Present when type is vehicle.
-  policyType:
-    $ref: "#/$defs/InsurancePolicyType"
-    description: Insurance policy type. Present when type is insurance.
-  companyName:
-    type: string
-    description: Insurance company name. Present when type is insurance.
-  policyNumber:
-    type: string
-    description: Policy or certificate number. Present when type is insurance.
-  faceValue:
-    type: number
-    format: float
-    minimum: 0
-    description: >
-      Face value of the insurance policy. Life insurance policies with a cash
-      surrender value above the resource limit count toward SNAP and TANF
-      resource tests. Present when type is insurance.
-  isRevocable:
-    type: boolean
-    description: Whether the insurance policy is revocable. Present when type is insurance.
-  address:
-    $ref: "./contact.yaml#/$defs/Address"
-    description: Property address. Present when type is real_property.
-  primaryUse:
-    $ref: "#/$defs/RealPropertyUse"
-    description: Primary use of the real property. Present when type is real_property.
-  primaryUseOther:
-    type: string
-    description: Free-text description when primaryUse is other.
-
-additionalProperties: true
+discriminator:
+  propertyName: type
+  mapping:
+    liquid: "#/$defs/LiquidOrRetirementAsset"
+    retirement_account: "#/$defs/LiquidOrRetirementAsset"
+    vehicle: "#/$defs/VehicleAsset"
+    insurance: "#/$defs/InsuranceAsset"
+    real_property: "#/$defs/RealPropertyAsset"
+    other: "#/$defs/OtherAsset"
+oneOf:
+  - $ref: "#/$defs/LiquidOrRetirementAsset"
+  - $ref: "#/$defs/VehicleAsset"
+  - $ref: "#/$defs/InsuranceAsset"
+  - $ref: "#/$defs/RealPropertyAsset"
+  - $ref: "#/$defs/OtherAsset"
 
 $defs:
+
+  AssetBase:
+    type: object
+    required:
+      - type
+      - value
+    additionalProperties: true
+    properties:
+      type:
+        $ref: "#/$defs/AssetType"
+      typeOther:
+        type: string
+        description: Free-text description when type is other.
+      value:
+        type: number
+        format: float
+        minimum: 0
+        description: The current fair market value of the asset.
+
+  LiquidOrRetirementAsset:
+    description: A liquid asset (cash, checking, savings) or retirement account.
+    allOf:
+      - $ref: "#/$defs/AssetBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [liquid, retirement_account]
+          financialInstitutionName:
+            type: string
+            description: Name of the financial institution holding the account.
+          accountNumber:
+            type: string
+            description: Account number.
+
+  VehicleAsset:
+    description: A vehicle asset.
+    allOf:
+      - $ref: "#/$defs/AssetBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [vehicle]
+          year:
+            type: string
+            description: Model year.
+          make:
+            type: string
+            description: Vehicle make (manufacturer).
+          model:
+            type: string
+            description: Vehicle model.
+
+  InsuranceAsset:
+    description: A life insurance policy with cash value.
+    allOf:
+      - $ref: "#/$defs/AssetBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [insurance]
+          policyType:
+            $ref: "#/$defs/InsurancePolicyType"
+            description: Insurance policy type.
+          companyName:
+            type: string
+            description: Insurance company name.
+          policyNumber:
+            type: string
+            description: Policy or certificate number.
+          faceValue:
+            type: number
+            format: float
+            minimum: 0
+            description: >
+              Face value of the insurance policy. Life insurance policies with a cash
+              surrender value above the resource limit count toward SNAP and TANF
+              resource tests.
+          isRevocable:
+            type: boolean
+            description: Whether the insurance policy is revocable.
+
+  RealPropertyAsset:
+    description: A real property asset.
+    allOf:
+      - $ref: "#/$defs/AssetBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [real_property]
+          address:
+            $ref: "./contact.yaml#/$defs/Address"
+            description: Property address.
+          primaryUse:
+            $ref: "#/$defs/RealPropertyUse"
+            description: Primary use of the real property.
+          primaryUseOther:
+            type: string
+            description: Free-text description when primaryUse is other.
+
+  OtherAsset:
+    description: An asset not covered by more specific types.
+    allOf:
+      - $ref: "#/$defs/AssetBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [other]
 
   AssetType:
     type: string

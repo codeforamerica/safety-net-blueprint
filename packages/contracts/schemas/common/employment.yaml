@@ -8,75 +8,103 @@ description: >
   expenses are deducted to compute net self-employment income for program
   eligibility calculations.
 
-type: object
-required:
-  - type
-  - status
-
-properties:
-  type:
-    $ref: "#/$defs/JobType"
-  status:
-    $ref: "#/$defs/JobStatus"
-  employerId:
-    type: string
-    format: uuid
-    description: The employer organization for this job. Present when type is employed.
-    x-relationship:
-      resource: Organization
-  hoursPerWeek:
-    type: number
-    format: float
-    minimum: 0
-    description: >
-      Average hours worked per week. Used in TANF work participation rate
-      calculations (45 CFR § 261.22) and CCDF activity eligibility determinations.
-  isTemporary:
-    type: boolean
-    description: Whether the position is temporary or seasonal.
-  startDate:
-    type: string
-    format: date
-    description: Date employment began.
-  endDate:
-    type: string
-    format: date
-    description: Date employment ended or is expected to end.
-  endReason:
-    $ref: "#/$defs/JobEndReason"
-    description: Reason employment ended. Present when status is ended.
-  strikeStartDate:
-    type: string
-    format: date
-    description: Date the strike began. Present when status is on_strike.
-  lastPaycheckDate:
-    type: string
-    format: date
-    description: Date of the most recent paycheck received from this employer.
-  lastPaycheckGrossAmount:
-    type: number
-    format: float
-    minimum: 0
-    description: Gross amount of the most recent paycheck from this employer.
-  businessName:
-    type: string
-    description: Business or trade name. Present when type is self_employed.
-  businessType:
-    type: string
-    description: Type of business or industry. Present when type is self_employed.
-  reportingMonth:
-    type: string
-    format: date
-    description: >
-      Month for which self-employment income is being reported (first day of
-      the month). Present when type is self_employed.
-  expenses:
-    $ref: "#/$defs/SelfEmploymentExpenses"
-    description: Allowable business expense deductions. Present when type is self_employed.
-
-additionalProperties: true
+discriminator:
+  propertyName: type
+  mapping:
+    employed: "#/$defs/EmployedJob"
+    self_employed: "#/$defs/SelfEmployedJob"
+oneOf:
+  - $ref: "#/$defs/EmployedJob"
+  - $ref: "#/$defs/SelfEmployedJob"
 
 $defs:
+
+  JobBase:
+    type: object
+    required:
+      - type
+      - status
+    additionalProperties: true
+    properties:
+      type:
+        $ref: "#/$defs/JobType"
+      status:
+        $ref: "#/$defs/JobStatus"
+      hoursPerWeek:
+        type: number
+        format: float
+        minimum: 0
+        description: >
+          Average hours worked per week. Used in TANF work participation rate
+          calculations (45 CFR § 261.22) and CCDF activity eligibility determinations.
+      isTemporary:
+        type: boolean
+        description: Whether the position is temporary or seasonal.
+      startDate:
+        type: string
+        format: date
+        description: Date employment began.
+      endDate:
+        type: string
+        format: date
+        description: Date employment ended or is expected to end.
+      endReason:
+        $ref: "#/$defs/JobEndReason"
+        description: Reason employment ended. Present when status is ended.
+      strikeStartDate:
+        type: string
+        format: date
+        description: Date the strike began. Present when status is on_strike.
+      lastPaycheckDate:
+        type: string
+        format: date
+        description: Date of the most recent paycheck received from this employer.
+      lastPaycheckGrossAmount:
+        type: number
+        format: float
+        minimum: 0
+        description: Gross amount of the most recent paycheck from this employer.
+
+  EmployedJob:
+    description: A W-2 employment job.
+    allOf:
+      - $ref: "#/$defs/JobBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [employed]
+          employerId:
+            type: string
+            format: uuid
+            description: The employer organization for this job.
+            x-relationship:
+              resource: Organization
+
+  SelfEmployedJob:
+    description: A self-employment or gig work job.
+    allOf:
+      - $ref: "#/$defs/JobBase"
+      - type: object
+        properties:
+          type:
+            type: string
+            enum: [self_employed]
+          businessName:
+            type: string
+            description: Business or trade name.
+          businessType:
+            type: string
+            description: Type of business or industry.
+          reportingMonth:
+            type: string
+            format: date
+            description: >
+              Month for which self-employment income is being reported (first day of
+              the month).
+          expenses:
+            $ref: "#/$defs/SelfEmploymentExpenses"
+            description: Allowable business expense deductions.
 
   JobType:
     type: string
