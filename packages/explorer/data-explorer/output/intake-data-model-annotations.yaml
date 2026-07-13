@@ -647,36 +647,36 @@ schema:
     description: Cost of goods purchased for resale.
   application.jobs[].expenses.other:
     description: Other allowable business expenses not captured above.
-  application.income[].jobId:
+  application.incomes[].jobId:
     description: The job record this income is associated with.
-  application.income[].memberId:
+  application.incomes[].memberId:
     description: The household member this income record belongs to.
-  application.income[].type:
+  application.incomes[].type:
     description: >-
       The category of income. employed and self_employed are earned income; unearned covers passive
       and benefit income; lump_sum covers one-time payments; in_kind_support covers non-cash
       contributions; tribal covers per-capita and other tribal payments; education_grant covers
       grants and scholarships not reported elsewhere; prior_period covers income from a previous
       benefit period being reported now.
-  application.income[].typeOther:
+  application.incomes[].typeOther:
     description: Free-text description when type is other.
-  application.income[].amount:
+  application.incomes[].amount:
     description: The income amount for the given frequency period.
-  application.income[].frequency:
+  application.incomes[].frequency:
     description: How often the income is received or accrues.
-  application.income[].dateReceived:
+  application.incomes[].dateReceived:
     description: Date the income was received. Used for lump sums and one-time payments.
-  application.income[].changeReason:
+  application.incomes[].changeReason:
     description: Reason for a change in income. Present when reporting an income change.
-  application.income[].changeExplanation:
+  application.incomes[].changeExplanation:
     description: Free-text explanation of the income change. Present when changeReason is other.
-  application.income[].unearnedType:
+  application.incomes[].unearnedType:
     description: The specific type of unearned income.
-  application.income[].inKindSupportType:
+  application.incomes[].inKindSupportType:
     description: The category of in-kind support received.
-  application.income[].payerName:
+  application.incomes[].payerName:
     description: Name of the person or organization providing in-kind support.
-  application.income[].lumpSumType:
+  application.incomes[].lumpSumType:
     description: The type of lump sum payment.
   application.assets[].memberId:
     description: The household member this asset belongs to.

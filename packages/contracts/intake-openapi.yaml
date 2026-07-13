@@ -3372,6 +3372,7 @@ components:
         - type: object
           required:
             - id
+            - memberId
             - applicationId
             - createdAt
             - updatedAt
@@ -3444,6 +3445,7 @@ components:
         - type: object
           required:
             - id
+            - memberId
             - applicationId
             - createdAt
             - updatedAt
@@ -3516,6 +3518,7 @@ components:
         - type: object
           required:
             - id
+            - memberId
             - applicationId
             - createdAt
             - updatedAt
@@ -3588,6 +3591,7 @@ components:
         - type: object
           required:
             - id
+            - memberId
             - applicationId
             - createdAt
             - updatedAt

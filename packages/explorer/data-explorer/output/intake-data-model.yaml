@@ -403,24 +403,24 @@ application.jobs[].expenses.laborCosts: { type: number, appliesWhen: 'type = sel
 application.jobs[].expenses.costOfMerchandise: { type: number, appliesWhen: 'type = self_employed' }
 application.jobs[].expenses.other: { type: number, appliesWhen: 'type = self_employed' }
 
-# ── income ──────────────────────────────────────────────────────────────────────
+# ── incomes ─────────────────────────────────────────────────────────────────────
 
-application.income[]: { type: list(Income) }
-application.income[].jobId: { type: uuid, relationship: Job, appliesWhen: 'type in [employed, self_employed]' }
-application.income[].id: { type: uuid }
-application.income[].memberId: { type: uuid, relationship: ApplicationMember }
-application.income[].applicationId: { type: uuid, relationship: Application }
-application.income[].type: { type: enum, values: [employed, self_employed, unearned, lump_sum, in_kind_support, tribal, education_grant, other, prior_period] }
-application.income[].typeOther: { type: string }
-application.income[].amount: { type: number }
-application.income[].frequency: { type: enum, values: [daily, weekly, every_two_weeks, twice_monthly, monthly, yearly, variable] }
-application.income[].dateReceived: { type: date }
-application.income[].changeReason: { type: enum, values: [stopped_working, hours_reduced, new_job, change_in_employment, marital_status_change, other] }
-application.income[].changeExplanation: { type: string }
-application.income[].unearnedType: { type: enum, values: [unemployment, kinship_payment, veterans_programs, adoption_and_refugee_services, ssi_or_ssdi, private_disability, workers_compensation, disability_from_veterans_programs, legal_settlement, scholarship, educational_grant, work_study, spousal_support, child_support, retirement_or_pension, investment_interest_and_dividends, social_security_retirement, rental_income, gambling_or_lottery_winnings, gifts_or_donations, loan_or_mortgage_income, research_participation, other], appliesWhen: 'type = unearned' }
-application.income[].inKindSupportType: { type: enum, values: [shelter, food, utilities, other], appliesWhen: 'type = in_kind_support' }
-application.income[].payerName: { type: string, appliesWhen: 'type = in_kind_support' }
-application.income[].lumpSumType: { type: enum, values: [lawsuit_settlement, insurance_settlement, social_security_ssi_ssdi_payment, veterans, inheritance, surrender_of_annuity, life_insurance_payout, lottery_gambling_winnings, other], appliesWhen: 'type = lump_sum' }
+application.incomes[]: { type: list(Income) }
+application.incomes[].jobId: { type: uuid, relationship: Job, appliesWhen: 'type in [employed, self_employed]' }
+application.incomes[].id: { type: uuid }
+application.incomes[].memberId: { type: uuid, relationship: ApplicationMember }
+application.incomes[].applicationId: { type: uuid, relationship: Application }
+application.incomes[].type: { type: enum, values: [employed, self_employed, unearned, lump_sum, in_kind_support, tribal, education_grant, other, prior_period] }
+application.incomes[].typeOther: { type: string }
+application.incomes[].amount: { type: number }
+application.incomes[].frequency: { type: enum, values: [daily, weekly, every_two_weeks, twice_monthly, monthly, yearly, variable] }
+application.incomes[].dateReceived: { type: date }
+application.incomes[].changeReason: { type: enum, values: [stopped_working, hours_reduced, new_job, change_in_employment, marital_status_change, other] }
+application.incomes[].changeExplanation: { type: string }
+application.incomes[].unearnedType: { type: enum, values: [unemployment, kinship_payment, veterans_programs, adoption_and_refugee_services, ssi_or_ssdi, private_disability, workers_compensation, disability_from_veterans_programs, legal_settlement, scholarship, educational_grant, work_study, spousal_support, child_support, retirement_or_pension, investment_interest_and_dividends, social_security_retirement, rental_income, gambling_or_lottery_winnings, gifts_or_donations, loan_or_mortgage_income, research_participation, other], appliesWhen: 'type = unearned' }
+application.incomes[].inKindSupportType: { type: enum, values: [shelter, food, utilities, other], appliesWhen: 'type = in_kind_support' }
+application.incomes[].payerName: { type: string, appliesWhen: 'type = in_kind_support' }
+application.incomes[].lumpSumType: { type: enum, values: [lawsuit_settlement, insurance_settlement, social_security_ssi_ssdi_payment, veterans, inheritance, surrender_of_annuity, life_insurance_payout, lottery_gambling_winnings, other], appliesWhen: 'type = lump_sum' }
 
 # ── assets ──────────────────────────────────────────────────────────────────────
 

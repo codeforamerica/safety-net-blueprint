@@ -670,11 +670,11 @@ $defs:
         type: string
         format: uuid
         description: Identifier of the member or contact record.
-      childNames:
+      children:
         type: array
         items:
-          $ref: "../common/identity.yaml#/$defs/Name"
-        description: Names of the children in the household whose non-custodial parent this person is.
+          $ref: "#/$defs/PersonRef"
+        description: References to the household members whose non-custodial parent this person is.
       attemptedMedicalSupportCooperation:
         type: boolean
         description: Whether the household has attempted to cooperate with medical child support enforcement for this parent.
@@ -864,19 +864,19 @@ $defs:
     description: >
       A directional relationship between two people in the application. Both
       directions are always stored — A→B (type: parent) and B→A (type: child)
-      — so querying by fromId always returns the correct relationship type for
+      — so querying by from always returns the correct relationship type for
       any given person. Used to determine MAGI household composition and
       child support obligations.
     required:
-      - fromId
-      - toId
+      - from
+      - to
       - relationshipTypes
     additionalProperties: false
     properties:
-      fromId:
+      from:
         $ref: "#/$defs/PersonRef"
         description: The subject of the relationship (the person whose perspective this describes).
-      toId:
+      to:
         $ref: "#/$defs/PersonRef"
         description: The object of the relationship.
       relationshipTypes:
@@ -897,7 +897,7 @@ $defs:
             - primary_caregiver
             - other_relative
             - unrelated
-        description: The relationship type(s) from fromId's perspective relative to toId.
+        description: The relationship type(s) from `from`'s perspective relative to `to`.
 
   AuthorizedRepresentative:
     type: object

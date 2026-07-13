@@ -61,14 +61,14 @@ version: "1.0"
 domain: intake
 
 schema:
-  ApplicationMember.ssn:
+  application.members[].personalInformation.ssn:
     dataClassification: [pii, fti]
     programs:
       snap: required
       medicaid: preferred
     policies: [snap-ssn-disclosure]
 
-  Application.submittedAt:
+  application.submittedAt:
     programs: [snap]           # shorthand — defaults to required
     policies: [snap-processing-clock, medicaid-processing-clock]
 
@@ -87,8 +87,10 @@ events:
 
 ### Sections
 
-**`schema`** — Annotations for OpenAPI component schema fields and JSON Schema properties. Keys use
-dot notation to identify the field path within its schema (e.g., `ApplicationMember.ssn`).
+**`schema`** — Annotations for data model fields. Keys use JSON path notation from the data root
+(e.g., `application.members[].personalInformation.ssn`). Annotate at any granularity — a
+collection (`application.incomes[]`), a sub-object (`application.members[].citizenship`), or a
+specific field (`application.members[].citizenship.citizenshipStatus`).
 
 **`operations`** — Annotations for state machine actions and OpenAPI path operations. State machine
 actions and OpenAPI path operations are two representations of the same behavioral concept — a
@@ -180,7 +182,7 @@ Examples of what states can do via overlay:
 
 ```yaml
 # Add a state-specific annotation to an existing element
-- target: $.schema['ApplicationMember.countyCode']
+- target: $.schema['application.members[].countyCode']
   file: intake-annotations.yaml
   update:
     dataClassification: [pii]
@@ -195,7 +197,7 @@ Examples of what states can do via overlay:
     programs: [snap]
 
 # Reference a state-specific policy from a baseline element
-- target: $.schema['ApplicationMember.countyCode'].policies
+- target: $.schema['application.members[].countyCode'].policies
   file: intake-annotations.yaml
   append:
     - state-county-residency
@@ -213,7 +215,7 @@ The contracts package generates typed static exports from annotation files as pa
 import { IntakeAnnotations } from '@codeforamerica/safety-net-blueprint-contracts';
 
 // Element annotation lookup
-const ssn = IntakeAnnotations.schema['ApplicationMember.ssn'];
+const ssn = IntakeAnnotations.schema['application.members[].personalInformation.ssn'];
 // ssn.dataClassification → ['pii', 'fti']
 // ssn.policies → ['snap-ssn-disclosure']
 ```
@@ -259,7 +261,7 @@ compliance dashboard use case emerges that needs a live annotation query, an
 | 2 | [Annotation file sections](#decision-2-annotation-file-sections) | Three sections map to artifact types: schema, operations, events |
 | 3 | [Multiple file support](#decision-3-multiple-file-support) | Both policy and annotation files support splitting for scale |
 | 4 | [Annotation endpoint placement](#decision-4-annotation-endpoint-placement) | Domain-scoped initially; platform-level is a future option |
-| 5 | [Element path format](#decision-5-element-path-format) | FHIR-style dot notation; no array brackets; applies to the field wherever it appears |
+| 5 | [Element path format](#decision-5-element-path-format) | JSON path notation (RFC 9535); data-root-centric; explicit array brackets |
 | 6 | [Citation URL](#decision-6-citation-url) | Optional `citationUrl` alongside the display `citation` string |
 | 7 | [dataClassification vocabulary](#decision-7-dataclassification-vocabulary) | Extensible baseline vocabulary; baseline values schema-enforced, states can extend |
 | 8 | [programs property and strength](#decision-8-programs-property-and-strength) | Renamed from `requiredForPrograms`; map form with per-program strength; shorthand defaults to `required` |
@@ -406,34 +408,44 @@ to platform-level is a breaking change to the API surface.
 
 ### Decision 5: Element path format
 
-**Status:** Decided: B
+**Status:** Decided: C
 
-**What's being decided:** What format annotation keys use to identify a specific field within a
-schema — so that `ApplicationMember.ssn` unambiguously refers to the `ssn` field on the
-`ApplicationMember` schema, and the format is stable as the underlying file structure changes.
+**What's being decided:** What format annotation keys use to identify a specific field in the
+data model — so that `application.members[].personalInformation.ssn` unambiguously refers to the
+SSN field within a household member record, in a format that is stable, standards-based, and
+consistent with how other tooling in the system addresses fields.
 
 **Considerations:**
-- FHIR StructureDefinition uses identical dot-notation syntax (`Patient.name.given`) for element
-  paths in profiles and implementation guides. It is the established standard for element-level
-  metadata in interoperability specifications.
-- JSONPath (`$.components.schemas.ApplicationMember.properties.ssn`) is unambiguous and machine-
-  precise but verbose and couples the key to the OpenAPI document structure. If the OpenAPI file
-  layout changes, annotation keys break.
-- JSON Pointer (`/components/schemas/ApplicationMember/properties/ssn`) has the same coupling
-  problem as JSONPath.
-- Type-prefixed strings (`schema:ApplicationMember.ssn`) duplicate the section context already
-  provided by the annotation file's `schema:` section.
+- JSON path (RFC 9535) uses dot-and-bracket notation to express paths from a root object
+  (`application.members[].personalInformation.ssn`). It is a published IETF standard, widely
+  understood, and already used in overlay `target` expressions throughout the contract toolchain.
+  Array segments are explicit (`[]`), making the data structure self-evident in the key itself.
+- FHIRPath uses schema-anchored dot notation (`ApplicationMember.ssn`) where the root is the
+  schema name, not the data root. FHIR resources are self-contained, so anchoring to the schema
+  name is natural there. In the blueprint, schemas are embedded in a larger application data model
+  (`application.members[]` hosts `ApplicationMember`), so anchoring to the schema name loses the
+  path context and creates ambiguity if the same schema is reused at multiple locations in the
+  data model.
+- OpenAPI JSONPath (`$.components.schemas.ApplicationMember.properties.ssn`) is unambiguous but
+  verbose and couples the key to the OpenAPI document structure. If the file layout changes,
+  annotation keys break.
+- Type-prefixed strings (`schema:application.members[].personalInformation.ssn`) duplicate the
+  section context already provided by the annotation file's `schema:` section.
 
-**Array notation convention:** For fields that appear within array items (e.g., `Application.members[].ssn`),
-array brackets are omitted — the path is `ApplicationMember.ssn`. The annotation applies to the
-field wherever it appears within an array, consistent with how FHIR handles repeated elements
-(`Patient.name.given` annotates `given` within every `name` repetition).
+**Array notation:** Array segments are explicitly marked with `[]`
+(`application.members[].roles[]`). This makes the data structure self-evident and is consistent
+with JSON path conventions.
 
 **Options:**
-- **(A)** JSONPath — unambiguous but verbose and file-structure-coupled.
-- **(B)** ✓ FHIR-style dot notation (`ApplicationMember.ssn`) — concise, file-structure-independent,
-  the established standard for element-level metadata.
-- **(C)** Type-prefixed string (`schema:ApplicationMember.ssn`) — redundant given section context.
+- **(A)** OpenAPI JSONPath — precise but verbose and file-structure-coupled.
+- **(B)** FHIRPath-style schema-anchored notation (`ApplicationMember.ssn`) — concise but
+  schema-centric; loses path context when the same schema appears at multiple locations in the
+  data model.
+- **(C)** ✓ JSON path notation (RFC 9535) (`application.members[].personalInformation.ssn`) —
+  standards-based, data-root-centric, explicit array brackets, consistent with overlay `target`
+  expressions and data dictionary key conventions.
+- **(D)** Type-prefixed string (`schema:application.members[].personalInformation.ssn`) —
+  redundant given section context.
 
 ---
 
@@ -508,13 +520,13 @@ classifications most relevant to benefits programs: `fti` (Federal Tax Informati
 structural pattern — extensible binding against a defined vocabulary — is borrowed from FHIR; the
 vocabulary itself is not.
 
-**Inheritance and override:** A `dataClassification` on a parent schema key (e.g.,
-`ApplicationMember`) propagates to all sub-properties. A sub-property with its own explicit
-`dataClassification` annotation overrides the parent entirely — the field's annotation is the
-complete, authoritative statement. There is no merging: if `ApplicationMember` is `[pii]` and
-`ApplicationMember.ssn` explicitly annotates `[pii, fti]`, the field is `[pii, fti]`; the parent
-`[pii]` does not add to it. This is consistent with CSS cascade and the overlay mechanism: the
-most specific annotation wins.
+**Inheritance and override:** A `dataClassification` on a parent path key (e.g.,
+`application.members[]`) propagates to all sub-properties. A more specific key with its own
+explicit `dataClassification` overrides the parent entirely — the field's annotation is the
+complete, authoritative statement. There is no merging: if `application.members[]` is `[pii]` and
+`application.members[].personalInformation.ssn` explicitly annotates `[pii, fti]`, the field is
+`[pii, fti]`; the parent `[pii]` does not add to it. This is consistent with CSS cascade and the
+overlay mechanism: the most specific annotation wins.
 
 **Options:**
 - **(A)** Fully open strings — no validation; inconsistencies invisible until runtime.

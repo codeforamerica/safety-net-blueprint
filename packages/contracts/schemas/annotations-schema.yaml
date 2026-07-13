@@ -10,8 +10,8 @@ description: >
   Annotation files attach machine-readable metadata to specific elements in
   contract artifacts. Three sections correspond to the three artifact types:
 
-    schema     — OpenAPI component schema fields, keyed by dot-notation path
-                 (e.g., ApplicationMember.ssn)
+    schema     — data model fields, keyed by JSON path notation
+                 (e.g., application.members[].personalInformation.ssn)
     operations — State machine actions, keyed by {objectName}.{actionId}
                  (e.g., application.submit, verification.satisfy)
     events     — AsyncAPI event channels, keyed by event type
@@ -39,10 +39,10 @@ properties:
 
   schema:
     description: >
-      Annotations for OpenAPI component schema fields.
-      Keys use dot notation to identify the field path (e.g., ApplicationMember.ssn).
-      A key on a parent object (e.g., ApplicationMember) propagates to all sub-properties;
-      a sub-property annotation overrides the parent entirely.
+      Annotations for data model fields, keyed by JSON path notation.
+      Annotate at any granularity — a collection (e.g., application.incomes[]),
+      a specific field (e.g., application.members[].citizenship.citizenshipStatus),
+      or a sub-object (e.g., application.members[].citizenship).
     $ref: "#/$defs/SchemaAnnotationMap"
 
   operations:
@@ -64,12 +64,12 @@ $defs:
   SchemaAnnotationMap:
     type: object
     description: >
-      Map of schema field paths to annotation objects.
-      Keys are PascalCase schema name, optionally followed by a dot and camelCase
-      field name (e.g., ApplicationMember, ApplicationMember.dateOfBirth).
+      Map of JSON path keys to annotation objects.
+      Keys use dot-and-bracket notation: segments are camelCase identifiers,
+      array segments are suffixed with [] (e.g., application.members[].citizenship.citizenshipStatus).
     minProperties: 1
     propertyNames:
-      pattern: "^[A-Z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)?$"
+      pattern: "^[a-z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*$"
     additionalProperties:
       $ref: "#/$defs/Annotation"
 

@@ -4,89 +4,88 @@ domain: intake
 
 # ---------------------------------------------------------------------------
 # Schema annotations
-# Field paths use dot notation: SchemaName.fieldName
-# A parent annotation (e.g., ApplicationMember) propagates to all sub-properties.
-# A sub-property annotation overrides the parent entirely.
+# Field paths use JSON path dot notation: object.field or object.collection[].field
+# Annotate at any granularity — application, application.incomes[], application.incomes[].type, etc.
 # ---------------------------------------------------------------------------
 
 schema:
 
   # ── Application ────────────────────────────────────────────────────────────
 
-  Application.programs:
+  application.programsAppliedFor[]:
     programs: [snap, medicaid, tanf]
 
-  Application.channel:
+  application.channel:
     programs: [snap, medicaid, tanf]
 
-  Application.submittedAt:
+  application.submittedAt:
     policies: [snap-processing-clock, medicaid-processing-clock]
     programs: [snap, medicaid]
 
-  Application.isExpedited:
+  application.isExpedited:
     policies: [snap-expedited-processing]
     programs: [snap]
 
   # ── ApplicationMember ──────────────────────────────────────────────────────
 
-  ApplicationMember.dateOfBirth:
+  application.members[].personalInformation.dateOfBirth:
     dataClassification: [pii]
     programs: [snap, medicaid]
 
-  ApplicationMember.programs:
+  application.members[].programsAppliedFor[]:
     programs: [snap, medicaid, tanf]
 
-  ApplicationMember.roles:
+  application.members[].roles[]:
     policies: [snap-authorized-representative, medicaid-authorized-representative]
     programs: [snap, medicaid]
 
-  ApplicationMember.citizenshipStatus:
+  application.members[].citizenship.citizenshipStatus:
     dataClassification: [pii]
     policies: [snap-citizenship-eligibility, qualified-alien-eligibility]
     programs: [snap, medicaid]
 
-  ApplicationMember.immigrationStatus:
+  application.members[].citizenship.immigrantStatus:
     dataClassification: [pii]
     policies: [qualified-alien-eligibility, medicaid-immigration-electronic-check, snap-citizenship-eligibility]
     programs: [snap, medicaid]
 
-  ApplicationMember.immigrationInfo:
+  application.members[].citizenship:
     dataClassification: [pii]
     policies: [medicaid-immigration-electronic-check]
     programs: [medicaid]
 
-  # ── MemberIncome ───────────────────────────────────────────────────────────
+  # ── Income ─────────────────────────────────────────────────────────────────
   # Income data is Federal Tax Information (FTI) under IRC § 6103 when sourced
   # from IRS data matches (IEVS). It is also PII.
 
-  MemberIncome:
+  application.incomes[]:
     dataClassification: [pii, fti]
     policies: [snap-income-verification]
     programs: [snap, medicaid]
 
-  # ── MemberAsset ────────────────────────────────────────────────────────────
+  # ── Asset ──────────────────────────────────────────────────────────────────
 
-  MemberAsset:
+  application.assets[]:
     dataClassification: [pii]
     policies: [snap-resource-limit]
     programs: [snap]
 
-  # ── MemberEmployment ───────────────────────────────────────────────────────
+  # ── Job ────────────────────────────────────────────────────────────────────
 
-  MemberEmployment:
+  application.jobs[]:
     dataClassification: [pii, fti]
     policies: [snap-income-verification]
     programs: [snap, medicaid]
 
   # ── Verification ───────────────────────────────────────────────────────────
 
-  Verification.category:
+  verification.category:
     policies: [snap-verification-requirements, medicaid-electronic-verification-first]
     programs: [snap, medicaid]
 
   # ── Interview ──────────────────────────────────────────────────────────────
 
-  Interview.completedAt:
+  application.interview.completedAt:
     policies: [snap-interview-requirement]
     programs: [snap]
 
