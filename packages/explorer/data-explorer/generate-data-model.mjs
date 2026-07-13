@@ -11,7 +11,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, sep } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 
@@ -20,6 +20,7 @@ const __dirname = dirname(__filename);
 
 const CONTRACTS_DIR = resolve(__dirname, '../../contracts');
 const OUTPUT_DIR = join(__dirname, 'output');
+const PROJECT_ROOT = resolve(__dirname, '../../..');
 
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
@@ -208,12 +209,46 @@ function emitField(schema, path, entries, visited) {
 
 // ─── Output helpers ───────────────────────────────────────────────────────────
 
-/** Reorder entries so uuid fields come first (identifiers and foreign keys before data fields). */
+/** Reorder entries so uuid fields come first within each parent namespace.
+ *  Builds a tree, sorts each node's direct children (uuids before others),
+ *  then flattens depth-first so parent entries always precede their children. */
 function hoistIds(entries) {
-  const ids = [...entries].filter(([, v]) => v.type === 'uuid');
-  if (ids.length === 0) return entries;
-  const out = new Map(ids);
-  for (const [k, v] of entries) { if (!out.has(k)) out.set(k, v); }
+  const keySet = new Set(entries.keys());
+
+  // Build child lists: parent is the nearest ancestor key that exists in entries,
+  // or null for true roots (no ancestor in the map).
+  const children = new Map(); // parentKey|null → [key, ...]
+  const roots = [];
+  for (const key of entries.keys()) {
+    const lastDot = key.lastIndexOf('.');
+    const parentPath = lastDot === -1 ? null : key.slice(0, lastDot);
+    const parent = parentPath !== null && keySet.has(parentPath) ? parentPath : null;
+    if (parent === null) {
+      roots.push(key);
+    } else {
+      if (!children.has(parent)) children.set(parent, []);
+      children.get(parent).push(key);
+    }
+  }
+
+  // Sort each group: uuids first, then others (stable within each group)
+  function sortGroup(keys) {
+    keys.sort((a, b) => {
+      const aUuid = entries.get(a)?.type === 'uuid' ? 0 : 1;
+      const bUuid = entries.get(b)?.type === 'uuid' ? 0 : 1;
+      return aUuid - bUuid;
+    });
+  }
+  sortGroup(roots);
+  for (const kids of children.values()) sortGroup(kids);
+
+  // DFS: emit parent, then recurse into children
+  const out = new Map();
+  function emit(key) {
+    out.set(key, entries.get(key));
+    for (const child of children.get(key) ?? []) emit(child);
+  }
+  for (const key of roots) emit(key);
   return out;
 }
 
@@ -278,7 +313,7 @@ async function main() {
   }
 
   // Raw spec — used to extract $ref schema names from path operations
-  const rawSpec = yaml.load(readFileSync(specPath, 'utf8'));
+  const rawSpec = yaml.load(readFileSync(specPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
   const rawPaths = rawSpec.paths ?? {};
 
   // Custom resolver: intercepts every YAML file load and annotates named schemas in memory
@@ -290,7 +325,11 @@ async function main() {
     read(file) {
       let resolvedPath;
       try { resolvedPath = fileURLToPath(file.url); } catch { resolvedPath = file.url; }
-      const content = yaml.load(readFileSync(resolvedPath, 'utf8'));
+      const realPath = resolve(resolvedPath);
+      if (!realPath.startsWith(PROJECT_ROOT + sep)) {
+        throw new Error(`Refusing to read file outside project directory: ${realPath}`);
+      }
+      const content = yaml.load(readFileSync(realPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
       if (content && typeof content === 'object') {
         for (const [name, schema] of Object.entries(content.components?.schemas ?? {})) {
           if (schema && typeof schema === 'object') schema['x-schema-name'] = name;
@@ -314,92 +353,94 @@ async function main() {
   // sections: [{ title, entries: Map<path, entryObject> }]
   const sections = [];
 
-  // ── Detect root resource ──────────────────────────────────────────────────
+  // ── Detect all root resources ─────────────────────────────────────────────
   //
-  // The root is the first /{collection}/{id} path that has a PATCH with a request body.
+  // A root is any /{collection}/{id} path with a PATCH that has a request body.
   // The dot-notation prefix is derived from the ID parameter name (e.g. applicationId → application).
+  // Domains with multiple top-level resources (e.g. workflow: queues + tasks) produce
+  // one section per root plus their respective sub-resources.
 
-  let rootCollection = null;
-  let rootPrefix = null;
-  let rootWritableSchemaName = null;
-
+  const roots = [];
   for (const [rawPath, methods] of Object.entries(rawPaths)) {
     const match = rawPath.match(/^\/([^/]+)\/\{([^}]+)\}$/);
     if (!match) continue;
     const schemaName = requestBodySchemaName(methods.patch);
     if (!schemaName) continue;
-    rootCollection = match[1];
-    rootPrefix = match[2].replace(/Id$/, ''); // e.g. 'applicationId' → 'application'
-    rootWritableSchemaName = schemaName;
-    break;
+    roots.push({
+      collection: match[1],
+      prefix: match[2].replace(/Id$/, ''), // e.g. 'applicationId' → 'application'
+      writableSchemaName: schemaName,
+    });
   }
 
-  if (!rootCollection) {
+  if (roots.length === 0) {
     console.error('Could not detect root resource — need a PATCH /{collection}/{id} path with a request body schema.');
     process.exit(1);
   }
 
-  console.log(`Root resource: ${rootCollection} (prefix: ${rootPrefix}, writable schema: ${rootWritableSchemaName})`);
+  for (const { collection: rootCollection, prefix: rootPrefix, writableSchemaName: rootWritableSchemaName } of roots) {
+    console.log(`Root resource: ${rootCollection} (prefix: ${rootPrefix}, writable schema: ${rootWritableSchemaName})`);
 
-  // ── Scan sub-resource paths in spec order ─────────────────────────────────
-  //
-  // Two-pass: item paths (/{root}/{rootId}/{resource}/{resourceId}) mark a resource
-  // as a collection. Remaining /{root}/{rootId}/{resource} paths are singletons.
-  // Scoped to the detected rootCollection so paths from other roots are ignored.
+    // ── Scan sub-resource paths in spec order ───────────────────────────────
+    //
+    // Two-pass: item paths (/{root}/{rootId}/{resource}/{resourceId}) mark a resource
+    // as a collection. Remaining /{root}/{rootId}/{resource} paths are singletons.
+    // Scoped to this root so paths from other roots are ignored.
 
-  const resourceOrder = []; // resource names in first-seen order
-  const resourceMap = new Map(); // resource → { isCollection, schemaName }
+    const resourceOrder = []; // resource names in first-seen order
+    const resourceMap = new Map(); // resource → { isCollection, schemaName }
 
-  const itemRe = new RegExp(`^\\/${rootCollection}\\/\\{[^}]+\\}\\/([^/{}]+)\\/\\{[^}]+\\}$`);
-  const subRe  = new RegExp(`^\\/${rootCollection}\\/\\{[^}]+\\}\\/([^/{}]+)$`);
+    const itemRe = new RegExp(`^\\/${rootCollection}\\/\\{[^}]+\\}\\/([^/{}]+)\\/\\{[^}]+\\}$`);
+    const subRe  = new RegExp(`^\\/${rootCollection}\\/\\{[^}]+\\}\\/([^/{}]+)$`);
 
-  for (const [rawPath, methods] of Object.entries(rawPaths)) {
-    const itemMatch = rawPath.match(itemRe);
-    if (itemMatch) {
-      const resource = itemMatch[1];
-      const schemaName = responseSchemaName(methods.get);
-      if (!resourceMap.has(resource)) resourceOrder.push(resource);
-      // Item path always wins (gives the single-item schema, not the List wrapper)
-      if (schemaName) resourceMap.set(resource, { isCollection: true, schemaName });
-      continue;
+    for (const [rawPath, methods] of Object.entries(rawPaths)) {
+      const itemMatch = rawPath.match(itemRe);
+      if (itemMatch) {
+        const resource = itemMatch[1];
+        const schemaName = responseSchemaName(methods.get);
+        if (!resourceMap.has(resource)) resourceOrder.push(resource);
+        // Item path always wins (gives the single-item schema, not the List wrapper)
+        if (schemaName) resourceMap.set(resource, { isCollection: true, schemaName });
+        continue;
+      }
+
+      const subMatch = rawPath.match(subRe);
+      if (!subMatch) continue;
+      const resource = subMatch[1];
+      if (resourceMap.has(resource)) continue; // item path already set it — don't downgrade
+
+      const op = methods.get || methods.put || methods.patch;
+      const schemaName = responseSchemaName(op);
+      if (!schemaName) continue;
+      resourceOrder.push(resource);
+      resourceMap.set(resource, { isCollection: false, schemaName });
     }
 
-    const subMatch = rawPath.match(subRe);
-    if (!subMatch) continue;
-    const resource = subMatch[1];
-    if (resourceMap.has(resource)) continue; // item path already set it — don't downgrade
+    // ── Root resource fields ──────────────────────────────────────────────
+    const rootWritable = schemas[rootWritableSchemaName];
+    if (rootWritable) {
+      const rawEntries = new Map();
+      walkSchema(rootWritable, rootPrefix, rawEntries, new WeakSet());
+      const entries = hoistIds(rawEntries);
+      if (entries.size > 0) sections.push({ title: rootPrefix, entries });
+    }
 
-    const op = methods.get || methods.put || methods.patch;
-    const schemaName = responseSchemaName(op);
-    if (!schemaName) continue;
-    resourceOrder.push(resource);
-    resourceMap.set(resource, { isCollection: false, schemaName });
-  }
+    // ── Sub-resources (collections and singletons) ────────────────────────
+    for (const resource of resourceOrder) {
+      const info = resourceMap.get(resource);
+      if (!info?.schemaName || !schemas[info.schemaName]) continue;
 
-  // ── Root resource fields ──────────────────────────────────────────────────
-  const rootWritable = schemas[rootWritableSchemaName];
-  if (rootWritable) {
-    const rawEntries = new Map();
-    walkSchema(rootWritable, rootPrefix, rawEntries, new WeakSet());
-    const entries = hoistIds(rawEntries);
-    if (entries.size > 0) sections.push({ title: rootPrefix, entries });
-  }
+      const camel = resource.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      const prefix = info.isCollection ? `${rootPrefix}.${camel}[]` : `${rootPrefix}.${camel}`;
 
-  // ── Sub-resources (collections and singletons) ────────────────────────────
-  for (const resource of resourceOrder) {
-    const info = resourceMap.get(resource);
-    if (!info?.schemaName || !schemas[info.schemaName]) continue;
-
-    const camel = resource.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    const prefix = info.isCollection ? `${rootPrefix}.${camel}[]` : `${rootPrefix}.${camel}`;
-
-    const rawEntries = new Map();
-    walkSchema(schemas[info.schemaName], prefix, rawEntries, new WeakSet());
-    const hoisted = hoistIds(rawEntries);
-    const entries = new Map();
-    if (info.isCollection) entries.set(prefix, { type: `list(${info.schemaName})` });
-    for (const [k, v] of hoisted) entries.set(k, v);
-    if (entries.size > 0) sections.push({ title: resource, entries });
+      const rawEntries = new Map();
+      walkSchema(schemas[info.schemaName], prefix, rawEntries, new WeakSet());
+      const hoisted = hoistIds(rawEntries);
+      const entries = new Map();
+      if (info.isCollection) entries.set(prefix, { type: `list(${info.schemaName})` });
+      for (const [k, v] of hoisted) entries.set(k, v);
+      if (entries.size > 0) sections.push({ title: resource, entries });
+    }
   }
 
   // ── Write data model (no descriptions) ───────────────────────────────────

@@ -27,6 +27,18 @@ fail() {
   failures+=("$1")
 }
 
+step "Checking explorer outputs are up to date"
+if ! git diff --exit-code packages/explorer/ > /dev/null 2>&1 || git ls-files --others --exclude-standard packages/explorer/ | grep -q .; then
+  printf "${RED}  ✗ Explorer outputs are stale — rebuild and stage before running preflight:${RESET}\n"
+  printf "      npm run build --workspace=packages/explorer\n"
+  printf "      git add packages/explorer/\n"
+  git diff --name-only packages/explorer/
+  git ls-files --others --exclude-standard packages/explorer/
+  exit 1
+else
+  pass "Explorer outputs are up to date"
+fi
+
 step "Validating base specs"
 if npm run validate 2>&1; then
   pass "Base specs valid"
@@ -76,16 +88,6 @@ if npm run postman:generate 2>&1; then
   pass "Postman collection generated"
 else
   fail "Postman collection generation failed"
-fi
-
-
-
-step "Checking explorer outputs are up to date"
-if git diff --exit-code packages/explorer/ > /dev/null 2>&1; then
-  pass "Explorer outputs are up to date"
-else
-  fail "Explorer outputs are stale — run 'npm run build --workspace=packages/explorer', stage, and commit (or push via git push to let the pre-push hook handle it)"
-  git diff --name-only packages/explorer/
 fi
 
 step "Running integration tests"

@@ -395,8 +395,10 @@ async function main() {
     const configContent = createOpenApiTsConfig(specPath, domainOutputDir);
     writeFileSync(configPath, configContent);
 
-    // Generate client using @hey-api/openapi-ts
-    await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: outputDir });
+    // Generate client using @hey-api/openapi-ts.
+    // cwd must be within the project tree so npx resolves the locally installed
+    // version from node_modules rather than fetching @latest from the registry.
+    await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
 
     // Post-process: add .nullable() to fields the generator missed.
     // @hey-api/openapi-ts does not translate nullable: true on allOf-wrapped $ref

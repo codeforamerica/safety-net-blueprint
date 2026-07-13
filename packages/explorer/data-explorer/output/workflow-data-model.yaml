@@ -1,0 +1,31 @@
+# workflow data model
+# Generated from workflow-openapi.yaml
+# Do not edit — regenerate with: node generate-data-model.mjs --domain=workflow
+
+# ── queue ───────────────────────────────────────────────────────────────────────
+
+queue.id: { type: uuid }
+queue.name: { type: string }
+queue.description: { type: string }
+queue.source: { type: enum, values: [system, user] }
+
+# ── task ────────────────────────────────────────────────────────────────────────
+
+task.subjectId: { type: uuid, relationship: Polymorphic }
+task.queueId: { type: uuid, relationship: Queue }
+task.assignedToId: { type: uuid, relationship: User }
+task.name: { type: string }
+task.description: { type: string }
+task.status: { type: string }
+task.taskType: { type: string }
+task.subjectType: { type: enum, values: [application, case, document, appointment] }
+task.programType: { type: enum, values: [snap, medicaid, chip, tanf] }
+task.isExpedited: { type: boolean }
+task.priority: { type: integer }
+task.startedAt: { type: datetime }
+task.completedAt: { type: datetime }
+task.escalatedAt: { type: datetime }
+task.cancelledAt: { type: datetime }
+task.blockedAt: { type: datetime }
+task.outcome: { type: string }
+task.completionNotes: { type: string }
