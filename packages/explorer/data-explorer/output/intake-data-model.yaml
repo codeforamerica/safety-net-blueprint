@@ -206,13 +206,13 @@ application.healthPlans[].type: { type: enum, values: [employer_sponsored, cobra
 application.healthPlans[].typeOther: { type: string }
 application.healthPlans[].premiumAmount: { type: number }
 application.healthPlans[].premiumFrequency: { type: enum, values: [weekly, every_two_weeks, twice_monthly, monthly, yearly] }
-application.healthPlans[].coverageContactName: { type: Name, appliesWhen: 'type in [employer_sponsored, cobra]' }
-application.healthPlans[].coverageContactName.firstName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
-application.healthPlans[].coverageContactName.middleName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
-application.healthPlans[].coverageContactName.middleInitial: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
-application.healthPlans[].coverageContactName.lastName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
-application.healthPlans[].coverageContactName.maidenName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
-application.healthPlans[].coverageContactName.suffix: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
+application.healthPlans[].coverageContact: { type: Name, appliesWhen: 'type in [employer_sponsored, cobra]' }
+application.healthPlans[].coverageContact.firstName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
+application.healthPlans[].coverageContact.middleName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
+application.healthPlans[].coverageContact.middleInitial: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
+application.healthPlans[].coverageContact.lastName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
+application.healthPlans[].coverageContact.maidenName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
+application.healthPlans[].coverageContact.suffix: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
 application.healthPlans[].hasMinimumValuePlan: { type: boolean, appliesWhen: 'type in [employer_sponsored, cobra]' }
 application.healthPlans[].lowestCostPlanName: { type: string, appliesWhen: 'type in [employer_sponsored, cobra]' }
 application.healthPlans[].lowestCostPlanPremium: { type: number, appliesWhen: 'type in [employer_sponsored, cobra]' }
@@ -266,18 +266,14 @@ application.healthEnrollments[].prefersSeparateMailing: { type: boolean }
 # ── child-support ───────────────────────────────────────────────────────────────
 
 application.childSupport.parentsOutsideHome[].id: { type: uuid }
+application.childSupport.parentsOutsideHome[].children[].id: { type: uuid }
 application.childSupport.id: { type: uuid }
 application.childSupport.applicationId: { type: uuid, relationship: Application }
 application.childSupport.goodCauseChildSupportWaiver: { type: boolean }
 application.childSupport.parentsOutsideHome[]: { type: list(ParentOutsideHome) }
 application.childSupport.parentsOutsideHome[].type: { type: enum, values: [member, contact] }
-application.childSupport.parentsOutsideHome[].childNames[]: { type: list(Name) }
-application.childSupport.parentsOutsideHome[].childNames[].firstName: { type: string }
-application.childSupport.parentsOutsideHome[].childNames[].middleName: { type: string }
-application.childSupport.parentsOutsideHome[].childNames[].middleInitial: { type: string }
-application.childSupport.parentsOutsideHome[].childNames[].lastName: { type: string }
-application.childSupport.parentsOutsideHome[].childNames[].maidenName: { type: string }
-application.childSupport.parentsOutsideHome[].childNames[].suffix: { type: string }
+application.childSupport.parentsOutsideHome[].children[]: { type: list(PersonRef) }
+application.childSupport.parentsOutsideHome[].children[].type: { type: enum, values: [member, contact] }
 application.childSupport.parentsOutsideHome[].attemptedMedicalSupportCooperation: { type: boolean }
 
 # ── contacts ────────────────────────────────────────────────────────────────────
@@ -321,14 +317,14 @@ application.organizations[].phone: { type: string }
 # ── person-relationships ────────────────────────────────────────────────────────
 
 application.personRelationships[]: { type: list(PersonRelationship) }
-application.personRelationships[].fromId.id: { type: uuid }
-application.personRelationships[].toId.id: { type: uuid }
+application.personRelationships[].from.id: { type: uuid }
+application.personRelationships[].to.id: { type: uuid }
 application.personRelationships[].id: { type: uuid }
 application.personRelationships[].applicationId: { type: uuid, relationship: Application }
-application.personRelationships[].fromId: { type: PersonRef }
-application.personRelationships[].fromId.type: { type: enum, values: [member, contact] }
-application.personRelationships[].toId: { type: PersonRef }
-application.personRelationships[].toId.type: { type: enum, values: [member, contact] }
+application.personRelationships[].from: { type: PersonRef }
+application.personRelationships[].from.type: { type: enum, values: [member, contact] }
+application.personRelationships[].to: { type: PersonRef }
+application.personRelationships[].to.type: { type: enum, values: [member, contact] }
 application.personRelationships[].relationshipTypes[]: { type: enum, values: [parent, child, spouse, domestic_partner, sibling, grandparent, grandchild, legal_guardian, caregiver, primary_caregiver, other_relative, unrelated] }
 
 # ── authorized-representatives ──────────────────────────────────────────────────

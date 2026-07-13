@@ -419,32 +419,11 @@ async function main() {
     modelLines.push('');
   }
 
-  // ── Write annotations file (descriptions, in intake-annotations.yaml format)
-  const schemaAnnotations = {};
-  for (const { entries } of sections) {
-    for (const [path, entry] of entries) {
-      const [, description] = splitEntry(entry);
-      if (description) schemaAnnotations[path] = { description: description.trim() };
-    }
-  }
-
   if (!existsSync(OUTPUT_DIR)) mkdirSync(OUTPUT_DIR, { recursive: true });
 
   const modelPath = join(OUTPUT_DIR, `${domain}-data-model.yaml`);
   writeFileSync(modelPath, modelLines.join('\n'), 'utf8');
   console.log(`Generated ${modelPath}`);
-
-  const annotationsDoc = [
-    `# ${domain} data model annotations`,
-    `# Generated from ${domain}-openapi.yaml`,
-    `# Do not edit — regenerate with: node generate-data-model.mjs --domain=${domain}`,
-    '',
-    yaml.dump({ version: '1.0', domain, schema: schemaAnnotations }, { lineWidth: 100, indent: 2 }),
-  ].join('\n');
-
-  const annotationsPath = join(OUTPUT_DIR, `${domain}-data-model-annotations.yaml`);
-  writeFileSync(annotationsPath, annotationsDoc, 'utf8');
-  console.log(`Generated ${annotationsPath}`);
 }
 
 main().catch(err => {
