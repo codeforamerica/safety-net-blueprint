@@ -63,9 +63,9 @@ components:
 
 const OPENAPI_TS_CONFIG = (specPath, outPath) => `\
 export default {
-  input: '${specPath}',
+  input: ${JSON.stringify(specPath)},
   output: {
-    path: '${outPath}',
+    path: ${JSON.stringify(outPath)},
   },
   plugins: [
     { name: '@hey-api/typescript', enums: 'javascript', style: 'PascalCase' },

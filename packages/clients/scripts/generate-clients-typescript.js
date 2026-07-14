@@ -106,6 +106,7 @@ function exec(command, args, options = {}) {
     console.log(`  Running: ${command} ${args.join(' ')}`);
     const child = spawn(command, args, {
       stdio: 'inherit',
+      shell: true,
       ...options
     });
 
