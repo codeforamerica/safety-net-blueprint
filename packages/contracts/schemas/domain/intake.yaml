@@ -957,10 +957,6 @@ $defs:
         type: string
         enum: [member, contact]
         description: Whether the sponsor is a household member or a people-registry contact.
-      personId:
-        type: string
-        format: uuid
-        description: Identifier of the member or contact record for the sponsor.
       ssn:
         $ref: "../common/identity.yaml#/$defs/SocialSecurityNumber"
         description: Sponsor's Social Security Number. Used for income verification and deeming calculations.
@@ -989,7 +985,7 @@ $defs:
         type: string
         enum: [member, contact]
         description: Whether the sponsor's spouse is a household member or a people-registry contact.
-      personId:
+      id:
         type: string
         format: uuid
         description: Identifier of the member or contact record for the spouse.
