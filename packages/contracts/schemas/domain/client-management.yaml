@@ -11,5 +11,6 @@ $defs:
     description: >
       A unique, de-duplicated individual record. Multiple applications may
       reference the same person; Client Management resolves that identity across
-      applications and cases. Full schema TBD.
+      applications and cases. Full schema TBD — additional identity fields will
+      be added as the client management domain is built out.
     additionalProperties: true

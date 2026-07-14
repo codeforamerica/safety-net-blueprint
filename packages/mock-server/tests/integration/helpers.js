@@ -15,6 +15,7 @@ export const BASE_URL = 'http://localhost:1080';
 // adds org prefixes at resolve time for state deployments.
 export const EVENT_PREFIX = '';
 export const contractsDir = resolve(__dirname, '..', '..', '..', 'contracts');
+export const seedDir = resolve(__dirname, '..', '..', 'seed');
 
 export function fetch(url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -115,7 +116,7 @@ export async function setupServer() {
   const isRunning = await isServerRunning().catch(() => false);
   if (!isRunning) {
     console.log('Starting mock server...');
-    await startMockServer([contractsDir]);
+    await startMockServer([contractsDir], seedDir);
     await new Promise(res => setTimeout(res, 1500));
     console.log('Mock server started\n');
   } else {

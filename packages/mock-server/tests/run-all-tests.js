@@ -16,6 +16,7 @@ import { startMockServer, stopServer, isServerRunning } from '../scripts/server.
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const seedDir = resolve(__dirname, '..', 'seed');
 
 // Discover all test files in unit/ and integration/ directories
 const unitDir = join(__dirname, 'unit');
@@ -147,7 +148,7 @@ async function runAllTests() {
       const alreadyRunning = await isServerRunning().catch(() => false);
       if (!alreadyRunning) {
         console.log('Starting mock server...');
-        await startMockServer([contractsDir]);
+        await startMockServer([contractsDir], seedDir);
         await new Promise(res => setTimeout(res, 1500));
         console.log('Mock server started\n');
       }

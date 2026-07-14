@@ -89,6 +89,71 @@ These are the baseline conventions for base specs. The resolve pipeline can tran
 
 ---
 
+## Schema Organization
+
+Schemas live in three places with distinct responsibilities:
+
+| Location | Purpose | Examples |
+|---|---|---|
+| `schemas/domain/{domain}.yaml` | Domain-specific field definitions (no system fields) | Domain properties, FKs (`applicationId`, `memberId`) |
+| `schemas/common/` or `components/common.yaml` | Value types reusable across any domain | `Address`, `Name`, `Email`, `PhoneNumber` |
+| OpenAPI `components/schemas` | REST scaffolding — adds system fields and composes API variants | `{Resource}`, `{Resource}Create`, `{Resource}Update`, `{Resource}List` |
+
+**Decision rule for common vs. domain:** A type belongs in `schemas/common/` only if it can be used verbatim in any domain without carrying domain-specific FK fields (`applicationId`, `memberId`, etc.). If it needs those FKs to be useful, it is a domain schema.
+
+**`id`, `createdAt`, `updatedAt` belong in the OpenAPI layer, not in `$defs`.** Domain schemas describe domain knowledge — fields a caseworker or applicant would recognize. System fields (`id`, timestamps) are API mechanics. Keeping them separate means the domain schema can be referenced for Create/Update operations without needing to strip readOnly fields.
+
+**How the layers connect:**
+
+```yaml
+# schemas/domain/intake.yaml — domain fields only, no system fields
+$defs:
+  Application:
+    title: Application
+    type: object
+    properties:
+      status: { type: string }
+      programs: { type: array, items: { type: string } }
+      # ... other domain fields
+
+# intake-openapi.yaml components/schemas
+
+Application:               # full resource — domain fields + system fields
+  allOf:
+    - $ref: "./schemas/domain/intake.yaml#/$defs/Application"
+    - type: object
+      required: [id, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+
+ApplicationCreate:         # POST body — domain fields only, declare required
+  allOf:
+    - $ref: "./schemas/domain/intake.yaml#/$defs/Application"
+    - type: object
+      required: [status, programs]
+
+ApplicationUpdate:         # PATCH body — domain fields only, at least one required
+  allOf:
+    - $ref: "./schemas/domain/intake.yaml#/$defs/Application"
+    - type: object
+      minProperties: 1
+
+ApplicationList:           # GET collection response — pagination envelope
+  allOf:
+    - $ref: "./components/pagination.yaml#/Pagination"
+    - type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Application"
+```
+
+---
+
 ## Common Field Patterns
 
 ### Standard Resource Fields (Required)

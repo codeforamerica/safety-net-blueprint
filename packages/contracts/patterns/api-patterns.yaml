@@ -99,19 +99,88 @@ authoring_style:
       Operation-specific wrapper schemas (ApplicationCreate, ApplicationList, etc.)
       are the exception: they are thin allOf compositions that only make sense in
       the context of a specific API, so they live inline in components/schemas.
+
+    schema_locations:
+      openapi_components_schemas:
+        purpose: REST API scaffolding — adds system fields and composes API variants
+        contains: |
+          - {Resource}: allOf [domain schema, system fields (id, createdAt, updatedAt)]
+          - {Resource}Create: allOf [domain schema, required declaration] — no system fields
+          - {Resource}Update: allOf [domain schema, minProperties: 1] — no system fields
+          - {Resource}List: pagination envelope with an items array
+        rule: |
+          id, createdAt, and updatedAt belong here, not in the domain schema.
+          They are API mechanics (server-generated, readOnly), not domain knowledge.
+          Keeping them out of the domain schema means Create/Update schemas can
+          reference the domain schema directly without needing to strip readOnly fields.
+
+      schemas_domain:
+        purpose: Domain-specific field definitions — no system fields
+        location: schemas/domain/{domain-name}.yaml
+        contains: |
+          - All domain-specific property definitions for the resource
+          - Domain-specific FK fields (e.g., applicationId, memberId)
+        rule: |
+          Do not include id, createdAt, or updatedAt here — those are added at
+          the OpenAPI components/schemas layer. Each domain gets one file. Fields
+          that carry domain-specific FKs belong here, not in schemas/common/.
+
+      schemas_common:
+        purpose: Reusable value types shared verbatim across multiple domains
+        location: schemas/common/ or components/common.yaml
+        contains: |
+          - Value objects: Address, Name, Email, PhoneNumber, and similar
+          - Types that carry no domain-specific FK fields
+        rule: |
+          A type belongs in common/ only if it can be used verbatim in any
+          domain without carrying domain-specific FK fields (applicationId,
+          memberId, etc.). If it needs domain FKs to be useful, it is a
+          domain schema, not a common one.
+
     file_structure: |
-      # schemas/domain/example.yaml
+      # schemas/domain/example.yaml — domain fields only, no id/createdAt/updatedAt
       $schema: https://json-schema.org/draft/2020-12/schema
       $defs:
-        MyDomainSchema:
-          title: MyDomainSchema
+        MyResource:
+          title: MyResource
           type: object
           properties:
-            ...
+            status: { type: string }
+            # ... domain-specific fields
     reference_pattern: |
       # In OpenAPI spec (components/schemas):
-      MyDomainSchema:
-        $ref: "./schemas/domain/example.yaml#/$defs/MyDomainSchema"
+      MyResource:                    # full resource — domain fields + system fields
+        allOf:
+          - $ref: "./schemas/domain/example.yaml#/$defs/MyResource"
+          - type: object
+            required: [id, createdAt, updatedAt]
+            properties:
+              id: { type: string, format: uuid, readOnly: true }
+              createdAt: { type: string, format: date-time, readOnly: true }
+              updatedAt: { type: string, format: date-time, readOnly: true }
+
+      MyResourceCreate:              # POST body — domain fields, declare required
+        allOf:
+          - $ref: "./schemas/domain/example.yaml#/$defs/MyResource"
+          - type: object
+            required: [status]
+
+      MyResourceUpdate:              # PATCH body — domain fields, at least one required
+        allOf:
+          - $ref: "./schemas/domain/example.yaml#/$defs/MyResource"
+          - type: object
+            minProperties: 1
+
+      MyResourceList:                # GET collection response — pagination envelope
+        allOf:
+          - $ref: "./components/pagination.yaml#/Pagination"
+          - type: object
+            required: [items]
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MyResource"
 
 # =============================================================================
 # Required Info Fields
