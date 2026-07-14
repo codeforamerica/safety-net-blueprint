@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const specsDir = join(__dirname, '../../../contracts');
-const seedDir = join(__dirname, '../../seed');
+const seedDir = join(__dirname, '../fixtures');
 
 // Cleanup function — uses SQL DELETE rather than file deletion to
 // avoid SQLite WAL replay issues (deleting .db but not .db-wal/.db-shm

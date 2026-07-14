@@ -22,7 +22,7 @@ import { join, dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const specsDir = join(__dirname, '../../../contracts');
-const seedDir = join(__dirname, '../../seed');
+const seedDir = join(__dirname, '../fixtures');
 
 const cleanup = () => { clearAll('persons'); };
 

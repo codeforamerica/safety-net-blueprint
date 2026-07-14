@@ -10,6 +10,7 @@ $defs:
   Domain:
     type: string
     enum:
+      - client-management
       - data-exchange
       - document-management
       - eligibility

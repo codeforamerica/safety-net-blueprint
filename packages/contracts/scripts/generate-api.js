@@ -207,6 +207,7 @@ paths:
       - "$ref": "${componentsPrefix}/parameters.yaml#/SearchQueryParam"
       - "$ref": "${componentsPrefix}/parameters.yaml#/LimitParam"
       - "$ref": "${componentsPrefix}/parameters.yaml#/OffsetParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated collection of ${resourcePluralLower}.
