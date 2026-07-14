@@ -85,15 +85,15 @@ export function extractResourceSlug(path) {
 
 /**
  * Collect all property names from a schema object.
- * Handles `properties` and `allOf` (one level deep for inline objects).
- * Does not resolve external `$ref` entries — properties on `$ref`-only allOf
- * members are skipped. This is sufficient for the common blueprint pattern of
- * `allOf: [{ $ref: external }, { type: object, properties: { ... } }]`.
+ * Handles `properties` and `allOf` entries, including external `$ref` allOf
+ * members that point to domain schema `$defs`. Uses `specsByFile` to follow
+ * those refs and collect properties from the referenced `$defs` entry.
  *
  * @param {Object} schema
+ * @param {Map<string, Object>} [specsByFile] - relativePath → parsed spec
  * @returns {Set<string>}
  */
-export function collectSchemaProperties(schema) {
+export function collectSchemaProperties(schema, specsByFile = new Map()) {
   const props = new Set();
   if (!schema || typeof schema !== 'object') return props;
 
@@ -105,7 +105,28 @@ export function collectSchemaProperties(schema) {
 
   if (Array.isArray(schema.allOf)) {
     for (const part of schema.allOf) {
-      if (part && typeof part === 'object' && !part.$ref && part.properties) {
+      if (!part || typeof part !== 'object') continue;
+
+      if (part.$ref && !part.$ref.startsWith('#')) {
+        // Follow external $ref into domain schema $defs
+        const hashIdx = part.$ref.indexOf('#');
+        if (hashIdx !== -1 && specsByFile.size > 0) {
+          const filePart = part.$ref.slice(0, hashIdx).replace(/^\.\//, '');
+          const anchorPart = part.$ref.slice(hashIdx + 1);
+          const refSpec = specsByFile.get(filePart);
+          if (refSpec) {
+            let node = refSpec;
+            for (const seg of anchorPart.split('/').filter(Boolean)) {
+              node = node?.[seg];
+            }
+            if (node?.properties) {
+              for (const key of Object.keys(node.properties)) {
+                props.add(key);
+              }
+            }
+          }
+        }
+      } else if (!part.$ref && part.properties) {
         for (const key of Object.keys(part.properties)) {
           props.add(key);
         }
@@ -128,6 +149,9 @@ export function collectSchemaProperties(schema) {
  */
 export function buildResourceSchemaIndex(yamlFiles) {
   const index = new Map();
+
+  // Build a file-keyed map so collectSchemaProperties can follow external refs
+  const specsByFile = new Map(yamlFiles.map(({ relativePath, spec }) => [relativePath, spec]));
 
   for (const { spec } of yamlFiles) {
     if (!spec || !spec.paths) continue;
@@ -159,7 +183,7 @@ export function buildResourceSchemaIndex(yamlFiles) {
       const schema = schemas[match[1]];
       if (!schema) continue;
 
-      const props = collectSchemaProperties(schema);
+      const props = collectSchemaProperties(schema, specsByFile);
       if (props.size > 0) {
         index.set(slug, props);
       }

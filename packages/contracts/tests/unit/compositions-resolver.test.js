@@ -1147,7 +1147,12 @@ describe('real intake composition', () => {
 
     const specPath = resolve(specsDir, 'intake-openapi.yaml');
     const spec = yaml.load(readFileSync(specPath, 'utf8'));
-    const yamlFiles = [{ relativePath: 'intake-openapi.yaml', spec }];
+    const domainPath = resolve(specsDir, 'schemas/domain/intake.yaml');
+    const domainSpec = yaml.load(readFileSync(domainPath, 'utf8'));
+    const yamlFiles = [
+      { relativePath: 'intake-openapi.yaml', spec },
+      { relativePath: 'schemas/domain/intake.yaml', spec: domainSpec },
+    ];
 
     const index = buildResourceSchemaIndex(yamlFiles);
     const errors = validateBindFields(intake, index);

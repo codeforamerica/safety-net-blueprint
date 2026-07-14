@@ -1062,10 +1062,10 @@ async function main() {
     const allLinksData = [];
 
     for (const [relativePath, spec] of currentResults) {
-      const found = discoverRelationships(spec);
+      const found = discoverRelationships(spec, currentResults);
       if (found.length === 0) continue;
 
-      const { result, warnings, expandRenames, linksData, decisions } = resolveRelationships(spec, relationshipStyle, schemaIndex);
+      const { result, warnings, expandRenames, linksData, decisions } = resolveRelationships(spec, relationshipStyle, schemaIndex, currentResults);
       currentResults.set(relativePath, result);
       allWarnings = allWarnings.concat(warnings);
       if (expandRenames.length > 0) allExpandRenames.push(...expandRenames);

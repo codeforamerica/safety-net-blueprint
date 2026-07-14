@@ -2692,41 +2692,6 @@ components:
         format: uuid
 
   schemas:
-    ApplicationWritable:
-      type: object
-      description: Client-writable fields for an application.
-      properties:
-        programsAppliedFor:
-          type: array
-          description: Programs the household is applying for. At least one required at submission.
-          items:
-            type: string
-            enum:
-              - snap
-              - medicaid
-              - chip
-              - tanf
-        channel:
-          type: string
-          description: How the application was filed.
-          enum:
-            - online
-            - in_person
-            - phone
-            - mail
-        ebt:
-          $ref: "./schemas/domain/intake.yaml#/$defs/Ebt"
-        registerToVote:
-          type: boolean
-          description: Whether any household member would like to register to vote.
-        deniesIevsConsent:
-          type: boolean
-          description: Whether the household denies consent for IEVS income verification.
-        expeditedSnap:
-          $ref: "./schemas/domain/intake.yaml#/$defs/ExpeditedSnap"
-        utilities:
-          $ref: "./schemas/domain/intake.yaml#/$defs/Utilities"
-
     Application:
       description: >
         The root entity representing one submitted application from a household.
@@ -2736,7 +2701,7 @@ components:
         the 30-day SNAP deadline and 45-day Medicaid deadline both run from
         submittedAt (7 CFR § 273.2, 42 CFR § 435.912).
       allOf:
-        - $ref: "#/components/schemas/ApplicationWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Application"
         - type: object
           required:
             - id
@@ -2797,14 +2762,14 @@ components:
 
     ApplicationCreate:
       allOf:
-        - $ref: "#/components/schemas/ApplicationWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Application"
         - type: object
           required:
             - programs
 
     ApplicationUpdate:
       allOf:
-        - $ref: "#/components/schemas/ApplicationWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Application"
         - type: object
           minProperties: 1
 
@@ -2824,76 +2789,6 @@ components:
     # ApplicationMember
     # ---------------------------------------------------------------------------
 
-    ApplicationMemberWritable:
-      description: Client-writable fields for an application member.
-      type: object
-      additionalProperties: true
-      properties:
-        roles:
-          type: array
-          description: Roles this person plays in the application.
-          items:
-            type: string
-            enum:
-              - primary_applicant
-              - household_member
-              - non_applying_member
-              - authorized_representative
-              - absent_parent
-        programsAppliedFor:
-          type: array
-          description: Programs this member is applying for.
-          items:
-            type: string
-            enum:
-              - snap
-              - medicaid
-              - chip
-              - tanf
-        purchasesAndPreparesFood:
-          type: boolean
-          description: Whether this member purchases and prepares food separately from the rest of the household.
-        isMigrantFarmWorker:
-          type: boolean
-          description: Whether this member is a migrant or seasonal farm worker.
-        hasThirdPartyLiabilityClaim:
-          type: boolean
-          description: Whether this member has a third-party liability claim that could cover medical costs.
-        personId:
-          type: string
-          format: uuid
-          nullable: true
-          description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
-          x-relationship:
-            resource: Person
-            domain: client-management
-        personalInformation:
-          $ref: "./schemas/domain/intake.yaml#/$defs/PersonalInformation"
-        contact:
-          $ref: "./schemas/domain/intake.yaml#/$defs/MemberContact"
-        residency:
-          $ref: "./schemas/domain/intake.yaml#/$defs/Residency"
-        citizenship:
-          $ref: "./schemas/domain/intake.yaml#/$defs/Citizenship"
-        retroactiveMedicalCoverage:
-          $ref: "./schemas/domain/intake.yaml#/$defs/RetroactiveMedicalCoverage"
-        disability:
-          $ref: "./schemas/domain/intake.yaml#/$defs/Disability"
-        studentStatus:
-          $ref: "./schemas/domain/intake.yaml#/$defs/StudentStatus"
-        pregnancy:
-          $ref: "./schemas/domain/intake.yaml#/$defs/Pregnancy"
-        fosterCare:
-          $ref: "./schemas/domain/intake.yaml#/$defs/FosterCare"
-        military:
-          $ref: "./schemas/domain/intake.yaml#/$defs/Military"
-        institutionalStatus:
-          $ref: "./schemas/domain/intake.yaml#/$defs/InstitutionalStatus"
-        priorConvictions:
-          $ref: "./schemas/domain/intake.yaml#/$defs/PriorConvictions"
-        tribalStatus:
-          $ref: "./schemas/domain/intake.yaml#/$defs/TribalStatus"
-
     ApplicationMember:
       description: >
         A person linked to an application. May be the primary applicant, a
@@ -2902,7 +2797,7 @@ components:
         or an authorized representative. SNAP requires all household members to
         be listed regardless of individual eligibility (7 CFR § 273.1).
       allOf:
-        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/ApplicationMember"
         - type: object
           required:
             - id
@@ -2942,14 +2837,14 @@ components:
 
     ApplicationMemberCreate:
       allOf:
-        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/ApplicationMember"
         - type: object
           required:
             - roles
 
     ApplicationMemberUpdate:
       allOf:
-        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/ApplicationMember"
         - type: object
           minProperties: 1
 
@@ -4084,45 +3979,6 @@ components:
     # Verification
     # ---------------------------------------------------------------------------
 
-    VerificationWritable:
-      type: object
-      description: Client-writable fields for a verification obligation record.
-      properties:
-        sourceId:
-          type: string
-          format: uuid
-          description: >
-            ID of the subject being verified. Points to an ApplicationMember when sourceType
-            is `member`, or to an income record when sourceType is `income`. Null for
-            household-level obligations (e.g., proof of residency).
-          nullable: true
-          x-relationship:
-            resource: Polymorphic
-        sourceType:
-          type: string
-          description: >
-            Identifies what sourceId refers to. Required when sourceId is set; null for
-            household-level obligations.
-          nullable: true
-          enum:
-            - member
-            - income
-        category:
-          type: string
-          description: Verification obligation category.
-          enum:
-            - citizenship
-            - identity
-            - immigration
-            - income
-            - residency
-        verificationType:
-          type: string
-          description: How this verification obligation is to be fulfilled.
-          enum:
-            - document
-            - electronic
-
     Verification:
       description: >
         One item on the household's verification checklist, covering both
@@ -4132,15 +3988,10 @@ components:
         check first, document request only if inconclusive) directly encodes the
         ex parte rule (42 CFR § 435.940).
       allOf:
-        - $ref: "#/components/schemas/VerificationWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Verification"
         - type: object
           required:
             - id
-            - applicationId
-            - category
-            - status
-            - evidence
-            - documentRequests
             - createdAt
             - updatedAt
           properties:
@@ -4148,34 +3999,6 @@ components:
               type: string
               format: uuid
               readOnly: true
-            applicationId:
-              type: string
-              format: uuid
-              readOnly: true
-              x-relationship:
-                resource: Application
-            status:
-              type: string
-              description: Current status of the verification obligation.
-              readOnly: true
-              enum:
-                - pending
-                - inconclusive
-                - satisfied
-                - waived
-                - cannot_verify
-            evidence:
-              type: array
-              description: Electronic and document evidence items accumulated against this obligation.
-              readOnly: true
-              items:
-                $ref: "#/components/schemas/VerificationEvidenceItem"
-            documentRequests:
-              type: array
-              description: Outbound document request notices sent to the applicant for this obligation.
-              readOnly: true
-              items:
-                $ref: "#/components/schemas/VerificationDocumentRequest"
             createdAt:
               type: string
               format: date-time
@@ -4187,14 +4010,14 @@ components:
 
     VerificationCreate:
       allOf:
-        - $ref: "#/components/schemas/VerificationWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Verification"
         - type: object
           required:
             - category
 
     VerificationUpdate:
       allOf:
-        - $ref: "#/components/schemas/VerificationWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Verification"
         - type: object
           minProperties: 1
 
@@ -4214,25 +4037,6 @@ components:
     # Interview
     # ---------------------------------------------------------------------------
 
-    InterviewWritable:
-      type: object
-      description: Caseworker-writable fields for an interview obligation record.
-      properties:
-        waiverGranted:
-          type:
-            - boolean
-            - "null"
-          description: Whether the interview requirement has been waived for this applicant.
-        waiverReason:
-          type: string
-          description: Reason the interview was waived. Required when waiverGranted is true.
-          nullable: true
-        completedAt:
-          type: string
-          format: date-time
-          description: When the caseworker attested the interview obligation was satisfied. Null until completed.
-          nullable: true
-
     Interview:
       description: >
         Tracks the required SNAP interview obligation for an application
@@ -4242,12 +4046,10 @@ components:
         which appointment satisfied the regulatory obligation; this is not
         set automatically when an appointment ends.
       allOf:
-        - $ref: "#/components/schemas/InterviewWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Interview"
         - type: object
           required:
             - id
-            - applicationId
-            - appointments
             - createdAt
             - updatedAt
           properties:
@@ -4255,21 +4057,6 @@ components:
               type: string
               format: uuid
               readOnly: true
-            applicationId:
-              type: string
-              format: uuid
-              readOnly: true
-              x-relationship:
-                resource: Application
-            appointments:
-              type: array
-              description: Appointment IDs from the scheduling domain accumulated for this interview obligation. Populated by the rules engine when scheduling.appointment.scheduled fires.
-              readOnly: true
-              items:
-                type: string
-                format: uuid
-                x-relationship:
-                  resource: External
             createdAt:
               type: string
               format: date-time
@@ -4281,95 +4068,12 @@ components:
 
     InterviewUpdate:
       allOf:
-        - $ref: "#/components/schemas/InterviewWritable"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Interview"
         - type: object
           minProperties: 1
 
-    VerificationDocumentEvidence:
-      type: object
-      description: A document submitted as evidence against a verification obligation.
-      required:
-        - type
-        - documentId
-        - receivedAt
-      properties:
-        type:
-          type: string
-          enum:
-            - document
-        documentId:
-          type: string
-          format: uuid
-          description: ID of the verified document in the document-management domain.
-          x-relationship:
-            resource: External
-        receivedAt:
-          type: string
-          format: date-time
-          description: When the document was received.
-        reviewedAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: When a caseworker reviewed the document.
-        reviewedBy:
-          type: string
-          format: uuid
-          nullable: true
-          description: ID of the caseworker who reviewed the document.
-
     VerificationDocumentRequest:
       $ref: "./schemas/domain/intake.yaml#/$defs/VerificationDocumentRequest"
-
-    VerificationElectronicEvidence:
-      type: object
-      description: An electronic service check result recorded as evidence against a verification obligation.
-      required:
-        - type
-        - source
-        - result
-        - receivedAt
-      properties:
-        type:
-          type: string
-          enum:
-            - electronic
-        source:
-          type: string
-          description: The external service that produced this result.
-          enum:
-            - fdsh_fti
-            - fdsh_ssa
-            - fdsh_vlp
-            - save
-            - ssa_ievs
-        result:
-          type: string
-          description: Whether the service check confirmed the obligation.
-          enum:
-            - conclusive
-            - inconclusive
-        serviceCallId:
-          type: string
-          format: uuid
-          description: ID of the data-exchange service call that produced this result.
-          x-relationship:
-            resource: External
-        receivedAt:
-          type: string
-          format: date-time
-          description: When the result was received.
-
-    VerificationEvidenceItem:
-      description: An electronic or document evidence item accumulated against a verification obligation.
-      oneOf:
-        - $ref: "#/components/schemas/VerificationElectronicEvidence"
-        - $ref: "#/components/schemas/VerificationDocumentEvidence"
-      discriminator:
-        propertyName: type
-        mapping:
-          electronic: "#/components/schemas/VerificationElectronicEvidence"
-          document: "#/components/schemas/VerificationDocumentEvidence"
 
   examples:
     MemberExample1:

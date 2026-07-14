@@ -1125,10 +1125,10 @@ schema:
     reason: >-
       Identifies whether the beneficiary qualifies for a premium-free Part B; affects Medicare Savings Program cost
       calculation.
-  application.interview.waiverGranted:
-    reason: Whether the SNAP interview requirement has been waived for this applicant. Caseworker-set field.
+  application.interview.waiverStatus:
+    reason: Status of the interview waiver for this applicant. Caseworker-set field.
   application.interview.waiverReason:
-    reason: Reason the interview was waived. Required when waiverGranted is true; used for audit and supervisory review.
+    reason: Reason the interview was waived. Required when waiverStatus is granted; used for audit and supervisory review.
   application.interview.completedAt:
     reason: >-
       When the caseworker attested the interview obligation was satisfied. Not set automatically — requires explicit

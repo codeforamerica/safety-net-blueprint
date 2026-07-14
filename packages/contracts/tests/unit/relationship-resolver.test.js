@@ -2428,12 +2428,14 @@ test('relationship-resolver tests', async (t) => {
     const __dirname = dirname(__filename);
     const contractsDir = join(__dirname, '../..');
     const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+    const intakeDomain = yaml.load(readFileSync(join(contractsDir, 'schemas/domain/intake.yaml'), 'utf8'));
 
-    // Build a minimal schema index from intake only. Cross-spec targets (Person,
-    // External) will warn during expand but the field-rename happens regardless,
-    // which is what the assertions below check.
-    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
-    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const currentResults = new Map([
+      ['intake-openapi.yaml', intakeSpec],
+      ['schemas/domain/intake.yaml', intakeDomain],
+    ]);
+    const schemaIndex = buildSchemaIndex(currentResults);
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex, currentResults);
     const schemas = result.components.schemas;
 
     // The 9 back-references in the intake spec (child → parent Application).
@@ -2453,7 +2455,7 @@ test('relationship-resolver tests', async (t) => {
     ];
 
     for (const [schemaName, fieldName] of backRefs) {
-      const props = gatherSchemaProperties(schemas[schemaName]);
+      const props = gatherSchemaProperties(schemas[schemaName], currentResults);
       assert.ok(
         props[fieldName],
         `${schemaName}.${fieldName} should remain a scalar field (back-ref kept scalar)`
@@ -2466,7 +2468,7 @@ test('relationship-resolver tests', async (t) => {
     }
   });
 
-  await t.test('integration - intake spec expands forward references on member writable schemas', async () => {
+  await t.test('integration - intake spec expands forward references on member schemas', async () => {
     const { readFileSync } = await import('fs');
     const { join, dirname } = await import('path');
     const { fileURLToPath } = await import('url');
@@ -2476,17 +2478,23 @@ test('relationship-resolver tests', async (t) => {
     const __dirname = dirname(__filename);
     const contractsDir = join(__dirname, '../..');
     const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+    const intakeDomain = yaml.load(readFileSync(join(contractsDir, 'schemas/domain/intake.yaml'), 'utf8'));
 
-    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
-    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const currentResults = new Map([
+      ['intake-openapi.yaml', intakeSpec],
+      ['schemas/domain/intake.yaml', intakeDomain],
+    ]);
+    const schemaIndex = buildSchemaIndex(currentResults);
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex, currentResults);
     const schemas = result.components.schemas;
 
-    // ApplicationMemberWritable.personId is a forward reference (Person is a
-    // top-level resource in its own URL tree, not above ApplicationMember).
-    // Under global expand it should be renamed to `person`.
-    const writableProps = gatherSchemaProperties(schemas.ApplicationMemberWritable);
-    assert.strictEqual(writableProps.personId, undefined, 'personId should be renamed by forward expansion');
-    assert.ok(writableProps.person, 'ApplicationMemberWritable.person should be inlined');
+    // ApplicationMember.personId is a forward reference. The x-relationship
+    // annotation lives in the domain schema $defs/ApplicationMember. The resolver
+    // follows the external $ref, discovers it there, deletes personId from the
+    // domain schema, and adds `person` to the OpenAPI inline allOf block.
+    const memberProps = gatherSchemaProperties(schemas.ApplicationMember, currentResults);
+    assert.strictEqual(memberProps.personId, undefined, 'personId should be renamed by forward expansion');
+    assert.ok(memberProps.person, 'ApplicationMember.person should be inlined');
   });
 
   await t.test('integration - intake spec expands cross-domain refs and cascade stops at one level', async () => {
@@ -2499,40 +2507,55 @@ test('relationship-resolver tests', async (t) => {
     const __dirname = dirname(__filename);
     const contractsDir = join(__dirname, '../..');
     const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+    const intakeDomain = yaml.load(readFileSync(join(contractsDir, 'schemas/domain/intake.yaml'), 'utf8'));
 
-    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
-    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const currentResults = new Map([
+      ['intake-openapi.yaml', intakeSpec],
+      ['schemas/domain/intake.yaml', intakeDomain],
+    ]);
+    const schemaIndex = buildSchemaIndex(currentResults);
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex, currentResults);
     const schemas = result.components.schemas;
 
-    // VerificationWritable.sourceId → Polymorphic is a cross-domain forward
-    // reference (the target has no served path in this spec). It should still
-    // be expanded — renamed to `source` — even though Polymorphic isn't in the
-    // schema index. This guards the cross-domain forward-expand path against
-    // regressions, in particular ensuring polymorphic / external refs aren't
-    // accidentally treated as back-references.
-    const verificationProps = gatherSchemaProperties(schemas.VerificationWritable);
-    assert.strictEqual(verificationProps.sourceId, undefined, 'VerificationWritable.sourceId should be renamed (cross-domain forward expand)');
-    assert.ok(verificationProps.source, 'VerificationWritable.source should be inlined');
+    // Verification.sourceId → Polymorphic is a cross-domain forward reference.
+    // The x-relationship annotation lives in $defs/Verification. It should be
+    // expanded even though Polymorphic isn't in the schema index.
+    const verificationProps = gatherSchemaProperties(schemas.Verification, currentResults);
+    assert.strictEqual(verificationProps.sourceId, undefined, 'Verification.sourceId should be renamed (cross-domain forward expand)');
+    assert.ok(verificationProps.source, 'Verification.source should be inlined');
 
-    // Cascade stops: ApplicationMember.applicationId remains scalar even though
-    // forward-expansion runs on other schemas. Consumers following a $ref to
-    // ApplicationMember see an applicationId field, not an embedded Application.
-    const memberProps = gatherSchemaProperties(schemas.ApplicationMember);
+    // Cascade stops: ApplicationMember.applicationId remains scalar.
+    const memberProps = gatherSchemaProperties(schemas.ApplicationMember, currentResults);
     assert.ok(memberProps.applicationId, 'ApplicationMember.applicationId still scalar (cascade stopped)');
     assert.strictEqual(memberProps.application, undefined, 'no embedded Application — cascade stopped');
   });
 });
 
 // Walk a schema (possibly allOf-composed) and return the merged properties
-// from all branches. Used by the integration tests to inspect the resolved
+// from all branches. Follows external $refs into domain schema $defs when
+// currentResults is provided. Used by integration tests to inspect the resolved
 // shape regardless of where the property lives.
-function gatherSchemaProperties(schema) {
+function gatherSchemaProperties(schema, currentResults = new Map()) {
   const merged = {};
   if (!schema) return merged;
   if (schema.properties) Object.assign(merged, schema.properties);
   if (Array.isArray(schema.allOf)) {
     for (const branch of schema.allOf) {
-      Object.assign(merged, gatherSchemaProperties(branch));
+      if (branch.$ref && !branch.$ref.startsWith('#') && currentResults.size > 0) {
+        const hashIdx = branch.$ref.indexOf('#');
+        if (hashIdx !== -1) {
+          const filePart = branch.$ref.slice(0, hashIdx).replace(/^\.\//, '');
+          const anchorPart = branch.$ref.slice(hashIdx + 1);
+          const refSpec = currentResults.get(filePart);
+          if (refSpec) {
+            let node = refSpec;
+            for (const seg of anchorPart.split('/').filter(Boolean)) node = node?.[seg];
+            Object.assign(merged, gatherSchemaProperties(node, currentResults));
+          }
+        }
+      } else {
+        Object.assign(merged, gatherSchemaProperties(branch, currentResults));
+      }
     }
   }
   return merged;

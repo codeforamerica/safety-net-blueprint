@@ -1117,6 +1117,314 @@ $defs:
         description: Organization's primary phone number.
 
   # ---------------------------------------------------------------------------
+  # Application and member domain fields
+  # ---------------------------------------------------------------------------
+
+  Application:
+    title: Application
+    type: object
+    description: Client-writable fields for an application.
+    properties:
+      programsAppliedFor:
+        type: array
+        description: Programs the household is applying for. At least one required at submission.
+        items:
+          type: string
+          enum:
+            - snap
+            - medicaid
+            - chip
+            - tanf
+      channel:
+        type: string
+        description: How the application was filed.
+        enum:
+          - online
+          - in_person
+          - phone
+          - mail
+      ebt:
+        $ref: "#/$defs/Ebt"
+      registerToVote:
+        type: boolean
+        description: Whether any household member would like to register to vote.
+      deniesIevsConsent:
+        type: boolean
+        description: Whether the household denies consent for IEVS income verification.
+      expeditedSnap:
+        $ref: "#/$defs/ExpeditedSnap"
+      utilities:
+        $ref: "#/$defs/Utilities"
+
+  ApplicationMember:
+    title: ApplicationMember
+    type: object
+    description: Client-writable fields for an application member.
+    additionalProperties: true
+    properties:
+      roles:
+        type: array
+        description: Roles this person plays in the application.
+        items:
+          type: string
+          enum:
+            - primary_applicant
+            - household_member
+            - non_applying_member
+            - authorized_representative
+            - absent_parent
+      programsAppliedFor:
+        type: array
+        description: Programs this member is applying for.
+        items:
+          type: string
+          enum:
+            - snap
+            - medicaid
+            - chip
+            - tanf
+      purchasesAndPreparesFood:
+        type: boolean
+        description: Whether this member purchases and prepares food separately from the rest of the household.
+      isMigrantFarmWorker:
+        type: boolean
+        description: Whether this member is a migrant or seasonal farm worker.
+      hasThirdPartyLiabilityClaim:
+        type: boolean
+        description: Whether this member has a third-party liability claim that could cover medical costs.
+      personId:
+        type:
+          - string
+          - "null"
+        format: uuid
+        description: Resolved person record ID. Auto-set on a confirmed match; caseworker can set it manually when selecting from match candidates or correcting a bad link.
+        x-relationship:
+          resource: Person
+          domain: client-management
+      personalInformation:
+        $ref: "#/$defs/PersonalInformation"
+      contact:
+        $ref: "#/$defs/MemberContact"
+      residency:
+        $ref: "#/$defs/Residency"
+      citizenship:
+        $ref: "#/$defs/Citizenship"
+      retroactiveMedicalCoverage:
+        $ref: "#/$defs/RetroactiveMedicalCoverage"
+      disability:
+        $ref: "#/$defs/Disability"
+      studentStatus:
+        $ref: "#/$defs/StudentStatus"
+      pregnancy:
+        $ref: "#/$defs/Pregnancy"
+      fosterCare:
+        $ref: "#/$defs/FosterCare"
+      military:
+        $ref: "#/$defs/Military"
+      institutionalStatus:
+        $ref: "#/$defs/InstitutionalStatus"
+      priorConvictions:
+        $ref: "#/$defs/PriorConvictions"
+      tribalStatus:
+        $ref: "#/$defs/TribalStatus"
+
+  Interview:
+    title: Interview
+    type: object
+    description: Caseworker-writable fields for an interview obligation record.
+    required:
+      - applicationId
+      - appointments
+    properties:
+      applicationId:
+        type: string
+        format: uuid
+        readOnly: true
+        x-relationship:
+          resource: Application
+      appointments:
+        type: array
+        description: Appointment IDs from the scheduling domain accumulated for this interview obligation. Populated by the rules engine when scheduling.appointment.scheduled fires.
+        readOnly: true
+        items:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: External
+      waiverStatus:
+        type: string
+        enum: [pending, granted, denied]
+        default: pending
+        description: Status of the interview waiver for this applicant.
+      waiverReason:
+        type: string
+        description: Reason the interview was waived. Required when waiverStatus is granted; used for audit and supervisory review.
+      completedAt:
+        type: string
+        format: date-time
+        description: When the caseworker attested the interview obligation was satisfied. Absent until completed.
+
+  Verification:
+    title: Verification
+    type: object
+    description: Client-writable fields for a verification obligation record.
+    required:
+      - applicationId
+      - category
+      - status
+      - evidence
+      - documentRequests
+    properties:
+      applicationId:
+        type: string
+        format: uuid
+        readOnly: true
+        x-relationship:
+          resource: Application
+      status:
+        type: string
+        description: Current status of the verification obligation.
+        readOnly: true
+        enum:
+          - pending
+          - inconclusive
+          - satisfied
+          - waived
+          - cannot_verify
+      evidence:
+        type: array
+        description: Electronic and document evidence items accumulated against this obligation.
+        readOnly: true
+        items:
+          $ref: "#/$defs/VerificationEvidenceItem"
+      documentRequests:
+        type: array
+        description: Outbound document request notices sent to the applicant for this obligation.
+        readOnly: true
+        items:
+          $ref: "#/$defs/VerificationDocumentRequest"
+      sourceId:
+        type:
+          - string
+          - "null"
+        format: uuid
+        description: >
+          ID of the subject being verified. Points to an ApplicationMember when sourceType
+          is `member`, or to an income record when sourceType is `income`. Null for
+          household-level obligations (e.g., proof of residency).
+        x-relationship:
+          resource: Polymorphic
+      sourceType:
+        type:
+          - string
+          - "null"
+        description: >
+          Identifies what sourceId refers to. Required when sourceId is set; null for
+          household-level obligations.
+        enum:
+          - member
+          - income
+      category:
+        type: string
+        description: Verification obligation category.
+        enum:
+          - citizenship
+          - identity
+          - immigration
+          - income
+          - residency
+      verificationType:
+        type: string
+        description: How this verification obligation is to be fulfilled.
+        enum:
+          - document
+          - electronic
+
+  VerificationDocumentEvidence:
+    title: VerificationDocumentEvidence
+    type: object
+    description: A document submitted as evidence against a verification obligation.
+    required:
+      - type
+      - documentId
+      - receivedAt
+    properties:
+      type:
+        type: string
+        enum:
+          - document
+      documentId:
+        type: string
+        format: uuid
+        description: ID of the verified document in the document-management domain.
+        x-relationship:
+          resource: External
+      receivedAt:
+        type: string
+        format: date-time
+        description: When the document was received.
+      reviewedAt:
+        type: string
+        format: date-time
+        description: When a caseworker reviewed the document.
+      reviewedBy:
+        type: string
+        format: uuid
+        description: ID of the caseworker who reviewed the document.
+
+  VerificationElectronicEvidence:
+    title: VerificationElectronicEvidence
+    type: object
+    description: An electronic service check result recorded as evidence against a verification obligation.
+    required:
+      - type
+      - source
+      - result
+      - receivedAt
+    properties:
+      type:
+        type: string
+        enum:
+          - electronic
+      source:
+        type: string
+        description: The external service that produced this result.
+        enum:
+          - fdsh_fti
+          - fdsh_ssa
+          - fdsh_vlp
+          - save
+          - ssa_ievs
+      result:
+        type: string
+        description: Whether the service check confirmed the obligation.
+        enum:
+          - conclusive
+          - inconclusive
+      serviceCallId:
+        type: string
+        format: uuid
+        description: ID of the data-exchange service call that produced this result.
+        x-relationship:
+          resource: External
+      receivedAt:
+        type: string
+        format: date-time
+        description: When the result was received.
+
+  VerificationEvidenceItem:
+    title: VerificationEvidenceItem
+    description: An electronic or document evidence item accumulated against a verification obligation.
+    oneOf:
+      - $ref: "#/$defs/VerificationElectronicEvidence"
+      - $ref: "#/$defs/VerificationDocumentEvidence"
+    discriminator:
+      propertyName: type
+      mapping:
+        electronic: "#/$defs/VerificationElectronicEvidence"
+        document: "#/$defs/VerificationDocumentEvidence"
+
+  # ---------------------------------------------------------------------------
   # Application process types
   # ---------------------------------------------------------------------------
 

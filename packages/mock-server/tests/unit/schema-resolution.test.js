@@ -137,33 +137,9 @@ async function runTests() {
     failed++;
   }
   
-  // Test 2: Inline schema resolution from spec file (shallow)
+  // Test 2: Nested properties with $ref
   try {
-    console.log('\nTest 2: Resolve inline schema reference (#/components/schemas/ApplicationWritable from intake-openapi.yaml)');
-    const specPath = join(__dirname, '../../../contracts/intake-openapi.yaml');
-    const specContent = loadYaml(specPath);
-    // Use ApplicationWritable directly (simple object schema with no external $refs)
-    const schema = specContent.components?.schemas?.ApplicationWritable;
-
-    if (schema && schema.type === 'object' && schema.properties) {
-      console.log('  ✓ PASS: Inline schema found correctly');
-      console.log(`    Found schema with type: ${schema.type}`);
-      console.log(`    Found ${Object.keys(schema.properties).length} properties`);
-      passed++;
-    } else {
-      console.log('  ✗ FAIL: Inline schema not found correctly');
-      console.log('    Expected: object schema with properties');
-      console.log('    Got:', schema ? JSON.stringify(schema, null, 2).substring(0, 200) : 'null/undefined');
-      failed++;
-    }
-  } catch (error) {
-    console.log('  ✗ FAIL: Error resolving inline schema:', error.message);
-    failed++;
-  }
-  
-  // Test 3: Nested properties with $ref
-  try {
-    console.log('\nTest 3: Resolve nested properties with $ref');
+    console.log('\nTest 2: Resolve nested properties with $ref');
     const spec = {
       components: {
         schemas: {
