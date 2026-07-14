@@ -2966,62 +2966,13 @@ components:
                 $ref: "#/components/schemas/ApplicationMember"
 
     PersonMatch:
-      type: object
-      description: Person matching state for an application member. Populated when client_management.person.match_resolved is received. Null until matching begins.
-      properties:
-        matchStatus:
-          type: string
-          enum:
-            - confirmed
-            - review_required
-            - no_match
-        candidates:
-          type: array
-          description: Match candidates. Populated for review_required; empty otherwise.
-          items:
-            $ref: "#/components/schemas/PersonMatchCandidate"
+      $ref: "./schemas/domain/intake.yaml#/$defs/PersonMatch"
 
     PersonMatchCandidate:
-      type: object
-      description: A candidate person record returned by the person matching process.
-      required:
-        - personId
-        - confidenceScore
-      properties:
-        personId:
-          type: string
-          format: uuid
-          description: The candidate person record ID.
-          x-relationship:
-            resource: Person
-            domain: client-management
-        confidenceScore:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 1
-          description: Match confidence score from 0 (no confidence) to 1 (certain).
+      $ref: "./schemas/domain/intake.yaml#/$defs/PersonMatchCandidate"
 
     ApplicationMemberProgramDetermination:
-      type: object
-      description: A single program eligibility determination result for a household member.
-      required:
-        - program
-        - status
-      properties:
-        program:
-          type: string
-          description: Program identifier (e.g., snap, medicaid, tanf).
-        outcome:
-          type: string
-          description: Determination outcome for this member/program combination.
-          enum:
-            - approved
-            - denied
-        determinedAt:
-          type: string
-          format: date-time
-          description: When the determination was recorded.
+      $ref: "./schemas/domain/intake.yaml#/$defs/ApplicationMemberProgramDetermination"
 
     # ---------------------------------------------------------------------------
     # Application-level collection schemas
@@ -3304,13 +3255,12 @@ components:
                 $ref: "#/components/schemas/Job"
 
     HealthPlan:
-      description: A health coverage record for an application member.
+      description: An application-level health coverage record. Shared across members; member enrollment is tracked separately via HealthEnrollment.
       allOf:
         - $ref: "./schemas/common/health.yaml"
         - type: object
           required:
             - id
-            - memberId
             - applicationId
             - createdAt
             - updatedAt
@@ -3319,12 +3269,6 @@ components:
               type: string
               format: uuid
               readOnly: true
-            memberId:
-              type: string
-              format: uuid
-              readOnly: true
-              x-relationship:
-                resource: ApplicationMember
             applicationId:
               type: string
               format: uuid
@@ -3368,7 +3312,7 @@ components:
     HealthEnrollment:
       description: A member's enrollment in a health plan.
       allOf:
-        - $ref: "./schemas/common/health.yaml#/$defs/HealthEnrollment"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/HealthEnrollment"
         - type: object
           required:
             - id
@@ -3404,7 +3348,7 @@ components:
 
     HealthEnrollmentCreate:
       allOf:
-        - $ref: "./schemas/common/health.yaml#/$defs/HealthEnrollment"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/HealthEnrollment"
         - type: object
           required:
             - memberId
@@ -3418,7 +3362,7 @@ components:
 
     HealthEnrollmentUpdate:
       allOf:
-        - $ref: "./schemas/common/health.yaml#/$defs/HealthEnrollment"
+        - $ref: "./schemas/domain/intake.yaml#/$defs/HealthEnrollment"
         - type: object
           minProperties: 1
 
@@ -4375,46 +4319,7 @@ components:
           description: ID of the caseworker who reviewed the document.
 
     VerificationDocumentRequest:
-      type: object
-      description: An outbound notice requesting documents from an applicant for a verification obligation.
-      required:
-        - noticeId
-        - type
-        - sentAt
-      properties:
-        noticeId:
-          type: string
-          format: uuid
-          description: ID of the notice in the communication domain.
-          x-relationship:
-            resource: External
-        type:
-          type: string
-          description: Template identifier for the notice. Matches the type field on the communication.notice.sent event.
-          enum:
-            - document_request_citizenship_verification
-            - document_request_identity_verification
-            - document_request_immigration_verification
-            - document_request_income_verification
-            - document_request_residency_verification
-        sentAt:
-          type: string
-          format: date-time
-          description: When the notice was sent.
-        dueAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: Deadline by which the applicant must respond.
-        channel:
-          type: string
-          nullable: true
-          description: Channel through which the notice was sent.
-          enum:
-            - email
-            - in_person
-            - mail
-            - portal
+      $ref: "./schemas/domain/intake.yaml#/$defs/VerificationDocumentRequest"
 
     VerificationElectronicEvidence:
       type: object

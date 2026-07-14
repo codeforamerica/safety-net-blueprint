@@ -7,6 +7,7 @@ description: >
 
 $defs:
   ImmigrationInfo:
+    title: ImmigrationInfo
     type: object
     description: >
       Immigration document details for a non-citizen member. Used to initiate
@@ -50,6 +51,7 @@ $defs:
         pattern: "^[A-Z]{2}$"
 
   DateOfBirth:
+    title: DateOfBirth
     type: string
     format: date
     description: >
@@ -57,6 +59,7 @@ $defs:
       core identity-matching field for FDSH verification calls.
 
   Name:
+    title: Name
     type: object
     description: Legal name of a person.
     additionalProperties: false
@@ -92,6 +95,7 @@ $defs:
         maxLength: 20
 
   SocialSecurityNumber:
+    title: SocialSecurityNumber
     type: string
     description: Social Security Number for identity verification.
     pattern: "^\\d{3}-\\d{2}-\\d{4}$"

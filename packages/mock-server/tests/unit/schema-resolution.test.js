@@ -139,11 +139,11 @@ async function runTests() {
   
   // Test 2: Inline schema resolution from spec file (shallow)
   try {
-    console.log('\nTest 2: Resolve inline schema reference (#/components/schemas/VerificationDocumentRequest from intake-openapi.yaml)');
+    console.log('\nTest 2: Resolve inline schema reference (#/components/schemas/ApplicationWritable from intake-openapi.yaml)');
     const specPath = join(__dirname, '../../../contracts/intake-openapi.yaml');
     const specContent = loadYaml(specPath);
-    // Use VerificationDocumentRequest directly (simple object schema with no external $refs)
-    const schema = specContent.components?.schemas?.VerificationDocumentRequest;
+    // Use ApplicationWritable directly (simple object schema with no external $refs)
+    const schema = specContent.components?.schemas?.ApplicationWritable;
 
     if (schema && schema.type === 'object' && schema.properties) {
       console.log('  ✓ PASS: Inline schema found correctly');

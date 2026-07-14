@@ -15,6 +15,7 @@ $defs:
   # ---------------------------------------------------------------------------
 
   PersonRef:
+    title: PersonRef
     type: object
     description: >
       A polymorphic reference to a person in the application. Can be a household
@@ -35,6 +36,7 @@ $defs:
         description: Identifier of the referenced member or contact.
 
   EntityRef:
+    title: EntityRef
     type: object
     description: >
       A polymorphic reference to a person or organization in the application.
@@ -58,6 +60,7 @@ $defs:
   # ---------------------------------------------------------------------------
 
   PersonalInformation:
+    title: PersonalInformation
     type: object
     description: >
       Core demographic and identity fields for a household member. Collected
@@ -120,6 +123,7 @@ $defs:
         description: BCP 47 language tag for the member's preferred written language. Used for notice generation.
 
   MemberContact:
+    title: MemberContact
     description: >
       Contact and address information for a household member. Extends the base
       Contact type with member-specific fields: mailing address, homelessness
@@ -148,6 +152,7 @@ $defs:
             description: Address for notices when privacy concerns exist (e.g., domestic violence situations).
 
   Residency:
+    title: Residency
     type: object
     description: >
       State residency information for a household member. States must verify
@@ -164,6 +169,7 @@ $defs:
         description: Date the member established residency in the state. Used for programs with residency waiting periods.
 
   Citizenship:
+    title: Citizenship
     type: object
     description: >
       Citizenship and immigration status for a household member. Determines
@@ -201,6 +207,7 @@ $defs:
         description: Sponsor deeming information. Present when the member entered the U.S. as a sponsored immigrant.
 
   ImmigrantStatus:
+    title: ImmigrantStatus
     type: string
     enum:
       - lawful_permanent_resident   # INA § 101(a)(20)
@@ -222,6 +229,7 @@ $defs:
       citizenshipStatus is non_citizen.
 
   Document:
+    title: Document
     type: object
     description: Immigration document details used to initiate FDSH VLP or USCIS SAVE verification.
     additionalProperties: true
@@ -253,6 +261,7 @@ $defs:
         pattern: "^[A-Z]{2}$"
 
   Sponsored:
+    title: Sponsored
     type: object
     description: >
       Sponsor deeming fields for sponsored immigrants. The sponsor's income and
@@ -275,6 +284,7 @@ $defs:
         description: Whether the sponsor is currently providing in-kind support to the member.
 
   Disability:
+    title: Disability
     type: object
     description: >
       Disability status for a household member. Affects SNAP medical expense
@@ -299,6 +309,7 @@ $defs:
         description: Whether the member needs assistance with activities of daily living.
 
   StudentStatus:
+    title: StudentStatus
     type: object
     description: >
       Student enrollment information for a household member. Affects SNAP
@@ -323,6 +334,7 @@ $defs:
         description: Whether the member is participating in a federal work-study program. Exempts from the SNAP student rule.
 
   Pregnancy:
+    title: Pregnancy
     type: object
     description: >
       Pregnancy information for a household member. Affects household size
@@ -342,6 +354,7 @@ $defs:
         description: Number of babies expected. Used when calculating household size for programs that count unborn children.
 
   FosterCare:
+    title: FosterCare
     type: object
     description: >
       Foster care history for a household member. Young adults who aged out of
@@ -376,6 +389,7 @@ $defs:
         description: Date the member returned to foster care after dissolved adoption.
 
   Military:
+    title: Military
     type: object
     description: >
       Military service information for a household member. Veterans and their
@@ -401,6 +415,7 @@ $defs:
         description: Character of discharge. Affects eligibility for VA benefits and some state programs.
 
   InstitutionalStatus:
+    title: InstitutionalStatus
     type: object
     description: >
       Institutional living status for a household member. Members residing in
@@ -430,6 +445,7 @@ $defs:
         description: Whether the institution provides meals as part of the living arrangement.
 
   PriorConvictions:
+    title: PriorConvictions
     type: object
     description: >
       Criminal history fields affecting program eligibility. Certain drug
@@ -463,6 +479,7 @@ $defs:
         description: Whether the member is in violation of a condition of probation or parole. Disqualifies from SNAP (7 CFR § 273.11(n)).
 
   TribalStatus:
+    title: TribalStatus
     type: object
     description: >
       Tribal membership and affiliation information. Members of federally
@@ -482,6 +499,7 @@ $defs:
         description: USPS postal abbreviation of the state where the tribe is headquartered.
 
   RetroactiveMedicalCoverage:
+    title: RetroactiveMedicalCoverage
     type: object
     description: >
       Retroactive Medicaid coverage request for a household member. Medicaid
@@ -499,6 +517,7 @@ $defs:
         description: Months for which retroactive coverage is requested, with household income for each.
 
   Period:
+    title: Period
     type: object
     description: A single month of retroactive Medicaid coverage with the relevant household income figure.
     required: [month]
@@ -519,6 +538,7 @@ $defs:
   # ---------------------------------------------------------------------------
 
   Household:
+    title: Household
     type: object
     description: >
       Household-level data collected at the application level. Covers shared
@@ -543,6 +563,7 @@ $defs:
         description: Whether the household has received TANF benefits in another state. Required for multi-state TANF coordination.
 
   Roomer:
+    title: Roomer
     type: object
     description: >
       A person who lives in the household's residence but is not a household
@@ -569,6 +590,7 @@ $defs:
         description: Whether meals are included with the roomer's rent payment.
 
   Utilities:
+    title: Utilities
     type: object
     description: >
       Utility information at the application level. Used to determine which
@@ -589,6 +611,7 @@ $defs:
         description: Whether the household receives Low Income Home Energy Assistance Program (LIHEAP) benefits. Households receiving LIHEAP may be eligible for the full SUA.
 
   ExpeditedSnap:
+    title: ExpeditedSnap
     type: object
     description: >
       Financial information used for the SNAP expedited processing screening
@@ -627,6 +650,7 @@ $defs:
         description: Whether the household received SNAP benefits in the last 30 days. Affects expedited eligibility under 7 CFR § 273.2(i).
 
   Ebt:
+    title: Ebt
     type: object
     description: EBT card preferences collected at the application level.
     additionalProperties: true
@@ -640,6 +664,7 @@ $defs:
         description: How the household prefers to receive their EBT card.
 
   ChildSupport:
+    title: ChildSupport
     type: object
     description: >
       Child support cooperation information at the application level. TANF and
@@ -657,6 +682,7 @@ $defs:
         description: Non-custodial parents outside the household for whom child support cooperation is being tracked.
 
   ParentOutsideHome:
+    title: ParentOutsideHome
     type: object
     description: A non-custodial parent outside the household relevant to child support cooperation.
     required: [type, id]
@@ -684,6 +710,7 @@ $defs:
   # ---------------------------------------------------------------------------
 
   Expense:
+    title: Expense
     type: object
     description: >
       A single expense record for a household member. Certain expense types
@@ -715,6 +742,7 @@ $defs:
           (7 CFR § 273.9(d)(5)).
 
   ExpenseType:
+    title: ExpenseType
     type: string
     enum:
       - rent
@@ -733,6 +761,7 @@ $defs:
       support payments (7 CFR § 273.9(d)(5)).
 
   Deduction:
+    title: Deduction
     type: object
     description: >
       An income deduction record for a household member. Used to compute
@@ -763,6 +792,7 @@ $defs:
         description: The total annual deduction amount. Used when frequency is variable or one_time_only.
 
   DeductionType:
+    title: DeductionType
     type: string
     enum:
       - alimony_paid
@@ -780,6 +810,7 @@ $defs:
     description: The type of above-the-line income deduction. Used in MAGI calculations for Medicaid and CHIP (42 CFR § 435.603).
 
   DeductionFrequency:
+    title: DeductionFrequency
     type: string
     enum:
       - one_time_only
@@ -792,6 +823,7 @@ $defs:
     description: How often the deduction occurs.
 
   DisabilityBenefit:
+    title: DisabilityBenefit
     type: object
     description: >
       A record of a member's SSI or SSDI benefit status. SSI receipt automatically
@@ -825,6 +857,7 @@ $defs:
         description: Date benefit payments ended, if applicable.
 
   TaxFiler:
+    title: TaxFiler
     type: object
     description: >
       Tax filing information for a household member. Tax filing status and
@@ -860,6 +893,7 @@ $defs:
         description: Whether the member qualifies for the domestic violence exception to the tax-filer household composition rule.
 
   PersonRelationship:
+    title: PersonRelationship
     type: object
     description: >
       A directional relationship between two people in the application. Both
@@ -900,6 +934,7 @@ $defs:
         description: The relationship type(s) from `from`'s perspective relative to `to`.
 
   AuthorizedRepresentative:
+    title: AuthorizedRepresentative
     type: object
     description: >
       A person or organization authorized to act on behalf of one or more
@@ -937,6 +972,7 @@ $defs:
         description: Programs for which this person or organization is authorized to act. Empty array means authorized for all applied-for programs.
 
   Sponsor:
+    title: Sponsor
     type: object
     description: >
       An immigration sponsor record for a sponsored non-citizen member.
@@ -977,6 +1013,7 @@ $defs:
         description: Whether the sponsor lives in the same household as the sponsored member.
 
   Spouse:
+    title: Spouse
     type: object
     description: Sponsor's spouse information used in sponsor deeming calculations.
     additionalProperties: true
@@ -997,6 +1034,7 @@ $defs:
         description: Whether the sponsor's spouse has signed an I-864A Household Member Contract.
 
   Signature:
+    title: Signature
     type: object
     description: >
       A signature collected during the application process. Applications require
@@ -1032,6 +1070,7 @@ $defs:
         description: How the signature was collected.
 
   Signer:
+    title: Signer
     type: object
     description: A reference to the person or organization providing a signature, including their role in this context.
     required: [type, id, role]
@@ -1051,6 +1090,7 @@ $defs:
         description: The role in which the signer is acting for this signature.
 
   Organization:
+    title: Organization
     type: object
     description: >
       A legal entity referenced in the application — typically an employer,
@@ -1081,6 +1121,7 @@ $defs:
   # ---------------------------------------------------------------------------
 
   VerificationSummary:
+    title: VerificationSummary
     type: object
     description: >
       A summary of one verification obligation and its current status. Passed
@@ -1100,3 +1141,160 @@ $defs:
           - waived
           - cannot_verify
         description: Current status of the verification obligation.
+
+  ApplicationMemberProgramDetermination:
+    title: ApplicationMemberProgramDetermination
+    type: object
+    description: A single program eligibility determination result for a household member.
+    required:
+      - program
+      - status
+    properties:
+      program:
+        type: string
+        description: Program identifier (e.g., snap, medicaid, tanf).
+      outcome:
+        type: string
+        description: Determination outcome for this member/program combination.
+        enum:
+          - approved
+          - denied
+      determinedAt:
+        type: string
+        format: date-time
+        description: When the determination was recorded.
+
+  HealthEnrollment:
+    title: HealthEnrollment
+    type: object
+    description: >
+      A record linking a household member to a health plan. A member may be
+      enrolled in multiple plans (e.g., subscriber on an employer plan and
+      dependent on a spouse's plan). The healthPlanId links to the application's
+      health plans collection.
+    required:
+      - role
+    additionalProperties: true
+    properties:
+      healthPlanId:
+        type: string
+        format: uuid
+        description: The health plan this enrollment is for.
+        x-relationship:
+          resource: HealthPlan
+      jobId:
+        type: string
+        format: uuid
+        description: The job through which this employer-sponsored coverage is offered. Present when the plan is employer_sponsored or cobra.
+        x-relationship:
+          resource: Job
+      role:
+        type: string
+        enum: [subscriber, dependent]
+        description: >
+          Whether the member is the primary subscriber (policyholder) or a
+          dependent on another member's plan.
+      startDate:
+        type: string
+        format: date
+        description: Date this member's coverage under the plan began.
+      endDate:
+        type: string
+        format: date
+        description: Date this member's coverage under the plan ended or is expected to end.
+      eligibleDate:
+        type: string
+        format: date
+        description: Date the member first became eligible for this plan.
+      enrollmentStatus:
+        type: string
+        enum: [eligible, enrolled, pending, ended]
+        description: Current enrollment status for this member in this plan.
+      prefersSeparateMailing:
+        type: boolean
+        description: Whether the member prefers to receive plan notices at a different address than their primary mailing address.
+      sponsor:
+        description: Person sponsoring this TRICARE coverage. Present only when the plan is type tricare.
+        $ref: "#/$defs/PersonRef"
+
+  PersonMatch:
+    title: PersonMatch
+    type: object
+    description: Person matching state for an application member. Populated when client_management.person.match_resolved is received. Null until matching begins.
+    properties:
+      matchStatus:
+        type: string
+        enum:
+          - confirmed
+          - review_required
+          - no_match
+      candidates:
+        type: array
+        description: Match candidates. Populated for review_required; empty otherwise.
+        items:
+          $ref: "#/$defs/PersonMatchCandidate"
+
+  PersonMatchCandidate:
+    title: PersonMatchCandidate
+    type: object
+    description: A candidate person record returned by the person matching process.
+    required:
+      - personId
+      - confidenceScore
+    properties:
+      personId:
+        type: string
+        format: uuid
+        description: The candidate person record ID.
+        x-relationship:
+          resource: Person
+          domain: client-management
+      confidenceScore:
+        type: number
+        format: float
+        minimum: 0
+        maximum: 1
+        description: Match confidence score from 0 (no confidence) to 1 (certain).
+
+  VerificationDocumentRequest:
+    title: VerificationDocumentRequest
+    type: object
+    description: An outbound notice requesting documents from an applicant for a verification obligation.
+    required:
+      - noticeId
+      - type
+      - sentAt
+    properties:
+      noticeId:
+        type: string
+        format: uuid
+        description: ID of the notice in the communication domain.
+        x-relationship:
+          resource: External
+      type:
+        type: string
+        description: Template identifier for the notice. Matches the type field on the communication.notice.sent event.
+        enum:
+          - document_request_citizenship_verification
+          - document_request_identity_verification
+          - document_request_immigration_verification
+          - document_request_income_verification
+          - document_request_residency_verification
+      sentAt:
+        type: string
+        format: date-time
+        description: When the notice was sent.
+      dueAt:
+        type: string
+        format: date-time
+        nullable: true
+        description: Deadline by which the applicant must respond.
+      channel:
+        type: string
+        nullable: true
+        description: Channel through which the notice was sent.
+        enum:
+          - email
+          - in_person
+          - mail
+          - portal

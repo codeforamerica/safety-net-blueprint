@@ -73,6 +73,46 @@ authoring_style:
       - explode: false (prefer omitting; only include when behavior is ambiguous)
       - required: false (default for parameters)
 
+  schema_titles:
+    description: |
+      Every named schema defined in a $defs block must include a title: field
+      that matches the schema key. The title is the authoritative type name used
+      by code generators, data model visualizers, and documentation tooling.
+      Without it, tools emit { type: object } instead of a meaningful type name.
+    rule: title must equal the $defs key (PascalCase schema name)
+    example: |
+      $defs:
+        HouseholdMember:
+          title: HouseholdMember
+          type: object
+          properties:
+            ...
+
+  json_schema_files:
+    description: |
+      Domain schemas and shared component schemas must be defined in standalone
+      JSON Schema files under schemas/domain/ or schemas/common/, with a $schema
+      header and a $defs map. OpenAPI specs reference them via $ref. Do not define
+      domain schemas inline in OpenAPI components/schemas — that couples the schema
+      to a single spec and prevents reuse across specs.
+
+      Operation-specific wrapper schemas (ApplicationCreate, ApplicationList, etc.)
+      are the exception: they are thin allOf compositions that only make sense in
+      the context of a specific API, so they live inline in components/schemas.
+    file_structure: |
+      # schemas/domain/example.yaml
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $defs:
+        MyDomainSchema:
+          title: MyDomainSchema
+          type: object
+          properties:
+            ...
+    reference_pattern: |
+      # In OpenAPI spec (components/schemas):
+      MyDomainSchema:
+        $ref: "./schemas/domain/example.yaml#/$defs/MyDomainSchema"
+
 # =============================================================================
 # Required Info Fields
 # =============================================================================

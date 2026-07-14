@@ -27,6 +27,7 @@ oneOf:
 $defs:
 
   AssetBase:
+    title: AssetBase
     type: object
     required:
       - type
@@ -45,6 +46,7 @@ $defs:
         description: The current fair market value of the asset.
 
   LiquidOrRetirementAsset:
+    title: LiquidOrRetirementAsset
     description: A liquid asset (cash, checking, savings) or retirement account.
     allOf:
       - $ref: "#/$defs/AssetBase"
@@ -61,6 +63,7 @@ $defs:
             description: Account number.
 
   VehicleAsset:
+    title: VehicleAsset
     description: A vehicle asset.
     allOf:
       - $ref: "#/$defs/AssetBase"
@@ -80,6 +83,7 @@ $defs:
             description: Vehicle model.
 
   InsuranceAsset:
+    title: InsuranceAsset
     description: A life insurance policy with cash value.
     allOf:
       - $ref: "#/$defs/AssetBase"
@@ -110,6 +114,7 @@ $defs:
             description: Whether the insurance policy is revocable.
 
   RealPropertyAsset:
+    title: RealPropertyAsset
     description: A real property asset.
     allOf:
       - $ref: "#/$defs/AssetBase"
@@ -129,6 +134,7 @@ $defs:
             description: Free-text description when primaryUse is other.
 
   OtherAsset:
+    title: OtherAsset
     description: An asset not covered by more specific types.
     allOf:
       - $ref: "#/$defs/AssetBase"
@@ -139,6 +145,7 @@ $defs:
             enum: [other]
 
   AssetType:
+    title: AssetType
     type: string
     enum:
       - liquid
@@ -155,6 +162,7 @@ $defs:
       is accessible. insurance includes life insurance policies with cash value.
 
   InsurancePolicyType:
+    title: InsurancePolicyType
     type: string
     enum:
       - term
@@ -167,6 +175,7 @@ $defs:
       term policies generally do not have cash value.
 
   RealPropertyUse:
+    title: RealPropertyUse
     type: string
     enum:
       - primary_residence
@@ -181,6 +190,7 @@ $defs:
       and state policy.
 
   AssetDisposal:
+    title: AssetDisposal
     type: object
     description: >
       A record of an asset transferred or sold in the past. Used to determine

@@ -71,10 +71,12 @@ $defs:
       - medicaid      # Medicaid / MAGI Medicaid
       - chip          # Children's Health Insurance Program (Title XXI)
       - tanf          # Temporary Assistance for Needy Families
+      - aca           # ACA Marketplace / premium tax credits
     description: >
       Baseline public assistance programs. SNAP, Medicaid/MAGI, and CHIP are
       first-class programs with full intake and eligibility support. TANF is a
       thin baseline — federal requirements are minimal; state-specific intake
-      behavior is an overlay concern. Values use the federal program name;
-      state-specific names (e.g., "medical_assistance" for Medicaid) are
-      overlay concerns. States may extend this list via overlay.
+      behavior is an overlay concern. ACA covers marketplace eligibility rules
+      (premium tax credits, employer affordability, special enrollment periods).
+      Values use the federal program name; state-specific names are overlay
+      concerns. States may extend this list via overlay.

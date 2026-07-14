@@ -30,6 +30,7 @@ oneOf:
 $defs:
 
   IncomeBase:
+    title: IncomeBase
     type: object
     required:
       - type
@@ -61,6 +62,7 @@ $defs:
         description: Free-text explanation of the income change. Present when changeReason is other.
 
   EarnedIncome:
+    title: EarnedIncome
     description: Earned income from employment or self-employment.
     allOf:
       - $ref: "#/$defs/IncomeBase"
@@ -77,6 +79,7 @@ $defs:
               resource: Job
 
   UnearnedIncome:
+    title: UnearnedIncome
     description: Unearned income from benefits, support payments, investments, or other passive sources.
     allOf:
       - $ref: "#/$defs/IncomeBase"
@@ -90,6 +93,7 @@ $defs:
             description: The specific type of unearned income.
 
   InKindSupportIncome:
+    title: InKindSupportIncome
     description: Non-cash in-kind support received (shelter, food, utilities, etc.).
     allOf:
       - $ref: "#/$defs/IncomeBase"
@@ -106,6 +110,7 @@ $defs:
             description: Name of the person or organization providing in-kind support.
 
   LumpSumIncome:
+    title: LumpSumIncome
     description: A one-time lump sum payment.
     allOf:
       - $ref: "#/$defs/IncomeBase"
@@ -119,6 +124,7 @@ $defs:
             description: The type of lump sum payment.
 
   OtherIncome:
+    title: OtherIncome
     description: Tribal payments, education grants, prior period income, or other income not covered by more specific types.
     allOf:
       - $ref: "#/$defs/IncomeBase"
@@ -129,6 +135,7 @@ $defs:
             enum: [tribal, education_grant, other, prior_period]
 
   IncomeType:
+    title: IncomeType
     type: string
     enum:
       - employed
@@ -149,6 +156,7 @@ $defs:
       from a previous benefit period being reported now.
 
   UnearnedIncomeType:
+    title: UnearnedIncomeType
     type: string
     enum:
       - unemployment
@@ -177,6 +185,7 @@ $defs:
     description: The specific type of unearned income. Present when type is unearned.
 
   InKindSupportType:
+    title: InKindSupportType
     type: string
     enum:
       - shelter
@@ -186,6 +195,7 @@ $defs:
     description: The category of in-kind support. Present when type is in_kind_support.
 
   LumpSumType:
+    title: LumpSumType
     type: string
     enum:
       - lawsuit_settlement
@@ -200,6 +210,7 @@ $defs:
     description: The type of lump sum payment. Present when type is lump_sum.
 
   IncomeFrequency:
+    title: IncomeFrequency
     type: string
     enum:
       - daily
@@ -212,6 +223,7 @@ $defs:
     description: How often the income is received or accrues.
 
   IncomeChangeReason:
+    title: IncomeChangeReason
     type: string
     enum:
       - stopped_working

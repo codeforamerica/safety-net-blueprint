@@ -26,6 +26,7 @@ properties:
 
 $defs:
   Address:
+    title: Address
     type: object
     description: Residential or mailing address used to determine eligibility.
     additionalProperties: false
@@ -65,12 +66,14 @@ $defs:
         maxLength: 100
 
   Email:
+    title: Email
     type: string
     format: email
     description: Email address.
     maxLength: 320
 
   PhoneNumber:
+    title: PhoneNumber
     type: string
     description: Phone number in international or local format.
     pattern: "^\\+?[0-9 .\\-()]{7,20}$"

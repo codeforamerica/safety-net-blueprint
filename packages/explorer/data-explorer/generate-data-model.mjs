@@ -179,9 +179,9 @@ function emitField(schema, path, entries, visited) {
       if (schema.description) entry.description = schema.description;
       entries.set(`${path}[]`, entry);
     } else if (hasProps(items)) {
-      // Array of objects — recurse with [] suffix; emit header when items has a known type name
+      // Array of objects — recurse with [] suffix; always emit header
       const listTypeName = items.title ?? items['x-schema-name'];
-      if (listTypeName) entries.set(`${path}[]`, { type: `list(${listTypeName})` });
+      entries.set(`${path}[]`, listTypeName ? { type: `list(${listTypeName})` } : { type: 'list' });
       if (!visited.has(items)) walkSchema(items, `${path}[]`, entries, visited);
     } else {
 
@@ -197,9 +197,9 @@ function emitField(schema, path, entries, visited) {
   }
 
   if (hasProps(schema)) {
-    // Nested object — emit type header if this is a named component schema, then recurse
-    const typeName = schema['x-schema-name'];
-    if (typeName) entries.set(path, { type: typeName });
+    // Nested object — always emit type header, then recurse
+    const typeName = schema['x-schema-name'] ?? schema.title;
+    entries.set(path, typeName ? { type: typeName } : { type: 'object' });
     if (!visited.has(schema)) walkSchema(schema, path, entries, visited);
     return;
   }

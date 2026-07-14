@@ -3,11 +3,10 @@ $id: "schemas/common/health.yaml"
 title: HealthPlan
 description: >
   A single health coverage plan referenced in an application. Plans are
-  application-level records shared across members; enrollment of a specific
-  member in a plan is tracked separately via HealthEnrollment. Plan type and
-  premium amount drive Medicaid and CHIP eligibility — specifically the
-  employer-sponsored insurance affordability test (45 CFR § 155.305(f)) and
-  cost-sharing reduction determinations.
+  application-level records shared across members. Plan type and premium amount
+  drive Medicaid and CHIP eligibility — specifically the employer-sponsored
+  insurance affordability test (45 CFR § 155.305(f)) and cost-sharing reduction
+  determinations.
 
 discriminator:
   propertyName: type
@@ -33,6 +32,7 @@ oneOf:
 $defs:
 
   HealthPlanBase:
+    title: HealthPlanBase
     type: object
     required:
       - type
@@ -52,6 +52,7 @@ $defs:
         $ref: "#/$defs/PremiumFrequency"
 
   EmployerOrCobraHealthPlan:
+    title: EmployerOrCobraHealthPlan
     description: An employer-sponsored or COBRA continuation health plan.
     allOf:
       - $ref: "#/$defs/HealthPlanBase"
@@ -84,6 +85,7 @@ $defs:
             description: Employee-share premium for the lowest-cost self-only plan available to the member.
 
   MedicareHealthPlan:
+    title: MedicareHealthPlan
     description: A Medicare health plan.
     allOf:
       - $ref: "#/$defs/HealthPlanBase"
@@ -109,6 +111,7 @@ $defs:
             description: Medicare Part D (prescription drug) details.
 
   TricareHealthPlan:
+    title: TricareHealthPlan
     description: A TRICARE military health plan.
     allOf:
       - $ref: "#/$defs/HealthPlanBase"
@@ -126,22 +129,9 @@ $defs:
           policyNumber:
             type: string
             description: Policy or member ID number.
-          sponsor:
-            type: object
-            description: Person sponsoring this TRICARE coverage.
-            required: [type, id]
-            additionalProperties: false
-            properties:
-              type:
-                type: string
-                enum: [member, contact]
-                description: Whether the sponsor is a household member or a non-member contact.
-              id:
-                type: string
-                format: uuid
-                description: Identifier of the member or contact record.
 
   OtherHealthPlan:
+    title: OtherHealthPlan
     description: A health plan with no type-specific fields (VA, marketplace, peace corps, CHIP, Medicaid, tribal health services, etc.).
     allOf:
       - $ref: "#/$defs/HealthPlanBase"
@@ -160,6 +150,7 @@ $defs:
               - other
 
   HealthPlanType:
+    title: HealthPlanType
     type: string
     enum:
       - employer_sponsored
@@ -181,6 +172,7 @@ $defs:
       tricare and va indicate military and veterans coverage.
 
   PremiumFrequency:
+    title: PremiumFrequency
     type: string
     enum:
       - weekly
@@ -191,6 +183,7 @@ $defs:
     description: How often the premium is paid.
 
   MedicarePart:
+    title: MedicarePart
     type: object
     description: Medicare Part A (hospital) or Part B (medical) enrollment and premium details.
     additionalProperties: true
@@ -219,6 +212,7 @@ $defs:
         description: Who pays the premium for this part.
 
   MedicarePartC:
+    title: MedicarePartC
     type: object
     description: Medicare Part C (Medicare Advantage) plan enrollment details.
     additionalProperties: true
@@ -251,6 +245,7 @@ $defs:
         description: Who pays the premium for this plan.
 
   MedicarePartD:
+    title: MedicarePartD
     type: object
     description: Medicare Part D (prescription drug coverage) enrollment details.
     additionalProperties: true
@@ -276,51 +271,3 @@ $defs:
         enum: [self, state, employer, other]
         description: Who pays the Part D premium.
 
-  HealthEnrollment:
-    type: object
-    description: >
-      A record linking a household member to a health plan. A member may be
-      enrolled in multiple plans (e.g., subscriber on an employer plan and
-      dependent on a spouse's plan). The healthPlanId links to the application's
-      health plans collection.
-    required:
-      - role
-    additionalProperties: true
-    properties:
-      healthPlanId:
-        type: string
-        format: uuid
-        description: The health plan this enrollment is for.
-        x-relationship:
-          resource: HealthPlan
-      jobId:
-        type: string
-        format: uuid
-        description: The job through which this employer-sponsored coverage is offered. Present when the plan is employer_sponsored or cobra.
-        x-relationship:
-          resource: Job
-      role:
-        type: string
-        enum: [subscriber, dependent]
-        description: >
-          Whether the member is the primary subscriber (policyholder) or a
-          dependent on another member's plan.
-      startDate:
-        type: string
-        format: date
-        description: Date this member's coverage under the plan began.
-      endDate:
-        type: string
-        format: date
-        description: Date this member's coverage under the plan ended or is expected to end.
-      eligibleDate:
-        type: string
-        format: date
-        description: Date the member first became eligible for this plan.
-      enrollmentStatus:
-        type: string
-        enum: [eligible, enrolled, pending, ended]
-        description: Current enrollment status for this member in this plan.
-      prefersSeparateMailing:
-        type: boolean
-        description: Whether the member prefers to receive plan notices at a different address than their primary mailing address.

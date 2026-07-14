@@ -19,7 +19,7 @@ task.description: { type: string }
 task.status: { type: string }
 task.taskType: { type: string }
 task.subjectType: { type: enum, values: [application, case, document, appointment] }
-task.programType: { type: enum, values: [snap, medicaid, chip, tanf] }
+task.programType: { type: enum, values: [snap, medicaid, chip, tanf, aca] }
 task.isExpedited: { type: boolean }
 task.priority: { type: integer }
 task.startedAt: { type: datetime }
