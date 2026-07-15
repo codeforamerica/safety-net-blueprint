@@ -358,7 +358,6 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: [pending, inconclusive], to: satisfied}
         steps:
-          - set: {field: satisfiedAt, value: $now, description: Record when the obligation was satisfied}
           - emit: {type: intake.verification.satisfied, description: Emit intake.verification.satisfied — signals the obligation is fulfilled}
       - id: mark-inconclusive
         description: POST /applications/verifications/{verificationId}/mark-inconclusive — System records that a service call returned inconclusive, triggering document fallback
@@ -378,7 +377,6 @@ machines:
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: waived}
         steps:
-          - set: {field: waivedAt, value: $now, description: Record when the waiver was granted}
           - emit: {type: intake.verification.waived, data: {reason: $request.reason}, description: Emit intake.verification.waived — signals the obligation is resolved without evidence}
       - id: mark-cannot-verify
         description: POST /applications/verifications/{verificationId}/mark-cannot-verify — Caseworker closes an obligation when all available verification methods are exhausted
@@ -389,8 +387,7 @@ machines:
           - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: cannot_verify}
-        steps:
-          - set: {field: closedAt, value: $now, description: Record when the obligation was closed as cannot-verify}
+        steps: []
     events:
       - type: intake.verification.created
         description: Initiate the appropriate service calls for a newly created electronic verification

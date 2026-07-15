@@ -32,7 +32,6 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: in_progress, to: completed}
         steps:
-          - set: {field: completedAt, value: $now, description: Record when all Decisions were resolved}
           - emit: {type: eligibility.application.determination_completed, subject: $object.applicationId, description: "Emit eligibility.application.determination_completed — signals all program Decisions are resolved; Intake subscribes to close the application"}
       - id: withdraw
         description: "POST /determinations/{determinationId}/withdraw — System withdraws a Determination when the associated application is withdrawn"
@@ -41,7 +40,6 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: in_progress, to: withdrawn}
         steps:
-          - set: {field: withdrawnAt, value: $now, description: Record when the withdrawal occurred; already-resolved Decisions are preserved as the audit record}
           - emit: {type: eligibility.determination.withdrawn, subject: $object.applicationId}
     events:
       - type: intake.application.submitted

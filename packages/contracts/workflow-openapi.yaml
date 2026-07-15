@@ -678,6 +678,15 @@ components:
               items:
                 $ref: "./components/sla.yaml#/SlaInfo"
               readOnly: true
+            slaDeadline:
+              type:
+                - string
+                - "null"
+              format: date-time
+              description: >
+                Engine-managed. The earliest active deadline across all slaInfo entries.
+                Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+              readOnly: true
             createdAt:
               type: string
               format: date-time
