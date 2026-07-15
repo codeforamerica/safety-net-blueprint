@@ -36,6 +36,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync
 import { join, dirname, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { bundleSpec } from '../../contracts/src/bundle.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -392,14 +393,25 @@ async function main() {
     // Create domain output directory
     mkdirSync(domainOutputDir, { recursive: true });
 
-    // Create openapi-ts config
-    const configContent = createOpenApiTsConfig(specPath, domainOutputDir);
+    // Bundle the spec (inline all external $refs) so hey-api receives a
+    // self-contained spec. Without this, hey-api resolves external refs itself
+    // and loses discriminator mapping key associations when hoisting $defs,
+    // producing unsatisfiable zod union literals.
+    const bundledSpec = await bundleSpec(resolvePath(specPath));
+    const bundledSpecPath = join(outputDir, `${domain}-bundled.yaml`);
+    writeFileSync(bundledSpecPath, yaml.dump(bundledSpec, { noRefs: true }));
+
+    // Create openapi-ts config pointing at the bundled spec
+    const configContent = createOpenApiTsConfig(bundledSpecPath, domainOutputDir);
     writeFileSync(configPath, configContent);
 
     // Generate client using @hey-api/openapi-ts.
     // cwd must be within the project tree so npx resolves the locally installed
     // version from node_modules rather than fetching @latest from the registry.
     await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
+
+    // Clean up bundled spec temp file
+    rmSync(bundledSpecPath);
 
     // Post-process: add .nullable() to fields the generator missed.
     // @hey-api/openapi-ts does not translate nullable: true on allOf-wrapped $ref
@@ -408,6 +420,7 @@ async function main() {
     if (existsSync(zodGenPath)) {
       const nullableFields = collectNullableFieldNames(specsDir);
       if (nullableFields.size > 0) patchZodGenForNullable(zodGenPath, nullableFields);
+      validateDiscriminatorLiterals(bundledSpec, zodGenPath);
     }
 
     // Post-process: Remove unused @ts-expect-error directives
@@ -458,8 +471,49 @@ async function main() {
   console.log(`  import { getPerson } from '@/api/${domains[0]}';`);
 }
 
+/**
+ * Walk a schema object tree and collect all discriminator mapping keys.
+ * Returns a Set of string values that should appear as zod literals.
+ */
+function collectDiscriminatorMappingKeys(obj, result = new Set()) {
+  if (!obj || typeof obj !== 'object') return result;
+  if (Array.isArray(obj)) { obj.forEach(v => collectDiscriminatorMappingKeys(v, result)); return result; }
+  if (obj.discriminator?.mapping) {
+    for (const key of Object.keys(obj.discriminator.mapping)) result.add(key);
+  }
+  for (const val of Object.values(obj)) collectDiscriminatorMappingKeys(val, result);
+  return result;
+}
+
+/**
+ * Validate that a generated zod.gen.ts file uses discriminator mapping keys
+ * as literals — not hoisted $defs schema names (e.g. "shape_Circle").
+ * Throws with a descriptive error if any mapping key is missing from the output.
+ *
+ * @param {Object} bundledSpec - fully dereferenced spec object
+ * @param {string} zodGenPath - absolute path to the generated zod.gen.ts
+ */
+function validateDiscriminatorLiterals(bundledSpec, zodGenPath) {
+  const mappingKeys = collectDiscriminatorMappingKeys(bundledSpec);
+  if (mappingKeys.size === 0) return;
+
+  const zodGen = readFileSync(zodGenPath, 'utf8');
+  const missing = [];
+  for (const key of mappingKeys) {
+    // hey-api may emit z.literal('key') or z.enum(['key']); check for the quoted value
+    if (!zodGen.includes(`'${key}'`)) missing.push(key);
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `Discriminator mapping keys missing from generated zod output: ${missing.join(', ')}\n` +
+      `This indicates hey-api used hoisted $defs schema names instead of mapping keys.\n` +
+      `Check that bundleSpec ran correctly before passing the spec to @hey-api/openapi-ts.`
+    );
+  }
+}
+
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals };
 
 // Run main function only if this is the entry point
 if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {

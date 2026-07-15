@@ -135,9 +135,20 @@ Environment variables (`process.env`) take precedence over `.env` file values. U
 
 Resolved specs are written to the path specified by `--out` (default: `packages/resolved/`). The resolved directory mirrors the structure of `packages/contracts/` but contains fully-merged, relationship-resolved artifacts.
 
+By default, resolved specs preserve all `$ref` references — they are not inlined. This keeps the output readable and allows downstream tools (mock server, Postman generator) to follow references normally. Pass `--bundle` to inline all `$ref`s and produce self-contained single-file specs per domain — useful when distributing specs to external consumers or feeding them to tools that don't handle multi-file specs well.
+
+```bash
+# Default: preserve $refs
+npm run resolve
+
+# Bundled: inline all $refs into self-contained files
+node packages/contracts/scripts/resolve.js --bundle --out=packages/resolved
+```
+
 The resolved directory is consumed by:
 - `generate-postman.js` to produce the Postman collection
 - `npm run mock:start -- --spec=packages/resolved` to run the mock with overlay behavior
+- `npm run clients:typescript -- --spec=packages/resolved` to generate TypeScript clients (the client generator bundles specs internally before passing to `@hey-api/openapi-ts`, so the resolved specs do not need to be pre-bundled)
 
 ## Invoking the Pipeline
 

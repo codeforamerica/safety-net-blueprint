@@ -8,11 +8,13 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { mkdtempSync, writeFileSync, mkdirSync, existsSync, rmSync, readFileSync } from 'node:fs';
+import { join, dirname, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'url';
 import { exec } from '../scripts/generate-clients-typescript.js';
+import { bundleSpec } from '../../contracts/src/bundle.js';
+import yaml from 'js-yaml';
 import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -103,6 +105,96 @@ describe('Client generation pipeline (e2e)', () => {
 
       assert.ok(existsSync(join(outPath, 'types.gen.ts')), 'types.gen.ts was not generated');
       assert.ok(existsSync(join(outPath, 'sdk.gen.ts')), 'sdk.gen.ts was not generated');
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  it('discriminated union: zod literals use mapping keys, not hoisted $defs schema names', async () => {
+    // Regression: without bundling, hey-api resolves external $defs itself and uses
+    // the hoisted schema name (e.g. "shape_Circle") as the zod literal instead of
+    // the discriminator mapping key (e.g. "circle"). This produces unsatisfiable unions.
+    const workDir = mkdtempSync(join(tmpdir(), 'snb-e2e-'));
+    try {
+      mkdirSync(join(workDir, 'schemas'));
+
+      // External schema file with $defs-based discriminated union
+      writeFileSync(join(workDir, 'schemas', 'shape.yaml'), `\
+discriminator:
+  propertyName: type
+  mapping:
+    circle: "#/$defs/Circle"
+    rectangle: "#/$defs/Rectangle"
+oneOf:
+  - $ref: "#/$defs/Circle"
+  - $ref: "#/$defs/Rectangle"
+$defs:
+  Circle:
+    title: Circle
+    type: object
+    properties:
+      type:
+        type: string
+        enum: [circle]
+      radius:
+        type: number
+  Rectangle:
+    title: Rectangle
+    type: object
+    properties:
+      type:
+        type: string
+        enum: [rectangle]
+      width:
+        type: number
+      height:
+        type: number
+`);
+
+      // Main spec that refs the external schema file
+      const specPath = join(workDir, 'test-openapi.yaml');
+      writeFileSync(specPath, `\
+openapi: 3.1.0
+info:
+  title: Shape API
+  version: 1.0.0
+paths:
+  /shapes:
+    get:
+      operationId: listShapes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shape'
+components:
+  schemas:
+    Shape:
+      $ref: ./schemas/shape.yaml
+`);
+
+      // Bundle the spec before passing to hey-api (same path as the generator)
+      const bundled = await bundleSpec(resolvePath(specPath));
+      const bundledPath = join(workDir, 'test-bundled.yaml');
+      writeFileSync(bundledPath, yaml.dump(bundled, { noRefs: true }));
+
+      const outPath = join(workDir, 'out');
+      const configPath = join(workDir, 'openapi-ts.config.js');
+      writeFileSync(configPath, OPENAPI_TS_CONFIG(bundledPath, outPath));
+
+      await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
+
+      const zodGen = readFileSync(join(outPath, 'zod.gen.ts'), 'utf8');
+
+      // The discriminator mapping key values must appear in the output — not hoisted schema names.
+      // hey-api generates z.enum(['circle']) or z.literal('circle') depending on the schema form;
+      // what matters is that the correct string values are present.
+      assert.ok(zodGen.includes("'circle'"), `zod.gen.ts should contain 'circle' but got:\n${zodGen}`);
+      assert.ok(zodGen.includes("'rectangle'"), `zod.gen.ts should contain 'rectangle' but got:\n${zodGen}`);
+      assert.ok(!zodGen.includes("'shape_Circle'"), `zod.gen.ts must not use hoisted schema name 'shape_Circle'`);
+      assert.ok(!zodGen.includes("'shape_Rectangle'"), `zod.gen.ts must not use hoisted schema name 'shape_Rectangle'`);
     } finally {
       rmSync(workDir, { recursive: true, force: true });
     }

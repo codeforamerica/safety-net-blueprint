@@ -50,6 +50,7 @@ packages/contracts/
 - **Lint** (`validate:lint`) — enforces design conventions: POST returns 201, DELETE returns 204, GET single-resource handles 404, path segments are kebab-case, operation IDs are camelCase, schemas are PascalCase, request/response content types are `application/json`. See [Decision 1](#decision-1-openapi-linter) for the choice of linting tool.
 - **Patterns** (`validate:patterns`, `validate:schemas`) — enforces blueprint-specific invariants that require cross-file analysis: list endpoint pagination shapes, shared error `$ref` usage, state machine event type references resolving to declared AsyncAPI channels. See [Decision 2](#decision-2-three-validation-layers) for the rationale.
 - **Events** (`validate:events`) — validates AsyncAPI 3.0 event contract files and checks cross-references between state machines, OpenAPI specs, and AsyncAPI files.
+- **Cross-artifact** (`validate:state-machines`, `validate:annotations`, `validate:sla-metrics`) — validates that field references in state machine transitions resolve to properties declared in the OpenAPI schemas, that annotation paths point to valid schema fields, and that SLA metric definitions are internally consistent. These checks require reading across multiple contract files and are not expressible as single-file lint rules.
 
 ### Stage 2: Overlay resolve
 
@@ -63,7 +64,7 @@ Applies state-specific customizations to the base specs and writes fully-merged 
 
 Produces downstream artifacts from the resolved specs:
 
-- **TypeScript clients** (`@hey-api/openapi-ts`) — generated from the resolved specs
+- **TypeScript clients** (`@hey-api/openapi-ts`) — generated from the resolved specs. The client generator bundles each spec (inlines all `$ref`s) before passing it to `@hey-api/openapi-ts`. This is an internal implementation step — the resolved specs on disk remain unbundled. Bundling is required because `@hey-api/openapi-ts` loses discriminator mapping key associations when it resolves external `$ref`s itself, producing incorrect zod union literals.
 - **Postman collection** — generated from the resolved specs for integration tests and manual exploration
 
 ## Toolchain
