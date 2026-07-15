@@ -26,7 +26,7 @@
  */
 
 import { readFileSync, readdirSync } from 'fs';
-import { resolve, join } from 'path';
+import { resolve, join, relative, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
@@ -67,8 +67,12 @@ function discoverStateMachines(specDir) {
   for (const file of files) {
     if (!file.endsWith('.yaml') && !file.endsWith('.yml')) continue;
     const filePath = join(specDir, file);
+    const base = resolve(specDir);
+    const target = resolve(filePath);
+    const rel = relative(base, target);
+    if (rel.startsWith('..') || isAbsolute(rel)) continue;
     try {
-      const doc = yaml.load(readFileSync(filePath, 'utf8'));
+      const doc = yaml.load(readFileSync(target, 'utf8'));
       if (!doc || typeof doc !== 'object') continue;
       // Use $schema as the type discriminator, not the filename convention
       const schemaBasename = doc.$schema?.split('/').pop();
