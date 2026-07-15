@@ -19,11 +19,13 @@ import {
   discoverCompositions,
   buildResourceSchemaIndex,
   validateBindFields,
+  validateFieldsArrays,
   validateSortableConfig
 } from '../src/compositions/compositions-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const DEFAULT_SPEC_DIR = resolve(__dirname, '..');
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -52,7 +54,7 @@ function collectOpenApiFiles(specsDir) {
       const content = readFileSync(filePath, 'utf8');
       const spec = yaml.load(content);
       if (spec && typeof spec === 'object') {
-        files.push({ relativePath: entry, spec });
+        files.push({ relativePath: entry, filePath, spec });
       }
     } catch {
       // skip
@@ -71,7 +73,7 @@ async function main() {
     process.exit(0);
   }
 
-  const specDir = resolve(options.specDir || '.');
+  const specDir = resolve(options.specDir || DEFAULT_SPEC_DIR);
 
   console.log('='.repeat(70));
   console.log('Composition Bind Validator');
@@ -95,8 +97,9 @@ async function main() {
 
   for (const compositionFile of compositionFiles) {
     const bindErrors = validateBindFields(compositionFile, resourceSchemaIndex);
+    const fieldsErrors = validateFieldsArrays(compositionFile, resourceSchemaIndex);
     const sortErrors = validateSortableConfig(compositionFile);
-    const errors = [...bindErrors, ...sortErrors];
+    const errors = [...bindErrors, ...fieldsErrors, ...sortErrors];
     const label = `${compositionFile.domain}-compositions.yaml`;
 
     if (errors.length === 0) {
@@ -114,11 +117,11 @@ async function main() {
   console.log('');
 
   if (totalErrors > 0) {
-    console.error(`Bind validation failed with ${totalErrors} error(s).`);
+    console.error(`Composition validation failed with ${totalErrors} error(s).`);
     process.exit(1);
   }
 
-  console.log('Bind validation passed.');
+  console.log('Composition validation passed.');
 }
 
 main();

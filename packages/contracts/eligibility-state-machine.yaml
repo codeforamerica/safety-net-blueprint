@@ -71,7 +71,7 @@ machines:
         steps:
           - forEach: {from: eligibility/determinations/decisions, where: {determinationId: $determination.id, status: pending}, as: decision}
             do:
-              - call: {POST: eligibility-adapter/evaluate/determination, body: {decisionId: $decision.id, determinationId: $determination.id, applicationId: $determination.applicationId, program: $decision.program}}
+              - call: {POST: eligibility/evaluate/determination, body: {decisionId: $decision.id, determinationId: $determination.id, applicationId: $determination.applicationId, program: $decision.program}}
 
   # ---------------------------------------------------------------------------
   # Decision — one per program per Determination; tracks per-program outcome.
@@ -140,7 +140,7 @@ machines:
     procedures:
       - id: evaluateSnapExpedited
         description: "Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))"
-        call: {POST: eligibility-adapter/evaluate/expedited-screening, body: {decisionId: $object.id, determinationId: $object.determinationId, applicationId: $object.applicationId}}
+        call: {POST: eligibility/evaluate/expedited-screening, body: {decisionId: $object.id, determinationId: $object.determinationId, applicationId: $object.applicationId}}
       - id: initiateMedicaidDataExchange
         description: Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)
         steps:
@@ -153,7 +153,7 @@ machines:
           - pendingCall: {from: data-exchange/service-calls, where: {decisionId: $this.data.decisionId, status: pending}}
         if: '$decision.id != null && $decision.program == "medicaid" && $pendingCall == null'
         then:
-          - call: {POST: eligibility-adapter/evaluate/medicaid-ex-parte, body: {decisionId: $decision.id, determinationId: $decision.determinationId, applicationId: $decision.applicationId}}
+          - call: {POST: eligibility/evaluate/medicaid-ex-parte, body: {decisionId: $decision.id, determinationId: $decision.determinationId, applicationId: $decision.applicationId}}
 
 $defs:
   ApproveDecisionRequest:

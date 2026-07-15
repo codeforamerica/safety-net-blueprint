@@ -109,18 +109,60 @@ Skip with `SKIP_VALIDATION=true`.
 
 ---
 
-## Behavioral Contract Validation (planned)
+## Cross-Artifact Field Reference Validation
 
-The prototypes will extend validation to check cross-artifact consistency:
+Several artifact types reference OpenAPI schema field names by string — renames that aren't reflected across all artifacts fail silently at runtime. These validators catch mismatches after overlays are applied. See [Cross-Artifact Impact of Field Renames](overlay-guide.md#cross-artifact-impact-of-field-renames) for a checklist.
 
-- State machine states match OpenAPI status enums
-- Effect targets reference schemas that exist
-- Rule context variables resolve to real fields
-- Field metadata source paths resolve to OpenAPI schema fields
-- Transitions include required audit effects
-- Metric sources reference states/transitions that exist
+### State Machine Validation
 
-See [Backend Developer Guide — Validate](../getting-started/backend-developers.md#3-validate) for the target validation workflow.
+```bash
+npm run validate:state-machines           # Within-file consistency (no resolved specs needed)
+npm run validate:state-machines-resolved  # Cross-artifact checks (requires resolved specs)
+```
+
+**Within-file consistency:**
+- Transition `from`/`to` states are declared in the machine's `states` list
+- Guard condition IDs reference declared guards (in the file or its `extends:` chain)
+- String-form `call:` IDs reference declared procedures or actions
+- No duplicate state, action, procedure, or guard IDs
+- `$params.field` references in procedures match declared `parameters:`
+- Actor role values are valid `RoleType` enum values
+
+**Cross-artifact checks** (run after `npm run resolve`):
+- Machine `object:` names exist in the resolved spec
+- Context `from:` paths resolve to known API endpoints
+- `$variable.field` references in all string values exist on the bound schema
+- String literals in CEL enum comparisons are valid values for the field (e.g. `"snap" in $application.programsAppliedFor`)
+- `set: {field:}` steps target fields that exist on the machine object schema
+- `call: {METHOD: path}` paths exist in the resolved spec
+
+### Composition Validation
+
+```bash
+npm run validate:compositions             # bind: and fields: field references against schema
+```
+
+- `bind:` field names exist on the referenced resource schema (existing)
+- `fields:` array entries exist on the referenced resource schema
+
+### Annotation Validation
+
+```bash
+npm run validate:annotations              # Dot-notation field paths against schema
+```
+
+- Each `schema:` key (e.g. `application.programsAppliedFor[]`) resolves to a field that exists on the referenced resource schema
+
+### SLA and Metrics Validation
+
+```bash
+npm run validate:sla-metrics              # var: field references in SLA types and metrics
+```
+
+- `var:` field names in SLA type `pauseWhen` conditions exist on the target resource schema
+- `var:` field names in metric `filter` and `source.filter` expressions exist on the source resource schema
+
+All cross-artifact validators run as part of `npm run validate:resolved` after overlay application.
 
 ---
 

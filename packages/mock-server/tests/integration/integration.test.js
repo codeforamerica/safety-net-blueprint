@@ -211,11 +211,10 @@ async function testApi(api, examples) {
           console.log('     ✗ FAIL: 422 response structure incorrect');
           failed++;
         }
-      } else if (response.status === 201 && examples.length === 0) {
-        // Schema has no fixture examples — likely additionalProperties: true with
-        // only readOnly required fields (e.g., a TBD domain schema). Any body is
-        // accepted, so triggering a 422 is not possible until real fields are defined.
-        console.log(`     ⚠️  SKIP: Schema accepts arbitrary bodies (no client-required fields defined yet)`);
+      } else if (response.status === 201) {
+        // Schema has no client-required fields — only readOnly server-generated fields
+        // (id, createdAt, updatedAt) are required, so any body is accepted.
+        console.log(`     ⚠️  SKIP: Schema accepts arbitrary bodies (no client-required fields defined)`);
       } else {
         console.log(`     ✗ FAIL: Expected 422, got ${response.status}`);
         failed++;

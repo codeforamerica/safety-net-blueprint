@@ -1,0 +1,40 @@
+# Known state machine validator exceptions.
+#
+# Fields listed here are intentionally absent from the schema for a documented reason.
+# Remove entries when the underlying issue is resolved.
+#
+# Format:
+#   unknownFields:
+#     - schema: <SchemaName>   # the OpenAPI schema the field would live on
+#       field: <fieldName>     # top-level field name
+#       issue: <url>           # tracking issue
+#       reason: <explanation>
+
+unknownFields:
+  - schema: Task
+    field: slaDeadline
+    issue: https://github.com/codeforamerica/safety-net-blueprint/issues/361
+    reason: >
+      Planned x-derived computed field. Will derive from slaInfo as the earliest
+      active deadline across all SLA entries. Not yet in schema — blocked on
+      x-derived extension support.
+
+  - schema: Determination
+    field: completedAt
+    reason: State-transition timestamp. To be added to schema in a future pass.
+
+  - schema: Determination
+    field: withdrawnAt
+    reason: State-transition timestamp. To be added to schema in a future pass.
+
+  - schema: Verification
+    field: satisfiedAt
+    reason: State-transition timestamp. To be added to schema in a future pass.
+
+  - schema: Verification
+    field: waivedAt
+    reason: State-transition timestamp. To be added to schema in a future pass.
+
+  - schema: Verification
+    field: closedAt
+    reason: State-transition timestamp. To be added to schema in a future pass.

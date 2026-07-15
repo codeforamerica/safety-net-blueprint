@@ -39,7 +39,7 @@ const TASKS = '/workflow/tasks';
 async function createAndSubmitApp(programs = ['snap'], channel = 'online') {
   const create = await fetch(`${BASE_URL}${APP}`, {
     method: 'POST', headers: APPLICANT,
-    body: { programs, channel },
+    body: { programsAppliedFor: programs, channel },
   });
   const app = await create.json();
   await fetch(`${BASE_URL}${APP}/${app.id}/submit`, { method: 'POST', headers: APPLICANT });
@@ -56,7 +56,7 @@ async function createOpenApp(programs = ['snap']) {
 async function createMember(applicationId, programs = ['snap']) {
   const res = await fetch(`${BASE_URL}${MEMBERS}`, {
     method: 'POST', headers: CASEWORKER,
-    body: { applicationId, firstName: 'Test', lastName: 'Member', programsApplyingFor: programs },
+    body: { applicationId, firstName: 'Test', lastName: 'Member', programsAppliedFor: programs },
   });
   return res.json();
 }
@@ -113,7 +113,7 @@ async function testApplicationLifecycle() {
   await test('Create application — status is draft', async () => {
     const res = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     assert.strictEqual(res.status, 201);
     const data = await res.json();
@@ -144,7 +144,7 @@ async function testApplicationLifecycle() {
   await test('open by applicant → 403 FORBIDDEN', async () => {
     const { id } = await (await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     })).json();
     await fetch(`${BASE_URL}${APP}/${id}/submit`, { method: 'POST', headers: APPLICANT });
     const res = await fetch(`${BASE_URL}${APP}/${id}/open`, { method: 'POST', headers: APPLICANT });
@@ -214,7 +214,7 @@ async function testApplicationWithdraw() {
   await test('withdraw from draft → 409 CONFLICT', async () => {
     const { id } = (await (await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     })).json());
     const res = await fetch(`${BASE_URL}${APP}/${id}/withdraw`, {
       method: 'POST', headers: APPLICANT,
@@ -395,7 +395,7 @@ async function testCreateVerificationChecklistRule() {
   await test('SNAP submission creates income (per source) + identity (per member, electronic) + residency (household, document) verifications', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await createRes.json();
     const member = await createMember(app.id, ['snap']);
@@ -426,7 +426,7 @@ async function testCreateVerificationChecklistRule() {
   await test('Medicaid submission creates citizenship + immigration (per member, electronic) verifications', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['medicaid'], channel: 'online' },
+      body: { programsAppliedFor: ['medicaid'], channel: 'online' },
     });
     const app = await createRes.json();
     const member = await createMember(app.id, ['medicaid']);
@@ -1368,7 +1368,7 @@ async function testIncomeVerificationPerSource() {
   await test('member with two income records → two income verifications, each pointing to the correct source', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await createRes.json();
     const member = await createMember(app.id, ['snap']);
@@ -1391,7 +1391,7 @@ async function testIncomeVerificationPerSource() {
   await test('two members each with one income record → two income verifications', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await createRes.json();
     const memberA = await createMember(app.id, ['snap']);
@@ -1408,7 +1408,7 @@ async function testIncomeVerificationPerSource() {
   await test('member with no income records → no income verifications created', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await createRes.json();
     await createMember(app.id, ['snap']);
@@ -1487,7 +1487,7 @@ async function testTraceparentPropagation() {
   await test('traceparent propagates from submit to downstream workflow.task.created event', async () => {
     const create = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await create.json();
 

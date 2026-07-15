@@ -10,13 +10,13 @@ metrics:
       collection: events
       filter:
         "==":
-          - var: action
+          - var: type
           - created
     to:
       collection: events
       filter:
         "==":
-          - var: action
+          - var: type
           - claimed
     pairBy: resourceId
     targets:
@@ -45,7 +45,7 @@ metrics:
       collection: events
       filter:
         "==":
-          - var: action
+          - var: type
           - released
     total:
       collection: events
@@ -79,7 +79,7 @@ metrics:
       collection: events
       filter:
         "==":
-          - var: action
+          - var: type
           - auto-escalate-sla-warning
     total:
       collection: events

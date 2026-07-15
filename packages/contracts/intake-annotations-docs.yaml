@@ -422,17 +422,13 @@ schema:
     reason: >-
       Discriminator identifying whether the sponsor is a household member or a contact-only person record in
       application.contacts[].
-  application.sponsors[].personId:
-    reason: >-
-      Identifier of the referenced person record for the sponsor; the person record holds the sponsor's name and
-      address.
   application.sponsors[].ssn:
     reason: Sponsor's SSN required for income and asset verification through IEVS and FDSH.
   application.sponsors[].spouse.type:
     reason: >-
       Discriminator identifying whether the sponsor's spouse is a household member or a contact-only person record in
       application.contacts[].
-  application.sponsors[].spouse.personId:
+  application.sponsors[].spouse.id:
     reason: Identifier of the referenced person record for the sponsor's spouse.
   application.sponsors[].spouse.ssn:
     reason: >-
@@ -583,14 +579,6 @@ schema:
     reason: >-
       Free-text narrative explaining an income change; required by MAGI rules when projected income differs materially
       from annualized pay stubs.
-  application.incomes[].expectsSameOrLowerIncomeNextYear:
-    reason: >-
-      Assesses whether the current month's income is representative for MAGI annual income projection; a "no" response
-      triggers worker review of whether income should be averaged differently.
-  application.incomes[].month:
-    reason: >-
-      Income reporting month for monthly income tracking and averaging; used when income varies month to month and a
-      single reporting period must be designated for calculation.
   application.assets[]:
     reason: >-
       Asset records for household members — liquid assets, vehicles, real property, retirement accounts, and insurance —
@@ -639,14 +627,6 @@ schema:
       countable.
   application.assets[].primaryUseOther:
     reason: Captures non-enumerated primary uses for worker review.
-  application.assets[].liquidResourceType:
-    reason: >-
-      Free-text description of the liquid asset type for cases that don't fit the standard enumerated categories;
-      used by workers to classify and determine countability.
-  application.assets[].propertyType:
-    reason: >-
-      Free-text description of the real property type to support worker determination of countability and exemption
-      status.
   application.assetDisposals[]:
     reason: >-
       Records of assets transferred or disposed of within the lookback period, reviewed to determine whether the
@@ -689,16 +669,6 @@ schema:
       payments above the obligation are not deductible.
   application.expenses[].typeOther:
     reason: Captures non-enumerated expense types for worker review.
-  application.expenses[].typeName:
-    reason: >-
-      Free-text name for the expense type to support worker review when the type is other or requires clarification.
-  application.expenses[].payerLivesInHome:
-    reason: >-
-      Whether the child support or alimony payer lives in the home; payments to someone in the same household are not
-      deductible.
-  application.expenses[].month:
-    reason: >-
-      Expense reporting month for monthly expense tracking and averaging for cases where costs vary.
   application.disabilityBenefits[]:
     reason: >-
       SSI and SSDI benefit records for household members, used for categorical Medicaid eligibility screening, income
@@ -937,24 +907,6 @@ schema:
     reason: >-
       Participation in a federally funded work-study program is one of the exemptions from the SNAP student eligibility
       restriction.
-  application.members[].studentStatus.lastGradeCompleted:
-    reason: >-
-      Last grade completed; used for educational attainment verification and to assess work-readiness for TANF and SNAP
-      employment and training programs.
-  application.members[].studentStatus.startDate:
-    reason: >-
-      School enrollment start date used to verify current enrollment status and determine the benefit period affected by
-      the SNAP student restriction.
-  application.members[].studentStatus.expectedGraduationDate:
-    reason: Expected graduation date used to project when the student restriction will end and to plan benefit continuity.
-  application.members[].studentStatus.financialAidForLivingExpensesMonthly:
-    reason: >-
-      Portion of financial aid designated for living expenses is counted as MAGI income; monthly amount used for income
-      calculation.
-  application.members[].studentStatus.taxableFinancialAidAnnual:
-    reason: >-
-      Taxable financial aid (scholarships and grants exceeding tuition and fees) is counted as MAGI income; annual
-      amount used for income projection.
   application.members[].pregnancy.isPregnant:
     reason: >-
       Pregnancy confers categorical Medicaid eligibility and affects CHIP unborn child coverage; the expected baby
@@ -963,9 +915,6 @@ schema:
     reason: Due date determines the benefit period for pregnancy Medicaid and the anticipated household size change for SNAP.
   application.members[].pregnancy.numberOfBabiesExpected:
     reason: Each expected baby counts as a separate household member for SNAP and Medicaid household size calculation.
-  application.members[].pregnancy.otherParentName:
-    reason: >-
-      Name of the other parent for child support referral and medical support enforcement purposes.
   application.members[].fosterCare.startDate:
     reason: >-
       Start date of the most recent foster care episode; used with end date and member age to determine whether extended
@@ -994,10 +943,6 @@ schema:
     reason: >-
       Date of re-entry into foster care after adoption dissolution; used to determine whether extended Medicaid
       eligibility resumes.
-  application.members[].fosterCare.nameUsed:
-    reason: >-
-      Name the member used while in foster care; supports identity verification when legal name differs from the name
-      on file with the child welfare agency.
   application.members[].military.isVeteran:
     reason: >-
       Veteran status may affect categorical SNAP eligibility in states with broad-based categorical eligibility and may
@@ -1062,10 +1007,6 @@ schema:
     reason: Tribe name used to verify tribal membership and coordinate with IHS and tribal health programs.
   application.members[].tribalStatus.tribeState:
     reason: State where the tribe is located, used to identify the relevant IHS service area and tribal health program.
-  application.members[].burialFuneralPreference:
-    reason: >-
-      Burial or funeral preference collected for members where applicable; used to coordinate funeral benefit programs
-      for individuals who qualify.
   application.members[].personMatch:
     reason: >-
       Person matching state for an application member. Populated when the client management domain resolves a match;
@@ -1110,13 +1051,6 @@ schema:
     reason: Discriminator identifying whether the child is a household member or a contact-only person record.
   application.childSupport.parentsOutsideHome[].children[].id:
     reason: Identifier of the referenced child person record.
-  application.healthPlans[].memberId:
-    reason: >-
-      FK to application.members[] linking this health plan directly to one member; used for Medicare plans where one
-      plan record covers one beneficiary.
-    modeling: >-
-      Applies only to Medicare plans (type = medicare). Non-Medicare plans link members via
-      application.healthEnrollments[].
   application.healthPlans[].partA.premiumAmount:
     reason: >-
       Part A premium amount for beneficiaries who did not earn 40 quarters of work and must pay a premium; used in

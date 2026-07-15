@@ -22,6 +22,7 @@ import yaml from 'js-yaml';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const DEFAULT_SPEC_DIR = resolve(__dirname, '..');
 
 // =============================================================================
 // AsyncAPI channel discovery
@@ -116,11 +117,7 @@ function collectTimerCallbackTypes(stateMachine) {
 async function main() {
   const args = process.argv.slice(2);
   const specArg = args.find(a => a.startsWith('--spec='));
-  if (!specArg) {
-    console.error('Error: --spec=<dir> is required.');
-    process.exit(1);
-  }
-  const specDir = resolve(specArg.split('=')[1]);
+  const specDir = resolve(specArg ? specArg.split('=')[1] : DEFAULT_SPEC_DIR);
 
   console.log('='.repeat(70));
   console.log('Event Contract Validator');

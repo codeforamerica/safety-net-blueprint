@@ -405,7 +405,7 @@ procedures:
       - application: {from: intake/applications, where: {id: $object.subjectId}}
       - snapQueue: {from: workflow/queues, where: {name: snap-intake}}
       - generalQueue: {from: workflow/queues, where: {name: general-intake}}
-    if: $snapQueue != null && (($application != null && $application.programs.size() == 1 && "snap" in $application.programs) || ($application == null && $object.programType == "snap"))
+    if: $snapQueue != null && (($application != null && $application.programsAppliedFor.size() == 1 && "snap" in $application.programsAppliedFor) || ($application == null && $object.programType == "snap"))
     then: [{set: {field: queueId, value: $snapQueue.id}}]
     else: [{set: {field: queueId, value: $generalQueue.id}}]
   - id: setPriority

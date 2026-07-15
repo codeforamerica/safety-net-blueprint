@@ -370,18 +370,9 @@ schema:
     policies: [snap-student-eligibility-restriction]
     programs: [snap]
 
-  application.members[].studentStatus.financialAidForLivingExpensesMonthly:
-    policies: [irs-scholarship-magi-exclusion, medicaid-magi-methodology]
-    programs: [medicaid, chip]
-
   application.members[].pregnancy:
     policies: [medicaid-pregnancy-eligibility, chip-unborn-child-coverage, snap-pregnancy-household-rules]
     programs: [snap, medicaid, chip]
-
-  application.members[].pregnancy.otherParentName:
-    dataClassification: [pii]
-    policies: [medicaid-medical-support-cooperation]
-    programs: [medicaid]
 
   application.members[].fosterCare:
     policies: [medicaid-foster-care-extended-eligibility]

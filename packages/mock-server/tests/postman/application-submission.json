@@ -70,7 +70,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"programs\": [\"snap\", \"medicaid\"], \"channel\": \"online\"}",
+              "raw": "{\"programsAppliedFor\": [\"snap\", \"medicaid\"], \"channel\": \"online\"}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -98,7 +98,7 @@
                   "  pm.response.to.have.status(201);",
                   "  const body = pm.response.json();",
                   "  pm.expect(body.status).to.eql('draft');",
-                  "  pm.expect(body.programs).to.include.members(['snap', 'medicaid']);",
+                  "  pm.expect(body.programsAppliedFor).to.include.members(['snap', 'medicaid']);",
                   "  pm.collectionVariables.set('appId', body.id);",
                   "});"
                 ]
@@ -126,7 +126,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"roles\": [\"primary_applicant\"], \"programsApplyingFor\": [\"snap\", \"medicaid\"]}",
+              "raw": "{\"roles\": [\"primary_applicant\"], \"programsAppliedFor\": [\"snap\", \"medicaid\"]}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -183,7 +183,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"snap\"]}",
+              "raw": "{\"roles\": [\"household_member\"], \"programsAppliedFor\": [\"snap\"]}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -238,7 +238,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"medicaid\"]}",
+              "raw": "{\"roles\": [\"household_member\"], \"programsAppliedFor\": [\"medicaid\"]}",
               "options": {
                 "raw": {
                   "language": "json"

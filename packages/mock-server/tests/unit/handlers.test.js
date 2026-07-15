@@ -30,7 +30,7 @@ test('CRUD Handler Tests', async (t) => {
   
   // Setup before tests
   cleanup();
-  seedDatabase('persons', seedDir);
+  seedDatabase('persons', seedDir, 'client-management');
   
   await t.test('LIST - returns all resources', () => {
     const results = findAll('persons', {});

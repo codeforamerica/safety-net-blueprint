@@ -16,6 +16,7 @@ import {
   collectSchemaProperties,
   buildResourceSchemaIndex,
   validateBindFields,
+  validateFieldsArrays,
   validateSortableConfig,
   extractPathParams,
   buildParameterIndex,
@@ -264,6 +265,7 @@ describe('discoverCompositions', () => {
     const dir = createTempDir();
     try {
       writeYaml(dir, 'intake-compositions.yaml', {
+        $schema: './schemas/compositions-schema.yaml',
         version: '1.0',
         domain: 'intake',
         compositions: { reviewContext: { resource: 'applications', sections: {} } },
@@ -570,6 +572,198 @@ describe('validateBindFields', () => {
     const errors = validateBindFields(compositionDoc, index);
     assert.equal(errors.length, 1);
     assert.ok(errors[0].path.includes('intake.compositions.reviewContext.sections.income'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateFieldsArrays
+// ---------------------------------------------------------------------------
+
+describe('validateFieldsArrays', () => {
+  const sampleSpec = {
+    paths: { '/applications/{id}': { get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } } } },
+    components: { schemas: { Application: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string' }, programsAppliedFor: { type: 'array' } } } } },
+  };
+  const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: sampleSpec }];
+
+  test('returns no errors when all fields exist on resource', () => {
+    const compositionDoc = {
+      domain: 'test',
+      doc: {
+        compositions: {
+          review: { resource: 'applications', fields: ['id', 'status', 'programsAppliedFor'] },
+        },
+      },
+    };
+    const index = buildResourceSchemaIndex(yamlFiles);
+    const errors = validateFieldsArrays(compositionDoc, index);
+    assert.equal(errors.length, 0);
+  });
+
+  test('errors when a field in fields: does not exist on resource', () => {
+    const compositionDoc = {
+      domain: 'test',
+      doc: {
+        compositions: {
+          review: { resource: 'applications', fields: ['id', 'nonExistentField'] },
+        },
+      },
+    };
+    const index = buildResourceSchemaIndex(yamlFiles);
+    const errors = validateFieldsArrays(compositionDoc, index);
+    assert.equal(errors.length, 1);
+    assert.ok(errors[0].message.includes('nonExistentField'));
+  });
+
+  test('skips nodes whose resource is not in the index', () => {
+    const compositionDoc = {
+      domain: 'test',
+      doc: {
+        compositions: {
+          review: { resource: 'unknown-resource', fields: ['anything'] },
+        },
+      },
+    };
+    const index = buildResourceSchemaIndex(yamlFiles);
+    const errors = validateFieldsArrays(compositionDoc, index);
+    assert.equal(errors.length, 0);
+  });
+
+  test('validates fields in include nodes', () => {
+    const compositionDoc = {
+      domain: 'test',
+      doc: {
+        compositions: {
+          review: {
+            resource: 'applications',
+            fields: ['id'],
+            include: {
+              members: { resource: 'applications', fields: ['id', 'badField'] },
+            },
+          },
+        },
+      },
+    };
+    const index = buildResourceSchemaIndex(yamlFiles);
+    const errors = validateFieldsArrays(compositionDoc, index);
+    assert.equal(errors.length, 1);
+    assert.ok(errors[0].message.includes('badField'));
+  });
+
+  test('returns no errors for nodes without a fields: array', () => {
+    const compositionDoc = {
+      domain: 'test',
+      doc: {
+        compositions: {
+          review: { resource: 'applications', bind: 'id' },
+        },
+      },
+    };
+    const index = buildResourceSchemaIndex(yamlFiles);
+    assert.equal(validateFieldsArrays(compositionDoc, index).length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario tests — simulate overlay changes; assert validator catches stale refs
+// ---------------------------------------------------------------------------
+
+describe('scenario: field rename in fields: array — overlay renames programsAppliedFor → programs', () => {
+  // Resolved spec after the rename: Application no longer has programsAppliedFor
+  const renamedSpec = {
+    paths: {
+      '/applications/{id}': {
+        get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } },
+      },
+    },
+    components: {
+      schemas: {
+        Application: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            status: { type: 'string' },
+            programs: { type: 'array' },
+          },
+        },
+      },
+    },
+  };
+  const index = buildResourceSchemaIndex([{ relativePath: 'intake-openapi.yaml', spec: renamedSpec }]);
+
+  test('catches stale fields: [programsAppliedFor] (old field name)', () => {
+    const compositionDoc = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          review: { resource: 'applications', fields: ['id', 'programsAppliedFor'] },
+        },
+      },
+    };
+    const errors = validateFieldsArrays(compositionDoc, index);
+    assert.ok(errors.length > 0 && errors[0].message.includes('programsAppliedFor'),
+      `Expected error for stale field name but got: ${JSON.stringify(errors)}`);
+  });
+
+  test('passes with fields: [programs] (updated field name)', () => {
+    const compositionDoc = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          review: { resource: 'applications', fields: ['id', 'programs'] },
+        },
+      },
+    };
+    assert.equal(validateFieldsArrays(compositionDoc, index).length, 0);
+  });
+});
+
+describe('scenario: field rename in bind: map — overlay renames programsAppliedFor → programs', () => {
+  // Same resolved spec — field renamed in bind: key too
+  const renamedSpec = {
+    paths: {
+      '/applications/{id}': {
+        get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } } },
+      },
+    },
+    components: {
+      schemas: {
+        Application: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            programs: { type: 'array' },
+          },
+        },
+      },
+    },
+  };
+  const index = buildResourceSchemaIndex([{ relativePath: 'intake-openapi.yaml', spec: renamedSpec }]);
+
+  test('catches stale bind: programsAppliedFor (old field name)', () => {
+    const compositionDoc = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          review: { resource: 'applications', bind: 'programsAppliedFor' },
+        },
+      },
+    };
+    const errors = validateBindFields(compositionDoc, index);
+    assert.ok(errors.length > 0 && errors[0].message.includes('programsAppliedFor'),
+      `Expected error for stale bind field but got: ${JSON.stringify(errors)}`);
+  });
+
+  test('passes with bind: programs (updated field name)', () => {
+    const compositionDoc = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          review: { resource: 'applications', bind: 'programs' },
+        },
+      },
+    };
+    assert.equal(validateBindFields(compositionDoc, index).length, 0);
   });
 });
 
@@ -1147,11 +1341,8 @@ describe('real intake composition', () => {
 
     const specPath = resolve(specsDir, 'intake-openapi.yaml');
     const spec = yaml.load(readFileSync(specPath, 'utf8'));
-    const domainPath = resolve(specsDir, 'schemas/domain/intake.yaml');
-    const domainSpec = yaml.load(readFileSync(domainPath, 'utf8'));
     const yamlFiles = [
-      { relativePath: 'intake-openapi.yaml', spec },
-      { relativePath: 'schemas/domain/intake.yaml', spec: domainSpec },
+      { relativePath: 'intake-openapi.yaml', filePath: specPath, spec },
     ];
 
     const index = buildResourceSchemaIndex(yamlFiles);

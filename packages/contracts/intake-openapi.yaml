@@ -2765,7 +2765,7 @@ components:
         - $ref: "./schemas/domain/intake.yaml#/$defs/Application"
         - type: object
           required:
-            - programs
+            - programsAppliedFor
 
     ApplicationUpdate:
       allOf:

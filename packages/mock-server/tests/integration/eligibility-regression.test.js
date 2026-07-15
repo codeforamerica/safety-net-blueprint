@@ -27,7 +27,7 @@ const SERVICE_CALLS = '/data-exchange/service-calls';
 async function createApplicationMember(appId, programs = []) {
   return fetch(`${BASE_URL}/intake/applications/${appId}/members`, {
     method: 'POST',
-    body: { roles: ['primary_applicant'], programs },
+    body: { roles: ['primary_applicant'], programsAppliedFor: programs },
   });
 }
 
@@ -335,7 +335,7 @@ async function testSnapExpeditedScreeningStub() {
     const stubRes = await fetch(`${BASE_URL}/mock/stubs/http`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/expedited-screening' } }),
+      body: JSON.stringify({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/expedited-screening' } }),
     });
     assert.strictEqual(stubRes.status, 201, 'stub registration should return 201');
     const stub = await stubRes.json();
@@ -368,7 +368,7 @@ async function testCrossDomainWriteBack() {
     // by the state machine (not a synthetic inject), exercising the full emit path.
     const appRes = await fetch(`${BASE_URL}/intake/applications`, {
       method: 'POST',
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     assert.strictEqual(appRes.status, 201, 'application creation should return 201');
     const app = await appRes.json();
@@ -401,7 +401,7 @@ async function testCrossDomainWriteBack() {
   await test('determination_completed on Determination closes the intake Application', async () => {
     const appRes = await fetch(`${BASE_URL}/intake/applications`, {
       method: 'POST',
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await appRes.json();
     const appId = app.id;
@@ -529,7 +529,7 @@ async function testMedicaidExParteEvaluation() {
     await registerHttpStub({ match: { method: 'POST', url: '/data-exchange/service-calls' } });
 
     // Register the ex parte adapter stub
-    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/medicaid-ex-parte' } });
+    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/medicaid-ex-parte' } });
 
     const appId = `app-exparte-${Date.now()}`;
     await createApplicationMember(appId, ['medicaid']);
@@ -562,13 +562,13 @@ async function testFinalDetermination() {
     const appId = `app-final-${Date.now()}`;
 
     // Stub out the expedited screening call triggered when the SNAP Decision is created
-    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/expedited-screening' } });
+    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/expedited-screening' } });
 
     await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
     // Register HTTP stub for the final determination adapter call
-    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility-adapter', url: '/evaluate/determination' } });
+    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/determination' } });
 
     await injectEvent('intake.application.review_completed', {}, appId);
 
