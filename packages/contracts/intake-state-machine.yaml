@@ -387,7 +387,8 @@ machines:
           - actors: [case_worker, supervisor]
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: cannot_verify}
-        steps: []
+        steps:
+          - emit: {type: intake.verification.cannot_verify, description: Emit intake.verification.cannot_verify — signals all available verification methods are exhausted}
     events:
       - type: intake.verification.created
         description: Initiate the appropriate service calls for a newly created electronic verification

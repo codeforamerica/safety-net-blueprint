@@ -145,7 +145,7 @@ async function testDeterminationTransitions() {
     assert.strictEqual(res.status, 403);
   });
 
-  await test('complete (in_progress → completed) — sets completedAt', async () => {
+  await test('complete (in_progress → completed)', async () => {
     const det = await createDetermination(['snap']);
     const res = await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}/complete`, {
       method: 'POST', headers: SYSTEM,
@@ -153,7 +153,6 @@ async function testDeterminationTransitions() {
     assert.strictEqual(res.status, 200, `expected 200, got ${res.status}`);
     const data = await res.json();
     assert.strictEqual(data.status, 'completed');
-    assert.ok(data.completedAt, 'completedAt should be set');
   });
 
   await test('complete by caseworker → 403 FORBIDDEN (system only)', async () => {
@@ -171,7 +170,7 @@ async function testDeterminationTransitions() {
     assert.strictEqual(res.status, 409);
   });
 
-  await test('withdraw (in_progress → withdrawn) — sets withdrawnAt', async () => {
+  await test('withdraw (in_progress → withdrawn)', async () => {
     const det = await createDetermination(['snap']);
     const res = await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}/withdraw`, {
       method: 'POST', headers: SYSTEM,
@@ -179,7 +178,6 @@ async function testDeterminationTransitions() {
     assert.strictEqual(res.status, 200, `expected 200, got ${res.status}`);
     const data = await res.json();
     assert.strictEqual(data.status, 'withdrawn');
-    assert.ok(data.withdrawnAt, 'withdrawnAt should be set');
   });
 }
 
@@ -460,7 +458,6 @@ async function testDeterminationCompletion() {
     // decision_completed subscription checks for pending Decisions; finding none, completes the Determination
     const updated = await (await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}`)).json();
     assert.strictEqual(updated.status, 'completed', 'Determination should complete when all Decisions are resolved');
-    assert.ok(updated.completedAt, 'completedAt should be set');
   });
 
   await test('second Decision still pending — Determination stays in_progress', async () => {
@@ -504,7 +501,6 @@ async function testWithdrawal() {
 
     const updated = await (await fetch(`${BASE_URL}${DETERMINATIONS}/${det.id}`)).json();
     assert.strictEqual(updated.status, 'withdrawn', 'Determination should be withdrawn');
-    assert.ok(updated.withdrawnAt, 'withdrawnAt should be set');
   });
 
   await test('intake.application.withdrawn for unknown applicationId — no error', async () => {

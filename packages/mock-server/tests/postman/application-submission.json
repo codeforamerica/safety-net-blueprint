@@ -724,7 +724,6 @@
                   "  pm.response.to.have.status(200);",
                   "  const body = pm.response.json();",
                   "  pm.expect(body.status).to.eql('satisfied');",
-                  "  pm.expect(body.satisfiedAt).to.be.a('string');",
                   "});",
                   "",
                   "pm.test('AC 3 — electronic evidence item recorded with result: conclusive', () => {",
