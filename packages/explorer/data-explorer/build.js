@@ -147,7 +147,7 @@ function displayType(meta) {
   if (!t) return null;
   if (Array.isArray(t)) return t.join(' | ');
   if (typeof t === 'string') {
-    if (t.startsWith('list(')) return 'list';
+    if (meta?.relationship && t === 'uuid') return `uuid(${meta.relationship})`;
     return t;
   }
   return String(t);
@@ -168,6 +168,7 @@ function renderFieldCard(path, meta, ann) {
 
   const type = displayType(meta);
   const typeBadge = type ? `<span class="type-badge">${h(type)}</span>` : '';
+  const relBadge = (meta?.relationship && meta?.type !== 'uuid') ? `<span class="rel-badge">→ ${h(String(meta.relationship))}</span>` : '';
 
   let annHtml = '';
   if (ann) {
@@ -204,13 +205,18 @@ function renderFieldCard(path, meta, ann) {
     valHtml = `<div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list">${meta.values.map(v => `<code>${h(String(v))}</code>`).join(' ')}</span></div>`;
   }
 
-  const bodyHtml = (annHtml || valHtml)
-    ? `<div class="card-body">${valHtml}${annHtml}</div>`
+  let appliesHtml = '';
+  if (meta?.appliesWhen) {
+    appliesHtml = `<div class="ann-row"><span class="ann-label">Applies when</span><code class="applies-expr">${h(String(meta.appliesWhen))}</code></div>`;
+  }
+
+  const bodyHtml = (annHtml || valHtml || appliesHtml)
+    ? `<div class="card-body">${appliesHtml}${valHtml}${annHtml}</div>`
     : '';
 
   const hasAnn = !!annHtml;
   return `<div class="card" data-path="${h(path)}">` +
-    `<div class="card-header"><code class="field-path">${h(path)}</code>${typeBadge}</div>` +
+    `<div class="card-header"><code class="field-path">${h(path)}</code>${typeBadge}${relBadge}</div>` +
     bodyHtml +
     `</div>`;
 }
@@ -541,6 +547,23 @@ mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; paddin
   border-radius: 3px;
   padding: 0.05rem 0.3rem;
   color: #444;
+}
+.rel-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--green-light);
+  color: var(--green-dark);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  letter-spacing: 0.02em;
+}
+.applies-expr {
+  font-size: 0.72rem;
+  background: var(--yellow-light);
+  border-radius: 3px;
+  padding: 0.05rem 0.4rem;
+  color: #5a4000;
 }
 .ann-row--col { align-items: flex-start; }
 .policy-list { display: flex; flex-direction: column; gap: 0.4rem; }
