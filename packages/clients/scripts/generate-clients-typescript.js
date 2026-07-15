@@ -413,6 +413,15 @@ async function main() {
     // Clean up bundled spec temp file
     rmSync(bundledSpecPath);
 
+    // Post-process: emit named enum const exports for string enum $defs in external
+    // schema files. dereference() inlines these, so hey-api never sees them as named
+    // schemas — we append the exports ourselves so consumers can iterate values at runtime.
+    const typesGenPath = join(domainOutputDir, 'types.gen.ts');
+    if (existsSync(typesGenPath)) {
+      const namedEnums = collectNamedEnumDefs(resolvePath(specPath));
+      if (namedEnums.length > 0) patchTypesGenForNamedEnums(typesGenPath, namedEnums);
+    }
+
     // Post-process: add .nullable() to fields the generator missed.
     // @hey-api/openapi-ts does not translate nullable: true on allOf-wrapped $ref
     // fields to Zod .nullable() — this patch reads it from the resolved spec.
@@ -513,8 +522,69 @@ function validateDiscriminatorLiterals(bundledSpec, zodGenPath) {
   }
 }
 
+/**
+ * Collect named string enum $defs from all external schema files referenced in the spec.
+ * Returns an array of { name, values } objects, deduplicated by name.
+ *
+ * @param {string} specPath - absolute path to the original (unbundled) spec file
+ */
+function collectNamedEnumDefs(specPath) {
+  const specDir = dirname(specPath);
+  const rawSpec = readFileSync(specPath, 'utf8');
+
+  // Find all external file refs: ./path/to/file.yaml (before any # anchor)
+  const externalRefs = new Set();
+  for (const match of rawSpec.matchAll(/\$ref:\s*['"]?(\.\/[^\s'"#]+\.yaml)/g)) {
+    externalRefs.add(match[1]);
+  }
+
+  // Name enums using file stem + def name to match hey-api's hoisting convention,
+  // e.g. income.yaml + IncomeType → IncomeIncomeType. This avoids naming collisions
+  // across files and preserves compatibility with what hey-api produced before bundling.
+  const toPascal = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const seen = new Set();
+  const namedEnums = [];
+  for (const ref of externalRefs) {
+    const filePath = resolvePath(specDir, ref);
+    if (!existsSync(filePath)) continue;
+    let schema;
+    try { schema = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    const fileStem = toPascal(ref.split('/').pop().replace(/\.yaml$/, ''));
+    const defs = schema?.$defs ?? schema?.definitions ?? {};
+    for (const [defName, def] of Object.entries(defs)) {
+      if (def.type === 'string' && Array.isArray(def.enum)) {
+        const name = fileStem + defName;
+        if (!seen.has(name)) {
+          seen.add(name);
+          namedEnums.push({ name, values: def.enum });
+        }
+      }
+    }
+  }
+  return namedEnums;
+}
+
+/**
+ * Append named enum const exports to types.gen.ts in hey-api javascript-enum format.
+ * Emits:
+ *   export const FooBar = { VALUE_ONE: 'value_one', ... } as const;
+ *   export type FooBar = (typeof FooBar)[keyof typeof FooBar];
+ *
+ * @param {string} typesGenPath - absolute path to the generated types.gen.ts
+ * @param {{ name: string, values: string[] }[]} namedEnums
+ */
+function patchTypesGenForNamedEnums(typesGenPath, namedEnums) {
+  const toConstKey = v => String(v).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const blocks = namedEnums.map(({ name, values }) => {
+    const entries = values.map(v => `  ${toConstKey(v)}: '${v}'`).join(',\n');
+    return `export const ${name} = {\n${entries},\n} as const;\nexport type ${name} = (typeof ${name})[keyof typeof ${name}];`;
+  });
+  const existing = readFileSync(typesGenPath, 'utf8');
+  writeFileSync(typesGenPath, existing.trimEnd() + '\n\n' + blocks.join('\n\n') + '\n');
+}
+
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums };
 
 // Run main function only if this is the entry point
 if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {
