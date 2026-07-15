@@ -419,7 +419,14 @@ async function main() {
     const typesGenPath = join(domainOutputDir, 'types.gen.ts');
     if (existsSync(typesGenPath)) {
       const namedEnums = collectNamedEnumDefs(resolvePath(specPath));
-      if (namedEnums.length > 0) patchTypesGenForNamedEnums(typesGenPath, namedEnums);
+      if (namedEnums.length > 0) {
+        patchTypesGenForNamedEnums(typesGenPath, namedEnums);
+        // Also patch the domain index.ts barrel — hey-api generates type-only re-exports
+        // and won't include our appended value consts. Add explicit value exports so they're
+        // reachable from the package entry point.
+        const domainIndexPath = join(domainOutputDir, 'index.ts');
+        if (existsSync(domainIndexPath)) patchDomainBarrelForNamedEnums(domainIndexPath, namedEnums);
+      }
     }
 
     // Post-process: add .nullable() to fields the generator missed.
@@ -565,6 +572,20 @@ function collectNamedEnumDefs(specPath) {
 }
 
 /**
+ * Patch the domain index.ts barrel to add value exports for named enum consts.
+ * hey-api generates type-only re-exports and won't include our appended consts,
+ * so consumers importing from the package entry point would get nothing.
+ *
+ * @param {string} domainIndexPath - absolute path to the domain's index.ts
+ * @param {{ name: string }[]} namedEnums
+ */
+function patchDomainBarrelForNamedEnums(domainIndexPath, namedEnums) {
+  const constNames = namedEnums.map(e => e.name).join(', ');
+  const existing = readFileSync(domainIndexPath, 'utf8');
+  writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { ${constNames} } from './types.gen';\n`);
+}
+
+/**
  * Append named enum const exports to types.gen.ts in hey-api javascript-enum format.
  * Emits:
  *   export const FooBar = { VALUE_ONE: 'value_one', ... } as const;
@@ -584,7 +605,7 @@ function patchTypesGenForNamedEnums(typesGenPath, namedEnums) {
 }
 
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums };
 
 // Run main function only if this is the entry point
 if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {
