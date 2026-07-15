@@ -475,13 +475,14 @@ async function main() {
  * Walk a schema object tree and collect all discriminator mapping keys.
  * Returns a Set of string values that should appear as zod literals.
  */
-function collectDiscriminatorMappingKeys(obj, result = new Set()) {
+function collectDiscriminatorMappingKeys(obj, result = new Set(), depth = 0, maxDepth = 1000) {
   if (!obj || typeof obj !== 'object') return result;
-  if (Array.isArray(obj)) { obj.forEach(v => collectDiscriminatorMappingKeys(v, result)); return result; }
+  if (depth >= maxDepth) return result;
+  if (Array.isArray(obj)) { obj.forEach(v => collectDiscriminatorMappingKeys(v, result, depth + 1, maxDepth)); return result; }
   if (obj.discriminator?.mapping) {
     for (const key of Object.keys(obj.discriminator.mapping)) result.add(key);
   }
-  for (const val of Object.values(obj)) collectDiscriminatorMappingKeys(val, result);
+  for (const val of Object.values(obj)) collectDiscriminatorMappingKeys(val, result, depth + 1, maxDepth);
   return result;
 }
 
