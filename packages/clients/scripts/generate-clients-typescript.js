@@ -124,6 +124,39 @@ function exec(command, args, options = {}) {
 }
 
 /**
+ * Strip x-relationship from all schema properties in a bundled spec object.
+ *
+ * The mock server needs x-relationship preserved in resolved specs to detect
+ * expand/links-only fields at runtime. hey-api does not understand this
+ * extension and may behave unexpectedly when it appears on schema properties,
+ * so we remove it from the bundled spec before code generation.
+ *
+ * Mutates the spec in place.
+ *
+ * @param {object} spec - Bundled OpenAPI spec object
+ */
+function stripXRelationship(spec) {
+  const schemas = spec?.components?.schemas;
+  if (!schemas) return;
+  for (const schema of Object.values(schemas)) {
+    stripXRelationshipFromSchema(schema);
+  }
+}
+
+function stripXRelationshipFromSchema(schema) {
+  if (!schema || typeof schema !== 'object') return;
+  if (schema.properties) {
+    for (const prop of Object.values(schema.properties)) {
+      delete prop['x-relationship'];
+      stripXRelationshipFromSchema(prop);
+    }
+  }
+  if (Array.isArray(schema.allOf)) {
+    for (const entry of schema.allOf) stripXRelationshipFromSchema(entry);
+  }
+}
+
+/**
  * Create openapi-ts config file
  */
 function createOpenApiTsConfig(inputPath, outputPath) {
@@ -398,6 +431,10 @@ async function main() {
     // and loses discriminator mapping key associations when hoisting $defs,
     // producing unsatisfiable zod union literals.
     const bundledSpec = await bundleSpec(resolvePath(specPath));
+    // Strip x-relationship before handing to hey-api — the mock server needs
+    // this extension at runtime, but hey-api does not understand it and may
+    // produce unexpected output when it appears on schema properties.
+    stripXRelationship(bundledSpec);
     const bundledSpecPath = join(outputDir, `${domain}-bundled.yaml`);
     writeFileSync(bundledSpecPath, yaml.dump(bundledSpec, { noRefs: true }));
 

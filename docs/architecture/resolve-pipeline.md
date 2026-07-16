@@ -80,6 +80,10 @@ Output from `resolveRelationships`:
 - `expandRenames` — field rename pairs for the expand style
 - `linksData` — link name + base path pairs for the links-only style
 
+**`x-relationship` is preserved in the resolved output** — both `expand` and `links-only` fields retain their `x-relationship` annotation after resolution. The mock server reads this at runtime to determine which fields to expand and which to populate with links URIs. Downstream tools that don't understand this extension (e.g. `@hey-api/openapi-ts`) strip it before processing — see [Output](#7-output) below.
+
+By default, relationship resolution only runs when an overlay is present. Pass `--resolve` to run it on base specs without an overlay — useful for testing the resolver in isolation (e.g. functional test fixtures).
+
 ### 4. Example Transform
 
 After resolving relationships, `resolveExampleRelationships` applies the same transformations to the corresponding `*-openapi-examples.yaml` file:
@@ -147,8 +151,8 @@ node packages/contracts/scripts/resolve.js --bundle --out=packages/resolved
 
 The resolved directory is consumed by:
 - `generate-postman.js` to produce the Postman collection
-- `npm run mock:start -- --spec=packages/resolved` to run the mock with overlay behavior
-- `npm run clients:typescript -- --spec=packages/resolved` to generate TypeScript clients (the client generator bundles specs internally before passing to `@hey-api/openapi-ts`, so the resolved specs do not need to be pre-bundled)
+- `npm run mock:start -- --spec=packages/resolved` to run the mock with overlay behavior — the mock server relies on `x-relationship` annotations being present to drive expand and links-only behavior at runtime
+- `npm run clients:typescript -- --spec=packages/resolved` to generate TypeScript clients — the client generator bundles specs internally and **strips `x-relationship` annotations** before passing to `@hey-api/openapi-ts`, since that tool does not use them and may produce unexpected output if they are present
 
 ## Invoking the Pipeline
 
@@ -158,6 +162,12 @@ The pipeline is driven by `resolve.js`. These npm scripts cover common invocatio
 |--------|-------------|
 | `npm run resolve` | Run the full pipeline and write resolved specs to `packages/resolved/` |
 | `npm run postman:generate` | Run the full pipeline with the example overlay, then generate the Postman collection |
+
+Pass `--resolve` to force relationship resolution even without an overlay:
+
+```bash
+node packages/contracts/scripts/resolve.js --spec=my/fixtures --out=my/resolved --resolve
+```
 
 `npm run postman:generate` is a two-step pipeline:
 
