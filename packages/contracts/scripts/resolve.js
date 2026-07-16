@@ -682,7 +682,12 @@ function generateRpcOverlays(inputFiles) {
 /**
  * Build an index of enum values from behavioral YAML files in currentResults.
  * Reads post-overlay versions so state customizations are included.
- * Returns { 'slaTypes': ['id1', ...], 'states': ['id1', ...] }
+ *
+ * Returns a flat index:
+ *   { 'slaTypes': ['id1', ...], 'states': ['id1', ...], 'states:Task': [...], ... }
+ *
+ * 'states' is the union of all machine states (used by the string form of x-enum-source).
+ * 'states:<MachineName>' keys are used by the object form when machine: is specified.
  */
 function buildEnumSourceIndex(currentResults) {
   const index = {};
@@ -694,8 +699,25 @@ function buildEnumSourceIndex(currentResults) {
       index['slaTypes'] = spec.slaTypes.map(t => t.id).filter(Boolean);
     }
 
-    if (relativePath.endsWith('-state-machine.yaml') && Array.isArray(spec.states)) {
-      index['states'] = spec.states.map(s => s.id).filter(Boolean);
+    if (relativePath.endsWith('-state-machine.yaml')) {
+      if (Array.isArray(spec.states)) {
+        // Legacy / test format: top-level states array
+        index['states'] = spec.states.map(s => s.id).filter(Boolean);
+      } else if (Array.isArray(spec.machines)) {
+        // Standard format: machines[].states — flatten all for string form,
+        // also index per machine for the object form with machine:
+        const allStates = [];
+        for (const machine of spec.machines) {
+          if (Array.isArray(machine.states)) {
+            const ids = machine.states.map(s => s.id).filter(Boolean);
+            allStates.push(...ids);
+            if (machine.object) {
+              index[`states:${machine.object}`] = ids;
+            }
+          }
+        }
+        index['states'] = allStates;
+      }
     }
   }
 
@@ -704,21 +726,40 @@ function buildEnumSourceIndex(currentResults) {
 
 /**
  * Recursively find all x-enum-source annotations in a spec object.
- * Returns [{ path: 'Foo.properties.bar', source: 'slaTypes[].id' }, ...]
+ *
+ * Supports two forms:
+ *   String: x-enum-source: "states[].id"
+ *   Object: x-enum-source: { source: "states[].id", machine: "Application" }
+ *
+ * Recurses into both objects and arrays (needed for allOf, oneOf, anyOf entries).
+ *
+ * Returns [{ path, source, machine, node }] where node is a direct reference to
+ * the annotated field object — used by applyEnumSourceInjections for direct mutation.
  */
-function findEnumSources(node, path = '') {
-  const findings = [];
-  if (!node || typeof node !== 'object' || Array.isArray(node)) return findings;
+function findEnumSources(node, path = '', findings = []) {
+  if (!node || typeof node !== 'object') return findings;
 
-  if (node['x-enum-source'] && typeof node['x-enum-source'] === 'string') {
-    findings.push({ path, source: node['x-enum-source'] });
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      findEnumSources(node[i], `${path}[${i}]`, findings);
+    }
+    return findings;
+  }
+
+  const xes = node['x-enum-source'];
+  if (xes) {
+    if (typeof xes === 'string') {
+      findings.push({ path, source: xes, machine: null, node });
+    } else if (typeof xes === 'object' && typeof xes.source === 'string') {
+      findings.push({ path, source: xes.source, machine: xes.machine || null, node });
+    }
   }
 
   for (const [key, value] of Object.entries(node)) {
     if (key === 'x-enum-source') continue;
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (value && typeof value === 'object') {
       const childPath = path ? `${path}.${key}` : key;
-      findings.push(...findEnumSources(value, childPath));
+      findEnumSources(value, childPath, findings);
     }
   }
 
@@ -739,6 +780,10 @@ function parseEnumSource(source) {
  * behavioral YAMLs, and strip the annotation from the resolved output.
  * Reads behavioral YAMLs from currentResults (post-overlay) so state
  * customizations are reflected.
+ *
+ * Mutates field nodes directly (no overlay pass) so that annotations inside
+ * allOf/oneOf/anyOf arrays are reached correctly.
+ *
  * Returns warnings for unresolvable sources.
  */
 function applyEnumSourceInjections(currentResults) {
@@ -753,40 +798,35 @@ function applyEnumSourceInjections(currentResults) {
     const findings = findEnumSources(spec);
     if (findings.length === 0) continue;
 
-    const actions = [];
+    let injected = 0;
 
-    for (const { path, source } of findings) {
+    for (const { path, source, machine, node } of findings) {
       const parsed = parseEnumSource(source);
       if (!parsed) {
         warnings.push(`x-enum-source: invalid syntax "${source}" at ${relativePath}#${path}`);
         continue;
       }
 
-      const enumValues = enumIndex[parsed.collection];
+      // When machine: is specified, look up per-machine index key (e.g. 'states:Application').
+      // Fall back to flat collection key for string form or when machine is omitted.
+      const indexKey = (parsed.collection === 'states' && machine)
+        ? `states:${machine}`
+        : parsed.collection;
+      const enumValues = enumIndex[indexKey];
       if (!enumValues || enumValues.length === 0) {
-        warnings.push(`x-enum-source: no values found for collection "${parsed.collection}" (${relativePath}#${path})`);
+        const qualifier = machine ? ` (machine: ${machine})` : '';
+        warnings.push(`x-enum-source: no values found for "${parsed.collection}"${qualifier} (${relativePath}#${path})`);
         continue;
       }
 
-      // Merge the enum array into the target field object
-      actions.push({
-        target: `$.${path}`,
-        description: `Inject ${source} enum into ${path}`,
-        update: { enum: enumValues }
-      });
-
-      // Strip the annotation from resolved output
-      actions.push({
-        target: `$.${path}.x-enum-source`,
-        remove: true
-      });
+      // Directly mutate the field node — works at any nesting depth including inside allOf arrays
+      node.enum = enumValues;
+      delete node['x-enum-source'];
+      injected++;
     }
 
-    if (actions.length > 0) {
-      const overlay = { overlay: '1.0.0', info: { title: 'Enum Source Injection', version: '1.0.0' }, actions };
-      const { result } = applyOverlay(spec, overlay, { silent: true });
-      currentResults.set(relativePath, result);
-      console.log(`  \u2713 Auto-generated: enum injection (${findings.length} field(s) in ${relativePath})`);
+    if (injected > 0) {
+      console.log(`  \u2713 Auto-generated: enum injection (${injected} field(s) in ${relativePath})`);
     }
   }
 

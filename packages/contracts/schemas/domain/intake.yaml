@@ -1285,12 +1285,9 @@ $defs:
         type: string
         description: Current status of the verification obligation.
         readOnly: true
-        enum:
-          - pending
-          - inconclusive
-          - satisfied
-          - waived
-          - cannot_verify
+        x-enum-source:
+          source: states[].id
+          machine: Verification
       evidence:
         type: array
         description: Electronic and document evidence items accumulated against this obligation.

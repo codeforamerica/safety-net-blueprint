@@ -102,10 +102,13 @@ describe('Functional — x-relationship: expand and links-only', () => {
     assert.notEqual(typeof parent.owner, 'string', 'owner must not be a string UUID');
   });
 
-  it('GET full parent — ownerId field is ABSENT (replaced by expand)', async () => {
+  it('GET full parent — ownerId field IS PRESENT alongside expanded owner (Writable pattern coexistence)', async () => {
     const res = await getParent({ client, path: { parentId: fullParentId } });
     const parent = res.data as Record<string, unknown>;
-    assert.equal(parent.ownerId, undefined, 'ownerId must not be present when expand is active');
+    // With the Writable pattern, ownerId stays in ParentWritable (the allOf base) and
+    // is not removed by the resolver. Both ownerId and owner coexist on GET responses.
+    assert.ok(parent.ownerId, 'ownerId must still be present alongside the expanded owner object');
+    assert.equal(typeof parent.ownerId, 'string', 'ownerId must be a string UUID');
   });
 
   it('GET full parent — owner.id, owner.label, owner.createdAt, owner.updatedAt all present', async () => {
@@ -137,14 +140,14 @@ describe('Functional — x-relationship: expand and links-only', () => {
     assert.doesNotThrow(() => zParent.parse(res.data), 'zParent.parse must not throw');
   });
 
-  it('GET list of parents — every item has owner object, no ownerId', async () => {
+  it('GET list of parents — every item has owner object and ownerId (Writable pattern coexistence)', async () => {
     const res = await listParents({ client });
     assert.equal(res.status, 200);
     const list = res.data as { items: Record<string, unknown>[] };
     assert.ok(list.items.length >= 2, 'list must have at least two parents');
     for (const item of list.items) {
       assert.equal(typeof item.owner, 'object', `parent ${item.id}: owner must be an object`);
-      assert.equal(item.ownerId, undefined, `parent ${item.id}: ownerId must not be present`);
+      assert.ok(item.ownerId, `parent ${item.id}: ownerId must still be present alongside owner`);
     }
   });
 

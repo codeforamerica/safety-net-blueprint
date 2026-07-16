@@ -9,6 +9,11 @@ info:
     Fixture spec for functional testing of x-relationship behavior through the
     full resolve pipeline. Tests expand (Parent.ownerId → Owner) and links-only
     (Child.parentId → Parent) styles.
+
+    Uses the Writable schema pattern throughout: {Resource}Writable contains
+    client-writable fields; {Resource} adds system fields and x-relationship
+    annotations; {Resource}Create and {Resource}Update reference {Resource}Writable
+    so resolve-time transformations on the read schema do not affect write payloads.
 servers:
   - url: /x-relationship
     description: Functional test server (unique prefix avoids collision with other fixture specs)
@@ -35,6 +40,36 @@ x-events:
     summary: Emitted when a owner is deleted
     payload:
       $ref: "#/components/schemas/OwnerDeletedEvent"
+  parent.created:
+    type: org.codeforamerica.safety-net-blueprint.x-relationship.parent.created
+    summary: Emitted when a parent is created
+    payload:
+      $ref: "#/components/schemas/ParentCreatedEvent"
+  parent.updated:
+    type: org.codeforamerica.safety-net-blueprint.x-relationship.parent.updated
+    summary: Emitted when a parent is updated via PATCH
+    payload:
+      $ref: "#/components/schemas/ParentUpdatedEvent"
+  parent.deleted:
+    type: org.codeforamerica.safety-net-blueprint.x-relationship.parent.deleted
+    summary: Emitted when a parent is deleted
+    payload:
+      $ref: "#/components/schemas/ParentDeletedEvent"
+  child.created:
+    type: org.codeforamerica.safety-net-blueprint.x-relationship.child.created
+    summary: Emitted when a child is created
+    payload:
+      $ref: "#/components/schemas/ChildCreatedEvent"
+  child.updated:
+    type: org.codeforamerica.safety-net-blueprint.x-relationship.child.updated
+    summary: Emitted when a child is updated via PATCH
+    payload:
+      $ref: "#/components/schemas/ChildUpdatedEvent"
+  child.deleted:
+    type: org.codeforamerica.safety-net-blueprint.x-relationship.child.deleted
+    summary: Emitted when a child is deleted
+    payload:
+      $ref: "#/components/schemas/ChildDeletedEvent"
 paths:
   /owners:
     get:
@@ -60,7 +95,7 @@ paths:
         "500":
           $ref: ../../../../../contracts/components/responses.yaml#/InternalError
     post:
-      summary: Create a owner
+      summary: Create an owner
       description: Create a new owner record.
       operationId: createOwner
       tags:
@@ -94,7 +129,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/OwnerIdParam"
     get:
-      summary: Get a owner
+      summary: Get an owner
       description: Retrieve a single owner by identifier.
       operationId: getOwner
       tags:
@@ -114,7 +149,7 @@ paths:
         "500":
           $ref: ../../../../../contracts/components/responses.yaml#/InternalError
     patch:
-      summary: Update a owner
+      summary: Update an owner
       description: Apply partial updates to an existing owner.
       operationId: updateOwner
       tags:
@@ -141,8 +176,8 @@ paths:
         "500":
           $ref: ../../../../../contracts/components/responses.yaml#/InternalError
     delete:
-      summary: Delete a owner
-      description: Permanently remove a owner record.
+      summary: Delete an owner
+      description: Permanently remove an owner record.
       operationId: deleteOwner
       tags:
         - Owners
@@ -417,68 +452,58 @@ components:
         format: uuid
       example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
   schemas:
-    Owner:
+    # ---------------------------------------------------------------------------
+    # Owner
+    # ---------------------------------------------------------------------------
+    OwnerWritable:
       type: object
-      additionalProperties: false
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Display label for the owner.
+        note:
+          type: string
+          maxLength: 1000
+          description: Optional free-text note.
+    Owner:
+      unevaluatedProperties: false
       required:
         - id
         - label
         - createdAt
         - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique identifier (server-generated).
-        label:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display label for the owner.
-        note:
-          type: string
-          maxLength: 1000
-          description: Optional note.
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the owner was created.
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the owner was last updated.
+      allOf:
+        - $ref: "#/components/schemas/OwnerWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the owner was created.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the owner was last updated.
     OwnerCreate:
-      type: object
-      additionalProperties: false
-      required:
-        - label
-      properties:
-        label:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display label for the owner.
-        note:
-          type: string
-          maxLength: 1000
-          description: Optional note.
+      allOf:
+        - $ref: "#/components/schemas/OwnerWritable"
+        - type: object
+          required:
+            - label
     OwnerUpdate:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        label:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display label for the owner.
-        note:
-          type: string
-          maxLength: 1000
-          description: Optional note.
+      allOf:
+        - $ref: "#/components/schemas/OwnerWritable"
+        - type: object
+          minProperties: 1
     OwnerList:
       type: object
       additionalProperties: false
@@ -512,88 +537,76 @@ components:
       description: Snapshot of the newly created owner resource.
       $ref: "#/components/schemas/Owner"
     OwnerUpdatedEvent:
-      $ref: ../../../../../contracts/components/events.yaml#/ResourceUpdatedEvent
+      $ref: ../../../../../contracts/components/../schemas/platform-events.yaml#/ResourceUpdatedEvent
     OwnerDeletedEvent:
-      $ref: ../../../../../contracts/components/events.yaml#/ResourceDeletedEvent
-    Parent:
+      $ref: ../../../../../contracts/components/../schemas/platform-events.yaml#/ResourceDeletedEvent
+
+    # ---------------------------------------------------------------------------
+    # Parent — ownerId has x-relationship: expand (set on the read schema only)
+    # ParentCreate/ParentUpdate reference ParentWritable so the expand
+    # transformation does not affect write payloads.
+    # Note: with the Writable pattern, both ownerId (from ParentWritable) and
+    # owner (expanded) will coexist on GET responses — see x-extensions.md.
+    # ---------------------------------------------------------------------------
+    ParentWritable:
       type: object
-      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Name of the parent.
+        ownerId:
+          type: string
+          format: uuid
+          description: ID of the owner this parent belongs to.
+        description:
+          type: string
+          maxLength: 1000
+          description: Optional description.
+    Parent:
+      unevaluatedProperties: false
       required:
         - id
         - name
         - ownerId
         - createdAt
         - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique identifier (server-generated).
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Name of the parent.
-        description:
-          type: string
-          maxLength: 1000
-          description: Optional description.
-        ownerId:
-          type: string
-          format: uuid
-          description: FK to Owner. Expanded to a full Owner object on GET responses.
-          x-relationship:
-            resource: Owner
-            style: expand
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the parent was created.
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the parent was last updated.
+      allOf:
+        - $ref: "#/components/schemas/ParentWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            ownerId:
+              x-relationship:
+                resource: Owner
+                style: expand
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the parent was created.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the parent was last updated.
     ParentCreate:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-        - ownerId
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Name of the parent.
-        description:
-          type: string
-          maxLength: 1000
-          description: Optional description.
-        ownerId:
-          type: string
-          format: uuid
-          description: FK to Owner.
+      allOf:
+        - $ref: "#/components/schemas/ParentWritable"
+        - type: object
+          required:
+            - name
+            - ownerId
     ParentUpdate:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Name of the parent.
-        description:
-          type: string
-          maxLength: 1000
-          description: Optional description.
-        ownerId:
-          type: string
-          format: uuid
-          description: FK to Owner.
+      allOf:
+        - $ref: "#/components/schemas/ParentWritable"
+        - type: object
+          minProperties: 1
     ParentList:
       type: object
       additionalProperties: false
@@ -627,88 +640,73 @@ components:
       description: Snapshot of the newly created parent resource.
       $ref: "#/components/schemas/Parent"
     ParentUpdatedEvent:
-      $ref: ../../../../../contracts/components/events.yaml#/ResourceUpdatedEvent
+      $ref: ../../../../../contracts/components/../schemas/platform-events.yaml#/ResourceUpdatedEvent
     ParentDeletedEvent:
-      $ref: ../../../../../contracts/components/events.yaml#/ResourceDeletedEvent
-    Child:
+      $ref: ../../../../../contracts/components/../schemas/platform-events.yaml#/ResourceDeletedEvent
+
+    # ---------------------------------------------------------------------------
+    # Child — parentId has x-relationship: links-only (set on the read schema only)
+    # links-only does not rename the FK field so coexistence is not a concern.
+    # ---------------------------------------------------------------------------
+    ChildWritable:
       type: object
-      additionalProperties: false
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Display label for the child.
+        parentId:
+          type: string
+          format: uuid
+          description: ID of the parent this child belongs to.
+        note:
+          type: string
+          maxLength: 1000
+          description: Optional free-text note.
+    Child:
+      unevaluatedProperties: false
       required:
         - id
         - label
         - parentId
         - createdAt
         - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique identifier (server-generated).
-        label:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display label for the child.
-        note:
-          type: string
-          maxLength: 1000
-          description: Optional note.
-        parentId:
-          type: string
-          format: uuid
-          description: FK to Parent. A links object with a URI to the parent is added on GET responses.
-          x-relationship:
-            resource: Parent
-            style: links-only
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the child was created.
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the child was last updated.
+      allOf:
+        - $ref: "#/components/schemas/ChildWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            parentId:
+              x-relationship:
+                resource: Parent
+                style: links-only
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the child was created.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the child was last updated.
     ChildCreate:
-      type: object
-      additionalProperties: false
-      required:
-        - label
-        - parentId
-      properties:
-        label:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display label for the child.
-        note:
-          type: string
-          maxLength: 1000
-          description: Optional note.
-        parentId:
-          type: string
-          format: uuid
-          description: FK to Parent.
+      allOf:
+        - $ref: "#/components/schemas/ChildWritable"
+        - type: object
+          required:
+            - label
+            - parentId
     ChildUpdate:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        label:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display label for the child.
-        note:
-          type: string
-          maxLength: 1000
-          description: Optional note.
-        parentId:
-          type: string
-          format: uuid
-          description: FK to Parent.
+      allOf:
+        - $ref: "#/components/schemas/ChildWritable"
+        - type: object
+          minProperties: 1
     ChildList:
       type: object
       additionalProperties: false
@@ -742,9 +740,9 @@ components:
       description: Snapshot of the newly created child resource.
       $ref: "#/components/schemas/Child"
     ChildUpdatedEvent:
-      $ref: ../../../../../contracts/components/events.yaml#/ResourceUpdatedEvent
+      $ref: ../../../../../contracts/components/../schemas/platform-events.yaml#/ResourceUpdatedEvent
     ChildDeletedEvent:
-      $ref: ../../../../../contracts/components/events.yaml#/ResourceDeletedEvent
+      $ref: ../../../../../contracts/components/../schemas/platform-events.yaml#/ResourceDeletedEvent
   examples:
     OwnerExample1:
       summary: Example Owner record
@@ -759,8 +757,13 @@ components:
       value:
         id: b2c3d4e5-f6a7-8901-bcde-f12345678901
         name: Example Parent
-        description: An optional description.
         ownerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        owner:
+          id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          label: Example Owner
+          createdAt: "2024-01-15T10:30:00Z"
+          updatedAt: "2024-01-15T10:30:00Z"
+        description: An optional description.
         createdAt: "2024-01-15T10:30:00Z"
         updatedAt: "2024-01-15T10:30:00Z"
     ChildExample1:
@@ -768,7 +771,7 @@ components:
       value:
         id: c3d4e5f6-a7b8-9012-cdef-123456789012
         label: Example Child
-        note: An optional note about this child.
         parentId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        note: An optional note about this child.
         createdAt: "2024-01-15T10:30:00Z"
         updatedAt: "2024-01-15T10:30:00Z"

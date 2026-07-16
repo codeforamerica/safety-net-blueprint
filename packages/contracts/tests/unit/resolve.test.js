@@ -1046,7 +1046,7 @@ test('x-enum-source injection', async (t) => {
     assert.strictEqual(parseEnumSource(''), null);
   });
 
-  await t.test('findEnumSources - finds annotations at any depth', () => {
+  await t.test('findEnumSources - finds string form annotation', () => {
     const spec = {
       SlaInfo: {
         properties: {
@@ -1059,6 +1059,35 @@ test('x-enum-source injection', async (t) => {
     assert.strictEqual(findings.length, 1);
     assert.strictEqual(findings[0].path, 'SlaInfo.properties.slaTypeCode');
     assert.strictEqual(findings[0].source, 'slaTypes[].id');
+    assert.strictEqual(findings[0].machine, null);
+  });
+
+  await t.test('findEnumSources - finds object form annotation with machine', () => {
+    const spec = {
+      Application: {
+        properties: {
+          status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Application' } }
+        }
+      }
+    };
+    const findings = findEnumSources(spec);
+    assert.strictEqual(findings.length, 1);
+    assert.strictEqual(findings[0].path, 'Application.properties.status');
+    assert.strictEqual(findings[0].source, 'states[].id');
+    assert.strictEqual(findings[0].machine, 'Application');
+  });
+
+  await t.test('findEnumSources - object form without machine defaults to null', () => {
+    const spec = {
+      Schema: {
+        properties: {
+          status: { type: 'string', 'x-enum-source': { source: 'states[].id' } }
+        }
+      }
+    };
+    const findings = findEnumSources(spec);
+    assert.strictEqual(findings.length, 1);
+    assert.strictEqual(findings[0].machine, null);
   });
 
   await t.test('findEnumSources - finds multiple annotations', () => {
@@ -1092,7 +1121,7 @@ test('x-enum-source injection', async (t) => {
     assert.deepStrictEqual(index['slaTypes'], ['snap_expedited', 'snap_standard']);
   });
 
-  await t.test('buildEnumSourceIndex - indexes states from state-machine yaml', () => {
+  await t.test('buildEnumSourceIndex - indexes states from state-machine yaml (legacy top-level format)', () => {
     const currentResults = new Map([
       ['workflow-state-machine.yaml', {
         states: [
@@ -1103,6 +1132,36 @@ test('x-enum-source injection', async (t) => {
     ]);
     const index = buildEnumSourceIndex(currentResults);
     assert.deepStrictEqual(index['states'], ['pending', 'completed']);
+  });
+
+  await t.test('buildEnumSourceIndex - indexes states from machines[].states format', () => {
+    const currentResults = new Map([
+      ['workflow-state-machine.yaml', {
+        machines: [
+          { object: 'Task', states: [{ id: 'pending' }, { id: 'in_progress' }, { id: 'completed' }] }
+        ]
+      }]
+    ]);
+    const index = buildEnumSourceIndex(currentResults);
+    assert.deepStrictEqual(index['states'], ['pending', 'in_progress', 'completed']);
+    assert.deepStrictEqual(index['states:Task'], ['pending', 'in_progress', 'completed']);
+  });
+
+  await t.test('buildEnumSourceIndex - indexes per-machine states for multi-machine state files', () => {
+    const currentResults = new Map([
+      ['intake-state-machine.yaml', {
+        machines: [
+          { object: 'Application', states: [{ id: 'draft' }, { id: 'submitted' }, { id: 'closed' }] },
+          { object: 'Verification', states: [{ id: 'pending' }, { id: 'satisfied' }, { id: 'waived' }] }
+        ]
+      }]
+    ]);
+    const index = buildEnumSourceIndex(currentResults);
+    // Flat union for string form
+    assert.deepStrictEqual(index['states'], ['draft', 'submitted', 'closed', 'pending', 'satisfied', 'waived']);
+    // Per-machine keys for object form
+    assert.deepStrictEqual(index['states:Application'], ['draft', 'submitted', 'closed']);
+    assert.deepStrictEqual(index['states:Verification'], ['pending', 'satisfied', 'waived']);
   });
 
   await t.test('buildEnumSourceIndex - returns empty when no behavioral yamls', () => {
@@ -1155,6 +1214,59 @@ test('x-enum-source injection', async (t) => {
     const field = currentResults.get('workflow-openapi.yaml').Task.properties.status;
     assert.deepStrictEqual(field.enum, ['pending', 'in_progress', 'completed']);
     assert.strictEqual(field['x-enum-source'], undefined);
+  });
+
+  await t.test('applyEnumSourceInjections - object form with machine scopes to correct machine', () => {
+    const currentResults = new Map([
+      ['intake-state-machine.yaml', {
+        machines: [
+          { object: 'Application', states: [{ id: 'draft' }, { id: 'submitted' }, { id: 'closed' }] },
+          { object: 'Verification', states: [{ id: 'pending' }, { id: 'satisfied' }, { id: 'waived' }] }
+        ]
+      }],
+      ['intake-openapi.yaml', {
+        Application: {
+          properties: {
+            status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Application' } }
+          }
+        },
+        Verification: {
+          properties: {
+            status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Verification' } }
+          }
+        }
+      }]
+    ]);
+
+    const warnings = applyEnumSourceInjections(currentResults);
+    assert.strictEqual(warnings.length, 0);
+
+    const resolved = currentResults.get('intake-openapi.yaml');
+    assert.deepStrictEqual(resolved.Application.properties.status.enum, ['draft', 'submitted', 'closed']);
+    assert.deepStrictEqual(resolved.Verification.properties.status.enum, ['pending', 'satisfied', 'waived']);
+    assert.strictEqual(resolved.Application.properties.status['x-enum-source'], undefined);
+    assert.strictEqual(resolved.Verification.properties.status['x-enum-source'], undefined);
+  });
+
+  await t.test('applyEnumSourceInjections - warns when machine name not found in index', () => {
+    const currentResults = new Map([
+      ['intake-state-machine.yaml', {
+        machines: [
+          { object: 'Application', states: [{ id: 'draft' }] }
+        ]
+      }],
+      ['intake-openapi.yaml', {
+        Schema: {
+          properties: {
+            status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'UnknownMachine' } }
+          }
+        }
+      }]
+    ]);
+
+    const warnings = applyEnumSourceInjections(currentResults);
+    assert.strictEqual(warnings.length, 1);
+    assert.ok(warnings[0].includes('UnknownMachine'));
   });
 
   await t.test('applyEnumSourceInjections - warns on missing collection', () => {

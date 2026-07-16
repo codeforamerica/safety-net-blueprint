@@ -1470,23 +1470,40 @@ x_extensions:
   x-enum-source:
     description: >
       Declares that a string field's valid enum values are derived from another
-      contract artifact rather than being hardcoded in the OpenAPI spec. The
-      value is a path expression into the source artifact (e.g., states[].id,
-      slaTypes[].id). The resolve pipeline injects the actual enum values at
-      build time, keeping the OpenAPI spec in sync with behavioral contracts
-      without duplication.
+      contract artifact rather than being hardcoded in the OpenAPI spec. Supports
+      a string form (path expression, e.g. states[].id or slaTypes[].id) and an
+      object form with an optional machine: property to scope to a specific state
+      machine when a state machine file defines multiple machines. The resolve
+      pipeline injects the actual enum values at build time and strips the annotation,
+      keeping the OpenAPI spec in sync with behavioral contracts without duplication.
     location: schema property level (on string fields whose valid values come from another artifact)
-    type: string
+    type: string | object
+    fields:
+      source: >
+        (object form only) Collection expression — states[].id or slaTypes[].id.
+      machine: >
+        (object form only, optional) The object name of the machine to scope to
+        (matches machines[].object in the state machine file). When omitted, all
+        states across all machines are pooled.
     example: |
+      # String form — single-machine state files or SLA types
       status:
         type: string
         x-enum-source: states[].id
-        description: Current lifecycle state. Valid values injected from workflow-state-machine.yaml.
+        description: Current lifecycle state.
 
       slaTypeCode:
         type: string
         x-enum-source: slaTypes[].id
-        description: Identifies which SLA type applies. Valid values injected from workflow-sla-types.yaml.
+        description: SLA type code.
+
+      # Object form — multi-machine state files, scoped to a specific machine
+      status:
+        type: string
+        x-enum-source:
+          source: states[].id
+          machine: Application
+        description: Current lifecycle status.
 
   x-relationship:
     description: >

@@ -82,10 +82,12 @@ x-events:
 
 **File type:** `*-openapi.yaml` — schema property level, on string fields whose valid values come from another contract artifact.
 
-Declares that a field's enum values are derived from a behavioral contract (state machine, SLA types) rather than hardcoded in the OpenAPI spec. The value is a path expression into the source artifact. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication.
+Declares that a field's enum values are derived from a behavioral contract (state machine, SLA types) rather than hardcoded in the OpenAPI spec. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication. The annotation is stripped from the resolved output and replaced with a concrete `enum:` array.
+
+**String form** — for single-machine state files or SLA types:
 
 ```yaml
-# workflow-openapi.yaml
+# workflow-openapi.yaml (one Task machine)
 status:
   type: string
   x-enum-source: states[].id
@@ -97,6 +99,35 @@ slaTypeCode:
   x-enum-source: slaTypes[].id
   description: Identifies which SLA type applies. Valid values injected from workflow-sla-types.yaml.
 ```
+
+**Object form** — when the state machine file defines multiple machines and you need to scope enum values to a specific one:
+
+```yaml
+# intake-openapi.yaml (Application machine in intake-state-machine.yaml)
+status:
+  type: string
+  x-enum-source:
+    source: states[].id
+    machine: Application
+  description: Current lifecycle status. Valid values injected from intake-state-machine.yaml.
+
+# schemas/domain/intake.yaml (Verification machine in the same file)
+status:
+  type: string
+  x-enum-source:
+    source: states[].id
+    machine: Verification
+  description: Current status of the verification obligation.
+```
+
+**Fields (object form):**
+
+| Field | Required | Description |
+|---|---|---|
+| `source` | Yes | Collection expression — same syntax as the string form: `states[].id` or `slaTypes[].id` |
+| `machine` | No | Object name of the machine to scope to (matches `machines[].object` in the state machine file). When omitted, all states across all machines are pooled. |
+
+**Why this matters for enum drift:** without `x-enum-source`, state IDs must be duplicated in both the state machine and the OpenAPI `enum:` list. When a state is renamed or added via overlay, the OpenAPI enum silently goes stale — the mismatch only surfaces at runtime. `x-enum-source` eliminates the duplication: the state machine is the single source of truth and the resolved OpenAPI spec stays in sync automatically. See [Cross-Artifact Impact of Field Renames](../guides/overlay-guide.md#cross-artifact-impact-of-field-renames).
 
 ---
 
@@ -124,6 +155,14 @@ queueId:
 | `resource` | Yes | Related schema name in PascalCase (e.g., `Queue`, `Person`) |
 | `style` | No | `expand` causes the mock server to inline the related resource. Default: reference by ID. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when an implicit global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
 | `fields` | No | Subset of fields to include when `style: expand`. Supports dot notation for nested relationships. When specified, must be a non-empty array — an empty `fields: []` is rejected at resolve time. |
+
+**FK field coexistence with the Writable pattern**
+
+When you use `style: expand` alongside the Writable schema pattern — where `{Resource}Writable` holds client-writable fields and `{Resource}` adds system fields and `x-relationship` annotations — the resolver adds `owner` to the read schema without removing `ownerId` from the Writable base. As a result, both fields are declared in the resolved schema and both appear in GET responses at runtime (see [mock server expand behavior](../resolve-pipeline.md#3-relationship-resolution) for details).
+
+If you want to eliminate `ownerId` from GET responses, place the FK field exclusively in the read schema rather than in `{Resource}Writable`. The trade-off is that clients must then extract the related resource's `id` from the expanded object when constructing update payloads.
+
+`links-only` style does not have this coexistence concern: the FK field is preserved as-is and a `links` object is added alongside it.
 
 ---
 

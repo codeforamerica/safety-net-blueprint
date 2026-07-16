@@ -2718,13 +2718,9 @@ components:
               type: string
               description: Current lifecycle status of the application.
               readOnly: true
-              enum:
-                - draft
-                - submitted
-                - under_review
-                - pending_approval
-                - withdrawn
-                - closed
+              x-enum-source:
+                source: states[].id
+                machine: Application
             isExpedited:
               type:
                 - boolean

@@ -49,6 +49,13 @@ else
   pass "Explorer outputs are up to date"
 fi
 
+step "Clearing generated artifacts for a clean-slate run"
+rm -rf packages/resolved
+rm -rf packages/mock-server/tests/generated
+rm -rf packages/mock-server/tests/e2e/functional/resolved
+rm -rf packages/mock-server/tests/e2e/functional/generated
+pass "Cleared packages/resolved, tests/generated, and functional resolved/generated"
+
 step "Validating base specs"
 if npm run validate 2>&1; then
   pass "Base specs valid"

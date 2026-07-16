@@ -564,6 +564,8 @@ Each action should do one thing. Don't combine unrelated changes:
 
 Overlays that rename a field or change enum values may break references across many artifact types. These failures are silent at overlay time — they only surface at runtime when a guard evaluates against an undefined field, or an annotation no longer maps to its schema path.
 
+For `status` fields and other enums whose valid values come from a state machine, use [`x-enum-source`](../architecture/x-extensions.md#x-enum-source) instead of hardcoding an `enum:` list. The resolve pipeline injects state IDs automatically, so state renames propagate to the OpenAPI spec without a manual overlay.
+
 When renaming a field, check for references in:
 - `*-state-machine.yaml` — CEL `if:` and `condition:` expressions, `set: {field:}` steps, context binding `from:` paths
 - `*-compositions.yaml` — `bind:` field names and `fields:` display arrays

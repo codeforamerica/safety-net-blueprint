@@ -418,10 +418,10 @@ components:
       $ref: "#/components/schemas/${resource}"
 
     ${resource}UpdatedEvent:
-      $ref: "${componentsPrefix}/events.yaml#/ResourceUpdatedEvent"
+      $ref: "${componentsPrefix}/../schemas/platform-events.yaml#/ResourceUpdatedEvent"
 
     ${resource}DeletedEvent:
-      $ref: "${componentsPrefix}/events.yaml#/ResourceDeletedEvent"
+      $ref: "${componentsPrefix}/../schemas/platform-events.yaml#/ResourceDeletedEvent"
 
   examples:
     ${resource}Example1:
