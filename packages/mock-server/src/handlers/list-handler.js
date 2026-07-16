@@ -2,10 +2,11 @@
  * Handler for GET /resources (list/search)
  */
 
-import { getDatabase } from '../database-manager.js';
+import { getDatabase, findById } from '../database-manager.js';
 import { executeSearch } from '../search-engine.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
+import { extractExpandFields, applyExpand, getItemSchema, extractLinksFields, applyLinks } from './expand-utils.js';
 
 /**
  * Extract all string-typed field paths from an OpenAPI schema.
@@ -125,6 +126,17 @@ export function createListHandler(apiMetadata, endpoint) {
         offset: result.offset || 0,
         hasNext: result.hasNext || false
       };
+
+      const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas);
+      const expandFields = extractExpandFields(itemSchema);
+      const linksFields = extractLinksFields(itemSchema);
+      if (expandFields.length > 0 || linksFields.length > 0) {
+        safeResult.items = safeResult.items.map(item => {
+          let result = expandFields.length > 0 ? applyExpand(item, expandFields, findById) : item;
+          if (linksFields.length > 0) result = applyLinks(result, linksFields, apiMetadata.serverBasePath);
+          return result;
+        });
+      }
 
       res.json(safeResult);
     } catch (error) {

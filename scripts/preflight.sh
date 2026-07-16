@@ -27,6 +27,16 @@ fail() {
   failures+=("$1")
 }
 
+# Stop immediately if a prior step failed — do not continue to later steps.
+# Fix the reported failure before re-running preflight.
+bail_if_failed() {
+  if [ "$failed" -gt 0 ]; then
+    printf "\n${RED}${BOLD}Stopping — fix the failure above before continuing.${RESET}\n"
+    printf "${RED}  ✗ %s${RESET}\n" "${failures[-1]}"
+    exit 1
+  fi
+}
+
 step "Checking explorer outputs are up to date"
 if ! git diff --exit-code packages/explorer/ > /dev/null 2>&1 || git ls-files --others --exclude-standard packages/explorer/ | grep -q .; then
   printf "${RED}  ✗ Explorer outputs are stale — rebuild and stage before running preflight:${RESET}\n"
@@ -45,6 +55,7 @@ if npm run validate 2>&1; then
 else
   fail "Base spec validation failed"
 fi
+bail_if_failed
 
 step "Running unit tests"
 if npm test 2>&1; then
@@ -52,6 +63,7 @@ if npm test 2>&1; then
 else
   fail "Unit tests failed"
 fi
+bail_if_failed
 
 step "Resolving example overlay"
 if npm run resolve 2>&1; then

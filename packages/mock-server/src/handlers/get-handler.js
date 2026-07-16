@@ -6,6 +6,7 @@ import { findById } from '../database-manager.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
 import { parentLinkRegistry } from '../composition-assembler.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
 
 /**
  * Create get-by-id handler for a resource
@@ -57,7 +58,11 @@ export function createGetHandler(apiMetadata, endpoint) {
         return res.json({ ...resource, _links });
       }
 
-      res.json(resource);
+      const expandFields = extractExpandFields(endpoint.responseSchema);
+      const linksFields = extractLinksFields(endpoint.responseSchema);
+      let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, findById) : resource;
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      res.json(responseBody);
     } catch (error) {
       console.error('Get handler error:', error);
       res.status(500).json({

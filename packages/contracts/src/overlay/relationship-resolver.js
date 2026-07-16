@@ -12,6 +12,8 @@
  * Supported styles:
  *   links-only  — adds a `links` object with URI references (default)
  *   expand      — replaces FK field with the related object schema (renamed: fooId → foo)
+ *                 Applies to response schemas only. Request body schemas (POST/PUT/PATCH)
+ *                 always use flat FKs regardless of the configured style.
  *
  * Planned (not yet implemented):
  *   include     — JSON:API-style sideloading
@@ -468,15 +470,6 @@ function applyLinksOnly(schema, fields) {
     };
   }
 
-  // Strip x-relationship from each FK field (inline or domain schema)
-  for (const { propertyName, sourceSchema } of fields) {
-    if (sourceSchema?.properties?.[propertyName]) {
-      delete sourceSchema.properties[propertyName]['x-relationship'];
-    } else {
-      const propDef = findProperty(schema, propertyName);
-      if (propDef) delete propDef['x-relationship'];
-    }
-  }
 }
 
 /**
@@ -521,6 +514,11 @@ function applyExpand(schemaName, schema, fields, schemaIndex, warnings, spec) {
         expandedSchema = { type: 'object', description: `Expanded ${relationship.resource}.` };
       }
     }
+
+    // Preserve x-relationship on the expanded field so the mock can identify
+    // it as an expand-style relationship at request time. Always set style: expand
+    // explicitly so the mock doesn't need to know the global default.
+    expandedSchema['x-relationship'] = { ...relationship, style: 'expand' };
 
     const expandedFieldName = deriveLinkName(propertyName);
 
@@ -704,6 +702,29 @@ function findProperty(schema, propertyName) {
 }
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Collect schema names referenced from requestBody in any path operation.
+ * Expand is a response-only transform — request schemas always use flat FKs.
+ *
+ * @param {object} spec - Parsed OpenAPI spec
+ * @returns {Set<string>}
+ */
+function collectRequestSchemaNames(spec) {
+  const names = new Set();
+  for (const pathItem of Object.values(spec.paths || {})) {
+    for (const operation of Object.values(pathItem)) {
+      if (!operation || typeof operation !== 'object') continue;
+      const ref = operation.requestBody?.content?.['application/json']?.schema?.$ref;
+      if (ref) names.add(ref.split('/').pop());
+    }
+  }
+  return names;
+}
+
+// =============================================================================
 // Main Transform
 // =============================================================================
 
@@ -743,6 +764,11 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     return { result: spec, warnings, expandRenames, linksData, decisions };
   }
 
+  // Collect schema names used as request bodies. Expand is a response-only
+  // transform — POST/PUT/PATCH bodies send flat FKs (memberId: uuid), not
+  // expanded objects. Applying expand to request schemas breaks writes.
+  const requestSchemaNames = collectRequestSchemaNames(spec);
+
   // Warn about unknown resource references
   for (const { schemaName, propertyName, relationship } of relationships) {
     if (relationship.resource && !schemaIndex.has(relationship.resource)) {
@@ -769,6 +795,9 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     const linksOnlyFields = [];
     const expandFields = [];
 
+    // Request body schemas never get expand — they send flat FKs to the server.
+    const isRequestSchema = requestSchemaNames.has(schemaName);
+
     if (!decisions[schemaName]) {
       decisions[schemaName] = {
         expandedForward: [],
@@ -780,7 +809,9 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
     for (const field of fields) {
       const isExplicitStyle = !!field.relationship.style;
-      let effectiveStyle = field.relationship.style || globalStyle;
+      let effectiveStyle = (isRequestSchema && !field.relationship.style)
+        ? 'links-only'
+        : (field.relationship.style || globalStyle);
       let wasBackRefDowngrade = false;
       let wasExplicitBackRefOverride = false;
 

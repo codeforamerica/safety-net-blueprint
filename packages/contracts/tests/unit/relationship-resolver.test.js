@@ -499,7 +499,7 @@ test('relationship-resolver tests', async (t) => {
   // resolveRelationships — links-only
   // ===========================================================================
 
-  await t.test('resolveRelationships links-only - adds links object and strips x-relationship', () => {
+  await t.test('resolveRelationships links-only - adds links object and preserves x-relationship for runtime', () => {
     const spec = {
       components: {
         schemas: {
@@ -532,9 +532,9 @@ test('relationship-resolver tests', async (t) => {
 
     const { result, warnings } = resolveRelationships(spec, 'links-only', schemaIndex);
 
-    // x-relationship stripped
-    assert.strictEqual(result.components.schemas.Task.properties.assignedToId['x-relationship'], undefined);
-    assert.strictEqual(result.components.schemas.Task.properties.caseId['x-relationship'], undefined);
+    // x-relationship preserved on FK fields so runtime can detect links-only fields
+    assert.deepStrictEqual(result.components.schemas.Task.properties.assignedToId['x-relationship'], { resource: 'User' });
+    assert.deepStrictEqual(result.components.schemas.Task.properties.caseId['x-relationship'], { resource: 'Case' });
 
     // links object added
     const links = result.components.schemas.Task.properties.links;
@@ -584,7 +584,7 @@ test('relationship-resolver tests', async (t) => {
     const allOfEntry = result.components.schemas.Task.allOf[1];
     assert.ok(allOfEntry.properties.links);
     assert.strictEqual(allOfEntry.properties.links.properties.assignedTo.format, 'uri');
-    assert.strictEqual(allOfEntry.properties.assignedToId['x-relationship'], undefined);
+    assert.deepStrictEqual(allOfEntry.properties.assignedToId['x-relationship'], { resource: 'User' });
   });
 
   // ===========================================================================
@@ -854,8 +854,8 @@ test('relationship-resolver tests', async (t) => {
     assert.ok(props.assignedTo.properties?.id);
     assert.ok(props.assignedTo.properties?.name);
 
-    // caseId should get links (global default)
-    assert.strictEqual(props.caseId['x-relationship'], undefined);
+    // caseId should get links (global default), x-relationship preserved for runtime
+    assert.deepStrictEqual(props.caseId['x-relationship'], { resource: 'Case' });
     assert.ok(props.links, 'links object should exist for caseId');
     assert.ok(props.links.properties.case);
   });
@@ -898,7 +898,7 @@ test('relationship-resolver tests', async (t) => {
     const props = result.components.schemas.ApplicationMember.properties;
     assert.ok(props.applicationId, 'applicationId scalar should remain');
     assert.strictEqual(props.application, undefined, 'no embedded application field should be created');
-    assert.strictEqual(props.applicationId['x-relationship'], undefined, 'x-relationship should be stripped (links-only treatment)');
+    assert.deepStrictEqual(props.applicationId['x-relationship'], { resource: 'Application' }, 'x-relationship preserved for runtime links-only detection');
     assert.ok(props.links, 'links object should be added for the back-reference');
     assert.ok(props.links.properties.application, 'links.application entry should exist');
   });

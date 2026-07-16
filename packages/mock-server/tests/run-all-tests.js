@@ -1,11 +1,12 @@
 /**
  * Run all mock server tests
  * Run with: node tests/mock-server/run-all-tests.js
- * 
+ *
  * Options:
  *   --unit         Run only unit tests (default)
  *   --integration  Run only integration tests (requires mock server to be running)
- *   --all          Run both unit and integration tests
+ *   --functional   Run only functional tests (resolve + generate + server start/stop)
+ *   --all          Run unit, integration, and functional tests
  */
 
 import { spawn } from 'child_process';
@@ -13,6 +14,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import { readdirSync, existsSync } from 'fs';
 import { startMockServer, stopServer, isServerRunning } from '../scripts/server.js';
+import { setupFunctional, startFunctionalServer, stopFunctionalServer } from './e2e/functional/setup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,9 +38,17 @@ const postmanCollections = existsSync(postmanDir)
       .map(file => join('postman', file))
   : [];
 
+const functionalDir = join(__dirname, 'e2e', 'functional');
+const functionalTestFiles = existsSync(functionalDir)
+  ? readdirSync(functionalDir)
+      .filter(file => file.endsWith('.test.ts') || file.endsWith('.test.js'))
+      .map(file => join('e2e', 'functional', file))
+  : [];
+
 const args = process.argv.slice(2);
 const runUnit = args.includes('--unit') || args.includes('--all') || args.length === 0;
 const runIntegration = args.includes('--integration') || args.includes('--all');
+const runFunctional = args.includes('--functional') || args.includes('--all');
 
 async function runTest(testFile) {
   return new Promise((resolve, reject) => {
@@ -102,13 +112,9 @@ async function runAllTests() {
   console.log('Mock Server Test Suite');
   console.log('='.repeat(70));
   
-  if (runUnit && runIntegration) {
-    console.log(`Running ${unitTestFiles.length} unit test(s), ${integrationTestFiles.length} integration test(s), and ${postmanCollections.length} Postman collection(s)...`);
-  } else if (runUnit) {
-    console.log(`Running ${unitTestFiles.length} unit test(s)...`);
-  } else if (runIntegration) {
-    console.log(`Running ${integrationTestFiles.length} integration test(s) and ${postmanCollections.length} Postman collection(s) (requires mock server)...`);
-  }
+  if (runUnit) console.log(`  Unit:        ${unitTestFiles.length} test(s)`);
+  if (runIntegration) console.log(`  Integration: ${integrationTestFiles.length} test(s), ${postmanCollections.length} Postman collection(s)`);
+  if (runFunctional) console.log(`  Functional:  ${functionalTestFiles.length} test(s)`);
   
   let passed = 0;
   let failed = 0;
@@ -174,7 +180,44 @@ async function runAllTests() {
       if (!alreadyRunning) await stopServer(false);
     }
   }
-  
+
+  // Run functional tests if requested
+  if (runFunctional) {
+    console.log('\n🧪 Functional Tests');
+    console.log('-'.repeat(70));
+
+    // Run the resolve + generate pipeline before starting the server
+    console.log('Running setup (resolve + generate)...');
+    try {
+      await setupFunctional();
+    } catch (error) {
+      failed++;
+      failedTests.push('functional/setup');
+      console.error(`\n✗ Functional setup failed: ${error.message}`);
+      console.error('   Skipping functional tests.');
+    }
+
+    if (!failedTests.includes('functional/setup')) {
+      console.log('Starting functional server...');
+      await startFunctionalServer();
+      await new Promise(res => setTimeout(res, 1500));
+      console.log('Functional server started\n');
+
+      for (const testFile of functionalTestFiles) {
+        try {
+          await runTest(testFile);
+          passed++;
+        } catch (error) {
+          failed++;
+          failedTests.push(testFile);
+          console.error(`\n✗ ${testFile} failed: ${error.message}`);
+        }
+      }
+
+      await stopFunctionalServer();
+    }
+  }
+
   // Summary
   console.log('\n' + '='.repeat(70));
   console.log('Test Suite Summary');

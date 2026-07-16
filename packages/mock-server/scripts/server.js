@@ -391,6 +391,10 @@ async function stopServer(exitProcess = true) {
           expressServer = null;
           resolve();
         });
+        // Force-close all open connections so the port is released immediately.
+        // Without this, keep-alive connections delay the 'close' event and leave
+        // the port bound, causing EADDRINUSE on the next startMockServer call.
+        expressServer.closeAllConnections?.();
       });
     }
   } catch (error) {

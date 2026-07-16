@@ -53,6 +53,7 @@ function parseArgs() {
     envFile: null,
     bundle: false,
     reconcileExamples: false,
+    resolve: false,
     verbose: false,
     help: false
   };
@@ -62,6 +63,8 @@ function parseArgs() {
       options.help = true;
     } else if (arg === '--bundle') {
       options.bundle = true;
+    } else if (arg === '--resolve') {
+      options.resolve = true;
     } else if (arg === '--verbose') {
       options.verbose = true;
     } else if (arg.startsWith('--spec=')) {
@@ -97,12 +100,13 @@ Flags:
   --overlay=<path>   Path to overlay file or directory (optional)
   --out=<dir>        Output directory for resolved specs (default: packages/resolved)
   --bundle           Inline all external $refs to produce self-contained specs
+  --resolve          Run relationship resolution even without an overlay
   --env=<env>        Target environment for x-environments filtering (optional)
   --env-file=<file>  Path to env file for \${VAR} placeholder substitution (optional)
   --verbose          Print a per-schema relationship-resolution summary
   -h, --help         Show this help message
 
-Without --overlay, base specs are copied to --out unchanged.
+Without --overlay, base specs are copied to --out unchanged (unless --resolve is specified).
 With --bundle, all external $ref references are dereferenced inline.
 With --env, nodes whose x-environments array doesn't include the target env are removed.
 With --env-file, \${VAR} placeholders in string values are substituted (process.env overrides file values).
@@ -870,7 +874,7 @@ async function main() {
   const hasStateMachines = !specIsFile && readdirSync(specPath).some(f => f.endsWith('-state-machine.yaml'));
   const hasCompositions = !specIsFile && readdirSync(specPath).some(f => f.endsWith('-compositions.yaml'));
 
-  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && !hasStateMachines && !hasCompositions) {
+  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
