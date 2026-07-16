@@ -89,7 +89,7 @@ compositions:
         bind: applicationId
         include:
           verifications:
-            resource: verifications
+            resource: application-verifications
             bind: applicationId
             filter: "category == 'identity'"
         index:
@@ -97,7 +97,7 @@ compositions:
           fields: [id, contact.name.firstName, contact.name.lastName, citizenshipStatus, immigrationStatus]
 
       income:
-        resource: income
+        resource: application-incomes
         bind: applicationId
         sortable:
           fields: [memberId, type, amount, frequency]
@@ -106,13 +106,13 @@ compositions:
           fields: [id, memberId, type, amount, frequency]
 
       employment:
-        resource: jobs
+        resource: application-jobs
         bind: applicationId
         index:
           fields: [id, memberId, status, jobTitle]
 
       health-coverage:
-        resource: health-enrollments
+        resource: application-health-enrollments
         bind: applicationId
         index:
           fields: [id, memberId, coverageType, planName]
@@ -120,7 +120,7 @@ compositions:
       # Household-level sections — one review-progress entry per section (no memberId)
 
       assets:
-        resource: assets
+        resource: application-assets
         bind: applicationId
         index:
           fields: [id, memberId, type, value]
@@ -134,7 +134,7 @@ compositions:
           fields: [id, contact.name.firstName, contact.name.lastName, contact.primaryPhone, email]
 
       expenses:
-        resource: expenses
+        resource: application-expenses
         bind: applicationId
         index:
           fields: [id, memberId, category, amount, frequency]
@@ -150,7 +150,7 @@ compositions:
     panel:
       include:
         verifications:
-          resource: verifications
+          resource: application-verifications
           bind: applicationId
           filter: "category == $section.name"
 

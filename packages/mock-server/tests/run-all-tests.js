@@ -26,7 +26,7 @@ const unitTestFiles = readdirSync(unitDir)
 
 const integrationDir = join(__dirname, 'integration');
 const integrationTestFiles = readdirSync(integrationDir)
-  .filter(file => file.endsWith('.test.js'))
+  .filter(file => file.endsWith('.test.js') || file.endsWith('.test.ts'))
   .map(file => join('integration', file));
 
 const postmanDir = join(__dirname, 'postman');
@@ -47,7 +47,13 @@ async function runTest(testFile) {
     console.log(`Running: ${testFile}`);
     console.log('='.repeat(70));
 
-    const proc = spawn('node', [testPath], {
+    const isTs = testFile.endsWith('.ts');
+    const tsxLocal = join(__dirname, '..', 'node_modules', '.bin', 'tsx');
+    const tsxRoot = join(__dirname, '..', '..', '..', 'node_modules', '.bin', 'tsx');
+    const tsxBin = existsSync(tsxLocal) ? tsxLocal : tsxRoot;
+    const runner = isTs ? tsxBin : 'node';
+    const runnerArgs = isTs ? ['--test', testPath] : [testPath];
+    const proc = spawn(runner, runnerArgs, {
       stdio: 'inherit',
       shell: true
     });
