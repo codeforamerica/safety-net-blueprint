@@ -47,7 +47,7 @@ const utilityDIr = join(clientsRoot, 'utility');
  * Parse command line arguments
  */
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { spec: null, out: null, help: false };
+  const args = { spec: null, out: null, help: false, preserveXExtensions: false };
 
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') {
@@ -56,6 +56,8 @@ function parseArgs(argv = process.argv.slice(2)) {
       args.spec = arg.split('=')[1];
     } else if (arg.startsWith('--out=')) {
       args.out = arg.split('=')[1];
+    } else if (arg === '--preserve-x-extensions') {
+      args.preserveXExtensions = true;
     }
   }
 
@@ -73,9 +75,10 @@ Usage:
   node scripts/generate-clients-typescript.js --spec=<file-or-dir> --out=<dir>
 
 Flags:
-  --spec=<file-or-dir>  Path to resolved spec file or directory (required)
-  --out=<dir>           Output directory for generated clients (required)
-  -h, --help            Show this help message
+  --spec=<file-or-dir>       Path to resolved spec file or directory (required)
+  --out=<dir>                Output directory for generated clients (required)
+  --preserve-x-extensions    Keep x-* vendor extensions (e.g. x-relationship) in generated output
+  -h, --help                 Show this help message
 
 Example:
   # From state application repo
@@ -361,7 +364,7 @@ function patchZodGenForNullable(zodGenPath, nullableFields) {
  * Main generation function
  */
 async function main() {
-  const { spec, out, help } = parseArgs();
+  const { spec, out, help, preserveXExtensions } = parseArgs();
 
   if (help) {
     showHelp();
@@ -434,7 +437,8 @@ async function main() {
     // Strip x-relationship before handing to hey-api — the mock server needs
     // this extension at runtime, but hey-api does not understand it and may
     // produce unexpected output when it appears on schema properties.
-    stripXRelationship(bundledSpec);
+    // Pass --preserve-x-extensions to skip stripping.
+    if (!preserveXExtensions) stripXRelationship(bundledSpec);
     const bundledSpecPath = join(outputDir, `${domain}-bundled.yaml`);
     writeFileSync(bundledSpecPath, yaml.dump(bundledSpec, { noRefs: true }));
 

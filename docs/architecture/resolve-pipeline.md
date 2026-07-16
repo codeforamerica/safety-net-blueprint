@@ -152,7 +152,11 @@ node packages/contracts/scripts/resolve.js --bundle --out=packages/resolved
 The resolved directory is consumed by:
 - `generate-postman.js` to produce the Postman collection
 - `npm run mock:start -- --spec=packages/resolved` to run the mock with overlay behavior — the mock server relies on `x-relationship` annotations being present to drive expand and links-only behavior at runtime
-- `npm run clients:typescript -- --spec=packages/resolved` to generate TypeScript clients — the client generator bundles specs internally and **strips `x-relationship` annotations** before passing to `@hey-api/openapi-ts`, since that tool does not use them and may produce unexpected output if they are present
+- `npm run clients:typescript -- --spec=packages/resolved` to generate TypeScript clients — the client generator bundles specs internally and **strips `x-relationship` annotations by default** before passing to `@hey-api/openapi-ts`, since that tool does not use them and may produce unexpected output if they are present. Pass `--preserve-x-extensions` to keep vendor extensions in the generated output:
+
+```bash
+npm run clients:typescript -- --spec=packages/resolved --out=./src/api --preserve-x-extensions
+```
 
 ## Invoking the Pipeline
 
@@ -185,3 +189,12 @@ node packages/contracts/scripts/resolve.js --help
 ## Testing
 
 Integration tests run against a fixture-seeded server to exercise the full stack. See [Testing Guide](../guides/testing.md) for details on how the fixture pipeline works and how to run integration tests.
+
+### Self-healing test pipeline
+
+The integration test scripts are designed to work from a clean checkout without requiring manual setup steps:
+
+- `generate-test-clients.js` checks whether `packages/resolved/` exists before generating clients. If it is missing or empty, it runs the resolve pipeline automatically.
+- `run-all-tests.js --integration` checks whether `tests/generated/` exists before running integration tests. If it is missing or empty, it runs `generate-test-clients.js` automatically (which in turn ensures resolved specs exist).
+
+This means `npm run test:integration` is safe to run at any time regardless of local state — it will resolve and generate whatever is needed.

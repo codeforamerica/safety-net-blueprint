@@ -108,18 +108,35 @@ async function runPostmanCollection(collectionFile) {
   });
 }
 
+const generatedDir = join(__dirname, 'generated');
+const generateTestClientsScript = resolve(__dirname, '..', 'scripts', 'generate-test-clients.js');
+
+/**
+ * Ensure generated TypeScript clients exist for integration tests.
+ * Checks for the generated/ directory and runs generate-test-clients.js if missing.
+ */
+async function ensureIntegrationClients() {
+  if (existsSync(generatedDir) && readdirSync(generatedDir).length > 0) return;
+  console.log('Generated clients not found — running clients:generate...');
+  await new Promise((res, rej) => {
+    const proc = spawn('node', [generateTestClientsScript], { stdio: 'inherit', shell: false });
+    proc.on('close', code => code === 0 ? res() : rej(new Error(`clients:generate failed with exit code ${code}`)));
+    proc.on('error', rej);
+  });
+}
+
 async function runAllTests() {
   console.log('Mock Server Test Suite');
   console.log('='.repeat(70));
-  
+
   if (runUnit) console.log(`  Unit:        ${unitTestFiles.length} test(s)`);
   if (runIntegration) console.log(`  Integration: ${integrationTestFiles.length} test(s), ${postmanCollections.length} Postman collection(s)`);
   if (runFunctional) console.log(`  Functional:  ${functionalTestFiles.length} test(s)`);
-  
+
   let passed = 0;
   let failed = 0;
   const failedTests = [];
-  
+
   // Run unit tests
   if (runUnit) {
     console.log('\n📋 Unit Tests');
@@ -135,9 +152,10 @@ async function runAllTests() {
       }
     }
   }
-  
+
   // Run integration tests if requested
   if (runIntegration) {
+    await ensureIntegrationClients();
     console.log('\n🔗 Integration Tests');
     console.log('-'.repeat(70));
     for (const testFile of integrationTestFiles) {
