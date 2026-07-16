@@ -453,7 +453,7 @@ function applyLinksOnly(schema, fields) {
     const linkName = deriveLinkName(propertyName);
     linkProperties[linkName] = {
       type: 'string',
-      format: 'uri',
+      format: 'uri-reference',
       description: `Link to the related ${relationship.resource} resource.`
     };
   }

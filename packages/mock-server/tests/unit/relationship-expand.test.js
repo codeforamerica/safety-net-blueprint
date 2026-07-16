@@ -93,7 +93,7 @@ test('extractExpandFields — returns empty array when schema has no x-relations
   assert.equal(fields.length, 0);
 });
 
-test('applyExpand — replaces FK field with the related object', () => {
+test('applyExpand — adds expanded object alongside FK field (both coexist)', () => {
   const record = { id: 'inc-1', memberId: 'mem-1', type: 'employed', amount: 3000 };
   const expandFields = [
     { fieldName: 'member', fkField: 'memberId', collection: 'application-members' }
@@ -107,7 +107,7 @@ test('applyExpand — replaces FK field with the related object', () => {
 
   const result = applyExpand(record, expandFields, lookup);
 
-  assert.equal(result.memberId, undefined, 'FK field should be removed from the record');
+  assert.equal(result.memberId, 'mem-1', 'FK field must be retained alongside the expanded object');
   assert.deepEqual(result.member, { id: 'mem-1', applicationId: 'app-1', roles: ['primary_applicant'] });
 });
 
@@ -140,8 +140,8 @@ test('applyExpand — handles multiple expand fields on the same record', () => 
 
   const result = applyExpand(record, expandFields, lookup);
 
-  assert.equal(result.memberId, undefined);
-  assert.equal(result.applicationId, undefined);
+  assert.equal(result.memberId, 'mem-1', 'FK field must be retained alongside the expanded object');
+  assert.equal(result.applicationId, 'app-1', 'FK field must be retained alongside the expanded object');
   assert.deepEqual(result.member, { id: 'mem-1', roles: ['primary_applicant'] });
   assert.deepEqual(result.application, { id: 'app-1', status: 'draft' });
 });

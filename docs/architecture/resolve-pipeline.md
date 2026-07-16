@@ -82,16 +82,7 @@ Output from `resolveRelationships`:
 
 **`x-relationship` is preserved in the resolved output** — both `expand` and `links-only` fields retain their `x-relationship` annotation after resolution. The mock server reads this at runtime to determine which fields to expand and which to populate with links URIs. Downstream tools that don't understand this extension (e.g. `@hey-api/openapi-ts`) strip it before processing — see [Output](#7-output) below.
 
-**Runtime coexistence of FK and expanded fields (expand style):** when `style: expand` is used with the Writable schema pattern, the mock server populates both the raw FK field (`ownerId`) and the expanded object (`owner`) on GET responses. This is because `ownerId` is declared in `{Resource}Writable` (the write schema) and the mock server adds `owner` alongside it at read time rather than replacing it. The result looks like:
-
-```json
-{
-  "ownerId": "a1b2c3d4-...",
-  "owner": { "id": "a1b2c3d4-...", "label": "...", "createdAt": "...", "updatedAt": "..." }
-}
-```
-
-This is intentional: `ownerId` remains available so clients can use it in write payloads without having to extract it from the nested object. Adapters that consume the resolved spec should replicate this behavior — return both fields on reads, accept only `ownerId` on writes.
+For the behavioral contract of each style, see [x-relationship](../x-extensions.md#x-relationship).
 
 By default, relationship resolution only runs when an overlay is present. Pass `--resolve` to run it on base specs without an overlay — useful for testing the resolver in isolation (e.g. functional test fixtures).
 

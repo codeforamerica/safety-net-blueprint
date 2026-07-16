@@ -78,7 +78,6 @@ export function applyExpand(record, expandFields, lookup) {
 
     const related = lookup(collection, fkValue);
     if (related) {
-      delete result[fkField];
       result[fieldName] = related;
     }
   }

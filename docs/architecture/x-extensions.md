@@ -135,7 +135,7 @@ status:
 
 **File type:** `*-openapi.yaml` — schema property level, on foreign-key fields.
 
-Annotates a UUID foreign-key field to identify the related resource. Required on all fields that end in `Id` and have `format: uuid`. Enables tooling to generate relationship diagrams, validate referential integrity, and optionally expand related resources inline.
+Annotates a UUID foreign-key field to identify the related resource. Recommended on all fields that end in `Id` and have `format: uuid`. Enables tooling to generate relationship diagrams, validate referential integrity, and optionally expand related resources inline.
 
 ```yaml
 # components/schemas/Task
@@ -152,17 +152,11 @@ queueId:
 
 | Field | Required | Description |
 |---|---|---|
-| `resource` | Yes | Related schema name in PascalCase (e.g., `Queue`, `Person`) |
-| `style` | No | `expand` causes the mock server to inline the related resource. Default: reference by ID. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when an implicit global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
+| `resource` | Yes | Related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`). Schema names follow PascalCase by convention. |
+| `style` | No | `expand` causes the mock server to inline the related resource alongside the FK field — both appear in any response body that includes the resource. If omitted, the FK field is left as-is. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when an implicit global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
 | `fields` | No | Subset of fields to include when `style: expand`. Supports dot notation for nested relationships. When specified, must be a non-empty array — an empty `fields: []` is rejected at resolve time. |
 
-**FK field coexistence with the Writable pattern**
-
-When you use `style: expand` alongside the Writable schema pattern — where `{Resource}Writable` holds client-writable fields and `{Resource}` adds system fields and `x-relationship` annotations — the resolver adds `owner` to the read schema without removing `ownerId` from the Writable base. As a result, both fields are declared in the resolved schema and both appear in GET responses at runtime (see [mock server expand behavior](../resolve-pipeline.md#3-relationship-resolution) for details).
-
-If you want to eliminate `ownerId` from GET responses, place the FK field exclusively in the read schema rather than in `{Resource}Writable`. The trade-off is that clients must then extract the related resource's `id` from the expanded object when constructing update payloads.
-
-`links-only` style does not have this coexistence concern: the FK field is preserved as-is and a `links` object is added alongside it.
+`links-only` style adds a `links` object alongside the FK field without expanding it into an object.
 
 ---
 

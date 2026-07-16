@@ -542,9 +542,9 @@ test('relationship-resolver tests', async (t) => {
     assert.strictEqual(links.type, 'object');
     assert.strictEqual(links.readOnly, true);
     assert.strictEqual(links.properties.assignedTo.type, 'string');
-    assert.strictEqual(links.properties.assignedTo.format, 'uri');
+    assert.strictEqual(links.properties.assignedTo.format, 'uri-reference');
     assert.strictEqual(links.properties.case.type, 'string');
-    assert.strictEqual(links.properties.case.format, 'uri');
+    assert.strictEqual(links.properties.case.format, 'uri-reference');
 
     // FK fields preserved
     assert.strictEqual(result.components.schemas.Task.properties.assignedToId.type, 'string');
@@ -583,7 +583,7 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(spec, 'links-only', schemaIndex);
     const allOfEntry = result.components.schemas.Task.allOf[1];
     assert.ok(allOfEntry.properties.links);
-    assert.strictEqual(allOfEntry.properties.links.properties.assignedTo.format, 'uri');
+    assert.strictEqual(allOfEntry.properties.links.properties.assignedTo.format, 'uri-reference');
     assert.deepStrictEqual(allOfEntry.properties.assignedToId['x-relationship'], { resource: 'User' });
   });
 

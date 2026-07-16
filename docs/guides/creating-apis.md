@@ -91,19 +91,32 @@ These are the baseline conventions for base specs. The resolve pipeline can tran
 
 ## Schema Organization
 
-Schemas live in three places with distinct responsibilities:
+### Resource Schema Variant Pattern
+
+Each resource is expressed as a family of schema variants, all composing from a single writable base that holds the domain properties clients can read and write:
+
+| Variant | Purpose | What it adds |
+|---|---|---|
+| `{Resource}` | GET response body | System fields (`id`, `createdAt`, `updatedAt`), read-only computed fields |
+| `{Resource}Create` | POST request body | Required field declarations |
+| `{Resource}Update` | PATCH request body | `minProperties: 1` constraint |
+| `{Resource}List` | GET collection response | Pagination envelope wrapping an array of `{Resource}` |
+
+The writable base holds what clients send on writes and what the server returns on reads. It can be a separate file (e.g. `schemas/domain/{domain}.yaml`) or defined inline in the OpenAPI spec — either works. What matters is that all variants share a single base so domain properties aren't duplicated.
+
+Schema location guidance:
 
 | Location | Purpose | Examples |
 |---|---|---|
-| `schemas/domain/{domain}.yaml` | Domain-specific field definitions (no system fields) | Domain properties, FKs (`applicationId`, `memberId`) |
+| `schemas/domain/{domain}.yaml` | Domain-specific writable base definitions | Domain properties, FKs (`applicationId`, `memberId`) |
 | `schemas/common/` or `components/common.yaml` | Value types reusable across any domain | `Address`, `Name`, `Email`, `PhoneNumber` |
-| OpenAPI `components/schemas` | REST scaffolding — adds system fields and composes API variants | `{Resource}`, `{Resource}Create`, `{Resource}Update`, `{Resource}List` |
+| OpenAPI `components/schemas` | REST scaffolding — composes API variants from the writable base | `{Resource}`, `{Resource}Create`, `{Resource}Update`, `{Resource}List` |
 
-**Decision rule for common vs. domain:** A type belongs in `schemas/common/` only if it can be used verbatim in any domain without carrying domain-specific FK fields (`applicationId`, `memberId`, etc.). If it needs those FKs to be useful, it is a domain schema.
+**Decision rule for common vs. domain:** A type belongs in `schemas/common/` only if it can be used verbatim in any domain without carrying domain-specific FK fields. If it needs those FKs to be useful, it is a domain schema.
 
-**`id`, `createdAt`, `updatedAt` belong in the OpenAPI layer, not in `$defs`.** Domain schemas describe domain knowledge — fields a caseworker or applicant would recognize. System fields (`id`, timestamps) are API mechanics. Keeping them separate means the domain schema can be referenced for Create/Update operations without needing to strip readOnly fields.
+**`id`, `createdAt`, `updatedAt` belong in `{Resource}`, not in the writable base.** System fields are API mechanics, not domain knowledge. Keeping them out of the writable base means `{Resource}Create` and `{Resource}Update` can reference it directly without needing to strip readOnly fields.
 
-**How the layers connect:**
+**How the variants connect:**
 
 ```yaml
 # schemas/domain/intake.yaml — domain fields only, no system fields

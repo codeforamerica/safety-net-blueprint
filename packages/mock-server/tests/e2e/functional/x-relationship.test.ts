@@ -34,7 +34,6 @@ import {
 
 const client = createClient({ baseURL: 'http://localhost:1080' });
 
-// IDs shared across tests within the describe block (set in before hook)
 let fullOwnerId: string;
 let minOwnerId: string;
 let fullParentId: string;
@@ -44,7 +43,7 @@ let minChildId: string;
 
 describe('Functional — x-relationship: expand and links-only', () => {
   before(async () => {
-    // Create two Owners: one with all fields, one with only required fields
+    // Two owners: one with optional note set, one without
     const fullOwnerRes = await createOwner({
       client,
       body: { label: 'Full Owner', note: 'owner note value' },
@@ -59,7 +58,7 @@ describe('Functional — x-relationship: expand and links-only', () => {
     assert.equal(minOwnerRes.status, 201, 'createOwner (minimal) must return 201');
     minOwnerId = (minOwnerRes.data as { id: string }).id;
 
-    // Create two Parents: one with all fields (linked to fullOwner), one minimal (linked to minOwner)
+    // Two parents: one with optional description set, one without
     const fullParentRes = await createParent({
       client,
       body: { name: 'Full Parent', description: 'parent description', ownerId: fullOwnerId },
@@ -74,7 +73,7 @@ describe('Functional — x-relationship: expand and links-only', () => {
     assert.equal(minParentRes.status, 201, 'createParent (minimal) must return 201');
     minParentId = (minParentRes.data as { id: string }).id;
 
-    // Create two Children: one with all fields (linked to fullParent), one minimal (linked to minParent)
+    // Two children: one with optional note set, one without
     const fullChildRes = await createChild({
       client,
       body: { label: 'Full Child', note: 'child note value', parentId: fullParentId },
@@ -91,86 +90,95 @@ describe('Functional — x-relationship: expand and links-only', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Expand tests: GET Parent (ownerId → expanded owner object)
+  // POST responses: expand and links-only apply on create as well as read
   // ---------------------------------------------------------------------------
 
-  it('GET full parent — owner field is an object, not a UUID string', async () => {
+  it('expand — POST response includes expanded object and passes schema', async () => {
+    const ownerId = fullOwnerId;
+    const res = await createParent({ client, body: { name: 'POST Test Parent', ownerId } });
+    assert.equal(res.status, 201);
+    assert.doesNotThrow(() => zParent.parse(res.data), 'zParent.parse must not throw on POST 201 response');
+    const body = res.data as Record<string, unknown>;
+    assert.equal(typeof body.owner, 'object', 'POST response must include expanded owner, not just ownerId');
+  });
+
+  it('links-only — POST response includes links object and passes schema', async () => {
+    const res = await createChild({ client, body: { label: 'POST Test Child', parentId: fullParentId } });
+    assert.equal(res.status, 201);
+    assert.doesNotThrow(() => zChild.parse(res.data), 'zChild.parse must not throw on POST 201 response');
+    const body = res.data as { links: Record<string, string> };
+    assert.equal(typeof body.links?.parent, 'string', 'POST response must include links.parent');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Expand: Parent → Owner
+  // zParent schema requires owner as a nested object with required label,
+  // optional note, and system fields (id, createdAt, updatedAt).
+  // ---------------------------------------------------------------------------
+
+  it('expand — GET response passes schema when all fields (required + optional) are populated', async () => {
     const res = await getParent({ client, path: { parentId: fullParentId } });
     assert.equal(res.status, 200);
-    const parent = res.data as Record<string, unknown>;
-    assert.equal(typeof parent.owner, 'object', 'owner must be an object');
-    assert.notEqual(typeof parent.owner, 'string', 'owner must not be a string UUID');
-  });
-
-  it('GET full parent — ownerId field IS PRESENT alongside expanded owner (Writable pattern coexistence)', async () => {
-    const res = await getParent({ client, path: { parentId: fullParentId } });
-    const parent = res.data as Record<string, unknown>;
-    // With the Writable pattern, ownerId stays in ParentWritable (the allOf base) and
-    // is not removed by the resolver. Both ownerId and owner coexist on GET responses.
-    assert.ok(parent.ownerId, 'ownerId must still be present alongside the expanded owner object');
-    assert.equal(typeof parent.ownerId, 'string', 'ownerId must be a string UUID');
-  });
-
-  it('GET full parent — owner.id, owner.label, owner.createdAt, owner.updatedAt all present', async () => {
-    const res = await getParent({ client, path: { parentId: fullParentId } });
-    const owner = (res.data as { owner: Record<string, unknown> }).owner;
-    assert.ok(owner.id, 'owner.id must be present');
-    assert.equal(typeof owner.id, 'string', 'owner.id must be a string');
-    assert.ok(owner.label, 'owner.label must be present');
-    assert.equal(typeof owner.label, 'string', 'owner.label must be a string');
-    assert.ok(owner.createdAt, 'owner.createdAt must be present');
-    assert.ok(owner.updatedAt, 'owner.updatedAt must be present');
-  });
-
-  it('GET full parent — owner.note is present with correct value', async () => {
-    const res = await getParent({ client, path: { parentId: fullParentId } });
-    const owner = (res.data as { owner: Record<string, unknown> }).owner;
-    assert.equal(owner.note, 'owner note value', 'owner.note must match the value set on creation');
-  });
-
-  it('GET min parent — owner.note is absent without zod error', async () => {
-    const res = await getParent({ client, path: { parentId: minParentId } });
-    const owner = (res.data as { owner: Record<string, unknown> }).owner;
-    assert.equal(owner.note, undefined, 'owner.note must be absent for minimal owner');
-    assert.doesNotThrow(() => zParent.parse(res.data), 'zParent.parse must not throw for minimal parent');
-  });
-
-  it('GET full parent — zod validates the response shape', async () => {
-    const res = await getParent({ client, path: { parentId: fullParentId } });
     assert.doesNotThrow(() => zParent.parse(res.data), 'zParent.parse must not throw');
   });
 
-  it('GET list of parents — every item has owner object and ownerId (Writable pattern coexistence)', async () => {
+  it('expand — GET response passes schema when linked owner has no optional fields set', async () => {
+    // minParent links to minOwner which has no note — owner.note is optional and must not break validation
+    const res = await getParent({ client, path: { parentId: minParentId } });
+    assert.doesNotThrow(() => zParent.parse(res.data), 'zParent.parse must not throw when owner.note is absent');
+  });
+
+  it('expand — schema rejects a response where the expanded owner field is missing', () => {
+    // owner is a required field in zParent — if the mock omits it, clients would get a validation failure
+    const responseWithoutOwner = {
+      id: '00000000-0000-0000-0000-000000000001',
+      name: 'Some Parent',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    assert.throws(
+      () => zParent.parse(responseWithoutOwner),
+      'zParent.parse must throw when owner is absent'
+    );
+  });
+
+  it('expand — GET response includes both ownerId (FK) and owner (expanded object)', async () => {
+    // Both must coexist: ownerId for write payloads, owner for read consumers (Writable pattern)
+    const res = await getParent({ client, path: { parentId: fullParentId } });
+    const parent = res.data as Record<string, unknown>;
+    assert.ok(parent.ownerId, 'ownerId must be present alongside the expanded owner object');
+    assert.equal(typeof parent.owner, 'object', 'owner must be an expanded object, not absent or a primitive');
+  });
+
+  it('expand — GET list schema validates every item including the expanded owner', async () => {
     const res = await listParents({ client });
     assert.equal(res.status, 200);
-    const list = res.data as { items: Record<string, unknown>[] };
+    const list = res.data as { items: unknown[] };
     assert.ok(list.items.length >= 2, 'list must have at least two parents');
     for (const item of list.items) {
-      assert.equal(typeof item.owner, 'object', `parent ${item.id}: owner must be an object`);
-      assert.ok(item.ownerId, `parent ${item.id}: ownerId must still be present alongside owner`);
+      assert.doesNotThrow(() => zParent.parse(item), `zParent.parse must not throw for list item`);
     }
   });
 
   // ---------------------------------------------------------------------------
-  // Links-only tests: GET Child (parentId kept + links object added)
+  // Links-only: Child → Parent
+  // zChild schema retains parentId as a required FK and adds an optional links
+  // object. No expanded parent object is added.
   // ---------------------------------------------------------------------------
 
-  it('GET full child — parentId is PRESENT (not removed by links-only)', async () => {
+  it('links-only — GET response passes schema when all fields (required + optional) are populated', async () => {
     const res = await getChild({ client, path: { childId: fullChildId } });
     assert.equal(res.status, 200);
-    const child = res.data as Record<string, unknown>;
-    assert.ok(child.parentId, 'parentId must be present');
-    assert.equal(typeof child.parentId, 'string', 'parentId must be a string');
+    assert.doesNotThrow(() => zChild.parse(res.data), 'zChild.parse must not throw');
   });
 
-  it('GET full child — links object is present', async () => {
-    const res = await getChild({ client, path: { childId: fullChildId } });
-    const child = res.data as Record<string, unknown>;
-    assert.ok(child.links, 'links must be present');
-    assert.equal(typeof child.links, 'object', 'links must be an object');
+  it('links-only — GET response passes schema when optional note is absent', async () => {
+    const res = await getChild({ client, path: { childId: minChildId } });
+    assert.doesNotThrow(() => zChild.parse(res.data), 'zChild.parse must not throw when note is absent');
   });
 
-  it('GET full child — links.parent is a string URL containing the parentId value', async () => {
+  it('links-only — links.parent is a URL path containing the parentId value', async () => {
+    // The link URL must resolve to the correct related resource
     const res = await getChild({ client, path: { childId: fullChildId } });
     const child = res.data as { parentId: string; links: Record<string, string> };
     assert.equal(typeof child.links.parent, 'string', 'links.parent must be a string');
@@ -180,73 +188,52 @@ describe('Functional — x-relationship: expand and links-only', () => {
     );
   });
 
-  it('GET full child — no parent object (not expanded)', async () => {
+  it('links-only — GET response retains parentId FK (links-only does not replace the FK field)', async () => {
     const res = await getChild({ client, path: { childId: fullChildId } });
     const child = res.data as Record<string, unknown>;
-    assert.equal(child.parent, undefined, 'parent object must not be present for links-only');
+    assert.ok(child.parentId, 'parentId must be present — links-only adds links alongside the FK, not instead of it');
   });
 
-  it('GET full child — note optional field present when set', async () => {
+  it('links-only — GET response has no expanded parent object (links-only does not expand the relationship)', async () => {
     const res = await getChild({ client, path: { childId: fullChildId } });
     const child = res.data as Record<string, unknown>;
-    assert.equal(child.note, 'child note value', 'note must be present with correct value');
+    assert.equal(child.parent, undefined, 'parent object must not be present for links-only style');
   });
 
-  it('GET minimal child — note optional field absent without error', async () => {
-    const res = await getChild({ client, path: { childId: minChildId } });
-    const child = res.data as Record<string, unknown>;
-    assert.equal(child.note, undefined, 'note must be absent when not set');
-  });
-
-  it('GET full child — zod validates the response shape', async () => {
-    const res = await getChild({ client, path: { childId: fullChildId } });
-    assert.doesNotThrow(() => zChild.parse(res.data), 'zChild.parse must not throw');
-  });
-
-  it('GET list of children — every item has parentId and links.parent', async () => {
+  it('links-only — GET list schema validates every item including links', async () => {
     const res = await listChildren({ client });
     assert.equal(res.status, 200);
-    const list = res.data as { items: Record<string, unknown>[] };
+    const list = res.data as { items: unknown[] };
     assert.ok(list.items.length >= 2, 'list must have at least two children');
     for (const item of list.items) {
-      assert.ok(item.parentId, `child ${item.id}: parentId must be present`);
-      const links = item.links as Record<string, string> | undefined;
-      assert.ok(links, `child ${item.id}: links must be present`);
-      assert.equal(typeof links.parent, 'string', `child ${item.id}: links.parent must be a string`);
+      assert.doesNotThrow(() => zChild.parse(item), 'zChild.parse must not throw for list item');
     }
   });
 
   // ---------------------------------------------------------------------------
-  // Update tests
+  // After updates: expand and links remain consistent
   // ---------------------------------------------------------------------------
 
-  it('PATCH Parent name — response has updated name, owner still expanded on GET', async () => {
-    const patchRes = await updateParent({
+  it('expand — GET after PATCH still passes schema with expanded owner', async () => {
+    await updateParent({
       client,
       path: { parentId: fullParentId },
       body: { name: 'Updated Parent Name' },
     });
-    assert.equal(patchRes.status, 200);
-
-    // GET the parent and verify expand still works after patch
-    const getRes = await getParent({ client, path: { parentId: fullParentId } });
-    const parent = getRes.data as Record<string, unknown>;
-    assert.equal(parent.name, 'Updated Parent Name', 'name must reflect the update');
-    assert.equal(typeof parent.owner, 'object', 'owner must still be expanded after patch');
-    assert.doesNotThrow(() => zParent.parse(getRes.data), 'zParent.parse must not throw after patch');
+    const res = await getParent({ client, path: { parentId: fullParentId } });
+    const parent = res.data as Record<string, unknown>;
+    assert.equal(parent.name, 'Updated Parent Name', 'name must reflect the PATCH');
+    assert.doesNotThrow(() => zParent.parse(res.data), 'zParent.parse must not throw after patch');
   });
 
-  it('PATCH Child parentId — GET reflects new parentId and new links.parent URL', async () => {
-    // Reassign fullChild from fullParent to minParent
-    const patchRes = await updateChild({
+  it('links-only — links.parent updates when parentId changes via PATCH', async () => {
+    await updateChild({
       client,
       path: { childId: fullChildId },
       body: { parentId: minParentId },
     });
-    assert.equal(patchRes.status, 200);
-
-    const getRes = await getChild({ client, path: { childId: fullChildId } });
-    const child = getRes.data as { parentId: string; links: Record<string, string> };
+    const res = await getChild({ client, path: { childId: fullChildId } });
+    const child = res.data as { parentId: string; links: Record<string, string> };
     assert.equal(child.parentId, minParentId, 'parentId must reflect the new value');
     assert.ok(
       child.links.parent.includes(minParentId),
@@ -254,14 +241,22 @@ describe('Functional — x-relationship: expand and links-only', () => {
     );
   });
 
-  it('zParentUpdate shape does NOT include owner (expanded object), DOES include ownerId', () => {
-    const shape = (zParentUpdate as unknown as { shape: Record<string, unknown> }).shape;
-    assert.equal('owner' in shape, false, 'owner (expanded object) must not be in ParentUpdate schema');
-    assert.ok('ownerId' in shape, 'ownerId (flat FK) must be in ParentUpdate schema');
+  // ---------------------------------------------------------------------------
+  // Generated write schemas
+  // Expand and links-only are read-side concerns. Write schemas must use the FK
+  // field (ownerId, parentId), not the expanded object or links.
+  // ---------------------------------------------------------------------------
+
+  it('write schema — zParentUpdate uses ownerId (FK), not owner (expanded object is read-only)', () => {
+    // zParentUpdate is a ZodIntersection (.and()), shape lives on _def.left
+    const shape = (zParentUpdate as unknown as { _def: { left: { shape: Record<string, unknown> } } })._def.left.shape;
+    assert.ok('ownerId' in shape, 'ownerId must be in the write schema');
+    assert.equal('owner' in shape, false, 'owner (expanded object) must not be in the write schema');
   });
 
-  it('zChildUpdate shape DOES include parentId', () => {
-    const shape = (zChildUpdate as unknown as { shape: Record<string, unknown> }).shape;
-    assert.ok('parentId' in shape, 'parentId must be in ChildUpdate schema');
+  it('write schema — zChildUpdate retains parentId (links-only does not affect the write schema)', () => {
+    // zChildUpdate is a ZodIntersection (.and()), shape lives on _def.left
+    const shape = (zChildUpdate as unknown as { _def: { left: { shape: Record<string, unknown> } } })._def.left.shape;
+    assert.ok('parentId' in shape, 'parentId must be in the write schema');
   });
 });
