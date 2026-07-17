@@ -144,14 +144,10 @@ export function createListHandler(apiMetadata, endpoint) {
       console.error('Error stack:', error.stack);
       console.error('API:', apiMetadata.name);
       console.error('Query params:', req.query);
-
-      // Return empty list instead of error for better UX
-      res.json({
-        items: [],
-        total: 0,
-        limit: 25,
-        offset: 0,
-        hasNext: false
+      res.status(500).json({
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred',
+        details: [{ message: error.message }]
       });
     }
   };

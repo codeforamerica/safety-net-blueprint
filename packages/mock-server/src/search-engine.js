@@ -407,14 +407,6 @@ export function executeSearch(db, queryParams = {}, searchableFields = [], pagin
     console.error('Query params:', queryParams);
     console.error('Where clause:', whereClause);
     console.error('Params:', params);
-    
-    // Return empty result instead of throwing
-    return { 
-      items: [], 
-      total: 0, 
-      limit, 
-      offset, 
-      hasNext: false 
-    };
+    throw error;
   }
 }
