@@ -1,0 +1,60 @@
+# Composition fixture for testing x-relationship + composition interaction.
+#
+# All compositions here use resources from x-relationship-openapi.yaml:
+#   Owner  — no FK fields
+#   Parent — ownerId: x-relationship: { style: expand }
+#   Child  — parentId: x-relationship: { style: links-only }
+#
+# Goal: verify that composition logic works as defined and completely ignores
+# x-relationship annotations. x-relationship expand and links-only are NOT
+# applied inside the composition assembler — only CRUD endpoints get that.
+
+$schema: "compositions-schema.yaml"
+version: "1.0"
+domain: x-relationship
+
+compositions:
+
+  # Variant 1: plain composition, no fields restriction.
+  # Parent.ownerId has x-relationship: expand, but the composition assembler
+  # ignores x-relationship entirely. The response returns the parent record
+  # as stored in the DB (ownerId present, no expanded owner object) plus a
+  # projected children include.
+  parentOverview:
+    resource: parents
+    endpoint:
+      path: /parents/{parentId}/overview
+    include:
+      children:
+        resource: children
+        bind: parentId
+        fields: [id, label, parentId]
+
+  # Variant 2: dot-notation fields on a FK field.
+  # fields: [name, owner.label] uses dot-notation to access owner.label.
+  # The composition assembler resolves dot-notation via resolveDotPath, which
+  # traverses record.owner?.label. Since only ownerId is stored in the DB
+  # record (not owner), resolveDotPath returns null and the field is skipped.
+  # Expected result: { name } only — owner.label is absent, ownerId is absent
+  # (was not in the fields list).
+  parentOwnerLabel:
+    resource: parents
+    fields: [name, owner.label]
+    endpoint:
+      path: /parents/{parentId}/owner-label
+
+  # Variant 3: include children with links: true.
+  # links: true on an include node adds _links.self to each item in the list
+  # (composition feature). This is completely separate from x-relationship
+  # links-only — the Child.parentId x-relationship links-only annotation is
+  # ignored by the composition assembler.
+  # Expected: children items have _links.self; no links.parent object.
+  parentChildrenWithLinks:
+    resource: parents
+    endpoint:
+      path: /parents/{parentId}/children-with-links
+    include:
+      children:
+        resource: children
+        bind: parentId
+        links: true

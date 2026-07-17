@@ -109,6 +109,16 @@ else
   fail "Postman collection generation failed"
 fi
 
+step "Running functional tests"
+# Kill any orphaned mock server from a previous run
+lsof -ti :1080 | xargs kill -9 2>/dev/null || true
+
+if node packages/mock-server/tests/run-all-tests.js --functional 2>&1; then
+  pass "Functional tests passed"
+else
+  fail "Functional tests failed"
+fi
+
 step "Running integration tests"
 # Kill any orphaned mock server from a previous run
 lsof -ti :1080 | xargs kill -9 2>/dev/null || true

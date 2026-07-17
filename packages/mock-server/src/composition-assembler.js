@@ -93,11 +93,12 @@ function buildSelfLink(resourceItemPath, serverBasePath, params, itemId) {
  * @param {Object} context - Evaluation context ({ sectionName })
  * @returns {Array|Object|null} Items array, empty object (missing: empty), or null
  */
-function fetchNodeItems(node, bindValues, context) {
+function fetchNodeItems(node, bindValues, context, resourceCollectionNameMap) {
   const { resource, bind, filter, fields, missing } = node;
 
+  const collectionName = resourceCollectionNameMap?.get(resource) ?? resource;
   const filterObj = bind ? { [bind]: bindValues[bind] } : {};
-  const { items } = findAll(resource, filterObj, { limit: null });
+  const { items } = findAll(collectionName, filterObj, { limit: null });
 
   const filtered = filter
     ? items.filter(item => Boolean(evaluateCEL(filter, { ...COMPOSITION_HELPERS, ...item, $section: { name: context.sectionName } })))
@@ -196,7 +197,7 @@ function buildBindValues(params) {
  * @param {Object} stateDefaults - Default field values for the state resource
  * @returns {Object}
  */
-export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
+export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '' } = {}) {
   const sectionDefs = composition.sections || {};
   const bindValues = buildBindValues(params);
 
@@ -239,7 +240,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
       missing: sectionDef.missing,
       filter: indexConfig?.filter,
     };
-    let items = fetchNodeItems(fetchNode, bindValues, context);
+    let items = fetchNodeItems(fetchNode, bindValues, context, resourceCollectionNameMap);
 
     if (!Array.isArray(items)) {
       // Singleton (missing: empty) — expose as data, unaffected by view filter
@@ -259,7 +260,8 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
 
     // Add _links.self after projection (so links are not stripped by field selection).
     if (sectionDef.links && resourceItemPathMap) {
-      const itemPath = resourceItemPathMap.get(sectionDef.resource);
+      const sectionCollectionName = resourceCollectionNameMap?.get(sectionDef.resource) ?? sectionDef.resource;
+      const itemPath = resourceItemPathMap.get(sectionCollectionName);
       if (itemPath) {
         finalItems = finalItems.map((item, idx) => ({
           ...item,
@@ -294,8 +296,9 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   if (composition.fields && composition.resource) {
     const primaryParam = extractPrimaryParam(composition.endpoint?.path ?? '');
     if (primaryParam && bindValues[primaryParam]) {
+      const rootCollectionName = resourceCollectionNameMap?.get(composition.resource) ?? composition.resource;
       const { items: parentItems } = findAll(
-        composition.resource,
+        rootCollectionName,
         { id: bindValues[primaryParam] },
         { limit: 1 }
       );
@@ -309,7 +312,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   const rootInclude = {};
   if (composition.include) {
     for (const [key, includeNode] of Object.entries(composition.include)) {
-      rootInclude[key] = fetchNodeItems(includeNode, bindValues, {});
+      rootInclude[key] = fetchNodeItems(includeNode, bindValues, {}, resourceCollectionNameMap);
     }
   }
 
@@ -335,11 +338,12 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
  * @param {Object} opts
  * @returns {Object|null} Assembled record, or null if root resource not found
  */
-export function assemblePlainComposition(composition, params, { resourceItemPathMap = null, serverBasePath = '' } = {}) {
+export function assemblePlainComposition(composition, params, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '' } = {}) {
   const bindValues = buildBindValues(params);
   const primaryParam = extractPrimaryParam(composition.endpoint?.path ?? '');
   const rootId = primaryParam ? bindValues[primaryParam] : null;
-  const rootRecord = rootId ? findById(composition.resource, rootId) : null;
+  const rootCollectionName = resourceCollectionNameMap?.get(composition.resource) ?? composition.resource;
+  const rootRecord = rootId ? findById(rootCollectionName, rootId) : null;
   if (!rootRecord) return null;
 
   const record = composition.fields ? projectFields(rootRecord, composition.fields) : { ...rootRecord };
@@ -348,15 +352,25 @@ export function assemblePlainComposition(composition, params, { resourceItemPath
     const context = { sectionName: null };
     const include = {};
     for (const [key, includeNode] of Object.entries(composition.include)) {
-      include[key] = fetchNodeItems(includeNode, bindValues, context);
+      let items = fetchNodeItems(includeNode, bindValues, context, resourceCollectionNameMap);
+      if (includeNode.links && resourceItemPathMap && Array.isArray(items)) {
+        const includeCollectionName = resourceCollectionNameMap?.get(includeNode.resource) ?? includeNode.resource;
+        const itemPath = resourceItemPathMap.get(includeCollectionName);
+        if (itemPath) {
+          const itemIds = items.map(item => item.id);
+          items = items.map((item, idx) => ({
+            ...item,
+            _links: { self: buildSelfLink(itemPath, serverBasePath, params, itemIds[idx]) },
+          }));
+        }
+      }
+      include[key] = items;
     }
-    if (Object.keys(include).length > 0) {
-      record.include = include;
-    }
+    Object.assign(record, include);
   }
 
   if (composition.links && resourceItemPathMap) {
-    const itemPath = resourceItemPathMap.get(composition.resource);
+    const itemPath = resourceItemPathMap.get(rootCollectionName);
     if (itemPath) {
       record._links = { self: buildSelfLink(itemPath, serverBasePath, params, record.id) };
     }
@@ -388,7 +402,7 @@ export function assemblePlainComposition(composition, params, { resourceItemPath
  * @param {Object} [opts.paginationDefaults={}] - Domain pagination defaults
  * @returns {Object|null} Panel response, or null if section not found
  */
-export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, serverBasePath = '', queryParams = {}, paginationDefaults = {} } = {}) {
+export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', queryParams = {}, paginationDefaults = {} } = {}) {
   const sections = composition.sections || {};
   const sectionDef = sections[sectionName];
   if (!sectionDef) return null;
@@ -397,13 +411,13 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
   const context = { sectionName };
 
   // Fetch primary section resource using the section's base filter
-  let items = fetchNodeItems(sectionDef, bindValues, context);
+  let items = fetchNodeItems(sectionDef, bindValues, context, resourceCollectionNameMap);
 
   // Fetch section-level includes
   const include = {};
   if (sectionDef.include) {
     for (const [key, includeNode] of Object.entries(sectionDef.include)) {
-      include[key] = fetchNodeItems(includeNode, bindValues, context);
+      include[key] = fetchNodeItems(includeNode, bindValues, context, resourceCollectionNameMap);
     }
   }
 
@@ -412,7 +426,7 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
     for (const [key, panelNode] of Object.entries(composition.panel.include)) {
       // Panel includes may already appear in section includes — section wins
       if (!(key in include)) {
-        include[key] = fetchNodeItems(panelNode, bindValues, context);
+        include[key] = fetchNodeItems(panelNode, bindValues, context, resourceCollectionNameMap);
       }
     }
   }
@@ -451,7 +465,8 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
 
     // Add _links.self after state embedding (so links are never stripped by field selection).
     if (sectionDef.links && resourceItemPathMap) {
-      const itemPath = resourceItemPathMap.get(sectionDef.resource);
+      const sectionCollectionName = resourceCollectionNameMap?.get(sectionDef.resource) ?? sectionDef.resource;
+      const itemPath = resourceItemPathMap.get(sectionCollectionName);
       if (itemPath) {
         finalItems = finalItems.map((item, idx) => ({
           ...item,

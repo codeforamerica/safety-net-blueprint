@@ -495,6 +495,41 @@ function buildResourceItemPathMap(apiSpecs) {
 }
 
 /**
+ * Build a map from resource name (path segment) to DB collection name.
+ * Scans collection endpoints (no path params) and calls deriveCollectionName
+ * on each, using the same logic as the route generator for CRUD routes.
+ *
+ * e.g. "children" → "childrens", "applications" → "applications"
+ *
+ * Used by the composition assembler so resource names in composition YAML
+ * resolve to the same collection names that CRUD routes write to.
+ *
+ * @param {Array} apiSpecs - Array of API metadata objects from loadAllSpecs()
+ * @returns {Map<string, string>}
+ */
+function buildResourceCollectionNameMap(apiSpecs) {
+  const map = new Map();
+  for (const spec of apiSpecs) {
+    for (const endpoint of (spec.endpoints || [])) {
+      // Skip item endpoints (e.g. /resources/{id}) — those end with a path param.
+      // Include collection endpoints (e.g. /resources, /parents/{id}/children).
+      if (endpoint.path.trimEnd().endsWith('}')) continue;
+      const collectionName = deriveCollectionName(endpoint.path, spec.serverBasePath || '');
+      if (!collectionName) continue;
+      const basePath = spec.serverBasePath || '';
+      const relativePath = basePath && endpoint.path.startsWith(basePath)
+        ? endpoint.path.slice(basePath.length)
+        : endpoint.path;
+      const resourceName = relativePath.split('/').filter(Boolean).pop();
+      if (resourceName && !map.has(resourceName)) {
+        map.set(resourceName, collectionName);
+      }
+    }
+  }
+  return map;
+}
+
+/**
  * Register routes for all discovered composition files.
  *
  * For each sectionView composition that declares an endpoint, registers:
@@ -509,6 +544,7 @@ function buildResourceItemPathMap(apiSpecs) {
 export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs = []) {
   const registeredEndpoints = [];
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
+  const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
 
   for (const { domain, doc, filePath } of compositionFiles) {
     // Look up the server base path for this domain (e.g. "/intake" for the intake domain)
@@ -558,14 +594,16 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       const stateDefaults = loadStateDefaults(composition.state, apiSpec);
 
       const paginationDefaults = apiSpec?.pagination || {};
-      const assemblerOpts = { resourceItemPathMap, serverBasePath: basePath };
+      const assemblerOpts = { resourceItemPathMap, resourceCollectionNameMap, serverBasePath: basePath };
+
+      const rootCollectionName = resourceCollectionNameMap.get(composition.resource) ?? composition.resource;
 
       if (composition.compositeType === 'sectionView') {
         // Section index
         app.get(indexExpressPath, (req, res) => {
           try {
             const parentId = primaryParam ? req.params[primaryParam] : null;
-            if (parentId && !findById(composition.resource, parentId)) {
+            if (parentId && !findById(rootCollectionName, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
             res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, assemblerOpts));
@@ -580,7 +618,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         app.get(panelExpressPath, (req, res) => {
           try {
             const parentId = primaryParam ? req.params[primaryParam] : null;
-            if (parentId && !findById(composition.resource, parentId)) {
+            if (parentId && !findById(rootCollectionName, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
             const panelOpts = { ...assemblerOpts, queryParams: req.query, paginationDefaults };

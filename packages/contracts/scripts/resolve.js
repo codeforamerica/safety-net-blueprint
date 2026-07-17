@@ -1204,9 +1204,14 @@ async function main() {
       console.log(`  ✓ ${relativePath}`);
     }
 
-    // Remove shared component files (they've been inlined)
+    // Remove shared component files (they've been inlined).
+    // Preserve companion YAML files the mock server needs at runtime —
+    // *-compositions.yaml and *-state-machine.yaml are not $ref targets;
+    // they are standalone files that drive route registration.
     for (const [relativePath] of currentResults) {
-      if (!relativePath.endsWith('-openapi.yaml')) {
+      if (!relativePath.endsWith('-openapi.yaml') &&
+          !relativePath.endsWith('-compositions.yaml') &&
+          !relativePath.endsWith('-state-machine.yaml')) {
         const filePath = join(outDir, relativePath);
         if (existsSync(filePath)) {
           rmSync(filePath, { recursive: true });
