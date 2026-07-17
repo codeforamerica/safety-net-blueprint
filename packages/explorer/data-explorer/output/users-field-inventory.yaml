@@ -1,6 +1,6 @@
-# users data model
+# users field inventory
 # Generated from users-openapi.yaml
-# Do not edit — regenerate with: node generate-data-model.mjs --domain=users
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=users
 
 # ── user ────────────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
-# document-management data model
+# document-management field inventory
 # Generated from document-management-openapi.yaml
-# Do not edit — regenerate with: node generate-data-model.mjs --domain=document-management
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=document-management
 
 # ── document ────────────────────────────────────────────────────────────────────
 

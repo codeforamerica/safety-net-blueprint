@@ -1,19 +1,31 @@
 #!/usr/bin/env node
 /**
- * generate-data-model.mjs
+ * generate-field-inventory.mjs
  *
- * Generates a domain data model YAML in dot-notation from an OpenAPI spec.
+ * Generates a domain field inventory YAML in dot-notation from an OpenAPI spec.
  * Walks schemas reachable from the spec, emitting one line per leaf field.
  *
- * Usage: node generate-data-model.mjs --domain=intake
- * Output: output/{domain}-data-model.yaml
+ * Usage:
+ *   node generate-field-inventory.mjs --domain=intake
+ *   node generate-field-inventory.mjs --spec=path/to/spec.yaml [--overlay=path/to/overlay.yaml] [--out=output.yaml]
+ *   node generate-field-inventory.mjs --spec=path/to/specs/ [--overlay=path/to/overlays/] [--out=path/to/output/]
+ *   node generate-field-inventory.mjs --domain=intake --spec=path/to/specs/ [--overlay=...] [--out=...]
+ *
+ * Flags:
+ *   --domain    Domain name filter. Without --spec, looks for {domain}-openapi.yaml in CONTRACTS_DIR.
+ *               With --spec=<folder>, filters specs in that folder whose filename includes the domain.
+ *   --spec      Path to an OpenAPI file or a folder of OpenAPI files.
+ *               Defaults to CONTRACTS_DIR when --domain is given without --spec.
+ *   --overlay   Path to an overlay file or folder of overlay files to apply before generating.
+ *   --out       Output file path (single spec) or directory. Defaults to output/{stem}-field-inventory.yaml.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve, sep } from 'path';
+import { dirname, join, resolve, basename, sep } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
+import { applyOverlay } from '../../contracts/src/overlay/overlay-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,7 +33,6 @@ const __dirname = dirname(__filename);
 const CONTRACTS_DIR = resolve(__dirname, '../../contracts');
 const OUTPUT_DIR = join(__dirname, 'output');
 const PROJECT_ROOT = resolve(__dirname, '../../..');
-
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
 
@@ -34,11 +45,83 @@ const cliArgs = Object.fromEntries(
     })
 );
 
-if (!cliArgs.domain) {
-  console.error('Usage: node generate-data-model.mjs --domain=<domain>');
+const { domain, spec: specArg, overlay: overlayArg, out: outArg } = cliArgs;
+
+if (!domain && !specArg) {
+  console.error('Usage: node generate-field-inventory.mjs --domain=<domain>');
+  console.error('       node generate-field-inventory.mjs --spec=<file-or-folder> [--overlay=<file-or-folder>] [--out=<file-or-folder>]');
   process.exit(1);
 }
-const { domain } = cliArgs;
+
+// ─── Input/output resolution ──────────────────────────────────────────────────
+
+/** Resolve the list of spec file paths to process. */
+function resolveSpecPaths() {
+  // No --spec: use CONTRACTS_DIR (filtered by --domain if given)
+  const searchDir = specArg ? resolve(specArg) : CONTRACTS_DIR;
+  const stat = specArg ? statSync(searchDir, { throwIfNoEntry: false }) : null;
+
+  if (specArg && !stat) {
+    console.error(`Spec path not found: ${searchDir}`);
+    process.exit(1);
+  }
+
+  // Single file
+  if (stat?.isFile()) return [searchDir];
+
+  // Folder (or default CONTRACTS_DIR): find all *-openapi.yaml files
+  let files = readdirSync(searchDir)
+    .filter(f => f.endsWith('-openapi.yaml') && !f.endsWith('-openapi-examples.yaml'));
+
+  if (domain) {
+    files = files.filter(f => f.includes(domain));
+  }
+
+  if (files.length === 0) {
+    const hint = domain ? ` matching domain "${domain}"` : '';
+    console.error(`No *-openapi.yaml files found${hint} in ${searchDir}`);
+    process.exit(1);
+  }
+
+  return files.map(f => join(searchDir, f));
+}
+
+/** Resolve the list of overlay file paths to apply. */
+function resolveOverlayPaths() {
+  if (!overlayArg) return [];
+
+  const overlayPath = resolve(overlayArg);
+  const stat = statSync(overlayPath, { throwIfNoEntry: false });
+
+  if (!stat) {
+    console.error(`Overlay path not found: ${overlayPath}`);
+    process.exit(1);
+  }
+
+  if (stat.isFile()) return [overlayPath];
+
+  return readdirSync(overlayPath)
+    .filter(f => f.endsWith('.yaml') || f.endsWith('.yml'))
+    .sort()
+    .map(f => join(overlayPath, f));
+}
+
+/**
+ * Resolve the output file path for a given spec.
+ * If --out ends with .yaml/.yml, use it as-is (explicit file).
+ * If --out is a directory path, derive the filename from the spec stem.
+ * If --out is omitted, write to the default output/ dir.
+ */
+function resolveOutputPath(specPath) {
+  const stem = basename(specPath).replace(/-openapi\.ya?ml$/, '');
+  const filename = `${stem}-field-inventory.yaml`;
+
+  if (!outArg) return join(OUTPUT_DIR, filename);
+
+  const outPath = resolve(outArg);
+  if (outPath.endsWith('.yaml') || outPath.endsWith('.yml')) return outPath;
+  return join(outPath, filename);
+}
 
 // ─── Schema helpers ───────────────────────────────────────────────────────────
 
@@ -184,7 +267,6 @@ function emitField(schema, path, entries, visited) {
       entries.set(`${path}[]`, listTypeName ? { type: `list(${listTypeName})` } : { type: 'list' });
       if (!visited.has(items)) walkSchema(items, `${path}[]`, entries, visited);
     } else {
-
       // Array of scalars
       entries.set(`${path}[]`, buildLeaf(items, schema.description));
     }
@@ -303,22 +385,28 @@ function requestBodySchemaName(rawOp) {
   return refToSchemaName(content?.schema?.$ref);
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Per-spec processing ──────────────────────────────────────────────────────
 
-async function main() {
-  const specPath = join(CONTRACTS_DIR, `${domain}-openapi.yaml`);
-  if (!existsSync(specPath)) {
-    console.error(`Spec not found: ${specPath}`);
-    process.exit(1);
+async function processSpec(specPath, overlayPaths, outputPath) {
+  const specFilename = basename(specPath);
+  const stem = specFilename.replace(/-openapi\.ya?ml$/, '');
+  const resolvedSpecPath = resolve(specPath);
+
+  // Raw spec — used to extract $ref schema names from path operations.
+  // Apply overlays here so rawPaths reflects any overlay-driven path changes.
+  let rawSpec = yaml.load(readFileSync(specPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
+  for (const overlayPath of overlayPaths) {
+    const overlay = yaml.load(readFileSync(overlayPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
+    const { result, warnings } = applyOverlay(rawSpec, overlay, { overlayDir: dirname(overlayPath) });
+    for (const w of warnings) console.warn(`  [overlay] ${w}`);
+    rawSpec = result;
   }
-
-  // Raw spec — used to extract $ref schema names from path operations
-  const rawSpec = yaml.load(readFileSync(specPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
   const rawPaths = rawSpec.paths ?? {};
 
   // Custom resolver: intercepts every YAML file load and annotates named schemas in memory
-  // (temporary — never written to disk) so emitField can emit type headers for named objects.
-  // Annotates: components.schemas entries, $defs entries, and top-level schemas with a title.
+  // (never written to disk) so emitField can emit type headers for named objects.
+  // When reading the root spec file, overlays are applied before annotation so that
+  // overlay-driven schema changes are reflected in the dereferenced output.
   const annotatingResolver = {
     order: 1,
     canRead(file) { return /\.ya?ml$/i.test(file.url); },
@@ -329,7 +417,17 @@ async function main() {
       if (!realPath.startsWith(PROJECT_ROOT + sep)) {
         throw new Error(`Refusing to read file outside project directory: ${realPath}`);
       }
-      const content = yaml.load(readFileSync(realPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
+      let content = yaml.load(readFileSync(realPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
+
+      // Apply overlays to the root spec file only
+      if (realPath === resolvedSpecPath && overlayPaths.length > 0) {
+        for (const overlayPath of overlayPaths) {
+          const overlay = yaml.load(readFileSync(overlayPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
+          const { result } = applyOverlay(content, overlay, { overlayDir: dirname(overlayPath) });
+          content = result;
+        }
+      }
+
       if (content && typeof content === 'object') {
         for (const [name, schema] of Object.entries(content.components?.schemas ?? {})) {
           if (schema && typeof schema === 'object') schema['x-schema-name'] = name;
@@ -343,7 +441,7 @@ async function main() {
     },
   };
 
-  console.log(`Loading ${domain}-openapi.yaml…`);
+  console.log(`Loading ${specFilename}…`);
   const spec = await $RefParser.dereference(specPath, {
     dereference: { circular: 'ignore' },
     resolve: { annotatingYaml: annotatingResolver },
@@ -374,12 +472,12 @@ async function main() {
   }
 
   if (roots.length === 0) {
-    console.error('Could not detect root resource — need a PATCH /{collection}/{id} path with a request body schema.');
-    process.exit(1);
+    console.warn(`  ${specFilename}: no root resource found (need PATCH /{collection}/{id} with request body) — skipping`);
+    return;
   }
 
   for (const { collection: rootCollection, prefix: rootPrefix, writableSchemaName: rootWritableSchemaName } of roots) {
-    console.log(`Root resource: ${rootCollection} (prefix: ${rootPrefix}, writable schema: ${rootWritableSchemaName})`);
+    console.log(`  Root resource: ${rootCollection} (prefix: ${rootPrefix}, writable schema: ${rootWritableSchemaName})`);
 
     // ── Scan sub-resource paths in spec order ───────────────────────────────
     //
@@ -443,28 +541,40 @@ async function main() {
     }
   }
 
-  // ── Write data model (no descriptions) ───────────────────────────────────
-  const modelLines = [
-    `# ${domain} data model`,
-    `# Generated from ${domain}-openapi.yaml`,
-    `# Do not edit — regenerate with: node generate-data-model.mjs --domain=${domain}`,
+  // ── Write field inventory (no descriptions) ───────────────────────────────
+  const overlayNote = overlayPaths.length > 0 ? ` + ${overlayPaths.length} overlay(s)` : '';
+  const lines = [
+    `# ${stem} field inventory`,
+    `# Generated from ${specFilename}${overlayNote}`,
+    `# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=${stem}`,
     '',
   ];
   for (const { title, entries } of sections) {
-    modelLines.push(section(title));
-    modelLines.push('');
+    lines.push(section(title));
+    lines.push('');
     for (const [path, entry] of entries) {
       const [modelEntry] = splitEntry(entry);
-      modelLines.push(`${path}: ${serializeEntry(modelEntry)}`);
+      lines.push(`${path}: ${serializeEntry(modelEntry)}`);
     }
-    modelLines.push('');
+    lines.push('');
   }
 
-  if (!existsSync(OUTPUT_DIR)) mkdirSync(OUTPUT_DIR, { recursive: true });
+  const outDir = dirname(outputPath);
+  if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
+  writeFileSync(outputPath, lines.join('\n'), 'utf8');
+  console.log(`  Generated ${outputPath}`);
+}
 
-  const modelPath = join(OUTPUT_DIR, `${domain}-data-model.yaml`);
-  writeFileSync(modelPath, modelLines.join('\n'), 'utf8');
-  console.log(`Generated ${modelPath}`);
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+async function main() {
+  const specPaths = resolveSpecPaths();
+  const overlayPaths = resolveOverlayPaths();
+
+  for (const specPath of specPaths) {
+    const outputPath = resolveOutputPath(specPath);
+    await processSpec(specPath, overlayPaths, outputPath);
+  }
 }
 
 main().catch(err => {

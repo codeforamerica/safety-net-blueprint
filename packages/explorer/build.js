@@ -102,7 +102,7 @@ if (doBuild('data-explorer')) {
   const domains = readdirSync(contractsDir)
     .filter(f => f.endsWith('-openapi.yaml'))
     .map(f => f.replace('-openapi.yaml', ''));
-  const generateDataModel = resolve(__dirname, 'data-explorer', 'generate-data-model.mjs');
+  const generateDataModel = resolve(__dirname, 'data-explorer', 'generate-field-inventory.mjs');
   for (const domain of domains) {
     try {
       execFileSync(node, [generateDataModel, `--domain=${domain}`], { stdio: 'inherit' });
