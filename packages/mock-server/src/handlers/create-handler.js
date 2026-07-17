@@ -121,7 +121,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         );
         if (entities === null) {
           console.error('onCreate: required context binding failed — skipping trigger');
-          return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Context binding failed' });
+          return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Context binding failed', details: [] });
         }
         const context = { ...baseContext, entities };
 

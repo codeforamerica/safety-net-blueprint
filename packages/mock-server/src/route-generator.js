@@ -69,6 +69,10 @@ function isSubItemEndpoint(path) {
  * e.g., /intake/applications/{applicationId}/documents → 'applications'
  * e.g., /intake/applications/{applicationId}/members/{memberId}/incomes → 'application-members'
  */
+function internalError(res, error) {
+  res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+}
+
 function deriveParentCollection(path, basePath) {
   const lastSlash = path.lastIndexOf('/');
   const parentPath = path.slice(0, lastSlash);
@@ -94,7 +98,7 @@ function createSingletonGetHandler(endpoint, parentParam, parentField) {
       res.json(items[0]);
     } catch (error) {
       console.error('Singleton get handler error:', error);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+      internalError(res, error);
     }
   };
 }
@@ -151,7 +155,7 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
       res.json(result);
     } catch (error) {
       console.error('Singleton update handler error:', error);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+      internalError(res, error);
     }
   };
 }
@@ -357,7 +361,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
                 : items;
               return res.json({ items: expandedItems, total, limit, offset, hasNext: offset + items.length < total });
             } catch (error) {
-              res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+              internalError(res, error);
             }
           };
           description = 'List sub-resources';
@@ -613,7 +617,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
             res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, assemblerOpts));
           } catch (error) {
             console.error('Composition index handler error:', error);
-            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+            internalError(res, error);
           }
         });
 
@@ -637,7 +641,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
             res.json(panel);
           } catch (error) {
             console.error('Composition panel handler error:', error);
-            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+            internalError(res, error);
           }
         });
 
@@ -666,7 +670,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
             res.json(result);
           } catch (error) {
             console.error('Plain composition handler error:', error);
-            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+            internalError(res, error);
           }
         });
 
@@ -761,11 +765,6 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
   const stateExpressBase = toExpressPath(stateFullPath);
   const sectionPath = `${stateExpressBase}/:section`;
   const itemPath = `${stateExpressBase}/:section/:itemId`;
-
-  const internalError = (res, error) => {
-    console.error('Composition state handler error:', error);
-    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-  };
 
   // GET /{section} — paginated list of state records for that section
   app.get(sectionPath, (req, res) => {
