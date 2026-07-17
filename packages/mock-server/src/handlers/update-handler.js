@@ -131,12 +131,11 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       // Fire onUpdate steps/effects if any watched fields changed.
       // Must run before emitting so rule-driven mutations (e.g. priority re-scored
       // because isExpedited changed) are included in the event's changes array.
-      const newOnUpdate = machine?.triggers?.onUpdate;
-      const oldOnUpdate = stateMachine?.onUpdate;
-      const hasOnUpdate = newOnUpdate?.steps?.length > 0 || oldOnUpdate?.effects?.length > 0;
+      const onUpdate = machine?.triggers?.onUpdate ?? stateMachine?.onUpdate;
+      const hasOnUpdate = onUpdate?.steps?.length > 0 || onUpdate?.effects?.length > 0;
 
       if (hasOnUpdate) {
-        const watchedFields = newOnUpdate?.fields ?? oldOnUpdate?.fields;
+        const watchedFields = onUpdate?.fields;
         const patchedFields = Object.keys(req.body);
         const shouldFire = !watchedFields || watchedFields.length === 0
           || patchedFields.some(f => watchedFields.includes(f));
@@ -154,7 +153,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           };
 
           const entities = resolveContextLayers(
-            [stateMachine?.context, machine?.context, newOnUpdate?.context ?? oldOnUpdate?.context],
+            [stateMachine?.context, machine?.context, onUpdate?.context],
             updated,
             baseContext
           );
@@ -164,10 +163,10 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           const context = entities !== null ? { ...baseContext, entities } : baseContext;
 
           let pendingProcedures;
-          if (newOnUpdate?.steps?.length > 0) {
-            ({ pendingProcedures } = applySteps(newOnUpdate.steps, updated, context));
+          if (onUpdate?.steps?.length > 0) {
+            ({ pendingProcedures } = applySteps(onUpdate.steps, updated, context));
           } else {
-            ({ pendingProcedures } = applyEffects(oldOnUpdate.effects, updated, context));
+            ({ pendingProcedures } = applyEffects(onUpdate.effects, updated, context));
           }
           const inlineRules = buildInlineRules(stateMachine, machine);
           executeProcedures(pendingProcedures, updated, inlineRules, context);
