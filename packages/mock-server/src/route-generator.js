@@ -20,7 +20,7 @@ import { generateStateSchemas } from '@codeforamerica/safety-net-blueprint-contr
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
-import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam } from './collection-utils.js';
+import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
 import { randomUUID } from 'node:crypto';
 
 /**
@@ -155,10 +155,6 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
   };
 }
 
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
 /**
  * Convert OpenAPI path format to Express path format
  * Example: /persons/{personId} => /persons/:personId
@@ -285,7 +281,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       const smEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
         const obj = s.object;
         return obj?.toLowerCase() + 's' === collectionName ||
-          obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === collectionName;
+          toKebabCase(obj ?? '') + 's' === collectionName;
       });
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
@@ -354,7 +350,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           const subSmEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
             const obj = s.object;
             return obj?.toLowerCase() + 's' === subResourceName ||
-              obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === subResourceName;
+              toKebabCase(obj ?? '') + 's' === subResourceName;
           });
           const subSmForEndpoint = subSmEntry?.stateMachine || null;
           const subMachineForEndpoint = subSmEntry?.machine || null;
@@ -400,7 +396,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       const smEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
         const obj = s.object;
         return obj?.toLowerCase() + 's' === collectionName ||
-          obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === collectionName;
+          toKebabCase(obj ?? '') + 's' === collectionName;
       });
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
@@ -850,7 +846,7 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
     // Uses suffix matching so single-word objects (e.g., "Verification") correctly match
     // sub-resource collections like "application-verifications".
     // e.g., object "Task" matches "tasks"; object "Verification" matches "application-verifications"
-    const objectPluralSuffix = sm.object.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's';
+    const objectPluralSuffix = toKebabCase(sm.object) + 's';
     const itemEndpoint = apiSpec.endpoints.find(
       e => e.method.toLowerCase() === 'get' && (isItemEndpoint(e.path) || isSubItemEndpoint(e.path))
         && (() => {

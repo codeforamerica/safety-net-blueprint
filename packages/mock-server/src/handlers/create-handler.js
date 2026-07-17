@@ -11,6 +11,7 @@ import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
+import { extractCallerRoles } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
 
 
@@ -93,10 +94,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // Execute onCreate steps/effects if this resource has a state machine
       if (onCreate) {
-        // Parse caller roles from header (comma-separated)
-        const callerRoles = req.headers['x-caller-roles']
-          ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-          : [];
+        const callerRoles = extractCallerRoles(req);
 
         // Enforce onCreate actors if defined
         if (onCreate.actors && onCreate.actors.length > 0) {
@@ -166,9 +164,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       }
 
       // Auto-emit created event with full resource snapshot (after effects applied)
-      const callerRoles = req.headers['x-caller-roles']
-        ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-        : [];
+      const callerRoles = extractCallerRoles(req);
       try {
         emitEvent({
           domain,

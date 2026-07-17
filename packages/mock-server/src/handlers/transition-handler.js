@@ -4,6 +4,7 @@
 
 import { executeTransition } from '../state-machine-runner.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
+import { extractCallerRoles } from '../auth-context.js';
 
 /**
  * Create a transition handler for an RPC endpoint.
@@ -32,9 +33,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
         });
       }
 
-      const callerRoles = req.headers['x-caller-roles']
-        ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-        : [];
+      const callerRoles = extractCallerRoles(req);
 
       const now = new Date().toISOString();
       const traceparent = req.headers['traceparent'] || null;

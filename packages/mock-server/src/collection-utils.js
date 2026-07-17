@@ -97,6 +97,38 @@ export function extractPrimaryParam(path) {
 }
 
 /**
+ * Capitalize the first letter of a string.
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+export function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Convert a camelCase or PascalCase string to kebab-case.
+ * e.g., "ApplicationDocument" → "application-document"
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+export function toKebabCase(str) {
+  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+/**
+ * Convert a snake_case string to camelCase.
+ * e.g., "application_document" → "applicationDocument"
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+export function toCamelCase(str) {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+/**
  * Merge two arrays of id-keyed items (guards or rules), with overrides taking precedence.
  * Domain-level items come first; machine-level items override by id.
  *

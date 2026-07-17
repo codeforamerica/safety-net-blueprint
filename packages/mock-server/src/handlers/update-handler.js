@@ -7,9 +7,9 @@ import { validate, createErrorResponse } from '../validator.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
+import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
-import { extractAuthContext } from '../auth-context.js';
+import { extractAuthContext, extractCallerRoles } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
 
 export function deepEqual(a, b) {
@@ -52,7 +52,7 @@ export function buildChanges(before, after) {
  * @returns {Function} Express handler
  */
 export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null) {
-  const paramName = extractPathParam(endpoint.path);
+  const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (req, res) => {
     try {
       const httpStub = matchAndPopHttp(req.method, req.path);
@@ -142,9 +142,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           || patchedFields.some(f => watchedFields.includes(f));
 
         if (shouldFire) {
-          const callerRoles = req.headers['x-caller-roles']
-            ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-            : [];
+          const callerRoles = extractCallerRoles(req);
           const baseContext = {
             caller: {
               id: req.headers['x-caller-id'],
@@ -203,9 +201,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           source: apiMetadata.serverBasePath,
           data: { changes },
           callerId: req.headers['x-caller-id'] || null,
-          callerRoles: req.headers['x-caller-roles']
-            ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-            : [],
+          callerRoles: extractCallerRoles(req),
           traceparent: req.headers['traceparent'] || null,
           now: updated.updatedAt,
         });
@@ -229,20 +225,3 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
   };
 }
 
-/**
- * Extract the path parameter name from an OpenAPI path pattern.
- * Returns the LAST parameter so sub-item paths like
- * /resources/{parentId}/sub/{subId} resolve to the sub-resource id.
- */
-function extractPathParam(path) {
-  const matches = path.match(/\{([^}]+)\}/g);
-  if (!matches) return 'id';
-  return matches[matches.length - 1].replace(/[{}]/g, '');
-}
-
-/**
- * Capitalize first letter of a string
- */
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}

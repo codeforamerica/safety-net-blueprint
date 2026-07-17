@@ -16,7 +16,7 @@
 
 import { evaluateCEL } from './cel-evaluator.js';
 import { findAll, findById, create, update } from './database-manager.js';
-import { deriveCollectionName, extractPrimaryParam, resolveDotPath } from './collection-utils.js';
+import { deriveCollectionName, extractPrimaryParam, resolveDotPath, toKebabCase } from './collection-utils.js';
 import { filterItems, paginateItems, sortItems } from './search-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -520,7 +520,7 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
 export function deriveStateResource(stateConfig, endpointPath, basePath) {
   const defsKey = stateConfig?.schema?.name;
   if (!defsKey) return null;
-  const pathSegment = defsKey.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  const pathSegment = toKebabCase(defsKey);
   const camelKey = defsKey.charAt(0).toLowerCase() + defsKey.slice(1);
   // Build the path the state resource will be served at and derive the collection name from it
   const parentBase = (endpointPath || '').replace(/\/[^/]+$/, '');
