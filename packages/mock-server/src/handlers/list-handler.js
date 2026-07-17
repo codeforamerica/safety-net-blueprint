@@ -3,7 +3,7 @@
  */
 
 import { getDatabase, findById } from '../database-manager.js';
-import { executeSearch } from '../search-engine.js';
+import { executeSearch, PAGINATION_DEFAULTS } from '../search-engine.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
 import { extractExpandFields, applyExpand, getItemSchema, extractLinksFields, applyLinks } from './expand-utils.js';
@@ -86,12 +86,7 @@ export function createListHandler(apiMetadata, endpoint) {
         searchableFields = declaredQueryParams;
       }
 
-      // Ensure pagination defaults exist
-      const paginationDefaults = apiMetadata.pagination || {
-        limitDefault: 25,
-        limitMax: 100,
-        offsetDefault: 0
-      };
+      const paginationDefaults = { ...PAGINATION_DEFAULTS, ...apiMetadata.pagination };
 
       // Execute search with filters, pagination, and sort
       const result = executeSearch(

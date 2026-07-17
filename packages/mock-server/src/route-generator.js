@@ -21,6 +21,7 @@ import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, d
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
+import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX } from './search-engine.js';
 import { randomUUID } from 'node:crypto';
 
 /**
@@ -327,7 +328,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
               // List sub-resources filtered by parent ID plus any extra query field filters.
               // Note: req.query mutation does not work reliably in Express 5 (getter re-evaluates),
               // so we call findAll directly rather than routing through createListHandler.
-              const limit = Math.min(parseInt(req.query.limit) || pagination.limitDefault || 25, pagination.limitMax || 100);
+              const limitDefault = pagination.limitDefault ?? PAGINATION_DEFAULTS.limitDefault;
+              const limitMax = pagination.limitMax ?? PAGINATION_DEFAULTS.limitMax;
+              const limit = Math.min(parseInt(req.query.limit) || limitDefault, limitMax);
               const offset = parseInt(req.query.offset) || 0;
               const reservedParams = new Set(['limit', 'offset', 'q', 'sort']);
               const extraFilters = Object.fromEntries(
@@ -765,7 +768,7 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
       const parent = findById(composition.resource, req.params[bindParam]);
       if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
 
-      const limit = Math.min(parseInt(req.query.limit) || 25, 1000);
+      const limit = Math.min(parseInt(req.query.limit) || PAGINATION_DEFAULTS.limitDefault, STATE_RECORDS_LIMIT_MAX);
       const offset = parseInt(req.query.offset) || 0;
       const result = listStateRecords(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, { limit, offset });
       res.json(result);
