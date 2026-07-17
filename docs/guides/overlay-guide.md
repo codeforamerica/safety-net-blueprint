@@ -560,6 +560,21 @@ Each action should do one thing. Don't combine unrelated changes:
 # Avoid: combining unrelated changes in one action
 ```
 
+### Cross-Artifact Impact of Field Renames
+
+Overlays that rename a field or change enum values may break references across many artifact types. These failures are silent at overlay time — they only surface at runtime when a guard evaluates against an undefined field, or an annotation no longer maps to its schema path.
+
+For `status` fields and other enums whose valid values come from a state machine, use [`x-enum-source`](../architecture/x-extensions.md#x-enum-source) instead of hardcoding an `enum:` list. The resolve pipeline injects state IDs automatically, so state renames propagate to the OpenAPI spec without a manual overlay.
+
+When renaming a field, check for references in:
+- `*-state-machine.yaml` — CEL `if:` and `condition:` expressions, `set: {field:}` steps, context binding `from:` paths
+- `*-compositions.yaml` — `bind:` field names and `fields:` display arrays
+- `*-annotations.yaml` — dot-notation field paths (e.g. `application.programsAppliedFor[]`)
+- `*-sla-types.yaml` — `var:` field references in `pauseWhen` conditions
+- `*-metrics.yaml` — `var:` field references in `filter` expressions
+
+Cross-artifact validation runs automatically after overlays are applied as part of the resolve pipeline and catches these mismatches before deployment. See [Cross-Artifact Field Reference Validation](../guides/validation.md#cross-artifact-field-reference-validation) for the full rule set.
+
 ### Test After Changes
 
 Always validate after modifying overlays:

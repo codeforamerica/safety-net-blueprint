@@ -1,0 +1,12 @@
+# Seed data for client-management
+# Edit freely; run mock:seed to regenerate from scratch.
+
+PersonExample1:
+  id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  createdAt: '2024-01-01T00:00:00.000Z'
+  updatedAt: '2024-01-01T00:00:00.000Z'
+
+PersonExample2:
+  id: b2c3d4e5-f6a7-8901-bcde-f12345678901
+  createdAt: '2024-01-31T00:00:00.000Z'
+  updatedAt: '2024-01-31T00:00:00.000Z'

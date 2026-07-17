@@ -1,0 +1,8 @@
+# document-management data model
+# Generated from document-management-openapi.yaml
+# Do not edit — regenerate with: node generate-data-model.mjs --domain=document-management
+
+# ── document ────────────────────────────────────────────────────────────────────
+
+document.title: { type: string }
+document.documentDate: { type: date }

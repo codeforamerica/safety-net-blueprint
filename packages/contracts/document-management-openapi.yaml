@@ -649,7 +649,6 @@ components:
         - lifecycleState
         - legalHold
         - latestVersionId
-        - metadata
         - createdAt
         - updatedAt
       properties:

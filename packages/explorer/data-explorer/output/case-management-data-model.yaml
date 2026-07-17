@@ -1,0 +1,15 @@
+# case-management data model
+# Generated from case-management-openapi.yaml
+# Do not edit — regenerate with: node generate-data-model.mjs --domain=case-management
+
+# ── case ────────────────────────────────────────────────────────────────────────
+
+case.id: { type: uuid }
+case.primaryApplicantId: { type: uuid, relationship: Person }
+case.assignedToId: { type: uuid, relationship: User }
+case.status: { type: enum, values: [active, closed] }
+case.effectiveStartDate: { type: date }
+case.effectiveEndDate: { type: date }
+case.members[]: { type: list }
+case.members[].personId: { type: uuid, relationship: Person }
+case.members[].relationship: { type: string }

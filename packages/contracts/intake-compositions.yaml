@@ -26,12 +26,12 @@ compositions:
   applicationReview:
     compositeType: sectionView
     resource: applications
-    fields: [programs, status]
+    fields: [programsAppliedFor, status]
     include:
       members:
         resource: application-members
         bind: applicationId
-        fields: [id, firstName, lastName, relationshipToHead]
+        fields: [id, contact.name.firstName, contact.name.lastName]
     endpoint:
       path: /applications/{applicationId}/review
       parentLink: true
@@ -82,22 +82,22 @@ compositions:
         links: true
         index:
           filter: "roles.contains('primary_applicant')"
-          fields: [id, firstName, lastName, dateOfBirth, relationshipToHead]
+          fields: [id, contact.name.firstName, contact.name.lastName, dateOfBirth]
 
       identity:
         resource: application-members
         bind: applicationId
         include:
           verifications:
-            resource: verifications
+            resource: application-verifications
             bind: applicationId
             filter: "category == 'identity'"
         index:
           filter: "roles.contains('primary_applicant')"
-          fields: [id, firstName, lastName, citizenshipStatus, immigrationStatus]
+          fields: [id, contact.name.firstName, contact.name.lastName, citizenshipStatus, immigrationStatus]
 
       income:
-        resource: member-incomes
+        resource: application-incomes
         bind: applicationId
         sortable:
           fields: [memberId, type, amount, frequency]
@@ -106,13 +106,13 @@ compositions:
           fields: [id, memberId, type, amount, frequency]
 
       employment:
-        resource: member-employment-records
+        resource: application-jobs
         bind: applicationId
         index:
           fields: [id, memberId, status, jobTitle]
 
       health-coverage:
-        resource: member-health-coverages
+        resource: application-health-enrollments
         bind: applicationId
         index:
           fields: [id, memberId, coverageType, planName]
@@ -120,7 +120,7 @@ compositions:
       # Household-level sections — one review-progress entry per section (no memberId)
 
       assets:
-        resource: member-assets
+        resource: application-assets
         bind: applicationId
         index:
           fields: [id, memberId, type, value]
@@ -128,13 +128,13 @@ compositions:
       contact:
         resource: application-members
         bind: applicationId
-        fields: [id, firstName, lastName, phoneNumber, email, preferredLanguage, preferredContactMethod]
+        fields: [id, contact.name.firstName, contact.name.lastName, contact.primaryPhone, email, preferredLanguage, preferredContactMethod]
         index:
           filter: "roles.contains('primary_applicant')"
-          fields: [id, firstName, lastName, phoneNumber, email]
+          fields: [id, contact.name.firstName, contact.name.lastName, contact.primaryPhone, email]
 
       expenses:
-        resource: member-expenses
+        resource: application-expenses
         bind: applicationId
         index:
           fields: [id, memberId, category, amount, frequency]
@@ -150,7 +150,7 @@ compositions:
     panel:
       include:
         verifications:
-          resource: verifications
+          resource: application-verifications
           bind: applicationId
           filter: "category == $section.name"
 

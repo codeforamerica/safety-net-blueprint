@@ -6,7 +6,7 @@
 ApplicationExample1:
   id: "00000004-0000-4000-8000-000000000001"
   status: submitted
-  programs:
+  programsAppliedFor:
     - snap
   channel: online
   isExpedited: false
@@ -19,7 +19,7 @@ ApplicationExample1:
 ApplicationExample2:
   id: "00000004-0000-4000-8000-000000000002"
   status: draft
-  programs:
+  programsAppliedFor:
     - snap
   channel: online
   submittedAt: null

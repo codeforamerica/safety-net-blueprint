@@ -1,0 +1,14 @@
+# scheduling data model
+# Generated from scheduling-openapi.yaml
+# Do not edit — regenerate with: node generate-data-model.mjs --domain=scheduling
+
+# ── appointment ─────────────────────────────────────────────────────────────────
+
+appointment.id: { type: uuid }
+appointment.personId: { type: uuid, relationship: Person }
+appointment.assignedToId: { type: uuid, relationship: User }
+appointment.startAt: { type: datetime }
+appointment.endAt: { type: datetime }
+appointment.appointmentType: { type: string }
+appointment.status: { type: enum, values: [scheduled, completed, canceled, no_show] }
+appointment.notes: { type: string }

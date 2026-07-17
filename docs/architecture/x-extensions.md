@@ -82,10 +82,12 @@ x-events:
 
 **File type:** `*-openapi.yaml` — schema property level, on string fields whose valid values come from another contract artifact.
 
-Declares that a field's enum values are derived from a behavioral contract (state machine, SLA types) rather than hardcoded in the OpenAPI spec. The value is a path expression into the source artifact. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication.
+Declares that a field's enum values are derived from a behavioral contract (state machine, SLA types) rather than hardcoded in the OpenAPI spec. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication. The annotation is stripped from the resolved output and replaced with a concrete `enum:` array.
+
+**String form** — for single-machine state files or SLA types:
 
 ```yaml
-# workflow-openapi.yaml
+# workflow-openapi.yaml (one Task machine)
 status:
   type: string
   x-enum-source: states[].id
@@ -98,13 +100,42 @@ slaTypeCode:
   description: Identifies which SLA type applies. Valid values injected from workflow-sla-types.yaml.
 ```
 
+**Object form** — when the state machine file defines multiple machines and you need to scope enum values to a specific one:
+
+```yaml
+# intake-openapi.yaml (Application machine in intake-state-machine.yaml)
+status:
+  type: string
+  x-enum-source:
+    source: states[].id
+    machine: Application
+  description: Current lifecycle status. Valid values injected from intake-state-machine.yaml.
+
+# schemas/domain/intake.yaml (Verification machine in the same file)
+status:
+  type: string
+  x-enum-source:
+    source: states[].id
+    machine: Verification
+  description: Current status of the verification obligation.
+```
+
+**Fields (object form):**
+
+| Field | Required | Description |
+|---|---|---|
+| `source` | Yes | Collection expression — same syntax as the string form: `states[].id` or `slaTypes[].id` |
+| `machine` | No | Object name of the machine to scope to (matches `machines[].object` in the state machine file). When omitted, all states across all machines are pooled. |
+
+**Why this matters for enum drift:** without `x-enum-source`, state IDs must be duplicated in both the state machine and the OpenAPI `enum:` list. When a state is renamed or added via overlay, the OpenAPI enum silently goes stale — the mismatch only surfaces at runtime. `x-enum-source` eliminates the duplication: the state machine is the single source of truth and the resolved OpenAPI spec stays in sync automatically. See [Cross-Artifact Impact of Field Renames](../guides/overlay-guide.md#cross-artifact-impact-of-field-renames).
+
 ---
 
 ## x-relationship
 
 **File type:** `*-openapi.yaml` — schema property level, on foreign-key fields.
 
-Annotates a UUID foreign-key field to identify the related resource. Required on all fields that end in `Id` and have `format: uuid`. Enables tooling to generate relationship diagrams, validate referential integrity, and optionally expand related resources inline.
+Annotates a UUID foreign-key field to identify the related resource. Recommended on all fields that end in `Id` and have `format: uuid`. Enables tooling to generate relationship diagrams, validate referential integrity, and optionally expand related resources inline.
 
 ```yaml
 # components/schemas/Task
@@ -121,9 +152,11 @@ queueId:
 
 | Field | Required | Description |
 |---|---|---|
-| `resource` | Yes | Related schema name in PascalCase (e.g., `Queue`, `Person`) |
-| `style` | No | `expand` causes the mock server to inline the related resource. Default: reference by ID. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when an implicit global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
+| `resource` | Yes | Related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`). Schema names follow PascalCase by convention. |
+| `style` | No | `expand` causes the mock server to inline the related resource alongside the FK field — both appear in any response body that includes the resource. If omitted, the FK field is left as-is. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when an implicit global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
 | `fields` | No | Subset of fields to include when `style: expand`. Supports dot notation for nested relationships. When specified, must be a non-empty array — an empty `fields: []` is rejected at resolve time. |
+
+`links-only` style adds a `links` object alongside the FK field without expanding it into an object.
 
 ---
 

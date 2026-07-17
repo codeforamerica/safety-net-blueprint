@@ -109,6 +109,12 @@ channels:
       verificationWaived:
         $ref: '#/components/messages/VerificationWaivedMessage'
 
+  intake.verification.cannot_verify:
+    address: intake.verification.cannot_verify
+    messages:
+      verificationCannotVerify:
+        $ref: '#/components/messages/VerificationCannotVerifyMessage'
+
 components:
   messages:
     ApplicationClosedMessage:
@@ -200,6 +206,12 @@ components:
       summary: Signals the obligation is fulfilled.
       payload:
         $ref: '#/components/schemas/VerificationSatisfiedEvent'
+
+    VerificationCannotVerifyMessage:
+      name: intake.verification.cannot_verify
+      summary: Signals all available verification methods are exhausted.
+      payload:
+        $ref: '#/components/schemas/VerificationCannotVerifyEvent'
 
     VerificationWaivedMessage:
       name: intake.verification.waived
@@ -412,6 +424,16 @@ components:
               const: intake.verification.inconclusive
 
     # subject: verificationId
+    # subject: verificationId
+    VerificationCannotVerifyEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.verification.cannot_verify
+
     VerificationSatisfiedEvent:
       allOf:
         - $ref: './schemas/platform-events.yaml#/$defs/Event'

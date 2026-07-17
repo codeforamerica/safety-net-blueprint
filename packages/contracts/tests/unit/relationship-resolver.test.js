@@ -499,7 +499,7 @@ test('relationship-resolver tests', async (t) => {
   // resolveRelationships — links-only
   // ===========================================================================
 
-  await t.test('resolveRelationships links-only - adds links object and strips x-relationship', () => {
+  await t.test('resolveRelationships links-only - adds links object and preserves x-relationship for runtime', () => {
     const spec = {
       components: {
         schemas: {
@@ -532,9 +532,9 @@ test('relationship-resolver tests', async (t) => {
 
     const { result, warnings } = resolveRelationships(spec, 'links-only', schemaIndex);
 
-    // x-relationship stripped
-    assert.strictEqual(result.components.schemas.Task.properties.assignedToId['x-relationship'], undefined);
-    assert.strictEqual(result.components.schemas.Task.properties.caseId['x-relationship'], undefined);
+    // x-relationship preserved on FK fields so runtime can detect links-only fields
+    assert.deepStrictEqual(result.components.schemas.Task.properties.assignedToId['x-relationship'], { resource: 'User' });
+    assert.deepStrictEqual(result.components.schemas.Task.properties.caseId['x-relationship'], { resource: 'Case' });
 
     // links object added
     const links = result.components.schemas.Task.properties.links;
@@ -542,9 +542,9 @@ test('relationship-resolver tests', async (t) => {
     assert.strictEqual(links.type, 'object');
     assert.strictEqual(links.readOnly, true);
     assert.strictEqual(links.properties.assignedTo.type, 'string');
-    assert.strictEqual(links.properties.assignedTo.format, 'uri');
+    assert.strictEqual(links.properties.assignedTo.format, 'uri-reference');
     assert.strictEqual(links.properties.case.type, 'string');
-    assert.strictEqual(links.properties.case.format, 'uri');
+    assert.strictEqual(links.properties.case.format, 'uri-reference');
 
     // FK fields preserved
     assert.strictEqual(result.components.schemas.Task.properties.assignedToId.type, 'string');
@@ -583,8 +583,8 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(spec, 'links-only', schemaIndex);
     const allOfEntry = result.components.schemas.Task.allOf[1];
     assert.ok(allOfEntry.properties.links);
-    assert.strictEqual(allOfEntry.properties.links.properties.assignedTo.format, 'uri');
-    assert.strictEqual(allOfEntry.properties.assignedToId['x-relationship'], undefined);
+    assert.strictEqual(allOfEntry.properties.links.properties.assignedTo.format, 'uri-reference');
+    assert.deepStrictEqual(allOfEntry.properties.assignedToId['x-relationship'], { resource: 'User' });
   });
 
   // ===========================================================================
@@ -854,8 +854,8 @@ test('relationship-resolver tests', async (t) => {
     assert.ok(props.assignedTo.properties?.id);
     assert.ok(props.assignedTo.properties?.name);
 
-    // caseId should get links (global default)
-    assert.strictEqual(props.caseId['x-relationship'], undefined);
+    // caseId should get links (global default), x-relationship preserved for runtime
+    assert.deepStrictEqual(props.caseId['x-relationship'], { resource: 'Case' });
     assert.ok(props.links, 'links object should exist for caseId');
     assert.ok(props.links.properties.case);
   });
@@ -898,7 +898,7 @@ test('relationship-resolver tests', async (t) => {
     const props = result.components.schemas.ApplicationMember.properties;
     assert.ok(props.applicationId, 'applicationId scalar should remain');
     assert.strictEqual(props.application, undefined, 'no embedded application field should be created');
-    assert.strictEqual(props.applicationId['x-relationship'], undefined, 'x-relationship should be stripped (links-only treatment)');
+    assert.deepStrictEqual(props.applicationId['x-relationship'], { resource: 'Application' }, 'x-relationship preserved for runtime links-only detection');
     assert.ok(props.links, 'links object should be added for the back-reference');
     assert.ok(props.links.properties.application, 'links.application entry should exist');
   });
@@ -2415,7 +2415,7 @@ test('relationship-resolver tests', async (t) => {
   // Integration: real intake spec under global expand
   // ===========================================================================
 
-  await t.test('integration - intake spec under global expand keeps all 14 back-refs scalar', async () => {
+  await t.test('integration - intake spec under global expand keeps all 9 back-refs scalar', async () => {
     // Loads the real packages/contracts/intake-openapi.yaml and confirms the
     // direction gate behaves correctly against the full spec. Acts as a
     // regression guard for the design intent documented in the GH issue.
@@ -2428,35 +2428,34 @@ test('relationship-resolver tests', async (t) => {
     const __dirname = dirname(__filename);
     const contractsDir = join(__dirname, '../..');
     const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+    const intakeDomain = yaml.load(readFileSync(join(contractsDir, 'schemas/domain/intake.yaml'), 'utf8'));
 
-    // Build a minimal schema index from intake only. Cross-spec targets (Person,
-    // External) will warn during expand but the field-rename happens regardless,
-    // which is what the assertions below check.
-    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
-    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const currentResults = new Map([
+      ['intake-openapi.yaml', intakeSpec],
+      ['schemas/domain/intake.yaml', intakeDomain],
+    ]);
+    const schemaIndex = buildSchemaIndex(currentResults);
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex, currentResults);
     const schemas = result.components.schemas;
 
-    // The 14 back-references in the intake spec.
+    // The 9 back-references in the intake spec (child → parent Application).
+    // memberId fields on application-level resources (Income, Expense, etc.) are
+    // sibling references, not back-references, so they are correctly expanded.
     // Each tuple: [containingSchema, scalarFieldName].
     const backRefs = [
       ['ApplicationMember', 'applicationId'],
-      ['MemberIncome', 'memberId'],
-      ['MemberIncome', 'applicationId'],
-      ['MemberExpense', 'memberId'],
-      ['MemberExpense', 'applicationId'],
-      ['MemberAsset', 'memberId'],
-      ['MemberAsset', 'applicationId'],
-      ['MemberEmployment', 'memberId'],
-      ['MemberEmployment', 'applicationId'],
-      ['MemberHealthCoverage', 'memberId'],
-      ['MemberHealthCoverage', 'applicationId'],
+      ['Income', 'applicationId'],
+      ['Expense', 'applicationId'],
+      ['Asset', 'applicationId'],
+      ['Job', 'applicationId'],
+      ['HealthPlan', 'applicationId'],
       ['ApplicationHousehold', 'applicationId'],
       ['Verification', 'applicationId'],
       ['Interview', 'applicationId'],
     ];
 
     for (const [schemaName, fieldName] of backRefs) {
-      const props = gatherSchemaProperties(schemas[schemaName]);
+      const props = gatherSchemaProperties(schemas[schemaName], currentResults);
       assert.ok(
         props[fieldName],
         `${schemaName}.${fieldName} should remain a scalar field (back-ref kept scalar)`
@@ -2469,7 +2468,7 @@ test('relationship-resolver tests', async (t) => {
     }
   });
 
-  await t.test('integration - intake spec expands forward references on member writable schemas', async () => {
+  await t.test('integration - intake spec expands forward references on member schemas', async () => {
     const { readFileSync } = await import('fs');
     const { join, dirname } = await import('path');
     const { fileURLToPath } = await import('url');
@@ -2479,17 +2478,23 @@ test('relationship-resolver tests', async (t) => {
     const __dirname = dirname(__filename);
     const contractsDir = join(__dirname, '../..');
     const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+    const intakeDomain = yaml.load(readFileSync(join(contractsDir, 'schemas/domain/intake.yaml'), 'utf8'));
 
-    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
-    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const currentResults = new Map([
+      ['intake-openapi.yaml', intakeSpec],
+      ['schemas/domain/intake.yaml', intakeDomain],
+    ]);
+    const schemaIndex = buildSchemaIndex(currentResults);
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex, currentResults);
     const schemas = result.components.schemas;
 
-    // ApplicationMemberWritable.personId is a forward reference (Person is a
-    // top-level resource in its own URL tree, not above ApplicationMember).
-    // Under global expand it should be renamed to `person`.
-    const writableProps = gatherSchemaProperties(schemas.ApplicationMemberWritable);
-    assert.strictEqual(writableProps.personId, undefined, 'personId should be renamed by forward expansion');
-    assert.ok(writableProps.person, 'ApplicationMemberWritable.person should be inlined');
+    // ApplicationMember.personId is a forward reference. The x-relationship
+    // annotation lives in the domain schema $defs/ApplicationMember. The resolver
+    // follows the external $ref, discovers it there, deletes personId from the
+    // domain schema, and adds `person` to the OpenAPI inline allOf block.
+    const memberProps = gatherSchemaProperties(schemas.ApplicationMember, currentResults);
+    assert.strictEqual(memberProps.personId, undefined, 'personId should be renamed by forward expansion');
+    assert.ok(memberProps.person, 'ApplicationMember.person should be inlined');
   });
 
   await t.test('integration - intake spec expands cross-domain refs and cascade stops at one level', async () => {
@@ -2502,40 +2507,55 @@ test('relationship-resolver tests', async (t) => {
     const __dirname = dirname(__filename);
     const contractsDir = join(__dirname, '../..');
     const intakeSpec = yaml.load(readFileSync(join(contractsDir, 'intake-openapi.yaml'), 'utf8'));
+    const intakeDomain = yaml.load(readFileSync(join(contractsDir, 'schemas/domain/intake.yaml'), 'utf8'));
 
-    const schemaIndex = buildSchemaIndex(new Map([['intake-openapi.yaml', intakeSpec]]));
-    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex);
+    const currentResults = new Map([
+      ['intake-openapi.yaml', intakeSpec],
+      ['schemas/domain/intake.yaml', intakeDomain],
+    ]);
+    const schemaIndex = buildSchemaIndex(currentResults);
+    const { result } = resolveRelationships(intakeSpec, 'expand', schemaIndex, currentResults);
     const schemas = result.components.schemas;
 
-    // VerificationWritable.sourceId → Polymorphic is a cross-domain forward
-    // reference (the target has no served path in this spec). It should still
-    // be expanded — renamed to `source` — even though Polymorphic isn't in the
-    // schema index. This guards the cross-domain forward-expand path against
-    // regressions, in particular ensuring polymorphic / external refs aren't
-    // accidentally treated as back-references.
-    const verificationProps = gatherSchemaProperties(schemas.VerificationWritable);
-    assert.strictEqual(verificationProps.sourceId, undefined, 'VerificationWritable.sourceId should be renamed (cross-domain forward expand)');
-    assert.ok(verificationProps.source, 'VerificationWritable.source should be inlined');
+    // Verification.sourceId → Polymorphic is a cross-domain forward reference.
+    // The x-relationship annotation lives in $defs/Verification. It should be
+    // expanded even though Polymorphic isn't in the schema index.
+    const verificationProps = gatherSchemaProperties(schemas.Verification, currentResults);
+    assert.strictEqual(verificationProps.sourceId, undefined, 'Verification.sourceId should be renamed (cross-domain forward expand)');
+    assert.ok(verificationProps.source, 'Verification.source should be inlined');
 
-    // Cascade stops: ApplicationMember.applicationId remains scalar even though
-    // forward-expansion runs on other schemas. Consumers following a $ref to
-    // ApplicationMember see an applicationId field, not an embedded Application.
-    const memberProps = gatherSchemaProperties(schemas.ApplicationMember);
+    // Cascade stops: ApplicationMember.applicationId remains scalar.
+    const memberProps = gatherSchemaProperties(schemas.ApplicationMember, currentResults);
     assert.ok(memberProps.applicationId, 'ApplicationMember.applicationId still scalar (cascade stopped)');
     assert.strictEqual(memberProps.application, undefined, 'no embedded Application — cascade stopped');
   });
 });
 
 // Walk a schema (possibly allOf-composed) and return the merged properties
-// from all branches. Used by the integration tests to inspect the resolved
+// from all branches. Follows external $refs into domain schema $defs when
+// currentResults is provided. Used by integration tests to inspect the resolved
 // shape regardless of where the property lives.
-function gatherSchemaProperties(schema) {
+function gatherSchemaProperties(schema, currentResults = new Map()) {
   const merged = {};
   if (!schema) return merged;
   if (schema.properties) Object.assign(merged, schema.properties);
   if (Array.isArray(schema.allOf)) {
     for (const branch of schema.allOf) {
-      Object.assign(merged, gatherSchemaProperties(branch));
+      if (branch.$ref && !branch.$ref.startsWith('#') && currentResults.size > 0) {
+        const hashIdx = branch.$ref.indexOf('#');
+        if (hashIdx !== -1) {
+          const filePart = branch.$ref.slice(0, hashIdx).replace(/^\.\//, '');
+          const anchorPart = branch.$ref.slice(hashIdx + 1);
+          const refSpec = currentResults.get(filePart);
+          if (refSpec) {
+            let node = refSpec;
+            for (const seg of anchorPart.split('/').filter(Boolean)) node = node?.[seg];
+            Object.assign(merged, gatherSchemaProperties(node, currentResults));
+          }
+        }
+      } else {
+        Object.assign(merged, gatherSchemaProperties(branch, currentResults));
+      }
     }
   }
   return merged;

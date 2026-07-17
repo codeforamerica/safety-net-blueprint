@@ -304,7 +304,7 @@ describe('OpenAPI to JSON Schema Conversion', () => {
 
   describe('loadSpec', () => {
     it('should dereference internal $ref entries', async () => {
-      const specPath = join(specsDir, 'persons-openapi.yaml');
+      const specPath = join(specsDir, 'intake-openapi.yaml');
       const spec = await loadSpec(specPath);
 
       // After dereferencing, components.schemas should contain resolved objects
@@ -321,15 +321,15 @@ describe('OpenAPI to JSON Schema Conversion', () => {
     });
 
     it('should dereference external $ref entries', async () => {
-      const specPath = join(specsDir, 'persons-openapi.yaml');
+      const specPath = join(specsDir, 'intake-openapi.yaml');
       const spec = await loadSpec(specPath);
 
       // External refs like ./components/parameters.yaml#/LimitParam should be resolved
       // Check that a path operation's parameters are resolved objects, not $ref strings
-      const listPath = spec.paths['/persons'];
-      assert.ok(listPath, '/persons path should exist');
+      const listPath = spec.paths['/applications'];
+      assert.ok(listPath, '/applications path should exist');
       const getOp = listPath.get;
-      assert.ok(getOp, 'GET /persons should exist');
+      assert.ok(getOp, 'GET /applications should exist');
 
       // Parameters should be resolved objects with 'name' and 'in' properties
       const params = getOp.parameters || listPath.parameters || [];

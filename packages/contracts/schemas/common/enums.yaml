@@ -10,6 +10,7 @@ $defs:
   Domain:
     type: string
     enum:
+      - client-management
       - data-exchange
       - document-management
       - eligibility
@@ -23,17 +24,19 @@ $defs:
   Frequency:
     type: string
     enum:
-      - hourly
       - daily
       - weekly
-      - every_2_weeks
-      - twice_a_month
+      - every_two_weeks
+      - twice_monthly
       - monthly
       - yearly
+      - variable
     description: >
-      How often an income or expense amount is received or incurred.
-      Not all values apply to all contexts — hourly and daily are typical
-      for income; weekly through yearly are typical for expenses.
+      How often an amount is received or incurred. Not all values apply to
+      all contexts — daily and weekly are typical for earned income; monthly
+      is typical for expenses. variable is used when the amount or timing
+      is irregular. Domain schemas (income.yaml, health.yaml) define their
+      own frequency enums where the allowed values differ from this baseline.
 
   Language:
     type: string
@@ -69,10 +72,12 @@ $defs:
       - medicaid      # Medicaid / MAGI Medicaid
       - chip          # Children's Health Insurance Program (Title XXI)
       - tanf          # Temporary Assistance for Needy Families
+      - aca           # ACA Marketplace / premium tax credits
     description: >
       Baseline public assistance programs. SNAP, Medicaid/MAGI, and CHIP are
       first-class programs with full intake and eligibility support. TANF is a
       thin baseline — federal requirements are minimal; state-specific intake
-      behavior is an overlay concern. Values use the federal program name;
-      state-specific names (e.g., "medical_assistance" for Medicaid) are
-      overlay concerns. States may extend this list via overlay.
+      behavior is an overlay concern. ACA covers marketplace eligibility rules
+      (premium tax credits, employer affordability, special enrollment periods).
+      Values use the federal program name; state-specific names are overlay
+      concerns. States may extend this list via overlay.

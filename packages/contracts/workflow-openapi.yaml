@@ -643,6 +643,7 @@ components:
           description: Reference to the User assigned to this task.
           x-relationship:
             resource: User
+            domain: identity-access
         outcome:
           type: string
           description: Completion outcome recorded when the task was completed (e.g., approved, denied).
@@ -676,6 +677,15 @@ components:
                 which SLA types to track.
               items:
                 $ref: "./components/sla.yaml#/SlaInfo"
+              readOnly: true
+            slaDeadline:
+              type:
+                - string
+                - "null"
+              format: date-time
+              description: >
+                Engine-managed. The earliest active deadline across all slaInfo entries.
+                Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
               readOnly: true
             createdAt:
               type: string

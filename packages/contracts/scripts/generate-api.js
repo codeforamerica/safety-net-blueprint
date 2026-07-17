@@ -96,7 +96,7 @@ Options:
   -r, --resource <name>    Resource name in PascalCase (e.g., "Benefit", "CaseWorker")
   -d, --domain <domain>    Business domain for x-domain (default: same as --name)
   -o, --out <dir>          Output directory (default: packages/contracts/)
-      --ref <dir>          Path to shared components directory (for correct $ref paths
+      --ref <dir>          Path to the contracts package root (for correct $ref paths
                            when --out is outside the contracts package)
   -h, --help               Show this help message
 
@@ -207,6 +207,7 @@ paths:
       - "$ref": "${componentsPrefix}/parameters.yaml#/SearchQueryParam"
       - "$ref": "${componentsPrefix}/parameters.yaml#/LimitParam"
       - "$ref": "${componentsPrefix}/parameters.yaml#/OffsetParam"
+      - "$ref": "${componentsPrefix}/parameters.yaml#/SortParam"
       responses:
         '200':
           description: A paginated collection of ${resourcePluralLower}.
@@ -417,10 +418,10 @@ components:
       $ref: "#/components/schemas/${resource}"
 
     ${resource}UpdatedEvent:
-      $ref: "${componentsPrefix}/events.yaml#/ResourceUpdatedEvent"
+      $ref: "${componentsPrefix}/../schemas/platform-events.yaml#/ResourceUpdatedEvent"
 
     ${resource}DeletedEvent:
-      $ref: "${componentsPrefix}/events.yaml#/ResourceDeletedEvent"
+      $ref: "${componentsPrefix}/../schemas/platform-events.yaml#/ResourceDeletedEvent"
 
   examples:
     ${resource}Example1:
@@ -473,10 +474,11 @@ async function main() {
     process.exit(1);
   }
 
-  // Compute components prefix for $ref paths
+  // Compute components prefix for $ref paths.
+  // --ref points to the contracts package root; components live in {ref}/components.
   let componentsPrefix = './components';
   if (options.ref) {
-    const absComponents = resolve(options.ref);
+    const absComponents = resolve(options.ref, 'components');
     let rel = relative(outDir, absComponents);
     if (!rel.startsWith('.')) rel = './' + rel;
     componentsPrefix = rel;

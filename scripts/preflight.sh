@@ -27,12 +27,42 @@ fail() {
   failures+=("$1")
 }
 
+# Stop immediately if a prior step failed — do not continue to later steps.
+# Fix the reported failure before re-running preflight.
+bail_if_failed() {
+  if [ "$failed" -gt 0 ]; then
+    printf "\n${RED}${BOLD}Stopping — fix the failure above before continuing.${RESET}\n"
+    printf "${RED}  ✗ %s${RESET}\n" "${failures[-1]}"
+    exit 1
+  fi
+}
+
+step "Checking explorer outputs are up to date"
+if ! git diff --exit-code packages/explorer/ > /dev/null 2>&1 || git ls-files --others --exclude-standard packages/explorer/ | grep -q .; then
+  printf "${RED}  ✗ Explorer outputs are stale — rebuild and stage before running preflight:${RESET}\n"
+  printf "      npm run build --workspace=packages/explorer\n"
+  printf "      git add packages/explorer/\n"
+  git diff --name-only packages/explorer/
+  git ls-files --others --exclude-standard packages/explorer/
+  exit 1
+else
+  pass "Explorer outputs are up to date"
+fi
+
+step "Clearing generated artifacts for a clean-slate run"
+rm -rf packages/resolved
+rm -rf packages/mock-server/tests/generated
+rm -rf packages/mock-server/tests/e2e/functional/resolved
+rm -rf packages/mock-server/tests/e2e/functional/generated
+pass "Cleared packages/resolved, tests/generated, and functional resolved/generated"
+
 step "Validating base specs"
 if npm run validate 2>&1; then
   pass "Base specs valid"
 else
   fail "Base spec validation failed"
 fi
+bail_if_failed
 
 step "Running unit tests"
 if npm test 2>&1; then
@@ -40,6 +70,7 @@ if npm test 2>&1; then
 else
   fail "Unit tests failed"
 fi
+bail_if_failed
 
 step "Resolving example overlay"
 if npm run resolve 2>&1; then
@@ -76,16 +107,6 @@ if npm run postman:generate 2>&1; then
   pass "Postman collection generated"
 else
   fail "Postman collection generation failed"
-fi
-
-
-
-step "Checking explorer outputs are up to date"
-if git diff --exit-code packages/explorer/ > /dev/null 2>&1; then
-  pass "Explorer outputs are up to date"
-else
-  fail "Explorer outputs are stale — run 'npm run build --workspace=packages/explorer', stage, and commit (or push via git push to let the pre-push hook handle it)"
-  git diff --name-only packages/explorer/
 fi
 
 step "Running integration tests"

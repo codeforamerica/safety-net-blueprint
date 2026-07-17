@@ -19,6 +19,7 @@
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
+import { resolveSchemaRefs, collectTopLevelProperties } from '../validation/state-machine-validator.js';
 
 const LIST_QUERY_PARAMS = [
   { $ref: './components/parameters.yaml#/SearchQueryParam' },
@@ -47,14 +48,19 @@ export function discoverCompositions(specsDir) {
 
   const results = [];
   for (const file of files) {
-    if (!file.endsWith('-compositions.yaml')) continue;
-    const domain = file.replace('-compositions.yaml', '');
+    if (!file.endsWith('.yaml') && !file.endsWith('.yml')) continue;
     const filePath = join(specsDir, file);
     try {
       const content = readFileSync(filePath, 'utf8');
       const doc = yaml.load(content);
-      if (!doc || typeof doc !== 'object' || !doc.compositions) continue;
+      if (!doc || typeof doc !== 'object') continue;
 
+      // Use $schema as the type discriminator, not the filename convention
+      const schemaBasename = doc.$schema?.split('/').pop();
+      if (schemaBasename !== 'compositions-schema.yaml') continue;
+      if (!doc.compositions) continue;
+
+      const domain = doc.domain || file.replace(/-compositions\.ya?ml$/, '');
       results.push({ filePath, domain, doc });
     } catch {
       continue;
@@ -85,15 +91,15 @@ export function extractResourceSlug(path) {
 
 /**
  * Collect all property names from a schema object.
- * Handles `properties` and `allOf` (one level deep for inline objects).
- * Does not resolve external `$ref` entries — properties on `$ref`-only allOf
- * members are skipped. This is sufficient for the common blueprint pattern of
- * `allOf: [{ $ref: external }, { type: object, properties: { ... } }]`.
+ * Handles `properties` and `allOf` entries, including external `$ref` allOf
+ * members that point to domain schema `$defs`. Uses `specsByFile` to follow
+ * those refs and collect properties from the referenced `$defs` entry.
  *
  * @param {Object} schema
+ * @param {Map<string, Object>} [specsByFile] - relativePath → parsed spec
  * @returns {Set<string>}
  */
-export function collectSchemaProperties(schema) {
+export function collectSchemaProperties(schema, specsByFile = new Map()) {
   const props = new Set();
   if (!schema || typeof schema !== 'object') return props;
 
@@ -105,7 +111,28 @@ export function collectSchemaProperties(schema) {
 
   if (Array.isArray(schema.allOf)) {
     for (const part of schema.allOf) {
-      if (part && typeof part === 'object' && !part.$ref && part.properties) {
+      if (!part || typeof part !== 'object') continue;
+
+      if (part.$ref && !part.$ref.startsWith('#')) {
+        // Follow external $ref into domain schema $defs
+        const hashIdx = part.$ref.indexOf('#');
+        if (hashIdx !== -1 && specsByFile.size > 0) {
+          const filePart = part.$ref.slice(0, hashIdx).replace(/^\.\//, '');
+          const anchorPart = part.$ref.slice(hashIdx + 1);
+          const refSpec = specsByFile.get(filePart);
+          if (refSpec) {
+            let node = refSpec;
+            for (const seg of anchorPart.split('/').filter(Boolean)) {
+              node = node?.[seg];
+            }
+            if (node?.properties) {
+              for (const key of Object.keys(node.properties)) {
+                props.add(key);
+              }
+            }
+          }
+        }
+      } else if (!part.$ref && part.properties) {
         for (const key of Object.keys(part.properties)) {
           props.add(key);
         }
@@ -129,7 +156,7 @@ export function collectSchemaProperties(schema) {
 export function buildResourceSchemaIndex(yamlFiles) {
   const index = new Map();
 
-  for (const { spec } of yamlFiles) {
+  for (const { spec, filePath } of yamlFiles) {
     if (!spec || !spec.paths) continue;
 
     const schemas = spec.components?.schemas || {};
@@ -156,12 +183,14 @@ export function buildResourceSchemaIndex(yamlFiles) {
       const match = schemaRef.match(/^#\/components\/schemas\/(.+)$/);
       if (!match) continue;
 
-      const schema = schemas[match[1]];
-      if (!schema) continue;
+      const rawSchema = schemas[match[1]];
+      if (!rawSchema) continue;
 
-      const props = collectSchemaProperties(schema);
-      if (props.size > 0) {
-        index.set(slug, props);
+      const context = filePath ? { spec, specFilePath: filePath } : { spec };
+      const schema = resolveSchemaRefs(rawSchema, context);
+      const propMap = collectTopLevelProperties(spec, schema);
+      if (propMap.size > 0) {
+        index.set(slug, new Set(propMap.keys()));
       }
     }
   }
@@ -228,6 +257,75 @@ export function validateBindFields(compositionDoc, resourceSchemaIndex) {
 
   const { domain, doc } = compositionDoc;
 
+  for (const [name, composition] of Object.entries(doc.compositions || {})) {
+    checkNode(composition, `${domain}.compositions.${name}`);
+  }
+
+  return errors;
+}
+
+// =============================================================================
+// Fields Array Validation
+// =============================================================================
+
+/**
+ * Validate all fields: arrays in a composition document against the resource schema index.
+ * Fields arrays contain dot-separated paths like "id", "contact.name.firstName".
+ * Validates that each path resolves to a property on the referenced resource schema.
+ *
+ * @param {Object} compositionDoc - { domain, doc: { compositions } }
+ * @param {Map<string, Set<string>>} resourceSchemaIndex
+ * @returns {Array<{ message: string, path: string }>}
+ */
+export function validateFieldsArrays(compositionDoc, resourceSchemaIndex) {
+  const errors = [];
+
+  function getNestedProperty(props, fieldPath) {
+    const parts = fieldPath.split('.');
+    // Only validate the top-level field; nested paths may reference sub-schemas
+    // not indexed here. Report only if the top-level field is missing.
+    return props?.has(parts[0]) ?? false;
+  }
+
+  function checkNode(node, nodePath) {
+    if (!node || typeof node !== 'object') return;
+
+    if (node.fields && node.resource) {
+      const props = resourceSchemaIndex.get(node.resource);
+      if (props) {
+        const fields = Array.isArray(node.fields) ? node.fields : [];
+        for (const field of fields) {
+          const topField = String(field).split('.')[0];
+          if (!props.has(topField)) {
+            errors.push({
+              message: `fields: "${field}" — field "${topField}" not found on resource "${node.resource}"`,
+              path: nodePath
+            });
+          }
+        }
+      }
+    }
+
+    if (node.include && typeof node.include === 'object') {
+      for (const [key, child] of Object.entries(node.include)) {
+        checkNode(child, `${nodePath}.include.${key}`);
+      }
+    }
+
+    if (node.sections && typeof node.sections === 'object') {
+      for (const [key, child] of Object.entries(node.sections)) {
+        checkNode(child, `${nodePath}.sections.${key}`);
+      }
+    }
+
+    if (node.panel?.include && typeof node.panel.include === 'object') {
+      for (const [key, child] of Object.entries(node.panel.include)) {
+        checkNode(child, `${nodePath}.panel.include.${key}`);
+      }
+    }
+  }
+
+  const { domain, doc } = compositionDoc;
   for (const [name, composition] of Object.entries(doc.compositions || {})) {
     checkNode(composition, `${domain}.compositions.${name}`);
   }

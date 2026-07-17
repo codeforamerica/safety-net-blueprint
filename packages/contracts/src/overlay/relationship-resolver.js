@@ -12,6 +12,8 @@
  * Supported styles:
  *   links-only  — adds a `links` object with URI references (default)
  *   expand      — replaces FK field with the related object schema (renamed: fooId → foo)
+ *                 Applies to response schemas only. Request body schemas (POST/PUT/PATCH)
+ *                 always use flat FKs regardless of the configured style.
  *
  * Planned (not yet implemented):
  *   include     — JSON:API-style sideloading
@@ -37,42 +39,102 @@
 // =============================================================================
 
 /**
+ * Resolve an external $ref (e.g. './schemas/domain/intake.yaml#/$defs/Foo')
+ * to the $defs entry object it points at, using currentResults as the file map.
+ *
+ * Returns { properties, sourceFile, defName, sourceSchema } on success,
+ * or an empty object if the file or anchor cannot be resolved.
+ *
+ * @param {string} ref - External $ref value
+ * @param {Map<string, object>} currentResults - Map of relativePath → parsed spec
+ * @returns {{ properties?: object, sourceFile?: string, defName?: string, sourceSchema?: object }}
+ */
+function resolveExternalDefRef(ref, currentResults) {
+  const hashIdx = ref.indexOf('#');
+  if (hashIdx === -1) return {};
+
+  const filePart = ref.slice(0, hashIdx).replace(/^\.\//, '');
+  const anchorPart = ref.slice(hashIdx + 1); // e.g. '/$defs/ApplicationMember'
+
+  const spec = currentResults.get(filePart);
+  if (!spec) return {};
+
+  // Navigate the anchor path: '/$defs/ApplicationMember' → spec.$defs.ApplicationMember
+  const segments = anchorPart.split('/').filter(Boolean);
+  let node = spec;
+  for (const seg of segments) {
+    if (!node || typeof node !== 'object') return {};
+    node = node[seg];
+  }
+
+  if (!node || !node.properties) return {};
+
+  return {
+    properties: node.properties,
+    sourceFile: filePart,
+    defName: segments[segments.length - 1],
+    sourceSchema: node
+  };
+}
+
+/**
  * Walk components.schemas for properties annotated with x-relationship.
  *
- * Handles both direct `properties` and `allOf` wrappers (where properties
- * may be nested inside allOf entries).
+ * Handles direct `properties`, inline `allOf` entries, and external `$ref`s
+ * in `allOf` that point to domain schema `$defs`. Results include a
+ * `sourceSchema` reference so transforms can mutate the right object.
  *
  * @param {object} spec - Parsed OpenAPI spec
- * @returns {Array<{ schemaName: string, propertyName: string, relationship: object }>}
+ * @param {Map<string, object>} [currentResults] - Map of relativePath → parsed spec,
+ *   used to follow external $refs into domain schema $defs
+ * @returns {Array<{
+ *   schemaName: string,
+ *   propertyName: string,
+ *   relationship: object,
+ *   sourceFile: string|null,
+ *   defName: string|null,
+ *   sourceSchema: object|null
+ * }>}
  */
-function discoverRelationships(spec) {
+function discoverRelationships(spec, currentResults = new Map()) {
   const results = [];
   const schemas = spec?.components?.schemas;
   if (!schemas) return results;
 
   for (const [schemaName, schema] of Object.entries(schemas)) {
-    // Collect properties from direct definition and allOf entries
+    // Each source: { properties, sourceFile, defName, sourceSchema }
+    // sourceFile/defName/sourceSchema are null for inline properties.
     const propertySources = [];
 
     if (schema.properties) {
-      propertySources.push(schema.properties);
+      propertySources.push({ properties: schema.properties, sourceFile: null, defName: null, sourceSchema: null });
     }
 
     if (Array.isArray(schema.allOf)) {
       for (const entry of schema.allOf) {
         if (entry.properties) {
-          propertySources.push(entry.properties);
+          propertySources.push({ properties: entry.properties, sourceFile: null, defName: null, sourceSchema: null });
+        }
+        // Follow external $refs to domain schema $defs
+        if (entry.$ref && !entry.$ref.startsWith('#')) {
+          const resolved = resolveExternalDefRef(entry.$ref, currentResults);
+          if (resolved.properties) {
+            propertySources.push(resolved);
+          }
         }
       }
     }
 
-    for (const properties of propertySources) {
+    for (const { properties, sourceFile, defName, sourceSchema } of propertySources) {
       for (const [propertyName, propertyDef] of Object.entries(properties)) {
         if (propertyDef?.['x-relationship']) {
           results.push({
             schemaName,
             propertyName,
-            relationship: propertyDef['x-relationship']
+            relationship: propertyDef['x-relationship'],
+            sourceFile,
+            defName,
+            sourceSchema
           });
         }
       }
@@ -391,7 +453,7 @@ function applyLinksOnly(schema, fields) {
     const linkName = deriveLinkName(propertyName);
     linkProperties[linkName] = {
       type: 'string',
-      format: 'uri',
+      format: 'uri-reference',
       description: `Link to the related ${relationship.resource} resource.`
     };
   }
@@ -408,13 +470,6 @@ function applyLinksOnly(schema, fields) {
     };
   }
 
-  // Strip x-relationship from each FK field
-  for (const { propertyName } of fields) {
-    const propDef = findProperty(schema, propertyName);
-    if (propDef) {
-      delete propDef['x-relationship'];
-    }
-  }
 }
 
 /**
@@ -433,7 +488,7 @@ function applyLinksOnly(schema, fields) {
  * @param {object} spec - The full target spec (needed to copy schemas for cross-spec refs)
  */
 function applyExpand(schemaName, schema, fields, schemaIndex, warnings, spec) {
-  for (const { propertyName, relationship } of fields) {
+  for (const { propertyName, relationship, sourceSchema } of fields) {
     // Build the expanded schema
     let expandedSchema;
     if (relationship.fields && Array.isArray(relationship.fields)) {
@@ -460,30 +515,58 @@ function applyExpand(schemaName, schema, fields, schemaIndex, warnings, spec) {
       }
     }
 
-    // Rename FK field (fooId → foo) and replace with expanded schema
+    // Preserve x-relationship on the expanded field so the mock can identify
+    // it as an expand-style relationship at request time. Always set style: expand
+    // explicitly so the mock doesn't need to know the global default.
+    expandedSchema['x-relationship'] = { ...relationship, style: 'expand' };
+
     const expandedFieldName = deriveLinkName(propertyName);
 
-    const propertySources = schema.properties ? [schema.properties] : [];
-    if (Array.isArray(schema.allOf)) {
-      for (const entry of schema.allOf) {
-        if (entry.properties) propertySources.push(entry.properties);
+    if (sourceSchema) {
+      // FK lives in a domain schema $defs entry.
+      // Delete it there, then add the expanded field to the OpenAPI spec's inline
+      // allOf properties block so the $ref target resolves in the correct namespace.
+      if (sourceSchema.properties) {
+        delete sourceSchema.properties[propertyName];
+        if (Array.isArray(sourceSchema.required)) {
+          const idx = sourceSchema.required.indexOf(propertyName);
+          if (idx !== -1) sourceSchema.required[idx] = expandedFieldName;
+        }
       }
-    }
-
-    for (const props of propertySources) {
-      if (propertyName in props) {
-        delete props[propertyName];
-        props[expandedFieldName] = expandedSchema;
-        break;
+      const inlineProps = findPropertiesObject(schema);
+      if (inlineProps) {
+        inlineProps[expandedFieldName] = expandedSchema;
       }
-    }
+      const schemasToCheck = [schema, ...(Array.isArray(schema.allOf) ? schema.allOf : [])];
+      for (const s of schemasToCheck) {
+        if (Array.isArray(s.required)) {
+          const idx = s.required.indexOf(propertyName);
+          if (idx !== -1) s.required[idx] = expandedFieldName;
+        }
+      }
+    } else {
+      // FK lives inline in the OpenAPI spec — existing behaviour.
+      const propertySources = schema.properties ? [schema.properties] : [];
+      if (Array.isArray(schema.allOf)) {
+        for (const entry of schema.allOf) {
+          if (entry.properties) propertySources.push(entry.properties);
+        }
+      }
 
-    // Update required arrays so the renamed field stays required
-    const schemasToCheck = [schema, ...(Array.isArray(schema.allOf) ? schema.allOf : [])];
-    for (const s of schemasToCheck) {
-      if (Array.isArray(s.required)) {
-        const idx = s.required.indexOf(propertyName);
-        if (idx !== -1) s.required[idx] = expandedFieldName;
+      for (const props of propertySources) {
+        if (propertyName in props) {
+          delete props[propertyName];
+          props[expandedFieldName] = expandedSchema;
+          break;
+        }
+      }
+
+      const schemasToCheck = [schema, ...(Array.isArray(schema.allOf) ? schema.allOf : [])];
+      for (const s of schemasToCheck) {
+        if (Array.isArray(s.required)) {
+          const idx = s.required.indexOf(propertyName);
+          if (idx !== -1) s.required[idx] = expandedFieldName;
+        }
       }
     }
   }
@@ -619,6 +702,29 @@ function findProperty(schema, propertyName) {
 }
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Collect schema names referenced from requestBody in any path operation.
+ * Expand is a response-only transform — request schemas always use flat FKs.
+ *
+ * @param {object} spec - Parsed OpenAPI spec
+ * @returns {Set<string>}
+ */
+function collectRequestSchemaNames(spec) {
+  const names = new Set();
+  for (const pathItem of Object.values(spec.paths || {})) {
+    for (const operation of Object.values(pathItem)) {
+      if (!operation || typeof operation !== 'object') continue;
+      const ref = operation.requestBody?.content?.['application/json']?.schema?.$ref;
+      if (ref) names.add(ref.split('/').pop());
+    }
+  }
+  return names;
+}
+
+// =============================================================================
 // Main Transform
 // =============================================================================
 
@@ -640,7 +746,7 @@ const PLANNED_STYLES = ['include', 'embed'];
  *   decisions: per-schema record of how each annotated FK was treated, suitable for
  *     verbose summary reporting via summarizeResolverDecisions
  */
-function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = new Map()) {
+function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = new Map(), currentResults = new Map()) {
   const warnings = [];
   const expandRenames = [];
   const linksData = [];
@@ -653,10 +759,15 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     );
   }
 
-  const relationships = discoverRelationships(spec);
+  const relationships = discoverRelationships(spec, currentResults);
   if (relationships.length === 0) {
     return { result: spec, warnings, expandRenames, linksData, decisions };
   }
+
+  // Collect schema names used as request bodies. Expand is a response-only
+  // transform — POST/PUT/PATCH bodies send flat FKs (memberId: uuid), not
+  // expanded objects. Applying expand to request schemas breaks writes.
+  const requestSchemaNames = collectRequestSchemaNames(spec);
 
   // Warn about unknown resource references
   for (const { schemaName, propertyName, relationship } of relationships) {
@@ -684,6 +795,9 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
     const linksOnlyFields = [];
     const expandFields = [];
 
+    // Request body schemas never get expand — they send flat FKs to the server.
+    const isRequestSchema = requestSchemaNames.has(schemaName);
+
     if (!decisions[schemaName]) {
       decisions[schemaName] = {
         expandedForward: [],
@@ -695,7 +809,9 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
     for (const field of fields) {
       const isExplicitStyle = !!field.relationship.style;
-      let effectiveStyle = field.relationship.style || globalStyle;
+      let effectiveStyle = (isRequestSchema && !field.relationship.style)
+        ? 'links-only'
+        : (field.relationship.style || globalStyle);
       let wasBackRefDowngrade = false;
       let wasExplicitBackRefOverride = false;
 

@@ -11,34 +11,8 @@ import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
 
-/**
- * Collect the names of optional properties from a resolved JSON Schema.
- * Optional = declared in properties but not in required. Handles allOf by
- * merging properties and required lists from all sub-schemas.
- *
- * @param {Object} schema - Fully-resolved JSON Schema object
- * @returns {Set<string>} Names of optional properties
- */
-function collectOptionalProperties(schema) {
-  const allProperties = {};
-  const allRequired = new Set();
-
-  function walk(s) {
-    if (!s || typeof s !== 'object') return;
-    if (s.properties) Object.assign(allProperties, s.properties);
-    if (s.required) for (const f of s.required) allRequired.add(f);
-    if (s.allOf) for (const sub of s.allOf) walk(sub);
-  }
-
-  walk(schema);
-
-  const optional = new Set();
-  for (const name of Object.keys(allProperties)) {
-    if (!allRequired.has(name)) optional.add(name);
-  }
-  return optional;
-}
 
 /**
  * Create create handler for a resource
@@ -83,20 +57,11 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // Merge enrichment data (catalog-derived fields, path params for sub-resources)
       const mergedBody = req.enrichmentData ? { ...req.body, ...req.enrichmentData } : req.body;
 
-      // Null-initialize optional schema properties not provided in the request body,
-      // so stored records reflect the full schema shape (matches real database behavior
-      // where unset nullable columns are stored as NULL rather than omitted entirely).
-      const nullDefaults = {};
-      if (endpoint.requestSchema) {
-        const optionalProps = collectOptionalProperties(endpoint.requestSchema);
-        for (const prop of optionalProps) {
-          if (!(prop in mergedBody)) nullDefaults[prop] = null;
-        }
-      }
-
-      const createData = Object.keys(nullDefaults).length > 0
-        ? { ...nullDefaults, ...mergedBody }
-        : mergedBody;
+      // Optional non-nullable fields not provided in the request body are intentionally
+      // omitted from the stored record (absent ≠ null per OpenAPI 3.1).
+      // Required-nullable defaults (null) and required-array defaults ([]) are applied
+      // at the database layer via registerCollectionDefaults / extractRequiredDefaults.
+      const createData = mergedBody;
 
       const resource = create(endpoint.collectionName, createData);
 
@@ -228,9 +193,16 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // Re-read from DB so the response reflects any mutations made by event subscriptions
       // (e.g. assignToQueue running synchronously in response to the created event)
       const fresh = findById(endpoint.collectionName, resource.id) || resource;
+
+      // Apply x-relationship expand and links-only transformations (same as GET handler)
+      const expandFields = extractExpandFields(endpoint.responseSchema);
+      const linksFields = extractLinksFields(endpoint.responseSchema);
+      let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, findById) : fresh;
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+
       res.status(201)
         .header('Location', location)
-        .json(fresh);
+        .json(responseBody);
     } catch (error) {
       console.error('Create handler error:', error);
 

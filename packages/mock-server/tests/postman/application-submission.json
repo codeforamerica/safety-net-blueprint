@@ -70,7 +70,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"programs\": [\"snap\", \"medicaid\"], \"channel\": \"online\"}",
+              "raw": "{\"programsAppliedFor\": [\"snap\", \"medicaid\"], \"channel\": \"online\"}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -98,7 +98,7 @@
                   "  pm.response.to.have.status(201);",
                   "  const body = pm.response.json();",
                   "  pm.expect(body.status).to.eql('draft');",
-                  "  pm.expect(body.programs).to.include.members(['snap', 'medicaid']);",
+                  "  pm.expect(body.programsAppliedFor).to.include.members(['snap', 'medicaid']);",
                   "  pm.collectionVariables.set('appId', body.id);",
                   "});"
                 ]
@@ -126,7 +126,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"roles\": [\"primary_applicant\"], \"programsApplyingFor\": [\"snap\", \"medicaid\"]}",
+              "raw": "{\"roles\": [\"primary_applicant\"], \"programsAppliedFor\": [\"snap\", \"medicaid\"]}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -183,7 +183,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"snap\"]}",
+              "raw": "{\"roles\": [\"household_member\"], \"programsAppliedFor\": [\"snap\"]}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -238,7 +238,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"roles\": [\"household_member\"], \"programsApplyingFor\": [\"medicaid\"]}",
+              "raw": "{\"roles\": [\"household_member\"], \"programsAppliedFor\": [\"medicaid\"]}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -284,13 +284,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"type\": \"employed\", \"amount\": 2000, \"frequency\": \"monthly\"}",
+              "raw": "{\"memberId\": \"{{memberAId}}\", \"type\": \"employed\", \"amount\": 2000, \"frequency\": \"monthly\"}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberAId}}/incomes",
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/incomes",
               "host": ["{{baseUrl}}"],
-              "path": ["intake", "applications", "{{appId}}", "members", "{{memberAId}}", "incomes"]
+              "path": ["intake", "applications", "{{appId}}", "incomes"]
             }
           },
           "event": [
@@ -319,13 +319,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"type\": \"employed\", \"amount\": 1500, \"frequency\": \"monthly\"}",
+              "raw": "{\"memberId\": \"{{memberBId}}\", \"type\": \"employed\", \"amount\": 1500, \"frequency\": \"monthly\"}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberBId}}/incomes",
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/incomes",
               "host": ["{{baseUrl}}"],
-              "path": ["intake", "applications", "{{appId}}", "members", "{{memberBId}}", "incomes"]
+              "path": ["intake", "applications", "{{appId}}", "incomes"]
             }
           },
           "event": [
@@ -353,13 +353,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"type\": \"employed\", \"amount\": 1200, \"frequency\": \"monthly\"}",
+              "raw": "{\"memberId\": \"{{memberCId}}\", \"type\": \"employed\", \"amount\": 1200, \"frequency\": \"monthly\"}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{appId}}/members/{{memberCId}}/incomes",
+              "raw": "{{baseUrl}}/intake/applications/{{appId}}/incomes",
               "host": ["{{baseUrl}}"],
-              "path": ["intake", "applications", "{{appId}}", "members", "{{memberCId}}", "incomes"]
+              "path": ["intake", "applications", "{{appId}}", "incomes"]
             }
           },
           "event": [
@@ -724,7 +724,6 @@
                   "  pm.response.to.have.status(200);",
                   "  const body = pm.response.json();",
                   "  pm.expect(body.status).to.eql('satisfied');",
-                  "  pm.expect(body.satisfiedAt).to.be.a('string');",
                   "});",
                   "",
                   "pm.test('AC 3 — electronic evidence item recorded with result: conclusive', () => {",

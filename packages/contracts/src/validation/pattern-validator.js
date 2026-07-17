@@ -64,11 +64,11 @@ function isFkField(propName, propSchema) {
  * @param {Object} spec - The OpenAPI spec object
  * @param {Array} errors - Array to push errors to
  */
-export function validateForeignKeys(spec, errors) {
+export function validateForeignKeys(spec, errors, sameDomainSchemas = new Set()) {
   const schemas = spec.components?.schemas;
   if (!schemas) return;
 
-  const localSchemaNames = new Set(Object.keys(schemas));
+  const localSchemaNames = new Set([...Object.keys(schemas), ...sameDomainSchemas]);
   const reservedResources = new Set(['External', 'Polymorphic']);
 
   for (const [schemaName, schema] of Object.entries(schemas)) {
@@ -87,12 +87,18 @@ export function validateForeignKeys(spec, errors) {
         continue;
       }
 
-      // Warn when the referenced resource is not defined in this spec and no
-      // domain qualifier is present — likely a cross-domain FK missing domain:.
+      // Path-style resources (e.g. "document-management/document-types") are already
+      // domain-qualified by their prefix — no additional domain: annotation needed.
+      const isPathStyleResource = rel.resource.includes('/');
+
+      // Warn when the referenced resource is not defined in this spec or any
+      // same-domain spec, and no domain qualifier is present — likely a
+      // cross-domain FK missing domain:.
       if (
         !reservedResources.has(rel.resource) &&
         !localSchemaNames.has(rel.resource) &&
-        !rel.domain
+        !rel.domain &&
+        !isPathStyleResource
       ) {
         errors.push({
           path: `components/schemas/${schemaName}/${propPath}`,
@@ -704,11 +710,11 @@ export function isActionPath(path) {
  * @param {string} specName - Name of the spec file
  * @returns {Array} Array of validation errors/warnings
  */
-export function validateSpec(spec, specName) {
+export function validateSpec(spec, specName, sameDomainSchemas = new Set()) {
   const errors = [];
 
   // Validate FK x-relationship annotations
-  validateForeignKeys(spec, errors);
+  validateForeignKeys(spec, errors, sameDomainSchemas);
 
   if (!spec.paths) {
     return errors.map(e => ({ ...e, spec: specName }));

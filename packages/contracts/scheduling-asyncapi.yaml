@@ -2,6 +2,7 @@ asyncapi: 3.0.0
 info:
   title: Scheduling Domain Events
   version: 1.0.0
+  x-domain: scheduling
   description: |
     Event catalog for the Scheduling domain. Covers appointment lifecycle events
     and timer infrastructure events used by the platform scheduling service.

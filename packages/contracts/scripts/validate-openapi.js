@@ -12,6 +12,7 @@ import { statSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const DEFAULT_SPEC_DIR = resolve(__dirname, '..');
 
 /**
  * Main validation function
@@ -44,14 +45,8 @@ async function main() {
     process.exit(1);
   }
 
-  // Parse --spec flag
   const specArg = args.find(a => a.startsWith('--spec='));
-  if (!specArg) {
-    console.error('Error: --spec=<file|dir> is required.\n');
-    console.error('Usage: node scripts/validate-openapi.js --spec=<file|dir>');
-    process.exit(1);
-  }
-  const specDir = resolve(specArg.split('=')[1]);
+  const specDir = resolve(specArg ? specArg.split('=')[1] : DEFAULT_SPEC_DIR);
   const isSingleFile = statSync(specDir).isFile();
 
   console.log('='.repeat(70));

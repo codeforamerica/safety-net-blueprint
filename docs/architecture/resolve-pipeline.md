@@ -80,6 +80,12 @@ Output from `resolveRelationships`:
 - `expandRenames` — field rename pairs for the expand style
 - `linksData` — link name + base path pairs for the links-only style
 
+**`x-relationship` is preserved in the resolved output** — both `expand` and `links-only` fields retain their `x-relationship` annotation after resolution. The mock server reads this at runtime to determine which fields to expand and which to populate with links URIs. Downstream tools that don't understand this extension (e.g. `@hey-api/openapi-ts`) strip it before processing — see [Output](#7-output) below.
+
+For the behavioral contract of each style, see [x-relationship](../x-extensions.md#x-relationship).
+
+By default, relationship resolution only runs when an overlay is present. Pass `--resolve` to run it on base specs without an overlay — useful for testing the resolver in isolation (e.g. functional test fixtures).
+
 ### 4. Example Transform
 
 After resolving relationships, `resolveExampleRelationships` applies the same transformations to the corresponding `*-openapi-examples.yaml` file:
@@ -135,9 +141,24 @@ Environment variables (`process.env`) take precedence over `.env` file values. U
 
 Resolved specs are written to the path specified by `--out` (default: `packages/resolved/`). The resolved directory mirrors the structure of `packages/contracts/` but contains fully-merged, relationship-resolved artifacts.
 
+By default, resolved specs preserve all `$ref` references — they are not inlined. This keeps the output readable and allows downstream tools (mock server, Postman generator) to follow references normally. Pass `--bundle` to inline all `$ref`s and produce self-contained single-file specs per domain — useful when distributing specs to external consumers or feeding them to tools that don't handle multi-file specs well.
+
+```bash
+# Default: preserve $refs
+npm run resolve
+
+# Bundled: inline all $refs into self-contained files
+node packages/contracts/scripts/resolve.js --bundle --out=packages/resolved
+```
+
 The resolved directory is consumed by:
 - `generate-postman.js` to produce the Postman collection
-- `npm run mock:start -- --spec=packages/resolved` to run the mock with overlay behavior
+- `npm run mock:start -- --spec=packages/resolved` to run the mock with overlay behavior — the mock server relies on `x-relationship` annotations being present to drive expand and links-only behavior at runtime
+- `npm run clients:typescript -- --spec=packages/resolved` to generate TypeScript clients — the client generator bundles specs internally and **strips `x-relationship` annotations by default** before passing to `@hey-api/openapi-ts`, since that tool does not use them and may produce unexpected output if they are present. Pass `--preserve-x-extensions` to keep vendor extensions in the generated output:
+
+```bash
+npm run clients:typescript -- --spec=packages/resolved --out=./src/api --preserve-x-extensions
+```
 
 ## Invoking the Pipeline
 
@@ -147,6 +168,12 @@ The pipeline is driven by `resolve.js`. These npm scripts cover common invocatio
 |--------|-------------|
 | `npm run resolve` | Run the full pipeline and write resolved specs to `packages/resolved/` |
 | `npm run postman:generate` | Run the full pipeline with the example overlay, then generate the Postman collection |
+
+Pass `--resolve` to force relationship resolution even without an overlay:
+
+```bash
+node packages/contracts/scripts/resolve.js --spec=my/fixtures --out=my/resolved --resolve
+```
 
 `npm run postman:generate` is a two-step pipeline:
 
@@ -164,3 +191,12 @@ node packages/contracts/scripts/resolve.js --help
 ## Testing
 
 Integration tests run against a fixture-seeded server to exercise the full stack. See [Testing Guide](../guides/testing.md) for details on how the fixture pipeline works and how to run integration tests.
+
+### Self-healing test pipeline
+
+The integration test scripts are designed to work from a clean checkout without requiring manual setup steps:
+
+- `generate-test-clients.js` checks whether `packages/resolved/` exists before generating clients. If it is missing or empty, it runs the resolve pipeline automatically.
+- `run-all-tests.js --integration` checks whether `tests/generated/` exists before running integration tests. If it is missing or empty, it runs `generate-test-clients.js` automatically (which in turn ensures resolved specs exist).
+
+This means `npm run test:integration` is safe to run at any time regardless of local state — it will resolve and generate whatever is needed.

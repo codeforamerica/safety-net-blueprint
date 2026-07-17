@@ -2,6 +2,7 @@ asyncapi: 3.0.0
 info:
   title: Document Management Domain Events
   version: 1.0.0
+  x-domain: document-management
   description: |
     Event catalog for the Document Management domain. Covers document and version
     lifecycle events.

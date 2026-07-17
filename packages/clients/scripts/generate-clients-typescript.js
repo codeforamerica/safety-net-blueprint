@@ -36,6 +36,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync
 import { join, dirname, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { bundleSpec } from '../../contracts/src/bundle.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -46,7 +47,7 @@ const utilityDIr = join(clientsRoot, 'utility');
  * Parse command line arguments
  */
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { spec: null, out: null, help: false };
+  const args = { spec: null, out: null, help: false, preserveXExtensions: false };
 
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') {
@@ -55,6 +56,8 @@ function parseArgs(argv = process.argv.slice(2)) {
       args.spec = arg.split('=')[1];
     } else if (arg.startsWith('--out=')) {
       args.out = arg.split('=')[1];
+    } else if (arg === '--preserve-x-extensions') {
+      args.preserveXExtensions = true;
     }
   }
 
@@ -72,9 +75,10 @@ Usage:
   node scripts/generate-clients-typescript.js --spec=<file-or-dir> --out=<dir>
 
 Flags:
-  --spec=<file-or-dir>  Path to resolved spec file or directory (required)
-  --out=<dir>           Output directory for generated clients (required)
-  -h, --help            Show this help message
+  --spec=<file-or-dir>       Path to resolved spec file or directory (required)
+  --out=<dir>                Output directory for generated clients (required)
+  --preserve-x-extensions    Keep x-* vendor extensions (e.g. x-relationship) in generated output
+  -h, --help                 Show this help message
 
 Example:
   # From state application repo
@@ -106,6 +110,7 @@ function exec(command, args, options = {}) {
     console.log(`  Running: ${command} ${args.join(' ')}`);
     const child = spawn(command, args, {
       stdio: 'inherit',
+      shell: true,
       ...options
     });
 
@@ -119,6 +124,39 @@ function exec(command, args, options = {}) {
 
     child.on('error', reject);
   });
+}
+
+/**
+ * Strip x-relationship from all schema properties in a bundled spec object.
+ *
+ * The mock server needs x-relationship preserved in resolved specs to detect
+ * expand/links-only fields at runtime. hey-api does not understand this
+ * extension and may behave unexpectedly when it appears on schema properties,
+ * so we remove it from the bundled spec before code generation.
+ *
+ * Mutates the spec in place.
+ *
+ * @param {object} spec - Bundled OpenAPI spec object
+ */
+function stripXRelationship(spec) {
+  const schemas = spec?.components?.schemas;
+  if (!schemas) return;
+  for (const schema of Object.values(schemas)) {
+    stripXRelationshipFromSchema(schema);
+  }
+}
+
+function stripXRelationshipFromSchema(schema) {
+  if (!schema || typeof schema !== 'object') return;
+  if (schema.properties) {
+    for (const prop of Object.values(schema.properties)) {
+      delete prop['x-relationship'];
+      stripXRelationshipFromSchema(prop);
+    }
+  }
+  if (Array.isArray(schema.allOf)) {
+    for (const entry of schema.allOf) stripXRelationshipFromSchema(entry);
+  }
 }
 
 /**
@@ -326,7 +364,7 @@ function patchZodGenForNullable(zodGenPath, nullableFields) {
  * Main generation function
  */
 async function main() {
-  const { spec, out, help } = parseArgs();
+  const { spec, out, help, preserveXExtensions } = parseArgs();
 
   if (help) {
     showHelp();
@@ -391,12 +429,46 @@ async function main() {
     // Create domain output directory
     mkdirSync(domainOutputDir, { recursive: true });
 
-    // Create openapi-ts config
-    const configContent = createOpenApiTsConfig(specPath, domainOutputDir);
+    // Bundle the spec (inline all external $refs) so hey-api receives a
+    // self-contained spec. Without this, hey-api resolves external refs itself
+    // and loses discriminator mapping key associations when hoisting $defs,
+    // producing unsatisfiable zod union literals.
+    const bundledSpec = await bundleSpec(resolvePath(specPath));
+    // Strip x-relationship before handing to hey-api — the mock server needs
+    // this extension at runtime, but hey-api does not understand it and may
+    // produce unexpected output when it appears on schema properties.
+    // Pass --preserve-x-extensions to skip stripping.
+    if (!preserveXExtensions) stripXRelationship(bundledSpec);
+    const bundledSpecPath = join(outputDir, `${domain}-bundled.yaml`);
+    writeFileSync(bundledSpecPath, yaml.dump(bundledSpec, { noRefs: true }));
+
+    // Create openapi-ts config pointing at the bundled spec
+    const configContent = createOpenApiTsConfig(bundledSpecPath, domainOutputDir);
     writeFileSync(configPath, configContent);
 
-    // Generate client using @hey-api/openapi-ts
-    await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: outputDir });
+    // Generate client using @hey-api/openapi-ts.
+    // cwd must be within the project tree so npx resolves the locally installed
+    // version from node_modules rather than fetching @latest from the registry.
+    await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
+
+    // Clean up bundled spec temp file
+    rmSync(bundledSpecPath);
+
+    // Post-process: emit named enum const exports for string enum $defs in external
+    // schema files. dereference() inlines these, so hey-api never sees them as named
+    // schemas — we append the exports ourselves so consumers can iterate values at runtime.
+    const typesGenPath = join(domainOutputDir, 'types.gen.ts');
+    if (existsSync(typesGenPath)) {
+      const namedEnums = collectNamedEnumDefs(resolvePath(specPath));
+      if (namedEnums.length > 0) {
+        patchTypesGenForNamedEnums(typesGenPath, namedEnums);
+        // Also patch the domain index.ts barrel — hey-api generates type-only re-exports
+        // and won't include our appended value consts. Add explicit value exports so they're
+        // reachable from the package entry point.
+        const domainIndexPath = join(domainOutputDir, 'index.ts');
+        if (existsSync(domainIndexPath)) patchDomainBarrelForNamedEnums(domainIndexPath, namedEnums);
+      }
+    }
 
     // Post-process: add .nullable() to fields the generator missed.
     // @hey-api/openapi-ts does not translate nullable: true on allOf-wrapped $ref
@@ -405,6 +477,7 @@ async function main() {
     if (existsSync(zodGenPath)) {
       const nullableFields = collectNullableFieldNames(specsDir);
       if (nullableFields.size > 0) patchZodGenForNullable(zodGenPath, nullableFields);
+      validateDiscriminatorLiterals(bundledSpec, zodGenPath);
     }
 
     // Post-process: Remove unused @ts-expect-error directives
@@ -455,8 +528,125 @@ async function main() {
   console.log(`  import { getPerson } from '@/api/${domains[0]}';`);
 }
 
+/**
+ * Walk a schema object tree and collect all discriminator mapping keys.
+ * Returns a Set of string values that should appear as zod literals.
+ */
+function collectDiscriminatorMappingKeys(obj, result = new Set(), depth = 0, maxDepth = 1000) {
+  if (!obj || typeof obj !== 'object') return result;
+  if (depth >= maxDepth) return result;
+  if (Array.isArray(obj)) { obj.forEach(v => collectDiscriminatorMappingKeys(v, result, depth + 1, maxDepth)); return result; }
+  if (obj.discriminator?.mapping) {
+    for (const key of Object.keys(obj.discriminator.mapping)) result.add(key);
+  }
+  for (const val of Object.values(obj)) collectDiscriminatorMappingKeys(val, result, depth + 1, maxDepth);
+  return result;
+}
+
+/**
+ * Validate that a generated zod.gen.ts file uses discriminator mapping keys
+ * as literals — not hoisted $defs schema names (e.g. "shape_Circle").
+ * Throws with a descriptive error if any mapping key is missing from the output.
+ *
+ * @param {Object} bundledSpec - fully dereferenced spec object
+ * @param {string} zodGenPath - absolute path to the generated zod.gen.ts
+ */
+function validateDiscriminatorLiterals(bundledSpec, zodGenPath) {
+  const mappingKeys = collectDiscriminatorMappingKeys(bundledSpec);
+  if (mappingKeys.size === 0) return;
+
+  const zodGen = readFileSync(zodGenPath, 'utf8');
+  const missing = [];
+  for (const key of mappingKeys) {
+    // hey-api may emit z.literal('key') or z.enum(['key']); check for the quoted value
+    if (!zodGen.includes(`'${key}'`)) missing.push(key);
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `Discriminator mapping keys missing from generated zod output: ${missing.join(', ')}\n` +
+      `This indicates hey-api used hoisted $defs schema names instead of mapping keys.\n` +
+      `Check that bundleSpec ran correctly before passing the spec to @hey-api/openapi-ts.`
+    );
+  }
+}
+
+/**
+ * Collect named string enum $defs from all external schema files referenced in the spec.
+ * Returns an array of { name, values } objects, deduplicated by name.
+ *
+ * @param {string} specPath - absolute path to the original (unbundled) spec file
+ */
+function collectNamedEnumDefs(specPath) {
+  const specDir = dirname(specPath);
+  const rawSpec = readFileSync(specPath, 'utf8');
+
+  // Find all external file refs: ./path/to/file.yaml (before any # anchor)
+  const externalRefs = new Set();
+  for (const match of rawSpec.matchAll(/\$ref:\s*['"]?(\.\/[^\s'"#]+\.yaml)/g)) {
+    externalRefs.add(match[1]);
+  }
+
+  // Name enums using file stem + def name to match hey-api's hoisting convention,
+  // e.g. income.yaml + IncomeType → IncomeIncomeType. This avoids naming collisions
+  // across files and preserves compatibility with what hey-api produced before bundling.
+  const toPascal = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const seen = new Set();
+  const namedEnums = [];
+  for (const ref of externalRefs) {
+    const filePath = resolvePath(specDir, ref);
+    if (!existsSync(filePath)) continue;
+    let schema;
+    try { schema = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    const fileStem = toPascal(ref.split('/').pop().replace(/\.yaml$/, ''));
+    const defs = schema?.$defs ?? schema?.definitions ?? {};
+    for (const [defName, def] of Object.entries(defs)) {
+      if (def.type === 'string' && Array.isArray(def.enum)) {
+        const name = fileStem + defName;
+        if (!seen.has(name)) {
+          seen.add(name);
+          namedEnums.push({ name, values: def.enum });
+        }
+      }
+    }
+  }
+  return namedEnums;
+}
+
+/**
+ * Patch the domain index.ts barrel to add value exports for named enum consts.
+ * hey-api generates type-only re-exports and won't include our appended consts,
+ * so consumers importing from the package entry point would get nothing.
+ *
+ * @param {string} domainIndexPath - absolute path to the domain's index.ts
+ * @param {{ name: string }[]} namedEnums
+ */
+function patchDomainBarrelForNamedEnums(domainIndexPath, namedEnums) {
+  const constNames = namedEnums.map(e => e.name).join(', ');
+  const existing = readFileSync(domainIndexPath, 'utf8');
+  writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { ${constNames} } from './types.gen';\n`);
+}
+
+/**
+ * Append named enum const exports to types.gen.ts in hey-api javascript-enum format.
+ * Emits:
+ *   export const FooBar = { VALUE_ONE: 'value_one', ... } as const;
+ *   export type FooBar = (typeof FooBar)[keyof typeof FooBar];
+ *
+ * @param {string} typesGenPath - absolute path to the generated types.gen.ts
+ * @param {{ name: string, values: string[] }[]} namedEnums
+ */
+function patchTypesGenForNamedEnums(typesGenPath, namedEnums) {
+  const toConstKey = v => String(v).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const blocks = namedEnums.map(({ name, values }) => {
+    const entries = values.map(v => `  ${toConstKey(v)}: '${v}'`).join(',\n');
+    return `export const ${name} = {\n${entries},\n} as const;\nexport type ${name} = (typeof ${name})[keyof typeof ${name}];`;
+  });
+  const existing = readFileSync(typesGenPath, 'utf8');
+  writeFileSync(typesGenPath, existing.trimEnd() + '\n\n' + blocks.join('\n\n') + '\n');
+}
+
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums };
 
 // Run main function only if this is the entry point
 if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {

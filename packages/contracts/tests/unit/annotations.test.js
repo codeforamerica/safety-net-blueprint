@@ -64,7 +64,7 @@ test('loadAnnotations', async (t) => {
     assert.ok(Object.keys(result.schema).length > 0, 'schema should have entries');
     assert.ok(Object.keys(result.operations).length > 0, 'operations should have entries');
     assert.ok(Object.keys(result.events).length > 0, 'events should have entries');
-    assert.ok(result.schema['ApplicationMember.dateOfBirth'], 'should include dateOfBirth annotation');
+    assert.ok(result.schema['application.members[].personalInformation.dateOfBirth'], 'should include dateOfBirth annotation');
   });
 });
 

@@ -192,6 +192,7 @@ components:
           description: Reference to the Person record for the primary applicant.
           x-relationship:
             resource: Person
+            domain: client-management
         members:
           type: array
           description: Household members associated with this case.
@@ -203,6 +204,7 @@ components:
           description: Reference to the User record for the assigned case worker.
           x-relationship:
             resource: User
+            domain: identity-access
         createdAt:
           type: string
           format: date-time
@@ -230,6 +232,7 @@ components:
           description: Reference to the Person record.
           x-relationship:
             resource: Person
+            domain: client-management
         relationship:
           type: string
           description: Relationship to the primary applicant.

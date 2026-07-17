@@ -39,7 +39,7 @@ const TASKS = '/workflow/tasks';
 async function createAndSubmitApp(programs = ['snap'], channel = 'online') {
   const create = await fetch(`${BASE_URL}${APP}`, {
     method: 'POST', headers: APPLICANT,
-    body: { programs, channel },
+    body: { programsAppliedFor: programs, channel },
   });
   const app = await create.json();
   await fetch(`${BASE_URL}${APP}/${app.id}/submit`, { method: 'POST', headers: APPLICANT });
@@ -56,15 +56,47 @@ async function createOpenApp(programs = ['snap']) {
 async function createMember(applicationId, programs = ['snap']) {
   const res = await fetch(`${BASE_URL}${MEMBERS}`, {
     method: 'POST', headers: CASEWORKER,
-    body: { applicationId, firstName: 'Test', lastName: 'Member', programsApplyingFor: programs },
+    body: { applicationId, firstName: 'Test', lastName: 'Member', programsAppliedFor: programs },
   });
   return res.json();
 }
 
 async function createIncome(applicationId, memberId, overrides = {}) {
-  const res = await fetch(`${BASE_URL}/intake/applications/${applicationId}/members/${memberId}/incomes`, {
+  const res = await fetch(`${BASE_URL}/intake/applications/${applicationId}/incomes`, {
     method: 'POST', headers: CASEWORKER,
-    body: { type: 'employed', amount: 1500, frequency: 'monthly', ...overrides },
+    body: { memberId, type: 'employed', amount: 1500, frequency: 'monthly', ...overrides },
+  });
+  return res.json();
+}
+
+async function createAsset(applicationId, memberId, overrides = {}) {
+  const res = await fetch(`${BASE_URL}/intake/applications/${applicationId}/assets`, {
+    method: 'POST', headers: CASEWORKER,
+    body: { memberId, type: 'liquid', value: 500, ...overrides },
+  });
+  return res.json();
+}
+
+async function createExpense(applicationId, memberId, overrides = {}) {
+  const res = await fetch(`${BASE_URL}/intake/applications/${applicationId}/expenses`, {
+    method: 'POST', headers: CASEWORKER,
+    body: { memberId, type: 'rent', amount: 800, ...overrides },
+  });
+  return res.json();
+}
+
+async function createJob(applicationId, memberId, overrides = {}) {
+  const res = await fetch(`${BASE_URL}/intake/applications/${applicationId}/jobs`, {
+    method: 'POST', headers: CASEWORKER,
+    body: { memberId, type: 'employed', status: 'active', ...overrides },
+  });
+  return res.json();
+}
+
+async function createHealthPlan(applicationId, overrides = {}) {
+  const res = await fetch(`${BASE_URL}/intake/applications/${applicationId}/health-plans`, {
+    method: 'POST', headers: CASEWORKER,
+    body: { type: 'employer_sponsored', ...overrides },
   });
   return res.json();
 }
@@ -81,7 +113,7 @@ async function testApplicationLifecycle() {
   await test('Create application — status is draft', async () => {
     const res = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     assert.strictEqual(res.status, 201);
     const data = await res.json();
@@ -112,7 +144,7 @@ async function testApplicationLifecycle() {
   await test('open by applicant → 403 FORBIDDEN', async () => {
     const { id } = await (await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     })).json();
     await fetch(`${BASE_URL}${APP}/${id}/submit`, { method: 'POST', headers: APPLICANT });
     const res = await fetch(`${BASE_URL}${APP}/${id}/open`, { method: 'POST', headers: APPLICANT });
@@ -182,7 +214,7 @@ async function testApplicationWithdraw() {
   await test('withdraw from draft → 409 CONFLICT', async () => {
     const { id } = (await (await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     })).json());
     const res = await fetch(`${BASE_URL}${APP}/${id}/withdraw`, {
       method: 'POST', headers: APPLICANT,
@@ -363,7 +395,7 @@ async function testCreateVerificationChecklistRule() {
   await test('SNAP submission creates income (per source) + identity (per member, electronic) + residency (household, document) verifications', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await createRes.json();
     const member = await createMember(app.id, ['snap']);
@@ -394,7 +426,7 @@ async function testCreateVerificationChecklistRule() {
   await test('Medicaid submission creates citizenship + immigration (per member, electronic) verifications', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['medicaid'], channel: 'online' },
+      body: { programsAppliedFor: ['medicaid'], channel: 'online' },
     });
     const app = await createRes.json();
     const member = await createMember(app.id, ['medicaid']);
@@ -1336,7 +1368,7 @@ async function testIncomeVerificationPerSource() {
   await test('member with two income records → two income verifications, each pointing to the correct source', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await createRes.json();
     const member = await createMember(app.id, ['snap']);
@@ -1359,7 +1391,7 @@ async function testIncomeVerificationPerSource() {
   await test('two members each with one income record → two income verifications', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await createRes.json();
     const memberA = await createMember(app.id, ['snap']);
@@ -1376,7 +1408,7 @@ async function testIncomeVerificationPerSource() {
   await test('member with no income records → no income verifications created', async () => {
     const createRes = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await createRes.json();
     await createMember(app.id, ['snap']);
@@ -1455,7 +1487,7 @@ async function testTraceparentPropagation() {
   await test('traceparent propagates from submit to downstream workflow.task.created event', async () => {
     const create = await fetch(`${BASE_URL}${APP}`, {
       method: 'POST', headers: APPLICANT,
-      body: { programs: ['snap'], channel: 'online' },
+      body: { programsAppliedFor: ['snap'], channel: 'online' },
     });
     const app = await create.json();
 
@@ -1478,6 +1510,124 @@ async function testTraceparentPropagation() {
     assert.ok(submittedEvent, 'intake.application.submitted event must exist');
     assert.ok(taskCreatedEvent, 'workflow.task.created event must exist');
     assert.strictEqual(taskCreatedEvent.causationid, submittedEvent.id, 'workflow.task.created must set causationid to the id of intake.application.submitted');
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Application sub-collection CRUD
+// ---------------------------------------------------------------------------
+
+async function testSubCollectionCrud() {
+  section('Application sub-collection CRUD');
+
+  const app = await createAndSubmitApp(['snap', 'medicaid']);
+  const member = await createMember(app.id, ['snap', 'medicaid']);
+
+  // --- Income ---
+  await test('POST /incomes — creates income record with applicationId and memberId', async () => {
+    const income = await createIncome(app.id, member.id);
+    assert.ok(income.id, 'income should have id');
+    assert.strictEqual(income.applicationId, app.id);
+    assert.strictEqual(income.memberId, member.id);
+    assert.ok(income.createdAt, 'should have createdAt');
+    assert.ok(income.updatedAt, 'should have updatedAt');
+  });
+
+  await test('GET /incomes — lists income filtered by memberId', async () => {
+    const res = await fetch(`${BASE_URL}/intake/applications/${app.id}/incomes?memberId=${member.id}`);
+    assert.strictEqual(res.status, 200);
+    const { items, total } = await res.json();
+    assert.ok(total >= 1, 'should have at least 1 income record');
+    assert.ok(items.every(i => i.memberId === member.id), 'all items should belong to member');
+  });
+
+  // --- Assets ---
+  await test('POST /assets — creates asset record with applicationId and memberId', async () => {
+    const asset = await createAsset(app.id, member.id);
+    assert.ok(asset.id, 'asset should have id');
+    assert.strictEqual(asset.applicationId, app.id);
+    assert.strictEqual(asset.memberId, member.id);
+    assert.strictEqual(asset.type, 'liquid');
+    assert.ok(asset.createdAt, 'should have createdAt');
+  });
+
+  await test('GET /assets — lists assets for application', async () => {
+    const res = await fetch(`${BASE_URL}/intake/applications/${app.id}/assets`);
+    assert.strictEqual(res.status, 200);
+    const { items, total } = await res.json();
+    assert.ok(total >= 1);
+    assert.ok(items.some(a => a.applicationId === app.id));
+  });
+
+  // --- Expenses ---
+  await test('POST /expenses — creates expense record with applicationId and memberId', async () => {
+    const expense = await createExpense(app.id, member.id);
+    assert.ok(expense.id, 'expense should have id');
+    assert.strictEqual(expense.applicationId, app.id);
+    assert.strictEqual(expense.memberId, member.id);
+    assert.strictEqual(expense.type, 'rent');
+    assert.ok(expense.createdAt, 'should have createdAt');
+  });
+
+  await test('GET /expenses — lists expenses for application', async () => {
+    const res = await fetch(`${BASE_URL}/intake/applications/${app.id}/expenses`);
+    assert.strictEqual(res.status, 200);
+    const { items, total } = await res.json();
+    assert.ok(total >= 1);
+    assert.ok(items.some(e => e.applicationId === app.id));
+  });
+
+  // --- Jobs ---
+  await test('POST /jobs — creates job record with applicationId and memberId', async () => {
+    const job = await createJob(app.id, member.id);
+    assert.ok(job.id, 'job should have id');
+    assert.strictEqual(job.applicationId, app.id);
+    assert.strictEqual(job.memberId, member.id);
+    assert.strictEqual(job.type, 'employed');
+    assert.strictEqual(job.status, 'active');
+    assert.ok(job.createdAt, 'should have createdAt');
+  });
+
+  await test('GET /jobs — lists jobs for application', async () => {
+    const res = await fetch(`${BASE_URL}/intake/applications/${app.id}/jobs`);
+    assert.strictEqual(res.status, 200);
+    const { items, total } = await res.json();
+    assert.ok(total >= 1);
+    assert.ok(items.some(j => j.applicationId === app.id));
+  });
+
+  // --- Health Plans ---
+  await test('POST /health-plans — creates health plan with applicationId', async () => {
+    const plan = await createHealthPlan(app.id);
+    assert.ok(plan.id, 'health plan should have id');
+    assert.strictEqual(plan.applicationId, app.id);
+    assert.strictEqual(plan.type, 'employer_sponsored');
+    assert.ok(plan.createdAt, 'should have createdAt');
+  });
+
+  await test('GET /health-plans — lists health plans for application', async () => {
+    const res = await fetch(`${BASE_URL}/intake/applications/${app.id}/health-plans`);
+    assert.strictEqual(res.status, 200);
+    const { items, total } = await res.json();
+    assert.ok(total >= 1);
+    assert.ok(items.some(p => p.applicationId === app.id));
+  });
+
+  // --- ApplicationMember list ---
+  await test('GET /application-members — lists members for application', async () => {
+    const res = await fetch(`${BASE_URL}/intake/application-members?applicationId=${app.id}`);
+    assert.strictEqual(res.status, 200);
+    const { items, total } = await res.json();
+    assert.ok(total >= 1, 'should have the member we created');
+    assert.ok(items.some(m => m.id === member.id));
+  });
+
+  // --- ApplicationHousehold ---
+  await test('GET /applications/{id}/household-info — returns household singleton', async () => {
+    const res = await fetch(`${BASE_URL}/intake/applications/${app.id}/household-info`);
+    // Household may be 404 before any data is written, or 200 if seeded/auto-created.
+    // Either is acceptable — we just verify the route exists (not 500).
+    assert.ok([200, 404].includes(res.status), `Expected 200 or 404, got ${res.status}`);
   });
 }
 
@@ -1526,6 +1676,7 @@ async function runTests() {
     await testCloseOnAllDeterminedRule();
     await testTaskClaimedRules();
     await testSubCollectionPaginationEnvelope();
+    if (membersAvailable) await testSubCollectionCrud();
     await testReviewContext();
     await testCompositionState();
     await testSectionView();

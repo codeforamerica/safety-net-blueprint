@@ -15,7 +15,7 @@
  *   node build.js --only=adoption-model
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -98,6 +98,18 @@ if (buildServiceBP) {
 // ── Data explorer (reads contracts directly — subprocess) ─────────────────────
 
 if (doBuild('data-explorer')) {
+  const contractsDir = resolve(__dirname, '..', 'contracts');
+  const domains = readdirSync(contractsDir)
+    .filter(f => f.endsWith('-openapi.yaml'))
+    .map(f => f.replace('-openapi.yaml', ''));
+  const generateDataModel = resolve(__dirname, 'data-explorer', 'generate-data-model.mjs');
+  for (const domain of domains) {
+    try {
+      execFileSync(node, [generateDataModel, `--domain=${domain}`], { stdio: 'inherit' });
+    } catch {
+      // Domain doesn't have the right structure for data model generation — skip
+    }
+  }
   execFileSync(node, [resolve(__dirname, 'data-explorer', 'build.js')], { stdio: 'inherit' });
 }
 

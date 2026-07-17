@@ -1,0 +1,10 @@
+$schema: ./schemas/annotations-schema.yaml
+version: "1.0"
+domain: client-management
+# Add field-level annotations below. See intake-annotations-docs.yaml for examples.
+# Supported sections: schema (field paths), operations (state machine actions), events (AsyncAPI channels).
+# Example:
+#
+# schema:
+#   person.id:
+#     reason: Unique identifier for the person record; FK target for personId fields throughout the platform.

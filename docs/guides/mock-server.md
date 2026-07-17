@@ -251,6 +251,20 @@ curl -X DELETE http://localhost:1080/mock/stubs/http/http.expedited-screening-1 
 curl -X DELETE http://localhost:1080/mock/stubs/http                             # clear all
 ```
 
+## Record shape on create
+
+When the mock stores a newly created resource, it applies the following defaults to fields not present in the request body:
+
+| Field type | Default behavior |
+|---|---|
+| Required + nullable (`type: [X, "null"]`) | Initialized to `null` |
+| Required + array (`type: "array"`) | Initialized to `[]` |
+| Optional (not in `required`) | **Omitted** — not present in the stored record |
+
+**Why optional fields are omitted, not null:** `null` and absent are semantically distinct in OpenAPI 3.1 / JSON Schema. A field typed as `string` (non-nullable) cannot validly hold `null` — only a field typed as `["string", "null"]` can. Emitting `null` for an optional non-nullable field produces a spec-invalid response that breaks generated validators (e.g. Zod `.optional()` rejects `null`; only `.nullable()` accepts it). Omitting the field is the only spec-valid representation of "not provided."
+
+This aligns with Stripe's behavior (they emit `null` for unset fields, but mark those fields `nullable` in their spec) and the Zalando REST guidelines (which treat null and absent identically only when a field is both optional *and* nullable).
+
 ## Sorting (`?sort=`)
 
 The mock server honors the `x-sortable` extension on every list endpoint:

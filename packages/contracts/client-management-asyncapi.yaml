@@ -2,6 +2,7 @@ asyncapi: 3.0.0
 info:
   title: Client Management Domain Events
   version: 1.0.0
+  x-domain: client-management
   description: |
     Event catalog for the Client Management domain. All events are CloudEvents 1.0
     envelopes extending the base Event schema.
@@ -83,6 +84,7 @@ components:
           description: The candidate person record ID.
           x-relationship:
             resource: Person
+            domain: client-management
         confidenceScore:
           type: number
           format: float

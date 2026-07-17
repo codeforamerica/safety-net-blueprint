@@ -16,6 +16,7 @@ import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes } from '../src/route-generator.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { closeAll, clearAllDatabases, insertResource, findById } from '../src/database-manager.js';
+import { seedAllDatabases } from '../src/seeder.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
@@ -218,7 +219,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
     console.log('  DELETE /mock/stubs/http/:id - Remove an HTTP stub');
     console.log('  DELETE /mock/stubs/http - Clear all HTTP stubs');
 
-    // Reset endpoint — clears all runtime data and re-seeds config-managed resources.
+    // Reset endpoint — clears all runtime data and restores config-managed resources.
     // Config-managed items (queues, services, document types) are restored; all other
     // data is wiped. Useful for putting tests into a known-clean state without restarting.
     app.post('/mock/reset', (req, res) => {
@@ -239,6 +240,14 @@ async function startMockServer(specDirs = null, seedDir = null) {
       res.status(204).end();
     });
     console.log('  POST   /mock/reset - Reset all runtime data (keeps config-managed resources)');
+
+    // Reseed endpoint — re-inserts seed data without clearing anything else.
+    // Useful after a reset when tests need baseline data present.
+    app.post('/mock/reseed', (req, res) => {
+      seedAllDatabases(apiSpecs, '', seedDir);
+      res.status(204).end();
+    });
+    console.log('  POST   /mock/reseed - Re-seed all collections from seed files');
 
 
     // Register event subscriptions
@@ -382,6 +391,10 @@ async function stopServer(exitProcess = true) {
           expressServer = null;
           resolve();
         });
+        // Force-close all open connections so the port is released immediately.
+        // Without this, keep-alive connections delay the 'close' event and leave
+        // the port bound, causing EADDRINUSE on the next startMockServer call.
+        expressServer.closeAllConnections?.();
       });
     }
   } catch (error) {

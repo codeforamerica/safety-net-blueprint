@@ -4,6 +4,7 @@
  */
 
 import { createListHandler } from './handlers/list-handler.js';
+import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expand-utils.js';
 import { createGetHandler } from './handlers/get-handler.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
@@ -337,7 +338,12 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
                 Object.entries(req.query).filter(([k]) => !reservedParams.has(k))
               );
               const { items, total } = findAll(endpointWithCollection.collectionName, { [parentField]: parentId, ...extraFilters }, { limit, offset });
-              return res.json({ items, total, limit, offset, hasNext: offset + items.length < total });
+              const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas);
+              const expandFields = extractExpandFields(itemSchema);
+              const expandedItems = expandFields.length > 0
+                ? items.map(item => applyExpand(item, expandFields, findById))
+                : items;
+              return res.json({ items: expandedItems, total, limit, offset, hasNext: offset + items.length < total });
             } catch (error) {
               res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
             }

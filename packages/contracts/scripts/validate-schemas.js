@@ -12,6 +12,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const DEFAULT_SPEC_DIR = resolve(__dirname, '..');
 
 /**
  * Recursively find all .yaml files in a directory, excluding node_modules.
@@ -52,12 +53,7 @@ async function main() {
   }
 
   const specArg = args.find(a => a.startsWith('--spec='));
-  if (!specArg) {
-    console.error('Error: --spec=<file|dir> is required.\n');
-    console.error('Usage: node scripts/validate-schemas.js --spec=<file|dir>');
-    process.exit(1);
-  }
-  const specDir = resolve(specArg.split('=')[1]);
+  const specDir = resolve(specArg ? specArg.split('=')[1] : DEFAULT_SPEC_DIR);
   const isSingleFile = statSync(specDir).isFile();
 
   console.log('='.repeat(70));

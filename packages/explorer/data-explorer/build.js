@@ -1,3836 +1,813 @@
 #!/usr/bin/env node
 /**
- * Export Design Reference
- * Generates a designer-friendly HTML reference from OpenAPI schemas
- * Uses OOUX/ORCA methodology for better designer usability
- * Domain list is driven by packages/explorer/config.yaml
+ * Data Dictionary build
+ *
+ * Generates a single data-dictionary.html from:
+ *   - packages/explorer/data-explorer/output/{domain}-data-model.yaml  (field paths + types)
+ *   - packages/contracts/{domain}-annotations.yaml                      (programs, policies, classification)
+ *   - packages/resolved/{domain}-openapi.yaml                           (version number)
+ *
+ * Uses the same navigate(CONTENT) pattern as the context map:
+ *   - CONTENT.index  — landing page with one card per domain
+ *   - CONTENT[domain] — field dictionary for that domain
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, rmSync } from 'fs';
+import { resolve, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
 import yaml from 'js-yaml';
-import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { discoverApiSpecs } from '../../contracts/src/validation/openapi-loader.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const contractsDir  = resolve(__dirname, '../../contracts');
+const resolvedDir   = resolve(__dirname, '../../resolved');
+const outputDir     = resolve(__dirname, 'output');
+const PROJECT_ROOT  = resolve(__dirname, '../../..');
 
-// Set of valid schema names (populated during main execution)
-// Used to only create links for schemas that actually exist
-let validSchemaNames = new Set();
+// ── Policy registry ───────────────────────────────────────────────────────────
+// Loaded once, shared across all domain renders.
 
-// Map of inline object schemas discovered during processing
-// Key: inferred type name, Value: { schema, parentSchema, propName }
-const inlineObjectSchemas = new Map();
+let POLICIES = {};
+try {
+  const reg = safeLoad(resolve(contractsDir, 'platform-registry-policies.yaml'));
+  POLICIES = reg?.policies ?? {};
+} catch { /* run without policy data if file is missing */ }
 
-// Type translations for designers
-const TYPE_TRANSLATIONS = {
-  string: 'Text',
-  integer: 'Number',
-  number: 'Number',
-  boolean: 'Yes/No',
-  array: 'List of',
-  object: 'Object',
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Format-specific translations
-const FORMAT_TRANSLATIONS = {
-  uuid: 'ID',
-  email: 'Email',
-  date: 'Date',
-  'date-time': 'Date & Time',
-  uri: 'URL',
-};
-
-// Project color palette — assigned to domains in order.
-// Colors from the safety-net-blueprint design palette.
-const DOMAIN_PALETTE = [
-  { color: '#5650BE', bgColor: '#E6EBF9' },  // Dark Blue mid
-  { color: '#00AD93', bgColor: '#E2F9F6' },  // Deep Green mid
-  { color: '#EF6C75', bgColor: '#F9C8CB' },  // Rich Red mid
-  { color: '#FFB446', bgColor: '#FFF3E0' },  // Warm Yellow
-  { color: '#2B1A78', bgColor: '#C2C0E8' },  // Dark Blue dark
-  { color: '#006152', bgColor: '#E2F9F6' },  // Deep Green dark
-  { color: '#AF121D', bgColor: '#F9C8CB' },  // Rich Red dark
-  { color: '#FFD699', bgColor: '#FFF3E0' },  // Warm Yellow light
-  { color: '#A1B4EA', bgColor: '#E6EBF9' },  // Light Blue
-  { color: '#E9CCBE', bgColor: '#F5F0ED' },  // Sand
-  { color: '#C9D4F3', bgColor: '#E6EBF9' },  // Light Blue light
-];
-
-// Built at runtime from config.yaml — see buildDomainHierarchy() and main()
-let DOMAIN_HIERARCHY = {};
-let DOMAIN_ORDER = [];
-
-/**
- * Build DOMAIN_HIERARCHY from config.yaml domains list.
- * Each domain gets: name, description, color, bgColor, schemas (from entities).
- */
-function buildDomainHierarchy(configDomains) {
-  const hierarchy = {};
-  const order = [];
-  for (const [i, d] of configDomains.entries()) {
-    const palette = DOMAIN_PALETTE[i % DOMAIN_PALETTE.length];
-    hierarchy[d.id] = {
-      name: d.label,
-      description: d.description || '',
-      color: palette.color,
-      bgColor: palette.bgColor,
-      schemas: d.entities || [],
-    };
-    order.push(d.id);
-  }
-  return { hierarchy, order };
-}
-
-// Attribute category mapping for property-level grouping (formerly DOMAIN_MAPPING)
-// System fields that should be grouped separately
-const SYSTEM_FIELDS = ['id', 'createdAt', 'updatedAt'];
-
-// Domain display configuration for special domains
-// Dynamic domains (schema names) use getDomainConfig() for consistent styling
-const DOMAIN_CONFIG = {
-  fields: { name: 'Fields', color: '#3498db', bgColor: '#ebf5fb' },
-  system: { name: 'System', color: '#95a5a6', bgColor: '#f8f9f9' },
-};
-
-/**
- * Get domain config, generating consistent colors for dynamic domains
- */
-function getDomainConfig(domainKey) {
-  if (DOMAIN_CONFIG[domainKey]) {
-    return DOMAIN_CONFIG[domainKey];
-  }
-
-  // For schema-derived domains, format the name nicely and use neutral styling
-  // "ContactInfo" → "Contact Info"
-  const name = domainKey.replace(/([a-z])([A-Z])/g, '$1 $2');
-  return { name, color: '#566573', bgColor: '#f2f3f4' };
-}
-
-// Schemas listed as domain entities in config.yaml — get full ORCA treatment. Populated in main().
-let PRIMARY_SCHEMAS = [];
-
-// Map of property refs: { "SchemaName.propertyName": "TargetSchemaName" }
-// Populated before dereferencing to preserve type information
-const PROPERTY_REFS = {};
-
-/**
- * Extract property refs from raw schemas before dereferencing
- * Populates PROPERTY_REFS map with { "SchemaName.propName": "TargetSchemaName" }
- */
-function extractPropertyRefs(rawSchemas) {
-  // Helper to recursively extract refs from an object schema
-  function extractFromObject(schemaName, props) {
-    for (const [propName, propSchema] of Object.entries(props)) {
-      if (!propSchema) continue;
-
-      // Direct $ref
-      if (propSchema.$ref) {
-        const refTarget = propSchema.$ref.split('/').pop();
-        PROPERTY_REFS[`${schemaName}.${propName}`] = refTarget;
-      }
-
-      // Array of $ref
-      if (propSchema.type === 'array' && propSchema.items?.$ref) {
-        const refTarget = propSchema.items.$ref.split('/').pop();
-        PROPERTY_REFS[`${schemaName}.${propName}`] = refTarget;
-      }
-
-      // Inline object - recurse into its properties
-      if (propSchema.type === 'object' && propSchema.properties) {
-        // Infer schema name from property name (e.g., "household" -> "Household")
-        const inferredName = propName.charAt(0).toUpperCase() + propName.slice(1);
-        extractFromObject(inferredName, propSchema.properties);
-      }
-
-      // Array of inline objects - recurse into item properties
-      if (propSchema.type === 'array' && propSchema.items?.type === 'object' && propSchema.items?.properties) {
-        // Infer schema name from singular property name (e.g., "members" -> "Member")
-        let itemName = propName.endsWith('s') ? propName.slice(0, -1) : propName;
-        itemName = itemName.charAt(0).toUpperCase() + itemName.slice(1);
-        extractFromObject(itemName, propSchema.items.properties);
-      }
-    }
-  }
-
-  for (const [schemaName, schema] of Object.entries(rawSchemas)) {
-    if (!schema || typeof schema !== 'object') continue;
-
-    // Handle allOf by merging properties
-    let props = schema.properties || {};
-    if (schema.allOf) {
-      for (const part of schema.allOf) {
-        if (part.properties) {
-          props = { ...props, ...part.properties };
-        }
-      }
-    }
-
-    extractFromObject(schemaName, props);
-  }
-}
-
-/**
- * Discover available state overlays
- */
-/**
- * Capitalize first letter and convert camelCase to title case
- */
-function inferTypeName(propName) {
-  if (!propName) return null;
-  // Capitalize first letter
-  return propName.charAt(0).toUpperCase() + propName.slice(1);
-}
-
-/**
- * Translate a schema type to designer-friendly text
- * @param {object} schema - The schema to translate
- * @param {string} propName - Optional property name for inferring inline object types
- */
-function translateType(schema, propName = null) {
-  if (!schema) return 'Unknown';
-
-  if (schema.$ref) {
-    const refName = schema.$ref.split('/').pop();
-    return `→ ${refName}`;
-  }
-
-  if (schema.allOf) {
-    return translateType(schema.allOf[0], propName);
-  }
-
-  if (schema.enum) {
-    return 'Dropdown';
-  }
-
-  if (schema.type === 'array') {
-    if (schema.items?.enum) {
-      return 'Multi-select';
-    }
-    // For array items, derive singular name from property name (e.g., 'members' -> 'Member')
-    let itemPropName = null;
-    if (propName) {
-      // Remove trailing 's' for simple plurals
-      itemPropName = propName.endsWith('s') ? propName.slice(0, -1) : propName;
-    }
-    const itemType = translateType(schema.items, itemPropName);
-    return `List of ${itemType}`;
-  }
-
-  if (schema.format && FORMAT_TRANSLATIONS[schema.format]) {
-    return FORMAT_TRANSLATIONS[schema.format];
-  }
-
-  if (schema.pattern === '^\\d{3}-\\d{2}-\\d{4}$') {
-    return 'SSN';
-  }
-
-  if (schema.pattern === '^\\+?[0-9 .\\-()]{7,20}$') {
-    return 'Phone';
-  }
-
-  // For inline objects with properties, use the title or check if a real schema exists
-  if (schema.type === 'object') {
-    if (schema.title && validSchemaNames.has(schema.title)) {
-      return `→ ${schema.title}`;
-    }
-    // For inline objects, check if the inferred name is a real schema
-    if (propName) {
-      const inferredName = inferTypeName(propName);
-      if (validSchemaNames.has(inferredName)) {
-        return `→ ${inferredName}`;
-      }
-    }
-    // For inline objects, infer name from property - will be handled specially
-    if (propName) {
-      return `→ ${inferTypeName(propName)}`;
-    }
-    return 'Nested object';
-  }
-
-  return TYPE_TRANSLATIONS[schema.type] || schema.type || 'Unknown';
-}
-
-/**
- * Get enum values as a formatted string
- * Handles both direct enums and arrays of enums (multi-select)
- */
-function formatEnumValues(schema) {
-  // Direct enum
-  if (schema.enum) {
-    return schema.enum.map(v => String(v).replace(/_/g, ' ')).join(', ');
-  }
-  // Array of enums (multi-select)
-  if (schema.type === 'array' && schema.items?.enum) {
-    return schema.items.enum.map(v => String(v).replace(/_/g, ' ')).join(', ');
-  }
-  return null;
-}
-
-/**
- * Get attribute category derived from property type and name
- * - System fields: group as "System"
- * - Everything else (primitives and nested objects): group as "Fields"
- */
-function getAttributeCategory(propName, propType) {
-  // System fields
-  if (SYSTEM_FIELDS.includes(propName)) {
-    return 'system';
-  }
-
-  // All other fields (including nested objects) go into 'fields'
-  return 'fields';
-}
-
-/**
- * Recursively collect properties and required fields from a schema with allOf
- */
-function collectSchemaProperties(schema, collected = { properties: {}, required: [] }) {
-  if (!schema) return collected;
-
-  // If this schema has allOf, recursively collect from each part
-  if (schema.allOf) {
-    for (const part of schema.allOf) {
-      collectSchemaProperties(part, collected);
-    }
-  }
-
-  // Collect direct properties
-  if (schema.properties) {
-    Object.assign(collected.properties, schema.properties);
-  }
-
-  // Collect required fields
-  if (schema.required) {
-    collected.required = [...collected.required, ...schema.required];
-  }
-
-  return collected;
-}
-
-/**
- * Process a schema and extract property information
- */
-function processSchema(schema, schemaName, stateSchemas = null) {
-  const properties = [];
-
-  // Recursively flatten allOf structures to get all properties
-  const effectiveSchema = collectSchemaProperties(schema);
-
-  const schemaProperties = effectiveSchema.properties || {};
-  const required = effectiveSchema.required || [];
-
-  for (const [propName, propSchema] of Object.entries(schemaProperties)) {
-    const isRequired = required.includes(propName);
-
-    // Check if we have a known reference for this property (preserved from pre-dereference)
-    const refKey = `${schemaName}.${propName}`;
-    const knownRef = PROPERTY_REFS[refKey];
-
-    // For state processing, look up enum values from the referenced schema if available
-    let stateEnumValues = null;
-    if (stateSchemas && knownRef) {
-      if (stateSchemas[knownRef]?.enum) {
-        stateEnumValues = stateSchemas[knownRef].enum;
-      }
-    }
-
-    // Check if this is an array of enums (multi-select)
-    const isArrayOfEnums = propSchema.type === 'array' && propSchema.items?.enum;
-
-    let type;
-    if (isArrayOfEnums) {
-      // Array of enums = Multi-select, regardless of whether it was a $ref
-      type = 'Multi-select';
-    } else if (knownRef) {
-      // Use the known reference from before dereferencing
-      const isArray = propSchema.type === 'array';
-      // Check if the dereferenced items are just an enum (not an object)
-      if (isArray && propSchema.items?.type === 'string' && propSchema.items?.enum) {
-        type = 'Multi-select';
-      } else {
-        type = isArray ? `List of → ${knownRef}` : `→ ${knownRef}`;
-      }
-    } else {
-      // Fall back to type inference
-      type = translateType(propSchema, propName);
-    }
-
-    // Use state-specific enum values if available, otherwise use values from schema
-    let enumValues;
-    if (stateEnumValues) {
-      enumValues = stateEnumValues.map(v => String(v).replace(/_/g, ' ')).join(', ');
-    } else {
-      enumValues = formatEnumValues(propSchema);
-    }
-    const isInlineObject = propSchema.type === 'object' && propSchema.properties && !knownRef;
-    const isNested = propSchema.type === 'object' || propSchema.allOf ||
-                     (propSchema.$ref && !['string', 'integer', 'number', 'boolean'].includes(propSchema.type)) ||
-                     (knownRef !== undefined && !isArrayOfEnums);
-    const isArrayOfObjects = propSchema.type === 'array' &&
-                             !isArrayOfEnums &&
-                             (propSchema.items?.type === 'object' || propSchema.items?.$ref || knownRef !== undefined);
-    const isReadOnly = propSchema.readOnly === true;
-
-    // Track inline objects so we can generate sections for them
-    if (isInlineObject) {
-      const inferredName = inferTypeName(propName);
-      if (!inlineObjectSchemas.has(inferredName)) {
-        inlineObjectSchemas.set(inferredName, {
-          schema: propSchema,
-          parentSchema: schemaName,
-          propName: propName
-        });
-      }
-    }
-
-    // Also track array items that are inline objects
-    if (propSchema.type === 'array' && propSchema.items?.type === 'object' && propSchema.items?.properties && !knownRef) {
-      // Derive singular name from plural property name
-      let itemName = propName.endsWith('s') ? propName.slice(0, -1) : propName;
-      itemName = inferTypeName(itemName);
-      if (!inlineObjectSchemas.has(itemName)) {
-        inlineObjectSchemas.set(itemName, {
-          schema: propSchema.items,
-          parentSchema: schemaName,
-          propName: `${propName} (array item)`
-        });
-      }
-    }
-
-    // Build description
-    let description = propSchema.description || '';
-
-    properties.push({
-      name: propName,
-      type,
-      required: isRequired,
-      readOnly: isReadOnly,
-      description,
-      enumValues,
-      isNested: isNested || isArrayOfObjects,
-      schema: propSchema,
-      domain: getAttributeCategory(propName, type),
-    });
-  }
-
-  return { properties };
-}
-
-/**
- * Group properties by domain
- */
-function groupPropertiesByDomain(properties) {
-  const grouped = {};
-
-  for (const prop of properties) {
-    const domain = prop.domain;
-    if (!grouped[domain]) {
-      grouped[domain] = [];
-    }
-    grouped[domain].push(prop);
-  }
-
-  // Sort domains: 'fields' first, then schema-derived domains alphabetically, 'system' last
-  const sorted = {};
-  const domains = Object.keys(grouped);
-
-  // Fields first
-  if (grouped.fields && grouped.fields.length > 0) {
-    sorted.fields = grouped.fields;
-  }
-
-  // Schema-derived domains (alphabetically)
-  const schemaDomains = domains.filter(d => d !== 'fields' && d !== 'system').sort();
-  for (const domain of schemaDomains) {
-    if (grouped[domain] && grouped[domain].length > 0) {
-      sorted[domain] = grouped[domain];
-    }
-  }
-
-  // System last
-  if (grouped.system && grouped.system.length > 0) {
-    sorted.system = grouped.system;
-  }
-
-  return sorted;
-}
-
-/**
- * Extract relationships from schemas
- */
-function extractRelationships(schemas) {
-  const relationships = {};
-
-  for (const [schemaName, schema] of Object.entries(schemas)) {
-    relationships[schemaName] = {
-      extends: [],
-      contains: [],
-      referencedBy: [],
-      belongsTo: [],
-    };
-
-    // Check allOf for inheritance
-    if (schema.allOf) {
-      for (const part of schema.allOf) {
-        if (part.$ref) {
-          const refName = part.$ref.split('/').pop();
-          relationships[schemaName].extends.push(refName);
-        }
-      }
-    }
-
-    // Check properties for contained objects using PROPERTY_REFS (populated before dereferencing)
-    const effectiveSchema = schema.allOf ?
-      schema.allOf.reduce((acc, part) => ({
-        ...acc,
-        properties: { ...acc.properties, ...(part.properties || {}) }
-      }), { properties: {} }) : schema;
-
-    const props = effectiveSchema.properties || {};
-
-    for (const [propName, propSchema] of Object.entries(props)) {
-      // Use PROPERTY_REFS to find the target schema (works after dereferencing)
-      const refKey = `${schemaName}.${propName}`;
-      const refTarget = PROPERTY_REFS[refKey];
-
-      if (refTarget) {
-        const isArray = propSchema.type === 'array';
-        relationships[schemaName].contains.push({
-          name: refTarget,
-          via: isArray ? `${propName}[]` : propName,
-          isArray
-        });
-      }
-      // Check for foreign keys within inline array objects (e.g., members[].personId)
-      if (propSchema.type === 'array' && propSchema.items?.properties) {
-        for (const [itemPropName, itemPropSchema] of Object.entries(propSchema.items.properties)) {
-          if (itemPropName.endsWith('Id') && itemPropSchema.format === 'uuid') {
-            const refName = itemPropName.slice(0, -2); // Remove 'Id' suffix
-            const capitalized = refName.charAt(0).toUpperCase() + refName.slice(1);
-            if (schemas[capitalized]) {
-              relationships[schemaName].belongsTo.push({
-                name: capitalized,
-                via: `${propName}[].${itemPropName}`
-              });
-            }
-          }
-        }
-      }
-      // Check for foreign key patterns (personId, householdId, etc.)
-      if (propName.endsWith('Id') && propSchema.format === 'uuid') {
-        const refName = propName.replace(/Id$/, '');
-        const capitalized = refName.charAt(0).toUpperCase() + refName.slice(1);
-        if (schemas[capitalized]) {
-          relationships[schemaName].belongsTo.push({ name: capitalized, via: propName });
-        }
-      }
-    }
-  }
-
-  // Build referencedBy from belongsTo
-  for (const [schemaName, rels] of Object.entries(relationships)) {
-    for (const belongs of rels.belongsTo) {
-      if (relationships[belongs.name]) {
-        relationships[belongs.name].referencedBy.push({
-          name: schemaName,
-          via: belongs.via
-        });
-      }
-    }
-  }
-
-  return relationships;
-}
-
-/**
- * Extract API operations for schemas
- */
-function extractOperations(apiSpecs) {
-  const operations = {};
-
-  for (const spec of apiSpecs) {
-    try {
-      const content = readFileSync(spec.specPath, 'utf8');
-      const parsed = yaml.load(content);
-
-      if (!parsed.paths) continue;
-
-      for (const [path, methods] of Object.entries(parsed.paths)) {
-        for (const [method, operation] of Object.entries(methods)) {
-          if (method === 'parameters') continue;
-
-          // Extract schema name from response or request body
-          let schemaName = null;
-
-          // Try to get from 200/201 response
-          const successResponse = operation.responses?.['200'] || operation.responses?.['201'];
-          if (successResponse?.content?.['application/json']?.schema?.$ref) {
-            schemaName = successResponse.content['application/json'].schema.$ref.split('/').pop();
-          }
-
-          // Try to get from request body
-          if (!schemaName && operation.requestBody?.content?.['application/json']?.schema?.$ref) {
-            schemaName = operation.requestBody.content['application/json'].schema.$ref.split('/').pop();
-          }
-
-          // Normalize schema names (PersonCreate -> Person, etc.)
-          if (schemaName) {
-            schemaName = schemaName.replace(/Create$|Update$|List$/, '');
-          }
-
-          // If the normalized name doesn't exist as a schema, try to resolve the item type
-          // from the original List schema (e.g. ReviewProgressList → ReviewProgressEntry)
-          if (schemaName && !parsed.components?.schemas?.[schemaName]) {
-            const listSchema = parsed.components?.schemas?.[schemaName + 'List'];
-            if (listSchema) {
-              for (const part of listSchema.allOf || []) {
-                const itemRef = part.properties?.items?.items?.$ref;
-                if (itemRef) { schemaName = itemRef.split('/').pop(); break; }
-              }
-            }
-          }
-
-          if (!schemaName) continue;
-
-          if (!operations[schemaName]) {
-            operations[schemaName] = {};
-          }
-
-          const operationType = getOperationType(method, path, operation);
-          if (operationType) {
-            operations[schemaName][operationType] = {
-              method: method.toUpperCase(),
-              path,
-              operationId: operation.operationId,
-              summary: operation.summary,
-              description: operation.description,
-            };
-          }
-        }
-      }
-    } catch (err) {
-      // Skip specs that can't be parsed
-    }
-  }
-
-  return operations;
-}
-
-/**
- * Determine operation type from HTTP method and path
- */
-function getOperationType(method, path, operation) {
-  method = method.toLowerCase();
-  const hasPathParam = path.includes('{');
-
-  if (method === 'get' && !hasPathParam) return 'list';
-  if (method === 'get' && hasPathParam) return 'get';
-  if (method === 'post') return 'create';
-  if (method === 'patch' || method === 'put') return 'update';
-  if (method === 'delete') return 'delete';
-
-  return null;
-}
-
-/**
- * Compare two schemas and find differences
- */
-function findDifferences(baseSchema, stateSchema, schemaName) {
-  const differences = {
-    added: [],
-    modified: [],
-    removed: [],
-  };
-
-  const baseProps = getEffectiveProperties(baseSchema);
-  const stateProps = getEffectiveProperties(stateSchema);
-
-  for (const [propName, stateProp] of Object.entries(stateProps)) {
-    if (!baseProps[propName]) {
-      differences.added.push({
-        name: propName,
-        schema: stateProp,
-        type: translateType(stateProp, propName),
-        description: stateProp.description || '',
-        enumValues: formatEnumValues(stateProp),
-        domain: getAttributeCategory(propName),
-      });
-    } else {
-      const baseProp = baseProps[propName];
-      // Check for direct enum differences
-      const baseEnum = baseProp.enum || baseProp.items?.enum;
-      const stateEnum = stateProp.enum || stateProp.items?.enum;
-      if (JSON.stringify(baseEnum) !== JSON.stringify(stateEnum)) {
-        differences.modified.push({
-          name: propName,
-          baseEnum: baseEnum,
-          stateEnum: stateEnum,
-          description: stateProp.description || baseProp.description || '',
-        });
-      }
-    }
-  }
-
-  for (const propName of Object.keys(baseProps)) {
-    if (!stateProps[propName]) {
-      differences.removed.push(propName);
-    }
-  }
-
-  return differences;
-}
-
-/**
- * Get effective properties from schema (handling allOf)
- */
-function getEffectiveProperties(schema) {
-  if (!schema) return {};
-
-  if (schema.allOf) {
-    let props = {};
-    for (const part of schema.allOf) {
-      if (part.properties) {
-        props = { ...props, ...part.properties };
-      }
-    }
-    return props;
-  }
-
-  return schema.properties || {};
-}
-
-/**
- * Make type references clickable by wrapping schema names in links
- * Only creates links for schemas that actually exist (uses global validSchemaNames)
- * @param {string} typeString - The type string to process
- */
-function makeTypeClickable(typeString) {
-  if (typeof typeString !== 'string') return String(typeString ?? '');
-  // Match patterns like "→ SchemaName" or "List of → SchemaName"
-  return typeString.replace(/→ (\w+)/g, (match, schemaName) => {
-    if (validSchemaNames.has(schemaName)) {
-      return `→ <a href="#${schemaName}" class="type-link">${schemaName}</a>`;
-    }
-    // No link for schemas that don't exist
-    return `→ ${schemaName}`;
-  });
-}
-
-/**
- * Escape HTML special characters
- */
-function escapeHtml(text) {
-  return String(text)
+function h(str) {
+  return String(str ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/"/g, '&quot;');
 }
 
-/**
- * Format field name to Title Case
- */
-function formatFieldName(name) {
-  return name
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
-    .trim();
+function safeLoad(filePath) {
+  const real = resolve(filePath);
+  if (!real.startsWith(PROJECT_ROOT + sep)) {
+    throw new Error(`Refusing to read file outside project: ${real}`);
+  }
+  return yaml.load(readFileSync(real, 'utf8'), { schema: yaml.CORE_SCHEMA });
 }
 
-/**
- * Generate relationship diagram SVG
- */
-function generateRelationshipDiagram(relationships, schemas) {
-  const primarySchemas = PRIMARY_SCHEMAS.filter(s => schemas[s]);
+function capitalize(str) {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
-  let svg = `<svg class="relationship-diagram" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-        <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
-      </marker>
-    </defs>
-    <style>
-      .entity { fill: white; stroke: #3498db; stroke-width: 2; cursor: pointer; transition: all 0.2s; }
-      .entity:hover { fill: #ebf5fb; stroke-width: 3; }
-      .entity-label { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; font-weight: 600; pointer-events: none; }
-      .relation-line { stroke: #666; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
-      .relation-label { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 10px; fill: #666; }
-      .entity-link { cursor: pointer; }
-    </style>`;
+function domainLabel(domain) {
+  // "case-management" → "Case Management"
+  return domain.split('-').map(capitalize).join(' ');
+}
 
-  // Position entities
-  const positions = {
-    Person: { x: 50, y: 80 },
-    Household: { x: 250, y: 80 },
-    Application: { x: 500, y: 80 },
-    Income: { x: 700, y: 80 },
-    HouseholdMember: { x: 375, y: 160 },
+// ── Data model YAML parser ────────────────────────────────────────────────────
+// Reads line-by-line to preserve section comment groupings.
+
+function parseDataModel(filePath) {
+  const lines = readFileSync(filePath, 'utf8').split('\n');
+  const sections = [];   // [{ name, fields: [{path, meta}] }]
+  let current = null;
+
+  for (const line of lines) {
+    const sectionMatch = line.match(/^# ── (.+?) ─+$/);
+    if (sectionMatch) {
+      current = { name: sectionMatch[1].trim(), fields: [] };
+      sections.push(current);
+      continue;
+    }
+    if (!current) continue;
+    const fieldMatch = line.match(/^([^#\s][^:]+):\s*(\{.+\})\s*$/);
+    if (!fieldMatch) continue;
+    const path = fieldMatch[1].trim();
+    let meta;
+    try {
+      meta = yaml.load(fieldMatch[2], { schema: yaml.CORE_SCHEMA }) ?? {};
+    } catch {
+      meta = {};
+    }
+    current.fields.push({ path, meta });
+  }
+
+  return sections;
+}
+
+// ── Annotation matching ───────────────────────────────────────────────────────
+// Resolves annotations from two maps (structured + docs), merging on match.
+// More specific (longer) paths override parent annotations within each map.
+
+function bestMatch(entries, fieldPath) {
+  let best = null;
+  let bestLen = -1;
+  for (const [annPath, ann] of entries) {
+    if (fieldPath === annPath || fieldPath.startsWith(annPath + '.') || fieldPath.startsWith(annPath + '[')) {
+      if (annPath.length > bestLen) { best = ann; bestLen = annPath.length; }
+    }
+  }
+  return best;
+}
+
+function buildAnnotationResolver(schemaAnnotations, docsAnnotations) {
+  const structured = schemaAnnotations ?? {};
+  const docs       = docsAnnotations ?? {};
+
+  // Walk up ancestor paths to find the nearest entry with the given key.
+  function inheritedValue(map, fieldPath, key) {
+    let path = fieldPath;
+    while (true) {
+      if (map[path]?.[key] !== undefined) return map[path][key];
+      // Strip the last segment: "a.b.c" → "a.b", "a.b[]" → "a.b", "a.b" → stop
+      const stripped = path.replace(/\.[^.]+$/, '');
+      if (stripped === path) return undefined;
+      path = stripped;
+    }
+  }
+
+  return function resolve(fieldPath) {
+    // Prose (reason, modeling): exact-match only
+    const d = docs[fieldPath] ?? null;
+
+    // Structural context (programs, policies, dataClassification): inherit from nearest ancestor
+    const programs           = inheritedValue(structured, fieldPath, 'programs');
+    const policies           = inheritedValue(structured, fieldPath, 'policies');
+    const dataClassification = inheritedValue(structured, fieldPath, 'dataClassification');
+
+    const s = (programs || policies || dataClassification)
+      ? { programs, policies, dataClassification }
+      : null;
+
+    if (!s && !d) return null;
+    return { ...s, ...d };
   };
-
-  // Draw entities (clickable)
-  for (const name of primarySchemas) {
-    const pos = positions[name];
-    if (!pos) continue;
-
-    svg += `
-    <a class="entity-link" href="#${name}">
-      <rect class="entity" x="${pos.x}" y="${pos.y}" width="120" height="40" rx="5"/>
-      <text class="entity-label" x="${pos.x + 60}" y="${pos.y + 25}" text-anchor="middle">${name}</text>
-    </a>`;
-  }
-
-  // Draw relationships
-  // Person -> Household (members)
-  if (positions.Person && positions.Household) {
-    svg += `
-    <path class="relation-line" d="M 170 100 L 245 100"/>
-    <text class="relation-label" x="207" y="92">.members[]</text>`;
-  }
-
-  // Household -> Application
-  if (positions.Household && positions.Application) {
-    svg += `
-    <path class="relation-line" d="M 370 100 L 495 100"/>
-    <text class="relation-label" x="432" y="92">.household</text>`;
-  }
-
-  // Application -> Income
-  if (positions.Application && positions.Income) {
-    svg += `
-    <path class="relation-line" d="M 620 100 L 695 100"/>
-    <text class="relation-label" x="657" y="92">.personId</text>`;
-  }
-
-  // HouseholdMember extends Person
-  if (positions.HouseholdMember && positions.Person) {
-    svg += `
-    <path class="relation-line" d="M 375 160 L 110 125" style="stroke-dasharray: 5,5"/>
-    <text class="relation-label" x="230" y="148">extends</text>`;
-  }
-
-  svg += `</svg>`;
-
-  return svg;
 }
 
-/**
- * Build domain-to-schemas mapping
- */
-function buildDomainSchemaMap(schemas) {
-  const domainMap = {};
+// ── Type display ──────────────────────────────────────────────────────────────
 
-  for (const [schemaName, schema] of Object.entries(schemas)) {
-    const { properties } = processSchema(schema, schemaName);
-
-    for (const prop of properties) {
-      const domain = prop.domain;
-      if (!domainMap[domain]) {
-        domainMap[domain] = new Set();
-      }
-      domainMap[domain].add(schemaName);
-    }
-  }
-
-  // Convert Sets to sorted Arrays
-  for (const domain of Object.keys(domainMap)) {
-    domainMap[domain] = [...domainMap[domain]].sort();
-  }
-
-  return domainMap;
-}
-
-/**
- * Generate domain browser section
- */
-function generateDomainBrowser(domainSchemaMap) {
-  const domainOrder = ['identity', 'contact', 'demographics', 'citizenship', 'employment',
-                       'income', 'health', 'housing', 'resources', 'education',
-                       'military', 'tribal', 'program', 'system', 'other'];
-
-  let html = `<div class="domain-browser">\n`;
-  html += `  <h3>Browse by Domain</h3>\n`;
-  html += `  <p class="domain-browser-intro">Click a domain to see all objects containing fields in that category.</p>\n`;
-  html += `  <div class="domain-cards">\n`;
-
-  for (const domain of domainOrder) {
-    const schemas = domainSchemaMap[domain];
-    if (!schemas || schemas.length === 0) continue;
-
-    const config = getDomainConfig(domain);
-    const primaryCount = schemas.filter(s => PRIMARY_SCHEMAS.includes(s)).length;
-
-    html += `    <div class="domain-card" style="--domain-color: ${config.color}; --domain-bg: ${config.bgColor};" data-domain="${domain}">\n`;
-    html += `      <div class="domain-card-header">\n`;
-    html += `        <span class="domain-card-indicator"></span>\n`;
-    html += `        <span class="domain-card-name">${config.name}</span>\n`;
-    html += `        <span class="domain-card-count">${schemas.length}</span>\n`;
-    html += `      </div>\n`;
-    html += `      <div class="domain-card-schemas" style="display: none;">\n`;
-
-    // Primary schemas first
-    const primarySchemas = schemas.filter(s => PRIMARY_SCHEMAS.includes(s));
-    const otherSchemas = schemas.filter(s => !PRIMARY_SCHEMAS.includes(s));
-
-    for (const schemaName of primarySchemas) {
-      html += `        <a href="#${schemaName}" class="domain-schema-link primary">${schemaName}</a>\n`;
-    }
-    for (const schemaName of otherSchemas) {
-      html += `        <a href="#${schemaName}" class="domain-schema-link">${schemaName}</a>\n`;
-    }
-
-    html += `      </div>\n`;
-    html += `    </div>\n`;
-  }
-
-  html += `  </div>\n`;
-  html += `</div>\n`;
-
-  return html;
-}
-
-/**
- * Generate a single flat property table. System fields are sorted to the bottom with a badge.
- */
-function generateFlatAttributeTable(props, stateName = null) {
-  if (!props || props.length === 0) return '';
-
-  const ordered = props;
-
-  let html = `<table class="property-table">\n`;
-  html += `  <thead>\n    <tr>\n`;
-  html += `      <th>Field</th>\n      <th>Type</th>\n      <th>Req</th>\n      <th>Notes</th>\n`;
-  html += `    </tr>\n  </thead>\n  <tbody>\n`;
-
-  for (const prop of ordered) {
-    const reqMark = prop.required ? '&#10003;' : '';
-    const systemBadge = prop.domain === 'system' ? ' <span class="system-badge">system</span>' : '';
-    const stateMarker = (stateName && prop.isStateSpecific) ? ` data-state-field="${stateName}"` : '';
-    const stateClass = (stateName && prop.isStateSpecific) ? ' state-added-field' : '';
-
-    let notes = prop.description || '';
-    if (prop.enumValues) notes = `Options: ${prop.enumValues}`;
-    if (prop.isNested) notes = notes ? `${notes} [Nested]` : '[Nested object]';
-
-    html += `    <tr data-field="${prop.name}"${stateMarker} class="${prop.isNested ? 'expandable' : ''}${stateClass}">\n`;
-    html += `      <td class="field-name">${prop.name}${systemBadge}</td>\n`;
-    html += `      <td class="field-type">${makeTypeClickable(prop.type)}</td>\n`;
-    html += `      <td class="field-required">${reqMark}</td>\n`;
-    html += `      <td class="field-notes">${escapeHtml(notes)}</td>\n`;
-    html += `    </tr>\n`;
-  }
-
-  html += `  </tbody>\n</table>\n`;
-  return html;
-}
-
-function generateDomainGroupedTables(groupedProps) {
-  return generateFlatAttributeTable(Object.values(groupedProps).flat());
-}
-
-/**
- * Generate relationships tab content
- */
-function generateRelationshipsTab(schemaName, relationships, schemas) {
-  const rels = relationships[schemaName];
-  if (!rels) return '<p>No relationships found.</p>';
-
-  let html = '';
-
-  if (rels.extends.length > 0) {
-    html += `<div class="rel-section">\n`;
-    html += `  <h5>Extends</h5>\n`;
-    html += `  <ul class="rel-list">\n`;
-    for (const ext of rels.extends) {
-      html += `    <li><a href="#${ext}">${ext}</a></li>\n`;
-    }
-    html += `  </ul>\n`;
-    html += `</div>\n`;
-  }
-
-  if (rels.contains.length > 0) {
-    html += `<div class="rel-section">\n`;
-    html += `  <h5>Contains</h5>\n`;
-    html += `  <ul class="rel-list">\n`;
-    for (const cont of rels.contains) {
-      const arrayIndicator = cont.isArray ? ' (array)' : '';
-      html += `    <li><a href="#${cont.name}">${cont.name}</a> via <code>${cont.via}</code>${arrayIndicator}</li>\n`;
-    }
-    html += `  </ul>\n`;
-    html += `</div>\n`;
-  }
-
-  if (rels.belongsTo.length > 0) {
-    html += `<div class="rel-section">\n`;
-    html += `  <h5>Belongs To</h5>\n`;
-    html += `  <ul class="rel-list">\n`;
-    for (const bel of rels.belongsTo) {
-      html += `    <li><a href="#${bel.name}">${bel.name}</a> via <code>${bel.via}</code></li>\n`;
-    }
-    html += `  </ul>\n`;
-    html += `</div>\n`;
-  }
-
-  if (rels.referencedBy.length > 0) {
-    html += `<div class="rel-section">\n`;
-    html += `  <h5>Referenced By</h5>\n`;
-    html += `  <ul class="rel-list">\n`;
-    for (const ref of rels.referencedBy) {
-      html += `    <li><a href="#${ref.name}">${ref.name}</a> via <code>${ref.via}</code></li>\n`;
-    }
-    html += `  </ul>\n`;
-    html += `</div>\n`;
-  }
-
-  if (html === '') {
-    html = '<p class="no-rels">No relationships found for this object.</p>';
-  }
-
-  return html;
-}
-
-/**
- * Generate actions tab content
- */
-function generateActionsTab(schemaName, operations, properties, transitions) {
-  const ops = operations[schemaName];
-  const smTransitions = (transitions && transitions[schemaName]) || [];
-  const hasCrud = ops && Object.keys(ops).length > 0;
-
-  if (!hasCrud && smTransitions.length === 0) {
-    return '<p class="no-actions">No operations defined for this object.</p>\n';
-  }
-
-  const actionOrder = ['list', 'create', 'get', 'update', 'delete'];
-  const actionLabels = { list: 'List', create: 'Create', get: 'Get', update: 'Update', delete: 'Delete' };
-  const actionNotes = {
-    list: 'Paginated, searchable',
-    create: '',
-    get: 'By ID',
-    update: 'Partial updates',
-    delete: 'Permanent',
-  };
-
-  let html = '';
-  html += `<table class="actions-table">\n`;
-  html += `  <thead>\n`;
-  html += `    <tr>\n`;
-  html += `      <th>Action</th>\n`;
-  html += `      <th>Endpoint</th>\n`;
-  html += `      <th>Notes</th>\n`;
-  html += `    </tr>\n`;
-  html += `  </thead>\n`;
-  html += `  <tbody>\n`;
-
-  if (hasCrud) {
-    for (const action of actionOrder) {
-      if (!ops[action]) continue;
-      const op = ops[action];
-      let notes = actionNotes[action] || '';
-      if (action === 'create') {
-        const reqFields = properties.filter(p => p.required && !p.readOnly).map(p => p.name);
-        if (reqFields.length > 0) {
-          notes = `Required: ${reqFields.slice(0, 3).join(', ')}${reqFields.length > 3 ? '...' : ''}`;
-        }
-      }
-      html += `    <tr>\n`;
-      html += `      <td class="action-name">${actionLabels[action]}</td>\n`;
-      html += `      <td class="action-endpoint"><span class="action-method method-${op.method.toLowerCase()}">${op.method}</span> <code>${op.path}</code></td>\n`;
-      html += `      <td class="action-notes">${notes}</td>\n`;
-      html += `    </tr>\n`;
-    }
-  }
-
-  for (const t of smTransitions) {
-    const notes = t.description || '';
-    const endpoint = t.method && t.path
-      ? `<span class="action-method method-${t.method.toLowerCase()}">${escapeHtml(t.method)}</span> <code>${escapeHtml(t.path)}</code>`
-      : '';
-    html += `    <tr>\n`;
-    html += `      <td class="action-name">${escapeHtml(t.id)}</td>\n`;
-    html += `      <td class="action-endpoint">${endpoint}</td>\n`;
-    html += `      <td class="action-notes">${escapeHtml(notes)}</td>\n`;
-    html += `    </tr>\n`;
-  }
-
-  html += `  </tbody>\n`;
-  html += `</table>\n`;
-
-  return html;
-}
-/**
- * Generate events tab content
- */
-function generateEventsTab(schemaName, events) {
-  const obj = events && events[schemaName];
-  if (!obj || (obj.published.length === 0 && obj.subscribed.length === 0)) {
-    return '<p class="no-actions">No events defined for this object.</p>\n';
-  }
-
-  function eventsTable(rows) {
-    let t = `<table class="actions-table">\n`;
-    t += `  <thead>\n    <tr>\n      <th>Event</th>\n      <th>Description</th>\n    </tr>\n  </thead>\n  <tbody>\n`;
-    for (const e of [...rows].sort((a, b) => a.name.localeCompare(b.name))) {
-      t += `    <tr>\n`;
-      t += `      <td class="action-name"><code>${escapeHtml(e.name)}</code></td>\n`;
-      t += `      <td class="action-notes">${escapeHtml(e.description)}</td>\n`;
-      t += `    </tr>\n`;
-    }
-    t += `  </tbody>\n</table>\n`;
+function displayType(meta) {
+  const t = meta?.type;
+  if (!t) return null;
+  if (Array.isArray(t)) return t.join(' | ');
+  if (typeof t === 'string') {
+    if (meta?.relationship && t === 'uuid') return `uuid(${meta.relationship})`;
     return t;
   }
-
-  let html = '';
-  if (obj.published.length > 0) {
-    html += `<h5 class="transitions-heading">Publishes</h5>\n`;
-    html += eventsTable(obj.published);
-  }
-  if (obj.subscribed.length > 0) {
-    html += `<h5 class="transitions-heading">Subscribes</h5>\n`;
-    html += eventsTable(obj.subscribed);
-  }
-  return html;
+  return String(t);
 }
 
-/**
- * Generate the Annotations tab for a primary schema.
- * Shows data classification, programs, and policy citations from the annotations registry.
- */
-function generateAnnotationsTab(schemaName, annotationsData, policies) {
-  const entry = annotationsData?.schemaAnnotations?.get(schemaName);
-  const hasOwn = entry?.own && (entry.own.dataClassification || entry.own.policies || entry.own.programs);
-  const hasFields = entry?.fields?.size > 0;
+// ── HTML rendering ────────────────────────────────────────────────────────────
 
-  if (!hasOwn && !hasFields) {
-    return '<p class="no-actions">No annotations defined for this schema.</p>\n';
-  }
-
-  function renderPrograms(programs) {
-    const entries = Array.isArray(programs)
-      ? programs.map(p => [p, 'required'])
-      : programs && typeof programs === 'object' ? Object.entries(programs) : [];
-    return entries.map(([p, s]) => `<span class="program-badge">${escapeHtml(p)}<span class="program-strength">${escapeHtml(s)}</span></span>`).join(' ');
-  }
-
-  function renderClassification(classes) {
-    if (!Array.isArray(classes) || classes.length === 0) return '';
-    return classes.map(c => `<span class="classification-badge classification-${escapeHtml(c)}">${escapeHtml(c.toUpperCase())}</span>`).join(' ');
-  }
-
-  function renderPolicies(policyIds) {
-    if (!Array.isArray(policyIds) || policyIds.length === 0) return '';
-    return policyIds.map(id => {
-      const policy = policies?.get(id);
-      if (!policy) return `<code>${escapeHtml(id)}</code>`;
-      const text = escapeHtml(policy.citation);
-      const desc = escapeHtml(policy.description?.trim() || '');
-      const url = policy.citationUrl;
-      const link = url ? `<a href="${escapeHtml(url)}" target="_blank" class="policy-citation">${text}</a>` : `<span class="policy-citation">${text}</span>`;
-      return desc ? `${link}<span class="policy-description"> — ${desc}</span>` : link;
-    }).join('<br>');
-  }
-
-  let html = '';
-
-  if (hasOwn) {
-    const own = entry.own;
-    html += `<div class="annotations-schema-level">\n`;
-    if (own.dataClassification) html += `<div class="annotation-row"><span class="annotation-label">Classification</span><span>${renderClassification(own.dataClassification)}</span></div>\n`;
-    if (own.programs) html += `<div class="annotation-row"><span class="annotation-label">Programs</span><span>${renderPrograms(own.programs)}</span></div>\n`;
-    if (own.policies?.length) html += `<div class="annotation-row"><span class="annotation-label">Policies</span><span class="annotation-policies">${renderPolicies(own.policies)}</span></div>\n`;
-    html += `</div>\n`;
-  }
-
-  if (hasFields) {
-    if (hasOwn) html += `<h5 class="transitions-heading">Field Annotations</h5>\n`;
-    html += `<table class="actions-table">\n`;
-    html += `  <thead>\n    <tr>\n      <th>Field</th>\n      <th>Classification</th>\n      <th>Programs</th>\n      <th>Policies</th>\n    </tr>\n  </thead>\n  <tbody>\n`;
-    for (const [fieldName, annotation] of [...entry.fields.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
-      html += `    <tr>\n`;
-      html += `      <td class="action-name"><code>${escapeHtml(fieldName)}</code></td>\n`;
-      html += `      <td>${renderClassification(annotation.dataClassification || [])}</td>\n`;
-      html += `      <td>${renderPrograms(annotation.programs)}</td>\n`;
-      html += `      <td>${renderPolicies(annotation.policies || [])}</td>\n`;
-      html += `    </tr>\n`;
-    }
-    html += `  </tbody>\n</table>\n`;
-  }
-
-  return html;
+function badge(text) {
+  return `<span class="badge">${h(text.toUpperCase())}</span>`;
 }
 
-/**
- * Generate ORCA-structured HTML for a primary schema
- */
-function generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, domainKey, transitions, events, annotationsData, policies, lifecycleStates) {
-  const { properties } = processSchema(schema, schemaName);
-  const description = schema.description || '';
-  const domain = DOMAIN_HIERARCHY[domainKey];
-
-  let html = `<section id="${schemaName}" class="schema-section primary orca-section" data-domain="${domainKey}">\n`;
-  html += `  <div class="section-header">\n`;
-  if (domain) {
-    html += `    <a href="#domain-${domainKey}" class="entity-domain-badge" style="--domain-color: ${domain.color}; --domain-bg: ${domain.bgColor};">${domain.name}</a>\n`;
-  }
-  html += `    <h2>${schemaName}</h2>\n`;
-  html += `  </div>\n`;
-
-  // ORCA Tabs
-  html += `  <div class="orca-tabs">\n`;
-  html += `    <button class="orca-tab" data-tab="overview">Overview</button>\n`;
-  html += `    <button class="orca-tab active" data-tab="attributes">Attributes</button>\n`;
-  html += `    <button class="orca-tab" data-tab="relationships">Relationships</button>\n`;
-  html += `    <button class="orca-tab" data-tab="actions">Actions</button>\n`;
-  html += `    <button class="orca-tab" data-tab="events">Events</button>\n`;
-  html += `    <button class="orca-tab" data-tab="annotations">Annotations</button>\n`;
-  html += `  </div>\n`;
-
-  // Tab Panels
-  html += `  <div class="orca-panels">\n`;
-
-  // Overview Panel
-  html += `    <div class="orca-panel" data-tab="overview">\n`;
-  html += `      <div class="overview-content">\n`;
-  html += `        <h4>What is ${schemaName}?</h4>\n`;
-  html += `        <p class="description">${escapeHtml(description)}</p>\n`;
-
-  // Quick stats
-  const schemaRels = relationships[schemaName] || {};
-  const relCount = (schemaRels.contains || []).length + (schemaRels.references || []).length;
-  const actionCount = (transitions?.[schemaName]?.length || 0) + Object.keys(operations?.[schemaName] || {}).length;
-  const eventCount = (events?.[schemaName]?.published?.length || 0) + (events?.[schemaName]?.subscribed?.length || 0);
-  html += `        <div class="overview-stats">\n`;
-  html += `          <div class="stat-card"><span class="stat-num">${properties.length}</span><span class="stat-label">Attributes</span></div>\n`;
-  html += `          <div class="stat-card"><span class="stat-num">${relCount}</span><span class="stat-label">Relationships</span></div>\n`;
-  html += `          <div class="stat-card"><span class="stat-num">${actionCount}</span><span class="stat-label">Actions</span></div>\n`;
-  html += `          <div class="stat-card"><span class="stat-num">${eventCount}</span><span class="stat-label">Events</span></div>\n`;
-  html += `        </div>\n`;
-
-  // Lifecycle states
-  const objStates = lifecycleStates?.[schemaName];
-  if (objStates?.length) {
-    html += `        <h5 class="overview-section-heading">Lifecycle</h5>\n`;
-    html += `        <div class="lifecycle-states">\n`;
-    for (const s of objStates) {
-      const clockClass = s.slaClock === 'running' ? 'sla-running' : s.slaClock === 'paused' ? 'sla-paused' : 'sla-stopped';
-      const title = s.description ? ` title="${escapeHtml(s.description)}"` : '';
-      html += `          <div class="lifecycle-state ${clockClass}"${title}>\n`;
-      html += `            <span class="lifecycle-state-name">${escapeHtml(s.id)}</span>\n`;
-      html += `            <span class="lifecycle-sla-clock">${escapeHtml(s.slaClock)}</span>\n`;
-      if (s.description) html += `            <span class="lifecycle-state-desc">${escapeHtml(s.description)}</span>\n`;
-      html += `          </div>\n`;
-    }
-    html += `        </div>\n`;
-  }
-
-  // Annotation highlights — schema-level classification and programs
-  const annEntry = annotationsData?.schemaAnnotations?.get(schemaName);
-  const ownAnn = annEntry?.own;
-  if (ownAnn?.dataClassification?.length || ownAnn?.programs) {
-    html += `        <h5 class="overview-section-heading">Data &amp; Programs</h5>\n`;
-    html += `        <div class="overview-annotations">\n`;
-    if (ownAnn.dataClassification?.length) {
-      html += `          <div class="annotation-row"><span class="annotation-label">Classification</span><span>`;
-      html += ownAnn.dataClassification.map(c => `<span class="classification-badge classification-${escapeHtml(c)}">${escapeHtml(c.toUpperCase())}</span>`).join(' ');
-      html += `</span></div>\n`;
-    }
-    if (ownAnn.programs) {
-      const entries = Array.isArray(ownAnn.programs) ? ownAnn.programs.map(p => [p, 'required']) : Object.entries(ownAnn.programs);
-      html += `          <div class="annotation-row"><span class="annotation-label">Programs</span><span>`;
-      html += entries.map(([p, s]) => `<span class="program-badge">${escapeHtml(p)}<span class="program-strength">${escapeHtml(s)}</span></span>`).join(' ');
-      html += `</span></div>\n`;
-    }
-    html += `        </div>\n`;
-  }
-
-  html += `      </div>\n`;
-  html += `    </div>\n`;
-
-  // Attributes Panel
-  html += `    <div class="orca-panel active" data-tab="attributes">\n`;
-  html += generateAttributesWithStateVariants(schemaName, schema, stateSchemas, states);
-  html += `    </div>\n`;
-
-  // Relationships Panel
-  html += `    <div class="orca-panel" data-tab="relationships">\n`;
-  html += generateRelationshipsTab(schemaName, relationships, {});
-  html += `    </div>\n`;
-
-  // Actions Panel
-  html += `    <div class="orca-panel" data-tab="actions">\n`;
-  html += generateActionsTab(schemaName, operations, properties, transitions);
-  html += `    </div>\n`;
-
-  // Events Panel
-  html += `    <div class="orca-panel" data-tab="events">\n`;
-  html += generateEventsTab(schemaName, events);
-  html += `    </div>\n`;
-
-  // Annotations Panel
-  html += `    <div class="orca-panel" data-tab="annotations">\n`;
-  html += generateAnnotationsTab(schemaName, annotationsData, policies);
-  html += `    </div>\n`;
-
-  html += `  </div>\n`; // End orca-panels
-  html += `</section>\n\n`;
-
-  return html;
+function pathSegmentDepth(p) {
+  // Count logical depth: split on '.' treating '[]' as part of its segment
+  return p.split('.').length;
 }
 
-/**
- * Generate simple section for non-primary schemas
- */
-function generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, domainKey) {
-  let effectiveDomainKey = domainKey;
-  let domain = DOMAIN_HIERARCHY[domainKey];
-  const rels = relationships[schemaName] || {};
+function renderFieldCard(path, meta, ann) {
 
-  // Find schemas that contain/reference this one
-  const usedBy = [];
-  for (const [otherSchema, otherRels] of Object.entries(relationships)) {
-    if (otherSchema === schemaName) continue;
-    for (const cont of otherRels.contains || []) {
-      if (cont.name === schemaName) {
-        usedBy.push({ schema: otherSchema, via: cont.via });
-      }
+  const type = displayType(meta);
+  const typeBadge = type ? `<span class="type-badge">${h(type)}</span>` : '';
+  const relBadge = (meta?.relationship && meta?.type !== 'uuid') ? `<span class="rel-badge">→ ${h(String(meta.relationship))}</span>` : '';
+
+  let annHtml = '';
+  if (ann) {
+    const programs = ann.programs ?? [];
+    const policies = ann.policies ?? [];
+    const dc = ann.dataClassification ?? [];
+    const reason   = (ann.reason   ?? '').replace(/\s+/g, ' ').trim();
+    const modeling = (ann.modeling ?? '').replace(/\s+/g, ' ').trim();
+    const parts = [];
+    if (reason)          parts.push(`<p class="ann-reason"><span class="ann-label">Reason</span>${h(reason)}</p>`);
+    if (modeling)        parts.push(`<p class="ann-modeling"><span class="ann-label">Modeling</span>${h(modeling)}</p>`);
+    if (dc.length)       parts.push(`<div class="ann-row"><span class="ann-label">Classification</span>${dc.map(badge).join('')}</div>`);
+    if (programs.length) parts.push(`<div class="ann-row"><span class="ann-label">Programs</span>${programs.map(badge).join('')}</div>`);
+    if (policies.length) {
+      const policyItems = policies.map(id => {
+        const pol = POLICIES[id];
+        if (!pol) return `<div class="policy-item"><code class="policy-id">${h(id)}</code></div>`;
+        const citationHtml = pol.citationUrl
+          ? `<a class="policy-citation" href="${pol.citationUrl}" target="_blank" rel="noopener">${h(pol.citation)}</a>`
+          : pol.citation ? `<span class="policy-citation">${h(pol.citation)}</span>` : '';
+        const desc = (pol.description ?? '').replace(/\s+/g, ' ').trim();
+        return `<div class="policy-item">` +
+          `<div class="policy-item-head"><code class="policy-id">${h(id)}</code>${citationHtml}</div>` +
+          (desc ? `<p class="policy-desc">${h(desc)}</p>` : '') +
+          `</div>`;
+      }).join('');
+      parts.push(`<div class="ann-row ann-row--col"><span class="ann-label">Policies</span><div class="policy-list">${policyItems}</div></div>`);
     }
+    if (parts.length) annHtml = `<div class="card-ann">${parts.join('')}</div>`;
   }
 
-  // If unclassified, inherit domain from parent schema(s)
-  if (domainKey === 'unclassified' && usedBy.length > 0) {
-    // Use the first parent's domain
-    const { domain: parentDomainKey } = classifySchemaIntoDomain(usedBy[0].schema);
-    if (parentDomainKey !== 'unclassified') {
-      effectiveDomainKey = parentDomainKey;
-      domain = DOMAIN_HIERARCHY[parentDomainKey];
-    }
+  let valHtml = '';
+  if (meta?.values?.length) {
+    valHtml = `<div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list">${meta.values.map(v => `<code>${h(String(v))}</code>`).join(' ')}</span></div>`;
   }
 
-  let html = `<section id="${schemaName}" class="schema-section" data-domain="${effectiveDomainKey}">\n`;
-  html += `  <div class="section-header simple">\n`;
-  if (domain) {
-    html += `    <a href="#domain-${effectiveDomainKey}" class="entity-domain-badge" style="--domain-color: ${domain.color}; --domain-bg: ${domain.bgColor};">${domain.name}</a>\n`;
+  let appliesHtml = '';
+  if (meta?.appliesWhen) {
+    appliesHtml = `<div class="ann-row"><span class="ann-label">Applies when</span><code class="applies-expr">${h(String(meta.appliesWhen))}</code></div>`;
   }
-  html += `    <h2>${schemaName}</h2>\n`;
-  if (usedBy.length > 0) {
-    html += `    <div class="used-by-links">`;
-    html += `Used by: `;
-    html += usedBy.map(u => `<a href="#${u.schema}">${u.schema}</a><code>.${u.via}</code>`).join(', ');
-    html += `</div>\n`;
-  }
-  html += `  </div>\n`;
-  html += `  <p class="description">${escapeHtml(schema.description || '')}</p>\n`;
-  html += generateAttributesWithStateVariants(schemaName, schema, stateSchemas, states);
-  html += `</section>\n\n`;
 
-  return html;
+  const bodyHtml = (annHtml || valHtml || appliesHtml)
+    ? `<div class="card-body">${appliesHtml}${valHtml}${annHtml}</div>`
+    : '';
+
+  const hasAnn = !!annHtml;
+  return `<div class="card" data-path="${h(path)}">` +
+    `<div class="card-header"><code class="field-path">${h(path)}</code>${typeBadge}${relBadge}</div>` +
+    bodyHtml +
+    `</div>`;
 }
 
-/**
- * Generate a section for an inline nested object
- */
-function generateInlineObjectSection(inlineName, inlineInfo) {
-  const { schema, parentSchema, propName } = inlineInfo;
+function renderDomainContent(domain, sections, resolveAnn) {
+  const label = domainLabel(domain);
+  const totalFields = sections.reduce((n, s) => n + s.fields.length, 0);
 
-  // Inherit domain from parent schema
-  const { domain: domainKey } = classifySchemaIntoDomain(parentSchema);
-  const domain = DOMAIN_HIERARCHY[domainKey];
+  const navItems = sections.map(s => {
+    const id = `sec-${h(s.name)}`;
+    return `<a href="#${id}" class="nav-sub" data-section="${id}">${h(s.name)} <span class="nav-count">${s.fields.length}</span></a>`;
+  }).join('');
 
-  let html = `<section id="${inlineName}" class="schema-section inline-object" data-domain="${domainKey}">\n`;
-  html += `  <div class="section-header simple">\n`;
-  if (domain) {
-    html += `    <a href="#domain-${domainKey}" class="entity-domain-badge" style="--domain-color: ${domain.color}; --domain-bg: ${domain.bgColor};">${domain.name}</a>\n`;
-  }
-  html += `    <span class="inline-object-badge">Nested in <a href="#${parentSchema}">${parentSchema}</a></span>\n`;
-  html += `    <h2>${inlineName}</h2>\n`;
-  html += `  </div>\n`;
-  html += `  <p class="description">${escapeHtml(schema.description || `Nested object within ${parentSchema}.${propName}`)}</p>\n`;
+  const sectionsHtml = sections.map(s => {
+    const id = `sec-${s.name}`;
+    const cards = s.fields.map(f => renderFieldCard(f.path, f.meta, resolveAnn(f.path))).join('');
+    return `<section class="dict-section" id="${h(id)}" data-section-id="${h(id)}">` +
+      `<h2 class="section-title">${h(s.name)}</h2>` +
+      `<div class="cards-grid">${cards}</div>` +
+      `</section>`;
+  }).join('');
 
-  // Generate property table for this inline object
-  const { properties } = processSchema(schema, inlineName);
-  if (properties.length > 0) {
-    const grouped = groupPropertiesByDomain(properties);
-    html += generateDomainGroupedTables(grouped);
-  }
-
-  html += `</section>\n\n`;
-  return html;
+  return `
+<div class="dict-layout">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <button class="back-btn" onclick="navigate('index')">← All dictionaries</button>
+      <div class="sidebar-domain">${h(label)}</div>
+      <div class="sidebar-meta">${totalFields} fields</div>
+    </div>
+    <div class="search-wrap">
+      <input class="search-bar" type="search" id="search" placeholder="Search fields…" autocomplete="off" />
+    </div>
+    <nav class="sidebar-nav">${navItems}</nav>
+  </aside>
+  <main class="dict-main">
+    <div class="dict-header">
+      <h1 class="dict-title">${h(label)} data dictionary</h1>
+      <button class="csv-btn" onclick="exportCsv()">Export CSV</button>
+    </div>
+    <div id="no-results" class="no-results hidden">No fields match your search.</div>
+    <div id="dict-content">${sectionsHtml}</div>
+  </main>
+</div>`;
 }
 
-/**
- * Generate attributes content with state variants
- * Each state's content is wrapped in a div with data-state-content attribute
- */
-function generateAttributesWithStateVariants(schemaName, baseSchema, stateSchemas, states) {
-  let html = '';
+function renderIndexContent(domains) {
+  const cards = domains.map(d => {
+    const label = domainLabel(d.domain);
+    const totalFields = d.sections.reduce((n, s) => n + s.fields.length, 0);
+    const annotatedCount = d.sections.reduce((n, s) => n + s.fields.filter(f => d.resolveAnn(f.path)).length, 0);
+    const metaParts = [];
+    if (d.version) metaParts.push(`v${h(d.version)}`);
+    metaParts.push(`${totalFields} fields`);
+    if (annotatedCount) metaParts.push(`${annotatedCount} annotated`);
 
-  // Generate base content (always visible by default)
-  const { properties: baseProps } = processSchema(baseSchema, schemaName);
-  const baseGrouped = groupPropertiesByDomain(baseProps);
+    return `<div class="domain-card" onclick="navigate('${h(d.domain)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')navigate('${h(d.domain)}')">` +
+      `<div class="domain-card-title">${h(label)}</div>` +
+      `<div class="domain-card-meta">${metaParts.join(' · ')}</div>` +
+      `</div>`;
+  }).join('');
 
-  html += `<div class="attributes-content" data-state-content="base">\n`;
-  html += generateFlatAttributeTable(baseProps);
-  html += `</div>\n`;
-
-  // Generate state-specific content
-  for (const state of states) {
-    const stateSchema = stateSchemas[state.state]?.[schemaName];
-    if (!stateSchema) continue;
-
-    const diffs = findDifferences(baseSchema, stateSchema, schemaName);
-    const hasChanges = diffs.added.length > 0 || diffs.modified.length > 0;
-
-    // Always process with state schemas to pick up state-specific enum values for referenced schemas
-    // (e.g., Program enum values differ by state even when HouseholdMember structure is the same)
-    const { properties: stateProps } = processSchema(stateSchema, schemaName, stateSchemas[state.state]);
-
-    // Mark state-specific (added) fields
-    if (hasChanges) {
-      const stateFieldNames = new Set(diffs.added.map(p => p.name));
-      for (const prop of stateProps) {
-        if (stateFieldNames.has(prop.name)) {
-          prop.isStateSpecific = true;
-          prop.stateName = state.state;
-        }
-      }
-    }
-
-    const stateGrouped = groupPropertiesByDomain(stateProps);
-
-    html += `<div class="attributes-content" data-state-content="${state.state}" style="display: none;">\n`;
-    html += generateFlatAttributeTable(stateProps, hasChanges ? state.state : null);
-    html += `</div>\n`;
-  }
-
-  return html;
+  return `
+<div class="index-layout">
+  <div class="index-header">
+    <h1>Data Dictionary</h1>
+    <p class="index-sub">Field-level reference for the Safety Net Blueprint data model. Select a domain to browse its fields.</p>
+  </div>
+  <div class="domain-grid">${cards}</div>
+</div>`;
 }
 
-/**
- * Classify a schema into its high-level domain
- */
-function classifySchemaIntoDomain(schemaName) {
-  // Check main domains
-  for (const [domainKey, domain] of Object.entries(DOMAIN_HIERARCHY)) {
-    if (domain.schemas?.includes(schemaName)) {
-      return { domain: domainKey, subdomain: null };
-    }
-    // Check subdomains
-    if (domain.subdomains) {
-      for (const [subKey, sub] of Object.entries(domain.subdomains)) {
-        if (sub.schemas?.includes(schemaName)) {
-          return { domain: domainKey, subdomain: subKey };
-        }
-      }
-    }
-  }
-  return { domain: 'unclassified', subdomain: null };
+// ── CSS ───────────────────────────────────────────────────────────────────────
+
+const CSS = `
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #F3F3F3;
+  color: #111;
+  min-height: 100vh;
+}
+:root {
+  --blue-dark:  #2B1A78;
+  --blue-mid:   #5650BE;
+  --blue-light: #C2C0E8;
+  --sand:       #E9CCBE;
+  --sand-light: #F5F0ED;
+  --lb-light:   #E6EBF9;
+  --green-dark: #006152;
+  --green-light:#E2F9F6;
+  --yellow-light:#FFF3E0;
+  --red-dark:   #AF121D;
+  --red-light:  #F9C8CB;
+  --sidebar-w:  240px;
 }
 
-/**
- * Group schemas by high-level domain
- */
-function groupSchemasByDomain(schemas) {
-  const grouped = {};
+/* ── Index layout ─────────────────────────────────────────────────────────── */
+.index-layout {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+.index-header { margin-bottom: 2.5rem; }
+.index-header h1 { font-size: 2rem; font-weight: 700; color: var(--blue-dark); margin-bottom: 0.5rem; }
+.index-sub { color: #555; font-size: 0.9rem; max-width: 560px; line-height: 1.5; }
+.domain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.domain-card {
+  background: #fff;
+  border: 1px solid var(--sand);
+  border-radius: 8px;
+  padding: 1.25rem 1rem;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.domain-card:hover { border-color: var(--blue-mid); box-shadow: 0 2px 8px rgba(86,80,190,0.12); }
+.domain-card-title { font-size: 1rem; font-weight: 700; color: var(--blue-dark); margin-bottom: 0.3rem; }
+.domain-card-meta { font-size: 0.75rem; color: #888; }
 
-  // Initialize all domains (even empty ones)
-  for (const [domainKey, domain] of Object.entries(DOMAIN_HIERARCHY)) {
-    if (domain.subdomains) {
-      grouped[domainKey] = { subdomains: {} };
-      for (const subKey of Object.keys(domain.subdomains)) {
-        grouped[domainKey].subdomains[subKey] = [];
-      }
-    } else {
-      grouped[domainKey] = [];
-    }
-  }
-  grouped.unclassified = [];
+/* ── Dictionary layout ────────────────────────────────────────────────────── */
+.dict-layout { display: flex; min-height: 100vh; }
 
-  // Classify each schema
-  for (const schemaName of Object.keys(schemas)) {
-    const { domain, subdomain } = classifySchemaIntoDomain(schemaName);
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--blue-dark);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-top {
+  padding: 1.25rem 1rem 0.75rem;
+  flex-shrink: 0;
+}
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--blue-light);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+.back-btn:hover { color: #fff; }
+.sidebar-domain { font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 0.15rem; }
+.sidebar-meta { font-size: 0.7rem; color: var(--blue-light); }
+.search-wrap {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+.search-bar {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 5px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 0.8rem;
+  outline: none;
+}
+.search-bar::placeholder { color: rgba(255,255,255,0.4); }
+.search-bar:focus { border-color: var(--blue-light); box-shadow: 0 0 0 2px rgba(194,192,232,0.3); }
 
-    if (subdomain && grouped[domain]?.subdomains) {
-      grouped[domain].subdomains[subdomain].push(schemaName);
-    } else if (Array.isArray(grouped[domain])) {
-      grouped[domain].push(schemaName);
-    } else {
-      grouped.unclassified.push(schemaName);
-    }
-  }
-
-  // Sort schemas within each domain
-  for (const [domainKey, content] of Object.entries(grouped)) {
-    if (Array.isArray(content)) {
-      content.sort((a, b) => {
-        const aIsPrimary = PRIMARY_SCHEMAS.includes(a);
-        const bIsPrimary = PRIMARY_SCHEMAS.includes(b);
-        if (aIsPrimary && !bIsPrimary) return -1;
-        if (!aIsPrimary && bIsPrimary) return 1;
-        return a.localeCompare(b);
-      });
-    } else if (content.subdomains) {
-      for (const arr of Object.values(content.subdomains)) {
-        arr.sort();
-      }
-    }
-  }
-
-  return grouped;
+.sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; }
+.nav-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  cursor: pointer;
+}
+.nav-sub:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.nav-sub--active { background: rgba(255,255,255,0.15); color: #fff; }
+.nav-count {
+  font-size: 0.65rem;
+  font-weight: 400;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 0.1rem 0.35rem;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
-/**
- * Generate domain overview page content
- */
-function generateDomainOverview(domainKey, domain, schemas, relationships) {
-  const domainSchemas = Array.isArray(schemas) ? schemas : [];
-  const hasSchemas = domainSchemas.length > 0;
+/* ── Main ─────────────────────────────────────────────────────────────────── */
+.dict-main { flex: 1; min-width: 0; padding: 0 2rem 3rem; }
+.dict-header {
+  position: sticky;
+  top: 0;
+  background: #F3F3F3;
+  padding: 1.25rem 0 0.75rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  z-index: 10;
+  border-bottom: 1px solid var(--sand);
+  margin-bottom: 1.5rem;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+.dict-title { font-size: 1.3rem; font-weight: 700; color: var(--blue-dark); flex: 1; }
+.csv-btn {
+  font-size: 0.78rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.csv-btn:hover { background: #f5f5f5; }
 
-  let html = `<section id="domain-${domainKey}" class="domain-overview-section">\n`;
-  html += `  <div class="domain-overview-header" style="--domain-color: ${domain.color}; --domain-bg: ${domain.bgColor};">\n`;
-  html += `    <div class="domain-title-row">\n`;
-  html += `      <span class="domain-indicator"></span>\n`;
-  html += `      <h2>${domain.name} Domain</h2>\n`;
-  html += `    </div>\n`;
-  html += `    <p class="domain-description">${escapeHtml(domain.description)}</p>\n`;
-  html += `  </div>\n`;
+.no-results { padding: 2rem; text-align: center; color: #888; font-style: italic; }
+.hidden { display: none !important; }
 
-  if (!hasSchemas) {
-    html += `  <div class="coming-soon-notice">\n`;
-    html += `    <h4>Coming Soon</h4>\n`;
-    html += `    <p>This domain is part of the architectural vision but hasn't been implemented yet in the OpenAPI specifications.</p>\n`;
-    html += `  </div>\n`;
-  } else {
-    // Entity list
-    html += `  <div class="domain-entities-section">\n`;
-    html += `    <h3>Entities in this domain</h3>\n`;
-    html += `    <div class="entity-grid">\n`;
+/* ── Section ──────────────────────────────────────────────────────────────── */
+.dict-section { margin-bottom: 2.5rem; scroll-margin-top: 72px; }
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--blue-dark);
+  border-bottom: 2px solid var(--blue-light);
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 72px;
+}
+.cards-grid { display: flex; flex-direction: column; gap: 0.5rem; }
 
-    for (const schemaName of domainSchemas) {
-      const isPrimary = PRIMARY_SCHEMAS.includes(schemaName);
-      html += `      <a href="#${schemaName}" class="entity-card${isPrimary ? ' primary' : ''}">\n`;
-      html += `        <span class="entity-name">${schemaName}</span>\n`;
-      if (isPrimary) {
-        html += `        <span class="entity-badge">Primary</span>\n`;
-      }
-      html += `      </a>\n`;
-    }
+/* ── Field card ───────────────────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border: 1px solid var(--sand);
+  border-left: 3px solid var(--blue-mid);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.card.hidden { display: none; }
+mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--lb-light);
+}
+.field-path {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--blue-dark);
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.type-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--blue-light);
+  color: var(--blue-dark);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.card-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.ann-reason {
+  font-size: 0.78rem;
+  color: #333;
+  line-height: 1.5;
+  margin: 0;
+}
+.ann-modeling {
+  font-size: 0.75rem;
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.ann-modeling .ann-label { flex-shrink: 0; }
+.card-ann { display: flex; flex-direction: column; gap: 0.3rem; }
+.ann-row { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; }
+.ann-label {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 3px;
+  padding: 0.1rem 0.35rem;
+  margin-right: 0.1rem;
+  vertical-align: middle;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: var(--sand-light);
+  color: #6b4c3b;
+  border: 1px solid var(--sand);
+}
+.badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  border-radius: 3px;
+  padding: 0.1rem 0.35rem;
+  letter-spacing: 0.03em;
+  background: #e8e8e8;
+  color: #444;
+}
+.val-list code {
+  font-size: 0.72rem;
+  background: #f0f0f0;
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  color: #444;
+}
+.rel-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--green-light);
+  color: var(--green-dark);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  letter-spacing: 0.02em;
+}
+.applies-expr {
+  font-size: 0.72rem;
+  background: var(--yellow-light);
+  border-radius: 3px;
+  padding: 0.05rem 0.4rem;
+  color: #5a4000;
+}
+.ann-row--col { align-items: flex-start; }
+.policy-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.policy-item { font-size: 0.75rem; }
+.policy-item-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.15rem; }
+.policy-id {
+  font-size: 0.72rem;
+  background: #f0f0f0;
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  color: #444;
+}
+.policy-citation {
+  font-size: 0.7rem;
+  color: var(--blue-mid);
+  text-decoration: none;
+}
+.policy-citation:hover { text-decoration: underline; }
+.policy-desc {
+  font-size: 0.75rem;
+  color: #555;
+  line-height: 1.45;
+  margin: 0;
+}
+`;
 
-    html += `    </div>\n`;
-    html += `  </div>\n`;
+// ── JS ────────────────────────────────────────────────────────────────────────
 
-    // Cross-domain relationships
-    const crossDomainRels = findCrossDomainRelationships(domainKey, domainSchemas, relationships);
-    if (crossDomainRels.length > 0) {
-      html += `  <div class="cross-domain-section">\n`;
-      html += `    <h3>Cross-domain relationships</h3>\n`;
-      html += `    <ul class="cross-domain-list">\n`;
-      for (const rel of crossDomainRels) {
-        html += `      <li>${rel.direction} <strong>${rel.targetDomain}</strong> (${rel.description})</li>\n`;
-      }
-      html += `    </ul>\n`;
-      html += `  </div>\n`;
-    }
+const JS = `
+const SECTION_OFFSET = 72;
+
+function navigate(id) {
+  if (!CONTENT[id]) return;
+  document.getElementById('app').innerHTML = CONTENT[id];
+  window.scrollTo(0, 0);
+  if (id !== 'index') {
+    initDictView();
   }
-
-  html += `</section>\n\n`;
-  return html;
 }
 
-/**
- * Find relationships that cross domain boundaries
- */
-function findCrossDomainRelationships(domainKey, domainSchemas, relationships) {
-  const crossRels = [];
-  const domainSchemaSet = new Set(domainSchemas);
+function initDictView() {
+  const sections = Array.from(document.querySelectorAll('.dict-section'));
+  const navLinks = Array.from(document.querySelectorAll('.nav-sub'));
 
-  for (const schemaName of domainSchemas) {
-    const rels = relationships[schemaName];
-    if (!rels) continue;
-
-    // Check contains
-    for (const cont of rels.contains || []) {
-      const { domain: targetDomain } = classifySchemaIntoDomain(cont.name);
-      if (targetDomain !== domainKey && targetDomain !== 'unclassified') {
-        const targetDomainConfig = DOMAIN_HIERARCHY[targetDomain];
-        if (targetDomainConfig) {
-          crossRels.push({
-            direction: 'Contains →',
-            targetDomain: targetDomainConfig.name,
-            description: `${schemaName} contains ${cont.name}`
-          });
-        }
-      }
+  function setActive() {
+    const scrollY = window.scrollY + SECTION_OFFSET + 10;
+    let active = sections[0]?.id ?? null;
+    for (const s of sections) {
+      if (s.offsetTop <= scrollY) active = s.id;
     }
-
-    // Check belongsTo
-    for (const bel of rels.belongsTo || []) {
-      const { domain: targetDomain } = classifySchemaIntoDomain(bel.name);
-      if (targetDomain !== domainKey && targetDomain !== 'unclassified') {
-        const targetDomainConfig = DOMAIN_HIERARCHY[targetDomain];
-        if (targetDomainConfig) {
-          crossRels.push({
-            direction: 'References →',
-            targetDomain: targetDomainConfig.name,
-            description: `${schemaName} references ${bel.name}`
-          });
-        }
-      }
-    }
+    navLinks.forEach(a => a.classList.toggle('nav-sub--active', a.dataset.section === active));
   }
 
-  // Deduplicate by targetDomain
-  const seen = new Set();
-  return crossRels.filter(rel => {
-    const key = `${rel.direction}-${rel.targetDomain}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  navLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.getElementById(a.dataset.section);
+      if (target) {
+        const top = target.getBoundingClientRect().top + window.scrollY - SECTION_OFFSET;
+        window.scrollTo({ top, behavior: 'instant' });
+      }
+    });
+  });
+
+  document.getElementById('search').addEventListener('input', function () {
+    applySearch(this.value);
   });
 }
 
-/**
- * Generate hierarchical sidebar HTML
- */
-function generateHierarchicalSidebar(schemasByDomain, schemas, stateSchemas, states) {
-  let html = '';
+// ── Search (ported from steel thread visualizer) ─────────────────────────────
 
-  const domainOrder = DOMAIN_ORDER;
-
-  for (const domainKey of domainOrder) {
-    const domain = DOMAIN_HIERARCHY[domainKey];
-    if (!domain) continue;
-
-    const domainSchemas = schemasByDomain[domainKey];
-    const schemaList = Array.isArray(domainSchemas) ? domainSchemas :
-                       (domainSchemas?.subdomains ? Object.values(domainSchemas.subdomains).flat() : []);
-    const schemaCount = schemaList.length;
-
-    html += `    <div class="sidebar-domain" data-domain="${domainKey}" style="--domain-color: ${domain.color};">\n`;
-    html += `      <div class="sidebar-domain-header">\n`;
-    html += `        <span class="sidebar-domain-indicator"></span>\n`;
-    html += `        <a href="#domain-${domainKey}" class="sidebar-domain-name">${domain.name}</a>\n`;
-    if (schemaCount > 0) {
-      html += `        <span class="sidebar-domain-count">${schemaCount}</span>\n`;
-      html += `        <span class="sidebar-domain-toggle">▶</span>\n`;
-    }
-    html += `      </div>\n`;
-
-    if (schemaCount > 0) {
-      html += `      <div class="sidebar-domain-entities" style="display: none;">\n`;
-
-      // Handle subdomains (for cross-cutting)
-      if (domainSchemas?.subdomains) {
-        for (const [subKey, subSchemas] of Object.entries(domainSchemas.subdomains)) {
-          if (subSchemas.length === 0) continue;
-          const subConfig = domain.subdomains[subKey];
-          html += `        <div class="sidebar-subdomain">\n`;
-          html += `          <span class="sidebar-subdomain-name">${subConfig.name}</span>\n`;
-          for (const schemaName of subSchemas) {
-            const isPrimary = PRIMARY_SCHEMAS.includes(schemaName);
-            const hasVariations = checkForVariations(schemaName, schemas, stateSchemas, states);
-            html += `          <a href="#${schemaName}" class="${isPrimary ? 'primary' : 'secondary'}${hasVariations ? ' has-variations' : ''}">${schemaName}${hasVariations ? ' *' : ''}</a>\n`;
-          }
-          html += `        </div>\n`;
-        }
-      } else {
-        // Regular domain with flat schema list
-        for (const schemaName of schemaList) {
-          const isPrimary = PRIMARY_SCHEMAS.includes(schemaName);
-          const hasVariations = checkForVariations(schemaName, schemas, stateSchemas, states);
-          html += `        <a href="#${schemaName}" class="${isPrimary ? 'primary' : 'secondary'}${hasVariations ? ' has-variations' : ''}">${schemaName}${hasVariations ? ' *' : ''}</a>\n`;
-        }
-      }
-
-      html += `      </div>\n`;
-    }
-
-    html += `    </div>\n`;
-  }
-
-  // Note: Unclassified schemas are not shown in sidebar - they're accessible via links from other schemas
-
-  return html;
+function clearHighlights() {
+  document.querySelectorAll('mark.search-hl').forEach(el => {
+    const parent = el.parentNode;
+    el.replaceWith(document.createTextNode(el.textContent));
+    if (parent) parent.normalize();
+  });
 }
 
-/**
- * Check if a schema has state variations
- */
-function checkForVariations(schemaName, schemas, stateSchemas, states) {
-  const baseSchema = schemas[schemaName];
-  if (!baseSchema) return false;
-
-  for (const state of states) {
-    const stateSchema = stateSchemas[state.state]?.[schemaName];
-    if (stateSchema) {
-      const diffs = findDifferences(baseSchema, stateSchema, schemaName);
-      if (diffs.added.length > 0 || diffs.modified.length > 0) {
-        return true;
-      }
+function highlightInElement(root, q) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const text = node.textContent;
+    const lower = text.toLowerCase();
+    if (!lower.includes(q)) continue;
+    const frag = document.createDocumentFragment();
+    let last = 0, idx = lower.indexOf(q);
+    while (idx !== -1) {
+      if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+      const mark = document.createElement('mark');
+      mark.className = 'search-hl';
+      mark.textContent = text.slice(idx, idx + q.length);
+      frag.appendChild(mark);
+      last = idx + q.length;
+      idx = lower.indexOf(q, last);
     }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
   }
-  return false;
 }
 
-/**
- * Generate the full HTML document
- */
-function generateHtml(schemas, stateSchemas, states, relationships, operations, transitions, events, annotationsData, policies, lifecycleStates) {
-  let contentHtml = '';
+function applySearch(q) {
+  q = (q ?? '').trim().toLowerCase();
+  clearHighlights();
 
-  // Group schemas by high-level domain
-  const schemasByDomain = groupSchemasByDomain(schemas);
+  let anyVisible = false;
+  document.querySelectorAll('.card').forEach(card => {
+    const match = !q || card.textContent.toLowerCase().includes(q);
+    card.classList.toggle('hidden', !match);
+    if (match) anyVisible = true;
+  });
+  document.querySelectorAll('.dict-section').forEach(section => {
+    const visible = section.querySelectorAll('.card:not(.hidden)').length > 0;
+    section.style.display = visible ? '' : 'none';
+  });
 
-  // Generate hierarchical sidebar
-  const sidebarHtml = generateHierarchicalSidebar(schemasByDomain, schemas, stateSchemas, states);
+  const noResults = document.getElementById('no-results');
+  if (noResults) noResults.classList.toggle('hidden', anyVisible || !q);
 
-  // Build search index of all fields
-  const searchIndex = [];
-  for (const [schemaName, schema] of Object.entries(schemas)) {
-    const { properties } = processSchema(schema, schemaName);
-    const { domain: domainKey } = classifySchemaIntoDomain(schemaName);
-    const domainInfo = DOMAIN_HIERARCHY[domainKey];
-    const domainName = domainInfo?.name || 'Other';
+  if (q) {
+    document.querySelectorAll('.card:not(.hidden)').forEach(el => highlightInElement(el, q));
+  }
+}
 
-    for (const prop of properties) {
-      searchIndex.push({
-        field: prop.name,
-        schema: schemaName,
-        type: prop.type,
-        domain: domainName,
-        description: prop.description || ''
-      });
-    }
+function exportCsv() {
+  const rows = [['path', 'type', 'programs', 'policies', 'dataClassification']];
+  document.querySelectorAll('.card:not(.hidden)').forEach(card => {
+    const path = card.dataset.path ?? '';
+    const type = card.querySelector('.type-badge')?.textContent ?? '';
+    const getAnnRow = label => [...card.querySelectorAll('.ann-row')]
+      .find(r => r.querySelector('.ann-label')?.textContent.trim().toLowerCase() === label);
+    const programs = [...(getAnnRow('programs')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    const policies = [...(getAnnRow('policies')?.querySelectorAll('code') ?? [])].map(b => b.textContent).join(';');
+    const dc = [...(getAnnRow('classification')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    rows.push([path, type, programs, policies, dc]);
+  });
+  const csv = rows.map(r => r.map(v => JSON.stringify(v)).join(',')).join('\\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'data-dictionary.csv';
+  a.click();
+}
+
+navigate('index');
+`;
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+function main() {
+  // Discover all data model YAMLs (one per domain)
+  const dataModelFiles = readdirSync(outputDir)
+    .filter(f => f.endsWith('-data-model.yaml'))
+    .sort();
+
+  if (dataModelFiles.length === 0) {
+    console.warn('No data model YAML files found in output/ — run the data model generator first.');
+    return;
   }
 
-  // Domain order driven by config.yaml
-  const domainOrder = DOMAIN_ORDER;
+  const domains = [];
 
-  // Generate entity detail sections (grouped by domain)
-  for (const domainKey of domainOrder) {
-    const domain = DOMAIN_HIERARCHY[domainKey];
-    const domainSchemaList = schemasByDomain[domainKey];
-    const schemaList = Array.isArray(domainSchemaList) ? domainSchemaList :
-                       (domainSchemaList?.subdomains ? Object.values(domainSchemaList.subdomains).flat() : []);
+  for (const dmFile of dataModelFiles) {
+    const domain = dmFile.replace('-data-model.yaml', '');
+    const dataModelPath = resolve(outputDir, dmFile);
 
-    // Add domain header for all domains (with entity list or "coming soon")
-    if (domain) {
-      contentHtml += `<div id="domain-${domainKey}" class="domain-header-anchor" style="--domain-color: ${domain.color}; --domain-bg: ${domain.bgColor};">\n`;
-      contentHtml += `  <h2 class="domain-header-title"><span class="domain-indicator"></span>${domain.name}</h2>\n`;
-      contentHtml += `  <p class="domain-description">${domain.description}</p>\n`;
+    console.log(`  Processing ${domain}...`);
 
-      if (schemaList.length > 0) {
-        contentHtml += `  <div class="domain-entity-list">\n`;
+    // Load structured annotations (programs, policies, dataClassification)
+    const annPath = resolve(contractsDir, `${domain}-annotations.yaml`);
+    let annotations = null;
+    if (existsSync(annPath)) {
+      try { annotations = safeLoad(annPath); } catch { /* ignore */ }
+    }
 
-        // Primary schemas first
-        const primarySchemas = schemaList.filter(s => PRIMARY_SCHEMAS.includes(s));
-        const otherSchemas = schemaList.filter(s => !PRIMARY_SCHEMAS.includes(s));
+    // Load prose annotations (reason, modeling)
+    const docsPath = resolve(contractsDir, `${domain}-annotations-docs.yaml`);
+    let docsAnnotations = null;
+    if (existsSync(docsPath)) {
+      try { docsAnnotations = safeLoad(docsPath); } catch { /* ignore */ }
+    }
 
-        for (const schemaName of primarySchemas) {
-          contentHtml += `    <a href="#${schemaName}" class="domain-entity-link primary">${schemaName}</a>\n`;
-        }
-        for (const schemaName of otherSchemas) {
-          contentHtml += `    <a href="#${schemaName}" class="domain-entity-link">${schemaName}</a>\n`;
-        }
+    const resolveAnn = buildAnnotationResolver(annotations?.schema, docsAnnotations?.schema);
 
-        contentHtml += `  </div>\n`;
-      } else {
-        contentHtml += `  <p class="domain-coming-soon">Coming soon - this domain is part of the architecture but not yet implemented.</p>\n`;
+    // Load data model sections
+    const sections = parseDataModel(dataModelPath);
+
+    // Load version from contracts spec (source of truth), fall back to resolved
+    let version = null;
+    const contractsSpec = resolve(contractsDir, `${domain}-openapi.yaml`);
+    const resolvedSpec  = resolve(resolvedDir,  `${domain}-openapi.yaml`);
+    for (const specPath of [contractsSpec, resolvedSpec]) {
+      if (existsSync(specPath)) {
+        try {
+          const spec = safeLoad(specPath);
+          version = spec?.info?.version ?? null;
+          if (version) break;
+        } catch { /* ignore */ }
       }
-
-      contentHtml += `</div>\n`;
     }
 
-    for (const schemaName of schemaList) {
-      const schema = schemas[schemaName];
-      if (!schema) continue;
-
-      const isPrimary = PRIMARY_SCHEMAS.includes(schemaName);
-      const { domain: schemaDomain } = classifySchemaIntoDomain(schemaName);
-
-      if (isPrimary) {
-        contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, schemaDomain, transitions, events, annotationsData, policies, lifecycleStates);
-      } else {
-        contentHtml += generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, schemaDomain);
-      }
-    }
+    domains.push({ domain, sections, version, resolveAnn });
   }
 
-  // Generate unclassified schemas
-  for (const schemaName of schemasByDomain.unclassified || []) {
-    const schema = schemas[schemaName];
-    if (!schema) continue;
+  // Build CONTENT object
+  const contentParts = domains.map(d => {
+    const html = renderDomainContent(d.domain, d.sections, d.resolveAnn);
+    return `${JSON.stringify(d.domain)}: ${JSON.stringify(html)}`;
+  });
+  contentParts.unshift(`"index": ${JSON.stringify(renderIndexContent(domains))}`);
 
-    const isPrimary = PRIMARY_SCHEMAS.includes(schemaName);
-    if (isPrimary) {
-      contentHtml += generateOrcaSection(schemaName, schema, relationships, operations, stateSchemas, states, 'unclassified', transitions, events, annotationsData, policies, lifecycleStates);
-    } else {
-      contentHtml += generateSimpleSection(schemaName, schema, relationships, stateSchemas, states, 'unclassified');
-    }
+  const contentJs = `const CONTENT = {\n${contentParts.join(',\n')}\n};`;
+
+  // Remove legacy data-explorer.html if still present
+  const oldOutput = resolve(outputDir, 'data-explorer.html');
+  if (existsSync(oldOutput)) {
+    rmSync(oldOutput);
+    console.log('  Removed legacy data-explorer.html');
   }
 
-  // Generate sections for inline nested objects
-  for (const [inlineName, inlineInfo] of inlineObjectSchemas) {
-    contentHtml += generateInlineObjectSection(inlineName, inlineInfo);
-  }
-
-  const stateListHtml = states.map(s => `<span class="state-badge">${s.name}</span>`).join(' ');
-
-  const introDomainListHtml = DOMAIN_ORDER.map(id => {
-    const d = DOMAIN_HIERARCHY[id];
-    return `            <li style="border-left-color: ${d.color}"><a href="#domain-${id}"><strong>${d.name}</strong> — ${d.description}</a></li>`;
-  }).join('\n');
-
-  return `<!DOCTYPE html>
+  // Write output
+  const outPath = resolve(outputDir, 'data-dictionary.html');
+  writeFileSync(outPath, `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Safety Net Blueprint - ORCA Design Reference</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f5f5f5;
-    }
-
-    .container {
-      display: flex;
-      min-height: 100vh;
-    }
-
-    /* Sidebar */
-    .sidebar {
-      width: 260px;
-      background: #2c3e50;
-      color: white;
-      position: fixed;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      z-index: 100;
-    }
-
-    .sidebar-header {
-      padding: 20px 20px 0 20px;
-      flex-shrink: 0;
-    }
-
-    .sidebar-nav {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0 20px 20px 20px;
-    }
-
-    .sidebar h1 {
-      font-size: 1.2rem;
-      margin-bottom: 0;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #456;
-    }
-
-    .sidebar-title {
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .sidebar-title:hover h1 {
-      color: #8ab4f8;
-    }
-
-    .intro-section {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border-radius: 12px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      border: 1px solid #dee2e6;
-    }
-
-    .intro-section h1 {
-      font-size: 1.8rem;
-      color: #2c3e50;
-      margin-bottom: 1rem;
-    }
-
-    .intro-description {
-      font-size: 1.1rem;
-      line-height: 1.6;
-      color: #495057;
-      margin-bottom: 1.5rem;
-    }
-
-    .intro-domains h3 {
-      font-size: 1.1rem;
-      color: #2c3e50;
-      margin-bottom: 0.5rem;
-    }
-
-    .intro-domains p {
-      color: #6c757d;
-      margin-bottom: 0.75rem;
-    }
-
-    .intro-domains ul {
-      list-style: none;
-      padding: 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 0.75rem;
-    }
-
-    .intro-domains li {
-      background: white;
-      padding: 0;
-      border-radius: 8px;
-      border-left: 4px solid #3498db;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-
-    .intro-domains li:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-    }
-
-    .intro-domains li a {
-      display: block;
-      padding: 0.75rem 1rem;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    /* Domain list colors are applied via inline style — see build script */
-
-    .search-container {
-      position: relative;
-      margin-bottom: 15px;
-    }
-
-    .sidebar input {
-      width: 100%;
-      padding: 8px;
-      border: none;
-      border-radius: 4px;
-    }
-
-    .search-results {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      width: 400px;
-      background: #fff;
-      border-radius: 4px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-height: 400px;
-      overflow-y: auto;
-      z-index: 1000;
-      display: none;
-    }
-
-    .search-results.visible {
-      display: block;
-    }
-
-    .search-result-item {
-      padding: 10px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid #eee;
-      color: #333;
-    }
-
-    .search-result-item:last-child {
-      border-bottom: none;
-    }
-
-    .search-result-item:hover {
-      background: #f0f7ff;
-    }
-
-    .search-result-field {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-
-    .search-result-schema {
-      font-size: 0.85em;
-      color: #7f8c8d;
-      margin-left: 8px;
-    }
-
-    .search-result-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 4px;
-    }
-
-    .search-result-type {
-      font-size: 0.8em;
-      color: #3498db;
-    }
-
-    .search-result-domain {
-      font-size: 0.75em;
-      color: #fff;
-      background: #7f8c8d;
-      padding: 2px 6px;
-      border-radius: 3px;
-    }
-
-    .search-no-results {
-      padding: 12px;
-      color: #7f8c8d;
-      text-align: center;
-      font-style: italic;
-    }
-
-    .field-highlight {
-      background: #fff3cd !important;
-      animation: highlight-fade 2s ease-out forwards;
-    }
-
-    @keyframes highlight-fade {
-      0% { background: #fff3cd; }
-      100% { background: transparent; }
-    }
-
-    .sidebar nav {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .sidebar a {
-      color: #bdc3c7;
-      text-decoration: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-      transition: all 0.2s;
-    }
-
-    .sidebar a:hover {
-      background: #34495e;
-      color: white;
-    }
-
-    .sidebar a.primary {
-      color: white;
-      font-weight: 600;
-    }
-
-    .sidebar a.secondary {
-      font-size: 0.9rem;
-      padding-left: 20px;
-    }
-
-    .sidebar a.has-variations {
-      border-left: 3px solid #f39c12;
-      padding-left: 7px;
-    }
-
-    /* Hierarchical sidebar domains */
-    .sidebar-domain {
-      margin-bottom: 8px;
-    }
-
-    .sidebar-domain-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .sidebar-domain-header:hover {
-      background: #34495e;
-    }
-
-    .sidebar-domain-indicator {
-      width: 10px;
-      height: 10px;
-      background: var(--domain-color);
-      border-radius: 2px;
-      flex-shrink: 0;
-    }
-
-    .sidebar-domain-name {
-      flex: 1;
-      color: #ecf0f1;
-      font-weight: 600;
-      font-size: 0.9rem;
-      text-decoration: none;
-    }
-
-    .sidebar-domain-name:hover {
-      color: white;
-    }
-
-    .sidebar-domain-count {
-      background: rgba(255,255,255,0.2);
-      color: #bdc3c7;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.75rem;
-    }
-
-    .sidebar-domain-toggle {
-      color: #7f8c8d;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-
-    .sidebar-domain.expanded .sidebar-domain-toggle {
-      transform: rotate(90deg);
-    }
-
-    .sidebar-domain-entities {
-      padding-left: 18px;
-      margin-top: 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .sidebar-domain-entities a {
-      padding: 5px 10px;
-      font-size: 0.85rem;
-    }
-
-    .sidebar-subdomain {
-      margin-top: 8px;
-    }
-
-    .sidebar-subdomain-name {
-      display: block;
-      color: #7f8c8d;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 4px 10px;
-      margin-bottom: 4px;
-    }
-
-    /* Main content */
-    .main {
-      flex: 1;
-      margin-left: 260px;
-      padding: 30px 40px;
-    }
-
-    /* Relationship Diagram */
-    .relationship-diagram-container {
-      background: white;
-      border-radius: 8px;
-      padding: 25px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .relationship-diagram-container h3 {
-      margin-bottom: 20px;
-      color: #2c3e50;
-    }
-
-    .relationship-diagram {
-      width: 100%;
-      max-width: 800px;
-      height: auto;
-    }
-
-    /* Domain Overview Sections */
-    .domain-overview-section {
-      background: white;
-      border-radius: 8px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-
-    .domain-overview-header {
-      background: var(--domain-bg);
-      border-left: 4px solid var(--domain-color);
-      padding: 25px;
-    }
-
-    .domain-title-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
-    .domain-overview-header .domain-indicator {
-      width: 16px;
-      height: 16px;
-      background: var(--domain-color);
-      border-radius: 4px;
-    }
-
-    .domain-overview-header h2 {
-      color: var(--domain-color);
-      margin: 0;
-      font-size: 1.5rem;
-    }
-
-    .domain-description {
-      color: #555;
-      margin: 0;
-      font-size: 1.05rem;
-    }
-
-    .domain-entities-section {
-      padding: 25px;
-    }
-
-    .domain-entities-section h3 {
-      color: #2c3e50;
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-    }
-
-    .entity-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 12px;
-    }
-
-    .entity-card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      text-decoration: none;
-      color: #2c3e50;
-      transition: all 0.2s;
-      border: 1px solid transparent;
-    }
-
-    .entity-card:hover {
-      background: #ebf5fb;
-      border-color: #3498db;
-      transform: translateY(-2px);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .entity-card.primary {
-      background: #ebf5fb;
-      border-color: #3498db;
-    }
-
-    .entity-name {
-      font-weight: 500;
-    }
-
-    .entity-badge {
-      background: #3498db;
-      color: white;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.7rem;
-      font-weight: 600;
-    }
-
-    .cross-domain-section {
-      padding: 0 25px 25px;
-    }
-
-    .cross-domain-section h3 {
-      color: #2c3e50;
-      margin-bottom: 12px;
-      font-size: 1.1rem;
-    }
-
-    .cross-domain-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .cross-domain-list li {
-      padding: 8px 12px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      margin-bottom: 6px;
-      color: #555;
-    }
-
-    .cross-domain-list strong {
-      color: #2c3e50;
-    }
-
-    .coming-soon-notice {
-      padding: 30px 25px;
-      text-align: center;
-      color: #7f8c8d;
-    }
-
-    .coming-soon-notice h4 {
-      color: #95a5a6;
-      margin-bottom: 10px;
-    }
-
-    /* Entity domain badge */
-    .entity-domain-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      background: var(--domain-bg);
-      color: var(--domain-color);
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-
-    .entity-domain-badge:hover {
-      filter: brightness(0.95);
-    }
-
-    /* Inline object badge */
-    .inline-object-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 12px;
-      background: #f0f0f0;
-      color: #666;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: 500;
-    }
-
-    .schema-section.inline-object {
-      border-left: 3px solid #ddd;
-      margin-left: 20px;
-    }
-
-    .section-header.simple {
-      margin-bottom: 10px;
-    }
-
-    .used-by-links {
-      font-size: 0.85rem;
-      color: #7f8c8d;
-      margin-top: 4px;
-    }
-
-    .used-by-links a {
-      color: #3498db;
-      text-decoration: none;
-    }
-
-    .used-by-links a:hover {
-      text-decoration: underline;
-    }
-
-    .used-by-links code {
-      font-size: 0.85em;
-      color: #95a5a6;
-      background: none;
-      padding: 0;
-    }
-
-    /* Domain header anchors */
-    .domain-header-anchor {
-      margin-bottom: 25px;
-      padding: 20px;
-      background: var(--domain-bg);
-      border-left: 4px solid var(--domain-color);
-      border-radius: 0 8px 8px 0;
-    }
-
-    .domain-header-title {
-      margin: 0 0 8px 0;
-      font-size: 1.4rem;
-      color: var(--domain-color);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .domain-header-title .domain-indicator {
-      width: 12px;
-      height: 12px;
-      background: var(--domain-color);
-      border-radius: 3px;
-    }
-
-    .domain-header-anchor .domain-description {
-      color: #666;
-      margin: 0 0 15px 0;
-      font-size: 0.95rem;
-    }
-
-    .domain-entity-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .domain-entity-link {
-      padding: 6px 12px;
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      color: #333;
-      text-decoration: none;
-      font-size: 0.9rem;
-      transition: all 0.2s;
-    }
-
-    .domain-entity-link:hover {
-      border-color: var(--domain-color);
-      color: var(--domain-color);
-    }
-
-    .domain-entity-link.primary {
-      font-weight: 600;
-      border-color: var(--domain-color);
-      background: white;
-    }
-
-    .domain-coming-soon {
-      color: #7f8c8d;
-      font-style: italic;
-      margin: 0;
-    }
-
-    /* Schema sections */
-    .schema-section {
-      background: white;
-      border-radius: 8px;
-      padding: 25px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .schema-section.primary {
-      border-left: 4px solid #3498db;
-    }
-
-    .schema-section h2 {
-      color: #2c3e50;
-      margin-bottom: 10px;
-      font-size: 1.5rem;
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 15px;
-    }
-
-    .section-header h2 {
-      margin-bottom: 0;
-    }
-
-    .variation-badge {
-      font-size: 0.7rem;
-      background: #f39c12;
-      color: white;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-weight: normal;
-    }
-
-    .schema-section .description {
-      color: #666;
-      margin-bottom: 20px;
-    }
-
-    /* ORCA Tabs */
-    .orca-tabs {
-      display: flex;
-      gap: 5px;
-      border-bottom: 2px solid #ecf0f1;
-      margin-bottom: 20px;
-    }
-
-    .orca-tab {
-      padding: 10px 20px;
-      border: none;
-      background: #ecf0f1;
-      color: #7f8c8d;
-      border-radius: 4px 4px 0 0;
-      cursor: pointer;
-      font-size: 0.95rem;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-
-    .orca-tab:hover {
-      background: #bdc3c7;
-      color: #2c3e50;
-    }
-
-    .orca-tab.active {
-      background: #3498db;
-      color: white;
-    }
-
-    .orca-panel {
-      display: none;
-    }
-
-    .orca-panel.active {
-      display: block;
-    }
-
-    /* Overview panel */
-    .overview-content h4 {
-      color: #2c3e50;
-      margin: 15px 0 10px;
-    }
-
-    .overview-content h4:first-child {
-      margin-top: 0;
-    }
-
-    .characteristics {
-      list-style: none;
-      padding: 0;
-    }
-
-    .characteristics li {
-      padding: 5px 0;
-      border-bottom: 1px solid #ecf0f1;
-    }
-
-    /* Relationships panel */
-    .rel-section {
-      margin-bottom: 20px;
-    }
-
-    .rel-section h5 {
-      color: #2c3e50;
-      margin-bottom: 10px;
-      font-size: 1rem;
-    }
-
-    .rel-list {
-      list-style: none;
-      padding: 0;
-    }
-
-    .rel-list li {
-      padding: 8px 12px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      margin-bottom: 5px;
-    }
-
-    .rel-list a {
-      color: #3498db;
-      text-decoration: none;
-    }
-
-    .rel-list a:hover {
-      text-decoration: underline;
-    }
-
-    .rel-list code {
-      background: #ecf0f1;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 0.85rem;
-    }
-
-    .no-rels {
-      color: #95a5a6;
-      font-style: italic;
-    }
-
-    /* Actions panel */
-    .actions-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-
-    .actions-table th {
-      text-align: left;
-      padding: 12px;
-      background: #ecf0f1;
-      border-bottom: 2px solid #bdc3c7;
-      font-weight: 600;
-      color: #2c3e50;
-    }
-
-    .actions-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #ecf0f1;
-    }
-
-    .action-name {
-      font-weight: 500;
-    }
-
-    .action-method {
-      font-family: monospace;
-      font-weight: bold;
-      padding: 3px 8px;
-      border-radius: 3px;
-    }
-
-    .method-get { background: #d4edda; color: #155724; }
-    .method-post { background: #cce5ff; color: #004085; }
-    .method-patch, .method-put { background: #fff3cd; color: #856404; }
-    .method-delete { background: #f8d7da; color: #721c24; }
-
-    .action-endpoint code {
-      background: #f8f9fa;
-      padding: 3px 8px;
-      border-radius: 3px;
-    }
-
-    .action-notes {
-      color: #7f8c8d;
-      font-size: 0.9rem;
-    }
-
-    .event-direction {
-      font-size: 0.8rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 3px;
-      white-space: nowrap;
-    }
-
-    .event-direction-publishes { background: #cce5ff; color: #004085; }
-    .event-direction-subscribes { background: #d4edda; color: #155724; }
-
-    .system-badge {
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 1px 5px;
-      border-radius: 3px;
-      background: #ecf0f1;
-      color: #7f8c8d;
-      margin-left: 6px;
-      vertical-align: middle;
-    }
-
-    .no-actions {
-      color: #95a5a6;
-      font-style: italic;
-    }
-
-    /* Overview panel */
-    .overview-stats {
-      display: flex;
-      gap: 12px;
-      margin: 20px 0;
-      flex-wrap: wrap;
-    }
-
-    .stat-card {
-      background: #f8f9fa;
-      border: 1px solid #e9ecef;
-      border-radius: 8px;
-      padding: 14px 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 80px;
-    }
-
-    .stat-num {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #2c3e50;
-      line-height: 1;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      color: #7f8c8d;
-      margin-top: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .overview-section-heading {
-      color: #2c3e50;
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin: 20px 0 10px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid #ecf0f1;
-    }
-
-    .lifecycle-states {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
-
-    .lifecycle-state {
-      display: flex;
-      flex-direction: column;
-      padding: 10px 14px;
-      border-radius: 6px;
-      border: 1px solid;
-      min-width: 120px;
-      max-width: 220px;
-      cursor: default;
-    }
-
-    .lifecycle-state-name {
-      font-size: 0.85rem;
-      font-weight: 600;
-      font-family: monospace;
-    }
-
-    .lifecycle-sla-clock {
-      font-size: 0.7rem;
-      margin-top: 2px;
-      opacity: 0.75;
-    }
-
-    .lifecycle-state-desc {
-      font-size: 0.75rem;
-      margin-top: 6px;
-      line-height: 1.35;
-      opacity: 0.85;
-      border-top: 1px solid currentColor;
-      padding-top: 5px;
-    }
-
-    .sla-running {
-      background: #fef9e7;
-      border-color: #e67e22;
-      color: #7d4e00;
-    }
-
-    .sla-stopped {
-      background: #f8f9fa;
-      border-color: #bdc3c7;
-      color: #5d6d7e;
-    }
-
-    .sla-paused {
-      background: #fef9e7;
-      border-color: #f1c40f;
-      color: #7d6608;
-    }
-
-    .overview-annotations {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 12px 16px;
-    }
-
-    /* Annotations panel */
-    .annotations-schema-level {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 16px 20px;
-      margin-bottom: 20px;
-    }
-
-    .annotation-row {
-      display: flex;
-      gap: 16px;
-      padding: 6px 0;
-      border-bottom: 1px solid #ecf0f1;
-      align-items: flex-start;
-    }
-
-    .annotation-row:last-child {
-      border-bottom: none;
-    }
-
-    .annotation-label {
-      font-weight: 600;
-      font-size: 0.85rem;
-      color: #5d6d7e;
-      min-width: 110px;
-      padding-top: 2px;
-    }
-
-    .annotation-policies {
-      line-height: 1.8;
-    }
-
-    .program-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: #e8f4fd;
-      color: #1a6fa8;
-      font-size: 0.78rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 3px;
-      margin-right: 4px;
-      text-transform: uppercase;
-    }
-
-    .program-strength {
-      font-weight: 400;
-      font-size: 0.72rem;
-      color: #5d9dc7;
-    }
-
-    .classification-badge {
-      display: inline-block;
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 3px;
-      margin-right: 4px;
-    }
-
-    .classification-pii { background: #fdecea; color: #c0392b; }
-    .classification-fti { background: #fef9e7; color: #9a7d0a; }
-    .classification-phi { background: #f5eef8; color: #76448a; }
-    .classification-phi-behavioral { background: #f5eef8; color: #76448a; }
-    .classification-cjis { background: #eafaf1; color: #1e8449; }
-
-    .policy-citation {
-      font-family: monospace;
-      font-size: 0.85rem;
-      color: #2980b9;
-      text-decoration: none;
-    }
-
-    a.policy-citation:hover {
-      text-decoration: underline;
-    }
-
-    .policy-description {
-      font-size: 0.82rem;
-      color: #7f8c8d;
-    }
-
-    .read-only-section {
-      margin-top: 25px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 8px;
-    }
-
-    .read-only-section h5 {
-      color: #2c3e50;
-      margin-bottom: 10px;
-    }
-
-    .read-only-list {
-      list-style: none;
-      padding: 0;
-      margin-top: 10px;
-    }
-
-    .read-only-list li {
-      padding: 5px 0;
-    }
-
-    .read-only-list code {
-      background: #ecf0f1;
-      padding: 2px 6px;
-      border-radius: 3px;
-    }
-
-    /* Domain groups */
-    .domain-group {
-      margin-bottom: 25px;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 1px solid var(--domain-color, #ddd);
-    }
-
-    .domain-header {
-      background: var(--domain-bg, #f5f5f5);
-      color: var(--domain-color, #333);
-      padding: 10px 15px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .domain-indicator {
-      width: 12px;
-      height: 12px;
-      background: var(--domain-color, #666);
-      border-radius: 3px;
-    }
-
-    .domain-group .property-table {
-      margin: 0;
-      border-radius: 0;
-    }
-
-    /* Tables */
-    .property-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .property-table th {
-      text-align: left;
-      padding: 12px;
-      background: #f8f9fa;
-      border-bottom: 2px solid #ecf0f1;
-      font-weight: 600;
-      color: #2c3e50;
-    }
-
-    .property-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #ecf0f1;
-    }
-
-    .property-table tr:hover {
-      background: #f9f9f9;
-    }
-
-    .field-name {
-      font-family: 'Monaco', 'Consolas', monospace;
-      font-size: 0.9rem;
-      color: #2980b9;
-    }
-
-    .field-type {
-      color: #27ae60;
-      font-weight: 500;
-    }
-
-    .type-link {
-      color: #27ae60;
-      text-decoration: none;
-    }
-
-    .type-link:hover {
-      text-decoration: underline;
-    }
-
-    .field-required {
-      color: #e74c3c;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .field-notes {
-      color: #7f8c8d;
-      font-size: 0.9rem;
-    }
-
-    .read-only-badge {
-      font-size: 0.7rem;
-      background: #95a5a6;
-      color: white;
-      padding: 1px 5px;
-      border-radius: 3px;
-      margin-left: 5px;
-    }
-
-
-    .base-enum {
-      color: #95a5a6;
-    }
-
-    .state-enum {
-      color: #27ae60;
-    }
-
-    /* Legend */
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      margin-bottom: 25px;
-      padding: 15px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.9rem;
-    }
-
-    .legend-item .badge {
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: 500;
-    }
-
-    .badge.type { background: #d5f5e3; color: #27ae60; }
-    .badge.required { background: #fadbd8; color: #e74c3c; }
-    .badge.link { background: #d4e6f1; color: #2980b9; }
-    .badge.state-var { background: #fef5e7; color: #e67e22; }
-
-    .state-badge {
-      display: inline-block;
-      background: #34495e;
-      color: white;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      margin: 2px;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    /* Domain color legend */
-    .domain-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 25px;
-      padding: 15px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .domain-legend h4 {
-      width: 100%;
-      margin-bottom: 10px;
-      color: #2c3e50;
-    }
-
-    .domain-legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.85rem;
-    }
-
-    .domain-legend-item .swatch {
-      width: 16px;
-      height: 16px;
-      border-radius: 3px;
-    }
-
-    /* Diagram hint */
-    .diagram-hint {
-      color: #7f8c8d;
-      font-size: 0.85rem;
-      margin-bottom: 15px;
-    }
-
-    /* Domain Browser */
-    .domain-browser {
-      background: white;
-      border-radius: 8px;
-      padding: 25px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .domain-browser h3 {
-      color: #2c3e50;
-      margin-bottom: 10px;
-    }
-
-    .domain-browser-intro {
-      color: #7f8c8d;
-      font-size: 0.9rem;
-      margin-bottom: 20px;
-    }
-
-    .domain-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 15px;
-    }
-
-    .domain-card {
-      border: 2px solid var(--domain-color);
-      border-radius: 8px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .domain-card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transform: translateY(-2px);
-    }
-
-    .domain-card.expanded {
-      grid-column: span 2;
-    }
-
-    .domain-card-header {
-      background: var(--domain-bg);
-      padding: 12px 15px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .domain-card-indicator {
-      width: 12px;
-      height: 12px;
-      background: var(--domain-color);
-      border-radius: 3px;
-    }
-
-    .domain-card-name {
-      flex: 1;
-      font-weight: 600;
-      color: var(--domain-color);
-    }
-
-    .domain-card-count {
-      background: var(--domain-color);
-      color: white;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.8rem;
-    }
-
-    .domain-card-schemas {
-      padding: 15px;
-      background: white;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .domain-schema-link {
-      display: inline-block;
-      padding: 4px 10px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      color: #2980b9;
-      text-decoration: none;
-      font-size: 0.85rem;
-      transition: all 0.2s;
-    }
-
-    .domain-schema-link:hover {
-      background: #3498db;
-      color: white;
-    }
-
-    .domain-schema-link.primary {
-      font-weight: 600;
-      background: #ebf5fb;
-    }
-
-    /* Global State Selector */
-    .state-selector {
-      background: white;
-      border-radius: 8px;
-      padding: 20px 25px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .state-selector-label {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-
-    .state-selector-buttons {
-      display: flex;
-      gap: 8px;
-    }
-
-    .state-selector-btn {
-      padding: 8px 16px;
-      border: 2px solid #ecf0f1;
-      background: white;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-
-    .state-selector-btn:hover {
-      border-color: #3498db;
-      color: #3498db;
-    }
-
-    .state-selector-btn.active {
-      background: #3498db;
-      border-color: #3498db;
-      color: white;
-    }
-
-    .state-selector-note {
-      color: #7f8c8d;
-      font-size: 0.85rem;
-      margin-left: auto;
-    }
-
-    /* State-specific field highlighting */
-    .state-added-field {
-      background: #e8f8f0 !important;
-    }
-
-    .state-added-field td:first-child::after {
-      content: ' (state-specific)';
-      color: #27ae60;
-      font-size: 0.75rem;
-    }
-  </style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Data Dictionary</title>
+  <style>${CSS}</style>
 </head>
 <body>
-  <div class="container">
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="#orca-intro" class="sidebar-title"><h1>ORCA Design Reference</h1></a>
-        <div class="search-container">
-          <input type="text" id="search" placeholder="Search fields..." autocomplete="off">
-          <div id="search-results" class="search-results"></div>
-        </div>
-      </div>
-      <div class="sidebar-nav">
-        <nav id="nav">
-${sidebarHtml}
-        </nav>
-      </div>
-    </aside>
-
-    <main class="main">
-      <section id="orca-intro" class="intro-section">
-        <h1>ORCA: Objects, Relationships, Calls to Action</h1>
-        <p class="intro-description">
-          OOUX (Object-Oriented UX) is a design methodology for modeling systems around real-world objects rather
-          than screens or flows. ORCA — Objects, Relationships, Calls to Action — is the core framework of OOUX.
-          This reference applies ORCA to the Safety Net Blueprint: an object-by-object guide to what data exists
-          in the system, how objects relate to each other, and what actions can be taken on them.
-        </p>
-        <div class="intro-domains">
-          <h3>Data Domains</h3>
-          <p>The data model is organized into these domains:</p>
-          <ul>
-${introDomainListHtml}
-          </ul>
-        </div>
-      </section>
-
-${contentHtml}
-    </main>
-  </div>
-
+  <div id="app"></div>
   <script>
-    // ORCA tabs - with persistence across all schemas
-    let activeTab = 'attributes';
-
-    // Function to set active tab across all sections
-    function setActiveTabGlobally(tabName) {
-      activeTab = tabName;
-
-      document.querySelectorAll('.orca-tabs').forEach(tabGroup => {
-        const tabs = tabGroup.querySelectorAll('.orca-tab');
-        const panels = tabGroup.parentElement.querySelectorAll('.orca-panel');
-
-        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
-        panels.forEach(p => p.classList.toggle('active', p.dataset.tab === tabName));
-      });
-    }
-
-    // Initialize tabs to saved state
-    setActiveTabGlobally(activeTab);
-
-    // Add click handlers for tabs
-    document.querySelectorAll('.orca-tabs').forEach(tabGroup => {
-      const tabs = tabGroup.querySelectorAll('.orca-tab');
-
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          setActiveTabGlobally(tab.dataset.tab);
-        });
-      });
-    });
-
-    // Search index
-    const searchIndex = ${JSON.stringify(searchIndex)};
-
-    // Search functionality with dropdown
-    const searchInput = document.getElementById('search');
-    const searchResults = document.getElementById('search-results');
-    const navLinks = document.querySelectorAll('.sidebar nav a');
-
-    function renderSearchResults(results) {
-      if (results.length === 0) {
-        searchResults.innerHTML = '<div class="search-no-results">No matching fields found</div>';
-        return;
-      }
-
-      searchResults.innerHTML = results.slice(0, 20).map(r => \`
-        <div class="search-result-item" data-schema="\${r.schema}" data-field="\${r.field}">
-          <span class="search-result-field">\${r.field}</span>
-          <span class="search-result-schema">→ \${r.schema}</span>
-          <span class="search-result-meta">
-            <span class="search-result-type">\${r.type}</span>
-            <span class="search-result-domain">\${r.domain}</span>
-          </span>
-        </div>
-      \`).join('');
-
-      if (results.length > 20) {
-        searchResults.innerHTML += \`<div class="search-no-results">\${results.length - 20} more results...</div>\`;
-      }
-    }
-
-    function navigateToField(schemaName, fieldName) {
-      // Navigate to schema section
-      const section = document.getElementById(schemaName);
-      if (!section) return;
-
-      // Make sure Attributes tab is active
-      setActiveTabGlobally('attributes');
-
-      // Find and highlight the field row
-      const fieldRow = section.querySelector(\`tr[data-field="\${fieldName}"]\`);
-      if (fieldRow) {
-        fieldRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        fieldRow.classList.add('field-highlight');
-        setTimeout(() => fieldRow.classList.remove('field-highlight'), 2000);
-      } else {
-        section.scrollIntoView({ behavior: 'smooth' });
-      }
-
-      // Clear search
-      searchInput.value = '';
-      searchResults.classList.remove('visible');
-    }
-
-    searchInput.addEventListener('input', (e) => {
-      const query = e.target.value.toLowerCase().trim();
-
-      if (query.length < 2) {
-        searchResults.classList.remove('visible');
-        return;
-      }
-
-      const results = searchIndex.filter(item =>
-        item.field.toLowerCase().includes(query) ||
-        item.schema.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query)
-      );
-
-      renderSearchResults(results);
-      searchResults.classList.add('visible');
-    });
-
-    searchResults.addEventListener('click', (e) => {
-      const item = e.target.closest('.search-result-item');
-      if (item) {
-        navigateToField(item.dataset.schema, item.dataset.field);
-      }
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.search-container')) {
-        searchResults.classList.remove('visible');
-      }
-    });
-
-    // Keyboard navigation
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        searchResults.classList.remove('visible');
-        searchInput.blur();
-      }
-      if (e.key === 'Enter') {
-        const firstResult = searchResults.querySelector('.search-result-item');
-        if (firstResult) {
-          navigateToField(firstResult.dataset.schema, firstResult.dataset.field);
-        }
-      }
-    });
-
-    // Smooth scrolling
-    navLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const target = document.querySelector(link.getAttribute('href'));
-        target?.scrollIntoView({ behavior: 'smooth' });
-      });
-    });
-
-    // Domain browser cards
-    document.querySelectorAll('.domain-card').forEach(card => {
-      const header = card.querySelector('.domain-card-header');
-      const schemas = card.querySelector('.domain-card-schemas');
-
-      header.addEventListener('click', () => {
-        const isExpanded = schemas.style.display !== 'none';
-        schemas.style.display = isExpanded ? 'none' : 'flex';
-        card.classList.toggle('expanded', !isExpanded);
-      });
-    });
-
-    // Hierarchical sidebar domain toggle
-    document.querySelectorAll('.sidebar-domain').forEach(domain => {
-      const header = domain.querySelector('.sidebar-domain-header');
-      const entities = domain.querySelector('.sidebar-domain-entities');
-      const toggle = domain.querySelector('.sidebar-domain-toggle');
-
-      if (header && entities && toggle) {
-        // Allow clicking on header (but not the domain name link) to toggle
-        header.addEventListener('click', (e) => {
-          // If clicking the domain name link, let it navigate
-          if (e.target.classList.contains('sidebar-domain-name')) {
-            return;
-          }
-          e.preventDefault();
-          const isExpanded = entities.style.display !== 'none';
-          entities.style.display = isExpanded ? 'none' : 'flex';
-          domain.classList.toggle('expanded', !isExpanded);
-        });
-      }
-    });
-
-    // Smooth scroll for sidebar domain links too
-    document.querySelectorAll('.sidebar-domain-name').forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const href = link.getAttribute('href');
-        if (href) {
-          const target = document.querySelector(href);
-          target?.scrollIntoView({ behavior: 'smooth' });
-        }
-      });
-    });
-
-    // Global state selector
-    const stateBtns = document.querySelectorAll('.state-selector-btn');
-    const stateContents = document.querySelectorAll('[data-state-content]');
-
-    stateBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const selectedState = btn.dataset.state;
-
-        // Update active button
-        stateBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Show/hide state-specific content
-        stateContents.forEach(content => {
-          const contentState = content.dataset.stateContent;
-          content.style.display = (contentState === selectedState) ? '' : 'none';
-        });
-
-        // Highlight state-specific fields
-        document.querySelectorAll('.state-added-field').forEach(row => {
-          row.classList.remove('state-added-field');
-        });
-
-        if (selectedState !== 'base') {
-          document.querySelectorAll(\`[data-state-field="\${selectedState}"]\`).forEach(row => {
-            row.classList.add('state-added-field');
-          });
-        }
-      });
-    });
+${contentJs}
+${JS}
   </script>
 </body>
-</html>`;
-}
+</html>`);
 
-/**
- * Load state machine transitions from all *-state-machine.yaml files in specDir.
- * Returns a map of objectName -> normalized transition array.
- */
-function loadStateMachineTransitions(specDir) {
-  const result = {};
-
-  let files;
-  try {
-    files = readdirSync(specDir).filter(f => f.endsWith('-state-machine.yaml'));
-  } catch {
-    return result;
-  }
-
-  for (const file of files) {
-    let sm;
-    try {
-      sm = yaml.load(readFileSync(join(specDir, file), 'utf8'));
-    } catch {
-      continue;
-    }
-
-    for (const machine of sm.machines || []) {
-      const objectName = machine.object;
-      if (!objectName) continue;
-
-      const normalized = [];
-
-      // Current format: machine.actions[] with id, description ("METHOD /path — notes"), guards[].actors, transition.from/to
-      for (const a of machine.actions || []) {
-        const desc = a.description || '';
-        const dashIdx = desc.indexOf(' — ');
-        const endpoint = dashIdx >= 0 ? desc.slice(0, dashIdx).trim() : desc.trim();
-        const notes = dashIdx >= 0 ? desc.slice(dashIdx + 3).trim() : '';
-        const parts = endpoint.split(' ');
-        const method = parts[0] || '';
-        const path = parts[1] || '';
-        const actors = (a.guards || []).flatMap(g => g.actors || []);
-
-        normalized.push({
-          id: a.id || '',
-          method,
-          path,
-          actors,
-          from: a.transition?.from || '',
-          to: a.transition?.to || '',
-          description: notes,
-        });
-      }
-
-      // Legacy format: machine.transitions[] (kept for backward compat)
-      for (const t of machine.transitions || []) {
-        const desc = t.description || '';
-        const dashIdx = desc.indexOf(' — ');
-        const endpoint = dashIdx >= 0 ? desc.slice(0, dashIdx).trim() : desc.trim();
-        const notes = dashIdx >= 0 ? desc.slice(dashIdx + 3).trim() : '';
-        const parts = endpoint.split(' ');
-        const method = parts[0] || '';
-        const path = parts[1] || '';
-        const actors = (t.guards || []).flatMap(g => g.actors || []);
-
-        normalized.push({
-          id: t.id || '',
-          method,
-          path,
-          actors,
-          from: t.transition?.from || '',
-          to: t.transition?.to || '',
-          description: notes,
-        });
-      }
-
-      // Legacy format: machine.operations[]
-      for (const op of machine.operations || []) {
-        const actors = Array.isArray(op.guards?.actors) ? op.guards.actors : [];
-        normalized.push({
-          id: op.name || '',
-          method: '',
-          path: '',
-          actors,
-          from: op.transition?.from || '',
-          to: op.transition?.to || '',
-          description: '',
-        });
-      }
-
-      // Deduplicate by id — same transition may appear for multiple source states
-      const seen = new Set();
-      const deduped = normalized.filter(t => {
-        if (seen.has(t.id)) return false;
-        seen.add(t.id);
-        return true;
-      });
-
-      if (deduped.length > 0) {
-        result[objectName] = (result[objectName] || []).concat(deduped);
-      }
-    }
-  }
-
-  return result;
-}
-
-/**
- * Load state machine events (published and subscribed) from all *-state-machine.yaml files.
- * Returns a map of objectName -> { published: [...], subscribed: [...] }
- */
-function loadStateMachineEvents(specDir) {
-  const result = {};
-
-  let files;
-  try {
-    files = readdirSync(specDir).filter(f => f.endsWith('-state-machine.yaml'));
-  } catch {
-    return result;
-  }
-
-  for (const file of files) {
-    let sm;
-    try {
-      sm = yaml.load(readFileSync(join(specDir, file), 'utf8'));
-    } catch {
-      continue;
-    }
-
-    const domain = sm.domain || '';
-
-    for (const machine of sm.machines || []) {
-      const objectName = machine.object;
-      if (!objectName) continue;
-
-      const published = [];
-      const subscribed = [];
-
-      // Published: emitted from action steps (emit.type is the fully-qualified event name)
-      for (const a of machine.actions || []) {
-        for (const step of a.steps || []) {
-          if (step.emit?.type) {
-            const name = step.emit.type;
-            const description = step.emit.description || '';
-            if (!published.some(e => e.name === name)) {
-              published.push({ name, description });
-            }
-          }
-        }
-      }
-
-      // Subscribed: from machine.events[] (type is the fully-qualified event name)
-      for (const e of machine.events || []) {
-        subscribed.push({ name: e.type || '', description: e.description || '' });
-      }
-
-      if (published.length > 0 || subscribed.length > 0) {
-        result[objectName] = { published, subscribed };
-      }
-    }
-  }
-
-  return result;
-}
-
-/**
- * Load lifecycle states from all *-state-machine.yaml files.
- * Returns a map of objectName -> [{ id, slaClock }]
- */
-function loadStateMachineStates(specDir) {
-  const result = {};
-
-  let files;
-  try {
-    files = readdirSync(specDir).filter(f => f.endsWith('-state-machine.yaml'));
-  } catch {
-    return result;
-  }
-
-  for (const file of files) {
-    let sm;
-    try {
-      sm = yaml.load(readFileSync(join(specDir, file), 'utf8'));
-    } catch {
-      continue;
-    }
-
-    for (const machine of sm.machines || []) {
-      const objectName = machine.object;
-      if (!objectName || !machine.states?.length) continue;
-      result[objectName] = machine.states.map(s => ({ id: s.id || '', slaClock: s.slaClock || 'stopped', description: s.description || '' }));
-    }
-  }
-
-  return result;
-}
-
-/**
- * Load domain annotations and policy registry from *-annotations.yaml and platform-registry-policies*.yaml.
- * Returns { schemaAnnotations, operationAnnotations, eventAnnotations, policies } where:
- *   schemaAnnotations: Map<schemaName, { own: annotation|null, fields: Map<fieldName, annotation> }>
- *   operationAnnotations: Map<"objectName.actionId", annotation>
- *   eventAnnotations: Map<"event.type.name", annotation>
- *   policies: Map<policyId, policy>
- */
-function loadAnnotations(specDir) {
-  const schemaAnnotations = new Map();
-  const operationAnnotations = new Map();
-  const eventAnnotations = new Map();
-  const policies = new Map();
-
-  try {
-    const registryFiles = readdirSync(specDir).filter(f => /^platform-registry-policies.*\.yaml$/.test(f));
-    for (const file of registryFiles) {
-      const registry = yaml.load(readFileSync(join(specDir, file), 'utf8'));
-      for (const [id, policy] of Object.entries(registry.policies || {})) {
-        policies.set(id, policy);
-      }
-    }
-  } catch { /* ignore */ }
-
-  try {
-    const annotationFiles = readdirSync(specDir).filter(f => /^[a-z].*-annotations\.yaml$/.test(f));
-    for (const file of annotationFiles) {
-      const annotations = yaml.load(readFileSync(join(specDir, file), 'utf8'));
-
-      for (const [key, annotation] of Object.entries(annotations.schema || {})) {
-        const dotIdx = key.indexOf('.');
-        if (dotIdx === -1) {
-          if (!schemaAnnotations.has(key)) schemaAnnotations.set(key, { own: null, fields: new Map() });
-          schemaAnnotations.get(key).own = annotation;
-        } else {
-          const schemaName = key.slice(0, dotIdx);
-          const fieldName = key.slice(dotIdx + 1);
-          if (!schemaAnnotations.has(schemaName)) schemaAnnotations.set(schemaName, { own: null, fields: new Map() });
-          schemaAnnotations.get(schemaName).fields.set(fieldName, annotation);
-        }
-      }
-
-      for (const [key, annotation] of Object.entries(annotations.operations || {})) {
-        operationAnnotations.set(key, annotation);
-      }
-
-      for (const [key, annotation] of Object.entries(annotations.events || {})) {
-        eventAnnotations.set(key, annotation);
-      }
-    }
-  } catch { /* ignore */ }
-
-  return { schemaAnnotations, operationAnnotations, eventAnnotations, policies };
-}
-
-/**
- * Main function
- */
-async function main() {
-  // Parse flags
-  const args = process.argv.slice(2);
-
-  // Check for unknown arguments
-  const unknown = args.filter(a => !a.startsWith('--spec=') && !a.startsWith('--out=') && !a.startsWith('--config='));
-  if (unknown.length > 0) {
-    console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
-    process.exit(1);
-  }
-
-  const specArg = args.find(a => a.startsWith('--spec='));
-  const outArg = args.find(a => a.startsWith('--out='));
-  const configArg = args.find(a => a.startsWith('--config='));
-
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const specDir = resolve(specArg ? specArg.split('=')[1] : join(__dirname, '../../contracts'));
-  const outDir = resolve(outArg ? outArg.split('=')[1] : join(__dirname, 'output'));
-  const configPath = resolve(configArg ? configArg.split('=')[1] : join(__dirname, '../src/config.yaml'));
-  const isSingleFile = statSync(specDir).isFile();
-
-  // Load domain list from config.yaml and build DOMAIN_HIERARCHY
-  const config = yaml.load(readFileSync(configPath, 'utf8'));
-  const built = buildDomainHierarchy(config.domains || []);
-  DOMAIN_HIERARCHY = built.hierarchy;
-  DOMAIN_ORDER = built.order;
-  console.log(`Loaded ${DOMAIN_ORDER.length} domains from ${configPath}`);
-
-  console.log('Generating ORCA Design Reference...\n');
-  console.log(`Specs: ${specDir}\n`);
-
-  try {
-    const apiSpecs = isSingleFile
-      ? [{ name: specDir.replace(/-openapi\.yaml$/, '').split(/[\\/]/).pop(), specPath: specDir }]
-      : discoverApiSpecs({ specsDir: specDir });
-    console.log(`Found ${apiSpecs.length} API specifications`);
-
-    const baseSchemas = {};
-
-    // Patterns for CRUD operation schemas that should be excluded from design reference
-    const CRUD_SCHEMA_PATTERNS = [/Create$/, /Update$/, /List$/, /^Conflict$/];
-    const isCrudSchema = (name) => CRUD_SCHEMA_PATTERNS.some(pattern => pattern.test(name));
-
-    for (const apiSpec of apiSpecs) {
-      console.log(`Processing: ${apiSpec.name}`);
-      try {
-        const spec = await $RefParser.dereference(apiSpec.specPath, {
-          dereference: { circular: 'ignore' }
-        });
-        if (spec.components?.schemas) {
-          for (const [name, schema] of Object.entries(spec.components.schemas)) {
-            if (isCrudSchema(name)) continue;
-            baseSchemas[name] = schema;
-          }
-        }
-      } catch (err) {
-        console.warn(`  Warning: Could not process ${apiSpec.name}: ${err.message}`);
-      }
-    }
-
-    console.log(`\nCollected ${Object.keys(baseSchemas).length} base schemas`);
-
-    // Populate valid schema names for link generation
-    validSchemaNames = new Set(Object.keys(baseSchemas));
-
-    // Pre-scan schemas to discover inline objects (so links work)
-    inlineObjectSchemas.clear();
-    for (const [schemaName, schema] of Object.entries(baseSchemas)) {
-      processSchema(schema, schemaName);
-    }
-    for (const inlineName of inlineObjectSchemas.keys()) {
-      validSchemaNames.add(inlineName);
-    }
-    console.log(`Discovered ${inlineObjectSchemas.size} inline nested objects`);
-
-    // Extract relationships
-    console.log('Extracting relationships...');
-    const relationships = extractRelationships(baseSchemas);
-
-    // Extract operations
-    console.log('Extracting API operations...');
-    const operations = extractOperations(apiSpecs);
-
-    // Load state machine transitions and events
-    const smSpecDir = isSingleFile ? dirname(specDir) : specDir;
-    const transitions = loadStateMachineTransitions(smSpecDir);
-    console.log(`Loaded transitions for ${Object.keys(transitions).length} object(s): ${Object.keys(transitions).join(', ')}`);
-    const events = loadStateMachineEvents(smSpecDir);
-    console.log(`Loaded events for ${Object.keys(events).length} object(s): ${Object.keys(events).join(', ')}`);
-
-    // Load annotations and policy registry
-    const { schemaAnnotations, operationAnnotations, eventAnnotations, policies } = loadAnnotations(smSpecDir);
-    console.log(`Loaded annotations for ${schemaAnnotations.size} schema(s), ${policies.size} policies`);
-    const annotationsData = { schemaAnnotations, operationAnnotations, eventAnnotations };
-
-    // Load lifecycle states
-    const lifecycleStates = loadStateMachineStates(smSpecDir);
-    console.log(`Loaded lifecycle states for ${Object.keys(lifecycleStates).length} object(s): ${Object.keys(lifecycleStates).join(', ')}`);
-
-    // Derive primary schemas: anything with a REST endpoint or a state machine gets full ORCA tabs
-    PRIMARY_SCHEMAS = [...new Set([...Object.keys(operations), ...Object.keys(transitions)])];
-    console.log(`Primary schemas: ${PRIMARY_SCHEMAS.join(', ')}`);
-
-    // Generate HTML (no state overlays — states use resolve-overlay.js separately)
-    const stateSchemas = {};
-    const states = [];
-    const html = generateHtml(baseSchemas, stateSchemas, states, relationships, operations, transitions, events, annotationsData, policies, lifecycleStates);
-
-    // Write output
-    if (!existsSync(outDir)) {
-      mkdirSync(outDir, { recursive: true });
-    }
-
-    const outputPath = join(outDir, 'data-explorer.html');
-    writeFileSync(outputPath, html, 'utf8');
-
-    console.log(`\nGenerated: ${outputPath}`);
-    console.log('Done!');
-
-  } catch (error) {
-    console.error('Error:', error.message);
-    console.error(error.stack);
-    process.exit(1);
-  }
+  console.log(`  ✓ Generated data-dictionary.html (${domains.length} domain${domains.length === 1 ? '' : 's'})`);
 }
 
 main();

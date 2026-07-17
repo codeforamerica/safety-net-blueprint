@@ -14,7 +14,7 @@
 
 import { readFile, writeFile } from 'fs/promises';
 import { existsSync, realpathSync } from 'fs';
-import { join, resolve } from 'path';
+import { join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { bundleSpec } from '../src/bundle.js';
@@ -43,6 +43,8 @@ Options:
   -n, --name <name>        API name in kebab-case (e.g., "workflow", "scheduling")
   -r, --resource <name>    Resource name in PascalCase (e.g., "Queue", "Schedule")
   -o, --out <dir>          Directory containing the spec (default: packages/contracts/)
+      --ref <dir>          Path to the contracts package root (for correct $ref paths
+                           when --out is outside the contracts package)
       --bundle             Inline all external $refs to produce a self-contained spec
   -h, --help               Show this help message
 
@@ -90,7 +92,7 @@ function detectUrlPrefix(existingPaths) {
  * Generates a full spec template for the resource, parses it, and extracts
  * paths/schemas/parameters/tag to merge into the existing spec.
  */
-function mergeResource(existingSpec, name, resource) {
+function mergeResource(existingSpec, name, resource, componentsPrefix = './components') {
   const kebabName = toKebabCase(name);
 
   // Check resource doesn't already exist
@@ -101,7 +103,7 @@ function mergeResource(existingSpec, name, resource) {
   }
 
   // Generate a full spec for the new resource and parse it
-  const generatedYaml = generateApiSpec(kebabName, resource);
+  const generatedYaml = generateApiSpec(kebabName, resource, componentsPrefix);
   const generatedSpec = yaml.load(generatedYaml);
 
   // Detect URL prefix from existing paths
@@ -188,8 +190,17 @@ async function main() {
   const existingContent = await readFile(specPath, 'utf8');
   const existingSpec = yaml.load(existingContent);
 
+  // Compute components prefix for $ref paths (same logic as generate-api.js)
+  let componentsPrefix = './components';
+  if (options.ref) {
+    const absComponents = resolve(options.ref, 'components');
+    let rel = relative(outDir, absComponents);
+    if (!rel.startsWith('.')) rel = './' + rel;
+    componentsPrefix = rel;
+  }
+
   // Merge new resource
-  mergeResource(existingSpec, name, resource);
+  mergeResource(existingSpec, name, resource, componentsPrefix);
 
   // Write updated spec
   const output = yaml.dump(existingSpec, {
