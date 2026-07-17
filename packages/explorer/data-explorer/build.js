@@ -3,7 +3,7 @@
  * Data Dictionary build
  *
  * Generates a single data-dictionary.html from:
- *   - packages/explorer/data-explorer/output/{domain}-data-model.yaml  (field paths + types)
+ *   - packages/explorer/data-explorer/output/{domain}-field-inventory.yaml  (field paths + types)
  *   - packages/contracts/{domain}-annotations.yaml                      (programs, policies, classification)
  *   - packages/resolved/{domain}-openapi.yaml                           (version number)
  *
@@ -720,7 +720,7 @@ navigate('index');
 function main() {
   // Discover all data model YAMLs (one per domain)
   const dataModelFiles = readdirSync(outputDir)
-    .filter(f => f.endsWith('-data-model.yaml'))
+    .filter(f => f.endsWith('-field-inventory.yaml'))
     .sort();
 
   if (dataModelFiles.length === 0) {
@@ -731,7 +731,7 @@ function main() {
   const domains = [];
 
   for (const dmFile of dataModelFiles) {
-    const domain = dmFile.replace('-data-model.yaml', '');
+    const domain = dmFile.replace('-field-inventory.yaml', '');
     const dataModelPath = resolve(outputDir, dmFile);
 
     console.log(`  Processing ${domain}...`);

@@ -1,0 +1,28 @@
+overlay: 1.0.0
+info:
+  title: Test overlay for field inventory generator fixture
+  version: 1.0.0
+
+actions:
+  # Extend the channel enum with a state-specific value
+  - target: $.components.schemas.ApplicationUpdate.properties.channel.enum
+    description: Add fax as a supported channel
+    update:
+      - online
+      - in_person
+      - phone
+      - mail
+      - fax
+
+  # Add a state-specific field to ApplicationUpdate
+  - target: $.components.schemas.ApplicationUpdate.properties
+    description: Add stateTrackingNumber field
+    update:
+      stateTrackingNumber:
+        type: string
+        description: State-assigned tracking number for this application.
+
+  # Remove a field not used in this state
+  - target: $.components.schemas.ApplicationUpdate.properties.monthlyIncome
+    description: Remove monthlyIncome — derived from member income records instead
+    remove: true

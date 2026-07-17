@@ -1,6 +1,6 @@
-# intake data model
+# intake field inventory
 # Generated from intake-openapi.yaml
-# Do not edit — regenerate with: node generate-data-model.mjs --domain=intake
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=intake
 
 # ── application ─────────────────────────────────────────────────────────────────
 
