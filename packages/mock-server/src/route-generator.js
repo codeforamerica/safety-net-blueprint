@@ -157,6 +157,23 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
 }
 
 /**
+ * Find the state machine entry whose governed object matches a collection name.
+ * Tries both simple-plural (e.g. "task" → "tasks") and kebab-plural
+ * (e.g. "ApplicationDocument" → "application-documents") forms.
+ *
+ * @param {Array} stateMachines - Loaded state machine entries
+ * @param {string} collectionName - Collection name to match (e.g. "application-documents")
+ * @returns {{ stateMachine, machine, object } | undefined}
+ */
+function findStateMachineForCollection(stateMachines, collectionName) {
+  return (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
+    const obj = s.object;
+    return obj?.toLowerCase() + 's' === collectionName ||
+      toKebabCase(obj ?? '') + 's' === collectionName;
+  });
+}
+
+/**
  * Convert OpenAPI path format to Express path format
  * Example: /persons/{personId} => /persons/:personId
  */
@@ -279,11 +296,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       // POST /resources - Create
       // Only pass state machine to the collection that matches the governed object.
       // Use kebab-plural comparison to handle multi-word names (ApplicationDocument → application-documents).
-      const smEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
-        const obj = s.object;
-        return obj?.toLowerCase() + 's' === collectionName ||
-          toKebabCase(obj ?? '') + 's' === collectionName;
-      });
+      const smEntry = findStateMachineForCollection(stateMachines, collectionName);
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
       const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
@@ -350,11 +363,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           description = 'List sub-resources';
         } else if (method === 'post') {
           const subResourceName = endpoint.path.split('/').pop();
-          const subSmEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
-            const obj = s.object;
-            return obj?.toLowerCase() + 's' === subResourceName ||
-              toKebabCase(obj ?? '') + 's' === subResourceName;
-          });
+          const subSmEntry = findStateMachineForCollection(stateMachines, subResourceName);
           const subSmForEndpoint = subSmEntry?.stateMachine || null;
           const subMachineForEndpoint = subSmEntry?.machine || null;
           const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
@@ -396,11 +405,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       description = 'Get resource by ID';
     } else if (method === 'patch' && isItemEndpoint(endpoint.path)) {
       // PATCH /resources/{id} - Update
-      const smEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
-        const obj = s.object;
-        return obj?.toLowerCase() + 's' === collectionName ||
-          toKebabCase(obj ?? '') + 's' === collectionName;
-      });
+      const smEntry = findStateMachineForCollection(stateMachines, collectionName);
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
       handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint);
