@@ -1101,7 +1101,7 @@ async function main() {
   // Resolve x-relationship annotations (after overlays, before env filtering)
   {
     const schemaIndex = buildSchemaIndex(currentResults);
-    const relationshipStyle = overlayConfig?.['x-relationship']?.style || 'links-only';
+    const relationshipStyle = overlayConfig?.['x-relationship']?.style ?? null;
     const allExpandRenames = [];
     const allLinksData = [];
 

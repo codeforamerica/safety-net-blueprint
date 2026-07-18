@@ -519,3 +519,19 @@ application.interview.id: { type: uuid }
 application.interview.waiverStatus: { type: enum, values: [pending, granted, denied] }
 application.interview.waiverReason: { type: string }
 application.interview.completedAt: { type: datetime }
+
+# ── review-progress ─────────────────────────────────────────────────────────────
+
+application.reviewProgress[]: { type: list(ReviewProgressListResponse) }
+application.reviewProgress[].items[]: { type: list(ReviewProgress) }
+application.reviewProgress[].items[].id: { type: uuid }
+application.reviewProgress[].items[].itemId: { type: uuid }
+application.reviewProgress[].items[].status: { type: enum, values: [not_started, in_progress, complete, flagged] }
+application.reviewProgress[].items[].notes: { type: object }
+application.reviewProgress[].items[].notes.text: { type: string }
+application.reviewProgress[].items[].notes.textFormat: { type: enum, values: [plain, markdown, html] }
+application.reviewProgress[].items[].section: { type: string }
+application.reviewProgress[].total: { type: integer }
+application.reviewProgress[].limit: { type: integer }
+application.reviewProgress[].offset: { type: integer }
+application.reviewProgress[].hasNext: { type: boolean }

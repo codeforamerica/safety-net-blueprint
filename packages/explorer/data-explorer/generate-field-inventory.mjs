@@ -20,12 +20,13 @@
  *   --out       Output file path (single spec) or directory. Defaults to output/{stem}-field-inventory.yaml.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync, readdirSync, statSync } from 'fs';
+import { tmpdir } from 'os';
+import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve, basename, sep } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { applyOverlay } from '../../contracts/src/overlay/overlay-resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,6 +34,43 @@ const __dirname = dirname(__filename);
 const CONTRACTS_DIR = resolve(__dirname, '../../contracts');
 const OUTPUT_DIR = join(__dirname, 'output');
 const PROJECT_ROOT = resolve(__dirname, '../../..');
+const RESOLVE_SCRIPT = resolve(__dirname, '../../contracts/scripts/resolve.js');
+
+// ─── Overlay stripping ────────────────────────────────────────────────────────
+
+// Remove x-relationship.style from any update/add/append values in an overlay.
+// The relationship resolver correctly handles request schemas (no links added),
+// but we strip style overrides defensively so the resolver sees only the base
+// x-relationship annotations without explicit expand/include hints.
+function stripStyleFromValue(value) {
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(stripStyleFromValue);
+  const result = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (k === 'x-relationship' && v && typeof v === 'object' && !Array.isArray(v)) {
+      const { style, ...rest } = v;
+      if (Object.keys(rest).length > 0) result[k] = rest;
+      // x-relationship had only style — drop the annotation entirely
+    } else {
+      result[k] = stripStyleFromValue(v);
+    }
+  }
+  return result;
+}
+
+function stripRelationshipStyles(overlay) {
+  if (!overlay?.actions) return overlay;
+  return {
+    ...overlay,
+    actions: overlay.actions.map(action => {
+      const stripped = { ...action };
+      for (const key of ['update', 'add', 'append']) {
+        if (stripped[key] != null) stripped[key] = stripStyleFromValue(stripped[key]);
+      }
+      return stripped;
+    }),
+  };
+}
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
 
@@ -399,50 +437,69 @@ async function processSpec(specPath, overlayPaths, outputPath) {
   const specFilename = basename(specPath);
   const stem = specFilename.replace(/-openapi\.ya?ml$/, '');
   const resolvedSpecPath = resolve(specPath);
+  // When given a single spec file, run resolve against its parent directory so
+  // state machine files and other companions in the same folder are included.
+  const specDir = statSync(resolvedSpecPath).isDirectory() ? resolvedSpecPath : dirname(resolvedSpecPath);
 
-  // Raw spec — used to extract $ref schema names from path operations.
-  // Apply overlays here so rawPaths reflects any overlay-driven path changes.
-  let rawSpec = yaml.load(readFileSync(specPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
-  for (const overlayPath of overlayPaths) {
-    const overlay = yaml.load(readFileSync(overlayPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
-    const { result, warnings } = applyOverlay(rawSpec, overlay, { overlayDir: dirname(overlayPath) });
-    for (const w of warnings) console.warn(`  [overlay] ${w}`);
-    rawSpec = result;
-  }
-  const rawPaths = rawSpec.paths ?? {};
+  // Run the real resolve pipeline. This applies overlays, injects x-enum-source
+  // enum values from state machines, and resolves relationships. We write the
+  // results to a temp dir and swap the root spec content into $RefParser via a
+  // custom resolver, preserving the original spec path as the base URL so
+  // external $refs (e.g. ./schemas/domain.yaml) continue to resolve correctly.
+  const tempDir = mkdtempSync(join(tmpdir(), 'field-inventory-'));
+  let resolvedContent = null;
 
-  // Custom resolver: intercepts YAML file reads so overlays can be applied to
-  // the root spec before $RefParser dereferences it. Returns a YAML string
-  // (not a parsed object) so that $RefParser retains per-file base URL context
-  // and correctly resolves internal #/$defs/ self-references within external
-  // schema files.
-  const overlayResolver = overlayPaths.length > 0 ? {
-    order: 1,
-    canRead(file) { return /\.ya?ml$/i.test(file.url); },
-    read(file) {
-      let resolvedPath;
-      try { resolvedPath = fileURLToPath(file.url); } catch { resolvedPath = file.url; }
-      const realPath = resolve(resolvedPath);
-      const raw = readFileSync(realPath, 'utf8');
+  try {
+    const resolvedSpecDir = join(tempDir, 'resolved');
 
-      // Only apply overlays to the root spec file
-      if (realPath !== resolvedSpecPath) return raw;
-
-      let content = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
-      for (const overlayPath of overlayPaths) {
-        const overlay = yaml.load(readFileSync(overlayPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
-        const { result } = applyOverlay(content, overlay, { overlayDir: dirname(overlayPath) });
-        content = result;
+    // Strip x-relationship.style from overlays before passing to resolve.
+    // This prevents explicit expand/include overrides from affecting schema
+    // structure; the resolver already enforces links-only on request schemas.
+    let tempOverlayArg = null;
+    if (overlayPaths.length > 0) {
+      const tempOverlayDir = join(tempDir, 'overlay');
+      mkdirSync(tempOverlayDir, { recursive: true });
+      for (const op of overlayPaths) {
+        const raw = yaml.load(readFileSync(op, 'utf8'), { schema: yaml.CORE_SCHEMA });
+        const stripped = stripRelationshipStyles(raw);
+        writeFileSync(join(tempOverlayDir, basename(op)), yaml.dump(stripped, { schema: yaml.CORE_SCHEMA, lineWidth: -1 }), 'utf8');
       }
-      return yaml.dump(content, { schema: yaml.CORE_SCHEMA, lineWidth: -1 });
-    },
-  } : null;
+      tempOverlayArg = tempOverlayDir;
+    }
+
+    const resolveArgs = [`--spec=${specDir}`, `--out=${resolvedSpecDir}`];
+    if (tempOverlayArg) resolveArgs.push(`--overlay=${tempOverlayArg}`);
+
+    const result = spawnSync(process.execPath, [RESOLVE_SCRIPT, ...resolveArgs], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    if (result.status !== 0) {
+      throw new Error(`resolve failed:\n${result.stderr || result.stdout}`);
+    }
+
+    const resolvedSpecFile = join(resolvedSpecDir, specFilename);
+    if (existsSync(resolvedSpecFile)) {
+      resolvedContent = readFileSync(resolvedSpecFile, 'utf8');
+    }
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+
+  // Parse the resolved spec. Use the original specPath as the base URL so that
+  // external $refs within the spec (e.g. ./schemas/domain.yaml#/$defs/Foo)
+  // still resolve correctly relative to the source directory.
+  // Parse twice: rawPaths needs $ref strings intact for root-resource detection,
+  // but $RefParser.dereference mutates the object it receives in-place.
+  const resolvedOrOriginal = resolvedContent ?? readFileSync(specPath, 'utf8');
+  const rawPaths = (yaml.load(resolvedOrOriginal, { schema: yaml.CORE_SCHEMA })).paths ?? {};
 
   console.log(`Loading ${specFilename}…`);
-  const spec = await $RefParser.dereference(specPath, {
-    dereference: { circular: 'ignore' },
-    ...(overlayResolver ? { resolve: { overlayYaml: overlayResolver } } : {}),
-  });
+  const spec = await $RefParser.dereference(
+    specPath,
+    yaml.load(resolvedOrOriginal, { schema: yaml.CORE_SCHEMA }),
+    { dereference: { circular: 'ignore' } }
+  );
 
   // Annotate components.schemas with x-schema-name so emitField can emit type
   // headers for named objects. Done post-dereference since $RefParser has fully

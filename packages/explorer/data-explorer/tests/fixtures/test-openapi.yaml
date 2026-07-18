@@ -186,6 +186,19 @@ components:
             resource: CaseWorker
           description: ID of the assigned case worker.
 
+        # Enum sourced from state machine via x-enum-source
+        verificationStatus:
+          type: string
+          x-enum-source:
+            source: states[].id
+            machine: Verification
+          description: Current verification status.
+
+        # External $defs ref — regression test for $RefParser resolving #/$defs/
+        # self-references inside external schema files.
+        externalContact:
+          $ref: './schemas/domain.yaml#/$defs/ContactDetails'
+
         # Array of enum scalars
         programsAppliedFor:
           type: array
