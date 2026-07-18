@@ -168,6 +168,18 @@ test('overlay extends enum values', () => {
   assert.match(inv['application.channel'], /fax/, 'overlay-extended enum includes new value');
 });
 
+test('overlay adds fields to external schema files', () => {
+  // Regression: $RefParser.dereference used the original source path as base URL,
+  // so external $refs resolved against unmodified source files rather than the
+  // temp resolved copies that had overlays applied. Fields added by overlays to
+  // external schema files were silently dropped.
+  const out = join(OUT_DIR, 'overlay.yaml');
+  const inv = parseInventory(readFileSync(out, 'utf8'));
+
+  assert.ok('application.externalContact.stateSpecificNote' in inv,
+    'overlay-added field on external schema file is present in inventory');
+});
+
 // ── Resolve pipeline (x-enum-source + relationship style stripping) ───────────
 
 test('x-enum-source enum values are resolved from state machine', () => {

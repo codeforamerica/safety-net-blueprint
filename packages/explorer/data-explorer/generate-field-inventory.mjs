@@ -447,7 +447,8 @@ async function processSpec(specPath, overlayPaths, outputPath) {
   // custom resolver, preserving the original spec path as the base URL so
   // external $refs (e.g. ./schemas/domain.yaml) continue to resolve correctly.
   const tempDir = mkdtempSync(join(tmpdir(), 'field-inventory-'));
-  let resolvedContent = null;
+  let rawPaths = {};
+  let spec = null;
 
   try {
     const resolvedSpecDir = join(tempDir, 'resolved');
@@ -478,33 +479,34 @@ async function processSpec(specPath, overlayPaths, outputPath) {
       throw new Error(`resolve failed:\n${result.stderr || result.stdout}`);
     }
 
+    // Use the resolved spec file as the base URL for $RefParser so that external
+    // $refs (e.g. ./schemas/domain/intake.yaml) resolve against the resolved
+    // copies in the temp dir — which have overlays applied — rather than the
+    // original source files. The temp dir must still exist during dereference.
     const resolvedSpecFile = join(resolvedSpecDir, specFilename);
-    if (existsSync(resolvedSpecFile)) {
-      resolvedContent = readFileSync(resolvedSpecFile, 'utf8');
-    }
+    const baseUrl = existsSync(resolvedSpecFile) ? resolvedSpecFile : specPath;
+    const resolvedOrOriginal = existsSync(resolvedSpecFile)
+      ? readFileSync(resolvedSpecFile, 'utf8')
+      : readFileSync(specPath, 'utf8');
+
+    // Parse twice: rawPaths needs $ref strings intact for root-resource detection,
+    // but $RefParser.dereference mutates the object it receives in-place.
+    rawPaths = (yaml.load(resolvedOrOriginal, { schema: yaml.CORE_SCHEMA })).paths ?? {};
+
+    console.log(`Loading ${specFilename}…`);
+    spec = await $RefParser.dereference(
+      baseUrl,
+      yaml.load(resolvedOrOriginal, { schema: yaml.CORE_SCHEMA }),
+      { dereference: { circular: 'ignore' } }
+    );
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
 
-  // Parse the resolved spec. Use the original specPath as the base URL so that
-  // external $refs within the spec (e.g. ./schemas/domain.yaml#/$defs/Foo)
-  // still resolve correctly relative to the source directory.
-  // Parse twice: rawPaths needs $ref strings intact for root-resource detection,
-  // but $RefParser.dereference mutates the object it receives in-place.
-  const resolvedOrOriginal = resolvedContent ?? readFileSync(specPath, 'utf8');
-  const rawPaths = (yaml.load(resolvedOrOriginal, { schema: yaml.CORE_SCHEMA })).paths ?? {};
-
-  console.log(`Loading ${specFilename}…`);
-  const spec = await $RefParser.dereference(
-    specPath,
-    yaml.load(resolvedOrOriginal, { schema: yaml.CORE_SCHEMA }),
-    { dereference: { circular: 'ignore' } }
-  );
-
   // Annotate components.schemas with x-schema-name so emitField can emit type
   // headers for named objects. Done post-dereference since $RefParser has fully
   // resolved all external $refs into spec.components.schemas by this point.
-  for (const [name, schema] of Object.entries(spec.components?.schemas ?? {})) {
+  for (const [name, schema] of Object.entries(spec?.components?.schemas ?? {})) {
     if (schema && typeof schema === 'object' && !schema['x-schema-name']) {
       schema['x-schema-name'] = name;
     }

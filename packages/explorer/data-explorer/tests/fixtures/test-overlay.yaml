@@ -34,3 +34,14 @@ actions:
       x-relationship:
         resource: CaseWorker
         style: expand
+
+  # Add a field to an external schema file. Regression test for the bug where
+  # $RefParser.dereference resolved external $refs from the original source path
+  # (before overlays) rather than the temp resolved dir (after overlays), causing
+  # overlay additions to external files to be silently dropped.
+  - target: $.$defs.ContactDetails.properties
+    file: schemas/domain.yaml
+    description: Add a state-specific field to the external ContactDetails schema
+    update:
+      stateSpecificNote:
+        type: string
