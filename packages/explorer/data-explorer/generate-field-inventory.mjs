@@ -403,49 +403,48 @@ async function processSpec(specPath, overlayPaths, outputPath) {
   }
   const rawPaths = rawSpec.paths ?? {};
 
-  // Custom resolver: intercepts every YAML file load and annotates named schemas in memory
-  // (never written to disk) so emitField can emit type headers for named objects.
-  // When reading the root spec file, overlays are applied before annotation so that
-  // overlay-driven schema changes are reflected in the dereferenced output.
-  const annotatingResolver = {
+  // Custom resolver: intercepts YAML file reads so overlays can be applied to
+  // the root spec before $RefParser dereferences it. Returns a YAML string
+  // (not a parsed object) so that $RefParser retains per-file base URL context
+  // and correctly resolves internal #/$defs/ self-references within external
+  // schema files.
+  const overlayResolver = overlayPaths.length > 0 ? {
     order: 1,
     canRead(file) { return /\.ya?ml$/i.test(file.url); },
     read(file) {
       let resolvedPath;
       try { resolvedPath = fileURLToPath(file.url); } catch { resolvedPath = file.url; }
       const realPath = resolve(resolvedPath);
-      if (!realPath.startsWith(PROJECT_ROOT + sep)) {
-        throw new Error(`Refusing to read file outside project directory: ${realPath}`);
-      }
-      let content = yaml.load(readFileSync(realPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
+      const raw = readFileSync(realPath, 'utf8');
 
-      // Apply overlays to the root spec file only
-      if (realPath === resolvedSpecPath && overlayPaths.length > 0) {
-        for (const overlayPath of overlayPaths) {
-          const overlay = yaml.load(readFileSync(overlayPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
-          const { result } = applyOverlay(content, overlay, { overlayDir: dirname(overlayPath) });
-          content = result;
-        }
-      }
+      // Only apply overlays to the root spec file
+      if (realPath !== resolvedSpecPath) return raw;
 
-      if (content && typeof content === 'object') {
-        for (const [name, schema] of Object.entries(content.components?.schemas ?? {})) {
-          if (schema && typeof schema === 'object') schema['x-schema-name'] = name;
-        }
-        for (const [name, schema] of Object.entries(content.$defs ?? {})) {
-          if (schema && typeof schema === 'object') schema['x-schema-name'] = name;
-        }
-        if (content.title && !content['x-schema-name']) content['x-schema-name'] = content.title;
+      let content = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
+      for (const overlayPath of overlayPaths) {
+        const overlay = yaml.load(readFileSync(overlayPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
+        const { result } = applyOverlay(content, overlay, { overlayDir: dirname(overlayPath) });
+        content = result;
       }
-      return content;
+      return yaml.dump(content, { schema: yaml.CORE_SCHEMA, lineWidth: -1 });
     },
-  };
+  } : null;
 
   console.log(`Loading ${specFilename}…`);
   const spec = await $RefParser.dereference(specPath, {
     dereference: { circular: 'ignore' },
-    resolve: { annotatingYaml: annotatingResolver },
+    ...(overlayResolver ? { resolve: { overlayYaml: overlayResolver } } : {}),
   });
+
+  // Annotate components.schemas with x-schema-name so emitField can emit type
+  // headers for named objects. Done post-dereference since $RefParser has fully
+  // resolved all external $refs into spec.components.schemas by this point.
+  for (const [name, schema] of Object.entries(spec.components?.schemas ?? {})) {
+    if (schema && typeof schema === 'object' && !schema['x-schema-name']) {
+      schema['x-schema-name'] = name;
+    }
+  }
+
   const schemas = spec.components?.schemas ?? {};
 
   // sections: [{ title, entries: Map<path, entryObject> }]

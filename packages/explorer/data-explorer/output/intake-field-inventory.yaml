@@ -496,13 +496,10 @@ application.deductions[].annualAmount: { type: number }
 # ── verifications ───────────────────────────────────────────────────────────────
 
 application.verifications[]: { type: list(Verification) }
+application.verifications[].applicationId: { type: uuid, relationship: Application }
 application.verifications[].sourceId: { type: uuid, relationship: Polymorphic }
 application.verifications[].id: { type: uuid }
-application.verifications[].applicationId: { type: uuid, relationship: Application }
-application.verifications[].sourceType: { type: enum, values: [member, income] }
-application.verifications[].category: { type: enum, values: [citizenship, identity, immigration, income, residency] }
-application.verifications[].verificationType: { type: enum, values: [document, electronic] }
-application.verifications[].status: { type: enum, values: [pending, inconclusive, satisfied, waived, cannot_verify] }
+application.verifications[].status: { type: string }
 application.verifications[].evidence[]: { type: string }
 application.verifications[].documentRequests[]: { type: list(VerificationDocumentRequest) }
 application.verifications[].documentRequests[].noticeId: { type: uuid, relationship: External }
@@ -510,12 +507,15 @@ application.verifications[].documentRequests[].type: { type: enum, values: [docu
 application.verifications[].documentRequests[].sentAt: { type: datetime }
 application.verifications[].documentRequests[].dueAt: { type: datetime }
 application.verifications[].documentRequests[].channel: { type: enum, values: [email, in_person, mail, portal] }
+application.verifications[].sourceType: { type: enum, values: [member, income] }
+application.verifications[].category: { type: enum, values: [citizenship, identity, immigration, income, residency] }
+application.verifications[].verificationType: { type: enum, values: [document, electronic] }
 
 # ── interview ───────────────────────────────────────────────────────────────────
 
-application.interview.id: { type: uuid }
 application.interview.applicationId: { type: uuid, relationship: Application }
 application.interview.appointments[]: { type: uuid, relationship: External }
-application.interview.waiverGranted: { type: [boolean, 'null'] }
+application.interview.id: { type: uuid }
+application.interview.waiverStatus: { type: enum, values: [pending, granted, denied] }
 application.interview.waiverReason: { type: string }
 application.interview.completedAt: { type: datetime }
