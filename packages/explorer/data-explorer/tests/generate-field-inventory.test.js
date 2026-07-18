@@ -194,6 +194,18 @@ test('x-enum-source enum values are resolved from state machine', () => {
   assert.match(inv['application.verificationStatus'], /cannot_verify/, 'has cannot_verify state');
 });
 
+test('global config.x-relationship.style:expand in overlay does not expand FK fields', () => {
+  // Regression: stripRelationshipStyles only stripped style from individual
+  // action values and missed the top-level config.x-relationship.style directive,
+  // causing all FK fields to be expanded globally.
+  const out = join(OUT_DIR, 'overlay-resolve.yaml');
+  const inv = parseInventory(readFileSync(out, 'utf8'));
+
+  assert.match(inv['application.caseWorkerId'], /type: uuid/, 'caseWorkerId stays as uuid FK despite global expand config');
+  assert.match(inv['application.caseWorkerId'], /relationship: CaseWorker/, 'relationship annotation preserved');
+  assert.ok(!Object.keys(inv).some(k => k.startsWith('application.caseWorkerId.')), 'no expanded sub-fields on caseWorkerId');
+});
+
 test('x-relationship style:expand in overlay does not produce links fields', () => {
   const out = join(OUT_DIR, 'overlay-resolve.yaml');
   const inv = parseInventory(readFileSync(out, 'utf8'));

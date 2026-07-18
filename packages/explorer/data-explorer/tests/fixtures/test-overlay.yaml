@@ -3,6 +3,12 @@ info:
   title: Test overlay for field inventory generator fixture
   version: 1.0.0
 
+# Global config — stripped by generate-field-inventory before passing to resolve.
+# Regression test: this must not cause FK fields to be expanded into inline objects.
+config:
+  x-relationship:
+    style: expand
+
 actions:
   # Extend the channel enum with a state-specific value
   - target: $.components.schemas.ApplicationUpdate.properties.channel.enum
