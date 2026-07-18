@@ -26,3 +26,11 @@ actions:
   - target: $.components.schemas.ApplicationUpdate.properties.monthlyIncome
     description: Remove monthlyIncome — derived from member income records instead
     remove: true
+
+  # Override relationship style to expand — stripped by generate-field-inventory before resolve
+  - target: $.components.schemas.ApplicationUpdate.properties.caseWorkerId
+    description: Override relationship style
+    update:
+      x-relationship:
+        resource: CaseWorker
+        style: expand

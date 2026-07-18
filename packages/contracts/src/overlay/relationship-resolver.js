@@ -809,11 +809,12 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
     for (const field of fields) {
       const isExplicitStyle = !!field.relationship.style;
-      let effectiveStyle = (isRequestSchema && !field.relationship.style)
-        ? 'links-only'
-        : (field.relationship.style || globalStyle);
+      let effectiveStyle = field.relationship.style ?? globalStyle ?? null;
       let wasBackRefDowngrade = false;
       let wasExplicitBackRefOverride = false;
+
+      // No style configured — annotation is metadata only; leave FK field as-is.
+      if (effectiveStyle == null) continue;
 
       if (PLANNED_STYLES.includes(effectiveStyle)) {
         throw new Error(

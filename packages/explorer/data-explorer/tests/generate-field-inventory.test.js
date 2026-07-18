@@ -18,7 +18,6 @@ const SCRIPT = join(__dirname, '..', 'generate-field-inventory.mjs');
 const FIXTURE_DIR = join(__dirname, 'fixtures');
 const FIXTURE_SPEC = join(FIXTURE_DIR, 'test-openapi.yaml');
 const FIXTURE_OVERLAY = join(FIXTURE_DIR, 'test-overlay.yaml');
-const DEFS_FIXTURE_SPEC = join(FIXTURE_DIR, 'test-defs-openapi.yaml');
 
 const OUT_DIR = join(tmpdir(), `fi-tests-${Date.now()}`);
 mkdirSync(OUT_DIR, { recursive: true });
@@ -169,17 +168,41 @@ test('overlay extends enum values', () => {
   assert.match(inv['application.channel'], /fax/, 'overlay-extended enum includes new value');
 });
 
+// ── Resolve pipeline (x-enum-source + relationship style stripping) ───────────
+
+test('x-enum-source enum values are resolved from state machine', () => {
+  const out = join(OUT_DIR, 'overlay-resolve.yaml');
+  run([`--spec=${FIXTURE_SPEC}`, `--overlay=${FIXTURE_OVERLAY}`, `--out=${out}`]);
+  const inv = parseInventory(readFileSync(out, 'utf8'));
+
+  assert.match(inv['application.verificationStatus'], /type: enum/, 'verificationStatus is an enum');
+  assert.match(inv['application.verificationStatus'], /pending/, 'has pending state');
+  assert.match(inv['application.verificationStatus'], /satisfied/, 'has satisfied state');
+  assert.match(inv['application.verificationStatus'], /waived/, 'has waived state');
+  assert.match(inv['application.verificationStatus'], /cannot_verify/, 'has cannot_verify state');
+});
+
+test('x-relationship style:expand in overlay does not produce links fields', () => {
+  const out = join(OUT_DIR, 'overlay-resolve.yaml');
+  const inv = parseInventory(readFileSync(out, 'utf8'));
+
+  assert.ok(!('application.links' in inv), 'no links object emitted');
+  assert.ok(!Object.keys(inv).some(k => k.startsWith('application.links.')), 'no links sub-fields');
+  assert.match(inv['application.caseWorkerId'], /type: uuid/, 'caseWorkerId stays as uuid FK');
+  assert.match(inv['application.caseWorkerId'], /relationship: CaseWorker/, 'relationship annotation preserved');
+});
+
 // ── $defs regression ──────────────────────────────────────────────────────────
 
 test('resolves external $defs with internal #/$defs/ self-references', () => {
-  // Regression: annotating resolver returning a parsed object caused $RefParser
-  // to lose the base URL for external files, so #/$defs/Foo inside those files
-  // was resolved against the root spec (which has no $defs) and failed with
-  // "Token $defs does not exist".
-  const out = join(OUT_DIR, 'defs.yaml');
-  assert.doesNotThrow(() => run([`--spec=${DEFS_FIXTURE_SPEC}`, `--out=${out}`]));
-
+  // Regression: when passing a parsed schema object to $RefParser.dereference,
+  // external files that use internal #/$defs/ self-references must resolve those
+  // refs relative to the external file, not the root spec.
+  // externalContact in the fixture uses ./schemas/domain.yaml#/$defs/ContactDetails,
+  // which internally references #/$defs/PhoneNumber.
+  const out = join(OUT_DIR, 'baseline.yaml');
   const inv = parseInventory(readFileSync(out, 'utf8'));
-  assert.match(inv['application.contact'], /type: ContactDetails/);
-  assert.match(inv['application.contact.phone'], /type: PhoneNumber/);
+
+  assert.match(inv['application.externalContact'], /type: ContactDetails/);
+  assert.match(inv['application.externalContact.phone'], /type: PhoneNumber/);
 });

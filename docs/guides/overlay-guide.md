@@ -273,7 +273,7 @@ config:
 | `x-casing` | `camelCase`, `snake_case` | `camelCase` | Property name casing in resolved output |
 | `x-pagination.style` | `offset`, `cursor`, `page`, `links` | `offset` | Pagination strategy for list endpoints |
 | `x-search.style` | `simple`, `filtered`, `post-search` | `simple` | Search query pattern |
-| `x-relationship.style` | `links-only`, `expand`, `include`, `embed` | `links-only` | How FK references are represented in responses |
+| `x-relationship.style` | `links-only`, `expand`, `include`, `embed` | none (metadata only) | Global default style for FK references. When omitted, each field's per-field `style` applies; fields with no per-field style are left as-is. |
 
 Only include keys you want to override — omitted keys use their defaults. Each key may only appear once across all overlay files; duplicates produce an error. We recommend keeping config in a dedicated file (e.g., `global-config.yaml`) separate from schema modifications.
 
