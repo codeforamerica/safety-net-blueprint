@@ -278,6 +278,14 @@ function emitField(schema, path, entries, visited) {
     return;
   }
 
+  // x-relationship fields are FK references. Treat as leaf regardless of whether
+  // the resolved spec has inlined the related object (e.g. via style: expand).
+  // The field inventory describes schema structure, not resolution artifacts.
+  if (schema['x-relationship']?.resource) {
+    entries.set(path, buildLeaf(schema));
+    return;
+  }
+
   if (hasProps(schema)) {
     // Nested object — always emit type header, then recurse
     const typeName = schema['x-schema-name'] ?? schema.title;
