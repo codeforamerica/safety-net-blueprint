@@ -59,17 +59,27 @@ function stripStyleFromValue(value) {
 }
 
 function stripRelationshipStyles(overlay) {
-  if (!overlay?.actions) return overlay;
-  return {
-    ...overlay,
-    actions: overlay.actions.map(action => {
+  if (!overlay) return overlay;
+  const result = { ...overlay };
+  // Strip style from the top-level config.x-relationship directive.
+  if (result.config?.['x-relationship']?.style) {
+    result.config = {
+      ...result.config,
+      'x-relationship': { ...result.config['x-relationship'] },
+    };
+    delete result.config['x-relationship'].style;
+  }
+  // Strip style from individual action update/add/append values.
+  if (result.actions) {
+    result.actions = result.actions.map(action => {
       const stripped = { ...action };
       for (const key of ['update', 'add', 'append']) {
         if (stripped[key] != null) stripped[key] = stripStyleFromValue(stripped[key]);
       }
       return stripped;
-    }),
-  };
+    });
+  }
+  return result;
 }
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
