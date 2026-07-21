@@ -153,10 +153,10 @@ queueId:
 | Field | Required | Description |
 |---|---|---|
 | `resource` | Yes | Related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`). Schema names follow PascalCase by convention. |
-| `style` | No | `expand` causes the mock server to inline the related resource alongside the FK field — both appear in any response body that includes the resource. If omitted, the FK field is left as-is. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when an implicit global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
+| `style` | No | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only — the FK field is left as-is, no links object is added, and no field renaming occurs.** Supported values: `expand` inlines the related resource alongside the FK field; `links-only` adds a `links` navigation object. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when a global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
 | `fields` | No | Subset of fields to include when `style: expand`. Supports dot notation for nested relationships. When specified, must be a non-empty array — an empty `fields: []` is rejected at resolve time. |
 
-`links-only` style adds a `links` object alongside the FK field without expanding it into an object.
+`links-only` style adds a `links` navigation object alongside the FK field without expanding it. `expand` style renames the FK field and replaces it with the related resource's schema. Omitting `style` leaves the field untouched — `x-relationship` is purely a metadata annotation in that case, used by tooling (field inventory, diagram generation) but not by the resolver.
 
 ---
 

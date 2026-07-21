@@ -809,11 +809,19 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
     for (const field of fields) {
       const isExplicitStyle = !!field.relationship.style;
-      let effectiveStyle = (isRequestSchema && !field.relationship.style)
-        ? 'links-only'
-        : (field.relationship.style || globalStyle);
+      let effectiveStyle = field.relationship.style ?? globalStyle ?? null;
       let wasBackRefDowngrade = false;
       let wasExplicitBackRefOverride = false;
+
+      // No style configured — annotation is metadata only; leave FK field as-is.
+      if (effectiveStyle == null) continue;
+
+      // Request schemas send flat FKs to the server. Expand (and links-only)
+      // are response-only transforms — applying them to a request body breaks
+      // writes. If the style came from the global default rather than an
+      // explicit per-field annotation, treat the x-relationship as metadata
+      // only and leave the FK field as a plain scalar.
+      if (isRequestSchema && !isExplicitStyle) continue;
 
       if (PLANNED_STYLES.includes(effectiveStyle)) {
         throw new Error(

@@ -1,0 +1,53 @@
+overlay: 1.0.0
+info:
+  title: Test overlay for field inventory generator fixture
+  version: 1.0.0
+
+# Global config — stripped by generate-field-inventory before passing to resolve.
+# Regression test: this must not cause FK fields to be expanded into inline objects.
+config:
+  x-relationship:
+    style: expand
+
+actions:
+  # Extend the channel enum with a state-specific value
+  - target: $.components.schemas.ApplicationUpdate.properties.channel.enum
+    description: Add fax as a supported channel
+    update:
+      - online
+      - in_person
+      - phone
+      - mail
+      - fax
+
+  # Add a state-specific field to ApplicationUpdate
+  - target: $.components.schemas.ApplicationUpdate.properties
+    description: Add stateTrackingNumber field
+    update:
+      stateTrackingNumber:
+        type: string
+        description: State-assigned tracking number for this application.
+
+  # Remove a field not used in this state
+  - target: $.components.schemas.ApplicationUpdate.properties.monthlyIncome
+    description: Remove monthlyIncome — derived from member income records instead
+    remove: true
+
+  # Override relationship style to expand — stripped by generate-field-inventory before resolve
+  - target: $.components.schemas.ApplicationUpdate.properties.caseWorkerId
+    description: Override relationship style
+    update:
+      x-relationship:
+        resource: CaseWorker
+        style: expand
+
+  # Add a field to an external schema file. Regression test for the bug where
+  # $RefParser.dereference resolved external $refs from the original source path
+  # (before overlays) rather than the temp resolved dir (after overlays), causing
+  # overlay additions to external files to be silently dropped.
+  - target: $.$defs.ContactDetails.properties
+    file: schemas/domain.yaml
+    description: Add a state-specific field to the external ContactDetails schema
+    update:
+      stateSpecificNote:
+        type: string

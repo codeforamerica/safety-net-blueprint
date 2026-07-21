@@ -1,6 +1,6 @@
-# scheduling data model
+# scheduling field inventory
 # Generated from scheduling-openapi.yaml
-# Do not edit — regenerate with: node generate-data-model.mjs --domain=scheduling
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=scheduling
 
 # ── appointment ─────────────────────────────────────────────────────────────────
 
