@@ -816,6 +816,13 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
       // No style configured — annotation is metadata only; leave FK field as-is.
       if (effectiveStyle == null) continue;
 
+      // Request schemas send flat FKs to the server. Expand (and links-only)
+      // are response-only transforms — applying them to a request body breaks
+      // writes. If the style came from the global default rather than an
+      // explicit per-field annotation, treat the x-relationship as metadata
+      // only and leave the FK field as a plain scalar.
+      if (isRequestSchema && !isExplicitStyle) continue;
+
       if (PLANNED_STYLES.includes(effectiveStyle)) {
         throw new Error(
           `Style "${effectiveStyle}" is not yet implemented. Supported styles: ${SUPPORTED_STYLES.join(', ')}.`

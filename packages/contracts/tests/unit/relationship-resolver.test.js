@@ -2529,6 +2529,57 @@ test('relationship-resolver tests', async (t) => {
     assert.ok(memberProps.applicationId, 'ApplicationMember.applicationId still scalar (cascade stopped)');
     assert.strictEqual(memberProps.application, undefined, 'no embedded Application — cascade stopped');
   });
+
+  await t.test('request schemas are not expanded by global style — FK stays as plain scalar', () => {
+    // x-relationship expand is a response-only transform. A global style: expand
+    // must not rename or inline FK fields on request body schemas (Create/Update).
+    // Doing so would break writes: clients send flat UUIDs, not expanded objects.
+    const spec = {
+      paths: {
+        '/applications': {
+          post: {
+            requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/ApplicationCreate' } } } },
+            responses: { '201': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } }
+          }
+        }
+      },
+      components: {
+        schemas: {
+          Application: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              householdId: { type: 'string', format: 'uuid', 'x-relationship': { resource: 'Household' } }
+            }
+          },
+          ApplicationCreate: {
+            type: 'object',
+            required: ['householdId'],
+            properties: {
+              householdId: { type: 'string', format: 'uuid', 'x-relationship': { resource: 'Household' } }
+            }
+          },
+          Household: {
+            type: 'object',
+            properties: { id: { type: 'string', format: 'uuid' } }
+          }
+        }
+      }
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
+    const { result } = resolveRelationships(spec, 'expand', schemaIndex);
+    const schemas = result.components.schemas;
+
+    // Response schema: householdId → household (expanded)
+    assert.strictEqual(schemas.Application.properties.householdId, undefined, 'response FK renamed away');
+    assert.ok(schemas.Application.properties.household, 'response FK expanded to inline object');
+
+    // Request schema: householdId stays as plain scalar — no rename, no expansion
+    assert.ok(schemas.ApplicationCreate.properties.householdId, 'request FK preserved as plain scalar');
+    assert.strictEqual(schemas.ApplicationCreate.properties.household, undefined, 'request schema must not have expanded object');
+    assert.deepStrictEqual(schemas.ApplicationCreate.required, ['householdId'], 'required array unchanged on request schema');
+  });
 });
 
 // Walk a schema (possibly allOf-composed) and return the merged properties
