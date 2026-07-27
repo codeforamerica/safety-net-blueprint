@@ -17,7 +17,7 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { createClient } from '../generated/intake/client/index.js';
+import { createClient } from './generated/intake/client/index.js';
 import {
   createApplication,
   createApplicationMember,
@@ -26,7 +26,7 @@ import {
   getIncome,
   getApplicationReview,
   getApplicationReviewIncomeSection,
-} from '../generated/intake/sdk.gen.js';
+} from './generated/intake/sdk.gen.js';
 import { setupServer, teardownServer } from './helpers.js';
 
 const BASE_URL = 'http://localhost:1080/intake';

@@ -37,6 +37,7 @@
     "test": "npm test --workspaces --if-present",
     "test:unit": "node packages/mock-server/tests/run-all-tests.js --unit",
     "test:integration": "node packages/mock-server/tests/run-all-tests.js --integration",
+    "test:functional": "node packages/mock-server/tests/run-all-tests.js --functional",
     "test:all": "node packages/mock-server/tests/run-all-tests.js --all",
     "preflight": "bash scripts/preflight.sh",
     "setup:hooks": "git config core.hooksPath scripts/hooks && echo 'Git hooks installed. Pre-push hook will run preflight before every push. Use git push --no-verify to skip.'",

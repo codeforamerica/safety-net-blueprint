@@ -3,6 +3,12 @@ set -uo pipefail
 
 # Preflight check — run before creating a PR to verify everything works.
 
+# Tee all output to a log file for post-run diagnosis.
+PREFLIGHT_LOG=/tmp/preflight.log
+exec > >(tee "$PREFLIGHT_LOG") 2>&1
+echo "Logging to $PREFLIGHT_LOG"
+echo
+
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'
 BOLD=$'\033[1m'
@@ -32,7 +38,7 @@ fail() {
 bail_if_failed() {
   if [ "$failed" -gt 0 ]; then
     printf "\n${RED}${BOLD}Stopping — fix the failure above before continuing.${RESET}\n"
-    printf "${RED}  ✗ %s${RESET}\n" "${failures[-1]}"
+    printf "${RED}  ✗ %s${RESET}\n" "${failures[${#failures[@]}-1]}"
     exit 1
   fi
 }
@@ -51,10 +57,10 @@ fi
 
 step "Clearing generated artifacts for a clean-slate run"
 rm -rf packages/resolved
-rm -rf packages/mock-server/tests/generated
-rm -rf packages/mock-server/tests/e2e/functional/resolved
-rm -rf packages/mock-server/tests/e2e/functional/generated
-pass "Cleared packages/resolved, tests/generated, and functional resolved/generated"
+rm -rf packages/mock-server/tests/integration/generated
+rm -rf packages/mock-server/tests/functional/resolved
+rm -rf packages/mock-server/tests/functional/generated
+pass "Cleared packages/resolved, tests/integration/generated, and functional resolved/generated"
 
 step "Validating base specs"
 if npm run validate 2>&1; then

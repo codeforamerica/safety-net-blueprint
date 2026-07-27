@@ -27,7 +27,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const CONTRACTS_DIR = resolve(__dirname, '..', '..', '..', '..', 'packages', 'contracts');
+const CONTRACTS_DIR = resolve(__dirname, '..', '..', '..', '..', '..', 'packages', 'contracts');
 
 /**
  * Create a temp directory with the real contract specs and fixture seed

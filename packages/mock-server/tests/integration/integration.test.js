@@ -5,26 +5,22 @@
  *
  * Setup:
  *   1. The mock server is started (or reset if already running).
- *   2. A Postman collection is generated from the contracts directory.
- *   3. All tests run against the mock server.
+ *   2. All tests run against the mock server.
  *
  * Run with: npm run test:integration
  */
 
-import { execSync } from 'child_process';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync, mkdtempSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
+import { readFileSync } from 'fs';
 import yaml from 'js-yaml';
-import newman from 'newman';
 import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { BASE_URL, contractsDir, fetch, setupServer, teardownServer } from './helpers.js';
 import { ROLES } from '../roles.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const fixturesDir = resolve(__dirname, '..', 'fixtures');
+const fixturesDir = resolve(__dirname, 'seed');
 let serverStartedByTests = false;
 
 // Simple fetch polyfill using Node.js http module
@@ -338,89 +334,6 @@ async function testApi(api, examples) {
   return { passed, failed, total: passed + failed };
 }
 
-/**
- * Run Postman collection tests using Newman.
- * Generates a fresh collection from the fixture directory before running.
- */
-async function runPostmanTests() {
-  console.log(`\n${'='.repeat(70)}`);
-  console.log('Postman Collection Tests (Newman)');
-  console.log('='.repeat(70));
-
-  // Generate a fresh Postman collection from the fixture directory
-  const tmpCollectionDir = mkdtempSync(join(tmpdir(), 'snb-postman-'));
-  const collectionPath = join(tmpCollectionDir, 'postman-collection.json');
-
-  try {
-    const generateScript = resolve(__dirname, '../../../contracts/scripts/generate-postman.js');
-    console.log('\n  Generating Postman collection from fixture specs...');
-    execSync(
-      `node "${generateScript}" --spec="${contractsDir}" --out="${collectionPath}"`,
-      { stdio: 'pipe' }
-    );
-    console.log(`  ✓ Collection generated`);
-  } catch (err) {
-    console.log(`  ✗ Failed to generate collection: ${err.message}`);
-    rmSync(tmpCollectionDir, { recursive: true, force: true });
-    return { passed: 0, failed: 1, total: 1, skipped: false };
-  }
-
-  // Re-seed so Postman tests find the expected baseline records regardless of
-  // what prior integration tests created or deleted.
-  await fetch(`${BASE_URL}/mock/reseed`, { method: 'POST' });
-
-  console.log(`\n  Collection: ${collectionPath}`);
-  console.log(`  Base URL: ${BASE_URL}\n`);
-
-  return new Promise((resolve) => {
-    newman.run({
-      collection: collectionPath,
-      envVar: [
-        { key: 'baseUrl', value: BASE_URL }
-      ],
-      reporters: ['cli'],
-      reporter: {
-        cli: {
-          silent: false,
-          noSummary: false
-        }
-      }
-    }, (err, summary) => {
-      rmSync(tmpCollectionDir, { recursive: true, force: true });
-
-      if (err) {
-        console.log(`  ✗ Newman execution error: ${err.message}`);
-        resolve({ passed: 0, failed: 1, total: 1, skipped: false });
-        return;
-      }
-
-      const stats = summary.run.stats;
-      const assertions = stats.assertions || { total: 0, failed: 0 };
-      const requests = stats.requests || { total: 0, failed: 0 };
-
-      const passed = requests.total - requests.failed;
-      const failed = requests.failed;
-
-      console.log(`\n  ${'─'.repeat(66)}`);
-      console.log(`  Newman Summary:`);
-      console.log(`    Requests: ${passed}/${requests.total} passed`);
-      console.log(`    Assertions: ${assertions.total - assertions.failed}/${assertions.total} passed`);
-
-      if (assertions.failed === 0) {
-        console.log(`  ✓ PASS: All Postman assertions passed`);
-      } else {
-        console.log(`  ✗ FAIL: ${assertions.failed} assertion(s) failed`);
-      }
-
-      resolve({
-        passed: assertions.failed === 0 ? 1 : 0,
-        failed: assertions.failed > 0 ? 1 : 0,
-        total: 1,
-        skipped: false
-      });
-    });
-  });
-}
 
 /**
  * Main test runner
@@ -1297,16 +1210,6 @@ async function runTests() {
     console.log(`  ✗ FAIL: ${error.message}`);
     totalFailed++;
     totalTests++;
-  }
-
-  // =========================================================================
-  // Postman/Newman tests
-  // =========================================================================
-  const postmanResults = await runPostmanTests();
-  if (!postmanResults.skipped) {
-    totalPassed += postmanResults.passed;
-    totalFailed += postmanResults.failed;
-    totalTests += postmanResults.total;
   }
 
   // =========================================================================

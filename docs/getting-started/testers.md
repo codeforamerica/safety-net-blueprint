@@ -75,7 +75,7 @@ npx newman run packages/contracts/postman-collection.json --env-var baseUrl=http
 
 - **New unit test** — create a `*.test.js` file in `packages/mock-server/tests/unit/` or `packages/contracts/tests/unit/`
 - **New integration test** — add to the appropriate section in `packages/mock-server/tests/integration/integration.test.js`
-- **New fixture data** — add records to `packages/mock-server/tests/fixtures/examples/`; use the established ID namespace for the resource type
+- **New fixture data** — add records to `packages/mock-server/tests/integration/seed/`; use the established ID namespace for the resource type
 
 See the [Testing Guide](../guides/testing.md) for detailed instructions on each.
 

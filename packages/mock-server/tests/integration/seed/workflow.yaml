@@ -32,7 +32,7 @@ TaskExample1:
   programType: snap
   isExpedited: false
   queueId: "ae5ed10f-657d-55f3-b53c-b381ec583a1e"
-  priority: normal
+  priority: 3
   createdAt: "2024-01-01T00:00:00Z"
   updatedAt: "2024-01-01T00:00:00Z"
 

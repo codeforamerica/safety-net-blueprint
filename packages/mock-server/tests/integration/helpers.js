@@ -14,8 +14,8 @@ export const BASE_URL = 'http://localhost:1080';
 // Event types are short-form (no org prefix). The x-event-type-prefix overlay config
 // adds org prefixes at resolve time for state deployments.
 export const EVENT_PREFIX = '';
-export const contractsDir = resolve(__dirname, '..', '..', '..', 'contracts');
-export const seedDir = resolve(__dirname, '..', '..', 'seed');
+export const contractsDir = resolve(__dirname, '..', '..', '..', 'resolved');
+export const seedDir = resolve(__dirname, 'seed');
 
 export function fetch(url, options = {}) {
   return new Promise((resolve, reject) => {

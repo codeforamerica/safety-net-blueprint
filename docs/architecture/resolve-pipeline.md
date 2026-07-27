@@ -197,6 +197,6 @@ Integration tests run against a fixture-seeded server to exercise the full stack
 The integration test scripts are designed to work from a clean checkout without requiring manual setup steps:
 
 - `generate-test-clients.js` checks whether `packages/resolved/` exists before generating clients. If it is missing or empty, it runs the resolve pipeline automatically.
-- `run-all-tests.js --integration` checks whether `tests/generated/` exists before running integration tests. If it is missing or empty, it runs `generate-test-clients.js` automatically (which in turn ensures resolved specs exist).
+- `run-all-tests.js --integration` checks whether `tests/integration/generated/` exists before running integration tests. If it is missing or empty, it runs `generate-test-clients.js` automatically (which in turn ensures resolved specs exist).
 
 This means `npm run test:integration` is safe to run at any time regardless of local state — it will resolve and generate whatever is needed.
