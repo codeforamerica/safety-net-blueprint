@@ -6,7 +6,7 @@ import { findById } from '../database-manager.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
 import { parentLinkRegistry } from '../composition-assembler.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { extractPrimaryParam, capitalize } from '../collection-utils.js';
 
 /**
@@ -61,8 +61,10 @@ export function createGetHandler(apiMetadata, endpoint) {
 
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema);
       let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, findById) : resource;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       res.json(responseBody);
     } catch (error) {
       console.error('Get handler error:', error);

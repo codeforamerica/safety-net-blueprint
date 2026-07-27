@@ -10,7 +10,7 @@ import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { extractAuthContext, extractCallerRoles } from '../auth-context.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 
 export function deepEqual(a, b) {
   if (a === b) return true;
@@ -210,8 +210,10 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
 
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema);
       let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, findById) : updated;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       res.json(responseBody);
     } catch (error) {
       console.error('Update handler error:', error);

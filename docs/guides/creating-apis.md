@@ -102,27 +102,32 @@ Each resource is expressed as a family of schema variants, all composing from a 
 | `{Resource}Update` | PATCH request body | `minProperties: 1` constraint |
 | `{Resource}List` | GET collection response | Pagination envelope wrapping an array of `{Resource}` |
 
-The writable base holds what clients send on writes and what the server returns on reads. It can be a separate file (e.g. `schemas/domain/{domain}.yaml`) or defined inline in the OpenAPI spec — either works. What matters is that all variants share a single base so domain properties aren't duplicated.
+**`id`, `createdAt`, `updatedAt` belong in `{Resource}`, not in the writable base.** System fields are API mechanics, not domain knowledge. Keeping them out of the writable base means `{Resource}Create` and `{Resource}Update` can reference it directly without needing to strip readOnly fields.
 
-Schema location guidance:
+### Where to define the writable base
+
+**Default: `schemas/domain/{domain}.yaml`**
+
+Put the writable base in a domain schema file. This is the preferred pattern because domain schema files are shared across multiple contract artifacts — OpenAPI specs, AsyncAPI specs, config schemas, and state machines all `$ref` into them. Putting domain types in the OpenAPI spec traps them there and forces duplication if another artifact ever needs the same type.
 
 | Location | Purpose | Examples |
 |---|---|---|
-| `schemas/domain/{domain}.yaml` | Domain-specific writable base definitions | Domain properties, FKs (`applicationId`, `memberId`) |
+| `schemas/domain/{domain}.yaml` | Domain entity writable bases and sub-types | `Case`, `CaseMember`, `Appointment`, `Task` |
 | `schemas/common/` or `components/common.yaml` | Value types reusable across any domain | `Address`, `Name`, `Email`, `PhoneNumber` |
-| OpenAPI `components/schemas` | REST scaffolding — composes API variants from the writable base | `{Resource}`, `{Resource}Create`, `{Resource}Update`, `{Resource}List` |
+| OpenAPI `components/schemas` | REST scaffolding only — composes API variants from the writable base | `{Resource}`, `{Resource}Create`, `{Resource}Update`, `{Resource}List`, enums used only by API parameters |
 
-**Decision rule for common vs. domain:** A type belongs in `schemas/common/` only if it can be used verbatim in any domain without carrying domain-specific FK fields. If it needs those FKs to be useful, it is a domain schema.
+**Decision rule for common vs. domain:** A type belongs in `schemas/common/` only if it can be used verbatim in any domain without carrying domain-specific FK fields. If it needs domain-specific fields to be useful, it is a domain schema.
 
-**`id`, `createdAt`, `updatedAt` belong in `{Resource}`, not in the writable base.** System fields are API mechanics, not domain knowledge. Keeping them out of the writable base means `{Resource}Create` and `{Resource}Update` can reference it directly without needing to strip readOnly fields.
+**When inline in the OpenAPI spec is acceptable:** Purely API-mechanical schemas that will never be referenced outside HTTP — pagination envelopes, error shapes, status enums used only as query parameters. These have no meaning outside the REST interface and don't belong in the shared domain layer.
 
 **How the variants connect:**
 
 ```yaml
 # schemas/domain/intake.yaml — domain fields only, no system fields
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/domain/intake.yaml"
 $defs:
   Application:
-    title: Application
     type: object
     properties:
       status: { type: string }
@@ -132,10 +137,11 @@ $defs:
 # intake-openapi.yaml components/schemas
 
 Application:               # full resource — domain fields + system fields
+  unevaluatedProperties: false
+  required: [id, createdAt, updatedAt]
   allOf:
     - $ref: "./schemas/domain/intake.yaml#/$defs/Application"
     - type: object
-      required: [id, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid, readOnly: true }
         createdAt: { type: string, format: date-time, readOnly: true }
@@ -153,7 +159,7 @@ ApplicationUpdate:         # PATCH body — domain fields only, at least one req
     - type: object
       minProperties: 1
 
-ApplicationList:           # GET collection response — pagination envelope
+ApplicationList:           # GET collection response — pagination envelope (inline is fine)
   allOf:
     - $ref: "./components/pagination.yaml#/Pagination"
     - type: object

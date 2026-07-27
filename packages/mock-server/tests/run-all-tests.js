@@ -70,7 +70,7 @@ async function runTest(testFile) {
     const runnerArgs = isTs ? ['--test', testPath] : [testPath];
     const proc = spawn(runner, runnerArgs, {
       stdio: 'inherit',
-      shell: true
+      shell: !isTs && process.platform === 'win32'
     });
 
     proc.on('close', (code) => {

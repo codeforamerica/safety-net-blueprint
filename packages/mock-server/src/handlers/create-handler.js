@@ -12,7 +12,7 @@ import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractCallerRoles } from '../auth-context.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 
 
 /**
@@ -188,11 +188,13 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // (e.g. assignToQueue running synchronously in response to the created event)
       const fresh = findById(endpoint.collectionName, resource.id) || resource;
 
-      // Apply x-relationship expand and links-only transformations (same as GET handler)
+      // Apply x-relationship expand, links-only, and x-derived transformations (same as GET handler)
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema);
       let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, findById) : fresh;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 
       res.status(201)
         .header('Location', location)

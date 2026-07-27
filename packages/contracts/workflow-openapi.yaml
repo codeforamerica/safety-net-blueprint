@@ -450,56 +450,49 @@ components:
 
   schemas:
     Queue:
-      type: object
       description: A routing queue that organizes tasks by team, program, or skill.
-      additionalProperties: false
+      unevaluatedProperties: false
       required:
         - id
         - name
         - source
         - createdAt
         - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier for the queue.
-          readOnly: true
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Machine-readable name for the queue (e.g., snap-intake).
-        description:
-          type: string
-          maxLength: 2000
-          description: Human-readable description of the queue's purpose.
-        source:
-          type: string
-          enum:
-            - system
-            - user
-          readOnly: true
-          description: >
-            Origin of the queue. "system" queues are defined in workflow-config.yaml
-            and cannot be deleted via the API. "user" queues are created at runtime
-            via POST /queues and can be deleted. Consumers may use this field to
-            disable destructive actions for system queues without first attempting
-            the operation.
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp when the queue was created.
-          readOnly: true
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp when the queue was last updated.
-          readOnly: true
+      allOf:
+        - $ref: "./schemas/domain/workflow.yaml#/$defs/Queue"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Unique identifier for the queue.
+              readOnly: true
+            source:
+              type: string
+              enum:
+                - system
+                - user
+              readOnly: true
+              description: >
+                Origin of the queue. "system" queues are defined in workflow-config.yaml
+                and cannot be deleted via the API. "user" queues are created at runtime
+                via POST /queues and can be deleted. Consumers may use this field to
+                disable destructive actions for system queues without first attempting
+                the operation.
+            createdAt:
+              type: string
+              format: date-time
+              description: Timestamp when the queue was created.
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              description: Timestamp when the queue was last updated.
+              readOnly: true
 
     QueueCreate:
       allOf:
-        - $ref: "#/components/schemas/Queue"
+        - $ref: "./schemas/domain/workflow.yaml#/$defs/Queue"
         - type: object
           description: |
             Payload to create a new queue. Name is required.
@@ -541,115 +534,13 @@ components:
 
     QueueUpdate:
       allOf:
-        - $ref: "#/components/schemas/Queue"
+        - $ref: "./schemas/domain/workflow.yaml#/$defs/Queue"
         - type: object
           description: |
             Payload to update one or more fields of an existing queue. Partial updates are supported.
 
             Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
           minProperties: 1
-
-    TaskWritable:
-      type: object
-      description: Client-writable task fields. Base schema for TaskCreate and TaskUpdate.
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Human-readable label for the task.
-        description:
-          type: string
-          maxLength: 2000
-          description: Detailed information about the task.
-        status:
-          type: string
-          x-enum-source: states[].id
-          description: Current lifecycle state. Valid values are injected at resolve time from workflow-state-machine.yaml.
-        taskType:
-          type: string
-          description: >
-            The type of work this task represents (e.g., application_review, interview,
-            document_review). Used by state machine guards to enable type-specific
-            lifecycle branches and by routing rules for type-aware assignment.
-            Open string — states extend via overlay without schema changes.
-        subjectType:
-          type: string
-          enum:
-            - application
-            - case
-            - document
-            - appointment
-          description: >
-            The type of entity this task is associated with. Used together with subjectId
-            to form a polymorphic association. States extend the enum via overlay.
-            Resolution of subjectId is conditional on subjectType — no automatic expansion
-            is performed.
-        subjectId:
-          type: string
-          format: uuid
-          description: >
-            Reference to the entity this task is associated with. The target entity type
-            is determined by subjectType. Resolution is conditional on subjectType —
-            consumers must resolve by type; no automatic expansion is performed.
-          x-relationship:
-            resource: Polymorphic
-        programType:
-          $ref: "./components/common.yaml#/Program"
-          description: >
-            The benefits program this task is associated with. Program-specific field
-            used for routing and SLA assignment on application review tasks. Candidate
-            for removal once context enrichment (#203) provides a generic alternative.
-        isExpedited:
-          type: boolean
-          description: >
-            Whether this task requires expedited processing. SNAP-specific concept tied
-            to the 7-day regulatory deadline. Candidate for removal once context enrichment
-            (#203) provides a generic alternative.
-        queueId:
-          type: string
-          format: uuid
-          description: Reference to the Queue this task is routed to.
-          x-relationship:
-            resource: Queue
-        priority:
-          type: integer
-          minimum: 1
-          maximum: 4
-          description: "Task processing priority (1=expedited, 2=high, 3=normal, 4=low). Lower number = higher urgency. Numeric representation enables correct ascending sort: expedited tasks surface first."
-        startedAt:
-          type: string
-          format: date-time
-          description: When work began (status transitioned to in_progress).
-        completedAt:
-          type: string
-          format: date-time
-          description: When work finished.
-        escalatedAt:
-          type: string
-          format: date-time
-          description: When the task was escalated.
-        cancelledAt:
-          type: string
-          format: date-time
-          description: When the task was cancelled.
-        blockedAt:
-          type: string
-          format: date-time
-          description: When the task entered a waiting state (awaiting_client or awaiting_verification).
-        assignedToId:
-          type: string
-          format: uuid
-          description: Reference to the User assigned to this task.
-          x-relationship:
-            resource: User
-            domain: identity-access
-        outcome:
-          type: string
-          description: Completion outcome recorded when the task was completed (e.g., approved, denied).
-        completionNotes:
-          type: string
-          description: Optional notes recorded when the task was completed.
 
     Task:
       description: A workflow task representing a unit of work in a safety net benefits program.
@@ -661,7 +552,7 @@ components:
         - createdAt
         - updatedAt
       allOf:
-        - $ref: "#/components/schemas/TaskWritable"
+        - $ref: "./schemas/domain/workflow.yaml#/$defs/Task"
         - type: object
           properties:
             id:
@@ -700,7 +591,7 @@ components:
 
     TaskCreate:
       allOf:
-        - $ref: "#/components/schemas/TaskWritable"
+        - $ref: "./schemas/domain/workflow.yaml#/$defs/Task"
         - type: object
           description: |
             Payload to create a new task. name is required; status is set by the state machine and
@@ -735,7 +626,7 @@ components:
 
     TaskUpdate:
       allOf:
-        - $ref: "#/components/schemas/TaskWritable"
+        - $ref: "./schemas/domain/workflow.yaml#/$defs/Task"
         - type: object
           description: |
             Payload to update one or more fields of an existing task. Partial updates are supported.

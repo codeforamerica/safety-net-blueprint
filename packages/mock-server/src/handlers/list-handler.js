@@ -6,7 +6,7 @@ import { getDatabase, findById } from '../database-manager.js';
 import { executeSearch, PAGINATION_DEFAULTS } from '../search-engine.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
-import { extractExpandFields, applyExpand, getItemSchema, extractLinksFields, applyLinks } from './expand-utils.js';
+import { extractExpandFields, applyExpand, getItemSchema, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 
 /**
  * Extract all string-typed field paths from an OpenAPI schema.
@@ -125,10 +125,12 @@ export function createListHandler(apiMetadata, endpoint) {
       const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas);
       const expandFields = extractExpandFields(itemSchema);
       const linksFields = extractLinksFields(itemSchema);
-      if (expandFields.length > 0 || linksFields.length > 0) {
+      const derivedFields = extractDerivedFields(itemSchema);
+      if (expandFields.length > 0 || linksFields.length > 0 || derivedFields.length > 0) {
         safeResult.items = safeResult.items.map(item => {
           let result = expandFields.length > 0 ? applyExpand(item, expandFields, findById) : item;
           if (linksFields.length > 0) result = applyLinks(result, linksFields, apiMetadata.serverBasePath);
+          if (derivedFields.length > 0) result = applyDerivedFields(result, derivedFields);
           return result;
         });
       }

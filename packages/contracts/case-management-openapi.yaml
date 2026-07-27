@@ -157,85 +157,40 @@ components:
   schemas:
     # Primary schema — the long-lived relationship with a client/household
     Case:
-      type: object
       description: |
         A case represents the ongoing relationship with a client or household. It spans
         years, multiple applications, and multiple programs.
-      additionalProperties: false
+      unevaluatedProperties: false
       required:
         - id
         - status
         - primaryApplicantId
         - createdAt
         - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique identifier (server-generated).
-        status:
-          "$ref": "#/components/schemas/CaseStatus"
-        effectiveStartDate:
-          type: string
-          format: date
-          description: Date when coverage or the case relationship begins.
-        effectiveEndDate:
-          type:
-            - string
-            - "null"
-          format: date
-          description: Date when the case was closed. Null while active.
-        primaryApplicantId:
-          type: string
-          format: uuid
-          description: Reference to the Person record for the primary applicant.
-          x-relationship:
-            resource: Person
-            domain: client-management
-        members:
-          type: array
-          description: Household members associated with this case.
-          items:
-            "$ref": "#/components/schemas/CaseMember"
-        assignedToId:
-          type: string
-          format: uuid
-          description: Reference to the User record for the assigned case worker.
-          x-relationship:
-            resource: User
-            domain: identity-access
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the case was created.
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the case was last updated.
+      allOf:
+        - $ref: "./schemas/domain/case-management.yaml#/$defs/Case"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the case was created.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the case was last updated.
 
     # Ancillary schemas (alphabetical)
 
     CaseMember:
-      type: object
-      description: A person associated with a case and their relationship to the primary applicant.
-      additionalProperties: false
-      required:
-        - personId
-        - relationship
-      properties:
-        personId:
-          type: string
-          format: uuid
-          description: Reference to the Person record.
-          x-relationship:
-            resource: Person
-            domain: client-management
-        relationship:
-          type: string
-          description: Relationship to the primary applicant.
+      $ref: "./schemas/domain/case-management.yaml#/$defs/CaseMember"
 
     CaseStatus:
       type: string
@@ -248,7 +203,7 @@ components:
 
     CaseCreate:
       allOf:
-      - "$ref": "#/components/schemas/Case"
+      - $ref: "./schemas/domain/case-management.yaml#/$defs/Case"
       - type: object
         description: |
           Payload to create a new case record.
@@ -258,7 +213,7 @@ components:
         - primaryApplicantId
     CaseUpdate:
       allOf:
-      - "$ref": "#/components/schemas/Case"
+      - $ref: "./schemas/domain/case-management.yaml#/$defs/Case"
       - type: object
         description: |
           Payload to update one or more mutable fields of an existing case. Partial updates are supported.
