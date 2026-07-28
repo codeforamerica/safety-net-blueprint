@@ -9,7 +9,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -25,6 +25,10 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const contractsRoot = join(__dirname, '../../');
+// Smoke tests run against resolved contracts (overlay-applied).
+// Run `npm run resolve` to generate this directory before running tests.
+const resolvedRoot = join(__dirname, '../../../resolved');
+const resolvedExists = existsSync(resolvedRoot);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -191,14 +195,14 @@ describe('scenario: resource rename — overlay renames application schema → i
 // ---------------------------------------------------------------------------
 
 describe('smoke tests — real annotation files', () => {
-  test('intake-annotations.yaml paths all resolve against intake-openapi.yaml', () => {
-    const resourceSchemaMap = buildResourceSchemaMap(contractsRoot);
+  test('intake-annotations.yaml paths all resolve against intake-openapi.yaml', { skip: !resolvedExists && 'run npm run resolve first' }, () => {
+    const resourceSchemaMap = buildResourceSchemaMap(resolvedRoot);
 
     let doc;
     try {
-      doc = yaml.load(readFileSync(join(contractsRoot, 'intake-annotations.yaml'), 'utf8'));
+      doc = yaml.load(readFileSync(join(resolvedRoot, 'intake-annotations.yaml'), 'utf8'));
     } catch {
-      return; // skip if file doesn't exist
+      return;
     }
 
     const errors = [];
@@ -259,12 +263,12 @@ describe('scenario: action rename — overlay renames submit → file', () => {
 });
 
 describe('smoke tests — real annotation operations vs state machines', () => {
-  test('intake-annotations.yaml operations all match declared state machine actions', () => {
-    const actionIndex = buildStateMachineActionIndex(contractsRoot);
+  test('intake-annotations.yaml operations all match declared state machine actions', { skip: !resolvedExists && 'run npm run resolve first' }, () => {
+    const actionIndex = buildStateMachineActionIndex(resolvedRoot);
 
     let doc;
     try {
-      doc = yaml.load(readFileSync(join(contractsRoot, 'intake-annotations.yaml'), 'utf8'));
+      doc = yaml.load(readFileSync(join(resolvedRoot, 'intake-annotations.yaml'), 'utf8'));
     } catch {
       return;
     }
@@ -361,12 +365,12 @@ describe('scenario: policy deleted from registry', () => {
 });
 
 describe('smoke tests — real annotation policy citations vs policy registry', () => {
-  test('intake-annotations.yaml policy citations all exist in platform-registry-policies.yaml', () => {
-    const policyIndex = buildPolicyIndex(contractsRoot);
+  test('intake-annotations.yaml policy citations all exist in platform-registry-policies.yaml', { skip: !resolvedExists && 'run npm run resolve first' }, () => {
+    const policyIndex = buildPolicyIndex(resolvedRoot);
 
     let doc;
     try {
-      doc = yaml.load(readFileSync(join(contractsRoot, 'intake-annotations.yaml'), 'utf8'));
+      doc = yaml.load(readFileSync(join(resolvedRoot, 'intake-annotations.yaml'), 'utf8'));
     } catch {
       return;
     }

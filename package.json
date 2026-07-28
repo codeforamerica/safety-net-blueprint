@@ -15,7 +15,7 @@
   "scripts": {
     "start": "node packages/mock-server/scripts/server.js --spec=packages/contracts",
     "validate": "npm run --prefix packages/contracts validate",
-    "validate:resolved": "node packages/contracts/scripts/validate-openapi.js --spec=packages/resolved && node packages/contracts/scripts/validate-refs.js --spec=packages/resolved && node packages/contracts/scripts/validate-state-machines.js --resolved",
+    "validate:resolved": "node packages/contracts/scripts/validate-openapi.js --spec=packages/resolved && node packages/contracts/scripts/validate-refs.js --spec=packages/resolved && node packages/contracts/scripts/validate-state-machines.js --resolved && node packages/contracts/scripts/validate-annotations.js --spec=packages/resolved",
     "validate:refs": "node packages/contracts/scripts/validate-refs.js --spec=packages/resolved",
     "validate:syntax": "node packages/contracts/scripts/validate-openapi.js --spec=packages/contracts",
     "validate:patterns": "node packages/contracts/scripts/validate-patterns.js --spec=packages/contracts",
