@@ -606,8 +606,8 @@ test('resolveValue — $request.field resolves from context', () => {
   assert.strictEqual(resolveValue('$request.reason', context), 'urgent');
 });
 
-test('resolveValue — $request.field returns null when missing', () => {
-  assert.strictEqual(resolveValue('$request.missing', { request: {} }), null);
+test('resolveValue — $request.field returns undefined when missing', () => {
+  assert.strictEqual(resolveValue('$request.missing', { request: {} }), undefined);
 });
 
 test('resolveValue — $this.field resolves from context.this', () => {

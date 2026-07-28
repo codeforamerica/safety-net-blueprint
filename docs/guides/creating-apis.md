@@ -171,6 +171,46 @@ ApplicationList:           # GET collection response — pagination envelope (in
             $ref: "#/components/schemas/Application"
 ```
 
+### Immutable type fields
+
+Some resources use a `type` field as their categorical identity — the type determines which fields are valid and how the record is processed by eligibility rules. Examples: income type (`wages`, `self_employed`), asset type (`vehicle`, `real_property`), expense type (`rent`, `medical`). For these resources, **`type` is immutable after creation**. Clients that need to change the type must delete and recreate the record.
+
+The required placement differs by schema structure:
+
+**Plain categorical schemas** (e.g. Deduction, Expense): do NOT put `type` in the base schema `required`. Put it in the Create schema's `allOf` required instead. The Update schema then inherits from the base and correctly does not require `type`.
+
+```yaml
+# Base — type is a property but not required
+Deduction:
+  required: [amount]          # type intentionally absent
+  properties:
+    type: { $ref: DeductionType }
+
+# Create — type required here
+DeductionCreate:
+  allOf:
+    - $ref: Deduction
+    - required: [type, memberId]
+
+# Update — type not required (PATCH can omit it)
+DeductionUpdate:
+  allOf:
+    - $ref: Deduction
+    - minProperties: 1
+```
+
+**Discriminated union schemas** (e.g. Income, Asset, Job, HealthPlan): the `oneOf`/discriminator at the root of the schema file enforces `type` for creates — no change needed to Create schemas. However, the Update schema must `$ref` the base sub-schema (e.g. `income.yaml#/$defs/IncomeBase`), not the discriminated root, so that PATCH bodies are not required to include `type`.
+
+```yaml
+# Update references the base, not the discriminated root
+IncomeUpdate:
+  allOf:
+    - $ref: "./schemas/common/income.yaml#/$defs/IncomeBase"   # NOT income.yaml
+    - minProperties: 1
+```
+
+See `api-patterns.yaml#schema_patterns.immutable_type_pattern` for the full pattern definition.
+
 ---
 
 ## Common Field Patterns

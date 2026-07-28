@@ -1163,6 +1163,58 @@ schema_patterns:
       description: Response schema for GET collection endpoints
       suffix: List
 
+  # Immutable type fields in categorized resources
+  immutable_type_pattern:
+    description: |
+      When a resource uses a type field as its categorical identity (e.g. income type,
+      asset type, expense type), type is immutable after creation. Clients that need to
+      change the type must delete and recreate the record.
+
+      This applies to both plain categorical resources (Deduction, Expense, AssetDisposal)
+      and discriminated union resources (Income, Asset, Job, HealthPlan) where type drives
+      oneOf variant selection.
+    rationale: |
+      Type fields determine which fields are valid (especially for discriminated unions),
+      how eligibility rules apply, and how the record is categorized in program calculations.
+      Allowing type mutation creates ambiguity about which variant-specific fields are valid
+      and risks silent miscategorization in eligibility outcomes.
+    rule: |
+      Do NOT include type in the base schema required list. Instead:
+      - Plain categorical schemas (Deduction, Expense, AssetDisposal): add type to required
+        in the Create schema (allOf second member), not the base schema.
+      - Discriminated union schemas (Income, Asset, Job, HealthPlan): type is already enforced
+        by the oneOf/discriminator at the root — no change needed to Create schemas.
+      - Update schemas for discriminated unions must $ref the base sub-schema
+        (e.g. IncomeBase, AssetBase) NOT the discriminated root, so the oneOf does not
+        require type in PATCH bodies.
+    examples:
+      plain_categorical: |
+        # Base schema — type not in required
+        Deduction:
+          required: [amount]
+          properties:
+            type: { $ref: DeductionType }
+            amount: { type: number }
+
+        # Create schema — type required here
+        DeductionCreate:
+          allOf:
+            - $ref: Deduction
+            - required: [type, memberId]
+
+        # Update schema — type not required (inherits from base)
+        DeductionUpdate:
+          allOf:
+            - $ref: Deduction
+            - minProperties: 1
+
+      discriminated_union: |
+        # Update schema references base sub-schema, not the discriminated root
+        IncomeUpdate:
+          allOf:
+            - $ref: income.yaml#/$defs/IncomeBase   # NOT income.yaml (root oneOf)
+            - minProperties: 1
+
   # Foreign key references to other schemas
   foreign_keys:
     description: |

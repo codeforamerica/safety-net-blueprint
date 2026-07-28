@@ -100,7 +100,7 @@ async function testStubConsumedOnEvent() {
 
   // Inject the trigger event — stub engine fires the response synchronously
   const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-001');
-  assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
+  assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
 
   // Stub should now be consumed
   const after = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
@@ -150,7 +150,7 @@ async function testNoStubNoError() {
 
   // No stub registered — event fires cleanly, service call stays pending
   const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'save' }, 'sc-003');
-  assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
+  assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
 
   // Stub count should still be 0
   const stubs = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
@@ -193,7 +193,7 @@ async function testTimerStub() {
     },
     subjectId
   );
-  assert(injectRes.status === 202, `inject → expected 202, got ${injectRes.status}`);
+  assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
 
   // Stub should be consumed
   const after = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();

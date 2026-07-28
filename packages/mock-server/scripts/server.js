@@ -165,7 +165,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
       }
       try {
         const stored = emitEventEnvelope(event);
-        res.status(202).json(stored);
+        res.status(201).json(stored);
       } catch (err) {
         console.error('Failed to emit injected event:', err.message);
         res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: err.message }] });

@@ -53,7 +53,11 @@ export function resolveValue(value, context) {
 
     if (value.startsWith('$request.')) {
       const field = value.slice('$request.'.length);
-      return context.request?.[field] ?? null;
+      // Return undefined (not null) when the field is absent from the request body.
+      // applySetEffect skips undefined values so optional fields like completionNotes
+      // are not written as null when the caller didn't provide them.
+      const req = context.request;
+      return req && Object.prototype.hasOwnProperty.call(req, field) ? req[field] : undefined;
     }
 
     if (value.startsWith('$this.')) {
@@ -623,7 +627,10 @@ export function applySteps(steps, resource, context) {
  * @param {Object} context - Context with caller info
  */
 export function applySetEffect(effect, resource, context) {
-  resource[effect.field] = resolveValue(effect.value, context);
+  const value = resolveValue(effect.value, context);
+  if (value !== undefined) {
+    resource[effect.field] = value;
+  }
 }
 
 /**

@@ -24,11 +24,15 @@ const fixturesDir = resolve(__dirname, 'seed');
 let serverStartedByTests = false;
 
 // Simple fetch polyfill using Node.js http module
-function loadExamples(apiName) {
+function loadExamples(apiName, collectionPrefix = null) {
   try {
     const content = readFileSync(`${fixturesDir}/${apiName}.yaml`, 'utf8');
     return Object.entries(yaml.load(content) || {})
-      .filter(([key, value]) => value?.id && !value.items && !key.toLowerCase().includes('payload'))
+      .filter(([key, value]) => {
+        if (!value?.id || value.items || key.toLowerCase().includes('payload')) return false;
+        if (collectionPrefix && !key.startsWith(collectionPrefix)) return false;
+        return true;
+      })
       .map(([, value]) => ({ data: value }));
   } catch {
     return [];
@@ -375,7 +379,9 @@ async function runTests() {
   // CRUD tests for each API
   // =========================================================================
   for (const api of apis) {
-    const examples = loadExamples(api.name);
+    const lastSegment = (api.baseResource || `/${api.name}`).split('/').pop();
+    const collectionPrefix = singularize(lastSegment).replace(/^./, c => c.toUpperCase());
+    const examples = loadExamples(api.name, collectionPrefix);
     const results = await testApi(api, examples);
 
     totalPassed += results.passed;

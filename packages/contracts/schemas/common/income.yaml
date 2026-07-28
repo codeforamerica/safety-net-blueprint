@@ -33,7 +33,6 @@ $defs:
     title: IncomeBase
     type: object
     required:
-      - type
       - amount
       - frequency
     additionalProperties: true

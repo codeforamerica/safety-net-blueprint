@@ -129,10 +129,7 @@ step "Running integration tests"
 # Kill any orphaned mock server from a previous run
 lsof -ti :1080 | xargs kill -9 2>/dev/null || true
 
-# 3>&- closes the fd opened by bash's process substitution (exec > >(tee ...))
-# above. Without it, tsx inherits a stale fd3 which Node.js test runner IPC
-# mistakes for its own channel, causing "Unable to deserialize cloned data".
-if npm run test:integration 3>&- 2>&1; then
+if npm run test:integration 2>&1; then
   pass "Integration tests passed"
 else
   fail "Integration tests failed"

@@ -660,7 +660,11 @@ function generateRpcOverlays(inputFiles) {
     const targetFile = inputFiles.find(f => f.relativePath === apiSpecFile);
     if (!targetFile) continue;
 
-    const endpointInfo = extractItemEndpointFromSpec(targetFile.spec, stateMachine.object);
+    // stateMachine.object is the top-level object name for single-machine specs.
+    // Multi-machine specs (like workflow) put object: inside each machines[] entry.
+    // Fall back to the first machine's object so the correct item path is found.
+    const smObjectName = stateMachine.object ?? stateMachine.machines?.[0]?.object;
+    const endpointInfo = extractItemEndpointFromSpec(targetFile.spec, smObjectName);
     if (!endpointInfo) continue;
 
     let overlay = generateOverlay(stateMachine, endpointInfo);

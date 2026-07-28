@@ -103,15 +103,15 @@ $defs:
         format: date-time
         description: When the task was escalated.
       cancelledAt:
-        type: string
+        type: [string, 'null']
         format: date-time
         description: When the task was cancelled.
       blockedAt:
-        type: string
+        type: [string, 'null']
         format: date-time
         description: When the task entered a waiting state (awaiting_client or awaiting_verification).
       assignedToId:
-        type: string
+        type: [string, 'null']
         format: uuid
         description: Reference to the User assigned to this task.
         x-relationship:
@@ -121,5 +121,5 @@ $defs:
         type: string
         description: Completion outcome recorded when the task was completed (e.g., approved, denied).
       completionNotes:
-        type: string
+        type: [string, 'null']
         description: Optional notes recorded when the task was completed.

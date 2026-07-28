@@ -68,8 +68,13 @@ async function runTest(testFile) {
     const tsxBin = existsSync(tsxLocal) ? tsxLocal : tsxRoot;
     const runner = isTs ? tsxBin : 'node';
     const runnerArgs = isTs ? ['--test', testPath] : [testPath];
+    // Close fd3 for tsx/--test runs: Node.js test runner uses fd3 for its IPC
+    // pipe between the orchestrator and the test file subprocess. If fd3 is
+    // already open in the environment (e.g. bash's exec > >(tee ...) pipe from
+    // preflight.sh, or npm's internal pipes), tsx inherits it and the IPC
+    // channel gets corrupted, causing "Unable to deserialize cloned data".
     const proc = spawn(runner, runnerArgs, {
-      stdio: 'inherit',
+      stdio: isTs ? ['inherit', 'inherit', 'inherit', 'ignore'] : 'inherit',
       shell: !isTs && process.platform === 'win32'
     });
 

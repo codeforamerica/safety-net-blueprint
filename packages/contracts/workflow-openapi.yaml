@@ -662,15 +662,13 @@ components:
           description: Aggregation function used to compute the value.
           readOnly: true
         value:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: >
             Computed scalar value. count: total matching records. ratio: 0–1.
             duration: median seconds between paired events. null when groupBy is specified.
           readOnly: true
         breakdown:
-          type: object
-          nullable: true
+          type: [object, 'null']
           description: >
             Map of group value to computed metric value. Present when groupBy is
             specified; null otherwise.

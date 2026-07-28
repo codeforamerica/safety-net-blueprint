@@ -84,16 +84,15 @@ function deriveParentCollection(path, basePath) {
  * Looks up the resource by parent field value (e.g., applicationId) rather than by its own id.
  */
 function createSingletonGetHandler(endpoint, parentParam, parentField) {
-  const resourceLabel = endpoint.collectionName.replace(/s$/, '');
   return (req, res) => {
     try {
       const parentId = req.params[parentParam];
       const { items } = findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
       if (items.length === 0) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: `${capitalize(resourceLabel)} not found`
-        });
+        // Singleton sub-resources always exist conceptually — initialize an empty one on first access.
+        const newRecord = { id: randomUUID(), [parentField]: parentId };
+        insertResource(endpoint.collectionName, newRecord);
+        return res.json(newRecord);
       }
       res.json(items[0]);
     } catch (error) {
@@ -221,10 +220,12 @@ export function extractRequiredDefaults(responseSchema) {
   if (!responseSchema) return {};
   const defaults = {};
   const schemas = responseSchema.allOf || [responseSchema];
+  // Collect all property definitions across all allOf members so that
+  // required fields declared in one schema can reference types defined in another.
+  const allProps = Object.assign({}, ...schemas.map(s => s.properties || {}));
   for (const s of schemas) {
-    const props = s.properties || {};
     for (const field of (s.required || [])) {
-      const prop = props[field];
+      const prop = allProps[field];
       if (!prop) continue;
       // Nullable wins over array: a type union that includes 'null' means
       // the schema explicitly allows null content, even for arrays.
@@ -322,6 +323,20 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
         } else if (method === 'patch') {
           handler = createSingletonUpdateHandler(apiMetadata, endpointWithCollection, parentParam, parentField);
           description = 'Update singleton sub-resource';
+        } else if (method === 'post') {
+          // POST on a singular sub-path is a state machine RPC/transition endpoint.
+          // e.g., POST /tasks/{taskId}/claim — the trigger name is the last path segment.
+          const trigger = endpoint.path.split('/').filter(s => s && !s.startsWith('{')).pop();
+          const parentCollectionName = deriveParentCollection(endpoint.path, apiMetadata.serverBasePath);
+          const smEntry = findStateMachineForCollection(stateMachines, parentCollectionName);
+          if (smEntry) {
+            const domainSlaTypes = findSlaTypes(slaTypes, smEntry.stateMachine.domain);
+            handler = createTransitionHandler(parentCollectionName, smEntry.stateMachine, trigger, parentParam, domainSlaTypes, smEntry.machine);
+            description = `${trigger} transition on ${parentCollectionName}`;
+          } else {
+            console.warn(`    Warning: No state machine found for POST ${endpoint.path} (parent collection: ${parentCollectionName})`);
+            continue;
+          }
         } else {
           console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on singleton ${endpoint.path}`);
           continue;
