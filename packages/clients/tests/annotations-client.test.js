@@ -7,6 +7,7 @@
  *   - Overlay files for the same domain are merged into a single export
  *   - Schema, operations, and events are accessible in the expected shape
  *   - policies, programs, and dataClassification arrays are accessible per entry
+ *   - Consumer access patterns work as expected (filter by program, find PII fields, etc.)
  */
 
 import { describe, it } from 'node:test';
@@ -277,5 +278,136 @@ events:
     assert.ok(Array.isArray(event.policies));
     assert.ok(event.policies.includes('snap-processing-clock'));
     assert.ok(event.programs.includes('medicaid'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Consumer access patterns
+// ---------------------------------------------------------------------------
+
+const FIXTURE = {
+  'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock, medicaid-processing-clock]
+    programs: [snap, medicaid]
+  application.registerToVote:
+    policies: [nvra-voter-registration-offer]
+    programs: [snap, medicaid, tanf, chip]
+  application.members[].personalInformation.ssn:
+    dataClassification: [pii]
+    policies: [snap-ssn-requirement]
+    programs: [snap, medicaid]
+  application.members[].personalInformation.dateOfBirth:
+    dataClassification: [pii]
+    policies: [chip-age-eligibility]
+    programs: [snap, medicaid, chip]
+  application.incomes[]:
+    dataClassification: [pii, fti]
+    policies: [snap-income-verification]
+    programs: [snap, medicaid]
+operations:
+  application.submit:
+    policies: [snap-processing-clock, snap-right-to-apply]
+    programs: [snap, medicaid]
+  application.approve-determination:
+    policies: [snap-supervisor-review]
+    programs: [snap]
+events:
+  intake.application.submitted:
+    policies: [snap-processing-clock]
+    programs: [snap, medicaid]
+  intake.application.closed:
+    policies: [snap-notice-of-eligibility]
+    programs: [snap]
+`,
+};
+
+describe('consumer access patterns', () => {
+  it('filter schema fields by program — find all SNAP-relevant fields', async () => {
+    const { IntakeAnnotations } = await generate(FIXTURE);
+
+    const snapFields = Object.entries(IntakeAnnotations.schema)
+      .filter(([, v]) => v.programs?.includes('snap'))
+      .map(([k]) => k);
+
+    assert.ok(snapFields.includes('application.submittedAt'));
+    assert.ok(snapFields.includes('application.registerToVote'));
+    assert.ok(!snapFields.includes('application.nonexistent'));
+  });
+
+  it('find all PII fields', async () => {
+    const { IntakeAnnotations } = await generate(FIXTURE);
+
+    const piiFields = Object.entries(IntakeAnnotations.schema)
+      .filter(([, v]) => v.dataClassification?.includes('pii'))
+      .map(([k]) => k);
+
+    assert.ok(piiFields.includes('application.members[].personalInformation.ssn'));
+    assert.ok(piiFields.includes('application.members[].personalInformation.dateOfBirth'));
+    assert.ok(piiFields.includes('application.incomes[]'));
+    assert.ok(!piiFields.includes('application.submittedAt'));
+  });
+
+  it('find fields carrying FTI data classification', async () => {
+    const { IntakeAnnotations } = await generate(FIXTURE);
+
+    const ftiFields = Object.entries(IntakeAnnotations.schema)
+      .filter(([, v]) => v.dataClassification?.includes('fti'))
+      .map(([k]) => k);
+
+    assert.ok(ftiFields.includes('application.incomes[]'));
+    assert.ok(!ftiFields.includes('application.members[].personalInformation.ssn'));
+  });
+
+  it('look up which policies govern an operation', async () => {
+    const { IntakeAnnotations } = await generate(FIXTURE);
+
+    const submitPolicies = IntakeAnnotations.operations['application.submit']?.policies ?? [];
+
+    assert.ok(submitPolicies.includes('snap-processing-clock'));
+    assert.ok(submitPolicies.includes('snap-right-to-apply'));
+  });
+
+  it('check whether an operation requires supervisor review', async () => {
+    const { IntakeAnnotations } = await generate(FIXTURE);
+
+    const requiresSupervisorReview = (operationKey) =>
+      IntakeAnnotations.operations[operationKey]?.policies?.includes('snap-supervisor-review') ?? false;
+
+    assert.equal(requiresSupervisorReview('application.approve-determination'), true);
+    assert.equal(requiresSupervisorReview('application.submit'), false);
+  });
+
+  it('find all fields that cite a specific policy', async () => {
+    const { IntakeAnnotations } = await generate(FIXTURE);
+
+    const fieldsWithPolicy = (policyId) =>
+      Object.entries(IntakeAnnotations.schema)
+        .filter(([, v]) => v.policies?.includes(policyId))
+        .map(([k]) => k);
+
+    const clockFields = fieldsWithPolicy('snap-processing-clock');
+    assert.ok(clockFields.includes('application.submittedAt'));
+    assert.ok(!clockFields.includes('application.registerToVote'));
+  });
+
+  it('look up which policies are triggered by an event', async () => {
+    const { IntakeAnnotations } = await generate(FIXTURE);
+
+    const eventPolicies = IntakeAnnotations.events['intake.application.submitted']?.policies ?? [];
+
+    assert.ok(eventPolicies.includes('snap-processing-clock'));
+  });
+
+  it('check whether a field is PII before logging or storing it', async () => {
+    const { IntakeAnnotations } = await generate(FIXTURE);
+
+    const isPii = (fieldPath) =>
+      IntakeAnnotations.schema[fieldPath]?.dataClassification?.includes('pii') ?? false;
+
+    assert.equal(isPii('application.members[].personalInformation.ssn'), true);
+    assert.equal(isPii('application.submittedAt'), false);
   });
 });
