@@ -1,8 +1,10 @@
 /**
  * Unit tests for validate-annotations.js
  *
- * Tests buildResourceSchemaMap and validateAnnotationPath.
- * Smoke tests run real annotation files against real OpenAPI specs.
+ * Tests buildResourceSchemaMap, validateAnnotationPath,
+ * buildStateMachineActionIndex, validateAnnotationOperation,
+ * buildPolicyIndex, and validateAnnotationPolicyCitations.
+ * Smoke tests run real annotation files against real specs.
  */
 
 import { test, describe } from 'node:test';
@@ -11,7 +13,14 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { buildResourceSchemaMap, validateAnnotationPath } from '../../scripts/validate-annotations.js';
+import {
+  buildResourceSchemaMap,
+  validateAnnotationPath,
+  buildStateMachineActionIndex,
+  validateAnnotationOperation,
+  buildPolicyIndex,
+  validateAnnotationPolicyCitations,
+} from '../../scripts/validate-annotations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -202,6 +211,171 @@ describe('smoke tests — real annotation files', () => {
       errors,
       [],
       `Annotation path errors:\n${errors.map(e => `  "${e.pathKey}": ${e.err}`).join('\n')}`
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateAnnotationOperation
+// ---------------------------------------------------------------------------
+
+describe('validateAnnotationOperation', () => {
+  const actionIndex = new Set([
+    'application.submit',
+    'application.close',
+    'verification.satisfy',
+  ]);
+
+  test('passes for a known operation', () => {
+    assert.equal(validateAnnotationOperation('application.submit', actionIndex), null);
+  });
+
+  test('errors for an operation on an unknown object', () => {
+    const result = validateAnnotationOperation('widget.submit', actionIndex);
+    assert.ok(result?.includes('does not match'));
+  });
+
+  test('errors for a known object but unknown action id', () => {
+    const result = validateAnnotationOperation('application.nonexistent', actionIndex);
+    assert.ok(result?.includes('does not match'));
+  });
+
+  test('returns null when action index is empty (no state machines loaded)', () => {
+    assert.equal(validateAnnotationOperation('application.submit', new Set()), null);
+  });
+});
+
+describe('scenario: action rename — overlay renames submit → file', () => {
+  const actionIndex = new Set(['application.file', 'application.close']);
+
+  test('catches stale application.submit after rename to application.file', () => {
+    const result = validateAnnotationOperation('application.submit', actionIndex);
+    assert.ok(result?.includes('does not match'));
+  });
+
+  test('passes with application.file after rename', () => {
+    assert.equal(validateAnnotationOperation('application.file', actionIndex), null);
+  });
+});
+
+describe('smoke tests — real annotation operations vs state machines', () => {
+  test('intake-annotations.yaml operations all match declared state machine actions', () => {
+    const actionIndex = buildStateMachineActionIndex(contractsRoot);
+
+    let doc;
+    try {
+      doc = yaml.load(readFileSync(join(contractsRoot, 'intake-annotations.yaml'), 'utf8'));
+    } catch {
+      return;
+    }
+
+    const errors = [];
+    for (const operationKey of Object.keys(doc?.operations || {})) {
+      const err = validateAnnotationOperation(operationKey, actionIndex);
+      if (err) errors.push({ operationKey, err });
+    }
+
+    assert.deepEqual(
+      errors,
+      [],
+      `Operation key errors:\n${errors.map(e => `  "${e.operationKey}": ${e.err}`).join('\n')}`
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateAnnotationPolicyCitations
+// ---------------------------------------------------------------------------
+
+describe('validateAnnotationPolicyCitations', () => {
+  const policyIndex = new Set(['snap-processing-clock', 'medicaid-processing-clock', 'nvra-voter-registration-offer']);
+
+  test('passes when all schema policy citations exist in the registry', () => {
+    const doc = {
+      schema: { 'application.submittedAt': { policies: ['snap-processing-clock', 'medicaid-processing-clock'] } },
+    };
+    assert.deepEqual(validateAnnotationPolicyCitations(doc, policyIndex), []);
+  });
+
+  test('errors when a schema policy citation is unknown', () => {
+    const doc = {
+      schema: { 'application.submittedAt': { policies: ['snap-processing-clock', 'typo-policy'] } },
+    };
+    const errors = validateAnnotationPolicyCitations(doc, policyIndex);
+    assert.ok(errors.some(e => e.includes('"typo-policy"')));
+    assert.ok(errors.some(e => e.includes('schema')));
+  });
+
+  test('errors when an operations policy citation is unknown', () => {
+    const doc = {
+      operations: { 'application.submit': { policies: ['deleted-policy'] } },
+    };
+    const errors = validateAnnotationPolicyCitations(doc, policyIndex);
+    assert.ok(errors.some(e => e.includes('"deleted-policy"')));
+    assert.ok(errors.some(e => e.includes('operations')));
+  });
+
+  test('errors when an events policy citation is unknown', () => {
+    const doc = {
+      events: { 'intake.application.submitted': { policies: ['unknown-policy'] } },
+    };
+    const errors = validateAnnotationPolicyCitations(doc, policyIndex);
+    assert.ok(errors.some(e => e.includes('"unknown-policy"')));
+    assert.ok(errors.some(e => e.includes('events')));
+  });
+
+  test('passes when policies array is empty', () => {
+    const doc = { schema: { 'application.channel': { policies: [] } } };
+    assert.deepEqual(validateAnnotationPolicyCitations(doc, policyIndex), []);
+  });
+
+  test('passes when no policies key is present on an entry', () => {
+    const doc = { schema: { 'application.channel': { programs: ['snap'] } } };
+    assert.deepEqual(validateAnnotationPolicyCitations(doc, policyIndex), []);
+  });
+
+  test('returns empty array when policy index is empty (no registry loaded)', () => {
+    const doc = { schema: { 'application.submittedAt': { policies: ['snap-processing-clock'] } } };
+    assert.deepEqual(validateAnnotationPolicyCitations(doc, new Set()), []);
+  });
+});
+
+describe('scenario: policy deleted from registry', () => {
+  // Registry after snap-processing-clock was removed
+  const policyIndex = new Set(['medicaid-processing-clock']);
+
+  test('catches stale snap-processing-clock citation after policy is deleted', () => {
+    const doc = {
+      schema: { 'application.submittedAt': { policies: ['snap-processing-clock', 'medicaid-processing-clock'] } },
+    };
+    const errors = validateAnnotationPolicyCitations(doc, policyIndex);
+    assert.ok(errors.some(e => e.includes('"snap-processing-clock"')));
+  });
+
+  test('does not flag the surviving medicaid-processing-clock citation', () => {
+    const doc = {
+      schema: { 'application.submittedAt': { policies: ['medicaid-processing-clock'] } },
+    };
+    assert.deepEqual(validateAnnotationPolicyCitations(doc, policyIndex), []);
+  });
+});
+
+describe('smoke tests — real annotation policy citations vs policy registry', () => {
+  test('intake-annotations.yaml policy citations all exist in platform-registry-policies.yaml', () => {
+    const policyIndex = buildPolicyIndex(contractsRoot);
+
+    let doc;
+    try {
+      doc = yaml.load(readFileSync(join(contractsRoot, 'intake-annotations.yaml'), 'utf8'));
+    } catch {
+      return;
+    }
+
+    const errors = validateAnnotationPolicyCitations(doc, policyIndex);
+    assert.deepEqual(
+      errors,
+      [],
+      `Policy citation errors:\n${errors.map(e => `  ${e}`).join('\n')}`
     );
   });
 });

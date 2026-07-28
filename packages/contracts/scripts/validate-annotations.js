@@ -133,6 +133,99 @@ export function buildResourceSchemaMap(specsDir) {
 }
 
 /**
+ * Build an index of valid operation keys from all state machine files.
+ * Keys are formatted as "<object-lowercase>.<action-id>" (e.g. "application.submit").
+ * Returns a Set<string>.
+ */
+export function buildStateMachineActionIndex(specsDir) {
+  const index = new Set();
+  let files;
+  try { files = readdirSync(specsDir); } catch { return index; }
+
+  for (const file of files) {
+    if (!file.endsWith('-state-machine.yaml')) continue;
+    const filePath = join(specsDir, file);
+    let doc;
+    try { doc = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+
+    for (const machine of doc?.machines || []) {
+      if (!machine.object) continue;
+      const objectKey = machine.object.toLowerCase();
+      for (const action of machine.actions || []) {
+        if (action.id) index.add(`${objectKey}.${action.id}`);
+      }
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Validate a single annotation operation key against the state machine action index.
+ * Key format: "object.action-id" (e.g. "application.submit").
+ *
+ * Returns null on success, or an error message string on failure.
+ */
+export function validateAnnotationOperation(operationKey, actionIndex) {
+  if (actionIndex.size === 0) return null; // no state machines loaded — skip
+  if (!actionIndex.has(operationKey)) {
+    return `Operation "${operationKey}" does not match any declared state machine action`;
+  }
+  return null;
+}
+
+/**
+ * Build an index of valid policy IDs from all policy registry files.
+ * Returns a Set<string>.
+ */
+export function buildPolicyIndex(specsDir) {
+  const index = new Set();
+  let files;
+  try { files = readdirSync(specsDir); } catch { return index; }
+
+  for (const file of files) {
+    if (!file.includes('-registry-policies') || !file.endsWith('.yaml')) continue;
+    const filePath = join(specsDir, file);
+    let doc;
+    try { doc = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+
+    for (const policyId of Object.keys(doc?.policies || {})) {
+      index.add(policyId);
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Validate all policy citations in an annotation document against the policy index.
+ * Checks schema, operations, and events sections.
+ *
+ * Returns an array of error message strings (empty if all citations are valid).
+ */
+export function validateAnnotationPolicyCitations(annotationDoc, policyIndex) {
+  if (policyIndex.size === 0) return []; // no policies loaded — skip
+
+  const errors = [];
+
+  function checkSection(sectionName, section) {
+    for (const [key, entry] of Object.entries(section || {})) {
+      for (const policyId of entry?.policies || []) {
+        if (!policyIndex.has(policyId)) {
+          errors.push(`Policy "${policyId}" cited at ${sectionName}["${key}"] not found in policy registry`);
+        }
+      }
+    }
+  }
+
+  checkSection('schema', annotationDoc?.schema);
+  checkSection('operations', annotationDoc?.operations);
+  checkSection('events', annotationDoc?.events);
+
+  return errors;
+}
+
+/**
  * Validate a single annotation path key against the resource schema map.
  * Path format: "resource.field" or "resource.collection[].field.subfield"
  *
