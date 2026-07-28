@@ -286,6 +286,75 @@ export function validateAnnotationPath(pathKey, resourceSchemaMap) {
   return null;
 }
 
+/**
+ * Build a cross-domain schema index from all OpenAPI specs.
+ * Returns Map<domain, Set<schemaName>>, keyed by the spec's info.x-domain value.
+ */
+export function buildCrossDomainSchemaIndex(specsDir) {
+  const index = new Map();
+  let files;
+  try { files = readdirSync(specsDir); } catch { return index; }
+
+  for (const file of files) {
+    if (!file.endsWith('-openapi.yaml')) continue;
+    const filePath = join(specsDir, file);
+    let spec;
+    try { spec = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+
+    const domain = spec?.info?.['x-domain'];
+    if (!domain) continue;
+
+    if (!index.has(domain)) index.set(domain, new Set());
+    for (const schemaName of Object.keys(spec?.components?.schemas || {})) {
+      index.get(domain).add(schemaName);
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Walk all properties in a schema, recursing into allOf branches.
+ * Yields { schemaName, propName, rel } for each x-relationship with a domain qualifier.
+ */
+function* walkRelationships(schemaName, schema) {
+  for (const branch of schema.allOf || []) yield* walkRelationships(schemaName, branch);
+  for (const [propName, propSchema] of Object.entries(schema.properties || {})) {
+    const rel = propSchema?.['x-relationship'];
+    if (rel?.resource && rel?.domain) yield { schemaName, propName, rel };
+  }
+}
+
+/**
+ * Validate that cross-domain x-relationship targets exist in the referenced
+ * domain's OpenAPI spec. Only checks references that declare domain: — local
+ * and External/Polymorphic references are out of scope.
+ *
+ * Returns an array of error message strings.
+ */
+export function validateRelationshipTargets(spec, schemaIndex) {
+  if (schemaIndex.size === 0) return [];
+
+  const errors = [];
+  const reservedResources = new Set(['External', 'Polymorphic']);
+
+  for (const [schemaName, schema] of Object.entries(spec?.components?.schemas || {})) {
+    for (const { propName, rel } of walkRelationships(schemaName, schema)) {
+      if (reservedResources.has(rel.resource)) continue;
+      if (rel.resource.includes('/')) continue; // path-style resource, skip
+
+      const domainSchemas = schemaIndex.get(rel.domain);
+      if (!domainSchemas) {
+        errors.push(`${schemaName}.${propName}: x-relationship references unknown domain "${rel.domain}"`);
+      } else if (!domainSchemas.has(rel.resource)) {
+        errors.push(`${schemaName}.${propName}: x-relationship resource "${rel.resource}" not found in domain "${rel.domain}"`);
+      }
+    }
+  }
+
+  return errors;
+}
+
 async function main() {
   const options = parseArgs();
 
@@ -362,6 +431,35 @@ async function main() {
         console.error(`        at: schema["${pathKey}"]`);
       }
       totalErrors += fileErrors.length;
+    }
+  }
+
+  console.log('');
+
+  // ── Cross-domain x-relationship target validation ──────────────────────────
+
+  console.log('='.repeat(70));
+  console.log('Cross-Domain Relationship Target Validator');
+  console.log('='.repeat(70));
+  console.log(`  Directory: ${specDir}\n`);
+
+  const schemaIndex = buildCrossDomainSchemaIndex(specDir);
+  const openApiFiles = files.filter(f => f.endsWith('-openapi.yaml'));
+
+  for (const file of openApiFiles) {
+    const filePath = join(specDir, file);
+    let spec;
+    try { spec = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+
+    const relErrors = validateRelationshipTargets(spec, schemaIndex);
+    if (relErrors.length === 0) {
+      console.log(`  ✓ ${file}`);
+    } else {
+      console.error(`  ✗ ${file}`);
+      for (const msg of relErrors) {
+        console.error(`      ${msg}`);
+      }
+      totalErrors += relErrors.length;
     }
   }
 
