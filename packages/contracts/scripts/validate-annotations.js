@@ -287,6 +287,119 @@ export function validateAnnotationPath(pathKey, resourceSchemaMap) {
 }
 
 /**
+ * Build an AsyncAPI channel index from all *-asyncapi.yaml files.
+ * Returns:
+ *   byFile: Map<filename, Set<channelKey>> — for validating emit steps against a specific spec
+ *   all:    Set<channelKey>                — for validating subscription steps across all domains
+ */
+export function buildAsyncApiChannelIndex(specsDir) {
+  const byFile = new Map();
+  const all = new Set();
+  let files;
+  try { files = readdirSync(specsDir); } catch { return { byFile, all }; }
+
+  for (const file of files) {
+    if (!file.endsWith('-asyncapi.yaml')) continue;
+    const filePath = join(specsDir, file);
+    let doc;
+    try { doc = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+
+    const channels = new Set(Object.keys(doc?.channels || {}));
+    byFile.set(file, channels);
+    for (const ch of channels) all.add(ch);
+  }
+
+  return { byFile, all };
+}
+
+/**
+ * Recursively collect all emit type values from a state machine document.
+ * Returns an array of { type, path } for each emit step found.
+ */
+function collectEmitSteps(node, path = '') {
+  const results = [];
+  if (!node || typeof node !== 'object') return results;
+  if (Array.isArray(node)) {
+    node.forEach((item, i) => results.push(...collectEmitSteps(item, `${path}[${i}]`)));
+    return results;
+  }
+  if ('emit' in node && node.emit?.type) {
+    results.push({ type: node.emit.type, path: `${path}.emit` });
+  }
+  for (const [key, val] of Object.entries(node)) {
+    if (key !== 'emit') results.push(...collectEmitSteps(val, `${path}.${key}`));
+  }
+  return results;
+}
+
+/**
+ * Collect all event subscription type values from a state machine document.
+ * Subscriptions are arrays of { type: '...' } objects under each machine's events.
+ */
+function collectSubscriptionTypes(doc) {
+  const types = [];
+  for (const machine of doc?.machines || []) {
+    for (const event of machine.events || []) {
+      if (event.type) types.push(event.type);
+    }
+  }
+  return types;
+}
+
+/**
+ * Validate that a state machine's emit and subscription event types exist in
+ * the AsyncAPI channel index.
+ *
+ * - Emit types are validated against the spec declared in eventsSpec.
+ * - Subscription types are validated against all known channels (cross-domain).
+ *
+ * Returns an array of error message strings.
+ */
+export function validateStateMachineEvents(doc, channelIndex) {
+  const { byFile, all } = channelIndex;
+  if (all.size === 0) return [];
+
+  const errors = [];
+  const eventsSpec = doc?.eventsSpec;
+
+  // Validate emit types against the declared eventsSpec
+  const ownChannels = eventsSpec ? (byFile.get(eventsSpec) ?? null) : null;
+  for (const { type, path } of collectEmitSteps(doc)) {
+    if (ownChannels === null) {
+      // eventsSpec not declared or not found — validate against all channels
+      if (!all.has(type)) {
+        errors.push(`emit type "${type}" at ${path} not found in any AsyncAPI spec`);
+      }
+    } else if (!ownChannels.has(type)) {
+      errors.push(`emit type "${type}" at ${path} not found in ${eventsSpec}`);
+    }
+  }
+
+  // Build set of internal timer event types to skip — these are fired by the
+  // workflow engine's timer scheduler, not published as external AsyncAPI events.
+  // Timer events follow {domain}.{timerId} where domain is the eventsSpec prefix.
+  const timerTypes = new Set();
+  if (eventsSpec) {
+    const domain = eventsSpec.replace(/-asyncapi\.yaml$/, '');
+    for (const machine of doc?.machines || []) {
+      for (const timer of machine.timers || []) {
+        if (timer.id) timerTypes.add(`${domain}.${timer.id}`);
+      }
+    }
+  }
+
+  // Validate subscription types against all known channels
+  for (const type of collectSubscriptionTypes(doc)) {
+    if (timerTypes.has(type)) continue;
+    if (!all.has(type)) {
+      errors.push(`subscription type "${type}" not found in any AsyncAPI spec`);
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Build a cross-domain schema index from all OpenAPI specs.
  * Returns Map<domain, Set<schemaName>>, keyed by the spec's info.x-domain value.
  */
@@ -436,6 +549,35 @@ async function main() {
 
   console.log('');
 
+  // ── AsyncAPI event type validation ────────────────────────────────────────
+
+  console.log('='.repeat(70));
+  console.log('AsyncAPI Event Type Validator');
+  console.log('='.repeat(70));
+  console.log(`  Directory: ${specDir}\n`);
+
+  const channelIndex = buildAsyncApiChannelIndex(specDir);
+  const stateMachineFiles = files.filter(f => f.endsWith('-state-machine.yaml'));
+
+  for (const file of stateMachineFiles) {
+    const filePath = join(specDir, file);
+    let doc;
+    try { doc = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+
+    const eventErrors = validateStateMachineEvents(doc, channelIndex);
+    if (eventErrors.length === 0) {
+      console.log(`  ✓ ${file}`);
+    } else {
+      console.error(`  ✗ ${file}`);
+      for (const msg of eventErrors) {
+        console.error(`      ${msg}`);
+      }
+      totalErrors += eventErrors.length;
+    }
+  }
+
+  console.log('');
+
   // ── Cross-domain x-relationship target validation ──────────────────────────
 
   console.log('='.repeat(70));
@@ -473,4 +615,6 @@ async function main() {
   console.log('Annotation validation passed.');
 }
 
-main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}
