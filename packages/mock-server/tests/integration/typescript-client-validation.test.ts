@@ -1818,6 +1818,70 @@ describe('Zod sweep — eligibility (extended)', () => {
   });
 });
 
+describe('Pagination shape — cross-API', () => {
+  before(async () => { await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' }); });
+
+  function assertPaginationShape(data: unknown, label: string) {
+    const d = data as Record<string, unknown>;
+    assert.ok(Array.isArray(d.items), `${label}: items must be array`);
+    assert.equal(typeof d.total, 'number', `${label}: total must be number`);
+    assert.equal(typeof d.limit, 'number', `${label}: limit must be number`);
+    assert.equal(typeof d.offset, 'number', `${label}: offset must be number`);
+    assert.equal(typeof d.hasNext, 'boolean', `${label}: hasNext must be boolean`);
+  }
+
+  it('workflow tasks — pagination fields present and typed correctly', async () => {
+    const res = await fetch(`${BASE_URL}/workflow/tasks?limit=1&offset=0`);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assertPaginationShape(data, 'workflow/tasks');
+    assert.equal((data as { limit: number }).limit, 1);
+  });
+
+  it('intake applications — pagination fields present and typed correctly', async () => {
+    const res = await fetch(`${BASE_URL}/intake/applications?limit=1&offset=0`);
+    assert.equal(res.status, 200);
+    assertPaginationShape(await res.json(), 'intake/applications');
+  });
+
+  it('users — pagination fields present and typed correctly', async () => {
+    const res = await fetch(`${BASE_URL}/identity-access/users?limit=1&offset=0`);
+    assert.equal(res.status, 200);
+    assertPaginationShape(await res.json(), 'identity-access/users');
+  });
+
+  it('platform events — pagination fields present and typed correctly', async () => {
+    const res = await fetch(`${BASE_URL}/platform/events?limit=1&offset=0`);
+    assert.equal(res.status, 200);
+    assertPaginationShape(await res.json(), 'platform/events');
+  });
+
+  it('hasNext is false when total <= limit', async () => {
+    // limit=1000 should exceed any seeded collection
+    const res = await fetch(`${BASE_URL}/workflow/tasks?limit=1000&offset=0`);
+    const data = await res.json() as { total: number; hasNext: boolean };
+    assert.equal(data.hasNext, false, `hasNext should be false when limit exceeds total (total=${data.total})`);
+  });
+
+  it('offset skips records — page 1 and page 2 return different items', async () => {
+    // Create two tasks so we have at least 2 items regardless of seed state
+    await fetch(`${BASE_URL}/workflow/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'pagination-test-a', status: 'pending' }),
+    });
+    await fetch(`${BASE_URL}/workflow/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'pagination-test-b', status: 'pending' }),
+    });
+    const p1 = await (await fetch(`${BASE_URL}/workflow/tasks?limit=1&offset=0`)).json() as { items: Array<{ id: string }> };
+    const p2 = await (await fetch(`${BASE_URL}/workflow/tasks?limit=1&offset=1`)).json() as { items: Array<{ id: string }> };
+    assert.ok(p1.items.length === 1 && p2.items.length === 1, 'both pages must return one item');
+    assert.notEqual(p1.items[0].id, p2.items[0].id, 'offset must return a different item');
+  });
+});
+
 describe('Error response shapes', () => {
   before(async () => { await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' }); });
 

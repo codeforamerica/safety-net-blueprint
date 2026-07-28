@@ -105,18 +105,62 @@ async function testApi(api, examples) {
     failed++;
   }
 
-  // Test 2: LIST with pagination
+  // Test 2: LIST with pagination — shape, limit enforcement, offset, hasNext
   try {
-    console.log(`\n  2. GET ${apiPath}?limit=1&offset=0 (pagination)`);
-    const response = await fetch(`${BASE_URL}${apiPath}?limit=1&offset=0`);
-    const data = await response.json();
+    console.log(`\n  2. GET ${apiPath}?limit=1&offset=0 (pagination shape + enforcement)`);
+    const r1 = await fetch(`${BASE_URL}${apiPath}?limit=1&offset=0`);
+    const d1 = await r1.json();
 
-    if (data.limit === 1 && data.items.length <= 1) {
-      console.log(`     ✓ PASS: Pagination works correctly`);
+    const shapeOk = typeof d1.total === 'number' && typeof d1.limit === 'number' &&
+      typeof d1.offset === 'number' && typeof d1.hasNext === 'boolean' &&
+      Array.isArray(d1.items);
+    const limitOk = d1.limit === 1 && d1.items.length <= 1;
+    const hasNextOk = d1.total <= 1 ? d1.hasNext === false : d1.hasNext === true;
+
+    // Verify offset skips: page 2 should differ from page 1 (when enough items exist)
+    let offsetOk = true;
+    if (d1.total >= 2) {
+      const r2 = await fetch(`${BASE_URL}${apiPath}?limit=1&offset=1`);
+      const d2 = await r2.json();
+      offsetOk = d1.items.length > 0 && d2.items.length > 0 &&
+        d1.items[0].id !== d2.items[0].id;
+    }
+
+    if (shapeOk && limitOk && hasNextOk && offsetOk) {
+      console.log(`     ✓ PASS: Pagination shape, limit, hasNext, and offset all correct`);
       passed++;
     } else {
-      console.log('     ✗ FAIL: Pagination not working');
+      const issues = [];
+      if (!shapeOk) issues.push('missing pagination fields');
+      if (!limitOk) issues.push(`limit not enforced (got ${d1.items.length} items)`);
+      if (!hasNextOk) issues.push(`hasNext=${d1.hasNext} incorrect for total=${d1.total}`);
+      if (!offsetOk) issues.push('offset did not skip records');
+      console.log(`     ✗ FAIL: ${issues.join('; ')}`);
       failed++;
+    }
+  } catch (error) {
+    console.log(`     ✗ FAIL: ${error.message}`);
+    failed++;
+  }
+
+  // Test 2b: sort — createdAt:desc should return items newest-first
+  try {
+    console.log(`\n  2b. GET ${apiPath}?sort=createdAt:desc (sort order)`);
+    const response = await fetch(`${BASE_URL}${apiPath}?sort=createdAt:desc&limit=10`);
+    const data = await response.json();
+
+    if (data.items && data.items.length >= 2) {
+      const dates = data.items.map(i => new Date(i.createdAt).getTime());
+      const sorted = dates.every((d, i) => i === 0 || dates[i - 1] >= d);
+      if (sorted) {
+        console.log(`     ✓ PASS: Items returned newest-first`);
+        passed++;
+      } else {
+        console.log(`     ✗ FAIL: Items not in descending createdAt order`);
+        failed++;
+      }
+    } else {
+      console.log(`     ⚠️  SKIP: Fewer than 2 items; sort order not verifiable`);
     }
   } catch (error) {
     console.log(`     ✗ FAIL: ${error.message}`);
