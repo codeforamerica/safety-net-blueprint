@@ -1818,6 +1818,72 @@ describe('Zod sweep — eligibility (extended)', () => {
   });
 });
 
+describe('Error response shapes', () => {
+  before(async () => { await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' }); });
+
+  function assertErrorShape(body: unknown, expectedCode: string) {
+    const b = body as { code?: string; message?: string; details?: unknown[] };
+    assert.equal(b.code, expectedCode, `expected code=${expectedCode}, got ${b.code}`);
+    assert.equal(typeof b.message, 'string', 'message must be a string');
+    if (b.details !== undefined) {
+      assert.ok(Array.isArray(b.details), 'details must be an array when present');
+    }
+  }
+
+  it('404 — unknown resource returns NOT_FOUND with correct shape', async () => {
+    const res = await fetch(`${BASE_URL}/workflow/tasks/00000000-0000-0000-0000-000000000000`);
+    assert.equal(res.status, 404);
+    assertErrorShape(await res.json(), 'NOT_FOUND');
+  });
+
+  it('422 — invalid POST body returns VALIDATION_ERROR with details', async () => {
+    const res = await fetch(`${BASE_URL}/workflow/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notAValidField: true }),
+    });
+    assert.equal(res.status, 422);
+    const body = await res.json() as { code?: string; details?: unknown[] };
+    assertErrorShape(body, 'VALIDATION_ERROR');
+    assert.ok(Array.isArray(body.details) && body.details.length > 0, 'VALIDATION_ERROR must include details');
+  });
+
+  it('409 — invalid state transition returns CONFLICT with correct shape', async () => {
+    const create = await fetch(`${BASE_URL}/workflow/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'error-shape-test', status: 'pending' }),
+    });
+    const task = await create.json() as { id: string };
+    // Claim once to put it in_progress, then claim again to trigger 409
+    await fetch(`${BASE_URL}/workflow/tasks/${task.id}/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'w1', 'X-Caller-Roles': 'case_worker' },
+    });
+    const res = await fetch(`${BASE_URL}/workflow/tasks/${task.id}/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'w2', 'X-Caller-Roles': 'case_worker' },
+    });
+    assert.equal(res.status, 409);
+    assertErrorShape(await res.json(), 'CONFLICT');
+  });
+
+  it('400 — RPC without required X-Caller-Id returns BAD_REQUEST with correct shape', async () => {
+    const create = await fetch(`${BASE_URL}/workflow/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'error-shape-test-400', status: 'pending' }),
+    });
+    const task = await create.json() as { id: string };
+    const res = await fetch(`${BASE_URL}/workflow/tasks/${task.id}/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    assert.equal(res.status, 400);
+    assertErrorShape(await res.json(), 'BAD_REQUEST');
+  });
+});
+
 // Node.js v20: file-level after() fires before the last registered item completes.
 // This dummy test ensures after(teardownServer) runs after all suites finish.
 it('teardown guard', () => {});
