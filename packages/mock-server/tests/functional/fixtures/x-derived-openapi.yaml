@@ -1,0 +1,138 @@
+openapi: 3.1.0
+info:
+  title: X-Derived Fixture API
+  version: 1.0.0
+  x-domain: x-derived
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    Fixture spec for functional testing of x-derived field evaluation through
+    the full mock server pipeline. Tests that fields annotated with x-derived
+    carry CEL expressions evaluated at read time with $this bound to the record.
+
+    Uses a Widget resource where widgetCode is derived from $this.id (mirrors the
+    users spec pattern where userId is derived from id).
+servers:
+  - url: /x-derived
+    description: Functional test server (unique prefix avoids collision with other fixture specs)
+tags:
+  - name: Widgets
+    description: Manage widgets.
+
+paths:
+  /widgets:
+    get:
+      summary: List widgets
+      operationId: listWidgets
+      tags: [Widgets]
+      parameters:
+        - $ref: "../../../../contracts/components/parameters.yaml#/SearchQueryParam"
+        - $ref: "../../../../contracts/components/parameters.yaml#/LimitParam"
+        - $ref: "../../../../contracts/components/parameters.yaml#/OffsetParam"
+        - $ref: "../../../../contracts/components/parameters.yaml#/SortParam"
+      responses:
+        "200":
+          description: List of widgets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WidgetList"
+        "500":
+          $ref: "../../../../contracts/components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create widget
+      operationId: createWidget
+      tags: [Widgets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WidgetCreate"
+      responses:
+        "201":
+          description: Widget created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Widget"
+        "422":
+          $ref: "../../../../contracts/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "../../../../contracts/components/responses.yaml#/InternalError"
+
+  /widgets/{widgetId}:
+    parameters:
+      - name: widgetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get widget
+      operationId: getWidget
+      tags: [Widgets]
+      responses:
+        "200":
+          description: Widget.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Widget"
+        "404":
+          $ref: "../../../../contracts/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "../../../../contracts/components/responses.yaml#/InternalError"
+
+components:
+  schemas:
+    Widget:
+      type: object
+      required:
+        - id
+        - widgetCode
+        - label
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        widgetCode:
+          type: string
+          readOnly: true
+          x-derived: "$this.id"
+          description: Stable alias for id, demonstrating x-derived CEL evaluation.
+        label:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    WidgetCreate:
+      type: object
+      required:
+        - label
+      properties:
+        label:
+          type: string
+
+    WidgetList:
+      allOf:
+        - $ref: "../../../../contracts/components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Widget"
