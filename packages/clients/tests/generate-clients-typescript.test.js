@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable } from '../scripts/generate-clients-typescript.js';
+import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable } from '../scripts/generate-clients-typescript.js';
 
 describe('Client Generation', () => {
   describe('parseArgs', () => {
@@ -262,6 +262,135 @@ properties:
       // Should not throw and should return empty set
       const result = collectNullableFieldNames(dir);
       assert.strictEqual(result.size, 0);
+    });
+  });
+
+  describe('generateAnnotationsAndPolicies', () => {
+    function makeDir(files) {
+      const specsDir = mkdtempSync(join(tmpdir(), 'specs-'));
+      const outputDir = mkdtempSync(join(tmpdir(), 'out-'));
+      for (const [name, content] of Object.entries(files)) {
+        writeFileSync(join(specsDir, name), content);
+      }
+      return { specsDir, outputDir };
+    }
+
+    function readAnnotations(outputDir) {
+      return readFileSync(join(outputDir, 'annotations.ts'), 'utf8');
+    }
+
+    it('uses domain property from file as export name', async () => {
+      const { specsDir, outputDir } = makeDir({
+        'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock]
+operations: {}
+events: {}
+`,
+      });
+      const exportNames = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
+      assert.ok(exportNames.includes('IntakeAnnotations'));
+      assert.ok(readAnnotations(outputDir).includes('export const IntakeAnnotations'));
+    });
+
+    it('uses domain property over filename when they differ', async () => {
+      const { specsDir, outputDir } = makeDir({
+        'foo-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock]
+operations: {}
+events: {}
+`,
+      });
+      const exportNames = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
+      assert.ok(exportNames.includes('IntakeAnnotations'), 'should use domain from file, not filename');
+      assert.ok(!exportNames.includes('FooAnnotations'), 'should not use filename-derived name');
+    });
+
+    it('falls back to filename when domain property is absent', async () => {
+      const { specsDir, outputDir } = makeDir({
+        'workflow-annotations.yaml': `
+schema:
+  task.assignedAt:
+    policies: []
+operations: {}
+events: {}
+`,
+      });
+      const exportNames = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
+      assert.ok(exportNames.includes('WorkflowAnnotations'));
+    });
+
+    it('generates exports for multiple domains', async () => {
+      const { specsDir, outputDir } = makeDir({
+        'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock]
+operations: {}
+events: {}
+`,
+        'workflow-annotations.yaml': `
+domain: workflow
+schema: {}
+operations:
+  task.assign:
+    policies: []
+events: {}
+`,
+      });
+      const exportNames = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
+      assert.ok(exportNames.includes('IntakeAnnotations'));
+      assert.ok(exportNames.includes('WorkflowAnnotations'));
+      const content = readAnnotations(outputDir);
+      assert.ok(content.includes('export const IntakeAnnotations'));
+      assert.ok(content.includes('export const WorkflowAnnotations'));
+    });
+
+    it('merges multiple files with the same domain', async () => {
+      const { specsDir, outputDir } = makeDir({
+        'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock]
+operations: {}
+events: {}
+`,
+        'intake-annotations-extra.yaml': `
+domain: intake
+schema:
+  application.members.ssn:
+    dataClassification: [pii, fti]
+operations: {}
+events: {}
+`,
+      });
+      const exportNames = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
+      assert.deepStrictEqual(exportNames, ['IntakeAnnotations']);
+      const content = readAnnotations(outputDir);
+      assert.ok(content.includes('application.submittedAt'));
+      assert.ok(content.includes('application.members.ssn'));
+    });
+
+    it('generates no file when no annotation files are present', async () => {
+      const { specsDir, outputDir } = makeDir({
+        'intake-openapi.yaml': 'openapi: 3.1.0\ninfo:\n  title: Test\n  version: 1.0.0\n',
+      });
+      const exportNames = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
+      assert.deepStrictEqual(exportNames, []);
+      assert.throws(() => readAnnotations(outputDir), 'annotations.ts should not be written');
     });
   });
 
