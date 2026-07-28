@@ -252,10 +252,25 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
 
-  for (const endpoint of apiMetadata.endpoints) {
+  // Sort endpoints so literal path segments are registered before parameterized ones.
+  // Express uses first-match-wins, so /users/me must be registered before /users/:userId
+  // regardless of the order they appear in the OpenAPI spec.
+  const sortedEndpoints = [...apiMetadata.endpoints].sort((a, b) => {
+    const aHasParam = a.path.includes('{');
+    const bHasParam = b.path.includes('{');
+    if (aHasParam !== bHasParam) return aHasParam ? 1 : -1;
+    return 0;
+  });
+
+  for (const endpoint of sortedEndpoints) {
     const expressPath = convertPathFormat(endpoint.path);
     const method = endpoint.method.toLowerCase();
-    const collectionName = deriveCollectionName(endpoint.path, apiMetadata.serverBasePath);
+    // For /me endpoints, derive the collection from the parent path (strip /me suffix)
+    // so the handler looks up records in the parent resource collection, not a phantom 'me' collection.
+    const collectionPath = endpoint.path.endsWith('/me')
+      ? endpoint.path.slice(0, -3)
+      : endpoint.path;
+    const collectionName = deriveCollectionName(collectionPath, apiMetadata.serverBasePath);
     const endpointWithCollection = { ...endpoint, collectionName };
 
     let handler = null;

@@ -1,0 +1,157 @@
+openapi: 3.1.0
+info:
+  title: Auth Context Fixture API
+  version: 1.0.0
+  x-domain: auth-context
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    Fixture spec for functional testing of the X-Caller-Id auth context mechanism
+    through the full mock server pipeline. Tests that GET /users/me resolves the
+    caller's own record via the X-Caller-Id header, and returns appropriate error
+    responses when the header is absent or references an unknown user.
+servers:
+  - url: /auth-context
+    description: Functional test server (unique prefix avoids collision with other fixture specs)
+tags:
+  - name: Users
+    description: Manage users.
+
+paths:
+  /users:
+    get:
+      summary: List users
+      operationId: listUsers
+      tags: [Users]
+      parameters:
+        - $ref: "../../../../contracts/components/parameters.yaml#/SearchQueryParam"
+        - $ref: "../../../../contracts/components/parameters.yaml#/LimitParam"
+        - $ref: "../../../../contracts/components/parameters.yaml#/OffsetParam"
+        - $ref: "../../../../contracts/components/parameters.yaml#/SortParam"
+      responses:
+        "200":
+          description: List of users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
+        "500":
+          $ref: "../../../../contracts/components/responses.yaml#/InternalError"
+
+    post:
+      summary: Create user
+      operationId: createUser
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "201":
+          description: User created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "422":
+          $ref: "../../../../contracts/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "../../../../contracts/components/responses.yaml#/InternalError"
+
+  /users/me:
+    get:
+      summary: Get authenticated user
+      operationId: getMe
+      tags: [Users]
+      parameters:
+        - name: X-Caller-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Mock auth header — resolves the caller's user record.
+      responses:
+        "200":
+          description: The authenticated user's record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "../../../../contracts/components/responses.yaml#/Unauthorized"
+        "404":
+          $ref: "../../../../contracts/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "../../../../contracts/components/responses.yaml#/InternalError"
+
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get user
+      operationId: getUser
+      tags: [Users]
+      responses:
+        "200":
+          description: User.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "../../../../contracts/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "../../../../contracts/components/responses.yaml#/InternalError"
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    UserCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+
+    UserList:
+      allOf:
+        - $ref: "../../../../contracts/components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/User"
