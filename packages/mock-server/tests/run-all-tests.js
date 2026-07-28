@@ -170,6 +170,7 @@ async function runAllTests() {
   let failed = 0;
   const failedTests = [];
 
+  let integrationServerStarted = false;
   let functionalServerStarted = false;
 
   async function bail(label, error) {
@@ -178,6 +179,7 @@ async function runAllTests() {
     console.error(`\n✗ ${label} failed: ${error.message}`);
     console.error('\nStopping — fix the failure above before continuing.');
     console.error(`  ✗ ${label}`);
+    if (integrationServerStarted) await stopServer(false).catch(() => {});
     if (functionalServerStarted) await stopFunctionalServer().catch(() => {});
     process.exit(1);
   }
@@ -218,6 +220,21 @@ async function runAllTests() {
   if (runIntegration) {
     console.log('\n🔗 Integration Tests');
     console.log('-'.repeat(70));
+
+    // Start the mock server once for all integration and Postman tests.
+    // Individual test files check isServerRunning() and skip startup when
+    // the server is already available, so teardownServer() is a no-op for them.
+    const integrationResolvedDir = resolve(__dirname, '..', '..', 'resolved');
+    const integrationSeedDir = resolve(__dirname, 'integration', 'seed');
+    const integrationAlreadyRunning = await isServerRunning().catch(() => false);
+    if (!integrationAlreadyRunning) {
+      console.log('Starting mock server...');
+      await startMockServer([integrationResolvedDir], integrationSeedDir);
+      await new Promise(res => setTimeout(res, 1500));
+      integrationServerStarted = true;
+      console.log('Mock server started\n');
+    }
+
     for (const testFile of integrationTestFiles) {
       await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
         .then(() => passed++)
@@ -234,25 +251,15 @@ async function runAllTests() {
           .catch(err => bail(testFile, err));
       }
 
-      if (postmanCollections.length > 0) {
-        const resolvedDir = resolve(__dirname, '..', '..', 'resolved');
-        const alreadyRunning = await isServerRunning().catch(() => false);
-        if (!alreadyRunning) {
-          console.log('Starting mock server...');
-          await startMockServer([resolvedDir], seedDir);
-          await new Promise(res => setTimeout(res, 1500));
-          console.log('Mock server started\n');
-        }
-
-        for (const collectionFile of postmanCollections) {
-          await withTimeout(runPostmanCollection(collectionFile), TEST_TIMEOUT_MS, collectionFile)
-            .then(() => passed++)
-            .catch(err => bail(collectionFile, err));
-        }
-
-        if (!alreadyRunning) await stopServer(false);
+      for (const collectionFile of postmanCollections) {
+        await withTimeout(runPostmanCollection(collectionFile), TEST_TIMEOUT_MS, collectionFile)
+          .then(() => passed++)
+          .catch(err => bail(collectionFile, err));
       }
     }
+
+    if (integrationServerStarted) await stopServer(false);
+    integrationServerStarted = false;
   }
 
   // Run functional tests if requested
