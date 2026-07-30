@@ -6,12 +6,13 @@
   "scripts": {
     "build": "node build.js",
     "build:context-map": "node build.js --only=context-map",
-    "build:service-blueprints": "node build.js --only=service-blueprints",
-    "build:data-explorer": "node build.js --only=data-explorer",
+    "build:data-dictionaries": "node build.js --only=data-dictionaries",
     "build:state-machine-docs": "node build.js --only=state-machine-docs",
     "build:adoption-model": "node build.js --only=adoption-model",
-    "field-inventory:generate": "node data-explorer/generate-field-inventory.mjs",
-    "test": "node --test data-explorer/tests/"
+    "build:action-flow": "node diagrams/sequence-diagrams/src/render-action-flow.js diagrams/sequence-diagrams",
+    "field-inventory:generate": "node tools/data-dictionaries/generate-field-inventory.mjs",
+    "serve": "npx serve . -l 4000",
+    "test": "node --test tools/data-dictionaries/tests/"
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",

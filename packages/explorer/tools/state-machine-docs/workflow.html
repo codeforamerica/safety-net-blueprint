@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workflow — State Machine Docs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+  </style>
+</head>
+<body>
+<div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;">
+  <a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a>
+  <span style="color:#C2C0E8;opacity:0.5;">/</span>
+  <a href="index.html" style="color:#C2C0E8;text-decoration:none;">State Machine Docs</a>
+  <span style="color:#C2C0E8;opacity:0.5;">/</span>
+  <span style="color:#FFFFFF;">Workflow</span>
+</div>
+<div style="background:#2B1A78;padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid #5650BE;">
+  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="eligibility.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Eligibility</a><a href="intake.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Intake</a><a href="workflow.html" style="color:#FFFFFF;font-size:12px;font-weight:700;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:rgba(255,255,255,0.15);">Workflow</a></nav>
+</div>
+<div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+  
+    <div style="margin-bottom:2rem;">
+      <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Workflow State Machine</h1>
+      <p style="font-size:12px;color:#666;">Domain: <code>workflow</code> · API spec: <code>workflow-openapi.yaml</code></p>
+    </div>
+    <section style="margin-bottom:2.5rem;">
+      <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">Task</h2>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
+      <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
+        <table>
+          <thead><tr>
+            <th>State</th><th>Description</th><th style="text-align:center;">SLA clock</th>
+          </tr></thead>
+          <tbody><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">pending</span></td>
+        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">in_progress</span></td>
+        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;white-space:nowrap;">completed</span></td>
+        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">escalated</span></td>
+        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">cancelled</span></td>
+        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">awaiting_client</span></td>
+        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">paused</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">awaiting_verification</span></td>
+        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">paused</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">pending_review</span></td>
+        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
+      </tr></tbody>
+        </table>
+      </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Actions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table>
+            <thead><tr>
+              <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
+            </tr></thead>
+            <tbody><tr>
+          <td><strong style="color:#2B1A78;">claim</strong><br><span style="font-size:12px;color:#666;">Caseworker takes ownership of an unassigned pending task</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Assign task to the claiming worker <code>sets assignedToId</code></li><li>Emit <code>workflow.task.claimed</code> — Emit a domain event recording the claim and who claimed the task</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">complete</strong><br><span style="font-size:12px;color:#666;">Marks an in-progress task done with an outcome and optional notes</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">completed</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when work finished <code>sets completedAt</code></li><li>Store the completion outcome from the request <code>sets outcome</code></li><li>Store optional completion notes from the request <code>sets completionNotes</code></li><li>Emit <code>workflow.task.completed</code> — Emit a domain event recording the completion and its outcome</li><li>If <code>$request.createFollowUp is true</code>:<ul style="margin:2px 0 0 14px;"><li>Create a follow-up task when caller requests one</li></ul></li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">release</strong><br><span style="font-size:12px;color:#666;">Returns an in-progress task to the queue, clearing the assignment</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Clear assignment so task returns to queue <code>sets assignedToId</code></li><li>Emit <code>workflow.task.released</code> — Emit a domain event recording the release and its reason</li><li>Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.</li><li>Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">escalate</strong><br><span style="font-size:12px;color:#666;">Escalate a task; assigned workers can escalate in-progress tasks, supervisors can escalate from any state</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span>/<span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">escalated</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the task was escalated <code>sets escalatedAt</code></li><li>Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).</li><li>Emit <code>workflow.task.escalated</code> — Emit a domain event recording the escalation</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">de-escalate</strong><br><span style="font-size:12px;color:#666;">Returns an escalated task to the pending queue</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">escalated</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.</li><li>Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).</li><li>Emit <code>workflow.task.de-escalated</code> — Emit a domain event recording the de-escalation</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">cancel</strong><br><span style="font-size:12px;color:#666;">Supervisor cancels a task from any active state</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span>/<span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span>/<span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">escalated</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">cancelled</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the task was cancelled <code>sets cancelledAt</code></li><li>Emit <code>workflow.task.cancelled</code> — Emit a domain event recording the cancellation</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">reopen</strong><br><span style="font-size:12px;color:#666;">Supervisor returns a cancelled task to the pending queue</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">cancelled</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Clear the cancellation timestamp on reopen <code>sets cancelledAt</code></li><li>Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.</li><li>Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).</li><li>Emit <code>workflow.task.reopened</code> — Emit a domain event recording the reopen</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">await-client</strong><br><span style="font-size:12px;color:#666;">Pauses an in-progress task while waiting for a client response</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">awaiting_client</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the task entered a waiting state <code>sets blockedAt</code></li><li>Schedule auto-cancellation after 30 calendar days of client unresponsiveness.</li><li>Emit <code>workflow.task.awaiting_client</code> — Emit a domain event recording the block</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">await-verification</strong><br><span style="font-size:12px;color:#666;">Pauses an in-progress task while waiting for a verification result</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">awaiting_verification</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the task entered a waiting state <code>sets blockedAt</code></li><li>Schedule auto-resume after 7 calendar days waiting on verification.</li><li>Emit <code>workflow.task.awaiting_verification</code> — Emit a domain event recording the block</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">resume</strong><br><span style="font-size:12px;color:#666;">Resumes a blocked task, cancelling any active wait timers</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">awaiting_client</span>/<span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">awaiting_verification</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Clear the block timestamp on resume <code>sets blockedAt</code></li><li>Cancel the client unresponsive timer; idempotent.</li><li>Cancel the verification timeout timer; idempotent, safe to call even if already fired.</li><li>Emit <code>workflow.task.resumed</code> — Emit a domain event recording the resumption</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">auto-resume</strong><br><span style="font-size:12px;color:#666;">System resumes a verification-blocked task when the timeout fires or a verification result arrives</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">awaiting_verification</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Clear the block timestamp on system resume <code>sets blockedAt</code></li><li>Cancel the verification timeout timer; idempotent, safe to call even if already fired.</li><li>Emit <code>workflow.task.resumed</code> — Emit a domain event recording the automated resumption; causationid links to the triggering event</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">sla-escalate</strong><br><span style="font-size:12px;color:#666;">System escalates a task when an SLA timer fires (creation deadline, warning, or breach)</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span>/<span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span>/<span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">escalated</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">escalated</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>escalatedAt is not set</code>:<ul style="margin:2px 0 0 14px;"><li>Record first escalation time; not overwritten on subsequent timer-triggered escalations <code>sets escalatedAt</code></li></ul></li><li>Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).</li><li>If <code>reason is "sla_deadline_exceeded"</code>:<ul style="margin:2px 0 0 14px;"><li>Emit <code>workflow.task.sla_breached</code> — Emit a domain event recording the SLA deadline breach for federal compliance reporting</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>Emit <code>workflow.task.escalated</code> — Emit a domain event recording the automatic escalation</li></ul></li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">auto-cancel</strong><br><span style="font-size:12px;color:#666;">System cancels a client-blocked task after 30 days without a response</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">awaiting_client</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">cancelled</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the task was automatically cancelled <code>sets cancelledAt</code></li><li>Emit <code>workflow.task.cancelled</code> — Emit a domain event recording the automatic cancellation</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">submit-for-review</strong><br><span style="font-size:12px;color:#666;">Worker submits a completed task to a supervisor for review and approval</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span>/<span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">escalated</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending_review</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <code>workflow.task.submitted_for_review</code> — Emit a domain event recording the submission for review</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">approve</strong><br><span style="font-size:12px;color:#666;">Supervisor approves a submitted task and records the final outcome</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending_review</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">completed</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when work was approved and completed <code>sets completedAt</code></li><li>Store the outcome from the supervisor's approval <code>sets outcome</code></li><li>Store optional notes from the supervisor <code>sets completionNotes</code></li><li>Emit <code>workflow.task.approved</code> — Emit a domain event recording the approval</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">return-to-worker</strong><br><span style="font-size:12px;color:#666;">Supervisor sends a review-pending task back to the worker with feedback</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending_review</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <code>workflow.task.returned_to_worker</code> — Emit a domain event recording the return for revision</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">assign</strong><br><span style="font-size:12px;color:#666;">Supervisor reassigns a task to a specific caseworker or moves it to a different queue</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="color:#999;font-size:11px;">no state change</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Assign the task to the specified caseworker <code>sets assignedToId</code></li><li>Optionally move the task to a different queue <code>sets queueId</code></li><li>Emit <code>workflow.task.assigned</code> — Emit a domain event recording the assignment</li></ul></td>
+        </tr><tr>
+          <td><strong style="color:#2B1A78;">set-priority</strong><br><span style="font-size:12px;color:#666;">Supervisor manually overrides the task priority</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="color:#999;font-size:11px;">no state change</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Override the task priority <code>sets priority</code></li><li>Emit <code>workflow.task.priority_changed</code> — Emit a domain event recording the priority change</li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Event Subscriptions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:30%">
+              <col style="width:20%">
+              <col style="width:50%">
+            </colgroup>
+            <thead><tr>
+              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+            </tr></thead>
+            <tbody><tr>
+          <td><code>workflow.task.created</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.</li><li>Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).</li><li>Schedule auto-escalation 72 business hours after task creation.</li></ul></td>
+        </tr><tr>
+          <td><code>workflow.task.updated</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>$this.data.changes.exists(c, c.field is "isExpedited" || c.field is "programType")</code>:<ul style="margin:2px 0 0 14px;"><li>Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).</li></ul></li><li>If <code>$this.data.changes.exists(c, c.field is "programType" || c.field is "queueId")</code>:<ul style="margin:2px 0 0 14px;"><li>Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.</li></ul></li><li>If <code>$this.data.changes.exists(c, c.field is "slaDeadline") and slaDeadline is set</code>:<ul style="margin:2px 0 0 14px;"><li>Schedule SLA warning escalation 48 hours before the task SLA deadline.</li><li>Schedule SLA breach escalation at the task SLA deadline.</li></ul></li></ul></td>
+        </tr><tr>
+          <td><code>workflow.creation_deadline</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Auto-escalate after 72h creation deadline</li></ul></td>
+        </tr><tr>
+          <td><code>workflow.sla_warning</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Auto-escalate 48h before SLA deadline</li></ul></td>
+        </tr><tr>
+          <td><code>workflow.sla_breach</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Escalate and record SLA breach at deadline</li></ul></td>
+        </tr><tr>
+          <td><code>workflow.client_timeout</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Auto-cancel after 30 days client unresponsive</li></ul></td>
+        </tr><tr>
+          <td><code>workflow.verification_timeout</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Auto-resume after 7 days verification timeout; passes timer event ID as causationid</li></ul></td>
+        </tr><tr>
+          <td><code>eligibility.application.expedited</code></td>
+          <td><a href="eligibility.html">Eligibility/Determination</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>id is set</code>:<ul style="margin:2px 0 0 14px;"><li>{"PATCH":"workflow/tasks/$task.id","body":{"isExpedited":true,"slaType":"snap_expedited"}}</li></ul></li></ul></td>
+        </tr><tr>
+          <td><code>intake.application.submitted</code></td>
+          <td><a href="intake.html">Intake/Application</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Create an intake review task when an application is submitted</li></ul></td>
+        </tr><tr>
+          <td><code>intake.application.closed</code></td>
+          <td><a href="intake.html">Intake/Application</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>id is set and status is "pending_review"</code>:<ul style="margin:2px 0 0 14px;"><li>Complete the caseworker task that was awaiting supervisor approval</li></ul></li><li>If <code>id is set and status is "in_progress"</code>:<ul style="margin:2px 0 0 14px;"><li>Complete the active caseworker task on application close</li></ul></li><li>If <code>id is set and status is "pending"</code>:<ul style="margin:2px 0 0 14px;"><li>Cancel the unclaimed caseworker task when the application was auto-determined at submission</li></ul></li><li>If <code>id is set</code>:<ul style="margin:2px 0 0 14px;"><li>Complete the supervisor approval task</li></ul></li></ul></td>
+        </tr><tr>
+          <td><code>intake.determination.approval_needed</code></td>
+          <td><a href="intake.html">Intake/Application</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>id is set</code>:<ul style="margin:2px 0 0 14px;"><li>Move caseworker task to pending_review while supervisor reviews the determination</li></ul></li><li>Create a supervisor approval task</li></ul></td>
+        </tr><tr>
+          <td><code>intake.determination.rejected</code></td>
+          <td><a href="intake.html">Intake/Application</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>id is set</code>:<ul style="margin:2px 0 0 14px;"><li>Return the caseworker task to in_progress for revision</li></ul></li><li>If <code>id is set</code>:<ul style="margin:2px 0 0 14px;"><li>Complete the supervisor approval task with a rejected outcome</li></ul></li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+    </section>
+</div>
+</body>
+</html>
