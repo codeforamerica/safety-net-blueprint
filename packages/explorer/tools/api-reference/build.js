@@ -513,6 +513,15 @@ function buildDomainPage({ slug, spec }) {
         if (ch) ch.textContent = d.open ? '\u25BC' : '\u25B6';
       });
     });
+
+    // Breadcrumb current-page link scrolls main content to top
+    // (body has overflow:hidden here; main is the scrollable container)
+    document.querySelectorAll('a[href="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelector('main').scrollTop = 0;
+      });
+    });
   </script>
 
 </body>

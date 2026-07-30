@@ -15,7 +15,7 @@
 
   <!-- Non-scrollable header: breadcrumb + compact title bar -->
   <div style="flex-shrink:0;z-index:50;">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><span style="color:#FFFFFF;">Eligibility Adapter API</span></div>
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Eligibility Adapter API</a></div>
     <div style="background:#2B1A78;color:#FFFFFF;padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-size:0.9375rem;font-weight:800;">Eligibility Adapter API</span>
       <span style="font-size:11px;font-family:monospace;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">v1.0.0</span>
@@ -725,6 +725,15 @@
       d.addEventListener('toggle', () => {
         const ch = d.querySelector('.chevron');
         if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+
+    // Breadcrumb current-page link scrolls main content to top
+    // (body has overflow:hidden here; main is the scrollable container)
+    document.querySelectorAll('a[href="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelector('main').scrollTop = 0;
       });
     });
   </script>
