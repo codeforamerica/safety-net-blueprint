@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Eligibility Adapter API</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; }
+    details[open] summary .chevron { content: '▼'; transform: rotate(90deg); display:inline-block; }
+    details summary::-webkit-details-marker { display:none; }
+  </style>
+</head>
+<body>
+
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><span style="color:#FFFFFF;">Eligibility Adapter API</span></div>
+
+  <div style="display:flex;min-height:calc(100vh - 36px);">
+
+    <!-- Sidebar -->
+    <nav style="width:260px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#FFFFFF;border-right:1px solid #E9CCBE;padding:1rem 0.75rem;">
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:0 8px 8px;border-bottom:1px solid #eee;margin-bottom:12px;">Eligibility Adapter API</div>
+      <div style="margin-bottom:12px;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#aaa;padding:4px 8px 2px;">Evaluate</div>
+      <a href="#op-post-evaluate-expedited-screening" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:#444;text-decoration:none;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span><code style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">/evaluate/expedited-screening</code></a><a href="#op-post-evaluate-medicaid-ex-parte" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:#444;text-decoration:none;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span><code style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">/evaluate/medicaid-ex-parte</code></a><a href="#op-post-evaluate-determination" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:#444;text-decoration:none;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span><code style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">/evaluate/determination</code></a>
+    </div>
+    </nav>
+
+    <!-- Main content -->
+    <main style="flex:1;padding:2rem 2.5rem;max-width:900px;min-width:0;">
+
+      <!-- Header -->
+      <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;flex-wrap:wrap;">
+          <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;">Eligibility Adapter API</h1>
+          <span style="font-size:11px;font-family:monospace;color:#888;background:#f0f0f0;padding:1px 6px;border-radius:3px;">v1.0.0</span>
+          <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;padding:1px 6px;border-radius:100px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;">Stable</span>
+        </div>
+        <p style="font-size:13px;color:#555;line-height:1.65;max-width:680px;white-space:pre-wrap;">Contracted interface for the state-provided eligibility evaluation adapter.
+The blueprint calls these endpoints to perform program eligibility evaluations.
+States implement this interface against whatever backend system they use —
+a rules engine, a legacy case management platform, or any other system.
+The blueprint treats the adapter as a black box.
+
+Each call represents one evaluation for one application and one program.
+All request schemas extend AdapterRequest, which includes a metadata passthrough
+field the blueprint sets for correlation. Adapters must echo metadata back
+unchanged in the response. See docs/architecture/cross-cutting/adapters.md.
+</p>
+        <div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">https://adapter.example.com</code></div>
+        <div style="margin-top:6px;font-size:11px;color:#aaa;">3 endpoints</div>
+      </div>
+
+      <!-- Endpoint sections -->
+      <section style="margin-bottom:2.5rem;">
+      <div style="margin-bottom:1rem;">
+        <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Evaluate</h2>
+        <p style="font-size:12px;color:#666;">Eligibility evaluation endpoints.</p>
+      </div>
+      <div id="op-post-evaluate-expedited-screening" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+      <code style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">/evaluate/expedited-screening</code>
+      <span style="font-size:12px;color:#666;">Evaluate expedited SNAP screening</span>
+      
+    </summary>
+    <div style="padding:12px 16px;">
+      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Determines whether an application qualifies for expedited SNAP processing
+based on household-level financial criteria (7 CFR § 273.2(i)). Called at
+submission before caseworker assignment. Member-level data is not required
+for the baseline criteria; states may extend the request via overlay if
+their rules engine needs additional context.
+</div>
+      
+      <div style="margin-top:16px;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
+      Request body <span style="color:#AF121D;font-weight:700;">required</span>
+    </div>
+    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">household</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Household-level data used in SNAP expedited screening criteria.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roomers</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Non-household members who share the living space and pay rent separately.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the roomer is a household member counted in another capacity or a non-member contact.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">member</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">contact</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Identifier of the member or contact record.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amountPaidForRent</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span><span style="font-size:10px;color:#999;font-family:monospace;"> (float)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Amount the roomer pays for rent.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">mealsIncludedWithRent</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether meals are included with the roomer's rent payment.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">utilitiesIncludedInRent</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether utility costs are included in the rent payment.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">isSubsidizedHousing</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the household lives in subsidized or public housing. Affects the SNAP utility standard deduction.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">receivedTanfInAnotherState</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the household has received TANF benefits in another state. Required for multi-state TANF coordination.</span>
+      </div>
+      
+    </div>
+    </div>
+  </div>
+      <div style="margin-top:16px;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
+    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
+        <span style="font-size:11px;color:#555;">Expedited screening result.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expedited</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the application qualifies for expedited SNAP processing.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
+        <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
+        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div></div>
+  </div>
+    </div>
+  </details>
+</div><div id="op-post-evaluate-medicaid-ex-parte" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+      <code style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">/evaluate/medicaid-ex-parte</code>
+      <span style="font-size:12px;color:#666;">Evaluate Medicaid ex parte</span>
+      
+    </summary>
+    <div style="padding:12px 16px;">
+      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Determines Medicaid eligibility for one applicant using electronic data
+exchange results, without requiring applicant-provided documentation.
+Called once per applicant after all Medicaid electronic checks complete.
+Applications that can be fully determined ex parte are closed automatically
+without caseworker intervention (42 CFR § 435.916).
+</div>
+      
+      <div style="margin-top:16px;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
+      Request body <span style="color:#AF121D;font-weight:700;">required</span>
+    </div>
+    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The program being evaluated.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aca</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">member</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The applicant being evaluated.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">income</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Income records for this member.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expenses</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Expense records for this member.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">assets</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Asset records for this member.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">employment</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Employment records for this member.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">healthCoverage</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Health coverage records for this member.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">electronicChecks</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Results from FDSH FTI, FDSH Medicare/VCI, and other Medicaid data exchange calls for this applicant.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The data exchange service that performed the check.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">result</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">High-level outcome of the service call.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">conclusive</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">inconclusive</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">partial</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">error</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">receivedAt</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">When the result was received.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceResult</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Service-type-specific result payload. Shape varies by serviceType — see data-exchange-adapter-openapi.yaml for the schema per service type.
+</span>
+      </div>
+      
+    </div>
+    </div>
+  </div>
+      <div style="margin-top:16px;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
+    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
+        <span style="font-size:11px;color:#555;">Medicaid ex parte evaluation result.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The program this decision applies to.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aca</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The eligibility outcome.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">approved</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">denied</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ineligible</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">How the decision was reached.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">auto</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">manual</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">denialReasonCode</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable reason code when status is denied or ineligible.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
+        <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
+        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div></div>
+  </div>
+    </div>
+  </details>
+</div><div id="op-post-evaluate-determination" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+      <code style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">/evaluate/determination</code>
+      <span style="font-size:12px;color:#666;">Evaluate final determination</span>
+      
+    </summary>
+    <div style="padding:12px 16px;">
+      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Runs final eligibility determination for one applicant (or household) and
+one program after caseworker review is complete. Called once per program
+with pending decisions after intake.application.review_completed fires.
+
+Use IndividualDeterminationRequest for per-applicant programs (medicaid,
+chip, tanf, ccdf) and HouseholdDeterminationRequest for household programs
+(snap).
+</div>
+      
+      <div style="margin-top:16px;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
+      Request body <span style="color:#AF121D;font-weight:700;">required</span>
+    </div>
+    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="padding:8px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">oneOf</span></div></div>
+  </div>
+      <div style="margin-top:16px;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
+    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
+        <span style="font-size:11px;color:#555;">Final determination result.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The program this decision applies to.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aca</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The eligibility outcome.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">approved</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">denied</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ineligible</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">How the decision was reached.</span>
+      </div>
+      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">auto</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">manual</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">denialReasonCode</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable reason code when status is denied or ineligible.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
+        <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
+        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+    </div></div>
+  </div>
+    </div>
+  </details>
+</div>
+    </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Rotate chevron icons when details open/close
+    document.querySelectorAll('details').forEach(d => {
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+  </script>
+
+</body>
+</html>
