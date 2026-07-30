@@ -49,26 +49,7 @@
 
       <!-- API description + server info -->
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-        <p style="font-size:13px;color:#555;line-height:1.65;max-width:680px;white-space:pre-wrap;">REST API for the Document Management domain — the central store for uploaded
-files and their metadata across all safety net programs.
-
-**Upload model:** A document and its first version are created atomically via
-`POST /documents` (multipart/form-data). Subsequent versions are uploaded via
-`POST /documents/{documentId}/document-versions`. File content is delivered via
-`GET /document-versions/{documentVersionId}/content` (proxy by default; states
-may overlay to redirect).
-
-**Context passthrough:** Callers attach correlation context to a document via
-`metadata` at creation or via `PUT /documents/{documentId}/metadata/{domain}`
-after the fact. Metadata is echoed in events so downstream consumers can
-correlate without additional lookups. Keys are structured as nested objects
-per domain namespace — `{ &quot;intake&quot;: { &quot;verificationId&quot;: &quot;...&quot; } }`.
-
-**Document types:** Baseline types are seeded from `document-management-config.yaml`.
-States add program-specific types at runtime via `POST /document-types`.
-
-&gt; **Status: Alpha** — Breaking changes expected.
-</p>
+        <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">REST API for the Document Management domain — the central store for uploaded files and their metadata across all safety net programs.</p><p style="margin:0 0 6px;"><strong>Upload model:</strong> A document and its first version are created atomically via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">POST /documents</code> (multipart/form-data). Subsequent versions are uploaded via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">POST /documents/{documentId}/document-versions</code>. File content is delivered via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">GET /document-versions/{documentVersionId}/content</code> (proxy by default; states may overlay to redirect).</p><p style="margin:0 0 6px;"><strong>Context passthrough:</strong> Callers attach correlation context to a document via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">metadata</code> at creation or via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">PUT /documents/{documentId}/metadata/{domain}</code> after the fact. Metadata is echoed in events so downstream consumers can correlate without additional lookups. Keys are structured as nested objects per domain namespace — <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">{ "intake": { "verificationId": "..." } }</code>.</p><p style="margin:0 0 6px;"><strong>Document types:</strong> Baseline types are seeded from <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">document-management-config.yaml</code>. States add program-specific types at runtime via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">POST /document-types</code>.</p><blockquote style="border-left:3px solid #ddd;padding:4px 10px;margin:6px 0;color:#666;font-style:italic;"><strong>Status: Alpha</strong> — Breaking changes expected.</blockquote></div></div>
         <div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">https://api.example.com/document-management</code></div>
       </div>
 
@@ -88,7 +69,7 @@ States add program-specific types at runtime via `POST /document-types`.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Retrieve a paginated list of documents. Filter by document type or subject via document links.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a paginated list of documents. Filter by document type or subject via document links.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -104,134 +85,37 @@ States add program-specific types at runtime via `POST /document-types`.
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Search query using field:value syntax. Multiple conditions separated by
-spaces are ANDed together.
-
-**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-Most HTTP clients handle this automatically. Examples in this documentation
-show human-readable syntax for clarity.
-
-## Syntax
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `term` | Full-text exact match | `john` |
-| `*term*` | Full-text contains | `*john*` |
-| `term*` | Full-text starts with | `john*` |
-| `*term` | Full-text ends with | `*smith` |
-| `field:value` | Exact match on field | `status:approved` |
-| `field:*value*` | Contains (case-insensitive) | `name:*john*` |
-| `field:value*` | Starts with | `name:john*` |
-| `field:*value` | Ends with | `email:*@example.com` |
-| `field:&quot;value&quot;` | Quoted value (for spaces) | `name:&quot;john doe&quot;` |
-| `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
-| `field:&gt;value` | Greater than | `income:&gt;1000` |
-| `field:&gt;=value` | Greater than or equal | `income:&gt;=1000` |
-| `field:&lt;value` | Less than | `income:&lt;5000` |
-| `field:&lt;=value` | Less than or equal | `income:&lt;=5000` |
-| `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
-| `-field:value` | Exclude / negate | `-status:denied` |
-| `field:*` | Field exists (not null) | `email:*` |
-| `-field:*` | Field does not exist | `-deletedAt:*` |
-
-## Examples
-
-- `john` — exact match for &quot;john&quot; in searchable fields
-- `*john*` — contains &quot;john&quot; in searchable fields
-- `name:*smith*` — name contains &quot;smith&quot; (case-insensitive)
-- `email:*@example.com` — email ends with &quot;@example.com&quot;
-- `status:approved` — exact match on status field
-- `status:approved,pending` — status is &quot;approved&quot; OR &quot;pending&quot;
-- `income:&gt;=1000` — income greater than or equal to 1000
-- `created:&gt;2024-01-01` — created after January 1, 2024
-- `status:approved income:&gt;=1000` — approved AND income &gt;= 1000 (multiple conditions)
-- `-status:denied` — exclude records with status &quot;denied&quot;
-- `-deletedAt:*` — only records where deletedAt does not exist
-- `applicant.state:CA` — nested field filter
-
-## URL Encoding Reference
-
-When manually constructing URLs, encode these characters:
-
-| Character | Encoded |
-|-----------|---------|
-| (space) | `%20` or `+` |
-| `&quot;` | `%22` |
-| `:` | `%3A` |
-| `&gt;` | `%3E` |
-| `&lt;` | `%3C` |
-| `,` | `%2C` |
-
-**Example:**
-```
-Human-readable: q=status:approved income:&gt;=1000
-URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
-```
-</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>term</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:<em>value</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>smith</em></code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">limit</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Maximum number of items to return (1-100).</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">offset</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Number of items to skip before collecting results.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">sort</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Comma-separated list of fields to sort the response by. Prefix a field
-with `-` for descending order. The first field is the primary sort;
-subsequent fields are tie-breakers in declaration order.
-
-**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-Most HTTP clients handle this automatically. Examples below show
-human-readable syntax for clarity.
-
-Which fields a given list endpoint allows is declared in the operation's
-`x-sortable.fields` extension. Sending a field name not present in that
-list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
-exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
-parameter is omitted, the operation's `x-sortable.default` (if declared)
-is applied; otherwise no client-driven sort is applied. A configured
-tie-breaker (default `id`) is always appended for stable pagination.
-
-See `api-patterns.yaml#sorting` for the full convention and
-`docs/architecture/x-extensions.md` for the extension shape.
-
-## Syntax
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `fieldName` | Ascending | `sort=createdAt` |
-| `-fieldName` | Descending | `sort=-createdAt` |
-| `field1,field2` | Multi-field | `sort=status,-priority` |
-| `nested.field` | Nested field via dot notation | `sort=name.lastName` |
-
-## Examples
-
-- `sort=createdAt` — oldest first
-- `sort=-createdAt` — newest first
-- `sort=-priority,dueDate` — highest priority first, then oldest due date
-- `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
-</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples below show human-readable syntax for clarity.</p><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">documentTypeId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Filter by document type.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Filter by document type.</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">lifecycleState</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Filter by lifecycle state.<div style="margin-top:2px;font-size:10px;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">retained</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending_disposition</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">destroyed</code></div></td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Filter by lifecycle state.</p></div><div style="margin-top:2px;font-size:10px;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">retained</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending_disposition</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">destroyed</code></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -511,16 +395,7 @@ See `api-patterns.yaml#sorting` for the full convention and
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Create a document and its first version atomically. The document is
-immediately active. Accepts multipart/form-data with the file bytes
-and document metadata in a single request.
-
-If the adapter's virus scanner rejects the file, returns `422` with
-error code `file_rejected_by_virus_scan` and no document is created.
-
-Pass `metadata` as a JSON string in the multipart body to attach
-correlation context at creation time (e.g. `{ &quot;intake&quot;: { &quot;verificationId&quot;: &quot;ver-abc&quot; } }`).
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Create a document and its first version atomically. The document is immediately active. Accepts multipart/form-data with the file bytes and document metadata in a single request.</p><p style="margin:0 0 6px;">If the adapter's virus scanner rejects the file, returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> with error code <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">file_rejected_by_virus_scan</code> and no document is created.</p><p style="margin:0 0 6px;">Pass <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">metadata</code> as a JSON string in the multipart body to attach correlation context at creation time (e.g. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">{ "intake": { "verificationId": "ver-abc" } }</code>).</p></div></div>
       
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
@@ -842,7 +717,7 @@ correlation context at creation time (e.g. `{ &quot;intake&quot;: { &quot;verifi
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Retrieve a single document by identifier. Documents in `destroyed` state are returned with their metadata intact but file content is no longer accessible.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a single document by identifier. Documents in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">destroyed</code> state are returned with their metadata intact but file content is no longer accessible.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -858,7 +733,7 @@ correlation context at creation time (e.g. `{ &quot;intake&quot;: { &quot;verifi
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document.</p></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -1088,7 +963,7 @@ correlation context at creation time (e.g. `{ &quot;intake&quot;: { &quot;verifi
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Update mutable document fields. Metadata is not patchable here — use the namespace-level metadata endpoints instead.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Update mutable document fields. Metadata is not patchable here — use the namespace-level metadata endpoints instead.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -1104,7 +979,7 @@ correlation context at creation time (e.g. `{ &quot;intake&quot;: { &quot;verifi
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document.</p></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -1395,10 +1270,7 @@ correlation context at creation time (e.g. `{ &quot;intake&quot;: { &quot;verifi
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Replace the calling domain's entire metadata namespace on a document.
-Other domains' namespaces are unaffected. Used for context passthrough
-when metadata is not known at upload time.
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Replace the calling domain's entire metadata namespace on a document. Other domains' namespaces are unaffected. Used for context passthrough when metadata is not known at upload time.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -1414,13 +1286,13 @@ when metadata is not known at upload time.
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document.</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">domain</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">The calling domain's namespace to set or remove.<div style="margin-top:2px;font-size:10px;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">client-management</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">data-exchange</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">document-management</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">eligibility</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">intake</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">workflow</code></div></td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The calling domain's namespace to set or remove.</p></div><div style="margin-top:2px;font-size:10px;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">client-management</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">data-exchange</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">document-management</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">eligibility</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">intake</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">workflow</code></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -1691,7 +1563,7 @@ when metadata is not known at upload time.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Remove the calling domain's entire metadata namespace from a document.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Remove the calling domain's entire metadata namespace from a document.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -1707,13 +1579,13 @@ when metadata is not known at upload time.
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document.</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">domain</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">The calling domain's namespace to set or remove.<div style="margin-top:2px;font-size:10px;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">client-management</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">data-exchange</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">document-management</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">eligibility</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">intake</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">workflow</code></div></td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The calling domain's namespace to set or remove.</p></div><div style="margin-top:2px;font-size:10px;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">client-management</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">data-exchange</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">document-management</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">eligibility</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">intake</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">workflow</code></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -1818,14 +1690,7 @@ when metadata is not known at upload time.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Upload a subsequent version of an existing document. Creates an immutable
-DocumentVersion record and updates Document.latestVersionId. Each upload
-preserves prior versions so the file that was current at any point in time
-is recoverable (required by 7 CFR § 272.1 and 45 CFR § 164.312).
-
-If the adapter's virus scanner rejects the file, returns `422` with error
-code `file_rejected_by_virus_scan` and no version is created.
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Upload a subsequent version of an existing document. Creates an immutable DocumentVersion record and updates Document.latestVersionId. Each upload preserves prior versions so the file that was current at any point in time is recoverable (required by 7 CFR § 272.1 and 45 CFR § 164.312).</p><p style="margin:0 0 6px;">If the adapter's virus scanner rejects the file, returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> with error code <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">file_rejected_by_virus_scan</code> and no version is created.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -1841,7 +1706,7 @@ code `file_rejected_by_virus_scan` and no version is created.
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document.</p></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -2081,7 +1946,7 @@ code `file_rejected_by_virus_scan` and no version is created.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Retrieve metadata for a specific document version. Does not return file bytes — use the content endpoint for that.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve metadata for a specific document version. Does not return file bytes — use the content endpoint for that.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -2097,7 +1962,7 @@ code `file_rejected_by_virus_scan` and no version is created.
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document version.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document version.</p></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -2286,16 +2151,7 @@ code `file_rejected_by_virus_scan` and no version is created.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Retrieve the file bytes for a document version. Emits a
-`document_version.accessed` audit event on every call (required by
-HIPAA 45 CFR § 164.312).
-
-The baseline response is `200` with the file streamed as
-`application/octet-stream` (proxy delivery). States that prefer
-redirect delivery add `x-content-delivery: redirect` via overlay —
-the response then returns `302` to a time-limited signed storage URL.
-Both response shapes are documented here so clients handle either.
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve the file bytes for a document version. Emits a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">document_version.accessed</code> audit event on every call (required by HIPAA 45 CFR § 164.312).</p><p style="margin:0 0 6px;">The baseline response is <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">200</code> with the file streamed as <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">application/octet-stream</code> (proxy delivery). States that prefer redirect delivery add <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-content-delivery: redirect</code> via overlay — the response then returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">302</code> to a time-limited signed storage URL. Both response shapes are documented here so clients handle either.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -2311,7 +2167,7 @@ Both response shapes are documented here so clients handle either.
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document version.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document version.</p></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -2458,7 +2314,7 @@ Both response shapes are documented here so clients handle either.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Retrieve the catalog of document types. Includes both config-seeded (system) and runtime-created (user) types.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve the catalog of document types. Includes both config-seeded (system) and runtime-created (user) types.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -2474,122 +2330,25 @@ Both response shapes are documented here so clients handle either.
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Search query using field:value syntax. Multiple conditions separated by
-spaces are ANDed together.
-
-**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-Most HTTP clients handle this automatically. Examples in this documentation
-show human-readable syntax for clarity.
-
-## Syntax
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `term` | Full-text exact match | `john` |
-| `*term*` | Full-text contains | `*john*` |
-| `term*` | Full-text starts with | `john*` |
-| `*term` | Full-text ends with | `*smith` |
-| `field:value` | Exact match on field | `status:approved` |
-| `field:*value*` | Contains (case-insensitive) | `name:*john*` |
-| `field:value*` | Starts with | `name:john*` |
-| `field:*value` | Ends with | `email:*@example.com` |
-| `field:&quot;value&quot;` | Quoted value (for spaces) | `name:&quot;john doe&quot;` |
-| `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
-| `field:&gt;value` | Greater than | `income:&gt;1000` |
-| `field:&gt;=value` | Greater than or equal | `income:&gt;=1000` |
-| `field:&lt;value` | Less than | `income:&lt;5000` |
-| `field:&lt;=value` | Less than or equal | `income:&lt;=5000` |
-| `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
-| `-field:value` | Exclude / negate | `-status:denied` |
-| `field:*` | Field exists (not null) | `email:*` |
-| `-field:*` | Field does not exist | `-deletedAt:*` |
-
-## Examples
-
-- `john` — exact match for &quot;john&quot; in searchable fields
-- `*john*` — contains &quot;john&quot; in searchable fields
-- `name:*smith*` — name contains &quot;smith&quot; (case-insensitive)
-- `email:*@example.com` — email ends with &quot;@example.com&quot;
-- `status:approved` — exact match on status field
-- `status:approved,pending` — status is &quot;approved&quot; OR &quot;pending&quot;
-- `income:&gt;=1000` — income greater than or equal to 1000
-- `created:&gt;2024-01-01` — created after January 1, 2024
-- `status:approved income:&gt;=1000` — approved AND income &gt;= 1000 (multiple conditions)
-- `-status:denied` — exclude records with status &quot;denied&quot;
-- `-deletedAt:*` — only records where deletedAt does not exist
-- `applicant.state:CA` — nested field filter
-
-## URL Encoding Reference
-
-When manually constructing URLs, encode these characters:
-
-| Character | Encoded |
-|-----------|---------|
-| (space) | `%20` or `+` |
-| `&quot;` | `%22` |
-| `:` | `%3A` |
-| `&gt;` | `%3E` |
-| `&lt;` | `%3C` |
-| `,` | `%2C` |
-
-**Example:**
-```
-Human-readable: q=status:approved income:&gt;=1000
-URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
-```
-</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>term</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:<em>value</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>smith</em></code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">limit</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Maximum number of items to return (1-100).</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">offset</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Number of items to skip before collecting results.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">sort</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Comma-separated list of fields to sort the response by. Prefix a field
-with `-` for descending order. The first field is the primary sort;
-subsequent fields are tie-breakers in declaration order.
-
-**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-Most HTTP clients handle this automatically. Examples below show
-human-readable syntax for clarity.
-
-Which fields a given list endpoint allows is declared in the operation's
-`x-sortable.fields` extension. Sending a field name not present in that
-list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
-exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
-parameter is omitted, the operation's `x-sortable.default` (if declared)
-is applied; otherwise no client-driven sort is applied. A configured
-tie-breaker (default `id`) is always appended for stable pagination.
-
-See `api-patterns.yaml#sorting` for the full convention and
-`docs/architecture/x-extensions.md` for the extension shape.
-
-## Syntax
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `fieldName` | Ascending | `sort=createdAt` |
-| `-fieldName` | Descending | `sort=-createdAt` |
-| `field1,field2` | Multi-field | `sort=status,-priority` |
-| `nested.field` | Nested field via dot notation | `sort=name.lastName` |
-
-## Examples
-
-- `sort=createdAt` — oldest first
-- `sort=-createdAt` — newest first
-- `sort=-priority,dueDate` — highest priority first, then oldest due date
-- `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
-</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples below show human-readable syntax for clarity.</p><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -2808,8 +2567,7 @@ See `api-patterns.yaml#sorting` for the full convention and
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Create a state-defined document type. Runtime-created types are marked `source: user` and can be deleted via the API. Config-seeded types cannot be deleted.
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Create a state-defined document type. Runtime-created types are marked <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">source: user</code> and can be deleted via the API. Config-seeded types cannot be deleted.</p></div></div>
       
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
@@ -3011,7 +2769,7 @@ See `api-patterns.yaml#sorting` for the full convention and
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Retrieve a single document type by identifier.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a single document type by identifier.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -3027,7 +2785,7 @@ See `api-patterns.yaml#sorting` for the full convention and
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document type.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document type.</p></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -3196,8 +2954,7 @@ See `api-patterns.yaml#sorting` for the full convention and
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Delete a user-created document type. Returns `409` if the type is config-seeded (`source: system`) or if documents of this type exist.
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Delete a user-created document type. Returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">409</code> if the type is config-seeded (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">source: system</code>) or if documents of this type exist.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -3213,7 +2970,7 @@ See `api-patterns.yaml#sorting` for the full convention and
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document type.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document type.</p></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -3354,7 +3111,7 @@ See `api-patterns.yaml#sorting` for the full convention and
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Retrieve document-subject associations. Filter by documentId or subjectId to find all documents for a subject or all subjects for a document.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve document-subject associations. Filter by documentId or subjectId to find all documents for a subject or all subjects for a document.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -3370,140 +3127,43 @@ See `api-patterns.yaml#sorting` for the full convention and
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Search query using field:value syntax. Multiple conditions separated by
-spaces are ANDed together.
-
-**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-Most HTTP clients handle this automatically. Examples in this documentation
-show human-readable syntax for clarity.
-
-## Syntax
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `term` | Full-text exact match | `john` |
-| `*term*` | Full-text contains | `*john*` |
-| `term*` | Full-text starts with | `john*` |
-| `*term` | Full-text ends with | `*smith` |
-| `field:value` | Exact match on field | `status:approved` |
-| `field:*value*` | Contains (case-insensitive) | `name:*john*` |
-| `field:value*` | Starts with | `name:john*` |
-| `field:*value` | Ends with | `email:*@example.com` |
-| `field:&quot;value&quot;` | Quoted value (for spaces) | `name:&quot;john doe&quot;` |
-| `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
-| `field:&gt;value` | Greater than | `income:&gt;1000` |
-| `field:&gt;=value` | Greater than or equal | `income:&gt;=1000` |
-| `field:&lt;value` | Less than | `income:&lt;5000` |
-| `field:&lt;=value` | Less than or equal | `income:&lt;=5000` |
-| `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
-| `-field:value` | Exclude / negate | `-status:denied` |
-| `field:*` | Field exists (not null) | `email:*` |
-| `-field:*` | Field does not exist | `-deletedAt:*` |
-
-## Examples
-
-- `john` — exact match for &quot;john&quot; in searchable fields
-- `*john*` — contains &quot;john&quot; in searchable fields
-- `name:*smith*` — name contains &quot;smith&quot; (case-insensitive)
-- `email:*@example.com` — email ends with &quot;@example.com&quot;
-- `status:approved` — exact match on status field
-- `status:approved,pending` — status is &quot;approved&quot; OR &quot;pending&quot;
-- `income:&gt;=1000` — income greater than or equal to 1000
-- `created:&gt;2024-01-01` — created after January 1, 2024
-- `status:approved income:&gt;=1000` — approved AND income &gt;= 1000 (multiple conditions)
-- `-status:denied` — exclude records with status &quot;denied&quot;
-- `-deletedAt:*` — only records where deletedAt does not exist
-- `applicant.state:CA` — nested field filter
-
-## URL Encoding Reference
-
-When manually constructing URLs, encode these characters:
-
-| Character | Encoded |
-|-----------|---------|
-| (space) | `%20` or `+` |
-| `&quot;` | `%22` |
-| `:` | `%3A` |
-| `&gt;` | `%3E` |
-| `&lt;` | `%3C` |
-| `,` | `%2C` |
-
-**Example:**
-```
-Human-readable: q=status:approved income:&gt;=1000
-URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
-```
-</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>term</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:<em>value</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>smith</em></code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">limit</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Maximum number of items to return (1-100).</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">offset</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Number of items to skip before collecting results.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">sort</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Comma-separated list of fields to sort the response by. Prefix a field
-with `-` for descending order. The first field is the primary sort;
-subsequent fields are tie-breakers in declaration order.
-
-**URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-Most HTTP clients handle this automatically. Examples below show
-human-readable syntax for clarity.
-
-Which fields a given list endpoint allows is declared in the operation's
-`x-sortable.fields` extension. Sending a field name not present in that
-list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
-exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
-parameter is omitted, the operation's `x-sortable.default` (if declared)
-is applied; otherwise no client-driven sort is applied. A configured
-tie-breaker (default `id`) is always appended for stable pagination.
-
-See `api-patterns.yaml#sorting` for the full convention and
-`docs/architecture/x-extensions.md` for the extension shape.
-
-## Syntax
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `fieldName` | Ascending | `sort=createdAt` |
-| `-fieldName` | Descending | `sort=-createdAt` |
-| `field1,field2` | Multi-field | `sort=status,-priority` |
-| `nested.field` | Nested field via dot notation | `sort=name.lastName` |
-
-## Examples
-
-- `sort=createdAt` — oldest first
-- `sort=-createdAt` — newest first
-- `sort=-priority,dueDate` — highest priority first, then oldest due date
-- `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
-</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples below show human-readable syntax for clarity.</p><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">documentId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Filter by document.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Filter by document.</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">subjectId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Filter by subject (application, case, etc.).</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Filter by subject (application, case, etc.).</p></div></td>
     </tr><tr>
       <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">subjectType</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
       <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Filter by subject type.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Filter by subject type.</p></div></td>
     </tr></tbody>
     </table>
   </div>
@@ -3722,10 +3382,7 @@ See `api-patterns.yaml#sorting` for the full convention and
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Associate a document with a program record (application, case, etc.).
-Enables cross-program reuse — the same document can satisfy obligations
-for multiple programs without duplication.
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Associate a document with a program record (application, case, etc.). Enables cross-program reuse — the same document can satisfy obligations for multiple programs without duplication.</p></div></div>
       
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
@@ -3963,7 +3620,7 @@ for multiple programs without duplication.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Retrieve a single document-subject association by identifier.</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a single document-subject association by identifier.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -3979,7 +3636,7 @@ for multiple programs without duplication.
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
       <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">Unique identifier of the document link.</td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the document link.</p></div></td>
     </tr></tbody>
     </table>
   </div>

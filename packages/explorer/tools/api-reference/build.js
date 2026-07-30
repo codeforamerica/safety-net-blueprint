@@ -20,6 +20,75 @@ import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { COLORS, FONT } from '../../lib/theme.js';
 import { esc, titleCase, breadcrumb } from '../../lib/html.js';
 
+// ── Markdown renderer ─────────────────────────────────────────────────────
+// Handles the subset of GFM used in OpenAPI descriptions:
+// headings, bold/italic, inline code, blockquotes, lists, pipe tables.
+
+function inlineMd(raw) {
+  return String(raw ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`\n]+)`/g, `<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">$1</code>`);
+}
+
+function parsePipeTable(lines) {
+  const dataLines = lines.filter(l => !/^\s*\|?[\s\-:|]+\|?\s*$/.test(l));
+  if (!dataLines.length) return null;
+  const parseRow = l => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+  const [head, ...body] = dataLines;
+  const thStyle = `padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;`;
+  const tdStyle = `padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;`;
+  const ths = parseRow(head).map(h => `<th style="${thStyle}">${inlineMd(h)}</th>`).join('');
+  const trs = body.map(r => `<tr>${parseRow(r).map(c => `<td style="${tdStyle}">${inlineMd(c)}</td>`).join('')}</tr>`).join('');
+  return `<div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  const mdStyle = `font-size:13px;color:#444;line-height:1.65;`;
+  const h3 = `font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:#666;margin:14px 0 4px;`;
+  const h2 = `font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;`;
+
+  // Split on double newlines to get blocks; collapse single newlines within a block
+  const blocks = text.split(/\n{2,}/).map(b => b.trim()).filter(Boolean);
+
+  const rendered = blocks.map(block => {
+    if (block.startsWith('### ')) return `<h4 style="${h3}">${inlineMd(block.slice(4))}</h4>`;
+    if (block.startsWith('## '))  return `<h3 style="${h2}">${inlineMd(block.slice(3))}</h3>`;
+    if (block.startsWith('# '))   return `<h2 style="${h2}">${inlineMd(block.slice(2))}</h2>`;
+
+    if (block.startsWith('> ')) {
+      const content = block.replace(/^> ?/gm, '').trim();
+      return `<blockquote style="border-left:3px solid #ddd;padding:4px 10px;margin:6px 0;color:#666;font-style:italic;">${inlineMd(content)}</blockquote>`;
+    }
+
+    const lines = block.split('\n');
+
+    // Pipe table: first line has |, second line is a separator
+    if (lines.length >= 2 && lines[0].includes('|') && /^\s*\|?[\s\-:|]+\|?\s*$/.test(lines[1])) {
+      const table = parsePipeTable(lines);
+      if (table) return table;
+    }
+
+    // Unordered list
+    if (lines.every(l => /^\s*[-*] /.test(l))) {
+      const items = lines.map(l => `<li>${inlineMd(l.replace(/^\s*[-*] /, ''))}</li>`).join('');
+      return `<ul style="margin:6px 0;padding-left:1.25rem;">${items}</ul>`;
+    }
+
+    // Ordered list
+    if (lines.every(l => /^\s*\d+\. /.test(l))) {
+      const items = lines.map(l => `<li>${inlineMd(l.replace(/^\s*\d+\. /, ''))}</li>`).join('');
+      return `<ol style="margin:6px 0;padding-left:1.25rem;">${items}</ol>`;
+    }
+
+    return `<p style="margin:0 0 6px;">${inlineMd(lines.join(' '))}</p>`;
+  }).join('');
+
+  return `<div style="${mdStyle}">${rendered}</div>`;
+}
+
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 const resolvedDir = resolve(__dirname, '../../../resolved');
 const outDir      = __dirname;
@@ -204,7 +273,7 @@ function renderParams(params) {
       <td style="padding:5px 12px;">${typeBadge(type)}</td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">${esc(p.in ?? '')}</td>
       <td style="padding:5px 12px;text-align:center;">${p.required ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};">✓</span>` : ''}</td>
-      <td style="padding:5px 12px;font-size:11px;color:#555;">${esc(p.description ?? '')}${enumVals}</td>
+      <td style="padding:5px 12px;">${renderMarkdown(p.description ?? '')}${enumVals}</td>
     </tr>`;
   }).join('');
 
@@ -263,7 +332,7 @@ function renderResponses(responses) {
     return `<div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:${statusColor};">${esc(status)}</span>
-        <span style="font-size:11px;color:#555;">${esc(resp.description ?? '')}</span>
+        <span style="font-size:11px;color:#555;">${inlineMd(resp.description ?? '')}</span>
       </div>
       ${schemaHtml}
     </div>`;
@@ -285,7 +354,7 @@ function renderEndpoint(path, method, op) {
   const id       = endpointId(path, method);
   const params   = op.parameters ?? [];
   const descHtml = op.description
-    ? `<div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">${esc(op.description)}</div>`
+    ? `<div style="padding:12px 16px;border-top:1px solid #f0f0f0;">${renderMarkdown(op.description)}</div>`
     : '';
 
   return `<div id="${id}" style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:10px;overflow:hidden;">
@@ -426,7 +495,7 @@ function buildDomainPage({ slug, spec }) {
 
       <!-- API description + server info -->
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid ${COLORS.sandDark};">
-        ${info.description ? `<p style="font-size:13px;color:#555;line-height:1.65;max-width:680px;white-space:pre-wrap;">${esc(info.description)}</p>` : ''}
+        ${info.description ? `<div style="max-width:720px;">${renderMarkdown(info.description)}</div>` : ''}
         ${serverUrl ? `<div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">${esc(serverUrl)}</code></div>` : ''}
       </div>
 
