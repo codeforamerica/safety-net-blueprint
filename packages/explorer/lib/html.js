@@ -27,7 +27,10 @@ export function breadcrumb(segments) {
   const sep = `<span style="opacity:0.5;">/</span>`;
   const parts = segments.map((seg, i) => {
     const isLast = i === segments.length - 1;
-    if (isLast || !seg.href) {
+    if (isLast) {
+      return `<a href="#" style="color:${COLORS.white};text-decoration:none;">${esc(seg.label)}</a>`;
+    }
+    if (!seg.href) {
       return `<span style="color:${COLORS.white};">${esc(seg.label)}</span>`;
     }
     return `<a href="${seg.href}" style="color:${COLORS.lightBlue};text-decoration:none;">${esc(seg.label)}</a>`;
