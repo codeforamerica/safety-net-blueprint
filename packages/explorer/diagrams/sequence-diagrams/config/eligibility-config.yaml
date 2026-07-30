@@ -1,0 +1,18 @@
+domain: eligibility
+
+events:
+  intake.application.submitted:
+    label: Create Determination for application
+
+  eligibility.decision.created:
+    label: Run SNAP expedited screening or initiate Medicaid data exchange
+
+  data_exchange.call.completed:
+    label: Evaluate Medicaid ex parte when all data exchange results are in
+
+  intake.application.review_completed:
+    label: Run final eligibility determination for all pending Decisions
+
+procedures:
+  initiateMedicaidDataExchange:
+    label: FDSH FTI + FDSH Medicare/VCI — Medicaid ex parte checks

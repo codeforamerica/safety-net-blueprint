@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Data Dictionary — Document Management</title>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #F3F3F3;
+  color: #111;
+  min-height: 100vh;
+}
+:root {
+  --blue-dark:  #2B1A78;
+  --blue-mid:   #5650BE;
+  --blue-light: #C2C0E8;
+  --sand:       #E9CCBE;
+  --sand-light: #F5F0ED;
+  --lb-light:   #E6EBF9;
+  --green-dark: #006152;
+  --green-light:#E2F9F6;
+  --yellow-light:#FFF3E0;
+  --red-dark:   #AF121D;
+  --red-light:  #F9C8CB;
+  --sidebar-w:  240px;
+}
+
+/* ── Index layout ─────────────────────────────────────────────────────────── */
+.index-layout {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+.index-header { margin-bottom: 2.5rem; }
+.index-header h1 { font-size: 2rem; font-weight: 700; color: var(--blue-dark); margin-bottom: 0.5rem; }
+.index-sub { color: #555; font-size: 0.9rem; max-width: 560px; line-height: 1.5; }
+.domain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.domain-card {
+  display: block;
+  text-decoration: none;
+  background: #fff;
+  border: 1px solid var(--sand);
+  border-radius: 8px;
+  padding: 1.25rem 1rem;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.domain-card:hover { border-color: var(--blue-mid); box-shadow: 0 2px 8px rgba(86,80,190,0.12); }
+.domain-card-title { font-size: 1rem; font-weight: 700; color: var(--blue-dark); margin-bottom: 0.3rem; }
+.domain-card-meta { font-size: 0.75rem; color: #888; }
+
+/* ── Dictionary layout ────────────────────────────────────────────────────── */
+.dict-layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--blue-dark);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-top {
+  padding: 1.25rem 1rem 0.75rem;
+  flex-shrink: 0;
+}
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--blue-light);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+.back-btn:hover { color: #fff; }
+.sidebar-domain { font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 0.15rem; }
+.sidebar-meta { font-size: 0.7rem; color: var(--blue-light); }
+.search-wrap {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+.search-bar {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 5px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 0.8rem;
+  outline: none;
+}
+.search-bar::placeholder { color: rgba(255,255,255,0.4); }
+.search-bar:focus { border-color: var(--blue-light); box-shadow: 0 0 0 2px rgba(194,192,232,0.3); }
+
+.sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; }
+.nav-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  cursor: pointer;
+}
+.nav-sub:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.nav-sub--active { background: rgba(255,255,255,0.15); color: #fff; }
+.nav-count {
+  font-size: 0.65rem;
+  font-weight: 400;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 0.1rem 0.35rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Main ─────────────────────────────────────────────────────────────────── */
+.dict-main { flex: 1; min-width: 0; padding: 0 2rem 3rem; }
+.dict-header {
+  position: sticky;
+  top: 0;
+  background: #F3F3F3;
+  padding: 1.25rem 0 0.75rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  z-index: 10;
+  border-bottom: 1px solid var(--sand);
+  margin-bottom: 1.5rem;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+.dict-title { font-size: 1.3rem; font-weight: 700; color: var(--blue-dark); flex: 1; }
+.csv-btn {
+  font-size: 0.78rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.csv-btn:hover { background: #f5f5f5; }
+
+.no-results { padding: 2rem; text-align: center; color: #888; font-style: italic; }
+.hidden { display: none !important; }
+
+/* ── Section ──────────────────────────────────────────────────────────────── */
+.dict-section { margin-bottom: 2.5rem; scroll-margin-top: 72px; }
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--blue-dark);
+  border-bottom: 2px solid var(--blue-light);
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 72px;
+}
+.cards-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* ── Field card ───────────────────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border: 1px solid var(--sand);
+  border-left: 3px solid var(--blue-mid);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.card.hidden { display: none; }
+mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--lb-light);
+}
+.field-path {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--blue-dark);
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.type-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--blue-light);
+  color: var(--blue-dark);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.card-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.ann-reason {
+  font-size: 0.78rem;
+  color: #333;
+  line-height: 1.5;
+  margin: 0;
+}
+.ann-modeling {
+  font-size: 0.75rem;
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.ann-modeling .ann-label { flex-shrink: 0; }
+.card-ann { display: flex; flex-direction: column; gap: 0.3rem; }
+.ann-row { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; }
+.ann-label {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 3px;
+  padding: 0.1rem 0.35rem;
+  margin-right: 0.1rem;
+  vertical-align: middle;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: var(--sand-light);
+  color: #6b4c3b;
+  border: 1px solid var(--sand);
+}
+.badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  border-radius: 3px;
+  padding: 0.1rem 0.35rem;
+  letter-spacing: 0.03em;
+  background: #e8e8e8;
+  color: #444;
+}
+.val-list code {
+  font-size: 0.72rem;
+  background: #f0f0f0;
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  color: #444;
+}
+.rel-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--green-light);
+  color: var(--green-dark);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  letter-spacing: 0.02em;
+}
+.applies-expr {
+  font-size: 0.72rem;
+  background: var(--yellow-light);
+  border-radius: 3px;
+  padding: 0.05rem 0.4rem;
+  color: #5a4000;
+}
+.ann-row--col { align-items: flex-start; }
+.policy-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.policy-item { font-size: 0.75rem; }
+.policy-item-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.15rem; }
+.policy-id {
+  font-size: 0.72rem;
+  background: #f0f0f0;
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  color: #444;
+}
+.policy-citation {
+  font-size: 0.7rem;
+  color: var(--blue-mid);
+  text-decoration: none;
+}
+.policy-citation:hover { text-decoration: underline; }
+.policy-desc {
+  font-size: 0.75rem;
+  color: #555;
+  line-height: 1.45;
+  margin: 0;
+}
+</style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#C2C0E8;"><a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Data Dictionary</a><span style="opacity:0.5;">/</span><span style="color:white;">Document Management</span></div>
+  
+<div class="dict-layout">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-domain">Document Management</div>
+      <div class="sidebar-meta">2 fields</div>
+    </div>
+    <div class="search-wrap">
+      <input class="search-bar" type="search" id="search" placeholder="Search fields…" autocomplete="off" />
+    </div>
+    <nav class="sidebar-nav"><a href="#sec-document" class="nav-sub" data-section="sec-document">document <span class="nav-count">2</span></a></nav>
+  </aside>
+  <main class="dict-main">
+    <div class="dict-header">
+      <h1 class="dict-title">Document Management data dictionary</h1>
+      <button class="csv-btn" onclick="exportCsv()">Export CSV</button>
+    </div>
+    <div id="no-results" class="no-results hidden">No fields match your search.</div>
+    <div id="dict-content"><section class="dict-section" id="sec-document" data-section-id="sec-document"><h2 class="section-title">document</h2><div class="cards-grid"><div class="card" data-path="document.title"><div class="card-header"><code class="field-path">document.title</code><span class="type-badge">string</span></div></div><div class="card" data-path="document.documentDate"><div class="card-header"><code class="field-path">document.documentDate</code><span class="type-badge">date</span></div></div></div></section></div>
+  </main>
+</div>
+  <script>
+
+const SECTION_OFFSET = 72;
+
+function initDictView() {
+  const sections = Array.from(document.querySelectorAll('.dict-section'));
+  const navLinks = Array.from(document.querySelectorAll('.nav-sub'));
+
+  function setActive() {
+    const scrollY = window.scrollY + SECTION_OFFSET + 10;
+    let active = sections[0]?.id ?? null;
+    for (const s of sections) {
+      if (s.offsetTop <= scrollY) active = s.id;
+    }
+    navLinks.forEach(a => a.classList.toggle('nav-sub--active', a.dataset.section === active));
+  }
+
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  navLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.getElementById(a.dataset.section);
+      if (target) {
+        const top = target.getBoundingClientRect().top + window.scrollY - SECTION_OFFSET;
+        window.scrollTo({ top, behavior: 'instant' });
+      }
+    });
+  });
+
+  document.getElementById('search').addEventListener('input', function () {
+    applySearch(this.value);
+  });
+}
+
+// ── Search (ported from steel thread visualizer) ─────────────────────────────
+
+function clearHighlights() {
+  document.querySelectorAll('mark.search-hl').forEach(el => {
+    const parent = el.parentNode;
+    el.replaceWith(document.createTextNode(el.textContent));
+    if (parent) parent.normalize();
+  });
+}
+
+function highlightInElement(root, q) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const text = node.textContent;
+    const lower = text.toLowerCase();
+    if (!lower.includes(q)) continue;
+    const frag = document.createDocumentFragment();
+    let last = 0, idx = lower.indexOf(q);
+    while (idx !== -1) {
+      if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+      const mark = document.createElement('mark');
+      mark.className = 'search-hl';
+      mark.textContent = text.slice(idx, idx + q.length);
+      frag.appendChild(mark);
+      last = idx + q.length;
+      idx = lower.indexOf(q, last);
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+  }
+}
+
+function applySearch(q) {
+  q = (q ?? '').trim().toLowerCase();
+  clearHighlights();
+
+  let anyVisible = false;
+  document.querySelectorAll('.card').forEach(card => {
+    const match = !q || card.textContent.toLowerCase().includes(q);
+    card.classList.toggle('hidden', !match);
+    if (match) anyVisible = true;
+  });
+  document.querySelectorAll('.dict-section').forEach(section => {
+    const visible = section.querySelectorAll('.card:not(.hidden)').length > 0;
+    section.style.display = visible ? '' : 'none';
+  });
+
+  const noResults = document.getElementById('no-results');
+  if (noResults) noResults.classList.toggle('hidden', anyVisible || !q);
+
+  if (q) {
+    document.querySelectorAll('.card:not(.hidden)').forEach(el => highlightInElement(el, q));
+  }
+}
+
+function exportCsv() {
+  const rows = [['path', 'type', 'programs', 'policies', 'dataClassification']];
+  document.querySelectorAll('.card:not(.hidden)').forEach(card => {
+    const path = card.dataset.path ?? '';
+    const type = card.querySelector('.type-badge')?.textContent ?? '';
+    const getAnnRow = label => [...card.querySelectorAll('.ann-row')]
+      .find(r => r.querySelector('.ann-label')?.textContent.trim().toLowerCase() === label);
+    const programs = [...(getAnnRow('programs')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    const policies = [...(getAnnRow('policies')?.querySelectorAll('code') ?? [])].map(b => b.textContent).join(';');
+    const dc = [...(getAnnRow('classification')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    rows.push([path, type, programs, policies, dc]);
+  });
+  const csv = rows.map(r => r.map(v => JSON.stringify(v)).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'data-dictionary.csv';
+  a.click();
+}
+
+initDictView();
+
+  </script>
+</body>
+</html>

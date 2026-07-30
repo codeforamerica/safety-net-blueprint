@@ -1,0 +1,105 @@
+version: "0.1.0"
+
+# Sequence Diagrams — index configuration
+#
+# phases: Phase overview diagrams, each mapping to a slice of a state machine.
+#   What's editorial: phase labels, descriptions, ordering, state/domain membership.
+#   What's contract-driven: state names (must exist in state machine), domain IDs
+#     (must match discovered OpenAPI specs).
+#
+# diagrams: Event chain diagrams, each tracing a triggering action through the
+#   full emit → subscribe → emit chain across all domain state machines.
+#   What's editorial: diagram id, title, trigger label.
+#   What's contract-driven: domain, object, and action (must exist in state machine).
+
+phases:
+  - id: application-filing
+    label: Application Filing
+    description: Applicant completes and submits a benefits application
+    status: implemented
+    domains:
+      - intake
+      - eligibility
+      - workflow
+      - data-exchange
+    stateMachine:
+      machine: intake
+      object: Application
+      states: [draft, submitted]
+    diagrams:
+      - application-submission
+
+  - id: intake-review
+    label: Intake Review
+    description: Caseworker reviews the application and gathers required verifications
+    status: implemented
+    domains:
+      - intake
+      - document-management
+      - scheduling
+      - data-exchange
+    stateMachine:
+      machine: intake
+      object: Application
+      states: [under_review, pending_approval]
+    diagrams:
+      - task-claimed
+
+  - id: determination
+    label: Eligibility Determination
+    description: System and caseworker evaluate program eligibility and issue decisions
+    status: implemented
+    domains:
+      - eligibility
+      - data-exchange
+    stateMachine:
+      machine: eligibility
+      object: Determination
+      states: [in_progress, completed]
+    diagrams:
+      - review-completed
+
+  - id: enrollment-activation
+    label: Enrollment & Activation
+    description: Case creation, benefit issuance, and program enrollment after an approved determination
+    status: planned
+    domains:
+      - case-management
+      - communication
+    stateMachine: null
+
+  - id: case-management
+    label: Case Management
+    description: Ongoing renewals, mid-period change reporting, benefit adjustments, and case closure
+    status: planned
+    domains:
+      - case-management
+      - workflow
+      - scheduling
+      - communication
+    stateMachine: null
+
+diagrams:
+  - id: application-submission
+    title: Application Submitted — Event Chain
+    trigger:
+      domain: intake
+      object: Application
+      action: submit
+      label: POST /applications/{id}/submit
+
+  - id: task-claimed
+    title: Task Claimed — Event Chain
+    trigger:
+      domain: workflow
+      object: Task
+      action: claim
+      label: POST /tasks/{id}/claim
+
+  - id: review-completed
+    title: Review Completed — Event Chain
+    trigger:
+      domain: intake
+      object: Application
+      action: complete-review
+      label: POST /applications/{id}/complete-review
