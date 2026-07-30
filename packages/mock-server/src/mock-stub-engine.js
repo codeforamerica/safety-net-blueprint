@@ -20,7 +20,7 @@
 import { emitEventEnvelope } from './emit-event.js';
 import { eventBus } from './event-bus.js';
 import { resolveTimeTokens } from './time-tokens.js';
-import { resolveDotPath } from './collection-utils.js';
+import { resolveDotPath, toCamelCase } from './collection-utils.js';
 
 /** Ordered list of registered event stubs. */
 const stubs = [];
@@ -281,7 +281,7 @@ function dispatchStubResponse(stub, envelope) {
   // "data_exchange.service_call.created" → "serviceCallId"
   const parts = eventType.split('.');
   const entitySnake = parts.length >= 2 ? parts[parts.length - 2] : '';
-  const entityCamel = entitySnake.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  const entityCamel = toCamelCase(entitySnake);
   const entityIdField = entityCamel ? entityCamel + 'Id' : null;
 
   // Merge: derived ID → trigger data → stub overrides

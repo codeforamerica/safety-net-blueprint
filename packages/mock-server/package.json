@@ -23,6 +23,7 @@
     "validate": "node -e \"console.log('mock-server: no schemas to validate')\"",
     "test": "node tests/run-all-tests.js --unit",
     "test:unit": "node tests/run-all-tests.js --unit",
+    "test:functional": "node tests/run-all-tests.js --functional",
     "test:integration": "npm run clients:generate && node tests/run-all-tests.js --integration",
     "test:all": "npm run clients:generate && node tests/run-all-tests.js --all",
     "clients:generate": "node scripts/generate-test-clients.js"

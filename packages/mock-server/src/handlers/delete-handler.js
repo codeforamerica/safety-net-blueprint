@@ -6,6 +6,8 @@ import { findById, deleteResource } from '../database-manager.js';
 import { emitEvent } from '../emit-event.js';
 import { isConfigManaged } from '../config-registry.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
+import { extractPrimaryParam, capitalize } from '../collection-utils.js';
+import { extractCallerRoles } from '../auth-context.js';
 
 /**
  * Create delete handler for a resource
@@ -14,7 +16,7 @@ import { matchAndPopHttp } from '../mock-stub-engine.js';
  * @returns {Function} Express handler
  */
 export function createDeleteHandler(apiMetadata, endpoint) {
-  const paramName = extractPathParam(endpoint.path);
+  const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (req, res) => {
     try {
       const httpStub = matchAndPopHttp(req.method, req.path);
@@ -59,9 +61,7 @@ export function createDeleteHandler(apiMetadata, endpoint) {
           source: apiMetadata.serverBasePath,
           data: null,
           callerId: req.headers['x-caller-id'] || null,
-          callerRoles: req.headers['x-caller-roles']
-            ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-            : [],
+          callerRoles: extractCallerRoles(req),
           traceparent: req.headers['traceparent'] || null,
           now: new Date().toISOString(),
         });
@@ -81,20 +81,3 @@ export function createDeleteHandler(apiMetadata, endpoint) {
   };
 }
 
-/**
- * Extract the path parameter name from an OpenAPI path pattern.
- * Returns the LAST parameter so sub-item paths like
- * /resources/{parentId}/sub/{subId} resolve to the sub-resource id.
- */
-function extractPathParam(path) {
-  const matches = path.match(/\{([^}]+)\}/g);
-  if (!matches) return 'id';
-  return matches[matches.length - 1].replace(/[{}]/g, '');
-}
-
-/**
- * Capitalize first letter of a string
- */
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}

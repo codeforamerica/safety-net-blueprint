@@ -262,7 +262,7 @@ components:
       description: |
         JWT from Identity Provider with embedded permissions.
 
-        Expected claims structure: see common.yaml#/JwtClaims
+        Expected claims structure: see schemas/domain/identity-access.yaml#/$defs/JwtClaims
         Documentation: docs/architecture/cross-cutting/identity-access.md
 
     apiKeyAuth:
@@ -291,8 +291,10 @@ components:
 
         Note: Job function details (skills, team, workload) are not stored here.
         Staff users link to a CaseWorker record in the Case Management domain.
+      unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/FrontendAuthContext"
+        - $ref: "./schemas/domain/identity-access.yaml#/$defs/User"
+        - $ref: "./schemas/domain/identity-access.yaml#/$defs/FrontendAuthContext"
         - type: object
           required:
             - id
@@ -306,20 +308,15 @@ components:
               type: string
               format: uuid
               readOnly: true
-              description: Unique identifier for the user (same as userId in JWT claims).
-            idpSubject:
+              description: Unique identifier for the user.
+            userId:
               type: string
+              format: uuid
+              readOnly: true
+              x-derived: "$this.id"
               description: |
-                Subject identifier from the Identity Provider. Immutable after creation.
-                Format varies by IdP (e.g., "auth0|507f1f77bcf86cd799439011").
-              example: "auth0|507f1f77bcf86cd799439011"
-            email:
-              type: string
-              format: email
-              description: User's email address (from IdP or manually set).
-              example: "jane.smith@alameda.gov"
-            status:
-              $ref: "#/components/schemas/UserStatus"
+                Alias for id, used in JWT claims context (BackendAuthContext.userId).
+                Same value as id.
             createdAt:
               type: string
               format: date-time
@@ -332,133 +329,33 @@ components:
               description: Timestamp when the user was last updated.
 
     # Ancillary schemas (alphabetical)
-    FrontendAuthContext:
-      type: object
-      description: |
-        Authorization context for frontend applications. Extends BackendAuthContext
-        with UI permissions and user preferences.
 
-        Used in enriched JWTs for frontends (via BFF/gateway) or returned by
-        GET /users/me. States can customize this independently from BackendAuthContext.
-      allOf:
-        - $ref: "./components/auth.yaml#/BackendAuthContext"
-        - type: object
-          properties:
-            ui:
-              $ref: "#/components/schemas/UiPermissions"
-            preferences:
-              $ref: "#/components/schemas/UserPreferences"
+    # FrontendAuthContext — JWT/BFF schema for enriched frontend tokens.
+    # Defined in schemas/domain/identity-access.yaml; exposed here for tooling.
+    FrontendAuthContext:
+      $ref: "./schemas/domain/identity-access.yaml#/$defs/FrontendAuthContext"
 
     RoleType:
-      $ref: "./components/auth.yaml#/RoleType"
+      $ref: "./schemas/common/enums.yaml#/$defs/RoleType"
 
     TokenClaims:
-      $ref: "./components/auth.yaml#/BackendAuthContext"
-
-    UiPermissions:
-      type: object
-      readOnly: true
-      additionalProperties: true
-      description: |
-        Computed UI permissions and display data for frontend feature toggling.
-        Backend computes these from role and permissions to provide
-        a UI-friendly interface for showing/hiding features.
-
-        Structure is flexible - states define their own fields via overlays.
-        Example fields: name, availableModules, canApproveApplications, etc.
-      example:
-        name: "Jane Smith"
-        availableModules: ["cases", "tasks", "documents"]
-        canApproveApplications: false
-        canViewSensitivePII: false
-        canExportData: true
-        canManageUsers: false
-
-    UserPreferences:
-      type: object
-      additionalProperties: true
-      description: |
-        User preferences for the application.
-
-        Structure is flexible - states define their own fields via overlays.
-        Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
-      example:
-        timezone: "America/Los_Angeles"
-        dateFormat: "us"
-        itemsPerPage: 25
-
-    UserStatus:
-      type: string
-      description: User account status.
-      enum:
-        - active
-        - inactive
-        - pending
-        - suspended
+      $ref: "./schemas/domain/identity-access.yaml#/$defs/BackendAuthContext"
 
     # API-specific schemas
-    UserCreate:
-      type: object
-      description: Payload to create a new user.
-      required:
-        - idpSubject
-        - email
-        - role
-      properties:
-        idpSubject:
-          type: string
-          description: Subject identifier from the IdP.
-          example: "auth0|507f1f77bcf86cd799439011"
-        email:
-          type: string
-          format: email
-          example: "jane.smith@alameda.gov"
-        name:
-          type: string
-          example: "Jane Smith"
-        role:
-          $ref: "./components/auth.yaml#/RoleType"
-        counties:
-          type: array
-          items:
-            type: string
-          description: County FIPS codes to assign.
-          example: ["06001"]
-        organizationId:
-          type: string
-          format: uuid
-          x-relationship:
-            resource: External
 
-    UserUpdate:
-      type: object
-      description: Payload to update a user.
-      properties:
-        name:
-          type: string
-        role:
-          $ref: "./components/auth.yaml#/RoleType"
-        status:
-          $ref: "#/components/schemas/UserStatus"
-        counties:
-          type: array
-          items:
-            type: string
-        personId:
-          type: string
-          format: uuid
-          description: Link to Person record (for applicants).
-          x-relationship:
-            resource: Person
-            domain: client-management
-        caseWorkerId:
-          type: string
-          format: uuid
-          description: Link to CaseWorker record (for staff).
-          x-relationship:
-            resource: External
-        preferences:
-          $ref: "#/components/schemas/UserPreferences"
+    UserCreate:
+      allOf:
+        - $ref: "./schemas/domain/identity-access.yaml#/$defs/User"
+        - type: object
+          description: |
+            Payload to create a new user.
+
+            Note: id, userId, createdAt, and updatedAt are server-generated (readOnly)
+            and will be returned in the response.
+          required:
+            - idpSubject
+            - email
+            - roles
 
     UserList:
       description: Paginated list of users.
@@ -474,6 +371,18 @@ components:
               items:
                 $ref: "#/components/schemas/User"
 
+    UserUpdate:
+      allOf:
+        - $ref: "./schemas/domain/identity-access.yaml#/$defs/User"
+        - type: object
+          description: |
+            Payload to update one or more mutable fields of an existing user.
+            Partial updates are supported.
+
+            Note: id, userId, createdAt, and updatedAt are server-generated (readOnly)
+            and cannot be updated.
+          minProperties: 1
+
   examples:
     UserExample1:
       summary: Jane Smith — active case worker
@@ -482,7 +391,6 @@ components:
         userId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         idpSubject: auth0|507f1f77bcf86cd799439011
         email: jane.smith@example.gov
-        role: case_worker
         roles:
           name: case_worker
           permissions:

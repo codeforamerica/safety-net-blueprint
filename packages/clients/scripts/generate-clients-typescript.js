@@ -225,22 +225,23 @@ async function generateAnnotationsAndPolicies(specsDir, outputDir, annotationExp
 
   // ── Annotations ───────────────────────────────────────────────────────────
 
-  const annotationFiles = allFiles.filter(f => f.endsWith('-annotations.yaml')).sort();
+  const annotationFiles = allFiles.filter(f => f.includes('-annotations') && f.endsWith('.yaml')).sort();
 
   if (annotationFiles.length > 0) {
-    // Group files by domain (everything before the first "-annotations" suffix)
+    // Group files by domain. Prefer the `domain:` property declared in the file;
+    // fall back to the filename prefix (everything before "-annotations") if absent.
     const domainMap = new Map();
     for (const f of annotationFiles) {
-      const domain = f.replace(/-annotations.*\.yaml$/, '');
+      const data = yaml.load(readFileSync(join(specsDir, f), 'utf8'));
+      const domain = data.domain || f.replace(/-annotations.*\.yaml$/, '');
       if (!domainMap.has(domain)) domainMap.set(domain, []);
-      domainMap.get(domain).push(f);
+      domainMap.get(domain).push({ file: f, data });
     }
 
     const blocks = [];
-    for (const [domain, files] of domainMap) {
+    for (const [domain, entries] of domainMap) {
       const merged = { schema: {}, operations: {}, events: {} };
-      for (const f of files) {
-        const data = yaml.load(readFileSync(join(specsDir, f), 'utf8'));
+      for (const { data } of entries) {
         Object.assign(merged.schema, data.schema || {});
         Object.assign(merged.operations, data.operations || {});
         Object.assign(merged.events, data.events || {});
@@ -646,7 +647,7 @@ function patchTypesGenForNamedEnums(typesGenPath, namedEnums) {
 }
 
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums };
 
 // Run main function only if this is the entry point
 if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {

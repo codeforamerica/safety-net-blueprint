@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import { readdirSync, existsSync } from 'fs';
 import { startMockServer, stopServer, isServerRunning } from '../scripts/server.js';
-import { setupFunctional, startFunctionalServer, stopFunctionalServer } from './e2e/functional/setup.js';
+import { setupFunctional, startFunctionalServer, stopFunctionalServer } from './functional/setup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,18 +31,23 @@ const integrationTestFiles = readdirSync(integrationDir)
   .filter(file => file.endsWith('.test.js') || file.endsWith('.test.ts'))
   .map(file => join('integration', file));
 
-const postmanDir = join(__dirname, 'postman');
+const postmanDir = join(__dirname, 'integration', 'postman');
+const postmanTestFiles = existsSync(postmanDir)
+  ? readdirSync(postmanDir)
+      .filter(file => file.endsWith('.test.js') || file.endsWith('.test.ts'))
+      .map(file => join('integration', 'postman', file))
+  : [];
 const postmanCollections = existsSync(postmanDir)
   ? readdirSync(postmanDir)
       .filter(file => file.endsWith('.json'))
-      .map(file => join('postman', file))
+      .map(file => join('integration', 'postman', file))
   : [];
 
-const functionalDir = join(__dirname, 'e2e', 'functional');
+const functionalDir = join(__dirname, 'functional');
 const functionalTestFiles = existsSync(functionalDir)
   ? readdirSync(functionalDir)
       .filter(file => file.endsWith('.test.ts') || file.endsWith('.test.js'))
-      .map(file => join('e2e', 'functional', file))
+      .map(file => join('functional', file))
   : [];
 
 const args = process.argv.slice(2);
@@ -63,9 +68,14 @@ async function runTest(testFile) {
     const tsxBin = existsSync(tsxLocal) ? tsxLocal : tsxRoot;
     const runner = isTs ? tsxBin : 'node';
     const runnerArgs = isTs ? ['--test', testPath] : [testPath];
+    // Close fd3 for tsx/--test runs: Node.js test runner uses fd3 for its IPC
+    // pipe between the orchestrator and the test file subprocess. If fd3 is
+    // already open in the environment (e.g. bash's exec > >(tee ...) pipe from
+    // preflight.sh, or npm's internal pipes), tsx inherits it and the IPC
+    // channel gets corrupted, causing "Unable to deserialize cloned data".
     const proc = spawn(runner, runnerArgs, {
-      stdio: 'inherit',
-      shell: true
+      stdio: isTs ? ['inherit', 'inherit', 'inherit', 'ignore'] : 'inherit',
+      shell: !isTs && process.platform === 'win32'
     });
 
     proc.on('close', (code) => {
@@ -80,6 +90,17 @@ async function runTest(testFile) {
       reject(error);
     });
   });
+}
+
+const TEST_TIMEOUT_MS = 5 * 60 * 1000;   // 5 minutes per test file
+const SETUP_TIMEOUT_MS = 3 * 60 * 1000;  // 3 minutes for resolve/generate steps
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 async function runPostmanCollection(collectionFile) {
@@ -108,12 +129,24 @@ async function runPostmanCollection(collectionFile) {
   });
 }
 
-const generatedDir = join(__dirname, 'generated');
+const generatedDir = join(__dirname, 'integration', 'generated');
 const generateTestClientsScript = resolve(__dirname, '..', 'scripts', 'generate-test-clients.js');
+const resolveScript = resolve(__dirname, '..', '..', 'contracts', 'scripts', 'resolve.js');
 
 /**
- * Ensure generated TypeScript clients exist for integration tests.
- * Checks for the generated/ directory and runs generate-test-clients.js if missing.
+ * Run the main contracts resolve pipeline (base specs + overlay → packages/resolved).
+ */
+async function resolveContracts() {
+  console.log('Resolving contracts...');
+  await new Promise((res, rej) => {
+    const proc = spawn('node', [resolveScript], { stdio: 'inherit', shell: false });
+    proc.on('close', code => code === 0 ? res() : rej(new Error(`resolve failed with exit code ${code}`)));
+    proc.on('error', rej);
+  });
+}
+
+/**
+ * Generate TypeScript clients for integration tests from already-resolved specs.
  */
 async function ensureIntegrationClients() {
   if (existsSync(generatedDir) && readdirSync(generatedDir).length > 0) return;
@@ -130,73 +163,103 @@ async function runAllTests() {
   console.log('='.repeat(70));
 
   if (runUnit) console.log(`  Unit:        ${unitTestFiles.length} test(s)`);
-  if (runIntegration) console.log(`  Integration: ${integrationTestFiles.length} test(s), ${postmanCollections.length} Postman collection(s)`);
+  if (runIntegration) console.log(`  Integration: ${integrationTestFiles.length} test(s), ${postmanTestFiles.length} Postman test(s), ${postmanCollections.length} Postman collection(s)`);
   if (runFunctional) console.log(`  Functional:  ${functionalTestFiles.length} test(s)`);
 
   let passed = 0;
   let failed = 0;
   const failedTests = [];
 
+  let integrationServerStarted = false;
+  let functionalServerStarted = false;
+
+  async function bail(label, error) {
+    failed++;
+    failedTests.push(label);
+    console.error(`\n✗ ${label} failed: ${error.message}`);
+    console.error('\nStopping — fix the failure above before continuing.');
+    console.error(`  ✗ ${label}`);
+    if (integrationServerStarted) await stopServer(false).catch(() => {});
+    if (functionalServerStarted) await stopFunctionalServer().catch(() => {});
+    process.exit(1);
+  }
+
+  // Run resolve pipelines before starting any servers.
+  // When both integration and functional are needed, run both resolve pipelines
+  // concurrently — they write to different output dirs and are fully independent.
+  if (runIntegration && runFunctional) {
+    console.log('\nRunning resolve pipelines in parallel...');
+    await Promise.all([
+      withTimeout(resolveContracts(), SETUP_TIMEOUT_MS, 'resolveContracts'),
+      withTimeout(setupFunctional(), SETUP_TIMEOUT_MS, 'setupFunctional'),
+    ]).catch(err => bail('resolve pipelines', err));
+    await withTimeout(ensureIntegrationClients(), SETUP_TIMEOUT_MS, 'ensureIntegrationClients')
+      .catch(err => bail('ensureIntegrationClients', err));
+  } else if (runIntegration) {
+    await withTimeout(resolveContracts(), SETUP_TIMEOUT_MS, 'resolveContracts')
+      .catch(err => bail('resolveContracts', err));
+    await withTimeout(ensureIntegrationClients(), SETUP_TIMEOUT_MS, 'ensureIntegrationClients')
+      .catch(err => bail('ensureIntegrationClients', err));
+  } else if (runFunctional) {
+    await withTimeout(setupFunctional(), SETUP_TIMEOUT_MS, 'setupFunctional')
+      .catch(err => bail('setupFunctional', err));
+  }
+
   // Run unit tests
   if (runUnit) {
     console.log('\n📋 Unit Tests');
     console.log('-'.repeat(70));
     for (const testFile of unitTestFiles) {
-      try {
-        await runTest(testFile);
-        passed++;
-      } catch (error) {
-        failed++;
-        failedTests.push(testFile);
-        console.error(`\n✗ ${testFile} failed: ${error.message}`);
-      }
+      await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
+        .then(() => passed++)
+        .catch(err => bail(testFile, err));
     }
   }
 
   // Run integration tests if requested
   if (runIntegration) {
-    await ensureIntegrationClients();
     console.log('\n🔗 Integration Tests');
     console.log('-'.repeat(70));
-    for (const testFile of integrationTestFiles) {
-      try {
-        await runTest(testFile);
-        passed++;
-      } catch (error) {
-        failed++;
-        failedTests.push(testFile);
-        console.error(`\n✗ ${testFile} failed: ${error.message}`);
-        console.error('   Make sure the mock server is running: npm run mock:start');
-      }
+
+    // Start the mock server once for all integration and Postman tests.
+    // Individual test files check isServerRunning() and skip startup when
+    // the server is already available, so teardownServer() is a no-op for them.
+    const integrationResolvedDir = resolve(__dirname, '..', '..', 'resolved');
+    const integrationSeedDir = resolve(__dirname, 'integration', 'seed');
+    const integrationAlreadyRunning = await isServerRunning().catch(() => false);
+    if (!integrationAlreadyRunning) {
+      console.log('Starting mock server...');
+      await startMockServer([integrationResolvedDir], integrationSeedDir);
+      await new Promise(res => setTimeout(res, 1500));
+      integrationServerStarted = true;
+      console.log('Mock server started\n');
     }
 
-    if (postmanCollections.length > 0) {
-      console.log('\n📮 Postman Collections');
+    for (const testFile of integrationTestFiles) {
+      await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
+        .then(() => passed++)
+        .catch(err => bail(testFile, err));
+    }
+
+    if (postmanTestFiles.length > 0 || postmanCollections.length > 0) {
+      console.log('\n📮 Postman Tests');
       console.log('-'.repeat(70));
 
-      const contractsDir = resolve(__dirname, '..', '..', 'contracts');
-      const alreadyRunning = await isServerRunning().catch(() => false);
-      if (!alreadyRunning) {
-        console.log('Starting mock server...');
-        await startMockServer([contractsDir], seedDir);
-        await new Promise(res => setTimeout(res, 1500));
-        console.log('Mock server started\n');
+      for (const testFile of postmanTestFiles) {
+        await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
+          .then(() => passed++)
+          .catch(err => bail(testFile, err));
       }
 
       for (const collectionFile of postmanCollections) {
-        try {
-          await runPostmanCollection(collectionFile);
-          passed++;
-        } catch (error) {
-          failed++;
-          failedTests.push(collectionFile);
-          console.error(`\n✗ ${collectionFile} failed: ${error.message}`);
-          console.error('   Make sure the mock server is running: npm run mock:start');
-        }
+        await withTimeout(runPostmanCollection(collectionFile), TEST_TIMEOUT_MS, collectionFile)
+          .then(() => passed++)
+          .catch(err => bail(collectionFile, err));
       }
-
-      if (!alreadyRunning) await stopServer(false);
     }
+
+    if (integrationServerStarted) await stopServer(false);
+    integrationServerStarted = false;
   }
 
   // Run functional tests if requested
@@ -204,36 +267,19 @@ async function runAllTests() {
     console.log('\n🧪 Functional Tests');
     console.log('-'.repeat(70));
 
-    // Run the resolve + generate pipeline before starting the server
-    console.log('Running setup (resolve + generate)...');
-    try {
-      await setupFunctional();
-    } catch (error) {
-      failed++;
-      failedTests.push('functional/setup');
-      console.error(`\n✗ Functional setup failed: ${error.message}`);
-      console.error('   Skipping functional tests.');
+    console.log('Starting functional server...');
+    await startFunctionalServer();
+    functionalServerStarted = true;
+    await new Promise(res => setTimeout(res, 1500));
+    console.log('Functional server started\n');
+
+    for (const testFile of functionalTestFiles) {
+      await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
+        .then(() => passed++)
+        .catch(err => bail(testFile, err));
     }
 
-    if (!failedTests.includes('functional/setup')) {
-      console.log('Starting functional server...');
-      await startFunctionalServer();
-      await new Promise(res => setTimeout(res, 1500));
-      console.log('Functional server started\n');
-
-      for (const testFile of functionalTestFiles) {
-        try {
-          await runTest(testFile);
-          passed++;
-        } catch (error) {
-          failed++;
-          failedTests.push(testFile);
-          console.error(`\n✗ ${testFile} failed: ${error.message}`);
-        }
-      }
-
-      await stopFunctionalServer();
-    }
+    await stopFunctionalServer();
   }
 
   // Summary

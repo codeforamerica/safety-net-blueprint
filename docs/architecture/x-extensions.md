@@ -10,6 +10,7 @@ The machine-readable catalog is in [`packages/contracts/patterns/api-patterns.ya
 
 | Extension | File type(s) | Location within file |
 |---|---|---|
+| `x-derived` | `*-openapi.yaml` | Schema property (on computed fields) |
 | `x-domain` | `*-openapi.yaml` | `info` level or operation level |
 | `x-environments` | Any spec node | `paths`, operations, schemas, or any other node |
 | `x-events` | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
@@ -18,6 +19,33 @@ The machine-readable catalog is in [`packages/contracts/patterns/api-patterns.ya
 | `x-sortable` | `*-openapi.yaml` | List operation level |
 | `x-status` | `*-openapi.yaml` | `info` level or operation level |
 | `x-visibility` | `*-openapi.yaml` | `info` level or operation level |
+
+---
+
+## x-derived
+
+**File type:** `*-openapi.yaml` — schema property level, on computed read-only fields.
+
+Declares a CEL expression that the mock server evaluates at read time to populate the field. The expression is evaluated with `$this` bound to the current resource record. Fields annotated with `x-derived` are implicitly read-only — no need to also declare `readOnly: true`.
+
+```yaml
+# users-openapi.yaml
+userId:
+  type: string
+  format: uuid
+  x-derived: "$this.id"
+  description: Alias for id, used in JWT claims context.
+```
+
+**CEL context:**
+
+| Variable | Value |
+|---|---|
+| `$this` | The full resource record being returned |
+
+**Evaluation scope:** item-scope only — the expression is evaluated once per record. Collection-scope expressions (operating across the full result set) are not currently supported.
+
+The mock server evaluates `x-derived` fields on all response paths: GET single, GET list, POST create, and PATCH update.
 
 ---
 

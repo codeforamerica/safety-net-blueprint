@@ -603,7 +603,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }
@@ -689,7 +689,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }
@@ -780,7 +780,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }
@@ -914,7 +914,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }
@@ -1000,7 +1000,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }
@@ -1079,7 +1079,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }
@@ -1166,7 +1166,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }
@@ -1253,7 +1253,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }
@@ -1346,7 +1346,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('event accepted', () => pm.response.to.have.status(202));"
+                  "pm.test('event accepted', () => pm.response.to.have.status(201));"
                 ]
               }
             }

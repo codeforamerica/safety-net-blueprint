@@ -48,10 +48,12 @@ function* walkProperties(schema, pathPrefix = '') {
 /**
  * Returns true if the property is a UUID FK field that requires x-relationship:
  * name ends in 'Id' (not exactly 'id'), type: string, format: uuid.
+ * Fields with x-derived are computed aliases, not foreign keys — excluded.
  */
 function isFkField(propName, propSchema) {
   if (propName === 'id') return false;
   if (!propName.endsWith('Id')) return false;
+  if (propSchema['x-derived']) return false;
   return propSchema.type === 'string' && propSchema.format === 'uuid';
 }
 

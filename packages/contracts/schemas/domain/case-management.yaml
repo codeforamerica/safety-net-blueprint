@@ -1,0 +1,72 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/domain/case-management.yaml"
+title: CaseManagement
+description: >
+  Shared case management domain types. These are the client-writable fields for
+  case management entities. OpenAPI specs compose these with system fields
+  (id, createdAt, updatedAt) to produce the full resource schema. AsyncAPI specs
+  and state machines reference these types directly.
+
+$defs:
+  Case:
+    type: object
+    description: >
+      A case represents the ongoing relationship with a client or household. It spans
+      years, multiple applications, and multiple programs.
+    properties:
+      status:
+        type: string
+        enum:
+          - active
+          - closed
+        description: >
+          Current status of the case. Will be driven by x-enum-source once a
+          case-management state machine is defined.
+      effectiveStartDate:
+        type: string
+        format: date
+        description: Date when coverage or the case relationship begins.
+      effectiveEndDate:
+        type:
+          - string
+          - "null"
+        format: date
+        description: Date when the case was closed. Null while active.
+      primaryApplicantId:
+        type: string
+        format: uuid
+        description: Reference to the Person record for the primary applicant.
+        x-relationship:
+          resource: Person
+          domain: client-management
+      members:
+        type: array
+        description: Household members associated with this case.
+        items:
+          $ref: "#/$defs/CaseMember"
+      assignedToId:
+        type: string
+        format: uuid
+        description: Reference to the User record for the assigned case worker.
+        x-relationship:
+          resource: User
+          domain: identity-access
+
+  CaseMember:
+    type: object
+    description: A person associated with a case and their relationship to the primary applicant.
+    additionalProperties: false
+    required:
+      - personId
+      - relationship
+    properties:
+      personId:
+        type: string
+        format: uuid
+        description: Reference to the Person record.
+        x-relationship:
+          resource: Person
+          domain: client-management
+      relationship:
+        type: string
+        description: Relationship to the primary applicant.

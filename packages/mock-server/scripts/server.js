@@ -165,7 +165,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
       }
       try {
         const stored = emitEventEnvelope(event);
-        res.status(202).json(stored);
+        res.status(201).json(stored);
       } catch (err) {
         console.error('Failed to emit injected event:', err.message);
         res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: err.message }] });
@@ -306,13 +306,35 @@ async function startMockServer(specDirs = null, seedDir = null) {
       });
     });
 
-    // Start Express server
-    expressServer = app.listen(PORT, HOST, () => {
-      console.log('\n' + '='.repeat(70));
-      console.log('✓ Mock API Server Started Successfully!');
-      console.log('='.repeat(70));
-      console.log(`\n📡 Mock Server:    http://${HOST}:${PORT}`);
-      console.log(`❤️  Health Check:   http://${HOST}:${PORT}/health`);
+    // Start Express server — if port is already in use, kill the existing process and retry once.
+    await new Promise((resolve, reject) => {
+      expressServer = app.listen(PORT, HOST, () => {
+        console.log('\n' + '='.repeat(70));
+        console.log('✓ Mock API Server Started Successfully!');
+        console.log('='.repeat(70));
+        console.log(`\n📡 Mock Server:    http://${HOST}:${PORT}`);
+        console.log(`❤️  Health Check:   http://${HOST}:${PORT}/health`);
+        resolve();
+      });
+      expressServer.once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          console.warn(`\nPort ${PORT} is already in use — killing existing process and retrying...`);
+          try {
+            execSync(`npx kill-port ${PORT}`, { stdio: 'ignore' });
+          } catch { /* ignore if nothing to kill */ }
+          expressServer = app.listen(PORT, HOST, () => {
+            console.log('\n' + '='.repeat(70));
+            console.log('✓ Mock API Server Started Successfully!');
+            console.log('='.repeat(70));
+            console.log(`\n📡 Mock Server:    http://${HOST}:${PORT}`);
+            console.log(`❤️  Health Check:   http://${HOST}:${PORT}/health`);
+            resolve();
+          });
+          expressServer.once('error', reject);
+        } else {
+          reject(err);
+        }
+      });
     });
 
     // Display available endpoints

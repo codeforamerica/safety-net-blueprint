@@ -718,7 +718,6 @@ $defs:
       support paid) and Medicaid deductions (medical expenses). Expenses are
       application-level records with a memberId linking to the owning member.
     required:
-      - type
       - amount
     additionalProperties: true
     properties:
@@ -769,7 +768,6 @@ $defs:
       (42 CFR § 435.603). Deductions are application-level records with a
       memberId linking to the owning member.
     required:
-      - type
       - amount
     additionalProperties: true
     properties:
@@ -830,9 +828,6 @@ $defs:
       confers Medicaid eligibility in most states. SSDI receipt triggers Medicare
       eligibility after a 24-month waiting period. Status is used in eligibility
       determinations and to initiate FDSH SSA verification.
-    required:
-      - programType
-      - status
     additionalProperties: true
     properties:
       programType:
@@ -905,7 +900,7 @@ $defs:
       - from
       - to
       - relationshipTypes
-    additionalProperties: false
+    additionalProperties: true
     properties:
       from:
         $ref: "#/$defs/PersonRef"
@@ -979,8 +974,6 @@ $defs:
       The sponsor's income and resources are deemed available to the member
       for eligibility calculations until the member naturalizes or works
       40 qualifying quarters (8 U.S.C. § 1631).
-    required:
-      - sponsoredMemberId
     additionalProperties: true
     properties:
       sponsoredMemberId:
@@ -1232,9 +1225,6 @@ $defs:
     title: Interview
     type: object
     description: Caseworker-writable fields for an interview obligation record.
-    required:
-      - applicationId
-      - appointments
     properties:
       applicationId:
         type: string
@@ -1268,12 +1258,6 @@ $defs:
     title: Verification
     type: object
     description: Client-writable fields for a verification obligation record.
-    required:
-      - applicationId
-      - category
-      - status
-      - evidence
-      - documentRequests
     properties:
       applicationId:
         type: string

@@ -34,8 +34,6 @@ $defs:
   HealthPlanBase:
     title: HealthPlanBase
     type: object
-    required:
-      - type
     additionalProperties: true
     properties:
       type:

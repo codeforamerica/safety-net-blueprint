@@ -43,6 +43,16 @@ export function extractAuthContext(req) {
 }
 
 /**
+ * Extract the caller's roles from the X-Caller-Roles request header.
+ * @param {import('express').Request} req
+ * @returns {string[]}
+ */
+export function extractCallerRoles(req) {
+  const header = req.headers['x-caller-roles'];
+  return header ? header.split(',').map(r => r.trim()).filter(Boolean) : [];
+}
+
+/**
  * Decode a JWT payload without verifying the signature.
  * @param {string} token
  * @returns {Object} Parsed payload

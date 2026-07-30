@@ -1,5 +1,5 @@
 /**
- * Utilities for x-relationship runtime behavior at GET time.
+ * Utilities for x-relationship and x-derived runtime behavior at GET time.
  *
  * expand:     The resolver renames the FK field (e.g. memberId → member) and
  *             preserves x-relationship on the renamed field. At GET time these
@@ -8,7 +8,12 @@
  * links-only: The resolver keeps the FK field and adds a `links` property to
  *             the schema. At GET time these utilities populate links.{name}
  *             with a URI pointing to the related resource.
+ *
+ * x-derived:  Fields annotated with x-derived carry a CEL expression evaluated
+ *             at read time with $this bound to the record.
  */
+
+import { evaluateCEL } from '../cel-evaluator.js';
 
 /**
  * Walk a response schema and return all fields annotated with
@@ -200,4 +205,57 @@ export function applyLinks(record, linksFields, serverBasePath = '') {
 
   if (!hasLinks) return record;
   return { ...record, links };
+}
+
+/**
+ * Walk a response schema and return all fields annotated with x-derived.
+ *
+ * Handles flat schemas and allOf.
+ *
+ * @param {object} schema - OpenAPI schema object (resolved, post-overlay)
+ * @returns {Array<{ fieldName: string, expr: string }>}
+ */
+export function extractDerivedFields(schema) {
+  if (!schema) return [];
+
+  const fields = [];
+  const propertySources = [];
+
+  if (schema.properties) propertySources.push(schema.properties);
+  if (Array.isArray(schema.allOf)) {
+    for (const entry of schema.allOf) {
+      if (entry.properties) propertySources.push(entry.properties);
+    }
+  }
+
+  for (const props of propertySources) {
+    for (const [fieldName, propDef] of Object.entries(props)) {
+      if (propDef?.['x-derived']) {
+        fields.push({ fieldName, expr: propDef['x-derived'] });
+      }
+    }
+  }
+
+  return fields;
+}
+
+/**
+ * Apply x-derived field computations to a record.
+ * Returns a new object — does not mutate the original.
+ *
+ * Each x-derived expression is evaluated with $this bound to the record.
+ *
+ * @param {object} record - DB record (after expand/links have been applied)
+ * @param {Array<{ fieldName: string, expr: string }>} derivedFields
+ * @returns {object}
+ */
+export function applyDerivedFields(record, derivedFields) {
+  if (!derivedFields || derivedFields.length === 0) return record;
+
+  const result = { ...record };
+  for (const { fieldName, expr } of derivedFields) {
+    const value = evaluateCEL(expr, { $this: record });
+    if (value !== undefined) result[fieldName] = value;
+  }
+  return result;
 }

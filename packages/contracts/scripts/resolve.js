@@ -660,7 +660,11 @@ function generateRpcOverlays(inputFiles) {
     const targetFile = inputFiles.find(f => f.relativePath === apiSpecFile);
     if (!targetFile) continue;
 
-    const endpointInfo = extractItemEndpointFromSpec(targetFile.spec, stateMachine.object);
+    // stateMachine.object is the top-level object name for single-machine specs.
+    // Multi-machine specs (like workflow) put object: inside each machines[] entry.
+    // Fall back to the first machine's object so the correct item path is found.
+    const smObjectName = stateMachine.object ?? stateMachine.machines?.[0]?.object;
+    const endpointInfo = extractItemEndpointFromSpec(targetFile.spec, smObjectName);
     if (!endpointInfo) continue;
 
     let overlay = generateOverlay(stateMachine, endpointInfo);
@@ -1204,9 +1208,14 @@ async function main() {
       console.log(`  ✓ ${relativePath}`);
     }
 
-    // Remove shared component files (they've been inlined)
+    // Remove shared component files (they've been inlined).
+    // Preserve companion YAML files the mock server needs at runtime —
+    // *-compositions.yaml and *-state-machine.yaml are not $ref targets;
+    // they are standalone files that drive route registration.
     for (const [relativePath] of currentResults) {
-      if (!relativePath.endsWith('-openapi.yaml')) {
+      if (!relativePath.endsWith('-openapi.yaml') &&
+          !relativePath.endsWith('-compositions.yaml') &&
+          !relativePath.endsWith('-state-machine.yaml')) {
         const filePath = join(outDir, relativePath);
         if (existsSync(filePath)) {
           rmSync(filePath, { recursive: true });

@@ -30,7 +30,6 @@ $defs:
     title: AssetBase
     type: object
     required:
-      - type
       - value
     additionalProperties: true
     properties:
@@ -197,7 +196,6 @@ $defs:
       whether a penalty period applies for transferring assets at below fair
       market value under SNAP resource rules (7 CFR § 273.8(h)) and TANF.
     required:
-      - type
       - dateOfDisposal
       - amountReceived
       - fairMarketValue

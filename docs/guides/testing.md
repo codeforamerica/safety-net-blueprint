@@ -7,7 +7,8 @@ The blueprint has three levels of testing:
 | Level | Command | What it tests |
 |-------|---------|---------------|
 | Unit | `npm test` | Individual modules (route generator, seeder, rules engine, etc.) |
-| Integration | `npm run test:integration` | Full mock server + HTTP + Postman/Newman |
+| Functional | `npm run test:functional` | Specific server behaviors against fixture specs + generated clients |
+| Integration | `npm run test:integration` | Full mock server + HTTP + Postman/Newman against resolved contracts |
 | Preflight | `npm run preflight` | All of the above plus validation, linting, and overlay freshness |
 
 ## Unit Tests
@@ -38,15 +39,12 @@ npm run test:integration
 
 ### How integration tests work
 
-The integration test suite uses a **fixture-based setup**:
+The integration test suite runs the mock server against `packages/resolved` (the resolved contracts with overlay applied):
 
-1. A temp directory is created with:
-   - Base spec files copied from `packages/contracts/`
-   - Fixture example files from `packages/mock-server/tests/fixtures/examples/` (replacing docs examples)
-2. The mock server is started against that temp directory
-3. A Postman collection is generated from the same temp directory
-4. All tests run — CRUD, state machine RPC, domain events, rule evaluation, Newman/Postman
-5. Temp directory and server are cleaned up
+1. The mock server is started against `packages/resolved` with seed data from `packages/mock-server/seed/`
+2. Tests make HTTP requests and assert on responses — CRUD, state machine RPC, domain events, rule evaluation
+3. A Postman collection is run via Newman for additional coverage
+4. Server is stopped after all tests complete
 
 ### Why fixture data?
 
@@ -94,7 +92,7 @@ Postman RPC tests require a task with `status: pending` (the state machine's `in
 
 ### Fixture files
 
-Fixture examples are in `packages/mock-server/tests/fixtures/examples/`. The key names in each fixture file match the key names in the corresponding docs example file — this ensures that `$ref` pointers in the spec files (e.g., `"$ref": "./persons-openapi-examples.yaml#/PersonExample1"`) remain valid during fixture dir validation.
+Seed data files are in `packages/mock-server/tests/integration/seed/`. The key names in each file match the key names in the corresponding docs example file — this ensures that `$ref` pointers in the spec files (e.g., `"$ref": "./persons-openapi-examples.yaml#/PersonExample1"`) remain valid during fixture dir validation.
 
 ## Postman/Newman Tests
 
@@ -137,7 +135,7 @@ Create a file in `packages/mock-server/tests/unit/` or `packages/contracts/tests
 
 Add to the appropriate section in `packages/mock-server/tests/integration/integration.test.js`.
 
-If the test requires new seed data, add records to the fixture example files in `packages/mock-server/tests/fixtures/examples/`. Use the established ID namespace for the resource type.
+If the test requires new seed data, add records to `packages/mock-server/tests/integration/seed/`. Use the established ID namespace for the resource type.
 
 ### New API (integration test coverage)
 

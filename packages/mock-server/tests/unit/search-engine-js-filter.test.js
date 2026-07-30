@@ -186,7 +186,7 @@ describe('paginateItems', () => {
   });
 
   test('uses default limit when not specified', () => {
-    const result = paginateItems(ITEMS, {}, { limit: 10 });
+    const result = paginateItems(ITEMS, {}, { limitDefault: 10 });
     assert.strictEqual(result.limit, 10);
     assert.strictEqual(result.total, 5);
   });

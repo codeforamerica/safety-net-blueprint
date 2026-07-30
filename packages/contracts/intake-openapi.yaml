@@ -2921,8 +2921,11 @@ components:
                 resource: ApplicationMember
 
     IncomeUpdate:
+      description: >
+        Mutable fields for an income record. type is immutable — to change the
+        income type, delete and recreate the record.
       allOf:
-        - $ref: "./schemas/common/income.yaml"
+        - $ref: "./schemas/common/income.yaml#/$defs/IncomeBase"
         - type: object
           minProperties: 1
 
@@ -2980,6 +2983,7 @@ components:
         - $ref: "./schemas/domain/intake.yaml#/$defs/Expense"
         - type: object
           required:
+            - type
             - memberId
           properties:
             memberId:
@@ -2990,6 +2994,9 @@ components:
                 resource: ApplicationMember
 
     ExpenseUpdate:
+      description: >
+        Mutable fields for an expense record. type is immutable — to change the
+        expense type, delete and recreate the record.
       allOf:
         - $ref: "./schemas/domain/intake.yaml#/$defs/Expense"
         - type: object
@@ -3059,8 +3066,11 @@ components:
                 resource: ApplicationMember
 
     AssetUpdate:
+      description: >
+        Mutable fields for an asset record. type is immutable — to change the
+        asset type, delete and recreate the record.
       allOf:
-        - $ref: "./schemas/common/assets.yaml"
+        - $ref: "./schemas/common/assets.yaml#/$defs/AssetBase"
         - type: object
           minProperties: 1
 
@@ -3128,8 +3138,11 @@ components:
                 resource: ApplicationMember
 
     JobUpdate:
+      description: >
+        Mutable fields for a job record. type is immutable — to change the job
+        type (employed vs. self_employed), delete and recreate the record.
       allOf:
-        - $ref: "./schemas/common/employment.yaml"
+        - $ref: "./schemas/common/employment.yaml#/$defs/JobBase"
         - type: object
           minProperties: 1
 
@@ -3179,8 +3192,11 @@ components:
       $ref: "./schemas/common/health.yaml"
 
     HealthPlanUpdate:
+      description: >
+        Mutable fields for a health plan record. type is immutable — to change
+        the plan type, delete and recreate the record.
       allOf:
-        - $ref: "./schemas/common/health.yaml"
+        - $ref: "./schemas/common/health.yaml#/$defs/HealthPlanBase"
         - type: object
           minProperties: 1
 
@@ -3315,6 +3331,7 @@ components:
         - $ref: "./schemas/common/assets.yaml#/$defs/AssetDisposal"
         - type: object
           required:
+            - type
             - memberId
           properties:
             memberId:
@@ -3325,6 +3342,9 @@ components:
                 resource: ApplicationMember
 
     AssetDisposalUpdate:
+      description: >
+        Mutable fields for an asset disposal record. type is immutable — to
+        change the asset type, delete and recreate the record.
       allOf:
         - $ref: "./schemas/common/assets.yaml#/$defs/AssetDisposal"
         - type: object
@@ -3388,6 +3408,7 @@ components:
         - $ref: "./schemas/domain/intake.yaml#/$defs/Deduction"
         - type: object
           required:
+            - type
             - memberId
           properties:
             memberId:
@@ -3398,6 +3419,9 @@ components:
                 resource: ApplicationMember
 
     DeductionUpdate:
+      description: >
+        Mutable fields for a deduction record. type is immutable — to change
+        the deduction type, delete and recreate the record.
       allOf:
         - $ref: "./schemas/domain/intake.yaml#/$defs/Deduction"
         - type: object
@@ -3462,6 +3486,8 @@ components:
         - type: object
           required:
             - memberId
+            - programType
+            - status
           properties:
             memberId:
               type: string
@@ -3816,7 +3842,11 @@ components:
               readOnly: true
 
     SponsorCreate:
-      $ref: "./schemas/domain/intake.yaml#/$defs/Sponsor"
+      allOf:
+        - $ref: "./schemas/domain/intake.yaml#/$defs/Sponsor"
+        - type: object
+          required:
+            - sponsoredMemberId
 
     SponsorUpdate:
       allOf:
@@ -3990,6 +4020,8 @@ components:
             - id
             - createdAt
             - updatedAt
+            - evidence
+            - documentRequests
           properties:
             id:
               type: string

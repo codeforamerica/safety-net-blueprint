@@ -11,7 +11,8 @@ import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
+import { extractCallerRoles } from '../auth-context.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 
 
 /**
@@ -87,16 +88,11 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const domain = apiMetadata.serverBasePath.replace(/^\//, '');
       const object = endpoint.collectionName.replace(/s$/, '');
 
-      // Resolve onCreate — new format: machine.triggers.onCreate; old format: stateMachine.onCreate
-      const isNewFormat = Array.isArray(stateMachine?.machines) || machine?.triggers != null;
-      const onCreate = isNewFormat ? machine?.triggers?.onCreate : stateMachine?.onCreate;
+      const onCreate = machine?.triggers?.onCreate ?? stateMachine?.onCreate;
 
       // Execute onCreate steps/effects if this resource has a state machine
       if (onCreate) {
-        // Parse caller roles from header (comma-separated)
-        const callerRoles = req.headers['x-caller-roles']
-          ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-          : [];
+        const callerRoles = extractCallerRoles(req);
 
         // Enforce onCreate actors if defined
         if (onCreate.actors && onCreate.actors.length > 0) {
@@ -125,12 +121,12 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         );
         if (entities === null) {
           console.error('onCreate: required context binding failed — skipping trigger');
-          return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Context binding failed' });
+          return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Context binding failed', details: [] });
         }
         const context = { ...baseContext, entities };
 
-        const { pendingCreates, pendingProcedures } = isNewFormat
-          ? applySteps(onCreate.steps || [], resource, context)
+        const { pendingCreates, pendingProcedures } = onCreate.steps?.length > 0
+          ? applySteps(onCreate.steps, resource, context)
           : applyEffects(onCreate.effects || [], resource, context);
 
         const inlineRules = buildInlineRules(stateMachine, machine);
@@ -166,9 +162,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       }
 
       // Auto-emit created event with full resource snapshot (after effects applied)
-      const callerRoles = req.headers['x-caller-roles']
-        ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-        : [];
+      const callerRoles = extractCallerRoles(req);
       try {
         emitEvent({
           domain,
@@ -194,11 +188,13 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // (e.g. assignToQueue running synchronously in response to the created event)
       const fresh = findById(endpoint.collectionName, resource.id) || resource;
 
-      // Apply x-relationship expand and links-only transformations (same as GET handler)
+      // Apply x-relationship expand, links-only, and x-derived transformations (same as GET handler)
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema);
       let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, findById) : fresh;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 
       res.status(201)
         .header('Location', location)

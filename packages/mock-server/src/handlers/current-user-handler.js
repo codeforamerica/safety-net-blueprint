@@ -4,6 +4,7 @@
 
 import { findById } from '../database-manager.js';
 import { extractAuthContext } from '../auth-context.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 
 /**
  * Create a handler for the current-user singleton endpoint.
@@ -30,7 +31,13 @@ export function createCurrentUserHandler(apiMetadata, endpoint) {
         });
       }
 
-      res.json(resource);
+      const expandFields = extractExpandFields(endpoint.responseSchema);
+      const linksFields = extractLinksFields(endpoint.responseSchema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema);
+      let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, findById) : resource;
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
+      res.json(responseBody);
     } catch (error) {
       console.error('Current user handler error:', error);
       res.status(500).json({

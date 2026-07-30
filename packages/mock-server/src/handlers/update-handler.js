@@ -7,10 +7,10 @@ import { validate, createErrorResponse } from '../validator.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
+import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
-import { extractAuthContext } from '../auth-context.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
+import { extractAuthContext, extractCallerRoles } from '../auth-context.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 
 export function deepEqual(a, b) {
   if (a === b) return true;
@@ -52,7 +52,7 @@ export function buildChanges(before, after) {
  * @returns {Function} Express handler
  */
 export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null) {
-  const paramName = extractPathParam(endpoint.path);
+  const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (req, res) => {
     try {
       const httpStub = matchAndPopHttp(req.method, req.path);
@@ -131,20 +131,17 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       // Fire onUpdate steps/effects if any watched fields changed.
       // Must run before emitting so rule-driven mutations (e.g. priority re-scored
       // because isExpedited changed) are included in the event's changes array.
-      const newOnUpdate = machine?.triggers?.onUpdate;
-      const oldOnUpdate = stateMachine?.onUpdate;
-      const hasOnUpdate = newOnUpdate?.steps?.length > 0 || oldOnUpdate?.effects?.length > 0;
+      const onUpdate = machine?.triggers?.onUpdate ?? stateMachine?.onUpdate;
+      const hasOnUpdate = onUpdate?.steps?.length > 0 || onUpdate?.effects?.length > 0;
 
       if (hasOnUpdate) {
-        const watchedFields = newOnUpdate?.fields ?? oldOnUpdate?.fields;
+        const watchedFields = onUpdate?.fields;
         const patchedFields = Object.keys(req.body);
         const shouldFire = !watchedFields || watchedFields.length === 0
           || patchedFields.some(f => watchedFields.includes(f));
 
         if (shouldFire) {
-          const callerRoles = req.headers['x-caller-roles']
-            ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-            : [];
+          const callerRoles = extractCallerRoles(req);
           const baseContext = {
             caller: {
               id: req.headers['x-caller-id'],
@@ -156,7 +153,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           };
 
           const entities = resolveContextLayers(
-            [stateMachine?.context, machine?.context, newOnUpdate?.context ?? oldOnUpdate?.context],
+            [stateMachine?.context, machine?.context, onUpdate?.context],
             updated,
             baseContext
           );
@@ -166,10 +163,10 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           const context = entities !== null ? { ...baseContext, entities } : baseContext;
 
           let pendingProcedures;
-          if (newOnUpdate?.steps?.length > 0) {
-            ({ pendingProcedures } = applySteps(newOnUpdate.steps, updated, context));
+          if (onUpdate?.steps?.length > 0) {
+            ({ pendingProcedures } = applySteps(onUpdate.steps, updated, context));
           } else {
-            ({ pendingProcedures } = applyEffects(oldOnUpdate.effects, updated, context));
+            ({ pendingProcedures } = applyEffects(onUpdate.effects, updated, context));
           }
           const inlineRules = buildInlineRules(stateMachine, machine);
           executeProcedures(pendingProcedures, updated, inlineRules, context);
@@ -203,9 +200,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           source: apiMetadata.serverBasePath,
           data: { changes },
           callerId: req.headers['x-caller-id'] || null,
-          callerRoles: req.headers['x-caller-roles']
-            ? req.headers['x-caller-roles'].split(',').map(r => r.trim()).filter(Boolean)
-            : [],
+          callerRoles: extractCallerRoles(req),
           traceparent: req.headers['traceparent'] || null,
           now: updated.updatedAt,
         });
@@ -215,8 +210,10 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
 
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema);
       let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, findById) : updated;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       res.json(responseBody);
     } catch (error) {
       console.error('Update handler error:', error);
@@ -229,20 +226,3 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
   };
 }
 
-/**
- * Extract the path parameter name from an OpenAPI path pattern.
- * Returns the LAST parameter so sub-item paths like
- * /resources/{parentId}/sub/{subId} resolve to the sub-resource id.
- */
-function extractPathParam(path) {
-  const matches = path.match(/\{([^}]+)\}/g);
-  if (!matches) return 'id';
-  return matches[matches.length - 1].replace(/[{}]/g, '');
-}
-
-/**
- * Capitalize first letter of a string
- */
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}

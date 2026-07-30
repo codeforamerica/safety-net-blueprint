@@ -23,7 +23,6 @@ $defs:
     title: JobBase
     type: object
     required:
-      - type
       - status
     additionalProperties: true
     properties:

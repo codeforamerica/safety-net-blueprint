@@ -484,7 +484,7 @@ test('Route Generator Tests', async (t) => {
     console.log('  ✓ Sub-collection GET uses prefixed collection "application-documents"');
   });
 
-  await t.test('registerRoutes - singleton handler returns 404 when no record exists for parent', () => {
+  await t.test('registerRoutes - singleton handler lazy-initializes when no record exists for parent', () => {
     const app = createMockApp();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/interview', method: 'get', operationId: 'getInterview' }
@@ -492,15 +492,17 @@ test('Route Generator Tests', async (t) => {
     registerRoutes(app, metadata, 'http://localhost:1080');
     const routes = app.getRoutes();
 
-    let statusCode = null;
+    let responseBody = null;
     const mockReq = { params: { applicationId: 'nonexistent-app' } };
     const mockRes = {
-      status: (code) => { statusCode = code; return { json: () => {} }; },
-      json: () => {}
+      status: () => ({ json: () => {} }),
+      json: (body) => { responseBody = body; }
     };
     routes[0].handler(mockReq, mockRes);
-    assert.strictEqual(statusCode, 404, 'Singleton GET returns 404 when no interview exists for the application');
-    console.log('  ✓ Singleton GET returns 404 when no record exists for parent');
+    assert.ok(responseBody, 'Singleton GET returns a body on first access');
+    assert.ok(responseBody.id, 'Singleton GET returns a record with an id');
+    assert.strictEqual(responseBody.applicationId, 'nonexistent-app', 'Singleton GET sets parent FK');
+    console.log('  ✓ Singleton GET lazy-initializes empty record on first access');
   });
 
   await t.test('registerRoutes - sub-collection GET returns 404 when parent does not exist', () => {

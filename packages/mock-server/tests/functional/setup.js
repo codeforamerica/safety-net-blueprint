@@ -5,14 +5,14 @@
  * pipeline, generates TypeScript clients, and provides server start/stop helpers.
  *
  * Use from run-all-tests.js (--functional flag) or directly:
- *   node tests/e2e/functional/setup.js
+ *   node tests/functional/setup.js
  */
 
 import { spawn } from 'child_process';
 import { readdirSync, mkdirSync } from 'fs';
 import { join, resolve, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
-import { startMockServer, stopServer } from '../../../scripts/server.js';
+import { startMockServer, stopServer } from '../../scripts/server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,9 +22,9 @@ export const resolvedDir = join(__dirname, 'resolved');
 export const generatedDir = join(__dirname, 'generated', 'typescript');
 
 // Path to contracts resolve.js (relative to mock-server package → contracts package)
-const resolveScript = resolve(__dirname, '..', '..', '..', '..', 'contracts', 'scripts', 'resolve.js');
+const resolveScript = resolve(__dirname, '..', '..', '..', 'contracts', 'scripts', 'resolve.js');
 // Path to generate-clients-typescript.js (in clients package)
-const generateScript = resolve(__dirname, '..', '..', '..', '..', 'clients', 'scripts', 'generate-clients-typescript.js');
+const generateScript = resolve(__dirname, '..', '..', '..', 'clients', 'scripts', 'generate-clients-typescript.js');
 
 /**
  * Spawn a node script and wait for it to complete.

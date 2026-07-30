@@ -25,6 +25,11 @@ import { parseSortString, buildOrderByClause } from './sort-parser.js';
  * @param {Array} searchableFields - List of fields that support search
  * @returns {Object} {whereClauses: Array, params: Array}
  */
+export const PAGINATION_DEFAULTS = { limitDefault: 25, limitMax: 100, offsetDefault: 0 };
+
+// State records are internal (not user-facing paginated lists), so a higher cap is used.
+export const STATE_RECORDS_LIMIT_MAX = 1000;
+
 export function buildSearchConditions(queryParams = {}, searchableFields = []) {
   const whereClauses = [];
   const params = [];
@@ -118,16 +123,13 @@ export function buildWhereClause(whereClauses) {
  * @param {Object} defaults - Default pagination values
  * @returns {Object} {limit: number, offset: number}
  */
-export function parsePagination(queryParams = {}, defaults = { limit: 25, offset: 0 }) {
-  // Ensure defaults exist
-  const defaultLimit = defaults.limit || defaults.limitDefault || 25;
-  const defaultOffset = defaults.offset || defaults.offsetDefault || 0;
-  
+export function parsePagination(queryParams = {}, defaults = {}) {
+  const defaultLimit = defaults.limitDefault ?? PAGINATION_DEFAULTS.limitDefault;
+  const defaultOffset = defaults.offsetDefault ?? PAGINATION_DEFAULTS.offsetDefault;
+  const maxLimit = defaults.limitMax ?? PAGINATION_DEFAULTS.limitMax;
+
   let limit = parseInt(queryParams.limit) || defaultLimit;
   let offset = parseInt(queryParams.offset) || defaultOffset;
-  
-  // Ensure limits are within bounds
-  const maxLimit = defaults.limitMax || 100;
   limit = Math.max(1, Math.min(limit, maxLimit));
   offset = Math.max(0, offset);
   
@@ -407,14 +409,6 @@ export function executeSearch(db, queryParams = {}, searchableFields = [], pagin
     console.error('Query params:', queryParams);
     console.error('Where clause:', whereClause);
     console.error('Params:', params);
-    
-    // Return empty result instead of throwing
-    return { 
-      items: [], 
-      total: 0, 
-      limit, 
-      offset, 
-      hasNext: false 
-    };
+    throw error;
   }
 }

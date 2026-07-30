@@ -5,34 +5,34 @@
  *
  * Setup:
  *   1. The mock server is started (or reset if already running).
- *   2. A Postman collection is generated from the contracts directory.
- *   3. All tests run against the mock server.
+ *   2. All tests run against the mock server.
  *
  * Run with: npm run test:integration
  */
 
-import { execSync } from 'child_process';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync, mkdtempSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
+import { readFileSync } from 'fs';
 import yaml from 'js-yaml';
-import newman from 'newman';
 import { loadAllSpecs } from '@codeforamerica/safety-net-blueprint-contracts/loader';
 import { BASE_URL, contractsDir, fetch, setupServer, teardownServer } from './helpers.js';
 import { ROLES } from '../roles.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const fixturesDir = resolve(__dirname, '..', 'fixtures');
+const fixturesDir = resolve(__dirname, 'seed');
 let serverStartedByTests = false;
 
 // Simple fetch polyfill using Node.js http module
-function loadExamples(apiName) {
+function loadExamples(apiName, collectionPrefix = null) {
   try {
     const content = readFileSync(`${fixturesDir}/${apiName}.yaml`, 'utf8');
     return Object.entries(yaml.load(content) || {})
-      .filter(([key, value]) => value?.id && !value.items && !key.toLowerCase().includes('payload'))
+      .filter(([key, value]) => {
+        if (!value?.id || value.items || key.toLowerCase().includes('payload')) return false;
+        if (collectionPrefix && !key.startsWith(collectionPrefix)) return false;
+        return true;
+      })
       .map(([, value]) => ({ data: value }));
   } catch {
     return [];
@@ -105,18 +105,62 @@ async function testApi(api, examples) {
     failed++;
   }
 
-  // Test 2: LIST with pagination
+  // Test 2: LIST with pagination — shape, limit enforcement, offset, hasNext
   try {
-    console.log(`\n  2. GET ${apiPath}?limit=1&offset=0 (pagination)`);
-    const response = await fetch(`${BASE_URL}${apiPath}?limit=1&offset=0`);
-    const data = await response.json();
+    console.log(`\n  2. GET ${apiPath}?limit=1&offset=0 (pagination shape + enforcement)`);
+    const r1 = await fetch(`${BASE_URL}${apiPath}?limit=1&offset=0`);
+    const d1 = await r1.json();
 
-    if (data.limit === 1 && data.items.length <= 1) {
-      console.log(`     ✓ PASS: Pagination works correctly`);
+    const shapeOk = typeof d1.total === 'number' && typeof d1.limit === 'number' &&
+      typeof d1.offset === 'number' && typeof d1.hasNext === 'boolean' &&
+      Array.isArray(d1.items);
+    const limitOk = d1.limit === 1 && d1.items.length <= 1;
+    const hasNextOk = d1.total <= 1 ? d1.hasNext === false : d1.hasNext === true;
+
+    // Verify offset skips: page 2 should differ from page 1 (when enough items exist)
+    let offsetOk = true;
+    if (d1.total >= 2) {
+      const r2 = await fetch(`${BASE_URL}${apiPath}?limit=1&offset=1`);
+      const d2 = await r2.json();
+      offsetOk = d1.items.length > 0 && d2.items.length > 0 &&
+        d1.items[0].id !== d2.items[0].id;
+    }
+
+    if (shapeOk && limitOk && hasNextOk && offsetOk) {
+      console.log(`     ✓ PASS: Pagination shape, limit, hasNext, and offset all correct`);
       passed++;
     } else {
-      console.log('     ✗ FAIL: Pagination not working');
+      const issues = [];
+      if (!shapeOk) issues.push('missing pagination fields');
+      if (!limitOk) issues.push(`limit not enforced (got ${d1.items.length} items)`);
+      if (!hasNextOk) issues.push(`hasNext=${d1.hasNext} incorrect for total=${d1.total}`);
+      if (!offsetOk) issues.push('offset did not skip records');
+      console.log(`     ✗ FAIL: ${issues.join('; ')}`);
       failed++;
+    }
+  } catch (error) {
+    console.log(`     ✗ FAIL: ${error.message}`);
+    failed++;
+  }
+
+  // Test 2b: sort — createdAt:desc should return items newest-first
+  try {
+    console.log(`\n  2b. GET ${apiPath}?sort=createdAt:desc (sort order)`);
+    const response = await fetch(`${BASE_URL}${apiPath}?sort=createdAt:desc&limit=10`);
+    const data = await response.json();
+
+    if (data.items && data.items.length >= 2) {
+      const dates = data.items.map(i => new Date(i.createdAt).getTime());
+      const sorted = dates.every((d, i) => i === 0 || dates[i - 1] >= d);
+      if (sorted) {
+        console.log(`     ✓ PASS: Items returned newest-first`);
+        passed++;
+      } else {
+        console.log(`     ✗ FAIL: Items not in descending createdAt order`);
+        failed++;
+      }
+    } else {
+      console.log(`     ⚠️  SKIP: Fewer than 2 items; sort order not verifiable`);
     }
   } catch (error) {
     console.log(`     ✗ FAIL: ${error.message}`);
@@ -338,89 +382,6 @@ async function testApi(api, examples) {
   return { passed, failed, total: passed + failed };
 }
 
-/**
- * Run Postman collection tests using Newman.
- * Generates a fresh collection from the fixture directory before running.
- */
-async function runPostmanTests() {
-  console.log(`\n${'='.repeat(70)}`);
-  console.log('Postman Collection Tests (Newman)');
-  console.log('='.repeat(70));
-
-  // Generate a fresh Postman collection from the fixture directory
-  const tmpCollectionDir = mkdtempSync(join(tmpdir(), 'snb-postman-'));
-  const collectionPath = join(tmpCollectionDir, 'postman-collection.json');
-
-  try {
-    const generateScript = resolve(__dirname, '../../../contracts/scripts/generate-postman.js');
-    console.log('\n  Generating Postman collection from fixture specs...');
-    execSync(
-      `node "${generateScript}" --spec="${contractsDir}" --out="${collectionPath}"`,
-      { stdio: 'pipe' }
-    );
-    console.log(`  ✓ Collection generated`);
-  } catch (err) {
-    console.log(`  ✗ Failed to generate collection: ${err.message}`);
-    rmSync(tmpCollectionDir, { recursive: true, force: true });
-    return { passed: 0, failed: 1, total: 1, skipped: false };
-  }
-
-  // Re-seed so Postman tests find the expected baseline records regardless of
-  // what prior integration tests created or deleted.
-  await fetch(`${BASE_URL}/mock/reseed`, { method: 'POST' });
-
-  console.log(`\n  Collection: ${collectionPath}`);
-  console.log(`  Base URL: ${BASE_URL}\n`);
-
-  return new Promise((resolve) => {
-    newman.run({
-      collection: collectionPath,
-      envVar: [
-        { key: 'baseUrl', value: BASE_URL }
-      ],
-      reporters: ['cli'],
-      reporter: {
-        cli: {
-          silent: false,
-          noSummary: false
-        }
-      }
-    }, (err, summary) => {
-      rmSync(tmpCollectionDir, { recursive: true, force: true });
-
-      if (err) {
-        console.log(`  ✗ Newman execution error: ${err.message}`);
-        resolve({ passed: 0, failed: 1, total: 1, skipped: false });
-        return;
-      }
-
-      const stats = summary.run.stats;
-      const assertions = stats.assertions || { total: 0, failed: 0 };
-      const requests = stats.requests || { total: 0, failed: 0 };
-
-      const passed = requests.total - requests.failed;
-      const failed = requests.failed;
-
-      console.log(`\n  ${'─'.repeat(66)}`);
-      console.log(`  Newman Summary:`);
-      console.log(`    Requests: ${passed}/${requests.total} passed`);
-      console.log(`    Assertions: ${assertions.total - assertions.failed}/${assertions.total} passed`);
-
-      if (assertions.failed === 0) {
-        console.log(`  ✓ PASS: All Postman assertions passed`);
-      } else {
-        console.log(`  ✗ FAIL: ${assertions.failed} assertion(s) failed`);
-      }
-
-      resolve({
-        passed: assertions.failed === 0 ? 1 : 0,
-        failed: assertions.failed > 0 ? 1 : 0,
-        total: 1,
-        skipped: false
-      });
-    });
-  });
-}
 
 /**
  * Main test runner
@@ -462,7 +423,9 @@ async function runTests() {
   // CRUD tests for each API
   // =========================================================================
   for (const api of apis) {
-    const examples = loadExamples(api.name);
+    const lastSegment = (api.baseResource || `/${api.name}`).split('/').pop();
+    const collectionPrefix = singularize(lastSegment).replace(/^./, c => c.toUpperCase());
+    const examples = loadExamples(api.name, collectionPrefix);
     const results = await testApi(api, examples);
 
     totalPassed += results.passed;
@@ -1297,16 +1260,6 @@ async function runTests() {
     console.log(`  ✗ FAIL: ${error.message}`);
     totalFailed++;
     totalTests++;
-  }
-
-  // =========================================================================
-  // Postman/Newman tests
-  // =========================================================================
-  const postmanResults = await runPostmanTests();
-  if (!postmanResults.skipped) {
-    totalPassed += postmanResults.passed;
-    totalFailed += postmanResults.failed;
-    totalTests += postmanResults.total;
   }
 
   // =========================================================================

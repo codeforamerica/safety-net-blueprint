@@ -6,7 +6,8 @@ import { findById } from '../database-manager.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
 import { parentLinkRegistry } from '../composition-assembler.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from './expand-utils.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+import { extractPrimaryParam, capitalize } from '../collection-utils.js';
 
 /**
  * Create get-by-id handler for a resource
@@ -15,7 +16,7 @@ import { extractExpandFields, applyExpand, extractLinksFields, applyLinks } from
  * @returns {Function} Express handler
  */
 export function createGetHandler(apiMetadata, endpoint) {
-  const paramName = extractPathParam(endpoint.path);
+  const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (req, res) => {
     try {
       const httpStub = matchAndPopHttp(req.method, req.path);
@@ -60,8 +61,10 @@ export function createGetHandler(apiMetadata, endpoint) {
 
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema);
       let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, findById) : resource;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       res.json(responseBody);
     } catch (error) {
       console.error('Get handler error:', error);
@@ -74,20 +77,3 @@ export function createGetHandler(apiMetadata, endpoint) {
   };
 }
 
-/**
- * Extract the path parameter name from an OpenAPI path pattern.
- * Returns the LAST parameter so sub-item paths like
- * /resources/{parentId}/sub/{subId} resolve to the sub-resource id.
- */
-function extractPathParam(path) {
-  const matches = path.match(/\{([^}]+)\}/g);
-  if (!matches) return 'id';
-  return matches[matches.length - 1].replace(/[{}]/g, '');
-}
-
-/**
- * Capitalize first letter of a string
- */
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}

@@ -123,8 +123,9 @@ a `userId` reference pointing back to User Service. This matches the pattern use
 (`ConcernRole.userAccount`), ServiceNow (`Task.assigned_to`), and Salesforce (`Contact.OwnerId`).
 
 Key fields:
-- `userId` — stable UUID; the canonical identifier used in JWT claims and event `authid` fields.
-  Same value as the `id` field on the User resource.
+- `id` — stable UUID; the primary identifier on the User REST resource. Exposed as `userId` in
+  JWT claims (`BackendAuthContext`). The `userId` field on the REST resource is a derived alias
+  (`x-derived: "$this.id"`) — same value, different name for JWT context compatibility.
 - `roles` — Role object containing `name` (RoleType) and `permissions` (array of
   `{resource}:{action}` strings, e.g., `applications:read`)
 
@@ -136,7 +137,9 @@ The minimal authorization context embedded in a JWT for API enforcement. Derived
 User Service data; not a persisted entity.
 
 Key fields:
-- `userId` — matches `User.id`; the value carried in the `authid` event extension attribute
+- `userId` — matches `User.id`; the value carried in the `authid` event extension attribute.
+  On the User REST resource, `userId` is a derived field (`x-derived: "$this.id"`) — same UUID
+  as `id`, exposed under this name for JWT claim compatibility.
 - `roles` — Role object containing `name` (RoleType) and `permissions` (array of
   `{resource}:{action}` strings, e.g., `applications:read`)
 
@@ -300,9 +303,8 @@ States can override the following via overlay:
 | Artifact | File |
 |---|---|
 | User Service API | `packages/contracts/users-openapi.yaml` |
-| Shared security schemes | `packages/contracts/components/auth.yaml` |
-| JWT claim schemas | `packages/contracts/components/auth.yaml` |
-| Frontend auth context | `packages/contracts/users-openapi.yaml` (`FrontendAuthContext`, `UiPermissions`) |
+| Identity-access domain schemas | `packages/contracts/schemas/domain/identity-access.yaml` |
+| JWT claim schemas (`BackendAuthContext`, `JwtClaims`, `FrontendAuthContext`, `Role`) | `packages/contracts/schemas/domain/identity-access.yaml` |
 | CloudEvents envelope pattern | `packages/contracts/patterns/api-patterns.yaml` |
 
 ## Key design decisions

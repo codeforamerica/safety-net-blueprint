@@ -2,7 +2,7 @@
 /**
  * Generate TypeScript API clients from the resolved specs for use in integration tests.
  *
- * Output goes to tests/generated/ (gitignored). Integration tests import from there
+ * Output goes to tests/integration/generated/ (gitignored). Integration tests import from there
  * to get typed SDK functions with built-in zod response validation.
  *
  * Run via: npm run clients:generate
@@ -17,7 +17,7 @@ import { existsSync, readdirSync } from 'fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..', '..', '..');
 const specDir = join(__dirname, '..', '..', 'resolved');
-const outDir = join(__dirname, '..', 'tests', 'generated');
+const outDir = join(__dirname, '..', 'tests', 'integration', 'generated');
 const generatorScript = join(__dirname, '..', '..', 'clients', 'scripts', 'generate-clients-typescript.js');
 const resolveScript = join(projectRoot, 'packages', 'contracts', 'scripts', 'resolve.js');
 

@@ -20,7 +20,8 @@ import { generateStateSchemas } from '@codeforamerica/safety-net-blueprint-contr
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
-import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam } from './collection-utils.js';
+import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
+import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX } from './search-engine.js';
 import { randomUUID } from 'node:crypto';
 
 /**
@@ -68,6 +69,10 @@ function isSubItemEndpoint(path) {
  * e.g., /intake/applications/{applicationId}/documents → 'applications'
  * e.g., /intake/applications/{applicationId}/members/{memberId}/incomes → 'application-members'
  */
+function internalError(res, error) {
+  res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+}
+
 function deriveParentCollection(path, basePath) {
   const lastSlash = path.lastIndexOf('/');
   const parentPath = path.slice(0, lastSlash);
@@ -79,21 +84,20 @@ function deriveParentCollection(path, basePath) {
  * Looks up the resource by parent field value (e.g., applicationId) rather than by its own id.
  */
 function createSingletonGetHandler(endpoint, parentParam, parentField) {
-  const resourceLabel = endpoint.collectionName.replace(/s$/, '');
   return (req, res) => {
     try {
       const parentId = req.params[parentParam];
       const { items } = findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
       if (items.length === 0) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: `${capitalize(resourceLabel)} not found`
-        });
+        // Singleton sub-resources always exist conceptually — initialize an empty one on first access.
+        const newRecord = { id: randomUUID(), [parentField]: parentId };
+        insertResource(endpoint.collectionName, newRecord);
+        return res.json(newRecord);
       }
       res.json(items[0]);
     } catch (error) {
       console.error('Singleton get handler error:', error);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+      internalError(res, error);
     }
   };
 }
@@ -150,13 +154,26 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
       res.json(result);
     } catch (error) {
       console.error('Singleton update handler error:', error);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+      internalError(res, error);
     }
   };
 }
 
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
+/**
+ * Find the state machine entry whose governed object matches a collection name.
+ * Tries both simple-plural (e.g. "task" → "tasks") and kebab-plural
+ * (e.g. "ApplicationDocument" → "application-documents") forms.
+ *
+ * @param {Array} stateMachines - Loaded state machine entries
+ * @param {string} collectionName - Collection name to match (e.g. "application-documents")
+ * @returns {{ stateMachine, machine, object } | undefined}
+ */
+function findStateMachineForCollection(stateMachines, collectionName) {
+  return (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
+    const obj = s.object;
+    return obj?.toLowerCase() + 's' === collectionName ||
+      toKebabCase(obj ?? '') + 's' === collectionName;
+  });
 }
 
 /**
@@ -203,10 +220,12 @@ export function extractRequiredDefaults(responseSchema) {
   if (!responseSchema) return {};
   const defaults = {};
   const schemas = responseSchema.allOf || [responseSchema];
+  // Collect all property definitions across all allOf members so that
+  // required fields declared in one schema can reference types defined in another.
+  const allProps = Object.assign({}, ...schemas.map(s => s.properties || {}));
   for (const s of schemas) {
-    const props = s.properties || {};
     for (const field of (s.required || [])) {
-      const prop = props[field];
+      const prop = allProps[field];
       if (!prop) continue;
       // Nullable wins over array: a type union that includes 'null' means
       // the schema explicitly allows null content, even for arrays.
@@ -233,10 +252,25 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
 
-  for (const endpoint of apiMetadata.endpoints) {
+  // Sort endpoints so literal path segments are registered before parameterized ones.
+  // Express uses first-match-wins, so /users/me must be registered before /users/:userId
+  // regardless of the order they appear in the OpenAPI spec.
+  const sortedEndpoints = [...apiMetadata.endpoints].sort((a, b) => {
+    const aHasParam = a.path.includes('{');
+    const bHasParam = b.path.includes('{');
+    if (aHasParam !== bHasParam) return aHasParam ? 1 : -1;
+    return 0;
+  });
+
+  for (const endpoint of sortedEndpoints) {
     const expressPath = convertPathFormat(endpoint.path);
     const method = endpoint.method.toLowerCase();
-    const collectionName = deriveCollectionName(endpoint.path, apiMetadata.serverBasePath);
+    // For /me endpoints, derive the collection from the parent path (strip /me suffix)
+    // so the handler looks up records in the parent resource collection, not a phantom 'me' collection.
+    const collectionPath = endpoint.path.endsWith('/me')
+      ? endpoint.path.slice(0, -3)
+      : endpoint.path;
+    const collectionName = deriveCollectionName(collectionPath, apiMetadata.serverBasePath);
     const endpointWithCollection = { ...endpoint, collectionName };
 
     let handler = null;
@@ -282,11 +316,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       // POST /resources - Create
       // Only pass state machine to the collection that matches the governed object.
       // Use kebab-plural comparison to handle multi-word names (ApplicationDocument → application-documents).
-      const smEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
-        const obj = s.object;
-        return obj?.toLowerCase() + 's' === collectionName ||
-          obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === collectionName;
-      });
+      const smEntry = findStateMachineForCollection(stateMachines, collectionName);
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
       const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
@@ -308,6 +338,20 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
         } else if (method === 'patch') {
           handler = createSingletonUpdateHandler(apiMetadata, endpointWithCollection, parentParam, parentField);
           description = 'Update singleton sub-resource';
+        } else if (method === 'post') {
+          // POST on a singular sub-path is a state machine RPC/transition endpoint.
+          // e.g., POST /tasks/{taskId}/claim — the trigger name is the last path segment.
+          const trigger = endpoint.path.split('/').filter(s => s && !s.startsWith('{')).pop();
+          const parentCollectionName = deriveParentCollection(endpoint.path, apiMetadata.serverBasePath);
+          const smEntry = findStateMachineForCollection(stateMachines, parentCollectionName);
+          if (smEntry) {
+            const domainSlaTypes = findSlaTypes(slaTypes, smEntry.stateMachine.domain);
+            handler = createTransitionHandler(parentCollectionName, smEntry.stateMachine, trigger, parentParam, domainSlaTypes, smEntry.machine);
+            description = `${trigger} transition on ${parentCollectionName}`;
+          } else {
+            console.warn(`    Warning: No state machine found for POST ${endpoint.path} (parent collection: ${parentCollectionName})`);
+            continue;
+          }
         } else {
           console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on singleton ${endpoint.path}`);
           continue;
@@ -331,7 +375,9 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
               // List sub-resources filtered by parent ID plus any extra query field filters.
               // Note: req.query mutation does not work reliably in Express 5 (getter re-evaluates),
               // so we call findAll directly rather than routing through createListHandler.
-              const limit = Math.min(parseInt(req.query.limit) || pagination.limitDefault || 25, pagination.limitMax || 100);
+              const limitDefault = pagination.limitDefault ?? PAGINATION_DEFAULTS.limitDefault;
+              const limitMax = pagination.limitMax ?? PAGINATION_DEFAULTS.limitMax;
+              const limit = Math.min(parseInt(req.query.limit) || limitDefault, limitMax);
               const offset = parseInt(req.query.offset) || 0;
               const reservedParams = new Set(['limit', 'offset', 'q', 'sort']);
               const extraFilters = Object.fromEntries(
@@ -345,17 +391,13 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
                 : items;
               return res.json({ items: expandedItems, total, limit, offset, hasNext: offset + items.length < total });
             } catch (error) {
-              res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+              internalError(res, error);
             }
           };
           description = 'List sub-resources';
         } else if (method === 'post') {
           const subResourceName = endpoint.path.split('/').pop();
-          const subSmEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
-            const obj = s.object;
-            return obj?.toLowerCase() + 's' === subResourceName ||
-              obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === subResourceName;
-          });
+          const subSmEntry = findStateMachineForCollection(stateMachines, subResourceName);
           const subSmForEndpoint = subSmEntry?.stateMachine || null;
           const subMachineForEndpoint = subSmEntry?.machine || null;
           const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
@@ -397,11 +439,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       description = 'Get resource by ID';
     } else if (method === 'patch' && isItemEndpoint(endpoint.path)) {
       // PATCH /resources/{id} - Update
-      const smEntry = (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
-        const obj = s.object;
-        return obj?.toLowerCase() + 's' === collectionName ||
-          obj?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's' === collectionName;
-      });
+      const smEntry = findStateMachineForCollection(stateMachines, collectionName);
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
       handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint);
@@ -495,6 +533,41 @@ function buildResourceItemPathMap(apiSpecs) {
 }
 
 /**
+ * Build a map from resource name (path segment) to DB collection name.
+ * Scans collection endpoints (no path params) and calls deriveCollectionName
+ * on each, using the same logic as the route generator for CRUD routes.
+ *
+ * e.g. "children" → "childrens", "applications" → "applications"
+ *
+ * Used by the composition assembler so resource names in composition YAML
+ * resolve to the same collection names that CRUD routes write to.
+ *
+ * @param {Array} apiSpecs - Array of API metadata objects from loadAllSpecs()
+ * @returns {Map<string, string>}
+ */
+function buildResourceCollectionNameMap(apiSpecs) {
+  const map = new Map();
+  for (const spec of apiSpecs) {
+    for (const endpoint of (spec.endpoints || [])) {
+      // Skip item endpoints (e.g. /resources/{id}) — those end with a path param.
+      // Include collection endpoints (e.g. /resources, /parents/{id}/children).
+      if (endpoint.path.trimEnd().endsWith('}')) continue;
+      const collectionName = deriveCollectionName(endpoint.path, spec.serverBasePath || '');
+      if (!collectionName) continue;
+      const basePath = spec.serverBasePath || '';
+      const relativePath = basePath && endpoint.path.startsWith(basePath)
+        ? endpoint.path.slice(basePath.length)
+        : endpoint.path;
+      const resourceName = relativePath.split('/').filter(Boolean).pop();
+      if (resourceName && !map.has(resourceName)) {
+        map.set(resourceName, collectionName);
+      }
+    }
+  }
+  return map;
+}
+
+/**
  * Register routes for all discovered composition files.
  *
  * For each sectionView composition that declares an endpoint, registers:
@@ -509,6 +582,7 @@ function buildResourceItemPathMap(apiSpecs) {
 export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs = []) {
   const registeredEndpoints = [];
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
+  const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
 
   for (const { domain, doc, filePath } of compositionFiles) {
     // Look up the server base path for this domain (e.g. "/intake" for the intake domain)
@@ -558,20 +632,22 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       const stateDefaults = loadStateDefaults(composition.state, apiSpec);
 
       const paginationDefaults = apiSpec?.pagination || {};
-      const assemblerOpts = { resourceItemPathMap, serverBasePath: basePath };
+      const assemblerOpts = { resourceItemPathMap, resourceCollectionNameMap, serverBasePath: basePath };
+
+      const rootCollectionName = resourceCollectionNameMap.get(composition.resource) ?? composition.resource;
 
       if (composition.compositeType === 'sectionView') {
         // Section index
         app.get(indexExpressPath, (req, res) => {
           try {
             const parentId = primaryParam ? req.params[primaryParam] : null;
-            if (parentId && !findById(composition.resource, parentId)) {
+            if (parentId && !findById(rootCollectionName, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
             res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, assemblerOpts));
           } catch (error) {
             console.error('Composition index handler error:', error);
-            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+            internalError(res, error);
           }
         });
 
@@ -580,7 +656,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         app.get(panelExpressPath, (req, res) => {
           try {
             const parentId = primaryParam ? req.params[primaryParam] : null;
-            if (parentId && !findById(composition.resource, parentId)) {
+            if (parentId && !findById(rootCollectionName, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
             const panelOpts = { ...assemblerOpts, queryParams: req.query, paginationDefaults };
@@ -595,7 +671,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
             res.json(panel);
           } catch (error) {
             console.error('Composition panel handler error:', error);
-            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+            internalError(res, error);
           }
         });
 
@@ -624,7 +700,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
             res.json(result);
           } catch (error) {
             console.error('Plain composition handler error:', error);
-            res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
+            internalError(res, error);
           }
         });
 
@@ -720,18 +796,13 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
   const sectionPath = `${stateExpressBase}/:section`;
   const itemPath = `${stateExpressBase}/:section/:itemId`;
 
-  const internalError = (res, error) => {
-    console.error('Composition state handler error:', error);
-    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-  };
-
   // GET /{section} — paginated list of state records for that section
   app.get(sectionPath, (req, res) => {
     try {
       const parent = findById(composition.resource, req.params[bindParam]);
       if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
 
-      const limit = Math.min(parseInt(req.query.limit) || 25, 1000);
+      const limit = Math.min(parseInt(req.query.limit) || PAGINATION_DEFAULTS.limitDefault, STATE_RECORDS_LIMIT_MAX);
       const offset = parseInt(req.query.offset) || 0;
       const result = listStateRecords(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, { limit, offset });
       res.json(result);
@@ -812,7 +883,7 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
     // Uses suffix matching so single-word objects (e.g., "Verification") correctly match
     // sub-resource collections like "application-verifications".
     // e.g., object "Task" matches "tasks"; object "Verification" matches "application-verifications"
-    const objectPluralSuffix = sm.object.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's';
+    const objectPluralSuffix = toKebabCase(sm.object) + 's';
     const itemEndpoint = apiSpec.endpoints.find(
       e => e.method.toLowerCase() === 'get' && (isItemEndpoint(e.path) || isSubItemEndpoint(e.path))
         && (() => {

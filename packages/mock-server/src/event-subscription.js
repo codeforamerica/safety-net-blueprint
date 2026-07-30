@@ -17,7 +17,7 @@ import { executeTransition } from './state-machine-runner.js';
 import { applySteps, evaluateGuards } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope } from './emit-event.js';
-import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
+import { deriveCollectionName, mergeByPrecedence, buildInlineRules, toKebabCase } from './collection-utils.js';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
@@ -36,9 +36,7 @@ function eventTypeMatches(eventType, onValue) {
 function findSmEntryForCollection(allStateMachines, domain, collection) {
   return allStateMachines.find(sm => {
     if (sm.domain !== domain) return false;
-    const kebabPlural = sm.object
-      .replace(/([a-z])([A-Z])/g, '$1-$2')
-      .toLowerCase() + 's';
+    const kebabPlural = toKebabCase(sm.object) + 's';
     // Also match sub-collection names like "application-verifications" → "verifications"
     return kebabPlural === collection || collection.endsWith(`-${kebabPlural}`);
   }) || null;
@@ -157,9 +155,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         let targetCollection = null;
         let originalSnapshot = null;
         if (entry.transition) {
-          targetCollection = smEntry.machine.object
-            .replace(/([a-z])([A-Z])/g, '$1-$2')
-            .toLowerCase() + 's';
+          targetCollection = toKebabCase(smEntry.machine.object) + 's';
           const found = findById(targetCollection, event.subject);
           if (!found) {
             console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);

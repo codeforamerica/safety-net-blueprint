@@ -159,10 +159,9 @@ components:
   schemas:
     # Primary schema — a scheduled interaction between a staff member and a person
     Appointment:
-      type: object
       description: |
         A scheduled interaction between a staff member and a person at a given time.
-      additionalProperties: false
+      unevaluatedProperties: false
       required:
         - id
         - startAt
@@ -172,54 +171,25 @@ components:
         - personId
         - createdAt
         - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique identifier (server-generated).
-        startAt:
-          type: string
-          format: date-time
-          description: When the appointment begins.
-        endAt:
-          type: string
-          format: date-time
-          description: When the appointment ends.
-        appointmentType:
-          type: string
-          maxLength: 100
-          description: Type of appointment (e.g., interview, recertification, orientation). Free-text, not enum — states define their own types.
-        status:
-          "$ref": "#/components/schemas/AppointmentStatus"
-        personId:
-          type: string
-          format: uuid
-          description: Reference to the Person record (the subject of the appointment).
-          x-relationship:
-            resource: Person
-            domain: client-management
-        assignedToId:
-          type: string
-          format: uuid
-          description: Reference to the User record (staff member conducting the appointment).
-          x-relationship:
-            resource: User
-            domain: identity-access
-        notes:
-          type: string
-          maxLength: 2000
-          description: Free-text notes about the appointment.
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the appointment was created.
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the appointment was last updated.
+      allOf:
+        - $ref: "./schemas/domain/scheduling.yaml#/$defs/Appointment"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the appointment was created.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the appointment was last updated.
 
     # Ancillary schemas (alphabetical)
 
@@ -236,7 +206,7 @@ components:
 
     AppointmentCreate:
       allOf:
-      - "$ref": "#/components/schemas/Appointment"
+      - $ref: "./schemas/domain/scheduling.yaml#/$defs/Appointment"
       - type: object
         description: |
           Payload to create a new appointment.
@@ -250,7 +220,7 @@ components:
         - personId
     AppointmentUpdate:
       allOf:
-      - "$ref": "#/components/schemas/Appointment"
+      - $ref: "./schemas/domain/scheduling.yaml#/$defs/Appointment"
       - type: object
         description: |
           Payload to update one or more mutable fields of an existing appointment. Partial updates are supported.
