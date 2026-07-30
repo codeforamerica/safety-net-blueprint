@@ -34,9 +34,10 @@ describe('Functional — auth-context: X-Caller-Id resolution', () => {
       headers: { 'X-Caller-Id': userId },
     });
     assert.equal(res.status, 200);
-    const data = await res.json() as { id: string; name: string };
+    const data = await res.json() as { id: string; name: string; userId: string };
     assert.equal(data.id, userId, 'returned record must match the caller\'s id');
     assert.equal(data.name, 'Auth Test User');
+    assert.equal(data.userId, userId, 'x-derived userId must equal id on /me response');
   });
 
   it('GET /users/me without X-Caller-Id returns 401', async () => {

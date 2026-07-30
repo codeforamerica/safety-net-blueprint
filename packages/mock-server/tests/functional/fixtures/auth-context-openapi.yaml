@@ -135,6 +135,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        userId:
+          type: string
+          format: uuid
+          readOnly: true
+          x-derived: "$this.id"
 
     UserCreate:
       type: object
