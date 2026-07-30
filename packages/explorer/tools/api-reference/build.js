@@ -555,7 +555,6 @@ function buildIndexPage(entries) {
     const primary = domainEntries.find(e => !e.slug.endsWith('-adapter')) ?? domainEntries[0];
     const info    = primary.spec.info ?? {};
     const totalEndpoints = domainEntries.reduce((n, e) => n + countEndpoints(e.spec), 0);
-    const badge   = statusBadge(info['x-status']);
     const desc    = info.description
       ? info.description.split('\n').find(l => l.trim()) ?? ''
       : '';
@@ -565,16 +564,17 @@ function buildIndexPage(entries) {
     const apiLinks = domainEntries.map(({ slug, spec }) => {
       const n = countEndpoints(spec);
       const apiTitle = spec.info?.title ?? slug;
-      return `<a href="${esc(slug)}.html" style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:4px;text-decoration:none;color:${COLORS.text};" onmouseover="this.style.background='${COLORS.paleBlue}'" onmouseout="this.style.background=''">
-        <span style="font-size:12px;font-weight:600;color:${COLORS.midBlue};">${esc(apiTitle)}</span>
-        <span style="font-size:10px;color:#aaa;">${n} endpoint${n !== 1 ? 's' : ''}</span>
+      const badge = statusBadge(spec.info?.['x-status']);
+      return `<a href="${esc(slug)}.html" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;text-decoration:none;color:${COLORS.text};" onmouseover="this.style.background='${COLORS.paleBlue}'" onmouseout="this.style.background=''">
+        <span style="font-size:12px;font-weight:600;color:${COLORS.midBlue};flex:1;">${esc(apiTitle)}</span>
+        ${badge}
+        <span style="font-size:10px;color:#aaa;flex-shrink:0;">${n} endpoint${n !== 1 ? 's' : ''}</span>
       </a>`;
     }).join('');
 
     return `<div style="${cardStyle}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:0.25rem;">
+      <div style="margin-bottom:0.25rem;">
         <span style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};">${esc(domainLabel)}</span>
-        ${badge}
       </div>
       ${desc ? `<p style="font-size:12px;color:#666;line-height:1.5;margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(desc)}</p>` : ''}
       <div style="border:1px solid ${COLORS.sandDark};border-radius:4px;overflow:hidden;margin-top:0.5rem;">${apiLinks}</div>
