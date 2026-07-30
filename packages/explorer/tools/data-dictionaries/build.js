@@ -16,6 +16,8 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, rmSync } from 'fs
 import { resolve, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { COLORS } from '../../lib/theme.js';
+import { esc as h, titleCase, breadcrumb } from '../../lib/html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contractsDir  = resolve(__dirname, '../../../contracts');
@@ -34,14 +36,6 @@ try {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function h(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function safeLoad(filePath) {
   const real = resolve(filePath);
   if (!real.startsWith(PROJECT_ROOT + sep)) {
@@ -50,15 +44,7 @@ function safeLoad(filePath) {
   return yaml.load(readFileSync(real, 'utf8'), { schema: yaml.CORE_SCHEMA });
 }
 
-function capitalize(str) {
-  if (!str) return str;
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function domainLabel(domain) {
-  // "case-management" → "Case Management"
-  return domain.split('-').map(capitalize).join(' ');
-}
+const domainLabel = titleCase;
 
 // ── Data model YAML parser ────────────────────────────────────────────────────
 // Reads line-by-line to preserve section comment groupings.
@@ -295,22 +281,22 @@ const CSS = `
 html { font-size: 14px; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #F3F3F3;
+  background: ${COLORS.bg};
   color: #111;
   min-height: 100vh;
 }
 :root {
-  --blue-dark:  #2B1A78;
-  --blue-mid:   #5650BE;
-  --blue-light: #C2C0E8;
-  --sand:       #E9CCBE;
+  --blue-dark:  ${COLORS.darkBlue};
+  --blue-mid:   ${COLORS.midBlue};
+  --blue-light: ${COLORS.lightBlue};
+  --sand:       ${COLORS.sandDark};
   --sand-light: #F5F0ED;
-  --lb-light:   #E6EBF9;
-  --green-dark: #006152;
-  --green-light:#E2F9F6;
-  --yellow-light:#FFF3E0;
-  --red-dark:   #AF121D;
-  --red-light:  #F9C8CB;
+  --lb-light:   ${COLORS.paleBlue};
+  --green-dark: ${COLORS.deepGreen};
+  --green-light:${COLORS.lightGreen};
+  --yellow-light:${COLORS.lightYellow};
+  --red-dark:   ${COLORS.richRed};
+  --red-light:  ${COLORS.lightRed};
   --sidebar-w:  240px;
 }
 
@@ -421,7 +407,7 @@ body {
 .dict-header {
   position: sticky;
   top: 0;
-  background: #F3F3F3;
+  background: ${COLORS.bg};
   padding: 1.25rem 0 0.75rem;
   display: flex;
   align-items: baseline;
@@ -708,19 +694,6 @@ initDictView();
 `;
 
 // ── HTML page builders ────────────────────────────────────────────────────────
-
-const BREADCRUMB_STYLE = `background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#C2C0E8;`;
-const BREADCRUMB_A = `color:#C2C0E8;text-decoration:none;`;
-const BREADCRUMB_SEP = `<span style="opacity:0.5;">/</span>`;
-
-function breadcrumb(crumbs) {
-  const parts = crumbs.map((c, i) =>
-    i === crumbs.length - 1
-      ? `<span style="color:white;">${c.label}</span>`
-      : `<a href="${c.href}" style="${BREADCRUMB_A}">${c.label}</a>`
-  );
-  return `<div style="${BREADCRUMB_STYLE}">${parts.join(BREADCRUMB_SEP)}</div>`;
-}
 
 function buildIndexPage(domains) {
   const body = renderIndexContent(domains);

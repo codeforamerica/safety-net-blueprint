@@ -9,13 +9,12 @@
 
 import { writeFileSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
+import { FONT } from '../../../lib/theme.js';
 
 // Set by renderSequenceDiagrams() before any helper function is called.
 let config;
 
 // ── Constants ──────────────────────────────────────────────────────────────
-
-const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 const STATUS_STYLE = {
   partial:           { fill: '#E6EBF9', stroke: '#5650BE', sw: 2,   dash: false },
