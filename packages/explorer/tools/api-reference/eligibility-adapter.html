@@ -40,17 +40,7 @@
 
       <!-- API description + server info -->
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-        <p style="font-size:13px;color:#555;line-height:1.65;max-width:680px;white-space:pre-wrap;">Contracted interface for the state-provided eligibility evaluation adapter.
-The blueprint calls these endpoints to perform program eligibility evaluations.
-States implement this interface against whatever backend system they use —
-a rules engine, a legacy case management platform, or any other system.
-The blueprint treats the adapter as a black box.
-
-Each call represents one evaluation for one application and one program.
-All request schemas extend AdapterRequest, which includes a metadata passthrough
-field the blueprint sets for correlation. Adapters must echo metadata back
-unchanged in the response. See docs/architecture/cross-cutting/adapters.md.
-</p>
+        <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Contracted interface for the state-provided eligibility evaluation adapter. The blueprint calls these endpoints to perform program eligibility evaluations. States implement this interface against whatever backend system they use — a rules engine, a legacy case management platform, or any other system. The blueprint treats the adapter as a black box.</p><p style="margin:0 0 6px;">Each call represents one evaluation for one application and one program. All request schemas extend AdapterRequest, which includes a metadata passthrough field the blueprint sets for correlation. Adapters must echo metadata back unchanged in the response. See docs/architecture/cross-cutting/adapters.md.</p></div></div>
         <div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">https://adapter.example.com</code></div>
       </div>
 
@@ -70,12 +60,7 @@ unchanged in the response. See docs/architecture/cross-cutting/adapters.md.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Determines whether an application qualifies for expedited SNAP processing
-based on household-level financial criteria (7 CFR § 273.2(i)). Called at
-submission before caseworker assignment. Member-level data is not required
-for the baseline criteria; states may extend the request via overlay if
-their rules engine needs additional context.
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Determines whether an application qualifies for expedited SNAP processing based on household-level financial criteria (7 CFR § 273.2(i)). Called at submission before caseworker assignment. Member-level data is not required for the baseline criteria; states may extend the request via overlay if their rules engine needs additional context.</p></div></div>
       
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
@@ -299,12 +284,7 @@ their rules engine needs additional context.
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Determines Medicaid eligibility for one applicant using electronic data
-exchange results, without requiring applicant-provided documentation.
-Called once per applicant after all Medicaid electronic checks complete.
-Applications that can be fully determined ex parte are closed automatically
-without caseworker intervention (42 CFR § 435.916).
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Determines Medicaid eligibility for one applicant using electronic data exchange results, without requiring applicant-provided documentation. Called once per applicant after all Medicaid electronic checks complete. Applications that can be fully determined ex parte are closed automatically without caseworker intervention (42 CFR § 435.916).</p></div></div>
       
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
@@ -590,14 +570,7 @@ without caseworker intervention (42 CFR § 435.916).
       
     </summary>
     <div style="padding:12px 16px;">
-      <div style="font-size:13px;color:#444;line-height:1.65;padding:12px 16px;border-top:1px solid #f0f0f0;white-space:pre-wrap;">Runs final eligibility determination for one applicant (or household) and
-one program after caseworker review is complete. Called once per program
-with pending decisions after intake.application.review_completed fires.
-
-Use IndividualDeterminationRequest for per-applicant programs (medicaid,
-chip, tanf, ccdf) and HouseholdDeterminationRequest for household programs
-(snap).
-</div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Runs final eligibility determination for one applicant (or household) and one program after caseworker review is complete. Called once per program with pending decisions after intake.application.review_completed fires.</p><p style="margin:0 0 6px;">Use IndividualDeterminationRequest for per-applicant programs (medicaid, chip, tanf, ccdf) and HouseholdDeterminationRequest for household programs (snap).</p></div></div>
       
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">

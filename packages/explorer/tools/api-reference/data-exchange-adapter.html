@@ -37,18 +37,9 @@
 
       <!-- API description + server info -->
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-        <p style="font-size:13px;color:#555;line-height:1.65;max-width:680px;white-space:pre-wrap;">Contracted interface for data exchange adapters — state-implemented components
-that call external agencies and data sources on behalf of the blueprint.
-
-This spec documents the result payload schemas adapters must return for each
-service type. The blueprint emits a `data_exchange.call.completed` event
-carrying a `ServiceCallResult` whose `serviceResult` field conforms to the
-schema for the corresponding service type defined here.
-
-&gt; **Status: Alpha** — Result schemas are stubs. States should define the full
-&gt; shape based on the CMS FDSH technical documentation and their adapter
-&gt; implementation.
-</p>
+        <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Contracted interface for data exchange adapters — state-implemented components that call external agencies and data sources on behalf of the blueprint.</p><p style="margin:0 0 6px;">This spec documents the result payload schemas adapters must return for each service type. The blueprint emits a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">data_exchange.call.completed</code> event carrying a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">ServiceCallResult</code> whose <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">serviceResult</code> field conforms to the schema for the corresponding service type defined here.</p><blockquote style="border-left:3px solid #ddd;padding:4px 10px;margin:6px 0;color:#666;font-style:italic;"><strong>Status: Alpha</strong> — Result schemas are stubs. States should define the full
+shape based on the CMS FDSH technical documentation and their adapter
+implementation.</blockquote></div></div>
         
       </div>
 
