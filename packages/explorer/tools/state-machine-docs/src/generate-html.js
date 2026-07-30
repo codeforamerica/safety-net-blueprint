@@ -9,28 +9,8 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { load } from 'js-yaml';
 import path from 'path';
-
-// ── Color palette ─────────────────────────────────────────────────────────────
-
-const COLORS = {
-  darkBlue:   '#2B1A78',
-  midBlue:    '#5650BE',
-  lightBlue:  '#C2C0E8',
-  paleBlue:   '#E6EBF9',
-  deepGreen:  '#006152',
-  midGreen:   '#00AD93',
-  lightGreen: '#E2F9F6',
-  richRed:    '#AF121D',
-  lightRed:   '#F9C8CB',
-  warmYellow: '#FFB446',
-  lightYellow:'#FFF3E0',
-  sandDark:   '#E9CCBE',
-  sandMid:    '#F7EDE8',
-  bg:         '#F3F3F3',
-  white:      '#FFFFFF',
-  text:       '#1a1a1a',
-  textLight:  '#666',
-};
+import { COLORS } from '../../../lib/theme.js';
+import { titleCase, breadcrumb } from '../../../lib/html.js';
 
 // Semantic state coloring
 function stateColor(stateId) {
@@ -93,13 +73,7 @@ function shell(title, navLinks, body, allDomains) {
   </style>
 </head>
 <body>
-<div style="background:${COLORS.darkBlue};padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;">
-  <a href="../../index.html" style="color:${COLORS.lightBlue};text-decoration:none;">Explorer</a>
-  <span style="color:${COLORS.lightBlue};opacity:0.5;">/</span>
-  <a href="index.html" style="color:${COLORS.lightBlue};text-decoration:none;">State Machine Docs</a>
-  <span style="color:${COLORS.lightBlue};opacity:0.5;">/</span>
-  <span style="color:${COLORS.white};">${activeLabel}</span>
-</div>
+${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'State Machine Docs', href: 'index.html' }, { label: activeLabel }])}
 <div style="background:${COLORS.darkBlue};padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid ${COLORS.midBlue};">
   <nav style="display:flex;align-items:center;gap:0.25rem;">${nav}</nav>
 </div>
@@ -111,10 +85,6 @@ function shell(title, navLinks, body, allDomains) {
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
-
-function titleCase(str) {
-  return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
 
 function getActors(guards) {
   const entry = (guards || []).find(g => g.actors);

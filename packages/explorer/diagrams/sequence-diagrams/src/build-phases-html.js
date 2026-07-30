@@ -11,6 +11,8 @@ import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 
 import { resolve, dirname, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { COLORS, FONT } from '../../../lib/theme.js';
+import { esc, titleCase, breadcrumb, statusBadge } from '../../../lib/html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const configPath = resolve(__dirname, '../config/index-config.yaml');
@@ -23,23 +25,6 @@ const phases  = config.phases ?? [];
 const diagDefs = config.diagrams ?? [];
 const diagById = new Map(diagDefs.map(d => [d.id, d]));
 
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function statusBadge(status) {
-  if (status === 'implemented') return `<span class="status-badge badge-complete">Complete</span>`;
-  if (status === 'in-progress') return `<span class="status-badge badge-progress">In progress</span>`;
-  return `<span class="status-badge badge-planned">Planned</span>`;
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function titleCase(s) {
-  return s.replace(/-/g, ' ').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
 
 //── Landing page — horizontal blueprint layout ────────────────────────────
 //
@@ -71,9 +56,9 @@ const phaseHeaders = phases.map((phase, i) => {
 // Domain swim lane cells
 const domainCells = phases.map((phase, i) => {
   const isLast  = i === phases.length - 1;
-  const borderR = isLast ? '' : 'border-right:1px solid #E9CCBE;';
+  const borderR = isLast ? '' : `border-right:1px solid ${COLORS.sandDark};`;
   const chips   = (phase.domains ?? []).map(d =>
-    `<span style="font-size:10px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:2px 7px;">${esc(titleCase(d))}</span>`
+    `<span style="font-size:10px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:2px 7px;">${esc(titleCase(d))}</span>`
   ).join('');
   return `<div style="flex:1;padding:0.875rem 1.25rem;${borderR}">
     <div style="display:flex;flex-wrap:wrap;gap:4px;">${chips}</div>
@@ -83,11 +68,11 @@ const domainCells = phases.map((phase, i) => {
 // Diagram swim lane cells
 const diagramCells = phases.map((phase, i) => {
   const isLast       = i === phases.length - 1;
-  const borderR      = isLast ? '' : 'border-right:1px solid #E9CCBE;';
+  const borderR      = isLast ? '' : `border-right:1px solid ${COLORS.sandDark};`;
   const phaseDiagrams = (phase.diagrams ?? []).map(id => diagById.get(id)).filter(Boolean);
   const links = phaseDiagrams.map(d =>
-    `<a href="${esc(d.id)}.html" class="diag-link" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#5650BE;background:white;border:1px solid #C2C0E8;border-radius:5px;padding:4px 10px;text-decoration:none;">
-      <svg viewBox="0 0 12 12" width="10" height="10" style="flex-shrink:0;"><line x1="1" y1="4" x2="7" y2="4" stroke="#5650BE" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="8" x2="11" y2="8" stroke="#5650BE" stroke-width="1.5" stroke-linecap="round"/><polygon points="7,4 5,2.5 5,5.5" fill="#5650BE"/><polygon points="11,8 9,6.5 9,9.5" fill="#5650BE"/></svg>
+    `<a href="${esc(d.id)}.html" class="diag-link" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:white;border:1px solid ${COLORS.lightBlue};border-radius:5px;padding:4px 10px;text-decoration:none;">
+      <svg viewBox="0 0 12 12" width="10" height="10" style="flex-shrink:0;"><line x1="1" y1="4" x2="7" y2="4" stroke="${COLORS.midBlue}" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="8" x2="11" y2="8" stroke="${COLORS.midBlue}" stroke-width="1.5" stroke-linecap="round"/><polygon points="7,4 5,2.5 5,5.5" fill="${COLORS.midBlue}"/><polygon points="11,8 9,6.5 9,9.5" fill="${COLORS.midBlue}"/></svg>
       ${esc(d.title.replace(' — Event Chain', ''))}</a>`
   ).join('');
   const empty = `<span style="font-size:11px;color:#bbb;font-style:italic;">No diagrams yet</span>`;
@@ -97,9 +82,9 @@ const diagramCells = phases.map((phase, i) => {
 }).join('');
 
 function swimLane(label, cells, opts = {}) {
-  const { bg = 'white', labelBg = '#F7EDE8', borderTop = '1px solid #E9CCBE' } = opts;
+  const { bg = 'white', labelBg = COLORS.sandMid, borderTop = `1px solid ${COLORS.sandDark}` } = opts;
   return `<div style="display:flex;border-top:${borderTop};background:${bg};">
-    <div style="width:120px;flex-shrink:0;padding:0.875rem 1rem;background:${labelBg};border-right:2px solid #E9CCBE;display:flex;align-items:flex-start;">
+    <div style="width:120px;flex-shrink:0;padding:0.875rem 1rem;background:${labelBg};border-right:2px solid ${COLORS.sandDark};display:flex;align-items:flex-start;">
       <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#9a8070;line-height:1.4;">${label}</span>
     </div>
     <div style="flex:1;display:flex;">${cells}</div>
@@ -113,47 +98,23 @@ const indexHtml = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Safety Net Blueprint — Sequence Diagrams</title>
   <style>
-    :root {
-      --dark-blue:    #2B1A78;
-      --mid-blue:     #5650BE;
-      --light-blue:   #C2C0E8;
-      --pale-blue:    #E6EBF9;
-      --deep-green:   #006152;
-      --mid-green:    #00AD93;
-      --sand-dark:    #E9CCBE;
-      --sand-mid:     #F7EDE8;
-      --text:         #1a1a1a;
-      --text-mid:     #444;
-      --text-light:   #666;
-      --bg:           #F3F3F3;
-      --white:        #FFFFFF;
-    }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    .page-title { background: var(--dark-blue); color: var(--white); padding: 1.25rem 1.5rem 1.125rem; }
+    body { font-family: ${FONT}; background: ${COLORS.bg}; color: ${COLORS.text}; min-height: 100vh; }
+    .page-title { background: ${COLORS.darkBlue}; color: ${COLORS.white}; padding: 1.25rem 1.5rem 1.125rem; }
     .page-title h2 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.2rem; }
     .page-title p  { font-size: 0.8125rem; color: rgba(255,255,255,0.55); }
     .blueprint { margin: 2rem auto; max-width: 1200px; padding: 0 1.5rem 4rem; }
-    .blueprint-table { border: 1px solid #E9CCBE; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
-    .phase-header-row { display: flex; background: #2B1A78; }
-    .diag-link:hover { border-color: var(--mid-blue) !important; }
-    .status-badge { font-size: 9px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 6px; border-radius: 100px; flex-shrink: 0; }
-    .badge-complete { background: rgba(0,173,147,0.25); color: #7ffff0; border: 1px solid rgba(0,173,147,0.4); }
-    .badge-progress { background: rgba(194,192,232,0.2); color: #C2C0E8; border: 1px solid rgba(194,192,232,0.3); }
-    .badge-planned  { background: rgba(233,204,190,0.15); color: #c8b0a0; border: 1px solid rgba(233,204,190,0.25); }
-    footer { border-top: 1px solid var(--sand-dark); background: var(--white); padding: 1.5rem 2rem; text-align: center; font-size: 12px; color: var(--text-light); }
-    footer a { color: var(--mid-blue); text-decoration: none; }
+    .blueprint-table { border: 1px solid ${COLORS.sandDark}; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+    .phase-header-row { display: flex; background: ${COLORS.darkBlue}; }
+    .diag-link:hover { border-color: ${COLORS.midBlue} !important; }
+    footer { border-top: 1px solid ${COLORS.sandDark}; background: ${COLORS.white}; padding: 1.5rem 2rem; text-align: center; font-size: 12px; color: ${COLORS.textLight}; }
+    footer a { color: ${COLORS.midBlue}; text-decoration: none; }
     footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
 
-  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#C2C0E8;">
-    <a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a>
-    <span style="opacity:0.5;">/</span>
-    <span style="color:white;">Sequence Diagrams</span>
-  </div>
+  ${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'Sequence Diagrams' }])}
 
   <div class="page-title">
     <h2>Sequence Diagrams</h2>
@@ -163,14 +124,14 @@ const indexHtml = `<!DOCTYPE html>
   <div class="blueprint">
     <div class="blueprint-table">
       <!-- Phase headers -->
-      <div class="phase-header-row" style="display:flex;background:#2B1A78;">
+      <div class="phase-header-row" style="display:flex;background:${COLORS.darkBlue};">
         <div style="width:120px;flex-shrink:0;padding:1rem;background:rgba(0,0,0,0.2);border-right:2px solid rgba(255,255,255,0.1);display:flex;align-items:flex-end;">
           <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.35);">Phase</span>
         </div>
         <div style="flex:1;display:flex;">${phaseHeaders}</div>
       </div>
-      ${swimLane('Domains', domainCells, { bg: 'white', labelBg: '#F7EDE8' })}
-      ${swimLane('Event Chains', diagramCells, { bg: 'white', labelBg: '#F7EDE8' })}
+      ${swimLane('Domains', domainCells)}
+      ${swimLane('Event Chains', diagramCells)}
     </div>
   </div>
 
@@ -214,7 +175,7 @@ if (existsSync(distDir)) {
   <title>Safety Net Blueprint \u2014 ${id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; }
+    body { font-family: ${FONT}; background: ${COLORS.bg}; }
     #container { min-height: 100vh; padding: 24px 0; overflow-x: hidden; }
     #map-wrapper { background: white; box-shadow: 0 2px 16px rgba(0,0,0,0.10); overflow: hidden; width: 1400px; transform-origin: top left; }
   </style>

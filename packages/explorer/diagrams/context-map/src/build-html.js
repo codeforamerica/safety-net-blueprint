@@ -13,6 +13,8 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
+import { COLORS, FONT } from '../../../lib/theme.js';
+import { breadcrumb } from '../../../lib/html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -21,13 +23,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const srcDir = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, '../dist');
 const outDir = process.argv[3] ? resolve(process.argv[3]) : resolve(__dirname, '..');
 mkdirSync(outDir, { recursive: true });
-
-// ── Color constants ──────────────────────────────────────────────────────────
-
-const DARK_BLUE  = '#2B1A78';
-const MID_BLUE   = '#5650BE';
-const LIGHT_BLUE = '#C2C0E8';
-const BG         = '#F3F3F3';
 
 // ── Nav definition ───────────────────────────────────────────────────────────
 
@@ -62,34 +57,22 @@ function buildNav(currentFile) {
     const isActive = item.file === currentFile;
     const style = isActive
       ? `color:white;background:rgba(255,255,255,0.15);border-radius:4px;padding:0.25rem 0.5rem;`
-      : `color:${LIGHT_BLUE};border-radius:4px;padding:0.25rem 0.5rem;`;
-    // Active item: render as a span (no href) to avoid file:// same-origin navigation errors
+      : `color:${COLORS.lightBlue};border-radius:4px;padding:0.25rem 0.5rem;`;
     if (isActive) {
-      return `<span style="${style};font-size:12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${item.label}</span>`;
+      return `<span style="${style};font-size:12px;font-family:${FONT};">${item.label}</span>`;
     }
-    return `<a href="${item.file}.html" style="${style};font-size:12px;text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${item.label}</a>`;
+    return `<a href="${item.file}.html" style="${style};font-size:12px;text-decoration:none;font-family:${FONT};">${item.label}</a>`;
   });
 
-  return `<nav style="background:${DARK_BLUE};border-bottom:3px solid ${MID_BLUE};padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:48px;overflow-x:auto;">
+  return `<nav style="background:${COLORS.darkBlue};border-bottom:3px solid ${COLORS.midBlue};padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:48px;overflow-x:auto;">
   ${links.join('\n  ')}
 </nav>`;
-}
-
-function buildBreadcrumb(pageTitle) {
-  return `<div style="background:${DARK_BLUE};padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-  <a href="../../index.html" style="color:${LIGHT_BLUE};text-decoration:none;">Explorer</a>
-  <span style="color:${LIGHT_BLUE};opacity:0.5;">/</span>
-  <a href="domains.html" style="color:${LIGHT_BLUE};text-decoration:none;">Context Map</a>
-  <span style="color:${LIGHT_BLUE};opacity:0.5;">/</span>
-  <span style="color:white;">${pageTitle}</span>
-</div>`;
 }
 
 function buildPage(fragmentName, svgContent) {
   const nav = buildNav(fragmentName);
   const navItem = navItems.find(n => n.file === fragmentName);
   const pageTitle = navItem ? navItem.label : fragmentName;
-  const breadcrumb = buildBreadcrumb(pageTitle);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -99,13 +82,13 @@ function buildPage(fragmentName, svgContent) {
   <title>Safety Net Blueprint \u2014 Context Map \u2014 ${pageTitle}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: ${BG}; }
+    body { font-family: ${FONT}; background: ${COLORS.bg}; }
     #container { min-height: 100vh; padding: 16px 0; overflow-x: hidden; }
     #map-wrapper { background: white; box-shadow: 0 2px 16px rgba(0,0,0,0.10); overflow: hidden; width: 1400px; transform-origin: top left; }
   </style>
 </head>
 <body>
-  ${breadcrumb}
+  ${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'Context Map', href: 'domains.html' }, { label: pageTitle }])}
   ${nav}
   <div id="container">
     <div id="map-wrapper">

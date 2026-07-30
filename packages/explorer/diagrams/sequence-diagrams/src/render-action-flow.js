@@ -13,6 +13,8 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { COLORS, FONT } from '../../../lib/theme.js';
+import { esc as escXml, breadcrumb } from '../../../lib/html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contractsDir = resolve(__dirname, '../../../../contracts');
@@ -22,7 +24,6 @@ mkdirSync(outDir, { recursive: true });
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const FONT    = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 const W       = 1400;
 const MARGIN  = 20;
 const LEGEND_H = 40;
@@ -30,10 +31,10 @@ const PHDR_H  = 48;
 const STEP_H  = 54;
 const FPAD    = 10;
 
-const DARK_BLUE = '#2B1A78';
-const MID_BLUE  = '#5650BE';
-const TEAL      = '#00AD93';
-const EVT_CLR   = '#5650BE';
+const DARK_BLUE = COLORS.darkBlue;
+const MID_BLUE  = COLORS.midBlue;
+const TEAL      = COLORS.midGreen;
+const EVT_CLR   = COLORS.midBlue;
 const CALL_CLR  = '#1F2937';
 
 // ── Load diagram config files ──────────────────────────────────────────────
@@ -368,10 +369,6 @@ function collectDomains(nodes) {
 }
 
 // ── SVG text helpers ───────────────────────────────────────────────────────
-
-function escXml(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 function wrapWords(str, maxChars) {
   const words = String(str).split(' ');
@@ -732,28 +729,13 @@ for (const def of diagramDefs) {
   <title>${escXml(def.title)}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; }
-    .breadcrumb-bar {
-      background: #2B1A78; padding: 0.5rem 1.25rem;
-      display: flex; align-items: center; gap: 0.5rem;
-      font-size: 12px; color: #C2C0E8;
-    }
-    .breadcrumb-bar a { color: #C2C0E8; text-decoration: none; }
-    .breadcrumb-bar a:hover { color: white; }
-    .breadcrumb-bar .sep { opacity: 0.5; }
-    .breadcrumb-bar .current { color: white; }
+    body { font-family: ${FONT}; background: ${COLORS.bg}; }
     #container { padding: 16px 0 32px; overflow-x: hidden; }
     #map-wrapper { background: white; box-shadow: 0 2px 16px rgba(0,0,0,.10); overflow: hidden; width: 1400px; transform-origin: top left; }
   </style>
 </head>
 <body>
-  <div class="breadcrumb-bar">
-    <a href="../../index.html">Explorer</a>
-    <span class="sep">/</span>
-    <a href="index.html">Sequence Diagrams</a>
-    <span class="sep">/</span>
-    <span class="current">${escXml(def.title.replace(' — Event Chain', ''))}</span>
-  </div>
+  ${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'Sequence Diagrams', href: 'index.html' }, { label: escXml(def.title.replace(' \u2014 Event Chain', '')) }])}
   <div id="container"><div id="map-wrapper">${svg}</div></div>
   <script>
     var w = document.getElementById('map-wrapper');

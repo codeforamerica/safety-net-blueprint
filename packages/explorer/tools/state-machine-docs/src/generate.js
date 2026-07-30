@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { load } from 'js-yaml';
 import path from 'path';
+import { titleCase } from '../../../lib/html.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,10 +37,6 @@ function humanActors(actors) {
   if (actors.length === 1) return actors[0];
   const last = actors[actors.length - 1];
   return actors.slice(0, -1).join(', ') + ', or ' + last;
-}
-
-function titleCase(str) {
-  return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function machineLink(domain, object, allStateMachines) {
