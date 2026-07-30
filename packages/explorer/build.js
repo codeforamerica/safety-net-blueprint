@@ -91,3 +91,7 @@ if (doBuild('state-machine-docs')) {
 if (doBuild('event-catalog')) {
   execFileSync(node, [resolve(__dirname, 'tools', 'event-catalog', 'build.js')], { stdio: 'inherit' });
 }
+
+if (doBuild('api-reference')) {
+  execFileSync(node, [resolve(__dirname, 'tools', 'api-reference', 'build.js')], { stdio: 'inherit' });
+}
