@@ -562,13 +562,13 @@ function buildIndexPage(entries) {
     const domainLabel = titleCase(domain);
 
     const apiLinks = domainEntries.map(({ slug, spec }) => {
-      const n = countEndpoints(spec);
       const apiTitle = spec.info?.title ?? slug;
-      const badge = statusBadge(spec.info?.['x-status']);
+      const version  = spec.info?.version ?? '';
+      const badge    = statusBadge(spec.info?.['x-status']);
       return `<a href="${esc(slug)}.html" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;text-decoration:none;color:${COLORS.text};" onmouseover="this.style.background='${COLORS.paleBlue}'" onmouseout="this.style.background=''">
         <span style="font-size:12px;font-weight:600;color:${COLORS.midBlue};flex:1;">${esc(apiTitle)}</span>
+        <span style="font-size:10px;font-family:monospace;color:#aaa;flex-shrink:0;">v${esc(version)}</span>
         ${badge}
-        <span style="font-size:10px;color:#aaa;flex-shrink:0;">${n} endpoint${n !== 1 ? 's' : ''}</span>
       </a>`;
     }).join('');
 
@@ -578,7 +578,6 @@ function buildIndexPage(entries) {
       </div>
       ${desc ? `<p style="font-size:12px;color:#666;line-height:1.5;margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(desc)}</p>` : ''}
       <div style="border:1px solid ${COLORS.sandDark};border-radius:4px;overflow:hidden;margin-top:0.5rem;">${apiLinks}</div>
-      <div style="font-size:11px;color:#aaa;margin-top:0.625rem;">${totalEndpoints} endpoints total</div>
     </div>`;
   }).join('');
 
