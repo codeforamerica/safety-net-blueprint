@@ -6,33 +6,37 @@
   <title>Safety Net Blueprint — Data Exchange Adapter API</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; }
-    details[open] summary .chevron { content: '▼'; transform: rotate(90deg); display:inline-block; }
-    details summary::-webkit-details-marker { display:none; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; }
+    details summary::-webkit-details-marker { display: none; }
   </style>
 </head>
 <body>
 
-  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><span style="color:#FFFFFF;">Data Exchange Adapter API</span></div>
+  <!-- Non-scrollable header: breadcrumb + compact title bar -->
+  <div style="flex-shrink:0;z-index:50;">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><span style="color:#FFFFFF;">Data Exchange Adapter API</span></div>
+    <div style="background:#2B1A78;color:#FFFFFF;padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.9375rem;font-weight:800;">Data Exchange Adapter API</span>
+      <span style="font-size:11px;font-family:monospace;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">v0.1.0</span>
+      
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">0 endpoints</span>
+    </div>
+  </div>
 
-  <div style="display:flex;min-height:calc(100vh - 36px);">
+  <!-- Scrollable body: sidebar + main content scroll independently -->
+  <div style="flex:1;display:flex;overflow:hidden;">
 
     <!-- Sidebar -->
-    <nav style="width:260px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#FFFFFF;border-right:1px solid #E9CCBE;padding:1rem 0.75rem;">
-      <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:0 8px 8px;border-bottom:1px solid #eee;margin-bottom:12px;">Data Exchange Adapter API</div>
+    <nav style="width:260px;flex-shrink:0;overflow-y:auto;background:#FFFFFF;border-right:1px solid #E9CCBE;padding:1rem 0.75rem;">
       
     </nav>
 
     <!-- Main content -->
-    <main style="flex:1;padding:2rem 2.5rem;max-width:900px;min-width:0;">
+    <main style="flex:1;overflow-y:auto;padding:2rem 2.5rem;min-width:0;">
 
-      <!-- Header -->
+      <!-- API description + server info -->
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;flex-wrap:wrap;">
-          <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;">Data Exchange Adapter API</h1>
-          <span style="font-size:11px;font-family:monospace;color:#888;background:#f0f0f0;padding:1px 6px;border-radius:3px;">v0.1.0</span>
-          
-        </div>
         <p style="font-size:13px;color:#555;line-height:1.65;max-width:680px;white-space:pre-wrap;">Contracted interface for data exchange adapters — state-implemented components
 that call external agencies and data sources on behalf of the blueprint.
 
@@ -46,7 +50,6 @@ schema for the corresponding service type defined here.
 &gt; implementation.
 </p>
         
-        <div style="margin-top:6px;font-size:11px;color:#aaa;">0 endpoints</div>
       </div>
 
       <!-- Endpoint sections -->

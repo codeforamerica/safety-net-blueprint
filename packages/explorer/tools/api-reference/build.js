@@ -336,7 +336,16 @@ function buildDomainPage({ slug, spec }) {
       ];
       const opWithParams = { ...op, parameters: merged };
 
-      const opTags = op.tags?.length ? op.tags : ['Other'];
+      // Infer a group from the path when no tags are declared.
+      // Uses the second static segment (after the root collection) so that e.g.
+      // /applications/{id}/review/… → "Review" and
+      // /applications/{id}/review-progress/{s}/… → "Review Progress".
+      const inferredTag = (() => {
+        const staticSegs = path.split('/').filter(s => s && !s.startsWith('{'));
+        const seg = staticSegs[1] ?? staticSegs[0] ?? 'Other';
+        return titleCase(seg);
+      })();
+      const opTags = op.tags?.length ? op.tags : [inferredTag];
       for (const tag of opTags) {
         if (!byTag.has(tag)) byTag.set(tag, []);
         byTag.get(tag).push({ path, method, op: opWithParams });
@@ -382,40 +391,43 @@ function buildDomainPage({ slug, spec }) {
   <title>Safety Net Blueprint \u2014 ${esc(info.title ?? slug)}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: ${FONT}; background: ${COLORS.bg}; color: ${COLORS.text}; }
-    details[open] summary .chevron { content: '▼'; transform: rotate(90deg); display:inline-block; }
-    details summary::-webkit-details-marker { display:none; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: ${FONT}; background: ${COLORS.bg}; color: ${COLORS.text}; display: flex; flex-direction: column; }
+    details summary::-webkit-details-marker { display: none; }
   </style>
 </head>
 <body>
 
-  ${breadcrumb([
-    { label: 'Explorer',       href: '../../../index.html' },
-    { label: 'API Reference',  href: 'index.html'          },
-    { label: info.title ?? slug },
-  ])}
+  <!-- Non-scrollable header: breadcrumb + compact title bar -->
+  <div style="flex-shrink:0;z-index:50;">
+    ${breadcrumb([
+      { label: 'Explorer',       href: '../../../index.html' },
+      { label: 'API Reference',  href: 'index.html'          },
+      { label: info.title ?? slug },
+    ])}
+    <div style="background:${COLORS.darkBlue};color:${COLORS.white};padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.9375rem;font-weight:800;">${esc(info.title ?? slug)}</span>
+      <span style="font-size:11px;font-family:monospace;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">v${esc(info.version ?? '')}</span>
+      ${statusBadge(info['x-status'])}
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">${total} endpoint${total !== 1 ? 's' : ''}</span>
+    </div>
+  </div>
 
-  <div style="display:flex;min-height:calc(100vh - 36px);">
+  <!-- Scrollable body: sidebar + main content scroll independently -->
+  <div style="flex:1;display:flex;overflow:hidden;">
 
     <!-- Sidebar -->
-    <nav style="width:260px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:${COLORS.white};border-right:1px solid ${COLORS.sandDark};padding:1rem 0.75rem;">
-      <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:0 8px 8px;border-bottom:1px solid #eee;margin-bottom:12px;">${esc(info.title ?? slug)}</div>
+    <nav style="width:260px;flex-shrink:0;overflow-y:auto;background:${COLORS.white};border-right:1px solid ${COLORS.sandDark};padding:1rem 0.75rem;">
       ${navSections}
     </nav>
 
     <!-- Main content -->
-    <main style="flex:1;padding:2rem 2.5rem;max-width:900px;min-width:0;">
+    <main style="flex:1;overflow-y:auto;padding:2rem 2.5rem;min-width:0;">
 
-      <!-- Header -->
+      <!-- API description + server info -->
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid ${COLORS.sandDark};">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;flex-wrap:wrap;">
-          <h1 style="font-size:1.5rem;font-weight:800;color:${COLORS.darkBlue};">${esc(info.title ?? slug)}</h1>
-          <span style="font-size:11px;font-family:monospace;color:#888;background:#f0f0f0;padding:1px 6px;border-radius:3px;">v${esc(info.version ?? '')}</span>
-          ${statusBadge(info['x-status'])}
-        </div>
         ${info.description ? `<p style="font-size:13px;color:#555;line-height:1.65;max-width:680px;white-space:pre-wrap;">${esc(info.description)}</p>` : ''}
         ${serverUrl ? `<div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">${esc(serverUrl)}</code></div>` : ''}
-        <div style="margin-top:6px;font-size:11px;color:#aaa;">${total} endpoint${total !== 1 ? 's' : ''}</div>
       </div>
 
       <!-- Endpoint sections -->
