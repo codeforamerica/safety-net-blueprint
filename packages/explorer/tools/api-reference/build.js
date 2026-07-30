@@ -562,20 +562,6 @@ function buildIndexPage(entries) {
 
     const domainLabel = titleCase(domain);
 
-    if (domainEntries.length === 1) {
-      // Single spec — card is a direct link
-      return `<a href="${esc(primary.slug)}.html" style="${cardStyle}transition:box-shadow 0.15s,border-color 0.15s;" onmouseover="${hoverOn}" onmouseout="${hoverOff}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:0.25rem;">
-          <span style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};">${esc(domainLabel)}</span>
-          ${badge}
-        </div>
-        <div style="font-size:10px;font-family:monospace;color:#888;margin-bottom:0.5rem;">${esc(info.title ?? primary.slug)} &nbsp;·&nbsp; v${esc(info.version ?? '')}</div>
-        ${desc ? `<p style="font-size:12px;color:#666;line-height:1.5;margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(desc)}</p>` : ''}
-        <div style="font-size:11px;color:#aaa;">${totalEndpoints} endpoint${totalEndpoints !== 1 ? 's' : ''}</div>
-      </a>`;
-    }
-
-    // Multiple specs — card body lists each API as a sub-link
     const apiLinks = domainEntries.map(({ slug, spec }) => {
       const n = countEndpoints(spec);
       const apiTitle = spec.info?.title ?? slug;
