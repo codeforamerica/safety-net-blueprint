@@ -16,7 +16,7 @@
  *   tools/client-reference/search-helpers.html
  */
 
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { COLORS } from '../../lib/theme.js';
@@ -28,6 +28,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const generatedClientsDir = resolve(__dirname, '..', '..', '..', 'clients', 'generated');
 const clientsUtilityDir   = resolve(__dirname, '..', '..', '..', 'clients', 'utility');
 const outputDir = __dirname;
+readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
 // Resolved source files clients are generated from — shown in each page's header metadata.
 // Clients come from OpenAPI only; asyncapi is excluded even where it exists.

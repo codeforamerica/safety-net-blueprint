@@ -13,7 +13,7 @@
  * Usage: node build.js
  */
 
-import { writeFileSync, readdirSync, readFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, readdirSync, readFileSync, mkdirSync, existsSync, rmSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
@@ -27,6 +27,7 @@ import { resolvedDir, resolvedSourcePairs } from '../../lib/paths.js';
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 const outDir      = __dirname;
 mkdirSync(outDir, { recursive: true });
+readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outDir, f)));
 
 // Resolved source files this tool reads — shown in each page's header metadata.
 const SOURCE_SUFFIXES = ['openapi', 'state-machine'];

@@ -20,6 +20,7 @@ import { resolvedDir, resolvedSourcePairs } from '../../lib/paths.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outputDir     = resolve(__dirname);
 const PROJECT_ROOT  = resolve(__dirname, '../../..');
+readdirSync(outputDir).filter(f => f.endsWith('.html') || f.endsWith('-field-inventory.yaml')).forEach(f => rmSync(resolve(outputDir, f)));
 
 // Resolved source files this tool reads — shown in each page's header metadata.
 const SOURCE_SUFFIXES = ['openapi', 'annotations'];
