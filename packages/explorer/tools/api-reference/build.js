@@ -396,9 +396,9 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
     if (componentParamName) {
       const desc = p.description ?? '';
       // Only expand if the expanded panel would show something beyond a short description:
-      // long description, enum values, default, or example.
-      const shouldExpand = desc.length > 80 || schema.enum?.length > 0
-        || schema.default !== undefined || schema.example !== undefined;
+      // long description or enum values (which can be numerous). Scalar metadata like
+      // default/minimum/maximum/example is shown inline and doesn't warrant an expand.
+      const shouldExpand = desc.length > 80 || schema.enum?.length > 0;
       if (shouldExpand) {
         const expandContent = `${renderMarkdown(desc)}${schema.enum ? `<div style="margin-top:4px;font-size:10px;color:#666;">One of: ${schema.enum.map(v => `<code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">${esc(String(v))}</code>`).join(', ')}</div>` : ''}`;
         const nameCell = `<details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>${esc(p.name ?? '')}</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;">${expandContent}</div></details>`;
