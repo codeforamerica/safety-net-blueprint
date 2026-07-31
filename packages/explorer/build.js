@@ -21,6 +21,7 @@ import yaml from 'js-yaml';
 import { resolveConfig } from './src/resolve-config.js';
 import { scanGaps } from './src/scan-gaps.js';
 import { renderContextMap } from './diagrams/context-map/src/render.js';
+import { resolvedDir } from './lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
@@ -44,7 +45,7 @@ const buildSeqDiagrams = doBuild('sequence-diagrams');
 
 let enrichedConfig;
 if (buildContextMap) {
-  enrichedConfig = resolveConfig();
+  enrichedConfig = resolveConfig(resolvedDir);
 }
 
 // ── Context map ───────────────────────────────────────────────────────────────
@@ -66,8 +67,8 @@ if (buildContextMap) {
 if (buildSeqDiagrams) {
   const seqSrcDir = resolve(__dirname, 'diagrams', 'sequence-diagrams', 'src');
   const seqOutDir = resolve(__dirname, 'diagrams', 'sequence-diagrams');
-  execFileSync(node, [resolve(seqSrcDir, 'render-action-flow.js'), seqOutDir], { stdio: 'inherit' });
-  execFileSync(node, [resolve(seqSrcDir, 'build-phases-html.js'), null, seqOutDir], { stdio: 'inherit' });
+  execFileSync(node, [resolve(seqSrcDir, 'render-action-flow.js'), seqOutDir, ...fwdResolved], { stdio: 'inherit' });
+  execFileSync(node, [resolve(seqSrcDir, 'build-phases-html.js'), null, seqOutDir, ...fwdResolved], { stdio: 'inherit' });
 }
 
 // ── Data explorer (reads contracts directly — subprocess) ─────────────────────
@@ -80,14 +81,13 @@ if (doBuild('data-dictionaries')) {
     .filter(f => f.endsWith('-field-inventory.yaml'))
     .forEach(f => rmSync(resolve(ddDir, f)));
 
-  const contractsDir = resolve(__dirname, '..', 'contracts');
-  const domains = readdirSync(contractsDir)
+  const domains = readdirSync(resolvedDir)
     .filter(f => f.endsWith('-openapi.yaml'))
     .map(f => f.replace('-openapi.yaml', ''));
   const generateDataModel = resolve(__dirname, 'tools', 'data-dictionaries', 'generate-field-inventory.mjs');
   for (const domain of domains) {
     try {
-      execFileSync(node, [generateDataModel, `--domain=${domain}`], { stdio: 'inherit' });
+      execFileSync(node, [generateDataModel, `--domain=${domain}`, `--spec=${resolvedDir}`], { stdio: 'inherit' });
     } catch {
       // Domain doesn't have the right structure for data model generation — skip
     }

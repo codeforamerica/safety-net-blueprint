@@ -48,6 +48,18 @@
         </div>
         <div class="domain-grid"><a href="case-management.html" class="domain-card"><div class="domain-card-title">Case Management</div><div class="domain-card-meta">v0.1.0 · 8 fields</div></a><a href="client-management.html" class="domain-card"><div class="domain-card-title">Client Management</div><div class="domain-card-meta">v0.1.0 · 0 fields</div></a><a href="document-management.html" class="domain-card"><div class="domain-card-title">Document Management</div><div class="domain-card-meta">v0.1.0 · 2 fields</div></a><a href="intake.html" class="domain-card"><div class="domain-card-title">Intake</div><div class="domain-card-meta">v1.1.0 · 465 fields · 399 annotated</div></a><a href="scheduling.html" class="domain-card"><div class="domain-card-title">Scheduling</div><div class="domain-card-meta">v0.1.0 · 7 fields</div></a><a href="users.html" class="domain-card"><div class="domain-card-title">Users</div><div class="domain-card-meta">v0.1.0 · 12 fields</div></a><a href="workflow.html" class="domain-card"><div class="domain-card-title">Workflow</div><div class="domain-card-meta">v0.1.0 · 20 fields</div></a></div>
       </div>
-  
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
 </body>
 </html>

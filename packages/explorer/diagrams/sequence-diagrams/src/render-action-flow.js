@@ -17,7 +17,10 @@ import { COLORS, FONT } from '../../../lib/theme.js';
 import { esc as escXml, breadcrumb } from '../../../lib/html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const contractsDir = resolve(__dirname, '../../../../contracts');
+const resolvedArg  = process.argv.find(a => a.startsWith('--resolved='));
+const contractsDir = resolvedArg
+  ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length))
+  : resolve(__dirname, '../../../../resolved');
 const configDir    = resolve(__dirname, '../config');
 const outDir = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, '..');
 mkdirSync(outDir, { recursive: true });
