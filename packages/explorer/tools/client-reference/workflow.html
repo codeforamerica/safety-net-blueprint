@@ -50,6 +50,14 @@
       background: rgba(255,255,255,0.15); border-radius: 8px;
       padding: 0.1rem 0.35rem; margin-left: auto;
     }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s, background 0.1s; }
+    .content-item:hover { border-color: #5650BE; background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
     a { color: #5650BE; }
   </style>
 </head>
@@ -73,7 +81,14 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#group-queues" class="nav-link">Queues <span class="nav-count">5</span></a><a href="#group-tasks" class="nav-link">Tasks <span class="nav-count">5</span></a><a href="#group-metrics" class="nav-link">Metrics <span class="nav-count">2</span></a><a href="#group-claim" class="nav-link">Claim <span class="nav-count">1</span></a><a href="#group-complete" class="nav-link">Complete <span class="nav-count">1</span></a><a href="#group-release" class="nav-link">Release <span class="nav-count">1</span></a><a href="#group-escalate" class="nav-link">Escalate <span class="nav-count">1</span></a><a href="#group-de-escalate" class="nav-link">De Escalate <span class="nav-count">1</span></a><a href="#group-cancel" class="nav-link">Cancel <span class="nav-count">1</span></a><a href="#group-reopen" class="nav-link">Reopen <span class="nav-count">1</span></a><a href="#group-await-client" class="nav-link">Await Client <span class="nav-count">1</span></a><a href="#group-await-verification" class="nav-link">Await Verification <span class="nav-count">1</span></a><a href="#group-resume" class="nav-link">Resume <span class="nav-count">1</span></a><a href="#group-auto-resume" class="nav-link">Auto Resume <span class="nav-count">1</span></a><a href="#group-sla-escalate" class="nav-link">Sla Escalate <span class="nav-count">1</span></a><a href="#group-auto-cancel" class="nav-link">Auto Cancel <span class="nav-count">1</span></a><a href="#group-submit-for-review" class="nav-link">Submit For Review <span class="nav-count">1</span></a><a href="#group-approve" class="nav-link">Approve <span class="nav-count">1</span></a><a href="#group-return-to-worker" class="nav-link">Return To Worker <span class="nav-count">1</span></a><a href="#group-assign" class="nav-link">Assign <span class="nav-count">1</span></a><a href="#group-set-priority" class="nav-link">Set Priority <span class="nav-count">1</span></a><a href="#section-types" class="nav-link">Types <span class="nav-count">30</span></a>
+        <div class="nav-section">
+      <div class="nav-section-label">Methods</div>
+      <a href="#group-queues" class="nav-link">Queues <span class="nav-count">5</span></a><a href="#group-tasks" class="nav-link">Tasks <span class="nav-count">5</span></a><a href="#group-metrics" class="nav-link">Metrics <span class="nav-count">2</span></a><a href="#group-claim" class="nav-link">Claim <span class="nav-count">1</span></a><a href="#group-complete" class="nav-link">Complete <span class="nav-count">1</span></a><a href="#group-release" class="nav-link">Release <span class="nav-count">1</span></a><a href="#group-escalate" class="nav-link">Escalate <span class="nav-count">1</span></a><a href="#group-de-escalate" class="nav-link">De Escalate <span class="nav-count">1</span></a><a href="#group-cancel" class="nav-link">Cancel <span class="nav-count">1</span></a><a href="#group-reopen" class="nav-link">Reopen <span class="nav-count">1</span></a><a href="#group-await-client" class="nav-link">Await Client <span class="nav-count">1</span></a><a href="#group-await-verification" class="nav-link">Await Verification <span class="nav-count">1</span></a><a href="#group-resume" class="nav-link">Resume <span class="nav-count">1</span></a><a href="#group-auto-resume" class="nav-link">Auto Resume <span class="nav-count">1</span></a><a href="#group-sla-escalate" class="nav-link">Sla Escalate <span class="nav-count">1</span></a><a href="#group-auto-cancel" class="nav-link">Auto Cancel <span class="nav-count">1</span></a><a href="#group-submit-for-review" class="nav-link">Submit For Review <span class="nav-count">1</span></a><a href="#group-approve" class="nav-link">Approve <span class="nav-count">1</span></a><a href="#group-return-to-worker" class="nav-link">Return To Worker <span class="nav-count">1</span></a><a href="#group-assign" class="nav-link">Assign <span class="nav-count">1</span></a><a href="#group-set-priority" class="nav-link">Set Priority <span class="nav-count">1</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-label">Types</div>
+        <a href="#section-types" class="nav-link">All types <span class="nav-count">30</span></a>
+      </div>
       </div>
     </nav>
     <main id="content">
@@ -984,7 +999,7 @@
     </div>
   </details>
 </div>
-      </section><section id="section-types">
+      </section><section id="section-types" style="margin-bottom:2.5rem;">
         <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (30)</h2>
         <div id="type-Queue" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>

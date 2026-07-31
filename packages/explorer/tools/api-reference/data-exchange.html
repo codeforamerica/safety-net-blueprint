@@ -50,6 +50,14 @@
       background: rgba(255,255,255,0.15); border-radius: 8px;
       padding: 0.1rem 0.35rem; margin-left: auto;
     }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s, background 0.1s; }
+    .content-item:hover { border-color: #5650BE; background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
     
   </style>
 </head>
@@ -161,17 +169,17 @@
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
           <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">ExternalServiceList</span>
         </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <div style="border-top:1px solid #f0f0f0;"><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[ExternalService]</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -191,29 +199,33 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ServiceType</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
 FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Services Hub. IEVS sources are separate systems with distinct interfaces. See the Data Exchange architecture doc for the full reference.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">defaultCallMode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Default call mode for submissions against this service. Can be overridden per call.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">async</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">sync</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">defaultCallMode</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">CallMode</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Default call mode for submissions against this service. Can be overridden per call.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">programs</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[string]</span>
@@ -253,7 +265,9 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">total</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
@@ -451,29 +465,33 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ServiceType</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
 FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Services Hub. IEVS sources are separate systems with distinct interfaces. See the Data Exchange architecture doc for the full reference.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">defaultCallMode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Default call mode for submissions against this service. Can be overridden per call.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">async</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">sync</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">defaultCallMode</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">CallMode</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Default call mode for submissions against this service. Can be overridden per call.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">programs</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[string]</span>
@@ -693,17 +711,17 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
           <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">ExternalServiceCallList</span>
         </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <div style="border-top:1px solid #f0f0f0;"><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[ExternalServiceCall]</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -723,19 +741,21 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ServiceType</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
 FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Services Hub. IEVS sources are separate systems with distinct interfaces. See the Data Exchange architecture doc for the full reference.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">requestingResourceId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -755,27 +775,31 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">async</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">sync</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">failed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">timed_out</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">CallMode</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ExternalServiceCallStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">data</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -815,7 +839,9 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">total</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
@@ -1012,19 +1038,21 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ServiceType</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
 FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Services Hub. IEVS sources are separate systems with distinct interfaces. See the Data Exchange architecture doc for the full reference.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">requestingResourceId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -1044,27 +1072,31 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">async</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">sync</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">failed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">timed_out</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">CallMode</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ExternalServiceCallStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">data</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -1136,19 +1168,21 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ServiceType</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
 FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Services Hub. IEVS sources are separate systems with distinct interfaces. See the Data Exchange architecture doc for the full reference.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">requestingResourceId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -1168,27 +1202,31 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">async</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">sync</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">failed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">timed_out</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">CallMode</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ExternalServiceCallStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">data</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -1428,19 +1466,21 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ServiceType</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
 FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Services Hub. IEVS sources are separate systems with distinct interfaces. See the Data Exchange architecture doc for the full reference.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">requestingResourceId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -1460,27 +1500,31 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">async</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">sync</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">failed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">timed_out</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">CallMode</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ExternalServiceCallStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">data</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -1689,19 +1733,21 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ServiceType</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The specific federal service interface being called. Each type has a distinct adapter interface, input schema, and result schema.
 FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Services Hub. IEVS sources are separate systems with distinct interfaces. See the Data Exchange architecture doc for the full reference.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">requestingResourceId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -1721,27 +1767,31 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">async</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">sync</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">failed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">timed_out</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">callMode</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">CallMode</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Whether this call is synchronous or asynchronous.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">ExternalServiceCallStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle state of an external service call.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">data</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>

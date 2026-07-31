@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Safety Net Blueprint — Client Reference: Data Exchange Adapter</title>
+  <title>Safety Net Blueprint — Data Dictionary — Document Management</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -14,8 +14,8 @@
     #page-header { flex-shrink: 0; }
     .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
     #sidebar {
-      width: 220px;
-      min-width: 220px;
+      width: 240px;
+      min-width: 240px;
       background: #2B1A78;
       color: white;
       flex-shrink: 0;
@@ -58,19 +58,90 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
-    a { color: #5650BE; }
+    
+:root {
+  --blue-dark:   #2B1A78;
+  --blue-mid:    #5650BE;
+  --blue-light:  #C2C0E8;
+  --sand:        #E9CCBE;
+  --sand-light:  #F5F0ED;
+  --lb-light:    #E6EBF9;
+  --green-dark:  #006152;
+  --green-light: #E2F9F6;
+  --yellow-light:#FFF3E0;
+  --red-dark:    #AF121D;
+  --red-light:   #F9C8CB;
+}
+.csv-btn {
+  font-size: 0.78rem; padding: 0.25rem 0.65rem;
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+  background: rgba(255,255,255,0.1); color: white; cursor: pointer; white-space: nowrap;
+}
+.csv-btn:hover { background: rgba(255,255,255,0.2); }
+.no-results { padding: 2rem; text-align: center; color: #888; font-style: italic; }
+.hidden { display: none !important; }
+.dict-section { margin-bottom: 2.5rem; scroll-margin-top: 1rem; }
+.section-title {
+  font-size: 1rem; font-weight: 700; color: var(--blue-dark);
+  border-bottom: 2px solid var(--blue-light);
+  padding-bottom: 0.35rem; margin-bottom: 0.75rem;
+}
+.cards-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+.card {
+  background: #fff; border: 1px solid var(--sand);
+  border-left: 3px solid var(--blue-mid); border-radius: 6px; overflow: hidden;
+}
+.card.hidden { display: none; }
+.card-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; background: var(--lb-light); }
+.field-path { font-size: 0.82rem; font-weight: 600; color: var(--blue-dark); flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.type-badge {
+  flex-shrink: 0; font-size: 0.65rem; font-weight: 600;
+  background: var(--blue-light); color: var(--blue-dark);
+  border-radius: 4px; padding: 0.1rem 0.4rem; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.rel-badge {
+  flex-shrink: 0; font-size: 0.65rem; font-weight: 600;
+  background: var(--green-light); color: var(--green-dark);
+  border-radius: 4px; padding: 0.1rem 0.4rem; letter-spacing: 0.02em;
+}
+.applies-expr { font-size: 0.72rem; background: var(--yellow-light); border-radius: 3px; padding: 0.05rem 0.4rem; color: #5a4000; }
+.card-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.ann-reason { font-size: 0.78rem; color: #333; line-height: 1.5; margin: 0; }
+.ann-modeling { font-size: 0.75rem; color: #555; line-height: 1.5; margin: 0; display: flex; gap: 0.5rem; align-items: baseline; }
+.ann-modeling .ann-label { flex-shrink: 0; }
+.card-ann { display: flex; flex-direction: column; gap: 0.3rem; }
+.ann-row { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; }
+.ann-row--col { align-items: flex-start; }
+.ann-label {
+  display: inline-block; font-size: 0.6rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-radius: 3px; padding: 0.1rem 0.35rem; margin-right: 0.1rem;
+  vertical-align: middle; white-space: nowrap; flex-shrink: 0;
+  background: var(--sand-light); color: #6b4c3b; border: 1px solid var(--sand);
+}
+.badge { font-size: 0.65rem; font-weight: 600; border-radius: 3px; padding: 0.1rem 0.35rem; letter-spacing: 0.03em; background: #e8e8e8; color: #444; }
+.val-list code { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
+.policy-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.policy-item { font-size: 0.75rem; }
+.policy-item-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.15rem; }
+.policy-id { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
+.policy-citation { font-size: 0.7rem; color: var(--blue-mid); text-decoration: none; }
+.policy-citation:hover { text-decoration: underline; }
+.policy-desc { font-size: 0.75rem; color: #555; line-height: 1.45; margin: 0; }
+
   </style>
 </head>
 <body>
   <div id="page-header">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Client Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Data Exchange Adapter</a></div>
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Data Dictionary</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Document Management</a></div>
     <div style="background:#2B1A78;color:white;">
-      <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:0.9375rem;font-weight:800;">Data Exchange Adapter</span>
-        <code style="font-size:11px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">packages/clients/generated/data-exchange-adapter</code>
-      </div>
-      <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">data-exchange-adapter</code> · API spec: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">packages/resolved/data-exchange-adapter-openapi.yaml</code><span style="margin-left:auto;"><a href="../api-reference/data-exchange-adapter.html" style="font-size:12px;color:#5650BE;">View full API reference →</a></span></div>
+    <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.9375rem;font-weight:800;">Document Management</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.45);font-family:monospace;">2 fields</span>
+      <button class="csv-btn" onclick="exportCsv()" style="margin-left:auto;">Export CSV</button>
     </div>
+    <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">document-management</code> · API spec: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">packages/resolved/document-management-openapi.yaml</code></div>
+  </div>
   </div>
   <div class="page-layout">
     <nav id="sidebar">
@@ -81,17 +152,13 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <div class="nav-section">
-      <div class="nav-section-label">Methods</div>
-      <a href="#section-methods" class="nav-link">All methods <span class="nav-count">0</span></a>
-    </div>
-    
+        <a href="#sec-document" class="nav-link">document <span class="nav-count">2</span></a>
       </div>
     </nav>
     <main id="content">
-      <section id="section-methods" style="margin-bottom:2.5rem;">
-      <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Methods (0)</h2>
-      
+      <section class="dict-section" id="sec-document">
+      <h2 class="section-title">document</h2>
+      <div class="cards-grid"><div class="card content-item" data-path="document.title"><div class="card-header"><code class="field-path">document.title</code><span class="type-badge">string</span></div></div><div class="card content-item" data-path="document.documentDate"><div class="card-header"><code class="field-path">document.documentDate</code><span class="type-badge">date</span></div></div></div>
     </section>
     </main>
   </div>
@@ -212,6 +279,25 @@
       });
     })();
     
+function exportCsv() {
+  const rows = [['path', 'type', 'programs', 'policies', 'dataClassification']];
+  document.querySelectorAll('.card:not(.hidden)').forEach(card => {
+    const path = card.dataset.path ?? '';
+    const type = card.querySelector('.type-badge')?.textContent ?? '';
+    const getAnnRow = label => [...card.querySelectorAll('.ann-row')]
+      .find(r => r.querySelector('.ann-label')?.textContent.trim().toLowerCase() === label);
+    const programs = [...(getAnnRow('programs')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    const policies = [...(getAnnRow('policies')?.querySelectorAll('code') ?? [])].map(b => b.textContent).join(';');
+    const dc = [...(getAnnRow('classification')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    rows.push([path, type, programs, policies, dc]);
+  });
+  const csv = rows.map(r => r.map(v => JSON.stringify(v)).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'data-dictionary.csv';
+  a.click();
+}
+
   </script>
 </body>
 </html>

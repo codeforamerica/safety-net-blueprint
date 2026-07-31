@@ -50,6 +50,14 @@
       background: rgba(255,255,255,0.15); border-radius: 8px;
       padding: 0.1rem 0.35rem; margin-left: auto;
     }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s, background 0.1s; }
+    .content-item:hover { border-color: #5650BE; background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
     a { color: #5650BE; }
   </style>
 </head>
@@ -73,7 +81,11 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-methods" class="nav-link">Methods <span class="nav-count">0</span></a>
+        <div class="nav-section">
+      <div class="nav-section-label">Methods</div>
+      <a href="#section-methods" class="nav-link">All methods <span class="nav-count">0</span></a>
+    </div>
+    
       </div>
     </nav>
     <main id="content">

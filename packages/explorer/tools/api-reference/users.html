@@ -50,6 +50,14 @@
       background: rgba(255,255,255,0.15); border-radius: 8px;
       padding: 0.1rem 0.35rem; margin-left: auto;
     }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s, background 0.1s; }
+    .content-item:hover { border-color: #5650BE; background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
     
   </style>
 </head>
@@ -196,17 +204,17 @@ This specification outlines the API shape. Details will be refined during implem
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[User]</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">idpSubject</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -238,17 +246,17 @@ Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -272,7 +280,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -346,17 +356,17 @@ Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -380,7 +390,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">ui</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -453,6 +465,8 @@ Same value as id.
       
     </div>
     </div>
+        </details>
+      </div></div>
       </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -642,17 +656,17 @@ Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -676,7 +690,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -787,17 +803,17 @@ Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -821,7 +837,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -895,17 +913,17 @@ Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -929,7 +947,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">ui</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -1279,17 +1299,17 @@ Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1313,7 +1333,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1387,17 +1409,17 @@ Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1421,7 +1443,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">ui</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -1663,17 +1687,17 @@ Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1697,7 +1721,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1771,17 +1797,17 @@ Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1805,7 +1831,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">ui</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -2085,17 +2113,17 @@ Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -2119,7 +2147,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -2230,17 +2260,17 @@ Format varies by IdP (e.g., &quot;auth0|507f1f77bcf86cd799439011&quot;).
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -2264,7 +2294,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -2338,17 +2370,17 @@ Example fields: timezone, dateFormat, itemsPerPage, language, theme, etc.
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roles</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Role</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Role and permissions for authorization.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">name</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -2372,7 +2404,9 @@ Examples: applications:read, persons:update, users:create
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">ui</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
