@@ -121,6 +121,29 @@ jobs:
 
 See [Resolve Pipeline Architecture](../architecture/resolve-pipeline.md) for how environment filtering and placeholder substitution work.
 
+## Building the Explorer
+
+The Explorer generates visual and reference documentation from your resolved specs — state machine docs, event catalog, API reference, data dictionaries, sequence diagrams, and more. Run it after resolving your overlays:
+
+```bash
+node packages/explorer/build.js \
+  --resolved=./resolved \
+  --clients=./clients
+```
+
+- `--resolved` — path to your resolved specs (output of `npm run resolve`). If omitted and the default location is empty, the build resolves automatically using the base contracts.
+- `--clients` — path to your generated TypeScript clients directory. Defaults to `packages/clients`.
+
+Build individual tools with `--only`:
+
+```bash
+node packages/explorer/build.js --only=api-reference --resolved=./resolved
+node packages/explorer/build.js --only=state-machine-docs --resolved=./resolved
+node packages/explorer/build.js --only=event-catalog --resolved=./resolved
+```
+
+The output is a set of static HTML files that can be published as a documentation site alongside your resolved specs.
+
 ## Updating base specs
 
 When a new version of `@codeforamerica/safety-net-blueprint-contracts` is released:
