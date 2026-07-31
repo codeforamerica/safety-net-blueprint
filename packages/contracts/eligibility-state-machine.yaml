@@ -11,9 +11,9 @@ machines:
   # ---------------------------------------------------------------------------
   - object: Determination
     states:
-      - {id: in_progress, slaClock: running}
-      - {id: completed, slaClock: stopped}
-      - {id: withdrawn, slaClock: stopped}
+      - {id: in_progress, slaClock: running,  description: "Eligibility determination underway; awaiting program-level decisions"}
+      - {id: completed,   slaClock: stopped,  description: "All program decisions resolved; eligibility determination finalized"}
+      - {id: withdrawn,   slaClock: stopped,  description: "Determination closed because the associated application was withdrawn"}
     initialState: in_progress
     actions:
       - id: flag-expedited
@@ -76,10 +76,10 @@ machines:
   # ---------------------------------------------------------------------------
   - object: Decision
     states:
-      - {id: pending, slaClock: running}
-      - {id: approved, slaClock: stopped}
-      - {id: denied, slaClock: stopped}
-      - {id: ineligible, slaClock: stopped}
+      - {id: pending,    slaClock: running,  description: "Program eligibility decision awaiting automatic or caseworker review"}
+      - {id: approved,   slaClock: stopped,  description: "Member approved for the program based on eligibility criteria"}
+      - {id: denied,     slaClock: stopped,  description: "Member denied for the program based on eligibility criteria"}
+      - {id: ineligible, slaClock: stopped,  description: "Member found categorically ineligible for the program"}
     initialState: pending
     actions:
       - id: approve

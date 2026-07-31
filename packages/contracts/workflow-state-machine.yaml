@@ -7,14 +7,14 @@ eventsSpec: workflow-asyncapi.yaml
 machines:
   - object: Task
     states:
-      - {id: pending, slaClock: running}
-      - {id: in_progress, slaClock: running}
-      - {id: completed, slaClock: stopped}
-      - {id: escalated, slaClock: running}
-      - {id: cancelled, slaClock: stopped}
-      - {id: awaiting_client, slaClock: paused}
-      - {id: awaiting_verification, slaClock: paused}
-      - {id: pending_review, slaClock: running}
+      - {id: pending,               slaClock: running,  description: "Unassigned task awaiting a caseworker to claim it"}
+      - {id: in_progress,           slaClock: running,  description: "Task claimed and actively being worked by an assigned caseworker"}
+      - {id: completed,             slaClock: stopped,  description: "Task finished with an outcome recorded"}
+      - {id: escalated,             slaClock: running,  description: "Task flagged for supervisor attention due to complexity or urgency"}
+      - {id: cancelled,             slaClock: stopped,  description: "Task terminated before completion by a supervisor"}
+      - {id: awaiting_client,       slaClock: paused,   description: "Task paused while waiting for a response from the client"}
+      - {id: awaiting_verification, slaClock: paused,   description: "Task paused while waiting for a verification result"}
+      - {id: pending_review,        slaClock: running,  description: "Task submitted for supervisor review before completion"}
     initialState: pending
     actions:
       - id: claim
