@@ -16,6 +16,7 @@ import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { loadAnnotations, loadPolicies } from '@codeforamerica/safety-net-blueprint-contracts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -33,26 +34,20 @@ export function resolveConfig(contractsDir) {
 
   const config = yaml.load(readFileSync(join(__dirname, 'config.yaml'), 'utf8'));
 
-  // Load all *-annotations.yaml files from contracts
+  // Load annotations for all domains and policy registry from contracts.
   const annotations = {};
   if (existsSync(contractsDir)) {
-    for (const f of readdirSync(contractsDir)) {
-      if (!f.endsWith('-annotations.yaml')) continue;
-      const data = yaml.load(readFileSync(join(contractsDir, f), 'utf8'));
-      const domain = f.replace('-annotations.yaml', '');
-      annotations[domain] = data;
+    const domains = new Set(
+      readdirSync(contractsDir)
+        .filter(f => f.match(/^.+-annotations.*\.yaml$/))
+        .map(f => f.replace(/-annotations.*\.yaml$/, ''))
+    );
+    for (const domain of domains) {
+      annotations[domain] = loadAnnotations(domain, contractsDir);
     }
   }
 
-  // Load all policy registry files from contracts
-  const policies = {};
-  if (existsSync(contractsDir)) {
-    for (const f of readdirSync(contractsDir)) {
-      if (!f.startsWith('platform-registry-policies') || !f.endsWith('.yaml')) continue;
-      const data = yaml.load(readFileSync(join(contractsDir, f), 'utf8'));
-      Object.assign(policies, data.policies || {});
-    }
-  }
+  const policies = existsSync(contractsDir) ? loadPolicies(contractsDir) : {};
 
   return {
     ...config,

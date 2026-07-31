@@ -2,7 +2,8 @@ import { readdirSync, readFileSync, rmSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
-import { generate, generateOverview, generateEventsPage, buildEventIndex } from './src/generate.js';
+import { generate, generateOverview, generateEventsPage } from './src/generate.js';
+import { buildEventIndex } from '@codeforamerica/safety-net-blueprint-contracts';
 import { generateHtml, generateOverviewHtml } from './src/generate-html.js';
 import { resolvedDir } from '../../lib/paths.js';
 
