@@ -59,6 +59,18 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     a { color: #5650BE; }
   </style>
 </head>
@@ -102,6 +114,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listServices<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
       <a href="../api-reference/data-exchange.html#op-get-services" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-listServices" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listServices({
@@ -146,6 +159,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getService<span style="color:#aaa;font-weight:400;">(serviceId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get an external service</span>
       <a href="../api-reference/data-exchange.html#op-get-services-serviceId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-getService" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getService({ path: { serviceId: string } })</pre>
@@ -171,6 +185,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listServiceCalls<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">List service calls</span>
       <a href="../api-reference/data-exchange.html#op-get-service-calls" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-listServiceCalls" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listServiceCalls({
@@ -225,6 +240,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">createServiceCall<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Submit a service call</span>
       <a href="../api-reference/data-exchange.html#op-post-service-calls" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-createServiceCall" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">createServiceCall({ body: { ... } })</pre>
@@ -247,6 +263,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getServiceCall<span style="color:#aaa;font-weight:400;">(serviceCallId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a service call</span>
       <a href="../api-reference/data-exchange.html#op-get-service-calls-serviceCallId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-getServiceCall" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getServiceCall({ path: { serviceCallId: string } })</pre>
@@ -272,6 +289,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">deleteServiceCallMetadata<span style="color:#aaa;font-weight:400;">(serviceCallId, domain)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Remove domain metadata from a service call</span>
       <a href="../api-reference/data-exchange.html#op-delete-service-calls-serviceCallId-metadata-domain" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-deleteServiceCallMetadata" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">deleteServiceCallMetadata({
@@ -301,6 +319,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">setServiceCallMetadata<span style="color:#aaa;font-weight:400;">(serviceCallId, domain)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Set domain metadata on a service call</span>
       <a href="../api-reference/data-exchange.html#op-put-service-calls-serviceCallId-metadata-domain" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-setServiceCallMetadata" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">setServiceCallMetadata({
@@ -338,6 +357,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalService</code>
       <span style="font-size:11px;color:#aaa;">8 fields</span>
+      <a href="#type-ExternalService" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalService</span> <span style="color:#666;">{</span></div>
@@ -351,6 +371,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceList</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-ExternalServiceList" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceList</span> <span style="color:#666;">{</span></div>
@@ -364,6 +385,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceCall</code>
       <span style="font-size:11px;color:#aaa;">11 fields</span>
+      <a href="#type-ExternalServiceCall" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceCall</span> <span style="color:#666;">{</span></div>
@@ -377,6 +399,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceCallList</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-ExternalServiceCallList" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceCallList</span> <span style="color:#666;">{</span></div>
@@ -390,6 +413,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceWritable</code>
       <span style="font-size:11px;color:#aaa;">7 fields</span>
+      <a href="#type-ExternalServiceWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceWritable</span> <span style="color:#666;">{</span></div>
@@ -403,6 +427,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceListWritable</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-ExternalServiceListWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceListWritable</span> <span style="color:#666;">{</span></div>

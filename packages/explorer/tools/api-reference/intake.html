@@ -59,6 +59,18 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     
   </style>
 </head>
@@ -110,6 +122,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -616,6 +629,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1275,6 +1289,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1711,6 +1726,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -2430,6 +2446,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -2562,6 +2579,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/intake.html#action-submit" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="submit: POST /applications/{applicationId}/submit — Formally submits a draft application…">State machine →</a>
+        <a href="#op-post-applications-applicationId-submit" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -3082,6 +3100,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/intake.html#action-open" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="open: POST /applications/{applicationId}/open — System marks a submitted application a…">State machine →</a>
+        <a href="#op-post-applications-applicationId-open" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -3602,6 +3621,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/intake.html#action-complete-review" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="complete-review: POST /applications/{applicationId}/complete-review — Caseworker signals data col…">State machine →</a>
+        <a href="#op-post-applications-applicationId-complete-review" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -4122,6 +4142,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/intake.html#action-submit-for-approval" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="submit-for-approval: POST /applications/{applicationId}/submit-for-approval — System routes the appli…">State machine →</a>
+        <a href="#op-post-applications-applicationId-submit-for-approval" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -4642,6 +4663,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/intake.html#action-approve-determination" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="approve-determination: POST /applications/{applicationId}/approve-determination — Supervisor approves t…">State machine →</a>
+        <a href="#op-post-applications-applicationId-approve-determination" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -5162,6 +5184,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/intake.html#action-reject-determination" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="reject-determination: POST /applications/{applicationId}/reject-determination — Supervisor rejects the…">State machine →</a>
+        <a href="#op-post-applications-applicationId-reject-determination" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -5682,6 +5705,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/intake.html#action-close" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="close: POST /applications/{applicationId}/close — Marks a reviewed application as close…">State machine →</a>
+        <a href="#op-post-applications-applicationId-close" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -6202,6 +6226,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/intake.html#action-withdraw" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="withdraw: POST /applications/{applicationId}/withdraw — Applicant or caseworker withdraws …">State machine →</a>
+        <a href="#op-post-applications-applicationId-withdraw" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -6743,6 +6768,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-satisfy" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -7263,6 +7289,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-mark-inconclusive" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -7783,6 +7810,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-waive" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -8324,6 +8352,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-mark-cannot-verify" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -8871,6 +8900,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-members" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -10523,6 +10553,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-members" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -13414,6 +13445,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -14954,6 +14986,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -17851,6 +17884,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -17995,6 +18029,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-household-info" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -18255,6 +18290,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-household-info" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -18698,6 +18734,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-tax-filers" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -19157,6 +19194,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-tax-filers" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -19744,6 +19782,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-tax-filers-taxFilerId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -20085,6 +20124,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-tax-filers-taxFilerId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -20668,6 +20708,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-tax-filers-taxFilerId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -20812,6 +20853,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-health-plans" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -21737,6 +21779,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-health-plans" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -23268,6 +23311,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-health-plans-healthPlanId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -24081,6 +24125,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-health-plans-healthPlanId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -25034,6 +25079,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-health-plans-healthPlanId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -25178,6 +25224,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-health-enrollments" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -25604,6 +25651,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-health-enrollments" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -26125,6 +26173,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-health-enrollments-healthEnrollmentId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -26433,6 +26482,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-health-enrollments-healthEnrollmentId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -26950,6 +27000,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-health-enrollments-healthEnrollmentId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -27094,6 +27145,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-child-support" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -27354,6 +27406,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-child-support" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -27797,6 +27850,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-contacts" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -28253,6 +28307,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-contacts" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -28846,6 +28901,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-contacts-contactId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -29190,6 +29246,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-contacts-contactId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -29789,6 +29846,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-contacts-contactId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -29933,6 +29991,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-organizations" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -30333,6 +30392,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-organizations" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -30810,6 +30870,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-organizations-organizationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -31098,6 +31159,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-organizations-organizationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -31585,6 +31647,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-organizations-organizationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -31729,6 +31792,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-person-relationships" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -32101,6 +32165,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-person-relationships" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -32522,6 +32587,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-person-relationships-personRelationshipId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -32782,6 +32848,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-person-relationships-personRelationshipId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -33213,6 +33280,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-person-relationships-personRelationshipId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -33357,6 +33425,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-authorized-representatives" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -33738,6 +33807,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-authorized-representatives" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -34177,6 +34247,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-authorized-representatives-authorizedRepresentativeId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -34446,6 +34517,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-authorized-representatives-authorizedRepresentativeId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -34895,6 +34967,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-authorized-representatives-authorizedRepresentativeId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -35039,6 +35112,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-signatures" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -35407,6 +35481,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-signatures" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -35822,6 +35897,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-signatures-signatureId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -36078,6 +36154,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-signatures-signatureId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -36501,6 +36578,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-signatures-signatureId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -36645,6 +36723,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-sponsors" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -37061,6 +37140,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-sponsors" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -37562,6 +37642,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-sponsors-sponsorId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -37860,6 +37941,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-sponsors-sponsorId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -38367,6 +38449,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-sponsors-sponsorId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -38511,6 +38594,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-jobs" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -39166,6 +39250,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-jobs" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -40145,6 +40230,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-jobs-jobId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -40682,6 +40768,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-jobs-jobId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -41423,6 +41510,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-jobs-jobId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -41567,6 +41655,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-incomes" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -42349,6 +42438,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-incomes" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -43582,6 +43672,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-incomes-incomeId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -44246,6 +44337,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-incomes-incomeId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -45082,6 +45174,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-incomes-incomeId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -45226,6 +45319,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-assets" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -45949,6 +46043,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-assets" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -47064,6 +47159,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-assets-assetId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -47669,6 +47765,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-assets-assetId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -48402,6 +48499,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-assets-assetId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -48546,6 +48644,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-asset-disposals" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -48911,6 +49010,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-asset-disposals" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -49310,6 +49410,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-asset-disposals-assetDisposalId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -49557,6 +49658,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-asset-disposals-assetDisposalId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -49952,6 +50054,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-asset-disposals-assetDisposalId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -50096,6 +50199,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-expenses" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -50452,6 +50556,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-expenses" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -50833,6 +50938,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-expenses-expenseId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -51071,6 +51177,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-expenses-expenseId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -51448,6 +51555,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-expenses-expenseId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -51592,6 +51700,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-disability-benefits" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -51954,6 +52063,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-disability-benefits" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -52347,6 +52457,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-disability-benefits-disabilityBenefitId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -52591,6 +52702,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-disability-benefits-disabilityBenefitId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -52980,6 +53092,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-disability-benefits-disabilityBenefitId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -53124,6 +53237,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-deductions" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -53490,6 +53604,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-deductions" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -53891,6 +54006,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-deductions-deductionId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -54139,6 +54255,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-deductions-deductionId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -54536,6 +54653,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-deductions-deductionId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -54680,6 +54798,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-verifications" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -55208,6 +55327,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-applications-applicationId-verifications" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -55955,6 +56075,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-verifications-verificationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -56371,6 +56492,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-verifications-verificationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -57124,6 +57246,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-applications-applicationId-verifications-verificationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -57268,6 +57391,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-interview" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -57486,6 +57610,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-interview" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -57855,6 +57980,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -57993,6 +58119,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-demographics" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -58155,6 +58282,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-identity" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -58317,6 +58445,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-income" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -58479,6 +58608,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-employment" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -58641,6 +58771,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-health-coverage" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -58803,6 +58934,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-assets" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -58965,6 +59097,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-contact" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -59127,6 +59260,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-expenses" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -59289,6 +59423,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-household" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -59457,6 +59592,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -59770,6 +59906,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-put-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -60145,6 +60282,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -60520,6 +60658,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -60763,6 +60902,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-put-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -61144,6 +61284,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">

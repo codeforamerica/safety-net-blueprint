@@ -59,6 +59,18 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     
   </style>
 </head>
@@ -110,6 +122,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-determinations" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -388,6 +401,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-determinations-determinationId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -590,6 +604,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-determinations-determinationId-decisions" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -955,6 +970,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-determinations-determinationId-decisions-decisionId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1256,6 +1272,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/eligibility.html#action-flag-expedited" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="flag-expedited: POST /determinations/{determinationId}/flag-expedited — System flags a Determina…">State machine →</a>
+        <a href="#op-post-determinations-determinationId-flag-expedited" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1542,6 +1559,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/eligibility.html#action-complete" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="complete: POST /determinations/{determinationId}/complete — System marks a Determination a…">State machine →</a>
+        <a href="#op-post-determinations-determinationId-complete" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1828,6 +1846,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/eligibility.html#action-withdraw" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="withdraw: POST /determinations/{determinationId}/withdraw — System withdraws a Determinati…">State machine →</a>
+        <a href="#op-post-determinations-determinationId-withdraw" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -2114,6 +2133,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-determinations-determinationId-approve" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -2421,6 +2441,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-determinations-determinationId-deny" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -2738,6 +2759,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-determinations-determinationId-mark-ineligible" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">

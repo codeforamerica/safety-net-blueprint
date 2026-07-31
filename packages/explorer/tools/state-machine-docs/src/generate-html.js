@@ -144,7 +144,7 @@ function collectStepHtml(steps, sm, machine, eventIndex, allStateMachines) {
       const canonical = step.emit.type;
       const raw = step.emit.description?.trim().replace(/\n\s*/g, ' ') || '';
       const desc = stripEmitPrefix(raw) || raw;
-      return `<li>Emit <a href="../event-catalog/index.html" style="font-family:monospace;font-size:12px;background:${COLORS.sandMid};padding:1px 5px;border-radius:3px;border:1px solid ${COLORS.sandDark};color:${COLORS.midBlue};text-decoration:none;">${canonical}</a>${desc ? ` — ${desc}` : ''}</li>`;
+      return `<li>Emit <a href="../event-catalog/index.html#event-${canonical}" style="font-family:monospace;font-size:12px;background:${COLORS.sandMid};padding:1px 5px;border-radius:3px;border:1px solid ${COLORS.sandDark};color:${COLORS.midBlue};text-decoration:none;">${canonical}</a>${desc ? ` — ${desc}` : ''}</li>`;
     }
     if (step.call) {
       if (typeof step.call === 'string') {
@@ -232,7 +232,7 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines)
   const allDomains = allStateMachines.map(s => s.domain);
 
   const sections = sm.machines.map(machine => {
-    const anchor = sm.machines.length > 1 ? ` id="${machine.object.toLowerCase()}"` : '';
+    const anchor = ` id="machine-${machine.object.toLowerCase()}"`;
 
     // States section
     const stateRows = (machine.states || []).map(s => {
@@ -266,7 +266,7 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines)
         const froms = Array.isArray(op.transition?.from) ? op.transition.from
           : op.transition?.from ? [op.transition.from] : [];
         const transition = op.transition?.to
-          ? `${froms.length ? froms.map(f => stateBadge(f)).join('/') + ' → ' : ''}${stateBadge(op.transition.to)}`
+          ? `<span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;">${froms.length ? froms.map(f => stateBadge(f)).join('<span style="color:#aaa;font-size:10px;">or</span>') + '<span style="color:#aaa;padding:0 2px;">→</span>' : ''}${stateBadge(op.transition.to)}</span>`
           : op.transition ? '<span style="color:#999;font-size:11px;">no state change</span>' : '';
         const steps = renderStepsHtml(getSteps(op), sm, machine, eventIndex, allStateMachines);
         const rpcMatch = op.description ? RPC_RE.exec(op.description) : null;
