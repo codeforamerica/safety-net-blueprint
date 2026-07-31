@@ -195,6 +195,14 @@ export function twoColumnPage({
       background: rgba(255,255,255,0.15); border-radius: 8px;
       padding: 0.1rem 0.35rem; margin-left: auto;
     }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s, background 0.1s; }
+    .content-item:hover { border-color: ${COLORS.midBlue}; background: ${COLORS.paleBlue}; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: ${COLORS.sandMid}; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
     ${extraStyle}
   </style>
 </head>
@@ -285,6 +293,12 @@ export function singleColumnPage({
     td { padding: 10px 12px; border-bottom: 1px solid ${COLORS.sandDark}; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: ${COLORS.sandMid}; }
+    .content-item { transition: border-color 0.1s, background 0.1s; }
+    .content-item:hover { border-color: ${COLORS.midBlue}; background: ${COLORS.paleBlue}; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: ${COLORS.sandMid}; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
     ${extraStyle}
   </style>
 </head>
