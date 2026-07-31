@@ -121,6 +121,18 @@ try {
   }
 } catch { /* contractsDir missing or unreadable — silently skip */ }
 
+// ── Enum display ──────────────────────────────────────────────────────────
+
+const ENUM_VALUE_STYLE = `font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;`;
+const ENUM_LABEL_STYLE = `font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;`;
+
+/** Render enum values as a compact chip list with an "enum" label. */
+function renderEnumValues(values) {
+  if (!values?.length) return '';
+  const chips = values.map(v => `<code style="${ENUM_VALUE_STYLE}">${esc(String(v))}</code>`).join(' ');
+  return `<div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="${ENUM_LABEL_STYLE}">enum</span>${chips}</div>`;
+}
+
 // ── Schema type inference ─────────────────────────────────────────────────
 
 function typeStr(schema) {
@@ -277,7 +289,7 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
 
     const type     = typeStr(prop);
     const enumVals = prop.enum
-      ? `<div style="margin-top:3px;font-size:10px;color:#666;">One of: ${prop.enum.map(v => `<code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">${esc(String(v))}</code>`).join(', ')}</div>`
+      ? renderEnumValues(prop.enum)
       : '';
     const formatTag = prop.format
       ? `<span style="font-size:10px;color:#999;font-family:monospace;"> (${esc(prop.format)})</span>` : '';
@@ -389,7 +401,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
     const type      = typeStr(schema);
     const typeCell  = refName ? schemaLink(refName) : typeBadge(type);
     const enumVals  = (!refName && schema.enum)
-      ? `<div style="margin-top:2px;font-size:10px;">One of: ${schema.enum.map(v => `<code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">${esc(String(v))}</code>`).join(', ')}</div>`
+      ? renderEnumValues(schema.enum)
       : '';
     // Detect named component params via: (1) raw $ref name, or (2) name:in reverse lookup
     const componentParamName = localParamRef(rawP) ?? (p.name && p.in ? paramNameByKey.get(`${p.name}:${p.in}`) : undefined);
@@ -401,7 +413,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
       const shouldExpand = desc.length > 80 || schema.enum?.length > 0;
       if (shouldExpand) {
         const eid = nextEid();
-        const expandContent = `${renderMarkdown(desc)}${schema.enum ? `<div style="margin-top:4px;font-size:10px;color:#666;">One of: ${schema.enum.map(v => `<code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">${esc(String(v))}</code>`).join(', ')}</div>` : ''}`;
+        const expandContent = `${renderMarkdown(desc)}${renderEnumValues(schema.enum)}`;
         const nameCell = `<span role="button" tabindex="0" data-expand-id="${eid}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>${esc(p.name ?? '')}</span>`;
         // Expand row spans all columns so content gets full table width (avoids clipping)
         const expandRow = `<tr id="${eid}" style="display:none"><td colspan="5" style="padding:4px 12px 10px;background:#fafafa;border-top:none;">${expandContent}</td></tr>`;
