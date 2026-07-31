@@ -11,7 +11,7 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs'
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
-import { buildEventIndex } from '../state-machine-docs/src/generate.js';
+import { buildEventIndex } from '@codeforamerica/safety-net-blueprint-contracts';
 import { COLORS, FONT } from '../../lib/theme.js';
 import { esc as h, titleCase, breadcrumb } from '../../lib/html.js';
 import { singleColumnPage } from '../../lib/layout.js';

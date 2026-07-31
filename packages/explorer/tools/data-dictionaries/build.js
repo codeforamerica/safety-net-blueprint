@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, rmSync } from 'fs
 import { resolve, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { loadAnnotations, loadPolicies } from '@codeforamerica/safety-net-blueprint-contracts';
 import { COLORS } from '../../lib/theme.js';
 import { esc as h, titleCase, breadcrumb, headerMetaSubtitle, HEADER_CODE_STYLE } from '../../lib/html.js';
 import { twoColumnPage, singleColumnPage } from '../../lib/layout.js';
@@ -20,7 +21,7 @@ import { resolvedDir, resolvedSourcePairs } from '../../lib/paths.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outputDir     = resolve(__dirname);
 const PROJECT_ROOT  = resolve(__dirname, '../../..');
-readdirSync(outputDir).filter(f => f.endsWith('.html') || f.endsWith('-field-inventory.yaml')).forEach(f => rmSync(resolve(outputDir, f)));
+readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outputDir, f)));
 
 // Resolved source files this tool reads — shown in each page's header metadata.
 const SOURCE_SUFFIXES = ['openapi', 'annotations'];
@@ -28,10 +29,7 @@ const SOURCE_SUFFIXES = ['openapi', 'annotations'];
 // ── Policy registry ───────────────────────────────────────────────────────────
 
 let POLICIES = {};
-try {
-  const reg = safeLoad(resolve(resolvedDir, 'platform-registry-policies.yaml'));
-  POLICIES = reg?.policies ?? {};
-} catch { /* run without policy data if file is missing */ }
+try { POLICIES = loadPolicies(resolvedDir); } catch { /* run without policy data if file is missing */ }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -88,14 +86,13 @@ function bestMatch(entries, fieldPath) {
   return best;
 }
 
-function buildAnnotationResolver(schemaAnnotations, docsAnnotations) {
-  const structured = schemaAnnotations ?? {};
-  const docs       = docsAnnotations ?? {};
+function buildAnnotationResolver(mergedSchema) {
+  const all = mergedSchema ?? {};
 
-  function inheritedValue(map, fieldPath, key) {
+  function inheritedValue(fieldPath, key) {
     let path = fieldPath;
     while (true) {
-      if (map[path]?.[key] !== undefined) return map[path][key];
+      if (all[path]?.[key] !== undefined) return all[path][key];
       const stripped = path.replace(/\.[^.]+$/, '');
       if (stripped === path) return undefined;
       path = stripped;
@@ -103,15 +100,15 @@ function buildAnnotationResolver(schemaAnnotations, docsAnnotations) {
   }
 
   return function resolve(fieldPath) {
-    const d = docs[fieldPath] ?? null;
-    const programs           = inheritedValue(structured, fieldPath, 'programs');
-    const policies           = inheritedValue(structured, fieldPath, 'policies');
-    const dataClassification = inheritedValue(structured, fieldPath, 'dataClassification');
+    const ann            = all[fieldPath] ?? null;
+    const programs       = inheritedValue(fieldPath, 'programs');
+    const policies       = inheritedValue(fieldPath, 'policies');
+    const dataClassification = inheritedValue(fieldPath, 'dataClassification');
     const s = (programs || policies || dataClassification)
       ? { programs, policies, dataClassification }
       : null;
-    if (!s && !d) return null;
-    return { ...s, ...d };
+    if (!s && !ann) return null;
+    return { ...s, ...ann };
   };
 }
 
@@ -401,19 +398,9 @@ function main() {
 
     console.log(`  Processing ${domain}...`);
 
-    const annPath = resolve(resolvedDir, `${domain}-annotations.yaml`);
-    let annotations = null;
-    if (existsSync(annPath)) {
-      try { annotations = safeLoad(annPath); } catch { /* ignore */ }
-    }
-
-    const docsPath = resolve(resolvedDir, `${domain}-annotations-docs.yaml`);
-    let docsAnnotations = null;
-    if (existsSync(docsPath)) {
-      try { docsAnnotations = safeLoad(docsPath); } catch { /* ignore */ }
-    }
-
-    const resolveAnn = buildAnnotationResolver(annotations?.schema, docsAnnotations?.schema);
+    let ann = { schema: {} };
+    try { ann = loadAnnotations(domain, resolvedDir); } catch { /* run without annotations if missing */ }
+    const resolveAnn = buildAnnotationResolver(ann.schema);
     const sections = parseDataModel(dataModelPath);
 
     let version = null;
