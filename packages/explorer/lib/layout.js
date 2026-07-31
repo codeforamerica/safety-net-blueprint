@@ -197,8 +197,9 @@ export function twoColumnPage({
     }
 
     /* Interactive element hover states — applied centrally so all tools get consistent behavior */
-    .content-item { transition: border-color 0.1s, background 0.1s; }
-    .content-item:hover { border-color: ${COLORS.midBlue}; background: ${COLORS.paleBlue}; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: ${COLORS.midBlue}; }
+    .content-item > details > summary:hover { background: ${COLORS.paleBlue}; }
     details summary { transition: background 0.1s; }
     details summary:hover { background: ${COLORS.sandMid}; }
     [data-expand-id] { transition: opacity 0.1s; }
@@ -305,8 +306,9 @@ export function singleColumnPage({
     td { padding: 10px 12px; border-bottom: 1px solid ${COLORS.sandDark}; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: ${COLORS.sandMid}; }
-    .content-item { transition: border-color 0.1s, background 0.1s; }
-    .content-item:hover { border-color: ${COLORS.midBlue}; background: ${COLORS.paleBlue}; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: ${COLORS.midBlue}; }
+    .content-item > details > summary:hover { background: ${COLORS.paleBlue}; }
     details summary { transition: background 0.1s; }
     details summary:hover { background: ${COLORS.sandMid}; }
     [data-expand-id] { transition: opacity 0.1s; }

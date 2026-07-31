@@ -52,8 +52,9 @@
     }
 
     /* Interactive element hover states — applied centrally so all tools get consistent behavior */
-    .content-item { transition: border-color 0.1s, background 0.1s; }
-    .content-item:hover { border-color: #5650BE; background: #E6EBF9; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
     details summary { transition: background 0.1s; }
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
