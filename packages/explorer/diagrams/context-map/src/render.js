@@ -105,7 +105,7 @@ function textBlock(cx, startY, lines, lh, size, fill, weight = 'normal') {
  * `leftParts` — additional SVG elements to place on the left (e.g. breadcrumb).
  * `centerLabel` — label text centered at x=700 (omit for overview).
  */
-function headerBarParts(W, leftParts = [], centerLabel = null) {
+function headerBarParts(W, leftParts = [], centerLabel = null, detailLegend = false) {
   const parts = [
     `<rect x="0" y="0" width="${W}" height="44" fill="#F3F3F3"/>`,
     `<line x1="0" y1="44" x2="${W}" y2="44" stroke="#E9CCBE" stroke-width="1"/>`,
@@ -114,20 +114,52 @@ function headerBarParts(W, leftParts = [], centerLabel = null) {
   if (centerLabel) {
     parts.push(svgText(centerLabel, 700, 27, { anchor: 'middle', size: 13, weight: 700, fill: '#000000' }));
   }
-  // Legend (right side)
-  const legItems = [
-    { status: 'design-complete', label: 'Complete'     },
-    { status: 'partial',         label: 'In progress'  },
-    { status: 'not-started',     label: 'Planned'      },
-  ];
+
+  const CHAR_W = 5.5;
+  const GAP    = 20;
   let lx = 856;
-  for (const item of legItems) {
-    const st   = STATUS_STYLE[item.status];
+
+  // Hex status items (all pages)
+  for (const { status, label } of [
+    { status: 'design-complete', label: 'Complete'    },
+    { status: 'partial',         label: 'In progress' },
+    { status: 'not-started',     label: 'Planned'     },
+  ]) {
+    const st   = STATUS_STYLE[status];
     const dash = st.dash ? ' stroke-dasharray="4 3"' : '';
     parts.push(`<polygon points="${hexPtsStr(lx + 6, 23, 6)}" fill="${st.fill}" stroke="${st.stroke}" stroke-width="1.5"${dash}/>`);
-    parts.push(svgText(item.label, lx + 17, 27, { size: 9, fill: '#000000' }));
-    lx += 104;
+    parts.push(svgText(label, lx + 17, 27, { size: 9, fill: '#000000' }));
+    lx += 17 + Math.ceil(label.length * CHAR_W) + GAP;
   }
+
+  if (detailLegend) {
+    // Separator
+    parts.push(`<line x1="${lx - 8}" y1="14" x2="${lx - 8}" y2="32" stroke="#E9CCBE" stroke-width="1"/>`);
+
+    // Edge type items
+    for (const { icon, label, color, italic } of [
+      { icon: '\u26a1', label: 'Event',    color: '#444',    italic: false },
+      { icon: '\u21c4', label: 'API call', color: '#2B1A78', italic: true  },
+    ]) {
+      const text = icon + '\u2009' + label;
+      parts.push(svgText(text, lx, 27, { size: 9, fill: color, italic }));
+      lx += Math.ceil(text.length * CHAR_W) + GAP;
+    }
+
+    // Separator
+    parts.push(`<line x1="${lx - 8}" y1="14" x2="${lx - 8}" y2="32" stroke="#E9CCBE" stroke-width="1"/>`);
+
+    // Implementation status items
+    for (const { label, color } of [
+      { label: 'Implemented', color: '#00AD93' },
+      { label: 'Planned',     color: '#5650BE' },
+    ]) {
+      parts.push(`<circle cx="${lx + 4}" cy="23" r="3.5" fill="${color}"/>`);
+      parts.push(svgText(label, lx + 13, 27, { size: 9, fill: color }));
+      lx += 13 + Math.ceil(label.length * CHAR_W) + GAP;
+    }
+  }
+
   return parts;
 }
 
@@ -293,42 +325,7 @@ function renderDetail(domainId) {
   ];
 
   // ── Header bar ─────────────────────────────────────────────────────────────
-  parts.push(
-    ...headerBarParts(W, [], center.label),
-    // Legend — two groups: types (what) and status (color meaning), separated by a pipe
-    ...(() => {
-      // Right-to-left rendering: status group first (rightmost), then separator, then types
-      const statusItems = [
-        { color: '#5650BE', label: 'Planned' },
-        { color: '#00AD93', label: 'Implemented' },
-      ];
-      const typeItems = [
-        { color: '#2B1A78', icon: '\u21c4', label: 'API call', italic: true },
-        { color: '#444',    icon: '\u26a1', label: 'Event' },
-      ];
-      const out = [];
-      let rx = W - 20;
-      for (const item of statusItems) {
-        const fullText = item.label;
-        const lw = fullText.length * 5.8 + 10;
-        out.push(svgText(fullText, rx, 27, { anchor: 'end', size: 9, fill: item.color }));
-        // Filled circle indicator
-        const cx = rx - fullText.length * 5.8 - 5;
-        out.push(`<circle cx="${cx}" cy="23" r="3.5" fill="${item.color}"/>`);
-        rx = Math.round(cx - 10);
-      }
-      // Separator
-      out.push(`<line x1="${rx}" y1="14" x2="${rx}" y2="32" stroke="#E9CCBE" stroke-width="1"/>`);
-      rx -= 14;
-      for (const item of typeItems) {
-        const fullText = item.icon + '\u2009' + item.label;
-        const lw = fullText.length * 5.8;
-        out.push(svgText(fullText, rx, 27, { anchor: 'end', size: 9, fill: item.color, italic: item.italic }));
-        rx = Math.round(rx - lw - 16);
-      }
-      return out;
-    })(),
-  );
+  parts.push(...headerBarParts(W, [], center.label, true));
 
 
   // ── Connection lines (plain gray, no arrowheads) ──────────────────────────

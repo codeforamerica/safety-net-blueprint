@@ -177,8 +177,6 @@
       gap: 1rem;
     }
 
-    /* Card is a <div> with position:relative so the stretched-link
-       ::after overlay covers the whole card without nesting <a> in <a>. */
     .card {
       background: var(--white);
       border: 1px solid var(--sand-dark);
@@ -198,7 +196,6 @@
 
     .card-title { color: inherit; font: inherit; }
 
-    /* Stretched link — covers the whole card, sits below the output tags */
     .card-link {
       text-decoration: none;
       color: inherit;
@@ -211,9 +208,7 @@
       z-index: 0;
     }
 
-    .card-accent {
-      height: 4px;
-    }
+    .card-accent { height: 4px; }
 
     .accent-blue   { background: linear-gradient(90deg, var(--dark-blue), var(--mid-blue)); }
     .accent-green  { background: linear-gradient(90deg, var(--deep-green), var(--mid-green)); }
@@ -284,7 +279,7 @@
     .badge-progress { background: var(--pale-blue);    color: var(--mid-blue);   border: 1px solid var(--light-blue); }
     .badge-planned  { background: var(--sand-mid);     color: #7a6050;           border: 1px solid var(--sand-dark); }
 
-    /* ── Output tags — sit above the stretched link overlay ─────── */
+    /* ── Output tags ─────────────────────────────────────────────── */
 
     .card-outputs {
       margin-top: 1rem;
@@ -315,8 +310,6 @@
     }
 
     .output-tag:hover { border-color: var(--mid-blue); color: var(--mid-blue); }
-
-    .output-tag.disabled { opacity: 0.5; pointer-events: none; }
 
     .dot {
       width: 6px;
@@ -369,111 +362,14 @@
     <div class="hero-badge">Explorer</div>
     <h2>Systems integration artifacts</h2>
     <p>Diagrams, tools, and reference outputs for the Safety Net Blueprint — a shared contract layer for state benefits programs.</p>
+    <div style="margin-top:1.5rem;display:flex;justify-content:center;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:0.04em;text-transform:uppercase;">For state leadership</span>
+      <a href="diagrams/adoption-model/executive-summary.html" style="font-size:12.5px;font-weight:600;color:white;text-decoration:none;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);padding:0.3rem 0.875rem;border-radius:100px;">Executive Summary</a>
+      <a href="diagrams/adoption-model/adoption-model.html" style="font-size:12.5px;font-weight:600;color:white;text-decoration:none;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);padding:0.3rem 0.875rem;border-radius:100px;">Slide Deck</a>
+    </div>
   </div>
 
   <main>
-
-    <!-- ── Diagrams ──────────────────────────────────────────────── -->
-
-    <div class="section-header">
-      <span class="pill pill-diagrams">Diagrams</span>
-      <h3>Architecture &amp; process diagrams</h3>
-    </div>
-
-    <div class="card-grid">
-
-      <div class="card">
-        <div class="card-accent accent-yellow"></div>
-        <div class="card-body">
-          <div class="card-icon icon-yellow">
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <polygon points="10,2 18,6.5 18,13.5 10,18 2,13.5 2,6.5" fill="#FFB446"/>
-              <circle cx="10" cy="10" r="3.5" fill="#c98a00"/>
-            </svg>
-          </div>
-          <div class="card-header-row">
-            <h4><a href="diagrams/adoption-model/adoption-model.html" class="card-link">Adoption Model</a></h4>
-            <span class="status-badge badge-complete">Complete</span>
-          </div>
-          <p>Non-technical overview of the blueprint and the path to adoption — designed for state leadership and procurement teams.</p>
-          <div class="card-outputs">
-            <a href="diagrams/adoption-model/executive-summary.html" class="output-tag">
-              <span class="dot dot-yellow"></span>Executive summary
-            </a>
-            <a href="diagrams/adoption-model/adoption-model.html" class="output-tag">
-              <span class="dot dot-yellow"></span>Slide deck
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-accent accent-blue"></div>
-        <div class="card-body">
-          <div class="card-icon icon-blue">
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <circle cx="10" cy="10" r="3.5" fill="#5650BE"/>
-              <circle cx="3" cy="4" r="2.5" fill="#2B1A78"/>
-              <circle cx="17" cy="4" r="2.5" fill="#2B1A78"/>
-              <circle cx="3" cy="16" r="2.5" fill="#2B1A78"/>
-              <circle cx="17" cy="16" r="2.5" fill="#2B1A78"/>
-              <line x1="5" y1="5.5" x2="7.5" y2="8" stroke="#5650BE" stroke-width="1.5"/>
-              <line x1="15" y1="5.5" x2="12.5" y2="8" stroke="#5650BE" stroke-width="1.5"/>
-              <line x1="5" y1="14.5" x2="7.5" y2="12" stroke="#5650BE" stroke-width="1.5"/>
-              <line x1="15" y1="14.5" x2="12.5" y2="12" stroke="#5650BE" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <div class="card-header-row">
-            <h4><a href="diagrams/context-map/domains.html" class="card-link">Context Map</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
-          </div>
-          <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>
-          <div class="card-outputs">
-            <a href="diagrams/context-map/domain_intake.html" class="output-tag">
-              <span class="dot dot-blue"></span>Intake
-            </a>
-            <a href="diagrams/context-map/domain_eligibility.html" class="output-tag">
-              <span class="dot dot-blue"></span>Eligibility
-            </a>
-            <a href="diagrams/context-map/domain_case_management.html" class="output-tag">
-              <span class="dot dot-blue"></span>Case management
-            </a>
-            <a href="diagrams/context-map/domain_workflow.html" class="output-tag">
-              <span class="dot dot-blue"></span>Workflow
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-accent accent-blue"></div>
-        <div class="card-body">
-          <div class="card-icon icon-blue">
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <line x1="2" y1="5" x2="10" y2="5" stroke="#5650BE" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="2" y1="10" x2="18" y2="10" stroke="#2B1A78" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="10" y1="15" x2="18" y2="15" stroke="#5650BE" stroke-width="1.5" stroke-linecap="round"/>
-              <polygon points="10,5 13,3 13,7" fill="#5650BE"/>
-              <polygon points="18,10 15,8 15,12" fill="#2B1A78"/>
-              <polygon points="18,15 15,13 15,17" fill="#5650BE"/>
-            </svg>
-          </div>
-          <div class="card-header-row">
-            <h4><a href="diagrams/sequence-diagrams/index.html" class="card-link">Sequence Diagrams</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
-          </div>
-          <p>Contract-driven event chain diagrams tracing how a triggering action propagates across domain boundaries.</p>
-          <div class="card-outputs">
-            <a href="diagrams/sequence-diagrams/application-submission.html" class="output-tag">
-              <span class="dot dot-blue"></span>Application submission
-            </a>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <hr class="section-divider">
 
     <!-- ── Tools ─────────────────────────────────────────────────── -->
 
@@ -483,6 +379,66 @@
     </div>
 
     <div class="card-grid">
+
+      <div class="card">
+        <div class="card-accent accent-green"></div>
+        <div class="card-body">
+          <div class="card-icon icon-green">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="3" y="3" width="14" height="3" rx="1.5" fill="#006152"/>
+              <rect x="3" y="8.5" width="9" height="2" rx="1" fill="#00AD93"/>
+              <rect x="3" y="12" width="11" height="2" rx="1" fill="#00AD93"/>
+              <rect x="3" y="15.5" width="7" height="2" rx="1" fill="#00AD93"/>
+            </svg>
+          </div>
+          <div class="card-header-row">
+            <h4><a href="tools/api-reference/index.html" class="card-link">API Reference</a></h4>
+            <span class="status-badge badge-progress">In progress</span>
+          </div>
+          <p>Static reference for all contract APIs — endpoints, parameters, request and response schemas. No running mock server required.</p>
+          <div class="card-outputs">
+            <a href="tools/api-reference/case-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Case Management
+            </a>
+            <a href="tools/api-reference/client-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Client Management
+            </a>
+            <a href="tools/api-reference/communication.html" class="output-tag">
+              <span class="dot dot-green"></span>Communication
+            </a>
+            <a href="tools/api-reference/data-exchange.html" class="output-tag">
+              <span class="dot dot-green"></span>Data Exchange
+            </a>
+            <a href="tools/api-reference/data-exchange-adapter.html" class="output-tag">
+              <span class="dot dot-green"></span>Data Exchange Adapter
+            </a>
+            <a href="tools/api-reference/document-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Document Management
+            </a>
+            <a href="tools/api-reference/eligibility.html" class="output-tag">
+              <span class="dot dot-green"></span>Eligibility
+            </a>
+            <a href="tools/api-reference/eligibility-adapter.html" class="output-tag">
+              <span class="dot dot-green"></span>Eligibility Adapter
+            </a>
+            <a href="tools/api-reference/intake.html" class="output-tag">
+              <span class="dot dot-green"></span>Intake
+            </a>
+            <a href="tools/api-reference/platform.html" class="output-tag">
+              <span class="dot dot-green"></span>Platform
+            </a>
+            <a href="tools/api-reference/scheduling.html" class="output-tag">
+              <span class="dot dot-green"></span>Scheduling
+            </a>
+            <a href="tools/api-reference/users.html" class="output-tag">
+              <span class="dot dot-green"></span>Users
+            </a>
+            <a href="tools/api-reference/workflow.html" class="output-tag">
+              <span class="dot dot-green"></span>Workflow
+            </a>
+          </div>
+        </div>
+      </div>
 
       <div class="card">
         <div class="card-accent accent-green"></div>
@@ -501,14 +457,106 @@
           </div>
           <p>Field-level reference for the blueprint data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>
           <div class="card-outputs">
+            <a href="tools/data-dictionaries/case-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Case Management
+            </a>
+            <a href="tools/data-dictionaries/client-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Client Management
+            </a>
+            <a href="tools/data-dictionaries/document-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Document Management
+            </a>
             <a href="tools/data-dictionaries/intake.html" class="output-tag">
               <span class="dot dot-green"></span>Intake
             </a>
-            <a href="tools/data-dictionaries/case-management.html" class="output-tag">
-              <span class="dot dot-green"></span>Case management
+            <a href="tools/data-dictionaries/scheduling.html" class="output-tag">
+              <span class="dot dot-green"></span>Scheduling
             </a>
-            <a href="tools/data-dictionaries/document-management.html" class="output-tag">
-              <span class="dot dot-green"></span>Document management
+            <a href="tools/data-dictionaries/users.html" class="output-tag">
+              <span class="dot dot-green"></span>Users
+            </a>
+            <a href="tools/data-dictionaries/workflow.html" class="output-tag">
+              <span class="dot dot-green"></span>Workflow
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-accent accent-sand"></div>
+        <div class="card-body">
+          <div class="card-icon icon-sand">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="3" y="2" width="9" height="12" rx="1.5" fill="#b5917a"/>
+              <rect x="5" y="5" width="5" height="1.5" rx="0.75" fill="#f7ede8"/>
+              <rect x="5" y="8" width="4" height="1.5" rx="0.75" fill="#f7ede8"/>
+              <circle cx="14.5" cy="14.5" r="4" fill="#e9ccbe" stroke="#b5917a" stroke-width="1.5"/>
+              <line x1="13" y1="14.5" x2="16" y2="14.5" stroke="#b5917a" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="14.5" y1="13" x2="14.5" y2="16" stroke="#b5917a" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="card-header-row">
+            <h4><a href="tools/client-reference/index.html" class="card-link">Client Reference</a></h4>
+            <span class="status-badge badge-progress">In progress</span>
+          </div>
+          <p>Generated TypeScript client reference — SDK functions, types, and Zod schemas for each domain, with search helper documentation.</p>
+          <div class="card-outputs">
+            <a href="tools/client-reference/applications.html" class="output-tag">
+              <span class="dot dot-grey"></span>Applications
+            </a>
+            <a href="tools/client-reference/case-management.html" class="output-tag">
+              <span class="dot dot-grey"></span>Case Management
+            </a>
+            <a href="tools/client-reference/client-management.html" class="output-tag">
+              <span class="dot dot-grey"></span>Client Management
+            </a>
+            <a href="tools/client-reference/colorado.html" class="output-tag">
+              <span class="dot dot-grey"></span>Colorado
+            </a>
+            <a href="tools/client-reference/communication.html" class="output-tag">
+              <span class="dot dot-grey"></span>Communication
+            </a>
+            <a href="tools/client-reference/data-exchange.html" class="output-tag">
+              <span class="dot dot-grey"></span>Data Exchange
+            </a>
+            <a href="tools/client-reference/data-exchange-adapter.html" class="output-tag">
+              <span class="dot dot-grey"></span>Data Exchange Adapter
+            </a>
+            <a href="tools/client-reference/document-management.html" class="output-tag">
+              <span class="dot dot-grey"></span>Document Management
+            </a>
+            <a href="tools/client-reference/eligibility.html" class="output-tag">
+              <span class="dot dot-grey"></span>Eligibility
+            </a>
+            <a href="tools/client-reference/eligibility-adapter.html" class="output-tag">
+              <span class="dot dot-grey"></span>Eligibility Adapter
+            </a>
+            <a href="tools/client-reference/households.html" class="output-tag">
+              <span class="dot dot-grey"></span>Households
+            </a>
+            <a href="tools/client-reference/incomes.html" class="output-tag">
+              <span class="dot dot-grey"></span>Incomes
+            </a>
+            <a href="tools/client-reference/intake.html" class="output-tag">
+              <span class="dot dot-grey"></span>Intake
+            </a>
+            <a href="tools/client-reference/persons.html" class="output-tag">
+              <span class="dot dot-grey"></span>Persons
+            </a>
+            <a href="tools/client-reference/platform.html" class="output-tag">
+              <span class="dot dot-grey"></span>Platform
+            </a>
+            <a href="tools/client-reference/scheduling.html" class="output-tag">
+              <span class="dot dot-grey"></span>Scheduling
+            </a>
+            <a href="tools/client-reference/search-helpers.html" class="output-tag">
+              <span class="dot dot-grey"></span>Search Helpers
+            </a>
+            <a href="tools/client-reference/users.html" class="output-tag">
+              <span class="dot dot-grey"></span>Users
+            </a>
+            <a href="tools/client-reference/workflow.html" class="output-tag">
+              <span class="dot dot-grey"></span>Workflow
             </a>
           </div>
         </div>
@@ -532,11 +580,11 @@
           </div>
           <p>Generated reference for the state machines defined in the blueprint contracts — states, transitions, actions, and event subscriptions.</p>
           <div class="card-outputs">
-            <a href="tools/state-machine-docs/intake.html" class="output-tag">
-              <span class="dot dot-blue"></span>Intake
-            </a>
             <a href="tools/state-machine-docs/eligibility.html" class="output-tag">
               <span class="dot dot-blue"></span>Eligibility
+            </a>
+            <a href="tools/state-machine-docs/intake.html" class="output-tag">
+              <span class="dot dot-blue"></span>Intake
             </a>
             <a href="tools/state-machine-docs/workflow.html" class="output-tag">
               <span class="dot dot-blue"></span>Workflow
@@ -570,27 +618,91 @@
         </div>
       </div>
 
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ── Diagrams ──────────────────────────────────────────────── -->
+
+    <div class="section-header">
+      <span class="pill pill-diagrams">Diagrams</span>
+      <h3>Architecture &amp; process diagrams</h3>
+    </div>
+
+    <div class="card-grid">
+
       <div class="card">
-        <div class="card-accent accent-green"></div>
+        <div class="card-accent accent-blue"></div>
         <div class="card-body">
-          <div class="card-icon icon-green">
+          <div class="card-icon icon-blue">
             <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect x="3" y="3" width="14" height="3" rx="1.5" fill="#006152"/>
-              <rect x="3" y="8.5" width="9" height="2" rx="1" fill="#00AD93"/>
-              <rect x="3" y="12" width="11" height="2" rx="1" fill="#00AD93"/>
-              <rect x="3" y="15.5" width="7" height="2" rx="1" fill="#00AD93"/>
+              <circle cx="10" cy="10" r="3.5" fill="#5650BE"/>
+              <circle cx="3" cy="4" r="2.5" fill="#2B1A78"/>
+              <circle cx="17" cy="4" r="2.5" fill="#2B1A78"/>
+              <circle cx="3" cy="16" r="2.5" fill="#2B1A78"/>
+              <circle cx="17" cy="16" r="2.5" fill="#2B1A78"/>
+              <line x1="5" y1="5.5" x2="7.5" y2="8" stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="15" y1="5.5" x2="12.5" y2="8" stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="5" y1="14.5" x2="7.5" y2="12" stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="15" y1="14.5" x2="12.5" y2="12" stroke="#5650BE" stroke-width="1.5"/>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="tools/api-reference/index.html" class="card-link">API Reference</a></h4>
+            <h4><a href="diagrams/context-map/domains.html" class="card-link">Context Map</a></h4>
             <span class="status-badge badge-progress">In progress</span>
           </div>
-          <p>Static reference for all contract APIs — endpoints, parameters, request and response schemas. No running mock server required.</p>
-          <div class="output-tags">
-            <a href="tools/api-reference/intake.html" class="output-tag">Intake</a>
-            <a href="tools/api-reference/eligibility.html" class="output-tag">Eligibility</a>
-            <a href="tools/api-reference/case-management.html" class="output-tag">Case Management</a>
-            <a href="tools/api-reference/workflow.html" class="output-tag">Workflow</a>
+          <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>
+          <div class="card-outputs">
+            <a href="diagrams/context-map/domain_case_management.html" class="output-tag">
+              <span class="dot dot-blue"></span>Case Management
+            </a>
+            <a href="diagrams/context-map/domain_data_exchange.html" class="output-tag">
+              <span class="dot dot-blue"></span>Data Exchange
+            </a>
+            <a href="diagrams/context-map/domain_eligibility.html" class="output-tag">
+              <span class="dot dot-blue"></span>Eligibility
+            </a>
+            <a href="diagrams/context-map/domain_intake.html" class="output-tag">
+              <span class="dot dot-blue"></span>Intake
+            </a>
+            <a href="diagrams/context-map/domain_scheduling.html" class="output-tag">
+              <span class="dot dot-blue"></span>Scheduling
+            </a>
+            <a href="diagrams/context-map/domain_workflow.html" class="output-tag">
+              <span class="dot dot-blue"></span>Workflow
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-accent accent-blue"></div>
+        <div class="card-body">
+          <div class="card-icon icon-blue">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <line x1="2" y1="5" x2="10" y2="5" stroke="#5650BE" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="2" y1="10" x2="18" y2="10" stroke="#2B1A78" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="10" y1="15" x2="18" y2="15" stroke="#5650BE" stroke-width="1.5" stroke-linecap="round"/>
+              <polygon points="10,5 13,3 13,7" fill="#5650BE"/>
+              <polygon points="18,10 15,8 15,12" fill="#2B1A78"/>
+              <polygon points="18,15 15,13 15,17" fill="#5650BE"/>
+            </svg>
+          </div>
+          <div class="card-header-row">
+            <h4><a href="diagrams/sequence-diagrams/index.html" class="card-link">Sequence Diagrams</a></h4>
+            <span class="status-badge badge-progress">In progress</span>
+          </div>
+          <p>Contract-driven event chain diagrams tracing how a triggering action propagates across domain boundaries.</p>
+          <div class="card-outputs">
+            <a href="diagrams/sequence-diagrams/application-submission.html" class="output-tag">
+              <span class="dot dot-blue"></span>Application Submission
+            </a>
+            <a href="diagrams/sequence-diagrams/review-completed.html" class="output-tag">
+              <span class="dot dot-blue"></span>Review Completed
+            </a>
+            <a href="diagrams/sequence-diagrams/task-claimed.html" class="output-tag">
+              <span class="dot dot-blue"></span>Task Claimed
+            </a>
           </div>
         </div>
       </div>

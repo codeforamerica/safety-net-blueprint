@@ -1023,11 +1023,15 @@ async function main() {
     // RPC overlays: derived from state machine specs in inputFiles
     const rpcOverlays = generateRpcOverlays(inputFiles);
     for (const { overlay, stateMachine } of rpcOverlays) {
-      const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+      // Rebuild from currentResults each iteration so earlier RPC patches aren't lost
+      const currentInputFiles = currentResults
+        ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+        : inputFiles;
+      const actionFileMap = analyzeTargetLocations(overlay, currentInputFiles);
       const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
       allWarnings = allWarnings.concat(warnings);
 
-      const { results: rpcResults, warnings: rpcWarnings } = applyOverlayWithTargets(inputFiles, overlay, actionTargets, specPath);
+      const { results: rpcResults, warnings: rpcWarnings } = applyOverlayWithTargets(currentInputFiles, overlay, actionTargets, specPath);
       allWarnings = allWarnings.concat(rpcWarnings);
       currentResults = rpcResults;
 

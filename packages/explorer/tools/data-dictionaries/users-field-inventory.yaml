@@ -4,10 +4,15 @@
 
 # ── user ────────────────────────────────────────────────────────────────────────
 
+user.organizationId: { type: uuid, relationship: External }
 user.personId: { type: uuid, relationship: Person }
 user.caseWorkerId: { type: uuid, relationship: External }
+user.idpSubject: { type: string }
+user.email: { type: email }
 user.name: { type: string }
-user.role: { type: enum, values: [applicant, case_worker, supervisor, county_admin, state_admin, partner_readonly, system] }
+user.roles: { type: object }
+user.roles.name: { type: enum, values: [applicant, case_worker, supervisor, county_admin, state_admin, partner_readonly, system] }
+user.roles.permissions[]: { type: string }
 user.status: { type: enum, values: [active, inactive, pending, suspended] }
 user.counties[]: { type: string }
 user.preferences: { type: object }

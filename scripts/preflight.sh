@@ -43,18 +43,6 @@ bail_if_failed() {
   fi
 }
 
-step "Checking explorer outputs are up to date"
-if ! git diff --exit-code packages/explorer/ > /dev/null 2>&1 || git ls-files --others --exclude-standard packages/explorer/ | grep -q .; then
-  printf "${RED}  ✗ Explorer outputs are stale — rebuild and stage before running preflight:${RESET}\n"
-  printf "      npm run build --workspace=packages/explorer\n"
-  printf "      git add packages/explorer/\n"
-  git diff --name-only packages/explorer/
-  git ls-files --others --exclude-standard packages/explorer/
-  exit 1
-else
-  pass "Explorer outputs are up to date"
-fi
-
 step "Clearing generated artifacts for a clean-slate run"
 rm -rf packages/resolved
 rm -rf packages/mock-server/tests/integration/generated
@@ -100,14 +88,23 @@ else
   fail "Resolved spec validation failed"
 fi
 
-step "Validating client generation"
-if npm run clients:typescript -- --spec=packages/resolved --out=/tmp/preflight-clients-check 2>&1; then
-  rm -rf /tmp/preflight-clients-check
-  pass "Client generation succeeded"
+step "Generating TypeScript clients from resolved specs"
+if npm run clients:typescript -- --spec=packages/resolved --out=packages/clients/generated 2>&1; then
+  git add packages/clients/generated/
+  pass "TypeScript clients generated and staged"
 else
-  rm -rf /tmp/preflight-clients-check
-  fail "Client generation failed"
+  fail "TypeScript client generation failed"
 fi
+bail_if_failed
+
+step "Rebuilding explorer outputs"
+if npm run build --workspace=packages/explorer 2>&1; then
+  git add packages/explorer/
+  pass "Explorer rebuilt and staged"
+else
+  fail "Explorer build failed"
+fi
+bail_if_failed
 
 step "Validating seed data"
 if npm run validate:seed 2>&1; then

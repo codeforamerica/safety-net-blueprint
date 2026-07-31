@@ -4,10 +4,8 @@
 
 # ── queue ───────────────────────────────────────────────────────────────────────
 
-queue.id: { type: uuid }
 queue.name: { type: string }
 queue.description: { type: string }
-queue.source: { type: enum, values: [system, user] }
 
 # ── task ────────────────────────────────────────────────────────────────────────
 
@@ -28,4 +26,4 @@ task.escalatedAt: { type: datetime }
 task.cancelledAt: { type: datetime }
 task.blockedAt: { type: datetime }
 task.outcome: { type: string }
-task.completionNotes: { type: string }
+task.completionNotes: { type: [string, 'null'] }

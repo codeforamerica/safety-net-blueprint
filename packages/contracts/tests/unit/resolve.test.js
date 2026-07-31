@@ -914,6 +914,69 @@ test('resolve-overlay tests', async (t) => {
     }
   });
 
+  await t.test('generateRpcOverlays - RPC patches from multiple domains all survive (loop accumulation)', () => {
+    const dir = createTmpDir();
+    try {
+      const makeApiSpec = (resource, pathParam) => ({
+        openapi: '3.1.0',
+        info: { title: `${resource} API`, version: '1.0.0' },
+        paths: {
+          [`/${resource.toLowerCase()}s/{${pathParam}}`]: {
+            parameters: [{ name: pathParam, in: 'path', required: true, schema: { type: 'string' } }],
+            get: {
+              tags: [resource],
+              responses: { '200': { description: 'OK', content: { 'application/json': { schema: { $ref: `#/components/schemas/${resource}` } } } } }
+            }
+          }
+        },
+        components: { schemas: { [resource]: { type: 'object' } } }
+      });
+
+      const makeStateMachine = (domain, resource, apiSpec) => ({
+        version: '1.0',
+        domain,
+        apiSpec,
+        machines: [{
+          object: resource,
+          states: [{ id: 'draft' }, { id: 'active' }],
+          initialState: 'draft',
+          actions: [{ id: 'activate', transition: { from: 'draft', to: 'active' } }]
+        }]
+      });
+
+      writeYaml(dir, 'foo-openapi.yaml', makeApiSpec('Foo', 'fooId'));
+      writeYaml(dir, 'bar-openapi.yaml', makeApiSpec('Bar', 'barId'));
+      writeYaml(dir, 'foo-state-machine.yaml', makeStateMachine('foo', 'Foo', 'foo-openapi.yaml'));
+      writeYaml(dir, 'bar-state-machine.yaml', makeStateMachine('bar', 'Bar', 'bar-openapi.yaml'));
+
+      const yamlFiles = ['foo-openapi.yaml', 'bar-openapi.yaml', 'foo-state-machine.yaml', 'bar-state-machine.yaml']
+        .map(f => ({ relativePath: f, spec: yaml.load(readFileSync(join(dir, f), 'utf8')) }));
+
+      const rpcOverlays = generateRpcOverlays(yamlFiles);
+      assert.strictEqual(rpcOverlays.length, 2);
+
+      // Apply overlays the same way resolve.js does — each iteration must build on currentResults
+      let currentResults = null;
+      for (const { overlay } of rpcOverlays) {
+        const currentInputFiles = currentResults
+          ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+          : yamlFiles;
+        const actionFileMap = analyzeTargetLocations(overlay, currentInputFiles);
+        const { actionTargets } = resolveActionTargets(actionFileMap);
+        const { results } = applyOverlayWithTargets(currentInputFiles, overlay, actionTargets, dir);
+        currentResults = results;
+      }
+
+      // Both domains' RPC paths must be present — the loop must not overwrite earlier iterations
+      const foo = currentResults.get('foo-openapi.yaml');
+      const bar = currentResults.get('bar-openapi.yaml');
+      assert.ok(foo.paths['/foos/{fooId}/activate'], 'foo RPC path should be present');
+      assert.ok(bar.paths['/bars/{barId}/activate'], 'bar RPC path should be present');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
   await t.test('applyOverlayWithTargets - warns when update: used with array on behavioral YAML', () => {
     const dir = createTmpDir();
     try {

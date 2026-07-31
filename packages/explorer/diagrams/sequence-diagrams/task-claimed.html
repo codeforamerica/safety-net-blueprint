@@ -7,27 +7,12 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; }
-    .breadcrumb-bar {
-      background: #2B1A78; padding: 0.5rem 1.25rem;
-      display: flex; align-items: center; gap: 0.5rem;
-      font-size: 12px; color: #C2C0E8;
-    }
-    .breadcrumb-bar a { color: #C2C0E8; text-decoration: none; }
-    .breadcrumb-bar a:hover { color: white; }
-    .breadcrumb-bar .sep { opacity: 0.5; }
-    .breadcrumb-bar .current { color: white; }
     #container { padding: 16px 0 32px; overflow-x: hidden; }
     #map-wrapper { background: white; box-shadow: 0 2px 16px rgba(0,0,0,.10); overflow: hidden; width: 1400px; transform-origin: top left; }
   </style>
 </head>
 <body>
-  <div class="breadcrumb-bar">
-    <a href="../../index.html">Explorer</a>
-    <span class="sep">/</span>
-    <a href="index.html">Sequence Diagrams</a>
-    <span class="sep">/</span>
-    <span class="current">Task Claimed</span>
-  </div>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Sequence Diagrams</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Task Claimed</a></div>
   <div id="container"><div id="map-wrapper"><svg xmlns="http://www.w3.org/2000/svg" width="1400" height="272">
 <rect width="1400" height="272" fill="white"/>
 <line x1="246.7" y1="90.0" x2="246.7" y2="252.0" stroke="#CACACA" stroke-width="1" stroke-dasharray="4 3"/>

@@ -11,6 +11,7 @@ import { load } from 'js-yaml';
 import path from 'path';
 import { COLORS } from '../../../lib/theme.js';
 import { titleCase, breadcrumb } from '../../../lib/html.js';
+import { singleColumnPage } from '../../../lib/layout.js';
 
 // Semantic state coloring
 function stateColor(stateId) {
@@ -53,35 +54,19 @@ function shell(title, navLinks, body, allDomains) {
 
   const activeLabel = navItems.find(n => n.href === navLinks.active)?.label ?? title;
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} — State Machine Docs</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: ${COLORS.bg}; color: ${COLORS.text}; font-size: 14px; line-height: 1.6; }
-    a { color: ${COLORS.midBlue}; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: ${COLORS.sandMid}; padding: 1px 5px; border-radius: 3px; border: 1px solid ${COLORS.sandDark}; color: #2a2a2a; }
-    table { border-collapse: collapse; width: 100%; }
-    th { background: ${COLORS.sandMid}; color: ${COLORS.text}; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid ${COLORS.sandDark}; }
-    td { padding: 10px 12px; border-bottom: 1px solid ${COLORS.sandDark}; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: ${COLORS.sandMid}; }
-  </style>
-</head>
-<body>
-${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'State Machine Docs', href: 'index.html' }, { label: activeLabel }])}
-<div style="background:${COLORS.darkBlue};padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid ${COLORS.midBlue};">
+  const topNavHtml = `<div style="background:${COLORS.darkBlue};padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid ${COLORS.midBlue};">
   <nav style="display:flex;align-items:center;gap:0.25rem;">${nav}</nav>
-</div>
-<div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
-  ${body}
-</div>
-</body>
-</html>`;
+</div>`;
+
+  return singleColumnPage({
+    title: `${title} — State Machine Docs`,
+    breadcrumbs: [
+      { label: 'Explorer',           href: '../../index.html' },
+      { label: 'State Machine Docs', href: 'index.html'       },
+      { label: activeLabel },
+    ],
+    bodyHtml: `${topNavHtml}<div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">${body}</div>`,
+  });
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -159,7 +144,7 @@ function collectStepHtml(steps, sm, machine, eventIndex, allStateMachines) {
       const canonical = step.emit.type;
       const raw = step.emit.description?.trim().replace(/\n\s*/g, ' ') || '';
       const desc = stripEmitPrefix(raw) || raw;
-      return `<li>Emit <code>${canonical}</code>${desc ? ` — ${desc}` : ''}</li>`;
+      return `<li>Emit <a href="../event-catalog/index.html" style="font-family:monospace;font-size:12px;background:${COLORS.sandMid};padding:1px 5px;border-radius:3px;border:1px solid ${COLORS.sandDark};color:${COLORS.midBlue};text-decoration:none;">${canonical}</a>${desc ? ` — ${desc}` : ''}</li>`;
     }
     if (step.call) {
       if (typeof step.call === 'string') {
@@ -218,7 +203,7 @@ export function generateOverviewHtml(allStateMachines, outputDir, eventIndex) {
 
   const body = `
     <h1 style="font-size:1.5rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.375rem;">State Machine Overview</h1>
-    <p style="color:${COLORS.textLight};margin-bottom:2rem;font-size:13px;">Auto-generated from <code>packages/contracts/*-state-machine.yaml</code>.</p>
+    <p style="color:${COLORS.textLight};margin-bottom:2rem;font-size:13px;">Auto-generated from <code>packages/resolved/*-state-machine.yaml</code>.</p>
     <div style="background:${COLORS.white};border:1px solid ${COLORS.sandDark};border-radius:8px;overflow:hidden;">
       <table>
         <thead><tr>
@@ -273,6 +258,7 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines)
       </div>`;
 
     // Actions table
+    const RPC_RE = /^(GET|POST|PATCH|PUT|DELETE)\s+(\S+)/i;
     const actionsHtml = (machine.actions || []).length ? (() => {
       const rows = machine.actions.map(op => {
         const desc = op.description ? stripRpcPrefix(op.description) || op.description : '';
@@ -283,8 +269,18 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines)
           ? `${froms.length ? froms.map(f => stateBadge(f)).join('/') + ' → ' : ''}${stateBadge(op.transition.to)}`
           : op.transition ? '<span style="color:#999;font-size:11px;">no state change</span>' : '';
         const steps = renderStepsHtml(getSteps(op), sm, machine, eventIndex, allStateMachines);
-        return `<tr>
-          <td><strong style="color:${COLORS.darkBlue};">${op.id}</strong>${desc ? `<br><span style="font-size:12px;color:${COLORS.textLight};">${desc}</span>` : ''}</td>
+        const rpcMatch = op.description ? RPC_RE.exec(op.description) : null;
+        let apiLinkHtml = '';
+        if (rpcMatch && sm.apiSpec) {
+          const rpcMethod = rpcMatch[1].toLowerCase();
+          const rpcPath = rpcMatch[2];
+          const apiAnchor = `op-${rpcMethod}-${rpcPath.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
+          const apiSlug = sm.apiSpec.replace('-openapi.yaml', '');
+          const apiLink = `../api-reference/${apiSlug}.html#${apiAnchor}`;
+          apiLinkHtml = ` <a href="${apiLink}" title="View API endpoint" style="font-size:10px;background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:3px;padding:1px 6px;color:${COLORS.midBlue};text-decoration:none;white-space:nowrap;">API →</a>`;
+        }
+        return `<tr id="action-${op.id}">
+          <td><strong style="color:${COLORS.darkBlue};">${op.id}</strong>${apiLinkHtml}${desc ? `<br><span style="font-size:12px;color:${COLORS.textLight};">${desc}</span>` : ''}</td>
           <td style="white-space:nowrap;">${actors ? `<span style="font-size:12px;">${actors}</span>` : ''}</td>
           <td>${transition}</td>
           <td>${steps}</td>

@@ -4,7 +4,6 @@
 
 # ── appointment ─────────────────────────────────────────────────────────────────
 
-appointment.id: { type: uuid }
 appointment.personId: { type: uuid, relationship: Person }
 appointment.assignedToId: { type: uuid, relationship: User }
 appointment.startAt: { type: datetime }
