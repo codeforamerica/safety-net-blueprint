@@ -396,40 +396,45 @@ function buildDomainPage(d) {
   }
   const useGroups = groups.size > 1;
 
-  const typesNavLink = d.types.length
-    ? `<a href="#section-types" class="nav-link">Types <span class="nav-count">${d.types.length}</span></a>`
-    : '';
   const typesSectionHtml = d.types.length
-    ? `<section id="section-types">
+    ? `<section id="section-types" style="margin-bottom:2.5rem;">
         <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (${d.types.length})</h2>
         ${d.types.map(t => renderTypeBlock(t, d.knownTypes, `type-${t.name}`)).join('')}
       </section>`
     : '';
 
-  let navHtml, mainHtml;
+  const typesNavSection = d.types.length
+    ? `<div class="nav-section">
+        <div class="nav-section-label">Types</div>
+        <a href="#section-types" class="nav-link">All types <span class="nav-count">${d.types.length}</span></a>
+      </div>`
+    : '';
+
+  let methodsNavItems, methodsMainHtml;
   if (useGroups) {
-    const groupNavItems = [...groups.entries()].map(([key, g]) =>
+    methodsNavItems = [...groups.entries()].map(([key, g]) =>
       `<a href="#group-${slugify(key)}" class="nav-link">${esc(g.label)} <span class="nav-count">${g.endpoints.length}</span></a>`
     ).join('');
-    navHtml = groupNavItems + typesNavLink;
-
-    const groupSections = [...groups.entries()].map(([key, g]) =>
+    methodsMainHtml = [...groups.entries()].map(([key, g]) =>
       `<section id="group-${slugify(key)}" style="margin-bottom:2.5rem;">
         <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">${esc(g.label)} (${g.endpoints.length})</h2>
         ${g.endpoints.map(ep => renderEndpointBlock(ep, d.apiSlug, d.knownTypes, `ep-${ep.name}`)).join('')}
       </section>`
     ).join('');
-    mainHtml = groupSections + typesSectionHtml;
   } else {
-    navHtml = [
-      `<a href="#section-methods" class="nav-link">Methods <span class="nav-count">${d.endpoints.length}</span></a>`,
-      typesNavLink,
-    ].join('');
-    mainHtml = `<section id="section-methods" style="margin-bottom:2.5rem;">
+    methodsNavItems = `<a href="#section-methods" class="nav-link">All methods <span class="nav-count">${d.endpoints.length}</span></a>`;
+    methodsMainHtml = `<section id="section-methods" style="margin-bottom:2.5rem;">
       <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Methods (${d.endpoints.length})</h2>
       ${d.endpoints.map(ep => renderEndpointBlock(ep, d.apiSlug, d.knownTypes, `ep-${ep.name}`)).join('')}
-    </section>` + typesSectionHtml;
+    </section>`;
   }
+
+  const navHtml = `<div class="nav-section">
+      <div class="nav-section-label">Methods</div>
+      ${methodsNavItems}
+    </div>
+    ${typesNavSection}`;
+  const mainHtml = methodsMainHtml + typesSectionHtml;
 
   const html = twoColumnPage({
     title: `Safety Net Blueprint \u2014 Client Reference: ${esc(d.label)}`,
