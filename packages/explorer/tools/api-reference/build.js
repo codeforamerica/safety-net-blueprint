@@ -575,6 +575,7 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         ${op.deprecated ? `<span style="font-size:9px;font-weight:700;color:#7A4800;background:${COLORS.lightYellow};border:1px solid ${COLORS.warmYellow};border-radius:3px;padding:1px 6px;">DEPRECATED</span>` : ''}
         ${smBadges}
+        <a href="#${id}" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">

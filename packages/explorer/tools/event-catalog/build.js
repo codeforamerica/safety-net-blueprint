@@ -48,13 +48,14 @@ const rows = sorted.map(event => {
   const emitter = eventIndex.emitters[event];
   const subs    = eventIndex.subscribers[event] || [];
   const publisherCell = emitter
-    ? `<a href="${SM_DOCS}/${h(emitter.domain)}.html">${h(titleCase(emitter.domain))} / ${h(emitter.object)}</a>`
-    : `<span style="color:#999;font-size:11px;">unknown</span>`;
-  const subsCell = subs.length
-    ? subs.map(s => `<a href="${SM_DOCS}/${h(s.domain)}.html">${h(titleCase(s.domain))} / ${h(s.object)}</a>`).join('<br>')
+    ? `<a href="${SM_DOCS}/${h(emitter.domain)}.html#machine-${h(emitter.object.toLowerCase())}">${h(titleCase(emitter.domain))} / ${h(emitter.object)}</a>`
     : `<span style="color:#999;font-size:11px;">none</span>`;
-  return `<tr>
-    <td><code>${h(event)}</code></td>
+  const subsCell = subs.length
+    ? subs.map(s => `<a href="${SM_DOCS}/${h(s.domain)}.html#machine-${h(s.object.toLowerCase())}">${h(titleCase(s.domain))} / ${h(s.object)}</a>`).join('<br>')
+    : `<span style="color:#999;font-size:11px;">none</span>`;
+  const anchor = `event-${h(event)}`;
+  return `<tr id="${anchor}">
+    <td><code>${h(event)}</code> <a href="#${anchor}" class="permalink" title="Link to this event">#</a></td>
     <td>${publisherCell}</td>
     <td>${subsCell}</td>
   </tr>`;

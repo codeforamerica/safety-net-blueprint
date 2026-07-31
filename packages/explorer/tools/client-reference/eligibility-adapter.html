@@ -59,6 +59,18 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     a { color: #5650BE; }
   </style>
 </head>
@@ -102,6 +114,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateExpeditedScreening<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
       <a href="../api-reference/eligibility-adapter.html#op-post-evaluate-expedited-screening" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-evaluateExpeditedScreening" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">evaluateExpeditedScreening({ body: { ... } })</pre>
@@ -124,6 +137,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateMedicaidExParte<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate Medicaid ex parte</span>
       <a href="../api-reference/eligibility-adapter.html#op-post-evaluate-medicaid-ex-parte" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-evaluateMedicaidExParte" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">evaluateMedicaidExParte({ body: { ... } })</pre>
@@ -146,6 +160,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateDetermination<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate final determination</span>
       <a href="../api-reference/eligibility-adapter.html#op-post-evaluate-determination" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-evaluateDetermination" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">evaluateDetermination({ body: { ... } })</pre>
@@ -170,6 +185,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">MemberContext</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-MemberContext" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">MemberContext</span> <span style="color:#666;">{</span></div>
@@ -183,6 +199,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ElectronicCheckResult</code>
       <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <a href="#type-ElectronicCheckResult" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ElectronicCheckResult</span> <span style="color:#666;">{</span></div>
@@ -196,6 +213,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">VerificationSummary</code>
       <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-VerificationSummary" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">VerificationSummary</span> <span style="color:#666;">{</span></div>
@@ -209,6 +227,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">PerMemberProgramRequest</code>
       <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-PerMemberProgramRequest" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">PerMemberProgramRequest</span> <span style="color:#666;">{</span></div>
@@ -222,6 +241,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">PerHouseholdProgramRequest</code>
       <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-PerHouseholdProgramRequest" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">PerHouseholdProgramRequest</span> <span style="color:#666;">{</span></div>
@@ -235,6 +255,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramDecision</code>
       <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-ProgramDecision" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramDecision</span> <span style="color:#666;">{</span></div>
@@ -248,6 +269,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExpeditedScreeningRequest</code>
       <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-ExpeditedScreeningRequest" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExpeditedScreeningRequest</span> <span style="color:#666;">{</span></div>
@@ -261,6 +283,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExpeditedScreeningResponse</code>
       <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-ExpeditedScreeningResponse" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExpeditedScreeningResponse</span> <span style="color:#666;">{</span></div>
@@ -274,6 +297,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">MedicaidExParteRequest</code>
       <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-MedicaidExParteRequest" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">MedicaidExParteRequest</span> <span style="color:#666;">{</span></div>
@@ -287,6 +311,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">IndividualDeterminationRequest</code>
       <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-IndividualDeterminationRequest" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">IndividualDeterminationRequest</span> <span style="color:#666;">{</span></div>
@@ -300,6 +325,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">HouseholdDeterminationRequest</code>
       <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-HouseholdDeterminationRequest" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">HouseholdDeterminationRequest</span> <span style="color:#666;">{</span></div>

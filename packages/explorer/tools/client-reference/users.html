@@ -59,6 +59,18 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     a { color: #5650BE; }
   </style>
 </head>
@@ -102,6 +114,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listUsers<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
       
+      <a href="#ep-listUsers" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listUsers({
@@ -141,6 +154,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">createUser<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Create a user</span>
       
+      <a href="#ep-createUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">createUser({ body: { ... } })</pre>
@@ -163,6 +177,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getCurrentUser<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get the authenticated user</span>
       
+      <a href="#ep-getCurrentUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:0;">getCurrentUser()</pre>
@@ -176,6 +191,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">deactivateUser<span style="color:#aaa;font-weight:400;">(userId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Deactivate a user</span>
       
+      <a href="#ep-deactivateUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">deactivateUser({ path: { userId: string } })</pre>
@@ -198,6 +214,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getUser<span style="color:#aaa;font-weight:400;">(userId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a user</span>
       
+      <a href="#ep-getUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getUser({ path: { userId: string } })</pre>
@@ -220,6 +237,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">updateUser<span style="color:#aaa;font-weight:400;">(userId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Update a user</span>
       
+      <a href="#ep-updateUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">updateUser({ path: { userId: string }, body: { ... } })</pre>
@@ -250,6 +268,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getTokenClaims<span style="color:#aaa;font-weight:400;">(sub)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get claims for JWT enrichment</span>
       
+      <a href="#ep-getTokenClaims" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getTokenClaims({ path: { sub: string } })</pre>
@@ -274,6 +293,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">User</code>
       <span style="font-size:11px;color:#aaa;">10 fields</span>
+      <a href="#type-User" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">User</span> <span style="color:#666;">{</span></div>
@@ -287,6 +307,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">FrontendAuthContext</code>
       <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-FrontendAuthContext" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">FrontendAuthContext</span> <span style="color:#666;">{</span></div>
@@ -300,6 +321,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">TokenClaims</code>
       <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-TokenClaims" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TokenClaims</span> <span style="color:#666;">{</span></div>
@@ -313,6 +335,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">UserCreate</code>
       <span style="font-size:11px;color:#aaa;">10 fields</span>
+      <a href="#type-UserCreate" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">UserCreate</span> <span style="color:#666;">{</span></div>
@@ -326,6 +349,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">UserList</code>
       <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <a href="#type-UserList" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">UserList</span> <span style="color:#666;">{</span></div>
@@ -339,6 +363,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">UserUpdate</code>
       <span style="font-size:11px;color:#aaa;">10 fields</span>
+      <a href="#type-UserUpdate" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">UserUpdate</span> <span style="color:#666;">{</span></div>
@@ -352,6 +377,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">UserWritable</code>
       <span style="font-size:11px;color:#aaa;">10 fields</span>
+      <a href="#type-UserWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">UserWritable</span> <span style="color:#666;">{</span></div>
@@ -365,6 +391,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">FrontendAuthContextWritable</code>
       <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-FrontendAuthContextWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">FrontendAuthContextWritable</span> <span style="color:#666;">{</span></div>
@@ -378,6 +405,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">UserListWritable</code>
       <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <a href="#type-UserListWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">UserListWritable</span> <span style="color:#666;">{</span></div>

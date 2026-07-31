@@ -59,6 +59,18 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     a { color: #5650BE; }
   </style>
 </head>
@@ -102,6 +114,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listEvents<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
       <a href="../api-reference/platform.html#op-get-events" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-listEvents" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listEvents({
@@ -171,6 +184,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">publishEvent<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Publish an event</span>
       <a href="../api-reference/platform.html#op-post-events" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-publishEvent" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">publishEvent({ body: { ... } })</pre>
@@ -193,6 +207,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">streamEvents<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Stream domain events (SSE)</span>
       <a href="../api-reference/platform.html#op-get-events-stream" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-streamEvents" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:0;">streamEvents()</pre>
@@ -206,6 +221,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getEvent<span style="color:#aaa;font-weight:400;">(eventId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a domain event</span>
       <a href="../api-reference/platform.html#op-get-events-eventId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-getEvent" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getEvent({ path: { eventId: string } })</pre>
@@ -231,6 +247,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listPolicies<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">List policies</span>
       <a href="../api-reference/platform.html#op-get-registry-policies" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-listPolicies" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listPolicies({
@@ -273,6 +290,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getPolicy<span style="color:#aaa;font-weight:400;">(policyId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a policy</span>
       <a href="../api-reference/platform.html#op-get-registry-policies-policyId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-getPolicy" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getPolicy({ path: { policyId: string } })</pre>
@@ -298,6 +316,7 @@
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">search<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Search across resources</span>
       <a href="../api-reference/platform.html#op-get-search" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-search" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">search({
@@ -339,6 +358,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">Event</code>
       <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-Event" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">Event</span> <span style="color:#666;">{</span></div>
@@ -352,6 +372,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">Policy</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-Policy" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">Policy</span> <span style="color:#666;">{</span></div>
@@ -365,6 +386,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">SearchResult</code>
       <span style="font-size:11px;color:#aaa;">7 fields</span>
+      <a href="#type-SearchResult" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SearchResult</span> <span style="color:#666;">{</span></div>
@@ -378,6 +400,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">EventList</code>
       <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <a href="#type-EventList" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">EventList</span> <span style="color:#666;">{</span></div>
@@ -391,6 +414,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">PolicyList</code>
       <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <a href="#type-PolicyList" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">PolicyList</span> <span style="color:#666;">{</span></div>
@@ -404,6 +428,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">SearchFacet</code>
       <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-SearchFacet" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SearchFacet</span> <span style="color:#666;">{</span></div>
@@ -417,6 +442,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">SearchResultAttribute</code>
       <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <a href="#type-SearchResultAttribute" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SearchResultAttribute</span> <span style="color:#666;">{</span></div>
@@ -430,6 +456,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">SearchResultList</code>
       <span style="font-size:11px;color:#aaa;">6 fields</span>
+      <a href="#type-SearchResultList" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SearchResultList</span> <span style="color:#666;">{</span></div>

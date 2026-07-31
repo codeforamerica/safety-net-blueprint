@@ -59,6 +59,18 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     
   </style>
 </head>
@@ -110,6 +122,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-cases" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -431,6 +444,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-cases" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -800,6 +814,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-cases-caseId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1051,6 +1066,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-cases-caseId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1480,6 +1496,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-cases-caseId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">

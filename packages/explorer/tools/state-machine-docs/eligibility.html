@@ -15,12 +15,25 @@
     td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #F7EDE8; }
-    .content-item { transition: border-color 0.1s, background 0.1s; }
-    .content-item:hover { border-color: #5650BE; background: #E6EBF9; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
     details summary { transition: background 0.1s; }
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     
   </style>
 </head>
@@ -33,7 +46,7 @@
       <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Eligibility State Machine</h1>
       <p style="font-size:12px;color:#666;">Domain: <code>eligibility</code> · API spec: <code>eligibility-openapi.yaml</code></p>
     </div>
-    <section id="determination" style="margin-bottom:2.5rem;">
+    <section id="machine-determination" style="margin-bottom:2.5rem;">
       <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">Determination</h2>
       <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
       <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
@@ -43,15 +56,15 @@
           </tr></thead>
           <tbody><tr>
         <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">in_progress</span></td>
-        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="font-size:12px;color:#1a1a1a;">Eligibility determination underway; awaiting program-level decisions</td>
         <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
       </tr><tr>
         <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;white-space:nowrap;">completed</span></td>
-        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="font-size:12px;color:#1a1a1a;">All program decisions resolved; eligibility determination finalized</td>
         <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
       </tr><tr>
         <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">withdrawn</span></td>
-        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="font-size:12px;color:#1a1a1a;">Determination closed because the associated application was withdrawn</td>
         <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
       </tr></tbody>
         </table>
@@ -66,17 +79,17 @@
           <td><strong style="color:#2B1A78;">flag-expedited</strong> <a href="../api-reference/eligibility.html#op-post-determinations-determinationId-flag-expedited" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System flags a Determination as qualifying for expedited SNAP processing</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
           <td><span style="color:#999;font-size:11px;">no state change</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record that the household qualifies for expedited SNAP processing <code>sets expeditedFlagged</code></li><li>Emit <a href="../event-catalog/index.html" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.expedited</a> — Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))</li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record that the household qualifies for expedited SNAP processing <code>sets expeditedFlagged</code></li><li>Emit <a href="../event-catalog/index.html#event-eligibility.application.expedited" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.expedited</a> — Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i))</li></ul></td>
         </tr><tr id="action-complete">
           <td><strong style="color:#2B1A78;">complete</strong> <a href="../api-reference/eligibility.html#op-post-determinations-determinationId-complete" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System marks a Determination as complete after all program Decisions are resolved</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
-          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">completed</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.determination_completed</a> — signals all program Decisions are resolved; Intake subscribes to close the application</li></ul></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">completed</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-eligibility.application.determination_completed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.determination_completed</a> — signals all program Decisions are resolved; Intake subscribes to close the application</li></ul></td>
         </tr><tr id="action-withdraw">
           <td><strong style="color:#2B1A78;">withdraw</strong> <a href="../api-reference/eligibility.html#op-post-determinations-determinationId-withdraw" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System withdraws a Determination when the associated application is withdrawn</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
-          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">withdrawn</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.determination.withdrawn</a></li></ul></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">withdrawn</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-eligibility.determination.withdrawn" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.determination.withdrawn</a></li></ul></td>
         </tr></tbody>
           </table>
         </div>
@@ -110,7 +123,7 @@
         </tr></tbody>
           </table>
         </div>
-    </section><section id="decision" style="margin-bottom:2.5rem;">
+    </section><section id="machine-decision" style="margin-bottom:2.5rem;">
       <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">Decision</h2>
       <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
       <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
@@ -120,19 +133,19 @@
           </tr></thead>
           <tbody><tr>
         <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">pending</span></td>
-        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="font-size:12px;color:#1a1a1a;">Program eligibility decision awaiting automatic or caseworker review</td>
         <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
       </tr><tr>
         <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;white-space:nowrap;">approved</span></td>
-        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="font-size:12px;color:#1a1a1a;">Member approved for the program based on eligibility criteria</td>
         <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
       </tr><tr>
         <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;white-space:nowrap;">denied</span></td>
-        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="font-size:12px;color:#1a1a1a;">Member denied for the program based on eligibility criteria</td>
         <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
       </tr><tr>
         <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;white-space:nowrap;">ineligible</span></td>
-        <td style="font-size:12px;color:#1a1a1a;"></td>
+        <td style="font-size:12px;color:#1a1a1a;">Member found categorically ineligible for the program</td>
         <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
       </tr></tbody>
         </table>
@@ -146,18 +159,18 @@
             <tbody><tr id="action-approve">
           <td><strong style="color:#2B1A78;">approve</strong> <a href="../api-reference/eligibility.html#op-post-determinations-determinationId-decisions-decisionId-approve" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System approves a Decision after automatic or caseworker review</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
-          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">approved</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the Decision was finalized <code>sets decidedAt</code></li><li>Record whether the Decision was reached automatically or by a caseworker <code>sets path</code></li><li>Emit <a href="../event-catalog/index.html" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.decision_completed</a> — Intake records the outcome per member; Determination checks if all Decisions are resolved</li></ul></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">approved</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the Decision was finalized <code>sets decidedAt</code></li><li>Record whether the Decision was reached automatically or by a caseworker <code>sets path</code></li><li>Emit <a href="../event-catalog/index.html#event-eligibility.application.decision_completed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.decision_completed</a> — Intake records the outcome per member; Determination checks if all Decisions are resolved</li></ul></td>
         </tr><tr id="action-deny">
           <td><strong style="color:#2B1A78;">deny</strong> <a href="../api-reference/eligibility.html#op-post-determinations-determinationId-decisions-decisionId-deny" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System denies a Decision based on failing eligibility criteria</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
-          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;">denied</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets decidedAt</code></li><li><code>sets path</code></li><li>Store the machine-readable denial reason; required for the Notice of Action and appeal basis (7 CFR § 273.2(h), 42 CFR § 435.917) <code>sets denialReasonCode</code></li><li>Emit <a href="../event-catalog/index.html" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.decision_completed</a></li></ul></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;">denied</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets decidedAt</code></li><li><code>sets path</code></li><li>Store the machine-readable denial reason; required for the Notice of Action and appeal basis (7 CFR § 273.2(h), 42 CFR § 435.917) <code>sets denialReasonCode</code></li><li>Emit <a href="../event-catalog/index.html#event-eligibility.application.decision_completed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.decision_completed</a></li></ul></td>
         </tr><tr id="action-mark-ineligible">
           <td><strong style="color:#2B1A78;">mark-ineligible</strong> <a href="../api-reference/eligibility.html#op-post-determinations-determinationId-decisions-decisionId-mark-ineligible" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System marks a Decision as categorically ineligible</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
-          <td><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span> → <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;">ineligible</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets decidedAt</code></li><li><code>sets path</code></li><li>Store the categorical ineligibility reason code (e.g., citizenship bar for SNAP, age limit for TANF) <code>sets denialReasonCode</code></li><li>Emit <a href="../event-catalog/index.html" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.decision_completed</a></li></ul></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;">ineligible</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets decidedAt</code></li><li><code>sets path</code></li><li>Store the categorical ineligibility reason code (e.g., citizenship bar for SNAP, age limit for TANF) <code>sets denialReasonCode</code></li><li>Emit <a href="../event-catalog/index.html#event-eligibility.application.decision_completed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">eligibility.application.decision_completed</a></li></ul></td>
         </tr></tbody>
           </table>
         </div>

@@ -322,6 +322,7 @@ function renderEndpointBlock(ep, apiSlug, knownTypes, id = '') {
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:${COLORS.darkBlue};">${esc(ep.name)}<span style="color:#aaa;font-weight:400;">(${argSummary})</span></span>
       ${ep.title ? `<span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(ep.title)}</span>` : '<span style="flex:1;"></span>'}
       ${apiRefLink}
+      ${id ? `<a href="#${esc(id)}" class="permalink" title="Link to this method">#</a>` : ''}
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:${paramsHtml ? '10px' : '0'};">${esc(sig)}</pre>
@@ -339,6 +340,7 @@ function renderTypeBlock(schema, knownTypes, id = '') {
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:${COLORS.darkBlue};">${esc(schema.name)}</code>
       <span style="font-size:11px;color:#aaa;">${schema.fields.length} field${schema.fields.length !== 1 ? 's' : ''}</span>
+      ${id ? `<a href="#${esc(id)}" class="permalink" title="Link to this type">#</a>` : ''}
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:${COLORS.darkBlue};font-weight:700;">${esc(schema.name)}</span> <span style="color:#666;">{</span></div>

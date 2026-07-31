@@ -59,6 +59,18 @@
     details summary:hover { background: #F7EDE8; }
     [data-expand-id] { transition: opacity 0.1s; }
     [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
     
   </style>
 </head>
@@ -110,6 +122,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-queues" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -379,6 +392,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-queues" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -633,6 +647,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-queues-queueId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -832,6 +847,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-queues-queueId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1146,6 +1162,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-queues-queueId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1284,6 +1301,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-tasks" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -1772,6 +1790,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-post-tasks" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -2432,6 +2451,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-tasks-taskId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -2850,6 +2870,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-patch-tasks-taskId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -3548,6 +3569,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-delete-tasks-taskId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -3680,6 +3702,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-claim" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="claim: POST /tasks/{taskId}/claim — Caseworker takes ownership of an unassigned pending…">State machine →</a>
+        <a href="#op-post-tasks-taskId-claim" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -4182,6 +4205,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-complete" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="complete: POST /tasks/{taskId}/complete — Marks an in-progress task done with an outcome a…">State machine →</a>
+        <a href="#op-post-tasks-taskId-complete" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -4725,6 +4749,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-release" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="release: POST /tasks/{taskId}/release — Returns an in-progress task to the queue, clearin…">State machine →</a>
+        <a href="#op-post-tasks-taskId-release" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -5248,6 +5273,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-escalate" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="escalate: POST /tasks/{taskId}/escalate — Escalate a task; assigned workers can escalate i…">State machine →</a>
+        <a href="#op-post-tasks-taskId-escalate" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -5771,6 +5797,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-de-escalate" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="de-escalate: POST /tasks/{taskId}/de-escalate — Returns an escalated task to the pending queu…">State machine →</a>
+        <a href="#op-post-tasks-taskId-de-escalate" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -6294,6 +6321,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-cancel" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="cancel: POST /tasks/{taskId}/cancel — Supervisor cancels a task from any active state">State machine →</a>
+        <a href="#op-post-tasks-taskId-cancel" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -6817,6 +6845,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-reopen" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="reopen: POST /tasks/{taskId}/reopen — Supervisor returns a cancelled task to the pending…">State machine →</a>
+        <a href="#op-post-tasks-taskId-reopen" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -7340,6 +7369,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-await-client" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="await-client: POST /tasks/{taskId}/await-client — Pauses an in-progress task while waiting for…">State machine →</a>
+        <a href="#op-post-tasks-taskId-await-client" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -7863,6 +7893,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-await-verification" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="await-verification: POST /tasks/{taskId}/await-verification — Pauses an in-progress task while waiti…">State machine →</a>
+        <a href="#op-post-tasks-taskId-await-verification" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -8386,6 +8417,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-resume" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="resume: POST /tasks/{taskId}/resume — Resumes a blocked task, cancelling any active wait…">State machine →</a>
+        <a href="#op-post-tasks-taskId-resume" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -8888,6 +8920,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-auto-resume" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="auto-resume: POST /tasks/{taskId}/auto-resume — System resumes a verification-blocked task wh…">State machine →</a>
+        <a href="#op-post-tasks-taskId-auto-resume" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -9412,6 +9445,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-sla-escalate" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="sla-escalate: POST /tasks/{taskId}/sla-escalate — System escalates a task when an SLA timer fi…">State machine →</a>
+        <a href="#op-post-tasks-taskId-sla-escalate" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -9935,6 +9969,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-auto-cancel" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="auto-cancel: POST /tasks/{taskId}/auto-cancel — System cancels a client-blocked task after 30…">State machine →</a>
+        <a href="#op-post-tasks-taskId-auto-cancel" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -10437,6 +10472,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-submit-for-review" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="submit-for-review: POST /tasks/{taskId}/submit-for-review — Worker submits a completed task to a su…">State machine →</a>
+        <a href="#op-post-tasks-taskId-submit-for-review" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -10939,6 +10975,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-approve" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="approve: POST /tasks/{taskId}/approve — Supervisor approves a submitted task and records …">State machine →</a>
+        <a href="#op-post-tasks-taskId-approve" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -11472,6 +11509,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-return-to-worker" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="return-to-worker: POST /tasks/{taskId}/return-to-worker — Supervisor sends a review-pending task b…">State machine →</a>
+        <a href="#op-post-tasks-taskId-return-to-worker" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -11995,6 +12033,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-assign" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="assign: POST /tasks/{taskId}/assign — Supervisor reassigns a task to a specific casework…">State machine →</a>
+        <a href="#op-post-tasks-taskId-assign" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -12528,6 +12567,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <a href="../state-machine-docs/workflow.html#action-set-priority" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="set-priority: POST /tasks/{taskId}/set-priority — Supervisor manually overrides the task prior…">State machine →</a>
+        <a href="#op-post-tasks-taskId-set-priority" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -13067,6 +13107,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-metrics" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
@@ -13439,6 +13480,7 @@
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
+        <a href="#op-get-metrics-metricId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
