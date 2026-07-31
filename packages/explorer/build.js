@@ -25,9 +25,15 @@ import { renderContextMap } from './diagrams/context-map/src/render.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
 
-const args    = process.argv.slice(2);
-const onlyArg = args.find(a => a.startsWith('--only='));
-const only    = onlyArg ? onlyArg.slice('--only='.length) : null;
+const args        = process.argv.slice(2);
+const onlyArg     = args.find(a => a.startsWith('--only='));
+const only        = onlyArg ? onlyArg.slice('--only='.length) : null;
+const resolvedArg = args.find(a => a.startsWith('--resolved='));
+const clientsArg  = args.find(a => a.startsWith('--clients='));
+
+// Args forwarded to all subprocesses that respect them.
+const fwdResolved = resolvedArg ? [resolvedArg] : [];
+const fwdClients  = clientsArg  ? [clientsArg]  : [];
 
 const doBuild = tool => !only || only === tool;
 
@@ -86,25 +92,25 @@ if (doBuild('data-dictionaries')) {
       // Domain doesn't have the right structure for data model generation — skip
     }
   }
-  execFileSync(node, [resolve(__dirname, 'tools', 'data-dictionaries', 'build.js')], { stdio: 'inherit' });
+  execFileSync(node, [resolve(__dirname, 'tools', 'data-dictionaries', 'build.js'), ...fwdResolved], { stdio: 'inherit' });
 }
 
 // ── State machine docs (reads contracts directly — subprocess) ────────────────
 
 if (doBuild('state-machine-docs')) {
-  execFileSync(node, [resolve(__dirname, 'tools', 'state-machine-docs', 'build.js')], { stdio: 'inherit' });
+  execFileSync(node, [resolve(__dirname, 'tools', 'state-machine-docs', 'build.js'), ...fwdResolved], { stdio: 'inherit' });
 }
 
 if (doBuild('event-catalog')) {
-  execFileSync(node, [resolve(__dirname, 'tools', 'event-catalog', 'build.js')], { stdio: 'inherit' });
+  execFileSync(node, [resolve(__dirname, 'tools', 'event-catalog', 'build.js'), ...fwdResolved], { stdio: 'inherit' });
 }
 
 if (doBuild('api-reference')) {
-  execFileSync(node, [resolve(__dirname, 'tools', 'api-reference', 'build.js')], { stdio: 'inherit' });
+  execFileSync(node, [resolve(__dirname, 'tools', 'api-reference', 'build.js'), ...fwdResolved], { stdio: 'inherit' });
 }
 
 if (doBuild('client-reference')) {
-  execFileSync(node, [resolve(__dirname, 'tools', 'client-reference', 'build.js')], { stdio: 'inherit' });
+  execFileSync(node, [resolve(__dirname, 'tools', 'client-reference', 'build.js'), ...fwdResolved, ...fwdClients], { stdio: 'inherit' });
 }
 
 // Hub is always rebuilt last so it can scan all tool output directories
