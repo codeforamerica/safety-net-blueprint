@@ -232,6 +232,18 @@ export function twoColumnPage({
         if (ch) ch.textContent = d.open ? '\u25BC' : '\u25B6';
       });
     });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '\u25B6' : '\u25BC';
+      });
+    });
     // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
     (function () {
       const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
@@ -305,7 +317,19 @@ export function singleColumnPage({
 <body>
   ${renderBreadcrumb(breadcrumbs)}
   ${bodyHtml}
-  ${extraScript ? `<script>${extraScript}</script>` : ''}
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '\u25B6' : '\u25BC';
+      });
+    });
+    ${extraScript}
+  </script>
 </body>
 </html>`;
 }

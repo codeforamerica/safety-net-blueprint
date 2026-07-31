@@ -400,15 +400,18 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
       // default/minimum/maximum/example is shown inline and doesn't warrant an expand.
       const shouldExpand = desc.length > 80 || schema.enum?.length > 0;
       if (shouldExpand) {
+        const eid = nextEid();
         const expandContent = `${renderMarkdown(desc)}${schema.enum ? `<div style="margin-top:4px;font-size:10px;color:#666;">One of: ${schema.enum.map(v => `<code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">${esc(String(v))}</code>`).join(', ')}</div>` : ''}`;
-        const nameCell = `<details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>${esc(p.name ?? '')}</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;">${expandContent}</div></details>`;
+        const nameCell = `<span role="button" tabindex="0" data-expand-id="${eid}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>${esc(p.name ?? '')}</span>`;
+        // Expand row spans all columns so content gets full table width (avoids clipping)
+        const expandRow = `<tr id="${eid}" style="display:none"><td colspan="5" style="padding:4px 12px 10px;background:#fafafa;border-top:none;">${expandContent}</td></tr>`;
         return `<tr>
           <td style="padding:5px 12px;white-space:nowrap;">${nameCell}</td>
           <td style="padding:5px 12px;">${typeCell}</td>
           <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">${esc(p.in ?? '')}</td>
           <td style="padding:5px 12px;text-align:center;">${p.required ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};">✓</span>` : ''}</td>
           <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">${esc(desc.split('\n')[0].slice(0, 80))}</td>
-        </tr>`;
+        </tr>${expandRow}`;
       }
     }
     const descCell = `${renderMarkdown(p.description ?? '')}${enumVals}`;
@@ -425,14 +428,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
 
   return `<div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;table-layout:fixed;">
-      <colgroup>
-        <col style="width:140px;">
-        <col style="width:130px;">
-        <col style="width:55px;">
-        <col style="width:40px;">
-        <col>
-      </colgroup>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="${thStyle}">Name</th>
         <th style="${thStyle}">Type</th>
